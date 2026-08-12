@@ -1,0 +1,8 @@
+# The disposable test project for the isolation proof. Safe to delete.
+# Apply with: kubectl apply --server-side  (client-side apply is rejected on this plane)
+apiVersion: project.cci.vmware.com/v1alpha2
+kind: Project
+metadata:
+  name: rbac-lab
+spec:
+  description: "Isolation-design proof: disposable RBAC test project. Safe to delete."

@@ -1,0 +1,42 @@
+# The memory-tiering lens's verdict metrics, in VCF Operations super-metric editor
+# syntax, exactly as proven live (VCF Operations against ESXi 9.1, 2026-07).
+# Sheet: https://privatecloudarchitect.com/handbook/memory-tiering
+#
+# The denominator rule: percent-of-DRAM metrics divide by the DRAM tier's own
+# capacity key (mem:DRAM|memory_tier_total_capacity), never by total memory
+# capacity, which on a tiered host includes the NVMe tier and understates the
+# true percent of DRAM by up to half at a 1:1 ratio.
+
+supermetrics:
+
+  - name: "PCA - MemTier - Host - Active pct of DRAM"
+    applies_to: [HostSystem, ClusterComputeResource]
+    unit: percent
+    formula: "(100 * (${this, metric=mem|active_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))"
+    interpretation: >-
+      The hot working set as a percentage of installed DRAM (the DRAM tier). The candidacy
+      gate: per the vSphere best-practices documentation, good candidates sit between 0 and
+      50 percent, and typical workloads run 10 to 30. Lower means a better candidate, because
+      more of the DRAM footprint is cold and can tier to NVMe.
+
+  - name: "PCA - MemTier - Host - Recoverable Cold DRAM GB"
+    applies_to: [HostSystem, ClusterComputeResource]
+    unit: GB
+    formula: "((${this, metric=mem|consumed_average} - ${this, metric=mem|active_average}) / 1048576)"
+    interpretation: >-
+      Cold, tierable memory: the DRAM footprint outside the hot working set, which is exactly
+      what tiering relocates to NVMe. Consumed minus active, converted from KB to GB. This is
+      the payoff number: the DRAM a candidate host would get back.
+
+  - name: "PCA - Shared - Host - Consumed pct of DRAM"
+    applies_to: [HostSystem, ClusterComputeResource]   # associated to both; computes at host scope only (see below)
+    unit: percent
+    formula: "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))"
+    interpretation: >-
+      Activation readiness: the total DRAM footprint (hot plus cold) as a percentage of the
+      DRAM tier. Tiering behavior begins when host consumption reaches roughly 80 percent of
+      DRAM, so a candidate at low consumption gains headroom immediately and exercises the
+      tier only as it fills. Proven live: this metric does not compute at cluster scope,
+      because the DRAM-tier denominator does not roll up; read it per host. The "Shared" name
+      field records its home namespace: it is consumed by more than one initiative, and the
+      naming schema promotes such primitives out of any single initiative's namespace.

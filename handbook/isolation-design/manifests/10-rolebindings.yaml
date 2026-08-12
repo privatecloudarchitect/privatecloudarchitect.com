@@ -1,0 +1,57 @@
+# Per-user project role bindings for the isolation proof.
+# The whole point: this is ONE declarative apply, not per-user click-ops.
+#   user1, user2 = edit (own-only)   user3 = edit_adv (project-wide)   user4 = admin (full)
+# Subject forms: user subjects are bare usernames; a group subject is
+#   {kind: Group, name: "<GroupName>@"} with the trailing @, named cci:group:<name>.
+# Apply with: kubectl apply --server-side
+apiVersion: authorization.cci.vmware.com/v1alpha1
+kind: ProjectRoleBinding
+metadata:
+  name: cci:user:user1
+  namespace: rbac-lab
+roleRef:
+  apiGroup: authorization.cci.vmware.com
+  kind: ProjectRole
+  name: edit
+subjects:
+- kind: User
+  name: user1
+---
+apiVersion: authorization.cci.vmware.com/v1alpha1
+kind: ProjectRoleBinding
+metadata:
+  name: cci:user:user2
+  namespace: rbac-lab
+roleRef:
+  apiGroup: authorization.cci.vmware.com
+  kind: ProjectRole
+  name: edit
+subjects:
+- kind: User
+  name: user2
+---
+apiVersion: authorization.cci.vmware.com/v1alpha1
+kind: ProjectRoleBinding
+metadata:
+  name: cci:user:user3
+  namespace: rbac-lab
+roleRef:
+  apiGroup: authorization.cci.vmware.com
+  kind: ProjectRole
+  name: edit_adv
+subjects:
+- kind: User
+  name: user3
+---
+apiVersion: authorization.cci.vmware.com/v1alpha1
+kind: ProjectRoleBinding
+metadata:
+  name: cci:user:user4
+  namespace: rbac-lab
+roleRef:
+  apiGroup: authorization.cci.vmware.com
+  kind: ProjectRole
+  name: admin
+subjects:
+- kind: User
+  name: user4

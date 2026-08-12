@@ -1,0 +1,32 @@
+name: isolation-proof-vm
+formatVersion: 1
+description: Single small VM variant of the isolation-proof workload. Unlike the ConfigMap marker, a real VM carries power, restart, and resize resource actions to gate per owner, so the matrix exercises resource-level Day-2 as well.
+inputs:
+  target_namespace_name:
+    type: string
+    title: Target SupervisorNamespace
+  app_name:
+    type: string
+    title: Application / VM name
+    default: vm
+resources:
+  Namespace:
+    type: CCI.Supervisor.Namespace
+    properties:
+      existing: true
+      name: ${input.target_namespace_name}
+  VM:
+    type: CCI.Supervisor.Resource
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: vmoperator.vmware.com/v1alpha5
+        kind: VirtualMachine
+        metadata:
+          name: ${input.app_name}
+        spec:
+          className: <your-vm-class>
+          imageName: <your-image-id>
+          storageClass: <your-storage-class>
+          powerState: PoweredOn
+          bootDiskCapacity: 20Gi

@@ -1,0 +1,15 @@
+{
+  "name": "Members: (Group) Engineers | Action Scope: ALL | Visibility: own via edit",
+  "typeId": "com.vmware.policy.deployment.action",
+  "enforcementType": "HARD",
+  "orgId": "<org-uuid>",
+  "projectId": "<project-uuid>",
+  "definition": {
+    "allowedActions": [
+      {
+        "actions": ["*"],
+        "authorities": ["GROUP:Engineers@"]
+      }
+    ]
+  }
+}

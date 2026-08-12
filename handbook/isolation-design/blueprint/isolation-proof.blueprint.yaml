@@ -1,0 +1,29 @@
+name: isolation-proof
+formatVersion: 1
+description: Minimal isolation-proof workload. Creates only a ConfigMap in an existing namespace, so a deployment exists and is owned by its requester without drawing VM capacity.
+inputs:
+  target_namespace_name:
+    type: string
+    title: Target SupervisorNamespace
+  app_name:
+    type: string
+    title: Application name
+    default: app
+resources:
+  Namespace:
+    type: CCI.Supervisor.Namespace
+    properties:
+      existing: true
+      name: ${input.target_namespace_name}
+  Marker:
+    type: CCI.Supervisor.Resource
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: ${input.app_name}-marker
+        data:
+          proof: isolation-design
+          owner-app: ${input.app_name}

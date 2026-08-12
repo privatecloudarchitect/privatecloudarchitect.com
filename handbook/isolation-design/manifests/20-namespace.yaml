@@ -1,0 +1,34 @@
+# The workload namespace for the proof.
+#
+# Every <your-...> value is estate-specific. The reliable way to fill them is to copy
+# the spec from a namespace that already works on your estate:
+#   kubectl get supervisornamespaces -n <existing-project> <existing-namespace> -o yaml
+#
+# Watch points:
+# - A brand-new project cannot host a namespace until a region and quota are added to
+#   it; the create fails with an opaque validation error. Add the region first.
+# - This resource does not support --dry-run=server; apply it server-side directly.
+apiVersion: infrastructure.cci.vmware.com/v1alpha3
+kind: SupervisorNamespace
+metadata:
+  name: rbac-lab-apps
+  namespace: rbac-lab
+spec:
+  className: <your-namespace-class>
+  regionName: <your-region>
+  vpcName: <your-vpc>
+  segName: <your-seg>
+  description: "Isolation-proof workload namespace (lightweight, ConfigMap-only deployments)."
+  infraPolicyNames: []
+  sharedSubnetNames: []
+  classConfigOverrides:
+    storageClasses:
+    - name: <your-storage-class>
+      limit: <your-storage-limit>
+    zones:
+    - name: <your-zone>
+      cpuLimit: <your-cpu-limit>
+      cpuReservation: 0M
+      memoryLimit: <your-memory-limit>
+      memoryReservation: 0Mi
+      vmClassReservations: []
