@@ -2,11 +2,12 @@
 #
 # Status: PROPOSED defaults to tune on your estate; instantiated live on the
 # reference estate beside the exemplar, so two envelopes of opposite
-# strictness judge the same shared hardware. The envelope below carries the
-# design catalog's proposed bands, the ones the published starter catalog
-# shows; the reference estate's currently instantiated copy runs milder
-# cpu-overcommit and memory-contention bands, a divergence queued for the
-# framework's reconciliation pass. Both sets are proposals; tune on yours.
+# strictness judge the same shared hardware. The envelope below is the
+# reference estate's running baseline (reconciled 2026-08-13), and that is
+# deliberate: test-dev bands start where an estate empirically runs and are
+# tightened by evidence through the envelope review. They are never de-facto
+# guidance, because test-dev varies too much by environment, and they never
+# carry density pressure that chokes development environments prematurely.
 # Backs the starter catalog at https://privatecloudarchitect.com/handbook/wtpc
 #
 # The exemplar's inverse: density is the point, and sitting far UNDER the
@@ -57,10 +58,10 @@ policy:
 envelope:
   capacity:
     mem_overcommit: {target: 2.0, warn: 3.0, breach: 4.0}    # density is the goal
-    cpu_overcommit: {target: 8.0, warn: 10.0, breach: 12.0}
+    cpu_overcommit: {target: 4.0, warn: 6.0, breach: 8.0}    # the estate's running baseline; tighten with evidence
   performance:
     cpu_ready_pct_p95:      {target: 5.0, warn: 10.0, breach: 15.0}   # contention is expected; only pathology acts
-    mem_contention_pct_p95: {target: 2.0, warn: 5.0, breach: 10.0}
+    mem_contention_pct_p95: {target: 1.0, warn: 3.0, breach: 5.0}     # the estate's running baseline; tighten with evidence
     protection_coverage:    optional   # no reservations expected
   cost:
     reclaimable_pct: {target: 20, warn: 35, breach: 50}   # tolerated churn-slack before anyone cares
