@@ -5,9 +5,11 @@ inputs:
   target_namespace_name:
     type: string
     title: Target SupervisorNamespace
+    pattern: '^[a-z][a-z0-9-]+$'
   app_name:
     type: string
     title: Application name
+    pattern: '^[a-z][a-z0-9-]{2,40}$'
     default: app
 resources:
   Namespace:

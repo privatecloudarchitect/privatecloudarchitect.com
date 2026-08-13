@@ -5,10 +5,12 @@ inputs:
   target_namespace_name:
     type: string
     title: Target SupervisorNamespace
+    pattern: '^[a-z][a-z0-9-]+$'
   app_name:
     type: string
     title: Application / VM name
-    default: vm
+    pattern: '^[a-z][a-z0-9-]{2,40}$'
+    default: proof-vm
 resources:
   Namespace:
     type: CCI.Supervisor.Namespace
