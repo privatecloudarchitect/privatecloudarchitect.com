@@ -35,10 +35,13 @@ each layer references the previous one by id):
   avoidance, cluster readiness) as the same kind of id-preserving package; no-force test-import
   recognized all three, zero failures. The views reference the metrics by id, which is why the
   package pair imports in order.
-- The readiness dashboard arrives in `dashboard/` next: dashboard import is UI-only on this
-  build, so unlike the packages above its re-import proof is a human step, and this repo does not
-  ship it until that step has run. It references the views and metrics by id, so when it lands it
-  imports last, after both packages.
+- `dashboard/memory-tiering-readiness.import.zip`: the readiness dashboard in the Dashboards,
+  Manage, Import shape (dashboard import is UI-only on this build; import the zip directly, do
+  not unzip it). This is the reference estate's own deploy artifact: its runbook deploys exactly
+  this file through Manage, Import, and the live dashboard matches the committed contents. It
+  references the views and metrics by id, so import it last, after both packages. Blank rows
+  right after import mean the super metrics are not yet activated in the collecting policy,
+  which is the activation step above.
 
 ## The rules the formulas encode
 
