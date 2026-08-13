@@ -1,0 +1,81 @@
+# WTPC posture record: prod-latency-critical-db (the exemplar)
+#
+# Status: RATIFIED and live-enforced on the reference estate. Values are v1
+# operator-judgment defaults, revised on a monthly envelope-review cadence.
+# Backs the starter catalog at https://privatecloudarchitect.com/handbook/wtpc
+#
+# Instance-independent: the tag rule, envelope, and policy shape are data.
+# Instantiation order: tag rule -> groups -> policy cloned from Default
+# carrying the envelope -> advisory scoring first (the sheet's first-two-weeks
+# path). Membership follows the workload: only the VM tier is tag-declarative;
+# host and cluster groups are derived from where those VMs run, because
+# relationship rules match far objects by name only and cannot see a tag
+# across the host-to-VM edge.
+
+posture: prod-latency-critical-db
+sla: latency-critical          # ~99.99; a contention event is an outage
+tier: production
+archetype: data                # memory-primary; tiering withheld: pinned memory, never tier + overcommit
+
+# Membership: the tag rule (AND of all three). Example taxonomy: env / function / sla.
+membership:
+  env: prod
+  function: db
+  sla: sla-1                   # sla-1 = latency-critical
+
+groups:
+  - name: "PCA - WTPC - Group - prod-latency-critical-db (VMs)"
+    resource_kind: VirtualMachine
+    membership: [{category: env, value: prod}, {category: function, value: db}, {category: sla, value: sla-1}]
+  - name: "PCA - WTPC - Group - prod-latency-critical-db (Clusters)"
+    resource_kind: ClusterComputeResource
+    derived: ancestor-clusters-of-vms-group
+  - name: "PCA - WTPC - Group - prod-latency-critical-db (Hosts)"
+    resource_kind: HostSystem
+    derived: parent-hosts-of-vms-group
+
+# The availability floor: a gate, verified pass or fail, never scored.
+availability_floor:
+  ha: required
+  ha_admission_control: enabled
+  admission_policy: host_failures      # host_failures | percentage | dedicated_hosts
+  n_plus: 1                            # one host failure tolerated; member hosts >= 2
+  drs_minimum: fully_automated
+  headroom_ceiling_pct: 100            # consumed percent of HA-usable DRAM must stay at or under this
+  anti_affinity: db-replica-pairs      # no observable on this build; verified by a manual monthly check
+
+# The enforcement copy: one policy cloned from Default, applied to the posture's groups.
+# Buffer convention: pct = round(100 * (1 - target/warn)) per metric.
+policy:
+  name: "PCA - WTPC - Policy - prod-latency-critical-db"
+  clone_from: Default                  # portable: every instance has a Default; discover its id at instantiation
+  capacity_allocation:                 # cluster-scoped capacity model
+    cpu: 1.5                           # = cpu_overcommit.target
+    memory: 1.0                        # = mem_overcommit.target; the RAM is the database's
+    diskspace: 2.0
+    poweredOffVmsConsidered: true      # a powered-off replica still owns its slot at this SLA
+  capacity_buffer:
+    memory_pct: 9                      # 100 * (1 - 1.0/1.1)
+    cpu_pct: 25                        # 100 * (1 - 1.5/2.0)
+  criticality: Conservative
+
+# The envelope: target / warn / breach per metric.
+envelope:
+  capacity:
+    mem_overcommit: {target: 1.0, warn: 1.1, breach: 1.25, basis: dram}   # tiering withheld -> strict ratio
+    cpu_overcommit: {target: 1.5, warn: 2.0, breach: 3.0}
+  performance:
+    cpu_ready_pct_p95:      {target: 1.0, warn: 3.0, breach: 5.0}
+    cpu_costop_pct_p95:     {target: 0.5, warn: 1.5, breach: 3.0}
+    mem_contention_pct_p95: {target: 0.0, warn: 0.5, breach: 1.0}
+    mem_balloon_pct_p95:    {target: 0.0, warn: 0.5, breach: 2.0}
+    mem_swapped_gb:         {target: 0, warn: ">0", breach: ">0"}   # any swap is a breach
+    protection_coverage:    required   # reservations must exist; absence is drift
+  cost:
+    reclaimable_pct: {target: 5, warn: 15, breach: 25}   # headroom is not waste; low waste tolerated
+    cost_coverage_pct: {gate: true}                      # a validity gate, not a scored band
+    cost_per_workload: {baseline: at_activation}         # reported and baselined, not banded in v1
+
+notes:
+  - Memory tiering is withheld at this posture; pinned memory cannot tier, and tiering never combines with overcommit.
+  - Reservation coverage is the drift check for the 1.0 memory target.

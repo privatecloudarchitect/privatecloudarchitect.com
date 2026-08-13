@@ -1,5 +1,5 @@
 {
- "860ddab7-816c-452f-ad99-c5bd61ec604e": {
+ "9637900d-c713-485d-ac8a-d889eed65cfa": {
   "resourceKinds": [
    {
     "resourceKindKey": "HostSystem",
@@ -10,9 +10,9 @@
     "adapterKindKey": "VMWARE"
    }
   ],
-  "name": "PCA - MemTier - Host - Active pct of DRAM",
-  "formula": "(100 * (${this, metric=mem|active_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))",
-  "description": "The active working set as a percentage of installed DRAM capacity (the DRAM tier) - the AUTHORITATIVE Memory Tiering selection gate. Per vSphere best-practices, good candidates have active memory between 0% and 50% of DRAM. LOWER = better candidate (more cold headroom that can tier to NVMe). Denominator is the DRAM tier, NOT mem|totalCapacity_average (which on a tiered host is DRAM+NVMe and understates the ratio). GATE ON THE 95TH PERCENTILE over a representative window (peak working set) via the view transformation - the mean hides the peak a safety gate must size for.",
+  "name": "PCA - Shared - Host - Consumed pct of DRAM",
+  "formula": "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))",
+  "description": "OBJECT: Host. UNIT: percent. Total DRAM footprint (hot + cold) as a percent of installed DRAM (the DRAM tier). Does NOT compute at Cluster scope - the DRAM-tier denominator does not roll up (verified live; cluster reads require child-aggregation). Activation-readiness for tiering (cold pages offload ~80% consumed) AND, for WTPC, the capacity utilization corridor read as a saturation ceiling at high-SLA postures.",
   "unitId": "percent"
  },
  "e937675a-3a17-4305-9298-2382a906d5b9": {
@@ -31,7 +31,7 @@
   "description": "UPPER BOUND on the DRAM currently holding COLD pages (consumed but not active) - i.e. the memory tiering would relocate to NVMe, freeing DRAM. The ACTIONABLE ranking metric: sort candidates by this. It is an UPPER BOUND because pinned memory (latency-sensitive VMs, DirectPath/passthrough, vGPU, SR-IOV) is counted as cold here yet cannot tier; cross-check against mem|reservedCapacity_average and the VM-type exclusion list before trusting the figure on a given host.",
   "unitId": "gb"
  },
- "9637900d-c713-485d-ac8a-d889eed65cfa": {
+ "860ddab7-816c-452f-ad99-c5bd61ec604e": {
   "resourceKinds": [
    {
     "resourceKindKey": "HostSystem",
@@ -42,9 +42,51 @@
     "adapterKindKey": "VMWARE"
    }
   ],
-  "name": "PCA - Shared - Host - Consumed pct of DRAM",
-  "formula": "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))",
-  "description": "OBJECT: Host. UNIT: percent. Total DRAM footprint (hot + cold) as a percent of installed DRAM (the DRAM tier). Does NOT compute at Cluster scope - the DRAM-tier denominator does not roll up (verified live; cluster reads require child-aggregation). Activation-readiness for tiering (cold pages offload ~80% consumed) AND, for WTPC, the capacity utilization corridor read as a saturation ceiling at high-SLA postures.",
+  "name": "PCA - MemTier - Host - Active pct of DRAM",
+  "formula": "(100 * (${this, metric=mem|active_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))",
+  "description": "The active working set as a percentage of installed DRAM capacity (the DRAM tier) - the AUTHORITATIVE Memory Tiering selection gate. Per vSphere best-practices, good candidates have active memory between 0% and 50% of DRAM. LOWER = better candidate (more cold headroom that can tier to NVMe). Denominator is the DRAM tier, NOT mem|totalCapacity_average (which on a tiered host is DRAM+NVMe and understates the ratio). GATE ON THE 95TH PERCENTILE over a representative window (peak working set) via the view transformation - the mean hides the peak a safety gate must size for.",
   "unitId": "percent"
+ },
+ "89a9cb19-ad0d-4fdd-ab01-b7bb4401bd28": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "HostSystem",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "modificationTime": 1783796484930,
+  "name": "PCA - MemTier - Host - NVMe Tier Used GB",
+  "formula": "(${this, metric=mem:NVMe|tier.usage} / 1024)",
+  "description": "HOST metric (HostSystem). Post-activation engagement signal: memory currently served from the NVMe tier (mem:NVMe|tier.usage, MB, shown as GB). Over 0 = tiering is actively offloading cold pages to NVMe; 0 = enabled-but-dormant or not configured. Pair with Consumed pct of DRAM (the ~80 pct trigger). Requires vSphere 8.0U3+/9.x with NVMe tiering configured. UNIT: GB.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+ },
+ "dd92fb78-1076-44e5-bedc-5123a26b72fb": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "HostSystem",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "modificationTime": 1784818000544,
+  "name": "PCA - MemTier - Host - Actual Tiering Uplift GB",
+  "formula": "(${this, metric=mem:NVMe|memory_tier_size} / 1048576)",
+  "description": "OBJECT: HostSystem. UNIT: GB. Memory a host has ACTUALLY gained from its configured NVMe tier (mem:NVMe|memory_tier_size), reflecting that host's real Mem.TierNVMePct ratio. The deployed-reality counterpart to Tiering Uplift GB (which projects the gain at a uniform planning ratio); a mixed-ratio fleet reports accurately here. Blank on a host with no NVMe tier configured.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+ },
+ "5de20df1-4648-42cd-9d16-7c1359d43c18": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "HostSystem",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "modificationTime": 1784820679145,
+  "name": "PCA - MemTier - Host - Reserved Memory GB",
+  "formula": "(${this, metric=mem|reservedCapacity_average} / 1048576)",
+  "description": "OBJECT: HostSystem. UNIT: GB. Pinned memory on the host - reservations guarantee physical DRAM, so this memory cannot tier to NVMe. Read it as a QUALIFIER on Recoverable Cold DRAM: up to this much of a host's cold DRAM is pinned and will not actually reclaim, so a host with high reserved memory reclaims less than its Recoverable Cold suggests. mem|reservedCapacity_average / 1048576.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
  }
 }

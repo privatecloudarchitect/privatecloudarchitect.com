@@ -22,7 +22,8 @@ Everything in this repo satisfies four rules before it is pushed:
 |---|---|---|
 | [`handbook/isolation-design/`](handbook/isolation-design/) | [The isolation design, assembled](https://privatecloudarchitect.com/handbook/isolation-design) and [field note 01](https://privatecloudarchitect.com/notes/vcfa-access-control-three-factors) | Declarative manifests plus a verifier that proves per-user isolation on your build |
 | [`handbook/day2-governance/`](handbook/day2-governance/) | [Day-2 governance](https://privatecloudarchitect.com/handbook/day2-governance) | The two-policy HARD change as importable JSON, named per the sheet's convention |
-| [`handbook/memory-tiering/`](handbook/memory-tiering/) | [Memory tiering candidacy](https://privatecloudarchitect.com/handbook/memory-tiering) | The lens's verdict super metrics, in the exact proven formulas |
+| [`handbook/memory-tiering/`](handbook/memory-tiering/) | [Memory tiering candidacy](https://privatecloudarchitect.com/handbook/memory-tiering) | The lens end to end: the metrics (formulas plus id-preserving package), the three views, and the readiness dashboard |
+| [`handbook/wtpc/`](handbook/wtpc/) | [The Well-Tuned Private Cloud](https://privatecloudarchitect.com/handbook/wtpc) | The starter catalog's three posture records, machine-readable and instance-independent |
 
 ## How to read this repo against the site
 

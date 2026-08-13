@@ -17,18 +17,28 @@ best-practices documentation.
 | Recoverable Cold DRAM GB | Payoff: how much DRAM is backing cold pages tiering can relocate? | GB |
 | Consumed pct of DRAM | Activation readiness: how close is consumption to the 80 trigger? | percent |
 
-Two artifact forms ship in `supermetrics/`:
+The artifacts, and the order they import in (metrics before views before the dashboard, because
+each layer references the previous one by id):
 
-- `editor-formulas.yaml`: each metric's exact formula in super-metric editor syntax, its object
-  types, and its unit, for building the metrics by hand in the editor.
-- `memory-tiering-supermetrics.import.json`: the canonical import form, an id-keyed map carrying
-  `resourceKinds` (the object-type association) and `unitId` alongside name, formula, and
-  description. On a clean instance, import it through Administration, Content, Import
-  (super metrics), and the metrics land already unit-labelled and object-type-associated. The
-  ids are preserved on import, which is what lets views and dashboards reference the metrics
-  by id in a later wave. Alternatively, create each metric over REST
-  (`POST /api/supermetrics` with the entry's name, formula, and description) and assign its
-  object types afterward; that path mints new ids on your instance.
+- `supermetrics/editor-formulas.yaml`: the three verdict metrics' exact formulas in super-metric
+  editor syntax, object types, and units, for building them by hand.
+- `supermetrics/memory-tiering-supermetrics.import.json`: the readable form of the full six-metric
+  set the lens's views reference: the three verdict metrics plus three qualifiers (reserved and
+  pinned memory, NVMe tier size, NVMe tier used). Id-keyed; the ids are what the views bind to.
+- `supermetrics/memory-tiering-supermetrics.contentpkg.zip`: the same six metrics as an
+  **id-preserving content package**, importable via
+  `POST /suite-api/api/content/operations/import?force=true` (multipart field `contentFile`) or
+  the content-import UI. Built by filtering the reference instance's own export, so what ships is
+  the export format verbatim; a no-force test-import on the reference instance recognized all six
+  with zero failures and zero changes.
+- `views/memory-tiering-views.contentpkg.zip`: the lens's three views (host candidates, capex
+  avoidance, cluster readiness) as the same kind of id-preserving package; no-force test-import
+  recognized all three, zero failures. The views reference the metrics by id, which is why the
+  package pair imports in order.
+- The readiness dashboard arrives in `dashboard/` next: dashboard import is UI-only on this
+  build, so unlike the packages above its re-import proof is a human step, and this repo does not
+  ship it until that step has run. It references the views and metrics by id, so when it lands it
+  imports last, after both packages.
 
 ## The rules the formulas encode
 
