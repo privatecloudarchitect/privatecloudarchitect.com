@@ -1,0 +1,9 @@
+# The group the rule will speak. Groups name workloads; rules written against
+# groups survive every replacement underneath them. This proof group carries no
+# members, so nothing on the estate is affected at any point in the round-trip.
+apiVersion: vpc.nsx.vmware.com/v1alpha1
+kind: NetworkSecurityGroup
+metadata:
+  name: seg-proof-app
+spec:
+  regionName: <your-region>

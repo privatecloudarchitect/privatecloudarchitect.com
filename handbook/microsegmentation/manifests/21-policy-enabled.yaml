@@ -1,0 +1,30 @@
+# The SAME section with the one field flipped. Diff this file against
+# 20-policy-disabled.yaml before applying: the change that alters traffic is a
+# single auditable field on a rule that was already reviewed in place.
+apiVersion: vpc.nsx.vmware.com/v1alpha1
+kind: FirewallPolicy
+metadata:
+  name: seg-proof-section
+spec:
+  regionName: <your-region>
+  category: Application
+  priority: 900000
+  stateful: true
+  appliedTo:
+    groupNames:
+    - seg-proof-app
+  rules:
+  - name: seg-proof-allow-https
+    action: Allow
+    direction: InOut
+    disabled: false
+    ipProtocol: IPV4
+    from:
+    - groupName: seg-proof-app
+    to:
+    - groupName: seg-proof-app
+    services:
+    - networkServiceName: ':HTTPS'
+    appliedTo:
+      groupNames:
+      - seg-proof-app

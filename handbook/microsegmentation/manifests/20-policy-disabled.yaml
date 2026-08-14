@@ -1,0 +1,37 @@
+# The firewall section, landed DISABLED. This is the reviewable document: one
+# rule allowing HTTPS between members of the proof group, scoped (appliedTo) to
+# that same group. Ship it, review it in place, then the enable is one field.
+#
+# Two admission facts a first write teaches (surfaced by live writes, never by
+# the docs; two more gateway behaviors are in the README):
+#   - Tenant-created rules accept ipProtocol IPV4 only; the platform's own
+#     default rules carry IPV4_IPV6, but that value is rejected on create.
+#   - Tenant priority must be 0-999999; the default section's max-int priority
+#     is a system special you cannot use.
+apiVersion: vpc.nsx.vmware.com/v1alpha1
+kind: FirewallPolicy
+metadata:
+  name: seg-proof-section
+spec:
+  regionName: <your-region>
+  category: Application
+  priority: 900000
+  stateful: true
+  appliedTo:
+    groupNames:
+    - seg-proof-app
+  rules:
+  - name: seg-proof-allow-https
+    action: Allow
+    direction: InOut
+    disabled: true
+    ipProtocol: IPV4
+    from:
+    - groupName: seg-proof-app
+    to:
+    - groupName: seg-proof-app
+    services:
+    - networkServiceName: ':HTTPS'
+    appliedTo:
+      groupNames:
+      - seg-proof-app
