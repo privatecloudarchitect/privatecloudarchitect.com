@@ -5,9 +5,9 @@ The runnable companion to
 (and its dated proof,
 [field note 01](https://privatecloudarchitect.com/notes/vcfa-access-control-three-factors)).
 Declarative manifests plus one stdlib-only verifier that prove, on **your** VCF Automation 9.1
-(All Apps) organization, that per-user isolation holds: two `edit` users in one project each
+(All Apps) organization, that per-user isolation holds: two Project User (`edit`) members of one project each
 operate their own deployment with full Day-2 authority and receive a hard 404 on each other's,
-`edit_adv` sees project-wide, and the operators' group keeps reach through its own policy.
+a Project Advanced User (`edit_adv`) sees project-wide, and the operators' group keeps reach through its own policy.
 
 **Provenance:** proven on a live VCF 9.1 estate, 2026-08-11 (isolation matrix, real owned
 deployments) and 2026-08-12 (workload plane). Every claim in the backing sheet carries its
