@@ -27,6 +27,13 @@ evidence an auditor consumes, not a data dump.
 | access | `projects`, then `projectrolebindings` per project | I |
 | audit-trail | `GET /cloudapi/1.0.0/auditTrail` (versioned Accept), total event count | VII.2 |
 
+## What the numbers mean
+
+Every figure the loop reports is YOUR estate's current state at the run date, nothing more. The
+audit question each finding asks is "is this intended," answered against your own records or the
+vendor's documented defaults, never against another estate's counts: a reference estate is a
+modified instance whose own tooling has toggled the very surfaces this loop reads.
+
 ## Three planes, each optional
 
 The loop spans three token planes by nature, and each is optional: set what you have, and the
