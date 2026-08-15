@@ -1,0 +1,15 @@
+{
+  "comment": "The declared estate the converge asserts. Names follow the sheet's parseable schema (owner - initiative - object - purpose) and contain no ':' or '|'. Formulas use metric keys proven on a live estate; edit one after the first converge to watch drift repair.",
+  "supermetrics": [
+    {
+      "name": "Converge Demo - Ops Estate - Super Metric - Active Memory GiB",
+      "formula": "(${this, metric=mem|active_average} / 1048576)",
+      "description": "Converge-demo metric: actively-touched guest memory in GiB. Safe to delete; owned by the ops-estate companion harness."
+    },
+    {
+      "name": "Converge Demo - Ops Estate - Super Metric - Consumed Memory GiB",
+      "formula": "(${this, metric=mem|consumed_average} / 1048576)",
+      "description": "Converge-demo metric: consumed guest memory in GiB. Safe to delete; owned by the ops-estate companion harness."
+    }
+  ]
+}

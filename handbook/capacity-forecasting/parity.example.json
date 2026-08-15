@@ -1,0 +1,8 @@
+{
+  "comment-1": "Ruler-parity expectations: for each policy that is a projection ruler, declare strings that must appear in its settings read. Encode your allocation ratios or any setting whose drift would silently change the projection.",
+  "comment-2": "Replace the policy name and needles with your own, then run: python3 runway.py --parity parity.example.json",
+  "<your allocation policy name>": [
+    "<a substring that encodes your declared overcommit ratio>",
+    "<another setting string the ruler depends on>"
+  ]
+}
