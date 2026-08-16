@@ -1,0 +1,33 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">The availability floor: a gate, not a score</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">The strip beside this shows one row per member cluster and one column per check. Every cell is a yes or no verdict, and no cell ever earns points. The posture&rsquo;s floor is its worst row. Only member clusters appear here. A cluster you expect but don&rsquo;t see has no posture VMs reconciled onto it yet.</div>
+
+  <div style="background:#f4f7fa;border:1px solid #dbe4ec;border-left:3px solid #2f6fb0;border-radius:5px;padding:11px 13px;margin-bottom:16px">
+    <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:5px">Uptime is table stakes</div>
+    <div style="color:#3b4b5b;font-size:12.5px">The floor asks one question: would a host failure be survivable? Five checks answer it. HA admission control must be enabled with the host-failures policy. The cluster needs N+1 redundancy: at least two member hosts and a failover level of at least 1. DRS must be fully automated, because DRS restores placement after the failover. Failover headroom must hold: consumed memory stays within 100% of HA-usable DRAM, so the load still fits after the failure. Effective-N must be intact: zero HA config issues, and hosts connected to the master must equal member hosts minus the master (N-1). Capacity, performance, and cost tuning only mean something above a satisfied floor.</div>
+  </div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:6px">Three states, one precedence</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:14px">
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px 6px 0;white-space:nowrap;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="display:inline-block;width:11px;height:11px;background:#4b9b45;border-radius:2px;margin-right:8px;vertical-align:middle"></span><span style="font-weight:700;color:#3a7d38">PASS</span></td>
+        <td style="padding:6px 0;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">The check is verified true on that cluster. Green means verified, never assumed.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px 6px 0;white-space:nowrap;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="display:inline-block;width:11px;height:11px;background:#de3f30;border-radius:2px;margin-right:8px;vertical-align:middle"></span><span style="font-weight:700;color:#c0392b">BREACH</span></td>
+        <td style="padding:6px 0;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Verified false. Admission control turned off on a member cluster is a real breach: this posture requires it. At this tier a floor breach pages. Restore the check before you read anything below.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px 6px 0;white-space:nowrap;vertical-align:top"><span style="display:inline-block;width:11px;height:11px;background:#ecc33e;border-radius:2px;margin-right:8px;vertical-align:middle"></span><span style="font-weight:700;color:#b08a1e">UNVERIFIED</span></td>
+        <td style="padding:6px 0;color:#3b4b5b;vertical-align:top">The check cannot be verified from here. Instrument it or confirm it by hand. A floor you can&rsquo;t observe hasn&rsquo;t passed. Precedence: breach beats unverified, and unverified beats pass.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>When the floor is red, the scores below are not meaningful.</b> A perfectly tuned envelope on a cluster that can&rsquo;t survive a host failure is a well-decorated outage. Restore the floor first. The floor never recolors or zeroes the scores. The strip and its alert carry the urgency. When every cell is green, the floor is holding. That is the state this page exists to protect.</div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>The one check no metric can see.</b> This posture declares anti-affinity on the db replica pairs, but no metric on this dashboard observes it, so the strip carries no column for it. It is an UNVERIFIED check, confirmed by hand every month, never rendered as a pass. The operating-rhythm widget carries the reminder.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Floor checks and gate semantics: the Well-Tuned Private Cloud posture catalog, posture prod-latency-critical-db.</div>
+</div>

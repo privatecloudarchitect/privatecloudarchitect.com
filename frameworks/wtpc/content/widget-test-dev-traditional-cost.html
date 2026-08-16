@@ -1,0 +1,15 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">Cost: density is the point</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">At best-effort the cost pillar leads, and it reads in two directions.</div>
+
+  <div style="background:#f4f7fa;border:1px solid #dbe4ec;border-left:3px solid #2f6fb0;border-radius:5px;padding:11px 13px;margin-bottom:14px">
+    <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:5px">An under-packed cluster is a cost failure</div>
+    <div style="color:#3b4b5b;font-size:12.5px">Density Position leads the cost view. A cluster running well below its 2.0 overcommit target is paying for DRAM it does not use. That idle capacity is the same waste an over-packed prod-DB cluster represents on the performance side, read from the other end. Consolidate onto it before buying more.</div>
+  </div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>Reclaimable is the other lever.</b> Reclaimable Memory % scores VM-level oversize from the demand analysis, banded 20 / 35 / 50. The tolerance is wide because this posture already runs hot; only clearly oversized VMs move the score. Cost Coverage % is a validity gate: below the coverage threshold the dollar figures read as insufficient attribution, so a low number with low coverage is unknown, not green.</div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>The move.</b> Work the most under-packed cluster first: consolidate more workload onto it. Then shrink the clearly oversized VMs the reclaim evidence has ranked. A blank dollar is no cost attributed, not no opportunity; the GB ratio carries the score.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Envelope: the Well-Tuned Private Cloud posture catalog, posture test-dev-traditional.</div>
+</div>

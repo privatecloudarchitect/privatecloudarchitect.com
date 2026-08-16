@@ -1,0 +1,82 @@
+# WTPC posture source - test-dev-traditional (P7, the contrast anchor; catalog 20-postures/00-catalog.md
+# the catalog best-effort/test-dev + the catalog T0-T5; the posture contract). Portable: tag rules + envelope + policy, no
+# instance ids/names.
+#
+# This is the HONEST best-effort baseline. On the reference estate prod-latency-critical-db is a
+# deliberate strict EXEMPLAR that runs ALONGSIDE this posture so the framework can demonstrate
+# prod-grade governance. test-dev-traditional is the P1 inverse: hot-and-cheap-correctly, best-effort, density is
+# the point. Instantiated live and CO-LOCATED with the exemplar to prove mixed-SLA governance
+# (the shared-infrastructure governance doctrine): the
+# feasibility conflict, strictest-resident-wins, and the dilution signal are all provable on real
+# shared hardware only when two postures of different strictness share a cluster.
+
+posture: test-dev-traditional
+sla: best-effort               # no availability SLA; restartable only
+tier: test-dev
+archetype: traditional         # traditional VM; density is the point (overcommit 2:1 -> 4:1)
+min_tier: density              # infra-tier REQUIREMENT (≠ env `tier` above): the least-premium hardware class in
+                               # tiers/ that satisfies this posture; verified `== fit` by `python _tiers.py --self-test`.
+density_signal: true           # emit the density-position SM: under-packing is the cost failure here
+
+# --- Stable content identity (elevator seam; read via _postures.py). ordinal = catalog P-number.
+#     view/dashboard/widget/tab are this posture's LIVE 4-hex UUID prefixes - do not renumber. ---
+content_ids: {ordinal: 7, view_prefix: p7, view: c068, dashboard: d068, widget: e068, tab: 0a68}
+
+# --- Step 1: membership (tag rule). env + sla define it - non-overlapping with any prod posture ---
+membership:
+  env: dev
+  sla: sla-4                   # sla-4 = best-effort (README Tags)
+
+# --- Step 3: custom groups. Same follows-the-workload model as every posture:
+#   VMs      = tag rule env=dev AND sla=sla-4.
+#   Hosts    = derived: hosts running a VMs-group member (reconcile_infra_groups.py).
+#   Clusters = derived: clusters hosting a VMs-group member.
+groups:
+  - name: "PCA - WTPC - Group - test-dev-traditional (VMs)"
+    resource_kind: VirtualMachine
+    membership: [{category: env, value: dev}, {category: sla, value: sla-4}]
+  - name: "PCA - WTPC - Group - test-dev-traditional (Clusters)"
+    resource_kind: ClusterComputeResource
+    derived: ancestor-clusters-of-vms-group
+  - name: "PCA - WTPC - Group - test-dev-traditional (Hosts)"
+    resource_kind: HostSystem
+    derived: parent-hosts-of-vms-group
+
+# --- Availability FLOOR - collapses to RESTARTABLE at test-dev (catalog T3) ---
+availability_floor:
+  ha: restartable              # HA restart priority only; NOT "required"
+  ha_admission_control: "disabled"   # admission control may be off at test-dev
+  n_plus: 0                    # no host-failure headroom guaranteed
+  drs_minimum: partially_automated
+  anti_affinity: none
+
+# --- Step 4: the enforcement copy (policy - LAX; density is the point) ---
+policy:
+  name: "PCA - WTPC - Policy - test-dev-traditional"
+  clone_from: Default
+  capacity_allocation:                 # type=CAPACITY_ALLOCATION_MODEL, resourceKind=ClusterComputeResource
+    cpu: 4.0                           # high packing
+    memory: 2.0                        # overcommit 2:1
+    diskspace: 4.0
+    poweredOffVmsConsidered: false     # a powered-off dev VM does not reserve a slot
+  capacity_buffer:                     # type=CAPACITY_BUFFER
+    memory_pct: 33                     # round(100*(1 - target/warn)) = 100*(1 - 2.0/3.0)
+    cpu_pct: 33                        # 100*(1 - 4.0/6.0)
+  criticality: Aggressive              # the inverse of prod-db's Conservative
+
+# --- The envelope (target/warn/breach per pillar) - the prod-latency-critical-db inverse ---
+envelope:
+  capacity:
+    mem_overcommit: {target: 2.0, warn: 3.0, breach: 4.0}   # 2:1 toward 4:1 - density is the point
+    cpu_overcommit: {target: 4.0, warn: 6.0, breach: 8.0}
+  performance:
+    cpu_ready_pct_p95:      {target: 5.0, warn: 10.0, breach: 15.0}   # loose - perceived latency not gated
+    mem_contention_pct_p95: {target: 1.0, warn: 3.0,  breach: 5.0}
+    protection_coverage:    optional                                  # no reservations expected
+  cost:
+    reclaimable_pct: {target: 20, warn: 35, breach: 50}     # an UNDER-packed cluster is the cost failure here
+
+notes:
+  - The honest lab baseline; prod-latency-critical-db is a deliberate strict EXEMPLAR alongside it.
+  - Opposite envelope to prod-latency-critical-db on the same metrics (the posture contract contrast anchor).
+  - Co-located with the exemplar to demonstrate mixed-SLA governance (shared-infrastructure-governance.md).

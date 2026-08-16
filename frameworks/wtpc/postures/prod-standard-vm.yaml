@@ -1,0 +1,82 @@
+# Well-Tuned Private Cloud — posture: prod-standard-vm  (catalog P4)
+#
+# PORTABLE, machine-readable source for one posture. Instance-independent: tag rules, envelope values,
+# and the policy capacityDefinition are data, not state.
+#
+# Provenance: the framework's posture catalog. STATUS: envelope values are PROPOSED
+# (operator-judgment defaults on an envelope-review cadence), transcribed as-proposed. diskspace + poweredOffVmsConsidered + admission_policy + drs are INFERRED (marked).
+
+posture: prod-standard-vm
+sla: standard                  # the broad prod SLA net; below business-critical, above best-effort
+tier: production
+archetype: traditional         # general-purpose server VM; the natural memory-tiering home (see notes)
+min_tier: standard             # infra-tier REQUIREMENT (≠ env `tier` above): the least-premium hardware class in
+                               # tiers/ that satisfies this posture; verified `== fit` by `python _tiers.py --self-test`.
+
+# --- Stable content identity (elevator seam; read via _postures.py) ---
+content_ids: {ordinal: 4, view_prefix: p4, view: c06c, dashboard: d06c, widget: e06c, tab: 0a6c}
+
+# --- Step 1: membership (tag rule) ---
+# Membership rule: env=prod ∧ sla=sla-3 ∧ ¬(workload∈{vdi,k8s}). v1 realizes the AND-composable core
+# (env ∧ sla-3) WITHOUT the negation and relies on the priority order: P3 (vdi) and P5 (k8s)
+# outrank P4, so a prod sla-3 VDI or k8s object lands in P3/P5 before P4 claims it - priority order
+# achieves the exclusion the ¬ was for, which is the catalog's own fallback (the catalog note; the catalog open item 3).
+membership:
+  env: prod
+  sla: sla-3                   # sla-3 = standard (README Tags)
+
+# --- Step 3: custom groups (follows-the-workload; the catalog lists all three kinds explicitly) ---
+groups:
+  - name: "PCA - WTPC - Group - prod-standard-vm (VMs)"
+    resource_kind: VirtualMachine
+    membership: [{category: env, value: prod}, {category: sla, value: sla-3}]
+  - name: "PCA - WTPC - Group - prod-standard-vm (Clusters)"
+    resource_kind: ClusterComputeResource
+    derived: ancestor-clusters-of-vms-group
+  - name: "PCA - WTPC - Group - prod-standard-vm (Hosts)"
+    resource_kind: HostSystem
+    derived: parent-hosts-of-vms-group
+
+# --- Availability FLOOR (posture catalog) ---
+availability_floor:
+  ha: required                 # standard prod → HA required
+  ha_admission_control: enabled          # the posture catalog (not yet live-verified)
+  admission_policy: percentage           # the posture catalog: "percentage-based acceptable"
+  n_plus: 1                    # the posture catalog
+  drs_minimum: fully_automated # inferred: prod → full DRS (not yet live-verified)
+  anti_affinity: none
+
+# --- Step 4: the enforcement copy (policy) ---
+policy:
+  name: "PCA - WTPC - Policy - prod-standard-vm"
+  clone_from: Default
+  capacity_allocation:
+    cpu: 4.0                           # = cpu_overcommit target
+    memory: 1.5                        # = mem_overcommit target
+    diskspace: 3.0                     # inferred: 2 x mem_target (fits prod-db 2.0, test-dev 4.0)
+    poweredOffVmsConsidered: true      # inferred: prod default - a powered-off VM reserves its slot
+  capacity_buffer:                     # pct = round(100*(1 - target/warn))
+    memory_pct: 25                     # 100*(1 - 1.5/2.0)
+    cpu_pct: 33                        # 100*(1 - 4.0/6.0)
+  criticality: Aggressive              # the posture catalog (P4/P5/P6/P7 = Aggressive)
+
+# --- The envelope (target/warn/breach per pillar) — the posture catalog, PROPOSED ---
+envelope:
+  capacity:
+    mem_overcommit: {target: 1.5, warn: 2.0, breach: 2.5}
+    cpu_overcommit: {target: 4.0, warn: 6.0, breach: 8.0}
+    # NOTE: the catalog also declares active_pct_of_dram_p95 {30/40/50} - the <=50% tiering safety
+    # gate. It is OMITTED here (as the shipped test-dev.yaml omits it): the active-%-of-DRAM axis is a
+    # MemTier-lens concern not yet wired into the view generator. P4 is the first posture the MemTier
+    # lens plugs into (see notes); the axis lands with that lens (roadmap S1b / MemTier).
+  performance:
+    cpu_ready_pct_p95:      {target: 3.0, warn: 6.0, breach: 10.0}
+    mem_contention_pct_p95: {target: 0.0, warn: 2.0, breach: 4.0}  # statkey (not yet live-verified)
+    protection_coverage:    optional
+  cost:
+    reclaimable_pct: {target: 15, warn: 25, breach: 35}
+
+notes:
+  - The natural memory-tiering home (cold-heavy, latency-tolerant) - the MemTier lens plugs in HERE first; the active-%-of-DRAM <=50% gate (posture catalog) applies to this posture's clusters when the lens is wired.
+  - Broad standard net: priority order (P1>P3>P5>P2>P6>P4>P7) routes db/vdi/k8s/business-critical members to their specific postures first, so P4 sweeps up the remaining prod standard VMs.
+  - Envelope values are PROPOSED - reconcile at the pillar-leaf pass (posture catalog).

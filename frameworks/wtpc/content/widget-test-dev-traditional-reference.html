@@ -1,0 +1,45 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">The envelope and metric model</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">Every band on this scorecard is generator-stamped from these values. The envelope is the single source; the views render it.</div>
+
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:14px">
+    <thead>
+      <tr style="background:#eef2f6">
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">Signal</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:150px">target / warn / breach</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">Reading</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6;font-weight:600">Memory Overcommit (x DRAM)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">2.0 / 3.0 / 4.0</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">Density is the point. The band is the safety ceiling; past 4.0 is the thrash cliff.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6;font-weight:600">CPU Overcommit (vCPU per pCPU)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">4.0 / 6.0 / 8.0</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">High packing by design.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6;font-weight:600">CPU Ready % (p95)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">5 / 10 / 15</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">Loose. Perceived latency is not gated here.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6;font-weight:600">Memory Contention % (p95)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">1 / 3 / 5</td>
+        <td style="padding:6px 10px;color:#3b4b5b;border-bottom:1px solid #eef2f6">Expected under density.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;font-weight:600">Reclaimable Memory %</td>
+        <td style="padding:6px 10px;color:#3b4b5b">20 / 35 / 50</td>
+        <td style="padding:6px 10px;color:#3b4b5b">Wide tolerance. Oversize is still waste, but the bar is generous.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>The position ruler.</b> An envelope position divides observed by breach, so 1.0 is the breach line on every signal. Density Position runs the other way: it divides the overcommit target by what is observed, so a value above 1.0 means the cluster sits below its target, the under-use the cost pillar exists to catch. Co-stop, Balloon and Swapped carry no envelope edge at this posture and are shown for context. Reservations are not expected; a best-effort VM holding one is a governance finding, surfaced on the estate governance dashboard.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Every value: the Well-Tuned Private Cloud posture catalog (docs/design/private-cloud-tuning-framework/), posture test-dev-traditional.</div>
+</div>

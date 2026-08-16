@@ -1,0 +1,32 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">How to read this scorecard</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">This posture is best-effort: restartable work, packed densely and cheaply. Density is the goal. The scorecard reads gate first, then scores each pillar as distance from this posture's envelope.</div>
+
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:14px">
+    <tbody>
+      <tr>
+        <td style="padding:5px 10px 5px 0;vertical-align:top;font-weight:600;color:#2f4256;width:120px">SLA</td>
+        <td style="padding:5px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">Best-effort. Restartable only. A breach is a ticket for the weekly review, not a page.</td>
+      </tr>
+      <tr>
+        <td style="padding:5px 10px 5px 0;vertical-align:top;font-weight:600;color:#2f4256">Design point</td>
+        <td style="padding:5px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">Density. Overcommit runs 2:1 toward 4:1. Idle hardware is the failure to catch, not a safe state.</td>
+      </tr>
+      <tr>
+        <td style="padding:5px 10px 5px 0;vertical-align:top;font-weight:600;color:#2f4256">Members</td>
+        <td style="padding:5px 0;color:#3b4b5b">Everything tagged <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">env=dev</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">sla=sla-4</span>: the VMs. Their hosts and clusters follow, derived from where those VMs run.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="background:#f4f7fa;border:1px solid #dbe4ec;border-left:3px solid #2f6fb0;border-radius:5px;padding:11px 13px;margin-bottom:14px">
+    <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:5px">Gate, then score</div>
+    <div style="color:#3b4b5b;font-size:12.5px">The floor is a pass or fail gate: restartability holds, or it does not. Nothing below the floor is meaningful until it is green. Then each pillar scores as a color, where green means within this posture's envelope, not a universal ideal. The same 2:1 overcommit that reads green here would breach a latency-critical posture. Each posture answers only to its own targets.</div>
+  </div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:8px"><b>Under-density is the cost failure.</b> The cluster and cost views lead with Density Position: a cluster running well below its overcommit target is capacity you bought and did not use. Over-packing past the safety breach is the other edge, the thrash cliff. Both are real; the pillar bands carry each.</div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>Contention is expected here.</b> CPU Ready and Memory Contention are scored against loose bands. Co-stop, Balloon and Swapped are shown for context and carry no envelope edge at this posture. Every view sorts worst-first, so the top row is the pillar.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Envelope and membership: the Well-Tuned Private Cloud posture catalog, posture test-dev-traditional. Contention renders at the 95th percentile over a 7-day window.</div>
+</div>

@@ -1,0 +1,40 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">The operating rhythm</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">A tuned private cloud is a habit, not a project. Each rhythm below ties to a specific signal on this scorecard moving in a specific direction.</div>
+
+  <div style="background:#f4f7fa;border:1px solid #dbe4ec;border-left:3px solid #2f6fb0;border-radius:5px;padding:11px 13px;margin-bottom:16px">
+    <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:5px">Why a rhythm at all</div>
+    <div style="color:#3b4b5b;font-size:12.5px">An envelope only holds if someone checks it. Drift is quiet. A host gets packed past 1.1&times; during a busy week. A reservation gets dropped in a rebuild. A policy gets edited as a temporary fix and stays that way. The cadence catches each of these while the fix is still cheap. The daily pass catches active incidents. The weekly review catches slow erosion. The monthly true-up catches configuration drift.</div>
+  </div>
+
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:14px">
+    <thead>
+      <tr style="background:#eef2f6">
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:90px">Rhythm</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">What you do</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:230px">Driven by (on this dashboard)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px;font-weight:600;color:#2f4256;vertical-align:top;border-bottom:1px solid #eef2f6">Daily</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Clear any red in the <b>floor strip</b> first. Nothing below it matters until the strip is green. Then act on the now clock: any VM <b>swapping</b> (always an incident at this posture) and any breach count above zero.</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Floor strip &middot; VMs Swapping &middot; VMs Over Ready / Contention Breach</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;font-weight:600;color:#2f4256;vertical-align:top;border-bottom:1px solid #eef2f6">Weekly</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">The envelope review. Check which members entered the warn band on the <b>window clock</b> (the 95th-percentile columns). Work the worst VM, then the worst host. Run the reclaim actions the evidence view has already ranked. Skip any shrink the VM&rsquo;s red peak vetoes.</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Contention view (p95 bands) &middot; Host envelope view &middot; Oversized-candidates drill-down</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;font-weight:600;color:#2f4256;vertical-align:top">Monthly</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">The true-up. Audit the <b>policy against the posture catalog</b>: an edited policy is drift even while the numbers look green. Confirm the anti-affinity rules on the replica pairs by hand (the one check this dashboard cannot see). Drive unpostured inventory toward zero. Ask whether any envelope value has earned a cited revision.</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Policy-parity check (pca) &middot; floor-strip UNVERIFIED note &middot; tag hygiene</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>Severity follows the tier.</b> This is a production, latency-critical posture. A floor, performance, or capacity breach pages. A cost breach opens a ticket for the weekly review. The same envelope on a staging posture would ticket where this one pages. The response changes with the tier. The targets never do.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Envelope and cadence: the Well-Tuned Private Cloud posture catalog, posture prod-latency-critical-db. Contention thresholds render at the 95th percentile over a 7-day window.</div>
+</div>

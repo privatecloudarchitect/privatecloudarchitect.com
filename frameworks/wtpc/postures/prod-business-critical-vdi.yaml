@@ -1,0 +1,84 @@
+# Well-Tuned Private Cloud — posture: prod-business-critical-vdi  (catalog P3)
+#
+# PORTABLE, machine-readable source for one posture. Instance-independent: tag rules, envelope values,
+# and the policy capacityDefinition are data, not state.
+#
+# Provenance: the framework's posture catalog.
+#
+# P3 shares P2's SLA + tier; every difference is pure ARCHETYPE (A2 - VDI) modulation: higher packing
+# density, a boot-storm floor addition, time-windowed performance gates, and pool-template (not per-VM)
+# rightsizing.
+#
+# STATUS: envelope values are PROPOSED (operator-judgment defaults on an envelope-review
+# cadence), transcribed as-proposed. diskspace + poweredOffVmsConsidered + drs are INFERRED (marked).
+
+posture: prod-business-critical-vdi
+sla: business-critical         # same SLA as P2; the VDI archetype modulates everything below
+tier: production
+archetype: vdi                 # virtual desktops; per-session density model, pool-template lifecycle
+min_tier: performance          # infra-tier REQUIREMENT (≠ env `tier` above): the least-premium hardware class in
+                               # tiers/ that satisfies this posture; verified `== fit` by `python _tiers.py --self-test`.
+
+# --- Stable content identity (elevator seam; read via _postures.py) ---
+content_ids: {ordinal: 3, view_prefix: p3, view: c06b, dashboard: d06b, widget: e06b, tab: 0a6b}
+
+# --- Step 1: membership (tag rule) ---
+# Membership rule: env=prod ∧ workload=vdi. Archetype-keyed, so no sla condition is needed - and P3
+# outranks the broad SLA nets (priority P1>P3>P5>P2>P6>P4>P7, the catalog), so a prod VDI VM lands here even
+# if it also carries an sla tag.
+membership:
+  env: prod
+  function: vdi                # vdi = the NEW function value this framework adds (a taxonomy extension the framework adds)
+
+# --- Step 3: custom groups (follows-the-workload; Hosts carry the density / boot-storm scope, the catalog) ---
+groups:
+  - name: "PCA - WTPC - Group - prod-business-critical-vdi (VMs)"
+    resource_kind: VirtualMachine
+    membership: [{category: env, value: prod}, {category: function, value: vdi}]
+  - name: "PCA - WTPC - Group - prod-business-critical-vdi (Clusters)"
+    resource_kind: ClusterComputeResource
+    derived: ancestor-clusters-of-vms-group
+  - name: "PCA - WTPC - Group - prod-business-critical-vdi (Hosts)"
+    resource_kind: HostSystem
+    derived: parent-hosts-of-vms-group
+
+# --- Availability FLOOR (posture catalog) ---
+availability_floor:
+  ha: required                 # business-critical → HA required
+  ha_admission_control: enabled          # the posture catalog (not yet live-verified)
+  n_plus: 1                    # the posture catalog
+  drs_minimum: fully_automated # inferred: business-critical prod → full DRS (not yet live-verified)
+  anti_affinity: none
+  boot_storm_headroom: declared          # A2 floor addition (posture catalog): sizing rule for login-storm burst (not yet live-verified)
+
+# --- Step 4: the enforcement copy (policy) ---
+policy:
+  name: "PCA - WTPC - Policy - prod-business-critical-vdi"
+  clone_from: Default
+  capacity_allocation:
+    cpu: 6.0                           # = cpu_overcommit target; high vCPU:pCPU is the VDI design point
+    memory: 1.5                        # = mem_overcommit target
+    diskspace: 3.0                     # inferred: 2 x mem_target (linked-clone sharing supports the higher ratio)
+    poweredOffVmsConsidered: false     # inferred: pooled desktops cycle power; a powered-off clone does not reserve a slot
+  capacity_buffer:                     # pct = round(100*(1 - target/warn))
+    memory_pct: 17                     # 100*(1 - 1.5/1.8)
+    cpu_pct: 25                        # 100*(1 - 6.0/8.0)
+  criticality: Conservative            # the posture catalog (P1/P2/P3 = Conservative)
+
+# --- The envelope (target/warn/breach per pillar) — the posture catalog, PROPOSED ---
+envelope:
+  capacity:
+    mem_overcommit: {target: 1.5, warn: 1.8, breach: 2.2}          # per-session density; packs beyond P2
+    cpu_overcommit: {target: 6.0, warn: 8.0, breach: 10.0}         # high vCPU:pCPU is the VDI design point
+  performance:
+    cpu_ready_pct_p95:      {target: 3.0, warn: 5.0, breach: 8.0}  # judged in the login-storm / working-hours WINDOW (A2) (not yet live-verified)
+    mem_contention_pct_p95: {target: 0.0, warn: 1.0, breach: 2.0}  # statkey (not yet live-verified)
+    protection_coverage:    optional
+  cost:
+    reclaimable_pct: {target: 10, warn: 20, breach: 30}            # reclaim = pool TEMPLATE resize, one fix x N clones (A2)
+
+notes:
+  - Performance gates are time-windowed (A2) - judged in the login-storm / working-hours window, not 24h; window mechanics belong to the performance leaf.
+  - Per-VM rightsizing is suppressed in favor of pool-template rightsizing (A2): one template resize propagates to every clone.
+  - Boot-storm headroom is an A2 floor addition (posture catalog) - sized for login-burst; the exact sizing rule is (not yet live-verified).
+  - Envelope values are PROPOSED - reconcile at the pillar-leaf pass (posture catalog).

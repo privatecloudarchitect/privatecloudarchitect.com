@@ -1,0 +1,15 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">The floor: restartability</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">The strip beside this shows one row per member cluster. At best-effort the floor asks one question: if a host fails, does the work come back? Two cells carry the verdict; the rest is context.</div>
+
+  <div style="background:#f4f7fa;border:1px solid #dbe4ec;border-left:3px solid #2f6fb0;border-radius:5px;padding:11px 13px;margin-bottom:14px">
+    <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:5px">What is judged</div>
+    <div style="color:#3b4b5b;font-size:12.5px"><b>HA Restart Enabled</b> must read on: this posture promises restart, nothing more (a string value, read it, it does not color). <b>HA Config Issues</b> must be zero, and turns red above zero: an HA cluster with a broken config keeps the one promise it makes only on paper. Those two cells are the floor. When restart reads off or config issues turn red, restore it before reading the scores below.</div>
+  </div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:12px"><b>The rest is context, not a gate.</b> Admission Control, HA Failover Level, Member Hosts, DRS Automation and Consumed % of HA DRAM are shown for orientation. This posture reserves no host-failure headroom, so admission control off and a failover level of zero are within posture, not breaches. An empty red set here is the designed state of a best-effort cluster, not a broken view.</div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px">A cluster you expect but do not see has no posture VMs reconciled onto it yet. Only clusters running this posture's workloads appear.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Floor definition: the Well-Tuned Private Cloud posture catalog, posture test-dev-traditional. Bounds are generator-stamped from the floor.</div>
+</div>

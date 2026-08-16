@@ -1,0 +1,230 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">The envelope &amp; metric model</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">Every column on this scorecard, the signal it reads, and the envelope value that colors it. Nothing on this page is a house number. Every threshold comes from the posture catalog and is cited at the foot.</div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:6px">The floor strip (a gate: pass or fail, never scored)</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:14px">
+    <thead>
+      <tr style="background:#eef2f6">
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:200px">Column</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">Reads</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:250px">Passing reading</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Admission control</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">configuration|dasConfig|admissionControlEnabled</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">True when HA admission control is enabled, as this posture requires. Off on a member cluster is a breach, judged by the floor alert.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Failover level</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">configuration|dasConfig|currentFailoverLevel</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">&ge; 1. The posture declares N+1.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Member Hosts</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">member-host count (super metric over host children)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">&ge; 2. N+1 needs a host to fail over to.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">DRS</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">configuration|drsConfig|enabledAndFullyAutomated</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Fully automated. DRS restores placement after a failover.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Consumed % of HA DRAM</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">100 &times; mem|consumed_average &divide; mem|haTotalCapacity_average</span> (Shared SM)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">&le; 100. The live check that the load still fits after the failure. Binary here. Margin above the floor belongs to the capacity pillar.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Declared memory reserve</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">configuration|dasConfig|currentMemoryFailoverResourcesPercent</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Display only: the declared reserve beside the live reading.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">HA config issues</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">configuration|dasConfig|ha_number_config_issues</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">0. No silent redundancy loss.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Hosts connected to master</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">configuration|dasConfig|ha_hosts_connected_to_master</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Must equal member hosts minus the master (N-1). The master excludes itself from its own count.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Anti-affinity (replica pairs)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">no observable on this dashboard</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">UNVERIFIED by design. Confirm it by hand every month.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:6px">Capacity (scored: hosts and clusters)</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:10px">
+    <thead>
+      <tr style="background:#eef2f6">
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:200px">Column</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">Signal</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:250px">Envelope (target / warn / breach)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Memory Overcommit (&times; DRAM)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem|guest_provisioned</span> summed over member VMs &divide; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem:DRAM|memory_tier_total_capacity</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">1.0 / 1.1 / 1.25. The basis is DRAM. Tiering is withheld, so the strict ratio carries the band.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">CPU Overcommit (vCPU per pCPU)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">config|hardware|num_Cpu</span> summed over member VMs &divide; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">cpu|corecount_provisioned</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">1.5 / 2.0 / 3.0</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Worst Host Memory Overcommit</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">max of the member hosts&rsquo; ratios</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">1.0 / 1.1 / 1.25. The cluster answers as its worst host.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Hosts Over Memory / CPU Envelope</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">count of member hosts with envelope position &gt; 1</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Any &gt; 0 is red. A now-clock column.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Consumed % of DRAM (host)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">100 &times; mem|consumed_average &divide; mem:DRAM|memory_tier_total_capacity</span> (Shared SM)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Advisory ceiling 60 / 80 / 90. A saturation reading from the documented DRAM banding, not an envelope band.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Consumed % of HA DRAM (cluster)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">the floor&rsquo;s failover-headroom signal, repeated in the capacity view</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Display gradient 85 / 95 / 100 toward the floor&rsquo;s pass or fail ceiling of 100. Packing that eats the failover reserve is a deferred outage.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Context columns</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">VM Memory Provisioned (GB) &middot; VM vCPU Allocated &middot; Member Hosts</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Unbanded: the raw quantities behind the ratios.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:14px"><b>The position columns and heatmaps.</b> An Envelope Position divides observed by breach, so 1.0 is the breach line for every signal. That is what lets the heatmaps hold fixed bounds: memory position 0 / 0.80 / 0.88 / 1.0, ready position 0 / 0.20 / 0.60 / 1.0. The interior stops are target&divide;breach and warn&divide;breach. The same color always means the same distance from the envelope. Cluster ratios divide summed numerators by summed denominators, never an average of per-host ratios. Skew hides in averages. That is why the worst-host column leads.</div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:6px">Performance (scored at the VM, 95th percentile over the 7-day window)</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:10px">
+    <thead>
+      <tr style="background:#eef2f6">
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:200px">Column</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">Signal</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:250px">Envelope (target / warn / breach)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">CPU Ready % (p95)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">cpu|readyPct</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">1.0 / 3.0 / 5.0. Scheduling wait: the VM is paying now.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">CPU Co-stop % (p95)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">cpu|costopPct</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">0.5 / 1.5 / 3.0. The wide-VM stall that Ready % understates.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Memory Contention % (p95)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem|host_contentionPct</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">0.0 / 0.5 / 1.0. Latency-weighted memory wait.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Memory Balloon % (p95)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem|balloonPct</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">0.0 / 0.5 / 2.0. Pressure building.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Memory Swapped (GB, current)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem|swapped_average</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">0. Any &gt; 0 is a breach. This is a stock, the GB sitting in swap: presence is the event.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Reservation</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">config|memoryAllocation|reservation</span> (property)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Required at this posture. A zero reservation is drift, not savings.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Limit</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">config|memoryAllocation|limit</span> (property)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">&minus;1 (unlimited) is correct. Anything &ge; 0 is a configured limit that silently manufactures contention.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">VMs Swapping &middot; VMs Over Ready / Contention Breach</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">count of member VMs past the breach bound</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Any &gt; 0 is red. The now clock.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Context columns</td>
+        <td style="padding:6px 10px;vertical-align:top"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">cpu|demandmhz</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem|active_average</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem|consumed_average</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Unbanded. High contention with high demand means grow or de-densify. High contention with low demand on a wide VM means fewer vCPUs.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:14px"><b>Why p95, and where the fix lives.</b> The scorecard judges contention at the peak. A daily mean smooths away the spikes the SLA feels. Balloon or swap on a VM is a symptom. Its root cause lives on the host. The durable fix is de-densify, rebalance, or reserve, not tuning the VM.</div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:6px">Cost (scored at the cluster)</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:14px">
+    <thead>
+      <tr style="background:#eef2f6">
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:200px">Column</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">Signal</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:250px">Envelope (target / warn / breach)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Reclaimable Memory %</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">member reclaimable GB (oversize only, clamped at zero) &divide; provisioned GB, from the Shared per-VM reclaimable metric over <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">mem|guest_provisioned</span></td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">5 / 15 / 25. Headroom is priced in. Only unclaimed oversize moves it.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Reclaimable Envelope Position</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">observed &divide; 25</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">0.20 / 0.60 / 1.0. The same ruler as every other position.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Cost Coverage %</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6">members carrying <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">cost|effectiveProjectedTotalCost</span> &divide; member VMs</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">GATE. It caps the dollar read and is never scored. Red below the threshold the column carries.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Fleet Reclaimable Cost (USD/mo)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">the Shared fleet-reclaimable-cost metric</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Unbanded. The GB ratio carries the score. The dollar helps you make the case to finance.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Total Cost (USD/mo)</td>
+        <td style="padding:6px 10px;vertical-align:top;border-bottom:1px solid #eef2f6"><span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">cost|effectiveProjectedTotalCost</span> summed over member VMs</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Unbanded. The projected monthly figure. It stays stable across the month, unlike a month-to-date total.</td>
+      </tr>
+      <tr>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Cost per Workload (USD/mo)</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Total Cost &divide; Member VMs</td>
+        <td style="padding:6px 10px;color:#3b4b5b;vertical-align:top">Baselined at activation. Reported, not banded. The trend is the finding.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:6px">The two clocks</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:10px">
+    <tbody>
+      <tr>
+        <td style="padding:5px 10px 5px 0;vertical-align:top;width:110px;font-weight:600;color:#2f4256">Window clock</td>
+        <td style="padding:5px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">The banded 95th-percentile columns over the 7-day window. It answers whether the SLA was protected this week. The weekly review reads this surface.</td>
+      </tr>
+      <tr>
+        <td style="padding:5px 10px 5px 0;vertical-align:top;font-weight:600;color:#2f4256">Now clock</td>
+        <td style="padding:5px 0;color:#3b4b5b">The count columns (VMs Swapping, hosts and VMs over breach) and the alerts behind them. It answers who is out right now. The daily pass reads this surface.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px">One envelope drives both clocks. The alerts substitute persistence for the percentile. A signal must hold its breach across consecutive collection cycles before it pages. A single spike triggers nothing. A sustained breach cannot hide.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Every statkey, formula, and threshold above: the Well-Tuned Private Cloud posture catalog, posture prod-latency-critical-db (verified signal bindings). Contention thresholds render at the 95th percentile over a 7-day window.</div>
+</div>

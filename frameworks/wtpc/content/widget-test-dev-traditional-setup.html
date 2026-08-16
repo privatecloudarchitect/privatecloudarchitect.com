@@ -1,0 +1,27 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">Setup (one-time)</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">Four steps bring this scorecard live. The super metrics import as definitions; activation is a console step.</div>
+
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:14px">
+    <tbody>
+      <tr>
+        <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256;width:96px">1 &middot; Object type</td>
+        <td style="padding:4px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">Each super metric imports as a definition only. Set its Object Type from the name's object slot (Host System &middot; Virtual Machine &middot; Cluster Compute Resource) and its Unit from the name's suffix.</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">2 &middot; Enable</td>
+        <td style="padding:4px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">In <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">PCA - WTPC - Policy - test-dev-traditional</span>, enable the 32 posture super metrics, plus the 4 Shared and the 4 Rightsizing metrics the drill-down renders. Per-policy enablement is the scoping mechanism: members compute, everything else stays dark.</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">3 &middot; Tags</td>
+        <td style="padding:4px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">Membership is two tags (<span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">env=dev</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">sla=sla-4</span>) on the VMs. Their hosts and clusters are derived from where those VMs run, so run the reconciler on a cadence to keep the infrastructure tiers current.</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">4 &middot; Blanks</td>
+        <td style="padding:4px 0;color:#3b4b5b">A blank cell has three legitimate reasons: the object is not a posture member, the metric is not yet enabled in the policy, or the cost engine has not attributed a value yet. This posture ships no alert definitions; a breach is a dashboard color for the weekly review.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Activation reference: the Well-Tuned Private Cloud content authoring doctrine (docs/reference/vcf-ops/content-authoring/).</div>
+</div>

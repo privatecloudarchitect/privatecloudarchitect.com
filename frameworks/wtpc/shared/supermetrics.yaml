@@ -1,0 +1,89 @@
+# Shared + lens super metrics the WTPC content references across postures - the PORTABLE SOURCE.
+#
+# adopt_shared.py upserts these by NAME on your instance (id-preserving update when the name is
+# live, create otherwise), resolves the one cross-reference to the freshly-minted id, and emits
+# `supermetrics.shared.yaml` (the instance RECORD build.py and the view generators read). Ids are
+# minted per instance; this file carries none.
+#
+# Two families, named per their owning initiative (one home per object; reuse is not co-ownership):
+#   PCA - Shared - *       cross-initiative primitives (HA-aware consumption, reclaim, reclaim cost)
+#   PCA - Rightsizing - *  the rightsizing lens quartet the scorecard's reclaim-evidence panel renders
+#
+# `unit` is documentation: the super-metric REST surface carries no display-unit field, so units are
+# confirmed in the UI once per instance (Administration > Configuration > Super Metrics).
+
+supermetrics:
+  - key: SH_CONSUMED_HA_DRAM
+    name: "PCA - Shared - Cluster - Consumed pct of HA DRAM"
+    applies_to: [ClusterComputeResource]
+    unit: percent
+    formula: "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem|haTotalCapacity_average}))"
+    description: >-
+      OBJECT: Cluster Compute Resource. UNIT: percent. Consumed memory as a percent of HA-usable
+      DRAM (after the failover reservation). High = densifying risks HA admission control. WTPC
+      reads it as the availability-floor live-truth check and the capacity floor-coupling gate.
+
+  - key: SH_CONSUMED_DRAM
+    name: "PCA - Shared - Host - Consumed pct of DRAM"
+    applies_to: [HostSystem, ClusterComputeResource]
+    unit: percent
+    formula: "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))"
+    description: >-
+      OBJECT: Host System / Cluster Compute Resource. UNIT: percent. Consumed memory as a percent
+      of DRAM tier capacity - the density signal the capacity views band against the envelope.
+
+  - key: SH_FLEET_RECLAIM_COST
+    name: "PCA - Shared - Cluster - Fleet Reclaimable Cost (USD/mo)"
+    applies_to: [ClusterComputeResource]
+    unit: USD/month
+    formula: "sum(${adaptertype=VMWARE, objecttype=VirtualMachine, metric=cost|reclaimableCost, depth=2})"
+    description: >-
+      OBJECT: Cluster Compute Resource. UNIT: USD/month. The cluster's summed per-VM reclaimable
+      cost - the money the cost views attach to the reclaim evidence.
+
+  - key: SH_RECLAIM
+    name: "PCA - Shared - VM - Memory Reclaimable (GB)"
+    applies_to: [VirtualMachine]
+    unit: GB
+    formula: "((${this, metric=mem|guest_provisioned} - ${this, metric=OnlineCapacityAnalytics|mem|recommendedSize}) / 1048576)"
+    description: >-
+      OBJECT: Virtual Machine. UNIT: GB. Provisioned minus the capacity engine's recommended size -
+      the per-VM reclaim the cluster reclaimable-percent super metric and the oversized-candidates
+      view both roll up.
+
+  - key: RS_OVERSIZED
+    name: "PCA - Rightsizing - VM - Memory Oversized (%)"
+    applies_to: [VirtualMachine]
+    unit: percent
+    formula: "(100 * ((${this, metric=mem|guest_provisioned} - ${this, metric=OnlineCapacityAnalytics|mem|recommendedSize}) / ${this, metric=mem|guest_provisioned}))"
+    description: >-
+      OBJECT: Virtual Machine. UNIT: percent. How far provisioned memory exceeds the capacity
+      engine's recommendation, as a percent of provisioned - the ranking signal of the
+      oversized-candidates view.
+
+  - key: RS_RECOMMENDED
+    name: "PCA - Rightsizing - VM - Recommended Memory (GB)"
+    applies_to: [VirtualMachine]
+    unit: GB
+    formula: "(${this, metric=OnlineCapacityAnalytics|mem|recommendedSize} / 1048576)"
+    description: >-
+      OBJECT: Virtual Machine. UNIT: GB. The capacity engine's recommended memory size - the
+      target the reclaim evidence resizes toward.
+
+  - key: RS_WORKLOAD
+    name: "PCA - Rightsizing - VM - Memory Workload %"
+    applies_to: [VirtualMachine]
+    unit: percent
+    formula: "(100 * (${this, metric=mem|active_average} / ${this, metric=mem|guest_provisioned}))"
+    description: >-
+      OBJECT: Virtual Machine. UNIT: percent. Active over provisioned memory - the sanity column
+      that separates a truly cold candidate from a burst-quiet one before acting on a resize.
+
+  - key: RS_OVERSIZED_COUNT
+    name: "PCA - Rightsizing - Cluster - Oversized VM Count (VMs)"
+    applies_to: [ClusterComputeResource]
+    unit: count
+    formula: "count(${adaptertype=VMWARE, objecttype=VirtualMachine, metric=Super Metric|sm_{SM:RS_OVERSIZED}, depth=2, where=($value > 25)})"
+    description: >-
+      OBJECT: Cluster Compute Resource. UNIT: count. VMs in the cluster more than 25 percent
+      memory-oversized - the cluster roll-up of the lens.

@@ -1,0 +1,84 @@
+# Well-Tuned Private Cloud — posture: prod-business-critical-vm  (catalog P2)
+#
+# PORTABLE, machine-readable source for one posture. Instance-independent: tag rules, envelope values,
+# and the policy capacityDefinition are data, not state. A clean Ops reproduces this posture by applying
+# the tag schema (README §Tags) then running instantiate_posture.py against this file.
+#
+# Provenance: the framework's posture catalog. STATUS: envelope values are PROPOSED
+# (operator-judgment defaults on an envelope-review cadence), transcribed as-proposed. Policy diskspace + poweredOffVmsConsidered and some availability_floor
+# details are INFERRED from framework logic and the two shipped exemplars (prod-latency-critical-db,
+# test-dev-traditional); each inference is marked "# inferred". True them up at reconciliation.
+
+posture: prod-business-critical-vm
+sla: business-critical         # ~99.9 — one tier below latency-critical; HA + DRS + priority, not full reservation
+tier: production
+archetype: traditional         # traditional server VM (app/web tier); not VDI, not containerized
+min_tier: performance          # infra-tier REQUIREMENT (≠ env `tier` above): the least-premium hardware class in
+                               # tiers/ that satisfies this posture; verified `== fit` by `python _tiers.py --self-test`.
+
+# --- Stable content identity (elevator seam; read via _postures.py). ordinal = catalog P-number.
+#     UNIQUE 4-hex UUID prefixes; never reuse c069 (governance GV views). ---
+content_ids: {ordinal: 2, view_prefix: p2, view: c06a, dashboard: d06a, widget: e06a, tab: 0a6a}
+
+# --- Step 1: membership (tag rule — the portable contract; see README §Tags) ---
+# The catalog refines P2 to env=prod ∧ sla=sla-2 ∧ workload∈{app,web} (which also excludes prod
+# infra VMs). v1 realizes the AND-composable core (env ∧ sla-2) and relies on the priority order
+# P1>P3>P5>P2 to route db (P1), vdi (P3), and k8s (P5) members away before P2 claims them. The
+# workload∈{app,web} refinement is a (not yet live-verified) item: add workload=app/web as OR rule blocks once
+# set-membership group rules are verified (posture catalog).
+membership:
+  env: prod
+  sla: sla-2                   # sla-2 = business-critical (README Tags)
+
+# --- Step 3: custom groups (follows-the-workload model): VMs = tag rule; Hosts/Clusters are
+#     derived by reconcile_infra_groups.py from the VMs the group resolves. ---
+groups:
+  - name: "PCA - WTPC - Group - prod-business-critical-vm (VMs)"
+    resource_kind: VirtualMachine
+    membership: [{category: env, value: prod}, {category: sla, value: sla-2}]
+  - name: "PCA - WTPC - Group - prod-business-critical-vm (Clusters)"
+    resource_kind: ClusterComputeResource
+    derived: ancestor-clusters-of-vms-group
+  - name: "PCA - WTPC - Group - prod-business-critical-vm (Hosts)"
+    resource_kind: HostSystem
+    derived: parent-hosts-of-vms-group
+
+# --- Availability FLOOR (posture catalog) ---
+availability_floor:
+  ha: required                 # business-critical → HA required
+  ha_admission_control: enabled          # the posture catalog (not yet live-verified)
+  n_plus: 1                    # the posture catalog
+  drs_minimum: fully_automated # inferred: business-critical prod → full DRS (catalog-declared; not yet live-verified)
+  anti_affinity: none          # no posture-specific AA rule (prod-db carries db-replica-pairs; P2 does not)
+
+# --- Step 4: the enforcement copy (policy) ---
+policy:
+  name: "PCA - WTPC - Policy - prod-business-critical-vm"
+  clone_from: Default
+  capacity_allocation:                 # type=CAPACITY_ALLOCATION_MODEL, resourceKind=ClusterComputeResource
+    cpu: 3.0                           # = cpu_overcommit target
+    memory: 1.25                       # = mem_overcommit target
+    diskspace: 2.5                     # inferred: 2 x mem_target (fits prod-db 2.0, test-dev 4.0)
+    poweredOffVmsConsidered: true      # inferred: a prod business-critical VM reserves its slot for restart
+  capacity_buffer:                     # type=CAPACITY_BUFFER; pct = round(100*(1 - target/warn)) per the shipped convention
+    memory_pct: 17                     # 100*(1 - 1.25/1.5)
+    cpu_pct: 25                        # 100*(1 - 3.0/4.0)
+  criticality: Conservative            # the posture catalog (P1/P2/P3 = Conservative)
+
+# --- The envelope (target/warn/breach per pillar) — the posture catalog, PROPOSED ---
+envelope:
+  capacity:
+    mem_overcommit: {target: 1.25, warn: 1.5, breach: 2.0}
+    cpu_overcommit: {target: 3.0,  warn: 4.0, breach: 6.0}
+  performance:
+    cpu_ready_pct_p95:      {target: 2.0, warn: 5.0, breach: 8.0}   # 2/5 aligns with the shipped view-band precedent
+    mem_contention_pct_p95: {target: 0.0, warn: 1.0, breach: 2.0}   # statkey (not yet live-verified)
+    protection_coverage:    optional                                # reservations governed only at the strict posture (prod-db)
+  cost:
+    reclaimable_pct: {target: 10, warn: 20, breach: 30}             # the rightsizing-yield center of gravity
+
+notes:
+  - Targets identical to P6 stage-business-critical-vm (staging rehearses production); P6 widens the bands ~2x and relaxes floor + response (the posture catalog, T1-T4).
+  - Business-critical is one tier below latency-critical: HA + DRS + priority protect it, not full memory reservation (protection_coverage optional; reservation coverage is governed only at the strict prod-latency-critical-db posture, GV2/D6).
+  - Envelope values are PROPOSED - reconcile against the pillar leaves + a live (not yet live-verified) pass (posture catalog).
+  - Membership realizes the env AND sla-2 core; the workload subset {app,web} is deferred to a set-membership (not yet live-verified) pass (posture catalog).

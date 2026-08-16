@@ -1,0 +1,102 @@
+# Well-Tuned Private Cloud — alerts: posture prod-latency-critical-db (the "now clock")
+#
+# PORTABLE declarative source. Super metrics are referenced by KEY (R1/G11/X7/Shared:SH_CONSUMED_HA_DRAM);
+# build_alerts.py resolves keys -> minted sm ids (the same portable pattern as build_views.py). No
+# instance ids live here.
+#
+# SCOPING (BLOCK invariant — never "all objects"): these alert definitions are ENABLED IN THE WTPC
+# POLICY ONLY, so they fire on posture members only. The alert definition carries no group; per-policy
+# enablement IS the scope (the same mechanism that scopes the SMs — synthesis R2 / B2). Enabling any of
+# these globally (Default policy) would page on every cluster in the fleet — do not.
+#
+# NOTIFICATIONS: out of scope. Alerts land in VCF Ops only — NO notification / ServiceNow rules are
+# created here (outbound gating is its own invariant surface; non-prod outbound is BLOCK-by-default).
+#
+# THRESHOLDS are STRUCTURAL on the roll-up SMs, which already encode the envelope: a count > 0 means a
+# member is over the envelope; an envelope position > 1 means past the breach edge; Consumed % of HA
+# DRAM > 100 means the failover reserve is overspent. So the envelope lives in the SMs; the alert just
+# reads "> 0 / > 1 / > 100".
+#
+# SEVERITY follows the tier (T4 + B3): production latency-critical upgrades the response — floor,
+# performance, and capacity breaches page (incident); a cost breach is a weekly-review ticket.
+
+posture: prod-latency-critical-db
+resource_kind: ClusterComputeResource      # DEFAULT (hardware alerts: capacity/floor). The Performance
+                                            # alert overrides to VirtualMachine (per-VM workload health).
+scoping: policy-enablement                  # enable in "PCA - WTPC - Policy - prod-latency-critical-db" ONLY
+notifications: out-of-scope                 # Ops-only; no outbound rules created
+
+# vROps alert-taxonomy note: type/subType are the Alert Type / Subtype codes (16 = Virtualization, a
+# valid observed VMWARE combo); the MEANINGFUL semantic is the impact badge (risk | health |
+# efficiency). Precise subType is confirmable/adjustable in the UI at import.
+
+alerts:
+  - name: "PCA - WTPC - Floor Breach - Failover Headroom - prod-latency-critical-db"
+    impact: risk
+    severity: CRITICAL
+    wait_cycles: 1
+    routing: incident
+    symptom_operator: OR
+    symptoms:
+      - {label: "Consumed % of HA DRAM over 100", sm: "Shared:SH_CONSUMED_HA_DRAM", operator: GT, value: 100}
+    rationale: "Consumed memory exceeds HA-usable DRAM; a host failure would no longer fit. Restore failover headroom before trusting the scores below."
+
+  - name: "PCA - WTPC - Floor Breach - HA/DRS Config - prod-latency-critical-db"
+    impact: risk
+    severity: CRITICAL
+    wait_cycles: 1
+    routing: incident
+    symptom_operator: OR
+    verify: "property-symptom binding (numeric vs string) confirmed at build/UI import; admissionControlEnabled read as numeric 1/0 like enabledAndFullyAutomated"
+    symptoms:
+      - {label: "Admission control not enabled", property_numeric: "configuration|dasConfig|admissionControlEnabled", operator: NOT_EQ, value: 1}
+      - {label: "Failover level below N+1", property_numeric: "configuration|dasConfig|currentFailoverLevel", operator: LT, value: 1}
+      - {label: "DRS not fully automated", property_numeric: "configuration|drsConfig|enabledAndFullyAutomated", operator: NOT_EQ, value: 1}
+      - {label: "HA config issues present", property_numeric: "configuration|dasConfig|ha_number_config_issues", operator: GT, value: 0}
+    rationale: "Redundancy configuration drifted from the floor: admission control, failover level, DRS automation, or HA config. Restore it before trusting the scores below."
+
+  - name: "PCA - WTPC - Floor Breach - VM Swapping - prod-latency-critical-db"
+    impact: health
+    severity: CRITICAL
+    wait_cycles: 1
+    routing: incident
+    symptom_operator: OR
+    symptoms:
+      - {label: "Member VMs swapping", sm: "G11", operator: GT, value: 0}
+    rationale: "A member VM is swapping. At this posture any swap is a breach: the VM is past the memory cliff. Relieve memory pressure now."
+
+  - name: "PCA - WTPC - Performance Envelope Breach - prod-latency-critical-db"
+    resource_kind: VirtualMachine           # PER-VM (was the cluster R3/R4 count). Two-unit model: the
+                                            # WORKLOAD alert fires on the VM under its POSTURE policy, so it
+                                            # works regardless of the cluster's TIER policy — the cluster
+                                            # belongs to its tier, the VM to its posture .
+    impact: health
+    severity: CRITICAL
+    wait_cycles: 3                          # ~15 min — persistence substitutes for p95 at the now clock
+    routing: incident
+    symptom_operator: OR
+    symptoms:                               # the VM's OWN envelope position past the breach edge (>1)
+      - {label: "VM over CPU Ready envelope", sm: "X3", operator: GT, value: 1}
+      - {label: "VM over Memory Contention envelope", sm: "X4", operator: GT, value: 1}
+    rationale: "This VM has sustained a performance breach past its envelope (CPU ready or memory contention). Investigate contention or re-place the VM."
+
+  - name: "PCA - WTPC - Capacity Envelope Breach - prod-latency-critical-db"
+    impact: risk
+    severity: CRITICAL
+    wait_cycles: 3
+    routing: incident
+    symptom_operator: OR
+    symptoms:
+      - {label: "Member hosts over Memory envelope", sm: "R1", operator: GT, value: 0}
+      - {label: "Member hosts over CPU envelope", sm: "R2", operator: GT, value: 0}
+    rationale: "A member host is past the capacity envelope. Rebalance or de-densify before it reaches the VMs."
+
+  - name: "PCA - WTPC - Cost Envelope Breach - prod-latency-critical-db"
+    impact: efficiency
+    severity: WARNING
+    wait_cycles: 12                         # ~1 h — a weekly-review finding, not a page
+    routing: ticket
+    symptom_operator: OR
+    symptoms:
+      - {label: "Reclaimable position past breach", sm: "X7", operator: GT, value: 1}
+    rationale: "Unclaimed oversize crossed the cost envelope. A ticket for the weekly review, not a page."

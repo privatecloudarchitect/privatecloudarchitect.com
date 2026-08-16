@@ -1,0 +1,35 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="background:#fff8ec;border:1px solid #f0dfb8;border-left:3px solid #e0a92e;border-radius:5px;padding:11px 13px;margin-bottom:10px">
+    <div style="font-size:13.5px;font-weight:700;color:#7a5a12;margin-bottom:5px">Setting up this scorecard: one-time steps</div>
+    <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:8px">The definitions ship in the bundle. Six steps make them live. Until the steps are done, a blank cell means an unwired metric. After they are done, a blank cell has a meaning (step 5 lists the three).</div>
+    <table style="border-collapse:collapse;width:100%;font-size:12.5px">
+      <tbody>
+        <tr>
+          <td style="padding:4px 10px 4px 0;vertical-align:top;width:118px;font-weight:600;color:#2f4256">1 &middot; Import order</td>
+          <td style="padding:4px 0;color:#3b4b5b">Super metrics first, then the five list views (<b>Views &#9656; Manage &#9656; Import</b>), then the dashboard (<b>Dashboards &#9656; Manage &#9656; Import</b>). Each layer references the previous one by id. The order is load-bearing.</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">2 &middot; Activate each SM</td>
+          <td style="padding:4px 0;color:#3b4b5b">A super metric imports as a definition only. Set each one&rsquo;s <b>Object Type</b> from the name&rsquo;s object slot (Host System &middot; Virtual Machine &middot; Cluster Compute Resource). Set its <b>Unit</b> from the name&rsquo;s suffix (%, GB, USD/month, count). Overcommit ratios stay on Auto.</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">3 &middot; Policy enablement</td>
+          <td style="padding:4px 0;color:#3b4b5b">In <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">PCA - WTPC - Policy - prod-latency-critical-db</span>, enable the <b>35 posture super metrics</b>. Also enable the <b>4 Shared</b> and the <b>4 Rightsizing</b> metrics the embedded drill-down renders. Per-policy enablement <b>is</b> the scoping mechanism: members compute, everything else stays dark. Never enable them in the Default policy.</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">4 &middot; Tag hygiene</td>
+          <td style="padding:4px 0;color:#3b4b5b">Membership is three vCenter tags (<span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">env=prod</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">workload=db</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">sla=sla-1</span>) on the VMs. Their hosts and clusters are derived from where those VMs run, so run the reconciler on a cadence to keep the infrastructure tiers current. A group condition matches on <b>category and value together</b>. A near-miss tag yields a silently empty group, not an error.</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">5 &middot; What stays blank</td>
+          <td style="padding:4px 0;color:#3b4b5b">After setup, a blank cell has exactly three legitimate reasons. First: the object is not a posture member, so it computes nothing by design. A blank row on an unpostured object is the scoping working. Second: the metric is not yet enabled in the posture policy, or hasn&rsquo;t completed a collection cycle. Third: the cost engine hasn&rsquo;t attributed a value to the object yet (the blank dollar). One display note: units don&rsquo;t travel through import, so if a GB column renders in base units, set the column unit once.</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">6 &middot; Provider scope</td>
+          <td style="padding:4px 0;color:#3b4b5b">The dashboard imports with <b>vSphere World</b> as its default provider. Re-scope it to <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">PCA - WTPC - Group - prod-latency-critical-db (Clusters)</span> so every widget auto-filters to posture members.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Checklist and membership rule: the Well-Tuned Private Cloud posture catalog, posture prod-latency-critical-db. The bundle&rsquo;s supermetrics.yaml and view XMLs are the single source of truth for every definition.</div>
+</div>

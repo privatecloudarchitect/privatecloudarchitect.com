@@ -1,0 +1,106 @@
+# Well-Tuned Private Cloud — posture: prod-latency-critical-db
+#
+# The PORTABLE, machine-readable source for one posture (the strict exemplar). Everything here is
+# instance-independent: tag rules, envelope values, and the policy capacityDefinition are data, not
+# state. A clean Ops reproduces this posture by applying the tag schema (README §Tags), then running
+# the instantiation recipe (README §Reproduce) against this file. No resource ids, no instance names.
+#
+# Provenance: the framework's ratified posture catalog; every value transcribed, never invented.
+
+posture: prod-latency-critical-db
+sla: latency-critical          # ~99.99 — a contention event is an outage
+tier: production
+archetype: data                # memory-primary; tiering WITHHELD (pinned memory; never tier+overcommit)
+min_tier: dedicated            # infra-tier REQUIREMENT (≠ env `tier` above): the least-premium hardware class in
+                               # tiers/ that satisfies this posture; verified `== fit` by `python _tiers.py --self-test`.
+
+# --- Stable content identity (the elevator seam; read by build_views / build_dashboard / bundles /
+#     governance via _postures.py). ordinal = catalog P-number (fixes estate ordering). view/dashboard/
+#     widget/tab are 4-hex UUID prefixes the generators expand into full ids. UNIQUE per posture; never
+#     reuse c069 (governance GV views). These are this posture's LIVE ids — do not renumber (re-import
+#     keys on the id; a change forks the content instead of updating it). ---
+content_ids: {ordinal: 1, view_prefix: p1, view: c067, dashboard: d067, widget: e067, tab: 0a67}
+
+# --- Step 1: membership (tag rule — the portable contract; see README §Tags for the schema) ---
+# [VERIFIED live] AND-composition of the three tag conditions below is PROVEN on live
+# data (via validate_live.py): a VM tagged env=prod ∧ workload=db ∧ sla=sla-1 joined the group,
+# while a control VM tagged with only env=prod did NOT. The group matches only objects carrying all
+# three. (Custom-group re-resolution after tagging took ~13 min — an interval, not instant.)
+membership:
+  env: prod
+  function: db
+  sla: sla-1                    # sla-1 = latency-critical
+
+# --- Step 3: custom groups. MEMBERSHIP MODEL = "follows the workload". The VM tier is the
+# only tag-declarative anchor; the Host and Cluster tiers are DERIVED from it, so tagging the workload
+# (automatable via VCFA/orchestrator) is the single input and the infrastructure tiers follow VM
+# placement with no operator re-tagging.
+#
+#   VMs      = tag rule: env=prod AND workload=db AND sla=sla-1 (AND-composition VERIFIED live).
+#   Hosts    = derived: the HostSystems running a VMs-group member.
+#   Clusters = derived: the ClusterComputeResources hosting a VMs-group member.
+#
+# WHY derived and not a declarative relationship rule: vROps relationship rules match the far object
+# by NAME, never by tag or by another group (VERIFIED - 9.1 spec relation enum PARENT|CHILD|ANCESTOR|
+# DESCENDANT + name/compareOperator; the only two live relationship-rule groups both anchor on a named
+# container). The rule engine cannot see the workload tag across the host<->VM edge. So a reconciler
+# (reconcile_infra_groups.py) walks VM --PARENT--> Host --PARENT--> Cluster and writes the result as
+# each infra group's includedResources (rules dropped). Idempotent; dry-run by default.
+groups:
+  - name: "PCA - WTPC - Group - prod-latency-critical-db (VMs)"
+    resource_kind: VirtualMachine
+    membership: [{category: env, value: prod}, {category: function, value: db}, {category: sla, value: sla-1}]
+  - name: "PCA - WTPC - Group - prod-latency-critical-db (Clusters)"
+    resource_kind: ClusterComputeResource
+    derived: ancestor-clusters-of-vms-group          # reconcile_infra_groups.py (includedResources)
+  - name: "PCA - WTPC - Group - prod-latency-critical-db (Hosts)"
+    resource_kind: HostSystem
+    derived: parent-hosts-of-vms-group               # reconcile_infra_groups.py (includedResources)
+
+# --- Availability FLOOR (GATE — verified pass/fail, never scored; floor leaf) ---
+availability_floor:
+  ha: required
+  ha_admission_control: enabled
+  admission_policy: host_failures          # host_failures | percentage | dedicated_hosts
+  n_plus: 1                                # k=1 host failure tolerated (member hosts >= 2, failover level >= 1)
+  drs_minimum: fully_automated
+  headroom_ceiling_pct: 100                # Consumed % of HA-usable DRAM must be <= this
+  anti_affinity: db-replica-pairs          # UNVERIFIED — no observable; manual monthly check
+
+# --- Step 4: the enforcement copy (policy capacityDefinition — CLUSTER-scoped, per preflight the catalog) ---
+# One policy cloned from Default, applied to all three groups, top of the custom priority list at
+# exemplar time. capacityDefinition compiled from the envelope; PATCHed per resource kind (204).
+policy:
+  name: "PCA - WTPC - Policy - prod-latency-critical-db"
+  clone_from: Default                      # portable: every Ops has a Default; the id is discovered at instantiation
+  capacity_allocation:                     # type=CAPACITY_ALLOCATION_MODEL, resourceKind=ClusterComputeResource
+    cpu: 1.5                               # = cpu_overcommit.target
+    memory: 1.0                            # = mem_overcommit.target (the RAM is the DB's)
+    diskspace: 2.0
+    poweredOffVmsConsidered: true          # a powered-off DB replica still owns its slot at this SLA
+  capacity_buffer:                         # type=CAPACITY_BUFFER (applied after HA)
+    memory_pct: 9                          # round(100*(1 - target/warn)) = 100*(1 - 1.0/1.1)
+    cpu_pct: 25                            # 100*(1 - 1.5/2.0)
+  criticality: Conservative                # Capacity/Time Remaining preset for latency-critical (P1/P2/P3)
+
+# --- The envelope (target / warn / breach per pillar; the single source for all 3 R1 copies) ---
+envelope:
+  capacity:
+    mem_overcommit: {target: 1.0, warn: 1.1, breach: 1.25, basis: dram}   # tiering withheld -> strict ratio
+    cpu_overcommit: {target: 1.5, warn: 2.0, breach: 3.0}
+  performance:
+    cpu_ready_pct_p95:      {target: 1.0, warn: 3.0, breach: 5.0}
+    cpu_costop_pct_p95:     {target: 0.5, warn: 1.5, breach: 3.0}
+    mem_contention_pct_p95: {target: 0.0, warn: 0.5, breach: 1.0}
+    mem_balloon_pct_p95:    {target: 0.0, warn: 0.5, breach: 2.0}
+    mem_swapped_gb:         {target: 0,   warn: ">0", breach: ">0"}        # any swap = breach
+    protection_coverage:    required                                       # reservations MUST exist (absence = drift)
+  cost:
+    reclaimable_pct:  {target: 5, warn: 15, breach: 25}                    # headroom != waste; low waste tolerated
+    cost_coverage_pct: {gate: true}                                        # validity gate (not scored)
+    cost_per_workload: {baseline: at_activation}                           # reported + baselined, not banded in v1
+
+notes:
+  - Memory tiering is WITHHELD at this posture (pinned memory can't tier; never tier + overcommit).
+  - reservation coverage is the drift check for mem_overcommit=1.0.
+  - All values verbatim from the framework's ratified catalog; every statkey binding verified live.

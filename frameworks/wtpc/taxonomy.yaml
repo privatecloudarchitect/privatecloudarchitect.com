@@ -1,0 +1,31 @@
+# WTPC tag taxonomy - the portable membership contract (step 1 of the adopt recipe).
+#
+# Three concepts drive posture membership: env (lifecycle tier), function (workload archetype),
+# sla (service-domain SLA). Each maps to ONE live vCenter tag category. The `category` field is
+# the live name on YOUR estate - rename it here (never in a script or posture) if your estate
+# already carries a taxonomy or namespaces its categories (e.g. lifecycle.env). Every script
+# resolves concept -> category through lib/_taxonomy.py, and WTPC_TAXONOMY=/path/file.yaml
+# points the whole estate at an alternate copy of this file without editing it.
+#
+# Cardinality is SINGLE on every axis by design: a workload has one environment, one function,
+# one SLA. The value lists are CLOSED - a group rule matches exact strings, and an open list
+# turns silent typos into silently-empty groups.
+
+categories:
+  - concept: env
+    category: env
+    object: VirtualMachine
+    cardinality: SINGLE
+    values: [prod, stage, dev, test, dr, lab]
+
+  - concept: function
+    category: function
+    object: VirtualMachine
+    cardinality: SINGLE
+    values: [db, web, app, vdi, k8s, infra]
+
+  - concept: sla
+    category: sla
+    object: VirtualMachine
+    cardinality: SINGLE
+    values: [sla-1, sla-2, sla-3, sla-4]

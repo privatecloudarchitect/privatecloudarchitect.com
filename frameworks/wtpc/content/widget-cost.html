@@ -1,0 +1,17 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">Purchased headroom is not waste</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:14px">Cost at this posture means efficiency <i>within</i> protection, not raw density. Read the cost view beside this through that lens.</div>
+
+  <div style="background:#f4f7fa;border:1px solid #dbe4ec;border-left:3px solid #2f6fb0;border-radius:5px;padding:11px 13px;margin-bottom:16px">
+    <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:5px">The posture pays for protection</div>
+    <div style="color:#3b4b5b;font-size:12.5px">Reservations on every member and a 1.0&times; memory overcommit are the purchased protection a latency-critical SLA runs on. They are not inefficiency. The envelope&rsquo;s 5 / 15 / 25 reclaimable band already prices that protection in. The score moves only on <b>unclaimed oversize</b>: allocation the demand analysis shows the workload never touches. Reclaiming that oversize costs the SLA nothing. Reclaiming the headroom would cost the SLA everything.</div>
+  </div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>The coverage gate.</b> Cost Coverage % is a validity gate. It never awards points. Below the threshold the coverage column carries, the dollar figures read as insufficient cost-engine coverage. A low number with low coverage is <b>unknown, not green</b>. Fix attribution before you quote the dollars.</div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>A blank dollar.</b> A blank in a dollar column means the cost engine hasn&rsquo;t attributed a cost to that object yet. It does not mean there is nothing to reclaim. When the dollar is blank, rank by the Reclaimable GB column instead. The GB figure drives the score. The dollar figure is there to help you make the case to finance.</div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:10px"><b>The withheld lever.</b> Memory tiering is deliberately not offered at this posture. Pinned database memory cannot tier, and tiering never combines with overcommit. The density lever lives in other postures. Don&rsquo;t add it back here.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:8px">Envelope and coverage semantics: the Well-Tuned Private Cloud posture catalog, posture prod-latency-critical-db.</div>
+</div>
