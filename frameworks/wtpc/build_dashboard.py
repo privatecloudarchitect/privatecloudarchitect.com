@@ -257,15 +257,15 @@ def build(sm, groups=None):
 
     P = POSTURE
     widgets = [
-        text(1, "Availability floor: the gate", (1, 1, 4, 6), "widget-floor.html"),
-        view(2, f"Availability Floor (per cluster)", (5, 1, 8, 6), VIEWS["V5"], gp("V5")),
+        text(1, "Availability floor: the gate", (1, 1, 5, 6), "widget-floor.html"),
+        view(2, f"Availability Floor (per cluster)", (6, 1, 7, 6), VIEWS["V5"], gp("V5")),
         text(3, "How to read this scorecard", (1, 7, 12, 14), "widget-how-to-read.html"),
         view(4, "Cluster capacity vs envelope", (1, 21, 12, 8), VIEWS["V3"], gp("V3")),
-        view(5, "Host capacity vs envelope", (1, 29, 7, 10), VIEWS["V2"], gp("V2")),
-        heatmap(6, "Capacity envelope position", (8, 29, 5, 10),
+        view(5, "Host capacity vs envelope", (1, 29, 6, 10), VIEWS["V2"], gp("V2")),
+        heatmap(6, "Capacity envelope position", (7, 29, 6, 10),
                 x1_key, x1_name, cap_bounds, g1_key, g1_name, RK_HOST, 4),
-        view(7, "VM contention vs envelope", (1, 39, 7, 12), VIEWS["V1"], gp("V1")),
-        heatmap(8, "Ready position (heatmap)", (8, 39, 5, 12),
+        view(7, "VM contention vs envelope", (1, 39, 6, 12), VIEWS["V1"], gp("V1")),
+        heatmap(8, "Ready position (heatmap)", (7, 39, 6, 12),
                 x3_key, x3_name, ready_bounds, "cpu|demandmhz", "CPU Demand (MHz)", RK_VM, 5),
         text(9, "VM detail", (1, 51, 12, 2), "widget-vm-detail.html"),
         drill_chart(10, "CPU", (1, 53, 6, 9),
@@ -275,8 +275,8 @@ def build(sm, groups=None):
                     [_line("Memory|Contention (%)", "mem|host_contentionPct", "Contention %", "mem_contention_pct_p95"),
                      _line("Memory|Balloon (%)", "mem|balloonPct", "Balloon %", "mem_balloon_pct_p95")]),
         view(12, "Cost: envelope and coverage", (1, 62, 12, 7), VIEWS["V4"], gp("V4")),
-        text(13, cost_title, (1, 69, 4, 10), "widget-cost.html"),
-        view(14, "Reclaim evidence: oversized candidates", (5, 69, 8, 10), VIEWS["OVERSIZED"], gp("OVERSIZED")),
+        text(13, cost_title, (1, 69, 5, 10), "widget-cost.html"),
+        view(14, "Reclaim evidence: oversized candidates", (6, 69, 7, 10), VIEWS["OVERSIZED"], gp("OVERSIZED")),
         text(15, "The operating rhythm", (1, 79, 12, 13), "widget-cadence.html"),
         text(16, "Setup (one-time)", (1, 92, 12, 6), "widget-setup.html"),
         text(17, "The envelope & metric model", (1, 98, 12, 14), "widget-reference.html"),
@@ -308,6 +308,20 @@ def build(sm, groups=None):
 
 # ---------------------------------------------------------------------- self-validation
 
+
+def _assert_proven_splits(widgets):
+    """Row-split gate: multi-widget rows must use a live-proven split - full width, 6+6, or 5+7
+    in the x1/x6 orientation. A 7+5 or 4+8 row misplaces/collapses widgets on import; the
+    reference dashboards prove the allowed set."""
+    allowed = {frozenset({(1, 6), (7, 6)}), frozenset({(1, 5), (6, 7)})}
+    rows = {}
+    for w in widgets:
+        g = w["gridsterCoords"]
+        rows.setdefault(g["y"], set()).add((g["x"], g["w"]))
+    for y, segs in rows.items():
+        if len(segs) > 1:
+            assert frozenset(segs) in allowed, f"unproven row split at y={y}: {sorted(segs)}"
+
 def validate(doc, groups=None):
     dash = doc["dashboards"][0]
     ws = dash["widgets"]
@@ -325,6 +339,7 @@ def validate(doc, groups=None):
             t2, x2, y2, w2, h2 = rects[j]
             if x1 < x2 + w2 and x2 < x1 + w1 and y1 < y2 + h2 and y2 < y1 + h1:
                 raise AssertionError(f"gridster overlap: {t1!r} and {t2!r}")
+    _assert_proven_splits(ws)
     # 2) view refs resolve to a known view id, and each View is bound to the RIGHT provider:
     #    group-scoped -> its posture group id (members only); unscoped -> vSphere World (portable)
     known = set(VIEWS.values())
