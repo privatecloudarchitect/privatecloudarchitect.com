@@ -47,7 +47,11 @@ enabled, not a broken import.
 
 ## Making it true from scratch
 
-The dashboard's own Setup panel walks this in full; the short form, in sensor-chain order:
+The dashboard's own Setup panel walks this in full, and
+[CONFIGURATION.md](CONFIGURATION.md) is the deep guide: per-layer configuration with the exact
+API payloads, the certificate-trust model (signing CA, not endpoint leaves), enablement
+semantics, verification without the console, and a condensed failure-signature table, all
+proven live. The short form, in sensor-chain order:
 
 1. **Pipeline first.** A cloud proxy deployed and every collector UP. A down collector freezes
    every layer at once; the signature is fleet-wide staleness at one age.
