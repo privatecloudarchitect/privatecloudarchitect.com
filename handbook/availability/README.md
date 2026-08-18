@@ -26,13 +26,14 @@ Each layer references the previous one by id, so the order matters:
      form: names, formulas, object types, units.
    - `supermetrics/editor-formulas.yaml`: the by-hand path: editor-syntax formulas with the two
      id substitutions the composition metrics need if you mint your own ids.
-2. `views/availability-views.import.zip`: all eleven views in the **Views, Manage, Import** shape
+2. `views/availability-views.import.zip`: all twelve views in the **Views, Manage, Import** shape
    (import the zip directly). Id-preserving, so the dashboard resolves them. Layer five carries
    two views, one per sensor: agentless Service Discovery and the agent's service monitors.
-   - `views/availability-views.contentpkg.zip`: the same eleven views for the content-import API
+   Layer one carries two too: the ping-adapter tables and the object-level reachability view.
+   - `views/availability-views.contentpkg.zip`: the same twelve views for the content-import API
      path, if you prefer one mechanism for metrics and views.
 3. `dashboard/availability-service-levels.import.zip`: the dashboard, via **Dashboards, Manage,
-   Import**, after the views. Twenty widgets: a collapsed Setup panel on top (expand it once:
+   Import**, after the views. Twenty-two widgets: a collapsed Setup panel on top (expand it once:
    it is the from-scratch runbook), then education beside evidence for every layer. The two
    world providers (vSphere World, Ping World) bind YOUR instance's objects automatically
    through the import remap; if a ping table ever imports unconfigured, edit the widget and
@@ -60,6 +61,10 @@ proven live. The short form, in sensor-chain order:
    plain slug; the display name can be branded), declare FQDN and IP targets, take values from
    the product's documented ranges, and read the instance's Adapter Status message as the health
    gate: an instance can heartbeat while reporting "Adapter configuration failed."
+2b. **Object-level ping (optional, L1 on inventory).** For vSphere VMs and hosts, enable the
+   `isPingEnabled` identifier (PUT /api/resources) to bind reachability onto the object itself,
+   beside its guest KPI. Scope it by promise; it runs from the object's collector, so read each
+   as reachable-from-there. CONFIGURATION.md section 1b has the mechanism.
 3. **VMware Tools everywhere (L3).** Tools is the sensor: the guest availability KPI, guest
    uptime, Service Discovery, and HA's guest-restart protection all ride it. The L3 table's
    Tools columns are your verification.

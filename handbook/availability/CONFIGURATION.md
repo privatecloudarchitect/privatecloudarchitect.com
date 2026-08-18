@@ -26,6 +26,7 @@ each thing. This is the map:
 |---|---|---|
 | Cloud proxy / collector | per site or failure domain | one proxy per network vantage you must collect from |
 | Ping instance | per collector vantage | one instance per proxy whose network path you want to test; endpoints are an identifier list on the instance |
+| Object ping | per VM or host, opt-in | reachability bound to the inventory object (isPingEnabled), on the object's own collector |
 | VMware Tools | per VM | install and keep current on every guest |
 | Service Discovery (agentless) | per vCenter | one adapter instance per vCenter, each with its own VMCA root trusted |
 | VC-CP mapping | per vCenter, one-time | map each vCenter to its proxy before any agent installs behind it |
@@ -70,6 +71,35 @@ truth. One instance can carry many endpoints (they are a single identifier list)
 practical ceiling in mind and split when the batch interval and packet count times the endpoint
 count start crowding the collection window; a few hundred endpoints per instance is comfortable,
 thousands is not.
+
+### 1b · Object-level ping: reachability bound to inventory
+
+There is a second, complementary ping mechanism. The Ping adapter above reaches arbitrary and
+external endpoints and mints standalone objects; **object-level ping runs on a virtual machine or
+host's own collector and writes the reading onto the object itself.** Enabling it on a VM gives
+that VM `ping|peak_packet_loss` and `ping|peak_latency` of its own (verified: the peak loss reads
+100 on an unreachable object, not blank, so failures surface; latency is null when unreachable),
+which lets reachability sit on the same row as the guest availability KPI. A VM green on the KPI
+but red on loss is alive with its path down from the monitoring vantage, a real and different
+finding than a dead guest.
+
+The toggle is a resource identifier, `isPingEnabled`, which is not part of the object's
+uniqueness, so flipping it updates the existing object. Enable it with
+`PUT /api/resources`: read the object (`GET /api/resources?resourceKind=VirtualMachine&name=...`),
+set the `isPingEnabled` identifier's value to `"true"` in the returned `resourceKey`, and PUT the
+object back with every other identifier preserved. Disable by setting it back to `""`. For bulk,
+loop a scoped GET and PUT; **scope it, do not sweep the fleet.** Enable object ping on the
+workloads that carry a reachability commitment, by the same by-promise rule as the agent plane. A
+VM with object ping off simply carries no ping metric, which is a coverage statement, not a health
+one.
+
+The vantage rule from above still holds and is the one caution worth internalizing: object ping
+runs from the object's collector, exactly like a ping instance runs from its collector group. A
+workload reachable only through a different vantage (an NSX overlay reachable only via a workload
+cloud proxy, say) reads 100 percent here while the guest is up. Object ping does not add a new
+vantage; it binds the reading to the object. This was verified live: the same target read
+identically from the Ping adapter and from object ping on the same collector, and the two mechanisms
+agree whenever they share a vantage.
 
 ## 2 · VMware Tools (the layer-3 sensor)
 
@@ -125,6 +155,14 @@ Manage Services page) moves that service to five-minute collection, starts its p
 metrics, and arms the shipped service-unavailability alert. A discovered-but-unmonitored
 service shows blank metric cells by design: that is coverage information. Activate by promise,
 starting with the services your commitments name.
+
+**Both discovery modes are agentless.** Service Discovery and the Application Discovery layer on
+top of it (rule-based multi-tier applications composed from discovered services) both run through
+VMware Tools plus vCenter privileges, not an installed agent. This is not just the documented
+design; it is verified: on the reference estate, Service Discovery found PostgreSQL, Active
+Directory, and Tomcat on management VMs that carry no agent object at all. The product-managed
+agent (the Telegraf-based OS and Application Monitoring pack in §4) is a separate sensor, so a
+service type like PostgreSQL can be monitored two ways, agentlessly here or by the agent there.
 
 **The Linux limit, and why layer 5 has a second sensor.** Credential-less discovery reads a
 Linux guest's inventory through Tools but does not see the services running inside it without
