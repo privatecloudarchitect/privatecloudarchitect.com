@@ -1,0 +1,76 @@
+{
+ "4120f8b5-9bd2-4537-8583-f259f1296556": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ping_adapter_instance",
+    "adapterKindKey": "PingAdapter"
+   }
+  ],
+  "modificationTime": 1787034928314,
+  "name": "PCA - Availability - Ping Instance - Reachability SLI (%)",
+  "formula": "(100 * (${this, metric=Super Metric|sm_56dadd97-427f-4728-9abd-c6621846c3c2} / ${this, metric=Super Metric|sm_36ae2a5e-e941-471c-b763-53d39c144879}))",
+  "description": "OBJECT: ping adapter instance. UNIT: percent. Reachable over total child checks: the L1 instantaneous SLI; its window average is the L1 attainment budget.py reports. PCA Availability arm, L1 SLI set; companion artifacts at privatecloudarchitect.com/handbook/availability.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+ },
+ "36ae2a5e-e941-471c-b763-53d39c144879": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ping_adapter_instance",
+    "adapterKindKey": "PingAdapter"
+   }
+  ],
+  "modificationTime": 1787034926863,
+  "name": "PCA - Availability - Ping Instance - Checks (count)",
+  "formula": "(count(${adaptertype=PingAdapter, objecttype=fqdn_type, metric=peak_packet_loss, depth=1}) + count(${adaptertype=PingAdapter, objecttype=ip_type, metric=peak_packet_loss, depth=1}))",
+  "description": "OBJECT: ping adapter instance. UNIT: count. Independent monitored endpoints (direct child checks of both kinds; an IP that a declared FQDN resolves to folds under the FQDN and counts once). PCA Availability arm, L1 SLI set; companion artifacts at privatecloudarchitect.com/handbook/availability.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+ },
+ "56dadd97-427f-4728-9abd-c6621846c3c2": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ping_adapter_instance",
+    "adapterKindKey": "PingAdapter"
+   }
+  ],
+  "modificationTime": 1787034927261,
+  "name": "PCA - Availability - Ping Instance - Checks Reachable (count)",
+  "formula": "(count(${adaptertype=PingAdapter, objecttype=fqdn_type, metric=peak_packet_loss, depth=1, where=($value < 100)}) + count(${adaptertype=PingAdapter, objecttype=ip_type, metric=peak_packet_loss, depth=1, where=($value < 100)}))",
+  "description": "OBJECT: ping adapter instance. UNIT: count. Child checks whose worst-of-cycle loss stayed under 100 percent (some reply arrived). PCA Availability arm, L1 SLI set; companion artifacts at privatecloudarchitect.com/handbook/availability.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+ },
+ "c452ab2e-85f6-4abd-9a88-fdd20ad6e8da": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ip_type",
+    "adapterKindKey": "PingAdapter"
+   },
+   {
+    "resourceKindKey": "fqdn_type",
+    "adapterKindKey": "PingAdapter"
+   }
+  ],
+  "modificationTime": 1787034926394,
+  "name": "PCA - Availability - Check - Packet Delivery (%)",
+  "formula": "(100 - ${this, metric=peak_packet_loss})",
+  "description": "OBJECT: ping check (ip_type/fqdn_type). UNIT: percent. 100 minus the cycle's WORST packet loss (peak_packet_loss, the non-instanced key): the conservative per-check delivery figure. PCA Availability arm, L1 SLI set; companion artifacts at privatecloudarchitect.com/handbook/availability.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+ },
+ "c48eb8af-c73d-4126-916a-725c86ed00d0": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ping_adapter_instance",
+    "adapterKindKey": "PingAdapter"
+   }
+  ],
+  "modificationTime": 1787034927706,
+  "name": "PCA - Availability - Ping Instance - Checks Unreachable (count)",
+  "formula": "(${this, metric=Super Metric|sm_36ae2a5e-e941-471c-b763-53d39c144879} - ${this, metric=Super Metric|sm_56dadd97-427f-4728-9abd-c6621846c3c2})",
+  "description": "OBJECT: ping adapter instance. UNIT: count. Checks minus reachable (same-object composition). PCA Availability arm, L1 SLI set; companion artifacts at privatecloudarchitect.com/handbook/availability.",
+  "unitId": "",
+  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+ }
+}

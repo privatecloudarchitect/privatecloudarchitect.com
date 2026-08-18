@@ -1,0 +1,40 @@
+# The five L1 reachability SLI super metrics, in super-metric editor syntax, for building by
+# hand instead of importing the content package. Object types and units as listed. The two
+# composition metrics (Unreachable, Reachability SLI) reference the ids YOUR instance mints for
+# Checks and Checks Reachable: create those two first, copy their ids from the super metric list,
+# and substitute below where marked <id-of-...>.
+#
+# Evidence model: peak_packet_loss is the cycle's WORST packet loss per check (conservative,
+# early-warning read). An FQDN check's resolved-address children fold under it, so depth-1
+# child counts on the adapter instance mean INDEPENDENT endpoints.
+
+supermetrics:
+  - name: "PCA - Availability - Check - Packet Delivery (%)"
+    applies_to: [ip_type, fqdn_type]     # adapter kind: PingAdapter
+    unit: percent
+    formula: "(100 - ${this, metric=peak_packet_loss})"
+
+  - name: "PCA - Availability - Ping Instance - Checks (count)"
+    applies_to: [ping_adapter_instance]
+    unit: count
+    formula: "(count(${adaptertype=PingAdapter, objecttype=fqdn_type, metric=peak_packet_loss, depth=1}) + count(${adaptertype=PingAdapter, objecttype=ip_type, metric=peak_packet_loss, depth=1}))"
+
+  - name: "PCA - Availability - Ping Instance - Checks Reachable (count)"
+    applies_to: [ping_adapter_instance]
+    unit: count
+    formula: "(count(${adaptertype=PingAdapter, objecttype=fqdn_type, metric=peak_packet_loss, depth=1, where=($value < 100)}) + count(${adaptertype=PingAdapter, objecttype=ip_type, metric=peak_packet_loss, depth=1, where=($value < 100)}))"
+
+  - name: "PCA - Availability - Ping Instance - Checks Unreachable (count)"
+    applies_to: [ping_adapter_instance]
+    unit: count
+    formula: "(${this, metric=Super Metric|sm_<id-of-Checks>} - ${this, metric=Super Metric|sm_<id-of-Checks-Reachable>})"
+
+  - name: "PCA - Availability - Ping Instance - Reachability SLI (%)"
+    applies_to: [ping_adapter_instance]
+    unit: percent
+    formula: "(100 * (${this, metric=Super Metric|sm_<id-of-Checks-Reachable>} / ${this, metric=Super Metric|sm_<id-of-Checks>}))"
+
+# Activation is part of creation: a super metric computes only when it is assigned its object
+# type(s) and enabled in the policy that governs the ping objects (the Default policy on a fresh
+# install; your scoped policy if you create one). Enablement is declarative per metric: one
+# enable action carrying ALL its policies and object types at once.
