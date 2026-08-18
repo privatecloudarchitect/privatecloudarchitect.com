@@ -63,6 +63,20 @@ checks. Create one instance and declare your endpoints on it.
 addresses is how you learn whether the collector routes to it; a 100 percent loss row is a
 finding about the path, and a different finding than a degraded one.
 
+**Monitor the front door, not the private backend.** This one is proven and it is the trap most
+worth naming. A modern application on a supervisor namespace, a VKS guest cluster, or an NSX VPC
+runs on a private CIDR (172.16.0.0/12-style space) that is inbound-isolated from the management
+network by design: the workload reaches out by source NAT and is reached in only through a load
+balancer. A ping from the collector to the workload's private pod or VM IP therefore reads a
+stable 100 percent loss, which is correct and useless, and it will page you on a healthy app.
+The right target is the application's external LoadBalancer VIP, the address users actually reach.
+On a live three-tier app this was unmistakable: the private data-tier VM IP read 100 percent from
+the collector while the NSX Advanced Load Balancer VIP for the web tier answered a ping at 0
+percent and served HTTP 200. Find the VIP in Operations under the NSX Advanced Load Balancer
+adapter's VirtualService objects (the `Summary|VSVIP` property), or from the LoadBalancer
+service's external IP inside the guest cluster, and declare that. Reserve the private IP for a
+check that runs from a vantage that actually shares the workload's network, if you have one.
+
 **A ping result is relative to the collector's vantage.** The check proves reachability from the
 collector that runs it, not from where your users sit. On a multi-site estate, a service can read
 100 percent reachable from the datacenter collector and be unreachable for a branch, so plan a
@@ -285,6 +299,7 @@ Two verification tools worth knowing, both used to prove this directory's artifa
 | "Certificate validation failed" persists after trusting the endpoint certificate | Trust is chain-based | Add the signing VMCA root CA(s) from the vCenter's certs bundle, then restart the instance |
 | A whole fleet of readings frozen at one age | One dead collector, not many failures | Check collector state and adapter last-collected before touching content |
 | A perfect reading renders yellow | Ascending band bounds are exclusive at the top | Set the yellow bound below the perfect value |
+| A workload's private IP reads a stable 100% loss from the collector | It is a VPC / supervisor / VKS private address, inbound-isolated by design | Monitor the app's external LoadBalancer VIP (the front door) instead; the private IP is the wrong target |
 | A Linux VM discovered with zero services | Credential-less discovery cannot see inside a Linux guest | Provide guest credentials to Service Discovery, or monitor the service with the agent plugin (§4) |
 | Agent install fails "No AppOsAdapter ... in the VC-CP mapping" | The target vCenter is not mapped to a proxy | Query mappings, then post the new vCenter id once (additive; re-posting a mapped vCenter 400s) |
 | Guest auth fails at agent install with a credential from the automation platform | The stored deploy-time password is encrypted, not the plaintext | Recover the value from the deploy tooling's defaults; verify with a vCenter guest-operations login (201 = good) |
