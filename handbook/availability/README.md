@@ -63,8 +63,11 @@ proven live. The short form, in sensor-chain order:
    gate: an instance can heartbeat while reporting "Adapter configuration failed."
 2b. **Object-level ping (optional, L1 on inventory).** For vSphere VMs and hosts, enable the
    `isPingEnabled` identifier (PUT /api/resources) to bind reachability onto the object itself,
-   beside its guest KPI. Scope it by promise; it runs from the object's collector, so read each
-   as reachable-from-there. CONFIGURATION.md section 1b has the mechanism.
+   beside its guest KPI. Scope it by promise, but never onto a workload isolated on a private
+   CIDR: that object reads a steady full loss from the collector even while healthy, and belongs
+   measured at its load-balancer VIP instead (the front-door rule below). It runs from the
+   object's collector, so read each as reachable-from-there. CONFIGURATION.md section 1b has the
+   mechanism.
 3. **VMware Tools everywhere (L3).** Tools is the sensor: the guest availability KPI, guest
    uptime, Service Discovery, and HA's guest-restart protection all ride it. The L3 table's
    Tools columns are your verification.
@@ -89,6 +92,13 @@ proven live. The short form, in sensor-chain order:
 
 ## The rules the content encodes
 
+- **Monitor the front door, not the private backend.** A workload on a private, inbound-isolated
+  CIDR (a supervisor namespace, a VKS cluster, an NSX VPC, or anything reachable only through a
+  load balancer) reads a steady 100% loss from the collector while it is healthy and serving
+  traffic. Point the check at its external load-balancer VIP (the NSX Advanced Load Balancer
+  VirtualService's `Summary|VSVIP`), never the private VM or pod IP. The signature is
+  unmistakable: the private address holds 100% loss while, in the same window, the VIP answers
+  ping at 0% and serves an HTTP 200.
 - **Peak, not average.** Delivery reads the cycle's worst packet loss; a link that fails every
   fifth batch averages respectably and is still failing someone every fifth batch.
 - **Blind is not down.** Tools heartbeat under 100 means the platform lost its sensor, and the
