@@ -26,12 +26,13 @@ Each layer references the previous one by id, so the order matters:
      form: names, formulas, object types, units.
    - `supermetrics/editor-formulas.yaml`: the by-hand path: editor-syntax formulas with the two
      id substitutions the composition metrics need if you mint your own ids.
-2. `views/availability-views.import.zip`: all ten views in the **Views, Manage, Import** shape
-   (import the zip directly). Id-preserving, so the dashboard resolves them.
-   - `views/availability-views.contentpkg.zip`: the same ten views for the content-import API
+2. `views/availability-views.import.zip`: all eleven views in the **Views, Manage, Import** shape
+   (import the zip directly). Id-preserving, so the dashboard resolves them. Layer five carries
+   two views, one per sensor: agentless Service Discovery and the agent's service monitors.
+   - `views/availability-views.contentpkg.zip`: the same eleven views for the content-import API
      path, if you prefer one mechanism for metrics and views.
 3. `dashboard/availability-service-levels.import.zip`: the dashboard, via **Dashboards, Manage,
-   Import**, after the views. Nineteen widgets: a collapsed Setup panel on top (expand it once:
+   Import**, after the views. Twenty widgets: a collapsed Setup panel on top (expand it once:
    it is the from-scratch runbook), then education beside evidence for every layer. The two
    world providers (vSphere World, Ping World) bind YOUR instance's objects automatically
    through the import remap; if a ping table ever imports unconfigured, edit the widget and
@@ -62,12 +63,18 @@ proven live. The short form, in sensor-chain order:
 3. **VMware Tools everywhere (L3).** Tools is the sensor: the guest availability KPI, guest
    uptime, Service Discovery, and HA's guest-restart protection all ride it. The L3 table's
    Tools columns are your verification.
-4. **Service Discovery (L5, native).** Enable per vCenter adapter (its Service Discovery tab);
-   credential-less with Tools 12.3.0 or later. Activate monitoring for the services that matter:
-   activation moves them from daily discovery to five-minute collection and arms the shipped
-   service-unavailability alert.
-5. **Agents where depth is owed (L4).** The OS and Application Monitoring agent is the second,
-   independent sensor. Install by promise, not by fleet.
+4. **Service Discovery (L5 sensor one, native).** Enable per vCenter adapter (its Service
+   Discovery tab). It is credential-less on Windows with Tools 12.3.0 or later; on a Linux guest
+   it needs guest credentials to see services inside the guest, and shows the VM with zero
+   services until they are supplied. Activate monitoring for the services that matter to move
+   them from daily discovery to five-minute collection and arm the shipped service-unavailability
+   alert. Full per-layer detail, including the per-vCenter certificate trust, is in
+   [CONFIGURATION.md](CONFIGURATION.md).
+5. **Agents (L4, and L5 sensor two).** The OS and Application Monitoring agent gives the OS its
+   own availability figure (L4) and, through per-service plugins, a per-service availability
+   object (the agent half of L5). On a credential-constrained Linux service it is the sensor of
+   record, not optional depth. Install by promise, not by fleet; it needs the target vCenter
+   mapped to a proxy first, and the plugin needs the service's own connection (CONFIGURATION.md).
 6. **The computed layer.** Step 1 above (the super metrics), plus alerting scoped to a dedicated
    group and policy, never to everything.
 7. **Keep it true.** Templates carry current Tools and the agent; Tools currency rides the guest

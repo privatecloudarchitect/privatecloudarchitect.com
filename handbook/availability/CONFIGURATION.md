@@ -3,9 +3,10 @@
 The import artifacts in this directory render the dashboard; this guide makes the readings true.
 It follows the sensor chain from the pipeline up, the same order as the dashboard's setup panel,
 and every step, payload, and failure signature here was proven on a live VCF Operations 9.1
-estate before publication, including onboarding a second vCenter's Service Discovery entirely
-through the API. Where the guide says "proven," it means executed, failed where noted, and
-verified fixed.
+estate before publication, including onboarding a second vCenter's Service Discovery and standing
+up a live application's agent and PostgreSQL service monitor end to end through the API. Where the
+guide says "proven," it means executed, failed where noted, and verified fixed. The cardinality
+map in the next section is the first thing to read if you are planning a multi-vCenter rollout.
 
 ## 0 · The pipeline: collectors before content
 
@@ -17,6 +18,20 @@ same age. That is one dead collector, not many failures.
 - Discipline: a latest value without its timestamp is not evidence that anything is computing.
   When verifying any metric, read the timestamp and treat a point older than about two
   collection cycles as not collecting.
+
+**Know the cardinality before you start.** At scale the first question is how many times you do
+each thing. This is the map:
+
+| Step | Cardinality | What repeats |
+|---|---|---|
+| Cloud proxy / collector | per site or failure domain | one proxy per network vantage you must collect from |
+| Ping instance | per collector vantage | one instance per proxy whose network path you want to test; endpoints are an identifier list on the instance |
+| VMware Tools | per VM | install and keep current on every guest |
+| Service Discovery (agentless) | per vCenter | one adapter instance per vCenter, each with its own VMCA root trusted |
+| VC-CP mapping | per vCenter, one-time | map each vCenter to its proxy before any agent installs behind it |
+| Agent (layer 4) | per VM you instrument | install by promise, not by fleet |
+| Agent service plugin (layer 5) | per service per VM | activate the plugin with the service's own connection |
+| Super metrics + enablement | per Operations instance | create once; enable in every governing policy |
 
 ## 1 · Ping monitoring (layer 1)
 
@@ -47,14 +62,29 @@ checks. Create one instance and declare your endpoints on it.
 addresses is how you learn whether the collector routes to it; a 100 percent loss row is a
 finding about the path, and a different finding than a degraded one.
 
+**A ping result is relative to the collector's vantage.** The check proves reachability from the
+collector that runs it, not from where your users sit. On a multi-site estate, a service can read
+100 percent reachable from the datacenter collector and be unreachable for a branch, so plan a
+ping instance per vantage that matters and read each as "reachable from here," never as a global
+truth. One instance can carry many endpoints (they are a single identifier list), but keep a
+practical ceiling in mind and split when the batch interval and packet count times the endpoint
+count start crowding the collection window; a few hundred endpoints per instance is comfortable,
+thousands is not.
+
 ## 2 · VMware Tools (the layer-3 sensor)
 
 Tools carries three duties at once: its heartbeat carries the guest availability reading, HA's
-VM Monitoring restarts a hung guest on heartbeat loss, and current Tools (12.3.0 or later)
-powers credential-less Service Discovery. Install it everywhere; keep it current with the same
-cadence as guest patching. The dashboard's layer-3 table is the verification loop: a red Tools
-state is a guest the platform can neither measure nor protect, and the honest reading of such a
-guest is unknown, not up.
+VM Monitoring restarts a hung guest on heartbeat loss, and current Tools (12.3.0 or later) feeds
+Service Discovery. Install it everywhere; keep it current with the same cadence as guest
+patching. The dashboard's layer-3 table is the verification loop: a red Tools state is a guest
+the platform can neither measure nor protect, and the honest reading of such a guest is unknown,
+not up.
+
+At scale, do not hand-install onto the existing fleet: bake current Tools into the golden images
+and templates so new guests arrive instrumented, and drive the existing estate from your
+configuration-management or guest-patching pipeline. The dashboard's yellow "Supported Old" rows
+are the remediation queue, already sorted; work it on the patch cadence rather than in a
+one-time sweep.
 
 ## 3 · Service Discovery (layer 5, native), per vCenter
 
@@ -96,15 +126,80 @@ metrics, and arms the shipped service-unavailability alert. A discovered-but-unm
 service shows blank metric cells by design: that is coverage information. Activate by promise,
 starting with the services your commitments name.
 
-## 4 · Agents (layer 4), by promise
+**The Linux limit, and why layer 5 has a second sensor.** Credential-less discovery reads a
+Linux guest's inventory through Tools but does not see the services running inside it without
+guest credentials: the instance will show the VMs and zero services. Provide guest credentials to
+discover Linux services, or use the agent's service plugins (§4) for those workloads. This is not
+a defect to route around; it is why the service layer is two sensors, agentless breadth where
+credentials permit and the agent for depth and for credential-constrained Linux.
 
-The OS and Application Monitoring agent is the second, independent sensor: the operating
-system's own availability figure on a 0-to-1 scale, process pathology, and in-guest service
-monitors. It requires the cloud proxy from step 0 and guest credentials at install time
-(console install, or `POST /api/applications/agents` with the agent lifecycle endpoints
-alongside it). Install onto the guests whose promise justifies the install, the data tier
-first; a workload absent from the layer-4 tables is relying on the thinner layers, and the
-dashboard says so rather than hiding it.
+**Repeat per vCenter.** Service Discovery is per-vCenter, so onboarding a second or third vCenter
+is the same procedure with four things that change each time:
+
+| Per-vCenter input | Where it comes from |
+|---|---|
+| `VCURL` | the target vCenter's FQDN |
+| `VMEntityVCID` | the target vCenter adapter instance's own identifier |
+| credential id | the target vCenter adapter's `credentialInstanceId` |
+| VMCA root CA | fetched and trusted separately, from that vCenter's `/certs/download.zip` |
+
+Everything else (the identifier template, the health-gate discipline, the activate-by-promise
+rule) is identical across vCenters.
+
+## 4 · Agents (layer 4) and agent-monitored services (the second layer-5 sensor)
+
+The OS and Application Monitoring agent is the second, independent sensor. It delivers two
+things: the operating system's own availability figure on a 0-to-1 scale (layer 4), and, through
+per-service plugins, a per-service availability object (the agent half of layer 5). On a
+credential-constrained Linux service the agent is not optional depth; it is the sensor of
+record, because credential-less Service Discovery cannot see inside the Linux guest (see §3).
+Install onto the guests whose promise justifies it, the data tier first.
+
+This layer has more preconditions than any other, and each was a live blocker before it was a
+step. In order:
+
+**4a. Map the target vCenter to the cloud proxy first (per vCenter, one-time).** Agent bootstrap
+resolves target VM to its vCenter to that vCenter's mapped cloud proxy to that proxy's
+AppOsAdapter. If the vCenter is not mapped, the install fails 400 "No AppOsAdapter exists on the
+Cloud Proxy in the VC-CP mapping." Add the mapping with
+`POST /api/applications/vccpmappings`, body
+`{"vCenterMappings":[{"collectorUUID":"<proxy collector uuid>","vCenterIds":["<vc-instance-uuid>"]}]}`.
+It is **additive per vCenter**: include a vCenter that is already mapped and the whole call 400s
+"already exists," so query the current mappings
+(`POST /api/applications/vccpmappings/query`) and post only the new vCenter id. The
+`vc-instance-uuid` is the vCenter adapter's `VMEntityVCID`; the `collectorUUID` is the proxy's
+own uuid from the existing mapping, not the small integer collector id.
+
+**4b. Have a working guest credential, and do not trust the deployment record for it.** Bootstrap
+performs a guest-operations login on the VM. If your VMs were provisioned by an automation
+platform, a deploy-time guest password stored there is likely returned **encrypted**: a long
+opaque blob that fails guest auth. Recover the real value from the deployment tooling's own
+defaults (the create script's variable default), and verify it authoritatively before use with a
+vCenter guest-operations process-create; a 201 with a real process id means the credential is
+good, a 401 means it is not. Treat guest credentials as the highest-exposure surface in this
+practice: scope them to the install, do not cache them in shell history or logs, and rotate on
+the guest's own schedule.
+
+**4c. Install.** Console install, or `POST /api/applications/agents` with
+`{"resourceCredentials":[{"resourceId":"<vm resource id>","username":"...","password":"...","addRuntimeUser":true}]}`.
+Poll the returned `taskStatuses[0].taskID` at `/api/applications/agents/{id}/status` to FINISHED.
+
+**4d. Expect a warmup, do not read it as failure.** For roughly two collection cycles after the
+task finishes, the agent object is grey and offers only its base network plugins
+(icmp, tcp, udp, http, customscript, processavailability). The application plugins (postgresql
+and its siblings) appear, and the agent registers with the cloud proxy for service management,
+only after it fully checks in. Before then, activating a service plugin fails 400 "not connected
+to any ARC or Cloud Proxy." This transient is expected; a re-install here is churn, not a fix.
+
+**4e. Activate the service plugin (the agent half of layer 5).** Once the plugin is offered, add
+it with `POST /api/applications/agents/{id}/services`, where `{id}` is the **VM's VMWARE resource
+id, not the OS object id** (the OS object id returns "not a virtual machine or Endpoint"). The
+plugin needs the service's own connection: PostgreSQL, for instance, takes mandatory
+`PORT`, `USERNAME`, `PASSWORD` (and optional `HOSTNAME`, defaulting to the loopback on the VM).
+Source those from the same deployment tooling that set them, not from the encrypted record. On
+success the agent mints a per-service availability object (`System Attributes|availability` on
+the 0-to-1 scale) that is a child of the guest OS object, so it renders through the same vSphere
+World traversal the layer-4 OS views use; the dashboard's agent-service view binds it.
 
 ## 5 · The computed layer: super metrics and policy enablement
 
@@ -122,6 +217,14 @@ rules that cost us real debugging time, both proven:
 
 Scope alerting to a dedicated group and policy, never to everything: an alert without a scoped
 group pages on objects you never meant.
+
+**On automation.** The reference estate drives every step above from committed generators and
+reconcilers (a declarative checks file for the ping endpoints, generators for the super metrics
+and views). Those are the estate's own tooling, not shipped here; this directory ships the
+outputs (the import packages) plus `editor-formulas.yaml` for building the metrics by hand. At
+scale, treat each step's API calls above as the contract and wrap them in whatever
+configuration-management you already run; nothing here needs a bespoke controller, only the
+calls in the right order with the right cardinality.
 
 ## 6 · Verifying without waiting for the console
 
@@ -144,6 +247,11 @@ Two verification tools worth knowing, both used to prove this directory's artifa
 | "Certificate validation failed" persists after trusting the endpoint certificate | Trust is chain-based | Add the signing VMCA root CA(s) from the vCenter's certs bundle, then restart the instance |
 | A whole fleet of readings frozen at one age | One dead collector, not many failures | Check collector state and adapter last-collected before touching content |
 | A perfect reading renders yellow | Ascending band bounds are exclusive at the top | Set the yellow bound below the perfect value |
+| A Linux VM discovered with zero services | Credential-less discovery cannot see inside a Linux guest | Provide guest credentials to Service Discovery, or monitor the service with the agent plugin (§4) |
+| Agent install fails "No AppOsAdapter ... in the VC-CP mapping" | The target vCenter is not mapped to a proxy | Query mappings, then post the new vCenter id once (additive; re-posting a mapped vCenter 400s) |
+| Guest auth fails at agent install with a credential from the automation platform | The stored deploy-time password is encrypted, not the plaintext | Recover the value from the deploy tooling's defaults; verify with a vCenter guest-operations login (201 = good) |
+| A freshly installed agent is grey and offers only base plugins | Expected warmup, about two collection cycles | Wait for check-in; the app plugins and cloud-proxy connection appear on their own, do not re-install |
+| Agent service activation 422 "not a virtual machine or Endpoint" | The call was keyed on the OS object id | Key agent-service calls on the VM's VMWARE resource id, not the OS object id |
 | Blank metric cells on a discovered service | Discovered is not monitored | Activate monitoring for that service; daily discovery becomes five-minute collection |
 | Blank SLI and fleet-row cells | The super metrics are absent or not enabled in the governing policy | Import the package, then converge enablement in one declarative call |
 | A guest availability reading you doubt | The sensor, not the guest | Read the Tools state and uptime witness columns beside the number |
