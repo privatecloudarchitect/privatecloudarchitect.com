@@ -26,7 +26,7 @@ each thing. This is the map:
 |---|---|---|
 | Cloud proxy / collector | per site or failure domain | one proxy per network vantage you must collect from |
 | Ping instance | per collector vantage | one instance per proxy whose network path you want to test; endpoints are an identifier list on the instance |
-| Object ping | per VM or host, opt-in | reachability bound to the inventory object (isPingEnabled), on the object's own collector |
+| Object ping | per guest VM, opt-in | reachability bound to the inventory object (isPingEnabled), on the object's own collector |
 | VMware Tools | per VM | install and keep current on every guest |
 | Service Discovery (agentless) | per vCenter | one adapter instance per vCenter, each with its own VMCA root trusted |
 | VC-CP mapping | per vCenter, one-time | map each vCenter to its proxy before any agent installs behind it |
@@ -114,6 +114,14 @@ cloud proxy, say) reads 100 percent here while the guest is up. Object ping does
 vantage; it binds the reading to the object. This was verified live: the same target read
 identically from the Ping adapter and from object ping on the same collector, and the two mechanisms
 agree whenever they share a vantage.
+
+Bind object ping to guests, not hosts. Object ping targets every address the object carries, and the
+portable `ping|peak_packet_loss` is the worst of them. A multi-homed ESXi host has many vmknics, and
+a non-routable link-local one (a `169.254.x` address on a vSAN or auto-config interface) never
+answers, so the peak reads a permanent 100 percent even while every routable interface answers at 0
+percent. The host's true reachability is its instanced `ping:<mgmt-ip>|packet_loss`, which a
+fleet-wide view cannot key on, and host availability is already the platform floor's job (connection
+state, uptime). So the clean coupled target is a single-homed guest.
 
 ## 2 · VMware Tools (the layer-3 sensor)
 

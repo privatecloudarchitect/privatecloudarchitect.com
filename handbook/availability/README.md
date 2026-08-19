@@ -61,13 +61,14 @@ proven live. The short form, in sensor-chain order:
    plain slug; the display name can be branded), declare FQDN and IP targets, take values from
    the product's documented ranges, and read the instance's Adapter Status message as the health
    gate: an instance can heartbeat while reporting "Adapter configuration failed."
-2b. **Object-level ping (optional, L1 on inventory).** For vSphere VMs and hosts, enable the
-   `isPingEnabled` identifier (PUT /api/resources) to bind reachability onto the object itself,
-   beside its guest KPI. Scope it by promise, but never onto a workload isolated on a private
-   CIDR: that object reads a steady full loss from the collector even while healthy, and belongs
-   measured at its load-balancer VIP instead (the front-door rule below). It runs from the
-   object's collector, so read each as reachable-from-there. CONFIGURATION.md section 1b has the
-   mechanism.
+2b. **Object-level ping (optional, L1 on inventory).** For a vSphere guest VM the collector can
+   reach, enable the `isPingEnabled` identifier (PUT /api/resources) to bind reachability onto the
+   object itself, beside its guest KPI. Scope it by promise, but never onto a workload isolated on
+   a private CIDR (a steady full loss from the collector while healthy, measured at its
+   load-balancer VIP instead, the front-door rule below); and prefer guests to hosts, since a
+   multi-homed ESXi host's portable loss key is pinned at 100 percent by a non-routable link-local
+   vmknic. It runs from the object's collector, so read each as reachable-from-there.
+   CONFIGURATION.md section 1b has the mechanism.
 3. **VMware Tools everywhere (L3).** Tools is the sensor: the guest availability KPI, guest
    uptime, Service Discovery, and HA's guest-restart protection all ride it. The L3 table's
    Tools columns are your verification.
