@@ -26,9 +26,12 @@ each layer references the previous one by id):
   set the lens's views reference: the three verdict metrics plus three qualifiers (reserved and
   pinned memory, NVMe tier size, NVMe tier used). Id-keyed; the ids are what the views bind to.
 - `supermetrics/memory-tiering-supermetrics.contentpkg.zip`: the same six metrics as an
-  **id-preserving content package**, importable via
-  `POST /suite-api/api/content/operations/import?force=true` (multipart field `contentFile`) or
-  the content-import UI. Built by filtering the reference instance's own export, so what ships is
+  **id-preserving content package**, importable via the content-import UI or
+  `POST /suite-api/api/content/operations/import` (multipart field `contentFile`). The import
+  creates any absent metric with its shipped id; the `force` flag affects only a metric that
+  already exists: `force=false` skips it (safe, non-destructive), `force=true` overwrites it (only
+  to push an update). The API defaults the flag to `true`/overwrite, so pass `force=false` for a
+  non-destructive import. Built by filtering the reference instance's own export, so what ships is
   the export format verbatim; a no-force test-import on the reference instance recognized all six
   with zero failures and zero changes.
 - `views/memory-tiering-views.contentpkg.zip`: the lens's three views (host candidates, capex

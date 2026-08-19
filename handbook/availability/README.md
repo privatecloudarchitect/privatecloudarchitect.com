@@ -18,12 +18,25 @@ Each layer references the previous one by id, so the order matters:
 
 1. `supermetrics/availability-slis.contentpkg.zip`: the five L1 reachability SLI super metrics
    (per-check packet delivery, endpoint count, reachable, unreachable, reachability SLI) as an
-   **id-preserving content package**. Import via the content-import UI or
-   `POST /suite-api/api/content/operations/import?force=true` (multipart field `contentFile`).
+   **id-preserving content package**. This is the format the VCF Operations **content-import**
+   mechanism reads, and the way super metrics travel between environments (a different path than
+   the *Manage ▸ Import* used for views and dashboards). It carries each metric's id, so the views
+   and dashboard that reference them by `Super Metric|sm_<id>` resolve on your instance; a plain
+   `POST /api/supermetrics` would mint new ids and break those references.
+   **Import** via the content-import UI, or
+   `POST /suite-api/api/content/operations/import` (multipart field `contentFile`; poll
+   `GET /api/content/operations/import` for `state=FINISHED`). The import **creates** any metric
+   that is absent, with its shipped id, so a first import into a fresh environment needs nothing
+   more. The `force` flag affects only a metric that **already exists**: `force=false` skips it
+   (safe and non-destructive, and how you re-run without clobbering local edits); `force=true`
+   **overwrites** it, which you want only to push an update to an environment that already has an
+   earlier version. The API defaults the flag to `true`/overwrite, so pass `force=false`
+   explicitly when you want the skip-existing behavior.
    Built as a verbatim filter of the reference instance's own export, so what ships is the
    export format exactly.
    - `supermetrics/availability-slis.import.json`: the same five metrics in readable, id-keyed
-     form: names, formulas, object types, units.
+     form (names, formulas, object types, units): a reference for review or a hand-rebuild, not
+     a direct import.
    - `supermetrics/editor-formulas.yaml`: the by-hand path: editor-syntax formulas with the two
      id substitutions the composition metrics need if you mint your own ids.
 2. `views/availability-views.import.zip`: all twelve views in the **Views, Manage, Import** shape
