@@ -115,13 +115,17 @@ vantage; it binds the reading to the object. This was verified live: the same ta
 identically from the Ping adapter and from object ping on the same collector, and the two mechanisms
 agree whenever they share a vantage.
 
-Bind object ping to guests, not hosts. Object ping targets every address the object carries, and the
-portable `ping|peak_packet_loss` is the worst of them. A multi-homed ESXi host has many vmknics, and
-a non-routable link-local one (a `169.254.x` address on a vSAN or auto-config interface) never
-answers, so the peak reads a permanent 100 percent even while every routable interface answers at 0
-percent. The host's true reachability is its instanced `ping:<mgmt-ip>|packet_loss`, which a
+Bind object ping to single-homed guests, not hosts. The portable `ping|peak_packet_loss` is a
+worst-of-all-addresses rollup: object ping targets every address the object carries and the peak is
+the worst of them, so the key is only trustworthy when the object has one reachable address. That
+holds for a typical guest and fails for any multi-homed object. An ESXi host is the universal case:
+every NSX-prepared host carries an `vmk50` NSX hyperbus interface fixed at the link-local
+`169.254.1.1`, which is non-routable by design and never answers from the collector, so the peak
+reads a permanent 100 percent even while every routable vmknic (management, vMotion, vSAN) answers at
+0 percent. The host's true reachability is its instanced `ping:<mgmt-ip>|packet_loss`, which a
 fleet-wide view cannot key on, and host availability is already the platform floor's job (connection
-state, uptime). So the clean coupled target is a single-homed guest.
+state, uptime). The same trap would catch a multi-NIC VM with one non-answering NIC, so the precise
+rule is: bind object ping only to a single-homed, collector-reachable guest.
 
 ## 2 · VMware Tools (the layer-3 sensor)
 
