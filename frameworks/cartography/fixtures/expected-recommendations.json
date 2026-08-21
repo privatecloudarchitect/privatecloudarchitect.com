@@ -1,0 +1,233 @@
+{
+ "source": "supervisor-lens",
+ "namespaces": 4,
+ "total_vms": 9,
+ "tag_ready_vms": 7,
+ "held_for_review": 2,
+ "recommended_count": 9,
+ "confirm_count": 9,
+ "category_distribution": {
+  "app": 3,
+  "env": 7,
+  "function": 5,
+  "tier": 3
+ },
+ "recommendations": [
+  {
+   "vm": "shop-cache-01",
+   "namespace": "shop-prod-x1",
+   "category": "app",
+   "value": "shop",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "declared-label"
+   ],
+   "justification": "declared by app.kubernetes.io/part-of, app.kubernetes.io/component"
+  },
+  {
+   "vm": "shop-db-01",
+   "namespace": "shop-prod-x1",
+   "category": "app",
+   "value": "shop",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "declared-label"
+   ],
+   "justification": "declared by app.kubernetes.io/name, app.kubernetes.io/component"
+  },
+  {
+   "vm": "shop-db-01",
+   "namespace": "shop-prod-x1",
+   "category": "tier",
+   "value": "data",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "component-label"
+   ],
+   "justification": "app.kubernetes.io/component maps to the data layer"
+  },
+  {
+   "vm": "shop-db-01",
+   "namespace": "shop-prod-x1",
+   "category": "function",
+   "value": "db",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "component-label"
+   ],
+   "justification": "declared component maps unambiguously"
+  },
+  {
+   "vm": "shop-web-01",
+   "namespace": "shop-prod-x1",
+   "category": "app",
+   "value": "shop",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "declared-label"
+   ],
+   "justification": "declared by app.kubernetes.io/part-of, app.kubernetes.io/component"
+  },
+  {
+   "vm": "shop-web-01",
+   "namespace": "shop-prod-x1",
+   "category": "tier",
+   "value": "presentation",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "component-label"
+   ],
+   "justification": "app.kubernetes.io/component maps to the presentation layer"
+  },
+  {
+   "vm": "shop-web-01",
+   "namespace": "shop-prod-x1",
+   "category": "function",
+   "value": "web",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "component-label"
+   ],
+   "justification": "declared component maps unambiguously"
+  },
+  {
+   "vm": "vks-cluster-a-ctrl-7f2kq",
+   "namespace": "vks-sandbox-z3",
+   "category": "function",
+   "value": "k8s",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "capi-label"
+   ],
+   "justification": "Kubernetes cluster node (controlplane)"
+  },
+  {
+   "vm": "vks-cluster-a-node-9m4tz",
+   "namespace": "vks-sandbox-z3",
+   "category": "function",
+   "value": "k8s",
+   "confidence": "high",
+   "recommended": true,
+   "lenses": [
+    "capi-label"
+   ],
+   "justification": "Kubernetes cluster node (node)"
+  },
+  {
+   "vm": "billing-api-01",
+   "namespace": "billing-dev-y2",
+   "category": "tier",
+   "value": "logic",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "component-label"
+   ],
+   "justification": "app.kubernetes.io/component maps to the logic layer"
+  },
+  {
+   "vm": "billing-api-01",
+   "namespace": "billing-dev-y2",
+   "category": "function",
+   "value": "app",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "component-label"
+   ],
+   "justification": "declared component maps unambiguously"
+  },
+  {
+   "vm": "billing-api-01",
+   "namespace": "billing-dev-y2",
+   "category": "env",
+   "value": "dev",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "namespace-token"
+   ],
+   "justification": "namespace 'billing-dev-y2' carries the 'dev' token; confirm before writing the observed fact"
+  },
+  {
+   "vm": "scratch-vm-01",
+   "namespace": "billing-dev-y2",
+   "category": "env",
+   "value": "dev",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "namespace-token"
+   ],
+   "justification": "namespace 'billing-dev-y2' carries the 'dev' token; confirm before writing the observed fact"
+  },
+  {
+   "vm": "shop-cache-01",
+   "namespace": "shop-prod-x1",
+   "category": "env",
+   "value": "prod",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "namespace-token"
+   ],
+   "justification": "namespace 'shop-prod-x1' carries the 'prod' token; confirm before writing the observed fact"
+  },
+  {
+   "vm": "shop-db-01",
+   "namespace": "shop-prod-x1",
+   "category": "env",
+   "value": "prod",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "namespace-token"
+   ],
+   "justification": "namespace 'shop-prod-x1' carries the 'prod' token; confirm before writing the observed fact"
+  },
+  {
+   "vm": "shop-web-01",
+   "namespace": "shop-prod-x1",
+   "category": "env",
+   "value": "prod",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "namespace-token"
+   ],
+   "justification": "namespace 'shop-prod-x1' carries the 'prod' token; confirm before writing the observed fact"
+  },
+  {
+   "vm": "vks-cluster-a-ctrl-7f2kq",
+   "namespace": "vks-sandbox-z3",
+   "category": "env",
+   "value": "lab",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "namespace-token"
+   ],
+   "justification": "namespace 'vks-sandbox-z3' carries the 'lab' token; confirm before writing the observed fact"
+  },
+  {
+   "vm": "vks-cluster-a-node-9m4tz",
+   "namespace": "vks-sandbox-z3",
+   "category": "env",
+   "value": "lab",
+   "confidence": "medium",
+   "recommended": false,
+   "lenses": [
+    "namespace-token"
+   ],
+   "justification": "namespace 'vks-sandbox-z3' carries the 'lab' token; confirm before writing the observed fact"
+  }
+ ]
+}

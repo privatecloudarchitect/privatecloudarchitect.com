@@ -1,0 +1,19 @@
+{
+  "shop-prod-x1": [
+    {"metadata": {"name": "shop-web-01", "labels": {"app.kubernetes.io/part-of": "shop", "app.kubernetes.io/component": "frontend"}}},
+    {"metadata": {"name": "shop-db-01", "labels": {"app.kubernetes.io/name": "shop", "app.kubernetes.io/component": "postgresql"}}},
+    {"metadata": {"name": "shop-cache-01", "labels": {"app.kubernetes.io/part-of": "shop", "app.kubernetes.io/component": "redis"}}}
+  ],
+  "billing-dev-y2": [
+    {"metadata": {"name": "billing-api-01", "labels": {"app.kubernetes.io/component": "api"}}},
+    {"metadata": {"name": "scratch-vm-01", "labels": {}}}
+  ],
+  "vks-sandbox-z3": [
+    {"metadata": {"name": "vks-cluster-a-ctrl-7f2kq", "labels": {"cluster.x-k8s.io/cluster-name": "cluster-a", "capw.vmware.com/cluster.role": "controlplane"}}},
+    {"metadata": {"name": "vks-cluster-a-node-9m4tz", "labels": {"cluster.x-k8s.io/cluster-name": "cluster-a", "capv.vmware.com/cluster.role": "node"}}}
+  ],
+  "ops-utility": [
+    {"metadata": {"name": "util-vm-9", "labels": {}}},
+    {"metadata": {"name": "jump-01", "labels": {"topology.kubernetes.io/zone": "az-1"}}}
+  ]
+}

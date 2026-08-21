@@ -1,0 +1,38 @@
+# Cartography tag taxonomy - the four discovery-owned axes this slice proposes and writes.
+#
+# Discovery OBSERVES; it never declares intent. `app` and `app-layer` are pure identity facts,
+# `function` is the discovery-authority axis the tuning framework governs on (proposals ratified
+# by the operator before any write), and `env-observed` is the observed companion of the
+# operator-declared environment: the intent twin (your `env` category) is never written by
+# discovery, so machine observation and operator intent cannot collide.
+#
+# The `category` field is the live name on YOUR estate. If your estate namespaces its categories
+# (the reference estate runs these axes as identity.app, identity.app-layer, identity.function,
+# lifecycle.env-observed), rename them here or point CARTOGRAPHY_TAXONOMY at an alternate copy;
+# every script resolves concept to category through this file. `values: open` marks an open
+# registry: the category is created empty and values mint as ratified recommendations land.
+
+categories:
+  - concept: app
+    category: app
+    object: VirtualMachine
+    cardinality: SINGLE
+    values: open
+
+  - concept: app-layer
+    category: app-layer
+    object: VirtualMachine
+    cardinality: SINGLE
+    values: [presentation, logic, data]
+
+  - concept: function
+    category: function
+    object: VirtualMachine
+    cardinality: SINGLE
+    values: [db, web, app, vdi, k8s, infra]
+
+  - concept: env-observed
+    category: env-observed
+    object: VirtualMachine
+    cardinality: SINGLE
+    values: [prod, stage, dev, test, dr, lab]
