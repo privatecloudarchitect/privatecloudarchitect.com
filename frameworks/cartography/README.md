@@ -7,11 +7,12 @@ durable tags with confidence and evidence attached, holds every proposal for you
 and writes only what you approve, on the vCenter-native tag plane, with every write verified
 against the source of truth, and reverses cleanly with a scoped un-write.
 
-The classify-and-write path was proven by a live round trip on the reference estate before
-publication, on exactly those bytes; the run date and shape are recorded in the companion build
-records. The scoped un-write is built from the same vCenter tag-association primitives the write
-rests on (detach, and read-back verification against the source of truth) and adds an offline
-self-test of its own decision core; dry-run it first on your estate, as the recipe shows.
+The classify-and-write path and the scoped un-write were both proven by a live round trip on the
+reference estate before publication, on exactly these bytes: a real classification tag was detached
+and verified gone from the vCenter source of truth, the teardown re-run to prove an idempotent
+no-op, then the tag restored and verified, leaving the estate exactly as found. The run date and
+shape are recorded in the companion build records, and the decision core additionally carries an
+offline self-test. Dry-run it first on your estate, as the recipe shows.
 
 [`METHOD.md`](METHOD.md) is the whole ten-phase method on one page: the three principles, which
 lens covers which phase, and where this supervisor slice sits in it. The narrative teaching, with
