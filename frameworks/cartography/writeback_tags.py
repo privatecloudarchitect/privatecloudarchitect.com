@@ -45,7 +45,7 @@ from pathlib import Path
 
 from lib import _taxonomy
 from lib._client import VcSession, vcenter_client
-from lib._models import DesiredTag, TagAction, reconcile_actions
+from lib._models import DesiredTag, TagAction, reconcile_actions, reconcile_teardown
 from lib._tagdefs import CategoryReport, NativeVcenterTagProvider
 from lib._tagging import attach_tag, detach_tag
 
@@ -123,6 +123,15 @@ class VcVerifier:
     def verify_landed(self, moref: str, tag_id: str, *, tries: int = 4, delay: float = 5.0) -> bool:
         for i in range(tries):
             if tag_id in self.attached_tag_ids(moref):
+                return True
+            if i < tries - 1:
+                time.sleep(delay)
+        return False
+
+    def verify_removed(self, moref: str, tag_id: str, *, tries: int = 4, delay: float = 5.0) -> bool:
+        """The inverse of verify_landed: confirm the tag is GONE from the vCenter source of truth."""
+        for i in range(tries):
+            if tag_id not in self.attached_tag_ids(moref):
                 return True
             if i < tries - 1:
                 time.sleep(delay)
@@ -269,37 +278,173 @@ def _did_not_land(a: TagAction) -> int:
     return 2
 
 
+def teardown(plane: NativeTagPlane, verifier: VcVerifier, approved: list[dict], *,
+             execute: bool, actuator: VcSession | None = None) -> int:
+    """The scoped inverse of apply: detach exactly the tags a matching write would have attached.
+
+    Value-matched (a human's different value is held, never removed), read back from the vCenter
+    source of truth to confirm the tag is GONE, and dry-run by default. Categories and values are
+    left defined by design - they are estate vocabulary, not per-run artifacts."""
+    cat_name = {c: _taxonomy.category_name(c) for c in REC_CONCEPT.values()}
+    names = sorted({r["vm"] for r in approved})
+    resolvable, skipped = [], []
+    for name in names:
+        (resolvable if verifier.moref(name) else skipped).append(name)
+
+    current_by_vm: dict[str, dict[str, str]] = {}
+    for name in resolvable:
+        moref = verifier.moref(name)
+        current: dict[str, str] = {}
+        for tid in verifier.attached_tag_ids(moref):
+            cv = plane.interpret(tid)
+            if cv:
+                current[cv[0]] = cv[1]
+        current_by_vm[name] = current
+
+    desired = [DesiredTag(object_ref=r["vm"], category=cat_name[REC_CONCEPT[r["category"]]],
+                          value=r["value"])
+               for r in approved if r["vm"] in current_by_vm]
+    actions = reconcile_teardown(desired, current_by_vm)
+
+    print(f"\n  {'VM':28} {'CATEGORY':16} {'VALUE':16} {'CURRENT':12} ACTION")
+    print(f"  {'-' * 28} {'-' * 16} {'-' * 16} {'-' * 12} {'-' * 26}")
+    counts: dict[str, int] = {}
+    removed = 0
+    for a in sorted(actions, key=lambda x: (not x.removes, x.object_ref, x.category)):
+        counts[a.action] = counts.get(a.action, 0) + 1
+        if a.removes and not execute:
+            note = "detach (DRY-RUN)"
+        elif a.removes and execute:
+            ok = _actuate_detach(plane, verifier, a, actuator=actuator)
+            if ok:
+                removed += 1
+                note = "DETACHED (verified gone)"
+            else:
+                print(f"  {a.object_ref[:28]:28} {a.category[:16]:16} {a.value[:16]:16} "
+                      f"{(a.current or '-'):12} detach FAILED verification")
+                return _detach_did_not_land(a)
+        elif a.action == "hold-foreign":
+            note = f"held ({a.current} present, not our {a.value})"
+        else:  # absent
+            note = "absent (nothing to remove)"
+        print(f"  {a.object_ref[:28]:28} {a.category[:16]:16} {a.value[:16]:16} "
+              f"{(a.current or '-'):12} {note}")
+
+    for name in skipped:
+        print(f"  {name[:28]:28} {'-':16} {'-':16} {'-':12} SKIPPED: not on this vCenter")
+
+    detaches = counts.get("detach", 0)
+    print(f"\n  summary: {len(actions)} decision(s) over {len(resolvable)} resolvable VM(s) "
+          f"({len(skipped)} skipped): "
+          + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+    if not execute and detaches:
+        via = ("the tag-authority identity" if actuator is not None else "the VCENTER_* identity")
+        hint = ("" if actuator is not None else
+                "; to detach from Supervisor-managed VMs, add --actuate-as-tag-authority")
+        print(f"  DRY-RUN: {detaches} native tag(s) would be detached via {via}. "
+              f"Re-run with --teardown --execute{hint}.")
+    elif execute and detaches:
+        print(f"  Detached {removed} native tag(s), each verified gone from the vCenter source of "
+              "truth. The tag categories and values remain defined (estate vocabulary).")
+    elif not detaches:
+        print("  nothing to remove: none of the approved values are currently attached "
+              "(already absent, or a human changed them and they were held).")
+    return 0
+
+
+def _actuate_detach(plane: NativeTagPlane, verifier: VcVerifier, a: TagAction, *,
+                    actuator: VcSession | None = None) -> bool:
+    urn = plane.existing_urn(a.category, a.value)
+    if urn is None:
+        return True  # the value is not even defined; nothing is attached, treat as already gone
+    moref = verifier.moref(a.object_ref)
+    client = actuator if actuator is not None else plane.vc
+    detach_tag(client, moref, "VirtualMachine", _tag_id_from_urn(urn))
+    return verifier.verify_removed(moref, _tag_id_from_urn(urn))
+
+
+def _detach_did_not_land(a: TagAction) -> int:
+    print(f"\n  DETACH did not land for {a.object_ref!r} ({a.category}={a.value}): the unassign "
+          "reported success but the tag is still present in the vCenter source of truth. The "
+          "actuating identity lacks effective tag-assign authority on this VM class (a "
+          "Supervisor-managed VM shadows a plain vCenter grant). Re-run with "
+          "--actuate-as-tag-authority using an identity that holds a global tag-assign role.")
+    return 2
+
+
+def self_test() -> int:
+    """Offline check of the pure decision cores - no vCenter, deterministic. The estate's own
+    guarantee that the write and its inverse behave before either touches an estate."""
+    desired = [
+        DesiredTag("vm-a", "function", "db"),
+        DesiredTag("vm-b", "function", "web"),
+        DesiredTag("vm-c", "function", "app"),
+    ]
+    write_current = {"vm-a": {}, "vm-b": {"function": "web"}, "vm-c": {"function": "db"}}
+    w = {(x.object_ref, x.action) for x in reconcile_actions(desired, write_current)}
+    assert ("vm-a", "attach") in w, w
+    assert ("vm-b", "already-set") in w, w
+    assert ("vm-c", "hold-change") in w, w
+    wc = {(x.object_ref, x.action) for x in reconcile_actions(desired, write_current, allow_change=True)}
+    assert ("vm-c", "change") in wc, wc
+
+    td_current = {"vm-a": {"function": "db"}, "vm-b": {}, "vm-c": {"function": "db"}}
+    td = reconcile_teardown(desired, td_current)
+    t = {(x.object_ref, x.action) for x in td}
+    assert ("vm-a", "detach") in t, t          # our value present -> remove
+    assert ("vm-b", "absent") in t, t          # already gone
+    assert ("vm-c", "hold-foreign") in t, t    # a human's value -> held, never removed
+    assert all(x.removes == (x.action == "detach") for x in td)
+    print("self-test OK: write (attach/already-set/hold-change/change) and teardown "
+          "(detach/absent/hold-foreign) decision cores reproduce the expected actions offline; "
+          "teardown removes only our own value and holds a human's.")
+    return 0
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Apply approved tag recommendations (two-phase write-back)")
-    ap.add_argument("--recommendations", required=True, type=Path,
+    ap = argparse.ArgumentParser(description="Apply or reverse approved tag recommendations (two-phase write-back)")
+    ap.add_argument("--recommendations", type=Path,
                     help="the ratification queue (classify_supervisor.py --export)")
     ap.add_argument("--approve", choices=["all", "recommended"],
                     help="approve every recommendation, or only the safe-to-approve subset")
     ap.add_argument("--approve-file", type=Path,
                     help="approve an explicit subset: one `vm:category` per line")
     ap.add_argument("--actuate-as-tag-authority", action="store_true",
-                    help="assign as the VCENTER_TAGAUTH_* identity (Supervisor-managed VM classes)")
+                    help="assign/unassign as the VCENTER_TAGAUTH_* identity (Supervisor-managed VM classes)")
     ap.add_argument("--allow-change", action="store_true",
                     help="permit overwriting a different existing value (default: hold and surface)")
+    ap.add_argument("--teardown", action="store_true",
+                    help="reverse: detach exactly the approved tags this framework attached (value-matched, verified gone)")
     ap.add_argument("--execute", action="store_true", help="apply (default: dry-run)")
+    ap.add_argument("--self-test", action="store_true",
+                    help="offline check of the write and teardown decision cores; no vCenter, then exit")
     args = ap.parse_args()
 
+    if args.self_test:
+        return self_test()
+
+    if args.recommendations is None:
+        raise SystemExit("--recommendations is required (or pass --self-test for the offline check)")
     report = load_recommendations(args.recommendations)
     approved = select_approved(report, args.approve, args.approve_file)
     if not approved:
         print("the approval selected zero recommendations; nothing to do")
         return 0
+    verb = "TEARDOWN" if args.teardown else "write-back"
     mode = "EXECUTE" if args.execute else "DRY-RUN"
-    print(f"write-back · {mode} · {len(approved)} approved recommendation(s) "
-          f"from {args.recommendations}")
+    print(f"{verb} · {mode} · {len(approved)} approved recommendation(s) from {args.recommendations}")
 
     with vcenter_client() as vc:
         plane = NativeTagPlane(vc, vc_name="vcenter")
         verifier = VcVerifier(vc)
         if args.actuate_as_tag_authority and args.execute:
             with vcenter_client(tag_authority=True) as actuator:
+                if args.teardown:
+                    return teardown(plane, verifier, approved, execute=True, actuator=actuator)
                 return apply(plane, verifier, approved, execute=True,
                              allow_change=args.allow_change, actuator=actuator)
+        if args.teardown:
+            return teardown(plane, verifier, approved, execute=args.execute, actuator=None)
         return apply(plane, verifier, approved, execute=args.execute,
                      allow_change=args.allow_change,
                      actuator=None)

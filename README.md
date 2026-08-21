@@ -43,7 +43,9 @@ Framework estates carry five further clauses:
 | [`handbook/ops-estate/`](handbook/ops-estate/) | [The operations estate](https://privatecloudarchitect.com/handbook/ops-estate) | Desired-state converge for owned Operations content, with scoped teardown |
 | [`handbook/capacity-forecasting/`](handbook/capacity-forecasting/) | [Capacity forecasting](https://privatecloudarchitect.com/handbook/capacity-forecasting) | The commitment-adjusted runway read, with the config-parity gate that refuses to project against a drifted ruler |
 | [`handbook/hardening-audit/`](handbook/hardening-audit/) | [Hardening and audit](https://privatecloudarchitect.com/handbook/hardening-audit) | The hardening loop as one command: seven reads distilled into a dated posture folder |
+| [`handbook/availability/`](handbook/availability/) | [Availability is a computed promise](https://privatecloudarchitect.com/handbook/availability) | One importable dashboard that reports availability as five layers of evidence, from reachability to the service SLI, each priced by posture |
 | [`frameworks/wtpc/`](frameworks/wtpc/) | [The Well-Tuned Private Cloud](https://privatecloudarchitect.com/handbook/wtpc) chapter series | The adoptable starter estate: posture catalog, tag taxonomy, and the converge that builds groups, policies, super metrics, views, dashboards, and alerts on your instance |
+| [`frameworks/cartography/`](frameworks/cartography/) | [Discovery and naming](https://privatecloudarchitect.com/handbook/cartography) chapter series | The adoptable supervisor lens: classify Supervisor workloads from the labels they already declare, propose durable tags held for your ratification, and write back only what you approve on the vCenter tag plane, verified and reversible |
 
 ## How to read this repo against the site
 

@@ -5,10 +5,18 @@ The adoptable slice behind the discovery-and-naming chapters. Where the tuning e
 membership depends on: it reads the labels your Supervisor workloads already declare, proposes
 durable tags with confidence and evidence attached, holds every proposal for your ratification,
 and writes only what you approve, on the vCenter-native tag plane, with every write verified
-against the source of truth.
+against the source of truth, and reverses cleanly with a scoped un-write.
 
-Proven by a live round trip on the reference estate before publication, on exactly these bytes;
-the run date and shape are recorded in the companion build records.
+The classify-and-write path was proven by a live round trip on the reference estate before
+publication, on exactly those bytes; the run date and shape are recorded in the companion build
+records. The scoped un-write is built from the same vCenter tag-association primitives the write
+rests on (detach, and read-back verification against the source of truth) and adds an offline
+self-test of its own decision core; dry-run it first on your estate, as the recipe shows.
+
+[`METHOD.md`](METHOD.md) is the whole ten-phase method on one page: the three principles, which
+lens covers which phase, and where this supervisor slice sits in it. The narrative teaching, with
+the live evidence, is the [Discovery and naming](https://privatecloudarchitect.com/handbook/cartography)
+chapter series on the site.
 
 ## The provenance rule the whole slice enforces
 
@@ -49,7 +57,9 @@ python3 classify_supervisor.py                       # read + classify; summary 
 python3 classify_supervisor.py --export recs.json    # also write the ratification queue
 $EDITOR recs.json                                    # review; the file IS the queue
 python3 writeback_tags.py --recommendations recs.json --approve recommended             # dry-run
-python3 writeback_tags.py --recommendations recs.json --approve recommended --execute
+python3 writeback_tags.py --recommendations recs.json --approve recommended --execute    # write
+python3 writeback_tags.py --recommendations recs.json --approve recommended --teardown            # preview the un-write
+python3 writeback_tags.py --recommendations recs.json --approve recommended --teardown --execute   # reverse it
 ```
 
 `--approve recommended` takes only the safe-to-approve subset (declared apps, cluster nodes,
@@ -58,6 +68,13 @@ are always flagged for confirmation and so never ride `recommended`. Every execu
 read back from vCenter and the run fails loud if a tag did not land, which usually means the
 assign identity cannot bind Supervisor-managed VM classes: re-run with
 `--actuate-as-tag-authority`.
+
+The write reverses. `--teardown` detaches exactly the tags a matching write would have attached:
+value-matched, so a value a human changed after the write is held and never removed, and each
+detach is read back from vCenter to confirm the tag is gone. Dry-run by default; the tag
+categories and values stay defined, since they are estate vocabulary and not per-run artifacts.
+That is the scoped reversibility the framework-estate contract asks of anything that writes to
+your estate: it removes exactly what it created, and nothing else.
 
 The handoff this slice exists for: once `function` (and your declared `env` and `sla`) are on a
 workload, the tuning estate's posture groups absorb it on the next membership re-resolution, with
@@ -70,6 +87,11 @@ no further wiring.
 result against the golden queue (`fixtures/expected-recommendations.json`). The same two
 classifiers were proven field-identical to the reference implementation over the same fixture
 before publication.
+
+`python3 writeback_tags.py --self-test` is the write side's equivalent: an offline, no-vCenter
+check that the write and its inverse decide the right action for every case, attaching a fresh
+tag, leaving an already-set one, holding a value a human changed, and, on teardown, removing only
+our own value while holding a human's. Run both before you point anything at an estate.
 
 ## What this slice does not carry (yet)
 
