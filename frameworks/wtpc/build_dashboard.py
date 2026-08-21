@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """WTPC scorecard dashboard generator - posture prod-latency-critical-db (exemplar step 7).
 
-Composes the 17-widget scorecard of exemplar spec section 5 into an importable dashboard.json:
-gate-first reading order (floor -> how-to-read -> capacity -> performance -> drill -> cost ->
-cadence -> reference), View widgets bound by viewDefinitionId to the five step-6 views + the
-reused Rightsizing 'Oversized Candidates' lens view, two triage Heatmaps (fixed color bounds -
-same color = same distance-from-envelope every time), two per-VM MetricCharts, and the seven
-authored education Text widgets whose HTML is synced VERBATIM from content/widget-*.html into
+Composes the 18-widget scorecard of exemplar spec section 5 into an importable dashboard.json:
+top-to-bottom reading order (prerequisites -> model -> how-to-read -> floor -> capacity ->
+performance -> drill -> cost -> cadence -> reference), View widgets bound by viewDefinitionId to
+the five step-6 views + the reused Rightsizing 'Oversized Candidates' lens view, two triage Heatmaps
+(fixed color bounds - same color = same distance-from-envelope every time), two per-VM MetricCharts,
+and the eight authored education Text widgets whose HTML is synced VERBATIM from content/widget-*.html into
 config.editorData (never hand-edited inside the JSON - text-and-design.md / dashboards.md).
 
 Widget/config shapes are mirrored from the live-validated exemplars
@@ -115,15 +115,17 @@ def read_html(fname):
 
 # --- widget builders (each returns the full widget dict; shapes mirror the live dashboards) ---
 
-def _wrap(n, wtype, title, coords, config):
+def _wrap(n, wtype, title, coords, config, collapsed=False):
     x, y, w, h = coords
-    return {"tabId": TAB_ID, "collapsed": False, "id": wid(n), "gridsterCoords": {"x": x, "y": y, "w": w, "h": h},
+    return {"tabId": TAB_ID, "collapsed": collapsed, "id": wid(n), "gridsterCoords": {"x": x, "y": y, "w": w, "h": h},
             "state": "", "type": wtype, "title": title, "config": config, "height": 0, "states": []}
 
 
-def text(n, title, coords, html_file):
+def text(n, title, coords, html_file, collapsed=False):
+    # collapsed=True ships the widget collapsed to its title bar (vROps compacts it at render, as the
+    # availability estate's Setup widget does): available in one click, never blocking the scroll.
     cfg = {"locationFile": "", "locationUrl": "", "editorData": read_html(html_file)}
-    return _wrap(n, "TextDisplay", title, coords, cfg)
+    return _wrap(n, "TextDisplay", title, coords, cfg, collapsed=collapsed)
 
 
 def view(n, title, coords, view_id, provider=None):
@@ -256,30 +258,44 @@ def build(sm, groups=None):
         return metric_chart(n, title, coords, [(m, k, y, r) for (m, k, y, r, _s) in present])
 
     P = POSTURE
+    # Reading order redesigned for top-to-bottom scroll (design-audit 2026-08): a concept precedes the
+    # view it explains, prerequisites open the page collapsed, and the two heavy teaching blocks frame it
+    # (the model primer expanded at the top, the per-metric reference collapsed at the foot). Widget
+    # NUMBERS are held stable so ids + the w07/w14->w10/w11 interactions never move; only coords, order
+    # and the collapsed flag change, plus the new model primer (w18). Each row stacks by full expanded
+    # height (vROps compacts the collapsed ones at render); every multi-widget row is a proven 5+7 / 6+6.
     widgets = [
-        text(1, "Availability floor: the gate", (1, 1, 5, 6), "widget-floor.html"),
-        view(2, f"Availability Floor (per cluster)", (6, 1, 7, 6), VIEWS["V5"], gp("V5")),
-        text(3, "How to read this scorecard", (1, 7, 12, 14), "widget-how-to-read.html"),
-        view(4, "Cluster capacity vs envelope", (1, 21, 12, 8), VIEWS["V3"], gp("V3")),
-        view(5, "Host capacity vs envelope", (1, 29, 6, 10), VIEWS["V2"], gp("V2")),
-        heatmap(6, "Capacity envelope position", (7, 29, 6, 10),
+        # -- orientation: prerequisites (collapsed), the model primer, how-to-read (collapsed) --
+        text(16, "Prerequisites (one-time setup)", (1, 1, 12, 6), "widget-setup.html", collapsed=True),
+        text(18, "The tuning model: two units", (1, 7, 12, 20), "widget-model.html"),
+        text(3, "How to read this scorecard", (1, 27, 12, 14), "widget-how-to-read.html", collapsed=True),
+        # -- the gate --
+        text(1, "Availability floor: the gate", (1, 41, 5, 6), "widget-floor.html"),
+        view(2, "Availability Floor (per cluster)", (6, 41, 7, 6), VIEWS["V5"], gp("V5")),
+        # -- capacity pillar --
+        view(4, "Cluster capacity vs envelope", (1, 47, 12, 8), VIEWS["V3"], gp("V3")),
+        view(5, "Host capacity vs envelope", (1, 55, 6, 10), VIEWS["V2"], gp("V2")),
+        heatmap(6, "Capacity envelope position", (7, 55, 6, 10),
                 x1_key, x1_name, cap_bounds, g1_key, g1_name, RK_HOST, 4),
-        view(7, "VM contention vs envelope", (1, 39, 6, 12), VIEWS["V1"], gp("V1")),
-        heatmap(8, "Ready position (heatmap)", (7, 39, 6, 12),
+        # -- performance pillar --
+        view(7, "VM contention vs envelope", (1, 65, 6, 12), VIEWS["V1"], gp("V1")),
+        heatmap(8, "Ready position (heatmap)", (7, 65, 6, 12),
                 x3_key, x3_name, ready_bounds, "cpu|demandmhz", "CPU Demand (MHz)", RK_VM, 5),
-        text(9, "VM detail", (1, 51, 12, 2), "widget-vm-detail.html"),
-        drill_chart(10, "CPU", (1, 53, 6, 9),
+        text(9, "VM detail", (1, 77, 12, 2), "widget-vm-detail.html"),
+        drill_chart(10, "CPU", (1, 79, 6, 9),
                     [_line("CPU|Ready (%)", "cpu|readyPct", "Ready %", "cpu_ready_pct_p95"),
                      _line("CPU|Co-stop (%)", "cpu|costopPct", "Co-stop %", "cpu_costop_pct_p95")]),
-        drill_chart(11, "Memory", (7, 53, 6, 9),
+        drill_chart(11, "Memory", (7, 79, 6, 9),
                     [_line("Memory|Contention (%)", "mem|host_contentionPct", "Contention %", "mem_contention_pct_p95"),
                      _line("Memory|Balloon (%)", "mem|balloonPct", "Balloon %", "mem_balloon_pct_p95")]),
-        view(12, "Cost: envelope and coverage", (1, 62, 12, 7), VIEWS["V4"], gp("V4")),
-        text(13, cost_title, (1, 69, 5, 10), "widget-cost.html"),
-        view(14, "Reclaim evidence: oversized candidates", (6, 69, 7, 10), VIEWS["OVERSIZED"], gp("OVERSIZED")),
-        text(15, "The operating rhythm", (1, 79, 12, 13), "widget-cadence.html"),
-        text(16, "Setup (one-time)", (1, 92, 12, 6), "widget-setup.html"),
-        text(17, "The envelope & metric model", (1, 98, 12, 14), "widget-reference.html"),
+        # -- cost pillar --
+        view(12, "Cost: envelope and coverage", (1, 88, 12, 7), VIEWS["V4"], gp("V4")),
+        text(13, cost_title, (1, 95, 5, 10), "widget-cost.html"),
+        view(14, "Reclaim evidence: oversized candidates", (6, 95, 7, 10), VIEWS["OVERSIZED"], gp("OVERSIZED")),
+        # -- operating rhythm (the closer) --
+        text(15, "The operating rhythm", (1, 105, 12, 13), "widget-cadence.html"),
+        # -- deep per-metric reference (collapsed appendix) --
+        text(17, "Metric reference: every column and threshold", (1, 118, 12, 14), "widget-reference.html", collapsed=True),
     ]
     # widgetInteractions: evidence views w07 + w14 drive the per-VM charts w10 + w11
     interactions = [{"widgetIdProvider": wid(p), "type": "resourceId", "widgetIdReceiver": wid(r)}
@@ -325,7 +341,7 @@ def _assert_proven_splits(widgets):
 def validate(doc, groups=None):
     dash = doc["dashboards"][0]
     ws = dash["widgets"]
-    assert len(ws) == 17, f"expected 17 widgets, got {len(ws)}"
+    assert len(ws) == 18, f"expected 18 widgets, got {len(ws)}"
     # 1) gridster: within the 12-col grid, no rectangle overlap
     rects = []
     for w in ws:
@@ -369,7 +385,7 @@ def validate(doc, groups=None):
         if w["type"] == "Heatmap":
             c = w["config"]["configs"][0]
             assert c["colorBy"]["metricKey"] and c["sizeBy"]["metricKey"], f"{w['title']}: empty heatmap key"
-    assert n_text == 7, f"expected 7 education Text widgets, got {n_text}"
+    assert n_text == 8, f"expected 8 education Text widgets, got {n_text}"
     types = {}
     for w in ws:
         types[w["type"]] = types.get(w["type"], 0) + 1
@@ -399,7 +415,7 @@ def main():
     print(f"  widgets: {types}  (total {sum(types.values())})")
     print(f"  view scope: {scope}")
     print(f"  interactions: {len(doc['dashboards'][0]['widgetInteractions'])} (w07/w14 -> w10/w11)")
-    print(f"  emitted + validated (gridster non-overlap, view refs, interaction refs, scope, 7 synced Text): "
+    print(f"  emitted + validated (gridster non-overlap, view refs, interaction refs, scope, 8 synced Text): "
           f"{OUT.split('/')[-1]} + {ZIP.split('/')[-1]}")
 
 

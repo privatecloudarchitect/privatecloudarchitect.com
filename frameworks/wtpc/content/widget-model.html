@@ -1,0 +1,81 @@
+<div style="font-family:Metropolis,'Segoe UI',Arial,sans-serif;color:#22303f;font-size:13px;line-height:1.55;padding:6px 4px">
+  <div style="font-size:18px;font-weight:700;color:#16283f;letter-spacing:.2px">The two units of a tuned cloud</div>
+  <div style="font-size:12.5px;color:#5c6b7a;margin-top:3px;margin-bottom:16px">This framework governs two different things with two different units, so no object is ever judged by a policy that is not its own. Read this once. It is the model every scorecard below renders.</div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin-bottom:8px">Two objects, two owners</div>
+  <table style="border-collapse:separate;border-spacing:12px 0;width:100%;margin:0 -12px 6px -12px;table-layout:fixed">
+    <tr>
+      <td style="width:50%;vertical-align:top;background:#f4f7fa;border:1px solid #d7dee5;border-radius:8px;padding:14px 16px">
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:#2f6fb0;text-transform:uppercase">The workload</div>
+        <div style="font-size:14px;font-weight:700;color:#16283f;margin:3px 0 8px">A VM, tagged by what it is <span style="font-weight:400;color:#6b7886">&rarr;</span> its <span style="color:#2f6fb0">posture</span></div>
+        <div style="color:#3b4b5b;font-size:12.5px">Environment, function, service level. The posture is the workload's contract: per-VM performance and protection, scored against the workload's own envelope. A dev VM never counts against a prod breach.</div>
+        <div style="color:#6b7886;font-size:11.5px;margin-top:9px;border-top:1px solid #eef2f6;padding-top:8px"><span style="font-family:Consolas,monospace;color:#2f4256">prod-latency-critical-db</span> holds its memory and tolerates almost no contention. <span style="font-family:Consolas,monospace;color:#2f4256">test-dev-traditional</span> packs freely.</div>
+      </td>
+      <td style="width:50%;vertical-align:top;background:#f4f7fa;border:1px solid #d7dee5;border-radius:8px;padding:14px 16px">
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:1.2px;color:#2f6fb0;text-transform:uppercase">The hardware</div>
+        <div style="font-size:14px;font-weight:700;color:#16283f;margin:3px 0 8px">A host or cluster, by what it provides <span style="font-weight:400;color:#6b7886">&rarr;</span> its <span style="color:#2f6fb0">tier</span></div>
+        <div style="color:#3b4b5b;font-size:12.5px">The tier is the hardware's promise: how hard it may be packed (the overcommit ceiling) and the cluster-wide floors it guarantees. It is judged against what it provides, not against the strictest guest it happens to run.</div>
+        <div style="color:#6b7886;font-size:11.5px;margin-top:9px;border-top:1px solid #eef2f6;padding-top:8px"><span style="font-family:Consolas,monospace;color:#2f4256">dedicated</span> packs at 1.0&times; (no overcommit). <span style="font-family:Consolas,monospace;color:#2f4256">density</span> packs at 4.0&times;.</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="background:#eef2f6;border-left:3px solid #2f6fb0;border-radius:4px;padding:11px 14px;margin:14px 0;color:#2f4256;font-size:12.5px;line-height:1.6">
+    <b>A host's capacity envelope is a property of its tier, what it provides, never of the strictest workload it happens to host.</b> Conflating the two is a category error: it makes the hardware inherit a workload's hardware requirement, the collapse that produced the mixed-service-level scoring anomalies. vROps allows one effective policy per object; partitioning objects across the two units (VM to posture, host and cluster to tier) satisfies that rule by construction, so the two families never compete for the same object.
+  </div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin:18px 0 6px">What an envelope is</div>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:12px">An envelope is the acceptable-state schema for one signal, per posture: a target, a warn edge, and a breach line. Scoring is relative to the posture, never a universal ideal. The same metric carries opposite envelopes across postures. Below, one signal, memory overcommit, on a shared 0 to 4.5&times; scale.</div>
+
+  <div style="font-size:11px;font-weight:700;color:#2f4256;margin-bottom:3px"><span style="font-family:Consolas,monospace">prod-latency-critical-db</span> <span style="font-weight:400;color:#6b7886">strict</span></div>
+  <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:2px"><tr style="height:15px">
+    <td style="width:22.2%;background:#5b9b52;border-radius:3px 0 0 3px"></td><td style="width:2.2%;background:#ecc33e"></td><td style="width:3.3%;background:#de3f30"></td><td style="width:72.3%;background:#e2e8ef;border-radius:0 3px 3px 0"></td>
+  </tr></table>
+  <div style="font-family:Consolas,monospace;font-size:11px;color:#6b7886;margin-bottom:12px">target 1.0&times; &middot; warn 1.1&times; &middot; breach 1.25&times;</div>
+
+  <div style="font-size:11px;font-weight:700;color:#2f4256;margin-bottom:3px"><span style="font-family:Consolas,monospace">test-dev-traditional</span> <span style="font-weight:400;color:#6b7886">permissive</span></div>
+  <table style="border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:2px"><tr style="height:15px">
+    <td style="width:44.4%;background:#5b9b52;border-radius:3px 0 0 3px"></td><td style="width:22.2%;background:#ecc33e"></td><td style="width:22.2%;background:#de3f30"></td><td style="width:11.2%;background:#e2e8ef;border-radius:0 3px 3px 0"></td>
+  </tr></table>
+  <div style="font-family:Consolas,monospace;font-size:11px;color:#6b7886;margin-bottom:10px">target 2.0&times; &middot; warn 3.0&times; &middot; breach 4.0&times;</div>
+
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:14px"><b>Same signal, opposite envelopes.</b> The strict posture's entire tolerance ends near 1.25&times;, where the permissive posture is still comfortably inside its band at 3&times;. Envelope Position normalizes every signal to observed &divide; breach, so 1.0 is the breach line for all of them. That is what lets one heatmap ruler color every posture: the same color is the same distance from breach, whatever the raw numbers.</div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin:18px 0 6px">Which unit owns which axis</div>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:8px">Not every axis can be judged per VM. The split follows the physics of the axis.</div>
+  <table style="border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:8px">
+    <thead>
+      <tr style="background:#eef2f6">
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:150px">Axis family</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5">How it composes</th>
+        <th style="text-align:left;padding:6px 10px;color:#2f4256;border-bottom:2px solid #d7dee5;width:135px">Owned by</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6"><b style="color:#2f4256">Cluster-atomic</b><br><span style="color:#6b7886;font-size:11.5px">HA admission control, N+k host redundancy, anti-affinity, EVC</span></td>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">A cluster holds exactly one of each. The strictest resident wins, unconditionally.</td>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">The <b style="color:#2f6fb0">tier</b>, as guarantees. A shortfall is a placement-fit finding, not a silent downgrade.</td>
+      </tr>
+      <tr>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6"><b style="color:#2f4256">Partitionable</b><br><span style="color:#6b7886;font-size:11.5px">CPU ready and co-stop, memory contention, balloon, swap</span></td>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">Isolate per VM with reservations and shares, then score each VM against its own posture.</td>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">The <b style="color:#2f6fb0">posture</b>, per VM. A dev VM never counts against a prod breach.</td>
+      </tr>
+      <tr>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top"><b style="color:#2f4256">Aggregate ratio</b><br><span style="color:#6b7886;font-size:11.5px">memory and CPU overcommit</span></td>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top">One ratio over the whole host: provisioned summed &divide; physical, reservation-blind. It cannot be expressed per VM, and one policy per object forbids splitting it.</td>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top">The <b style="color:#2f6fb0">tier</b>'s ceiling. This axis is where the original strictest-workload rule was replaced.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin:18px 0 6px">What the framework does not do</div>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:14px">It does not make hardware inherit the strictest workload's hardware requirement. A latency-critical VM landing on a high-overcommit host is a <b>fit finding on the VM</b>, not a red score on the host. The workload is misplaced; the hardware is doing exactly what its tier promised. The fix is placement, not a policy edit. Overcommit is a physical property the tier owns; performance is a per-VM property the posture owns.</div>
+
+  <div style="font-size:13.5px;font-weight:700;color:#16283f;margin:18px 0 6px">Hardware follows the workload, slowly</div>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:8px">Hardware still follows the workload, but only as a lagging observability inference. A newly tagged VM pulls its host and cluster into the posture's membership within about one re-resolution cycle. A departing VM does not free the hardware promptly: a dwell window and an empty-group guard hold the membership so a live migration cannot thrash a tier. Hardware acquires a workload quickly and releases it slowly, by design.</div>
+  <div style="color:#3b4b5b;font-size:12.5px;margin-bottom:6px">And the framework observes and advises. It never places. DRS, HA admission control, and the deployment pipeline place; the scorecards read the result and tell you where it drifted from the envelope.</div>
+
+  <div style="font-size:11px;color:#7a8794;border-top:1px solid #eef2f6;padding-top:9px;margin-top:14px"><b style="color:#6b7886">One word, two meanings.</b> A posture's tier input (production, staging, test-dev) is the workload's environment class. A hardware tier (dedicated, performance, standard, density) is what the metal provides. This page is about the second. Every threshold a scorecard shows is stamped from the posture and tier catalogs, never a house number.</div>
+</div>
