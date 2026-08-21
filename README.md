@@ -46,6 +46,7 @@ Framework estates carry five further clauses:
 | [`handbook/availability/`](handbook/availability/) | [Availability is a computed promise](https://privatecloudarchitect.com/handbook/availability) | One importable dashboard that reports availability as five layers of evidence, from reachability to the service SLI, each priced by posture |
 | [`frameworks/wtpc/`](frameworks/wtpc/) | [The Well-Tuned Private Cloud](https://privatecloudarchitect.com/handbook/wtpc) chapter series | The adoptable starter estate: posture catalog, tag taxonomy, and the converge that builds groups, policies, super metrics, views, dashboards, and alerts on your instance |
 | [`frameworks/cartography/`](frameworks/cartography/) | [Discovery and naming](https://privatecloudarchitect.com/handbook/cartography) chapter series | The adoptable supervisor lens: classify Supervisor workloads from the labels they already declare, propose durable tags held for your ratification, and write back only what you approve on the vCenter tag plane, verified and reversible |
+| [`frameworks/cartography/flow/`](frameworks/cartography/flow/) | [Discovery and naming](https://privatecloudarchitect.com/handbook/cartography) chapter series | The flow lens: pull the east-west flow graph from VCF Operations for Networks, quarantine the shared services by fan-in, and cluster the rest into tiered candidate applications, read-only, with an offline self-test |
 
 ## How to read this repo against the site
 

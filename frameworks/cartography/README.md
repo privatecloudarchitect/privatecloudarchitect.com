@@ -94,9 +94,12 @@ check that the write and its inverse decide the right action for every case, att
 tag, leaving an already-set one, holding a value a human changed, and, on teardown, removing only
 our own value while holding a human's. Run both before you point anything at an estate.
 
-## What this slice does not carry (yet)
+## The other lens: the flow lens
 
-The flow lens (east-west traffic analysis, shared-services extraction, boundary detection, and
-the arbitration that triangulates lenses) is a later slice of the same framework; it publishes
-when its own round trip does. Nothing in this slice depends on it, and everything this slice
-writes is exactly what that lens will corroborate.
+The flow lens (east-west traffic analysis: shared-services extraction and boundary-plus-tier
+clustering) now ships alongside this one, at [`flow/`](flow/). Where this supervisor lens reads a
+classification a workload declares, the flow lens infers one from behaviour: the two halves of the
+same framework. The fuller triangulation (the environment and zone overlay, the identity anchor, and
+the arbitration that fuses the lenses into one confidence-scored classification) remains in the
+platform's `pca vcf-opsnet discover-*` commands, the next slice. Nothing in this slice depends on the
+flow lens, and everything this slice writes is exactly what that lens corroborates.

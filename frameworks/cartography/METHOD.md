@@ -36,9 +36,8 @@ lives in the chapters; this is the structure you can hold in your head.
 
 The **flow lens** is the primary instrument: it is the only one that shows the real east-west
 dependency graph, and it is the evidence for both boundaries and fan-in. The **declared lens** is the
-cleanest to adopt first, because its source is authoritative rather than inferred. This repo ships the
-declared (supervisor) lens today; the flow lens is taught in full on the site and ships as its own slice
-next.
+cleanest to adopt first, because its source is authoritative rather than inferred. This repo ships both:
+the supervisor lens at the root, and the flow lens's Phase 4-5 core in [`flow/`](flow/).
 
 ## The ten phases
 
@@ -48,17 +47,19 @@ next.
 | 1 · Substrate | turn the lenses on, prove they flow, start the accumulation window | flow + process | operator step |
 | 2 · Census | enumerate everything, so coverage has a denominator | inventory | operator step |
 | 3 · Multi-modal | gather raw evidence from every lens, conclude nothing yet | all four | **the supervisor lens reads the declared column** |
-| 4 · Shared services | quarantine high-fan-in common services before boundary math | flow + identity | flow lens (next) |
-| 5 · Boundaries + tiers | cluster the shared-service-free graph into apps, assign tiers | flow | flow lens (next) |
+| 4 · Shared services | quarantine high-fan-in common services before boundary math | flow + identity | **the flow lens, [`flow/`](flow/)** (port-only) |
+| 5 · Boundaries + tiers | cluster the shared-service-free graph into apps, assign tiers | flow | **the flow lens, [`flow/`](flow/)** |
 | 6 · Env + zone | overlay environment and security zone, orthogonal to identity | metadata + NSX | flow lens (next); the supervisor lens observes environment |
 | 7 · Arbitrate | collapse the lenses into one confidence-scored classification per workload | all four | flow lens (next) |
 | 8 · Persist | write the confident classifications back as durable, governed tags | the write | **the supervisor lens writes back today** |
 | 9 · Govern | re-run on a cadence; drive the unclassified backlog to zero and hold | census delta | operator cadence |
 
-Read the columns honestly: the supervisor lens this repo ships covers the declared evidence of Phase 3
-and the write-back of Phase 8. Phases 4 through 7, the flow-graph analysis, are taught on the site and
-ship as the flow-lens estate next. Phases 0, 1, 2, and 9 are operator steps the method frames but no tool
-performs for you.
+Read the columns honestly: the supervisor lens covers the declared evidence of Phase 3 and the write-back
+of Phase 8; the flow lens in [`flow/`](flow/) covers Phases 4 and 5, shared-services extraction and
+boundary-plus-tier clustering, on port-only heuristics. Phases 6 and 7 (the environment and zone overlay,
+and the arbitration that fuses the lenses) plus the flow lens's identity anchor live in the platform's
+`pca vcf-opsnet` commands and are the next slice. Phases 0, 1, 2, and 9 are operator steps the method
+frames but no tool performs for you.
 
 ## The target taxonomy
 
@@ -111,11 +112,11 @@ point tuning, micro-segmentation, and capacity planning all inherit a map they c
 - **Learn the full method** on the site: [Application Cartography: discover before you tune](https://privatecloudarchitect.com/handbook/cartography),
   then [The supervisor lens: labels are declarations](https://privatecloudarchitect.com/handbook/cartography-supervisor),
   then [Tag governance: facts, intent, and who may write](https://privatecloudarchitect.com/handbook/cartography-governance).
-- **The flow lens** (Phases 4 through 7, the dependency graph and shared-services extraction) is taught in
-  the first chapter and ships as its own adoptable estate next. Its query idioms, run against VCF
-  Operations for Networks, read like `flows where port = 3306` (everyone reaching a database) and
-  `flows where bytes > 1000000` (the heavy talkers); a discovery pass is a handful of these, analyzed as a
-  graph offline.
+- **Run the flow lens** from [`flow/`](flow/): see [`flow/README.md`](flow/README.md). It pulls the flows
+  VCF Operations for Networks collects, quarantines the shared services by fan-in, and clusters the
+  remaining VM-to-VM graph into tiered candidate applications, read-only, with its own offline
+  `--self-test`. It carries Phases 4 and 5; the environment and zone overlay, the identity anchor, and the
+  cross-lens arbitration (Phases 6 and 7) remain in the platform's `pca vcf-opsnet discover-*` commands.
 
 Every claim on the site carries an evidence tier, defined on the [method page](https://privatecloudarchitect.com/method).
 This repo is the `repo` tier: what you can run and read for yourself.

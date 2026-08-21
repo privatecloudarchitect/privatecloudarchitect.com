@@ -1,0 +1,256 @@
+{
+  "shared_services": {
+    "window_hours": 24,
+    "total_flows": 22,
+    "projected_flows": 22,
+    "distinct_destinations": 10,
+    "distinct_sources": 15,
+    "min_fan_in": 3,
+    "candidates": [
+      {
+        "destination": "dns-01",
+        "distinct_sources": 7,
+        "ports": [
+          53
+        ],
+        "well_known": [
+          "53/DNS"
+        ],
+        "verdict": "shared-service",
+        "basis": "7 distinct sources on infrastructure port(s) 53/DNS",
+        "sample_sources": [
+          "blog-db-01",
+          "blog-web-01",
+          "monitoring-01",
+          "portal-01",
+          "shop-app-01"
+        ]
+      },
+      {
+        "destination": "ad-01",
+        "distinct_sources": 4,
+        "ports": [
+          389
+        ],
+        "well_known": [
+          "389/LDAP"
+        ],
+        "verdict": "shared-service",
+        "basis": "4 distinct sources on infrastructure port(s) 389/LDAP",
+        "sample_sources": [
+          "blog-web-01",
+          "monitoring-01",
+          "portal-01",
+          "shop-app-01"
+        ]
+      },
+      {
+        "destination": "portal-01",
+        "distinct_sources": 4,
+        "ports": [
+          443
+        ],
+        "well_known": [
+          "443/HTTPS"
+        ],
+        "verdict": "review",
+        "basis": "4 distinct sources but only on web port(s) 443/HTTPS, a shared service or a popular app front-end; confirm against application boundaries",
+        "sample_sources": [
+          "203.0.113.30",
+          "203.0.113.31",
+          "203.0.113.32",
+          "203.0.113.33"
+        ]
+      },
+      {
+        "destination": "alpha-node",
+        "distinct_sources": 1,
+        "ports": [
+          9000
+        ],
+        "well_known": [],
+        "verdict": "application-private",
+        "basis": "only 1 distinct source(s) (< 3)",
+        "sample_sources": [
+          "beta-node"
+        ]
+      },
+      {
+        "destination": "beta-node",
+        "distinct_sources": 1,
+        "ports": [
+          9000
+        ],
+        "well_known": [],
+        "verdict": "application-private",
+        "basis": "only 1 distinct source(s) (< 3)",
+        "sample_sources": [
+          "alpha-node"
+        ]
+      },
+      {
+        "destination": "blog-db-01",
+        "distinct_sources": 1,
+        "ports": [
+          5432
+        ],
+        "well_known": [],
+        "verdict": "application-private",
+        "basis": "only 1 distinct source(s) (< 3)",
+        "sample_sources": [
+          "blog-web-01"
+        ]
+      },
+      {
+        "destination": "blog-web-01",
+        "distinct_sources": 1,
+        "ports": [
+          443
+        ],
+        "well_known": [
+          "443/HTTPS"
+        ],
+        "verdict": "application-private",
+        "basis": "only 1 distinct source(s) (< 3)",
+        "sample_sources": [
+          "203.0.113.20"
+        ]
+      },
+      {
+        "destination": "shop-app-01",
+        "distinct_sources": 1,
+        "ports": [
+          8080
+        ],
+        "well_known": [
+          "8080/HTTP-alt"
+        ],
+        "verdict": "application-private",
+        "basis": "only 1 distinct source(s) (< 3)",
+        "sample_sources": [
+          "shop-web-01"
+        ]
+      },
+      {
+        "destination": "shop-db-01",
+        "distinct_sources": 1,
+        "ports": [
+          3306
+        ],
+        "well_known": [],
+        "verdict": "application-private",
+        "basis": "only 1 distinct source(s) (< 3)",
+        "sample_sources": [
+          "shop-app-01"
+        ]
+      },
+      {
+        "destination": "shop-web-01",
+        "distinct_sources": 1,
+        "ports": [
+          443
+        ],
+        "well_known": [
+          "443/HTTPS"
+        ],
+        "verdict": "application-private",
+        "basis": "only 1 distinct source(s) (< 3)",
+        "sample_sources": [
+          "203.0.113.10"
+        ]
+      }
+    ]
+  },
+  "boundaries": {
+    "window_hours": 24,
+    "total_flows": 22,
+    "vm_flows": 5,
+    "shared_services_excluded": 2,
+    "min_edge_weight": 1,
+    "applications": [
+      {
+        "app_id": "shop",
+        "size": 3,
+        "internal_edges": 2,
+        "tiers": {
+          "app": 1,
+          "data": 1,
+          "web": 1
+        },
+        "members": [
+          {
+            "vm": "shop-db-01",
+            "tier": "data",
+            "serves_ports": [
+              3306
+            ]
+          },
+          {
+            "vm": "shop-web-01",
+            "tier": "web",
+            "serves_ports": [
+              443
+            ]
+          },
+          {
+            "vm": "shop-app-01",
+            "tier": "app",
+            "serves_ports": [
+              8080
+            ]
+          }
+        ]
+      },
+      {
+        "app_id": "app-cluster-2",
+        "size": 2,
+        "internal_edges": 1,
+        "tiers": {
+          "app": 2
+        },
+        "members": [
+          {
+            "vm": "alpha-node",
+            "tier": "app",
+            "serves_ports": [
+              9000
+            ]
+          },
+          {
+            "vm": "beta-node",
+            "tier": "app",
+            "serves_ports": [
+              9000
+            ]
+          }
+        ]
+      },
+      {
+        "app_id": "blog",
+        "size": 2,
+        "internal_edges": 1,
+        "tiers": {
+          "data": 1,
+          "web": 1
+        },
+        "members": [
+          {
+            "vm": "blog-db-01",
+            "tier": "data",
+            "serves_ports": [
+              5432
+            ]
+          },
+          {
+            "vm": "blog-web-01",
+            "tier": "web",
+            "serves_ports": [
+              443
+            ]
+          }
+        ]
+      }
+    ],
+    "singletons": []
+  }
+}

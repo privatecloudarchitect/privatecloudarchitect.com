@@ -1,0 +1,35 @@
+{
+  "_comment": "Synthetic vRNI Flow entities for the offline self-test. Generic names, no estate specifics. Exercises: two infrastructure shared services (DNS high fan-in, LDAP), a review case (high fan-in on a web port only), a three-tier app (web/app/data by served port), a two-tier app, an unnamed two-VM cluster (app-cluster naming), and shared-service quarantine before clustering.",
+  "hours": 24,
+  "min_fan_in": 3,
+  "min_edge_weight": 1,
+  "flows": [
+    {"source_vm": {"entity_name": "shop-web-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "shop-app-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "shop-db-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "blog-web-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "blog-db-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "portal-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "monitoring-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+
+    {"source_vm": {"entity_name": "shop-app-01"}, "destination_vm": {"entity_name": "ad-01"}, "port": {"start": 389, "end": 389}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "blog-web-01"}, "destination_vm": {"entity_name": "ad-01"}, "port": {"start": 389, "end": 389}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "portal-01"}, "destination_vm": {"entity_name": "ad-01"}, "port": {"start": 389, "end": 389}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "monitoring-01"}, "destination_vm": {"entity_name": "ad-01"}, "port": {"start": 389, "end": 389}, "protocol": "TCP"},
+
+    {"source_vm": {"entity_name": "shop-web-01"}, "destination_vm": {"entity_name": "shop-app-01"}, "port": {"start": 8080, "end": 8080}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "shop-app-01"}, "destination_vm": {"entity_name": "shop-db-01"}, "port": {"start": 3306, "end": 3306}, "protocol": "TCP"},
+    {"source_ip": "203.0.113.10", "destination_vm": {"entity_name": "shop-web-01"}, "port": {"start": 443, "end": 443}, "protocol": "TCP"},
+
+    {"source_vm": {"entity_name": "blog-web-01"}, "destination_vm": {"entity_name": "blog-db-01"}, "port": {"start": 5432, "end": 5432}, "protocol": "TCP"},
+    {"source_ip": "203.0.113.20", "destination_vm": {"entity_name": "blog-web-01"}, "port": {"start": 443, "end": 443}, "protocol": "TCP"},
+
+    {"source_ip": "203.0.113.30", "destination_vm": {"entity_name": "portal-01"}, "port": {"start": 443, "end": 443}, "protocol": "TCP"},
+    {"source_ip": "203.0.113.31", "destination_vm": {"entity_name": "portal-01"}, "port": {"start": 443, "end": 443}, "protocol": "TCP"},
+    {"source_ip": "203.0.113.32", "destination_vm": {"entity_name": "portal-01"}, "port": {"start": 443, "end": 443}, "protocol": "TCP"},
+    {"source_ip": "203.0.113.33", "destination_vm": {"entity_name": "portal-01"}, "port": {"start": 443, "end": 443}, "protocol": "TCP"},
+
+    {"source_vm": {"entity_name": "alpha-node"}, "destination_vm": {"entity_name": "beta-node"}, "port": {"start": 9000, "end": 9000}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "beta-node"}, "destination_vm": {"entity_name": "alpha-node"}, "port": {"start": 9000, "end": 9000}, "protocol": "TCP"}
+  ]
+}
