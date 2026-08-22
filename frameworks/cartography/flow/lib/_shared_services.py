@@ -25,6 +25,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from lib._identity import HOST_DATA_PLANE_ROLES, VcfComponentInventory
+
 # Generic directory / auth / time / logging / storage services a service many clients DEPEND on.
 # (IANA well-known; provider-agnostic.)
 INFRA_PORTS: dict[int, str] = {
@@ -134,6 +136,9 @@ class SharedServiceCandidate(BaseModel):
     verdict: Verdict
     basis: str  # why this verdict, the defensible explanation
     sample_sources: tuple[str, ...]
+    # the VCF role vRNI authoritatively typed this destination as (esxi-host / vcenter / nsx-*), or
+    # None when it is not a known VCF component or the identity anchor is off. IDENTITY, not a guess.
+    component_role: str | None = None
 
 
 class SharedServicesReport(BaseModel):
@@ -214,7 +219,14 @@ def project_flows(raw_flows: Iterable[dict]) -> list[FlowProjection]:
 
 
 def _classify(distinct_sources: int, infra_ports: list[int], web_ports: list[int],
-              min_fan_in: int) -> tuple[Verdict, str]:
+              min_fan_in: int, component_role: str | None = None) -> tuple[Verdict, str]:
+    if component_role is not None:
+        # IDENTITY is certain: a destination vRNI authoritatively typed as a VCF component is
+        # infrastructure regardless of port or fan-in, so quarantine it. A port guess becomes a role.
+        port_note = (f" on {', '.join(f'{p}/{_INFRA_LABELS[p]}' for p in infra_ports)}"
+                     if infra_ports else "")
+        return "shared-service", (f"identified VCF component ({component_role}); "
+                                  f"{distinct_sources} distinct source(s){port_note}")
     if distinct_sources < min_fan_in:
         return "application-private", f"only {distinct_sources} distinct source(s) (< {min_fan_in})"
     if infra_ports:
@@ -230,7 +242,8 @@ def _classify(distinct_sources: int, infra_ports: list[int], web_ports: list[int
 
 
 def analyze(flows: list[FlowProjection], *, total_flows: int, window_hours: int,
-            min_fan_in: int = 5, limit: int | None = None) -> SharedServicesReport:
+            min_fan_in: int = 5, limit: int | None = None,
+            component_inventory: VcfComponentInventory | None = None) -> SharedServicesReport:
     """Pure fan-in analysis: rank destinations by distinct-source count and classify each. Returns
     the COMPLETE ranked set by default; ``limit`` is an optional cap. Display truncation is a caller
     concern, so the report (and ``.quarantine``) stay complete."""
@@ -245,9 +258,14 @@ def analyze(flows: list[FlowProjection], *, total_flows: int, window_hours: int,
     candidates: list[SharedServiceCandidate] = []
     for dst, srcs in dst_srcs.items():
         ports = sorted(dst_ports[dst])
+        role = component_inventory.role_of(dst) if component_inventory else None
         infra = [p for p in ports if p in _INFRA_ALL]
+        # collision-prone ports (vMotion/BGP/iSCSI) are infrastructure ONLY when identity confirms a
+        # host-data-plane role; port-only, they stay label-only and never drive the verdict.
+        if role in HOST_DATA_PLANE_ROLES:
+            infra += [p for p in ports if p in HOST_SENSITIVE_PORTS]
         web = [p for p in ports if p in AMBIGUOUS_WEB_PORTS]
-        verdict, basis = _classify(len(srcs), sorted(set(infra)), web, min_fan_in)
+        verdict, basis = _classify(len(srcs), sorted(set(infra)), web, min_fan_in, role)
         candidates.append(SharedServiceCandidate(
             destination=dst,
             distinct_sources=len(srcs),
@@ -256,6 +274,7 @@ def analyze(flows: list[FlowProjection], *, total_flows: int, window_hours: int,
             verdict=verdict,
             basis=basis,
             sample_sources=sorted(srcs)[:_SAMPLE_SOURCES],
+            component_role=role,
         ))
 
     rank = {"shared-service": 0, "review": 1, "application-private": 2}

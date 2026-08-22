@@ -1,0 +1,35 @@
+{
+  "_comment": "Synthetic input for the arbitration self-test. Exercises: the identity anchor (an ESXi host typed by vRNI, corroborating a shared-service verdict), a DNS shared service (flow only), a clean multi-tier app confirmed by a declared label (high confidence across four lenses), an exposed database that trips the data-tier-in-dmz conflict (review queue), and an isolated management VM. Generic names + documentation IPs; no estate specifics.",
+  "hours": 24,
+  "min_fan_in": 3,
+  "min_edge_weight": 1,
+  "identity": [["Host", "esxi-01", ["10.0.0.11"]]],
+  "flows": [
+    {"source_vm": {"entity_name": "shop-web-01"}, "destination_ip": "10.0.0.11", "port": {"start": 902, "end": 902}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "shop-db-01"}, "destination_ip": "10.0.0.11", "port": {"start": 902, "end": 902}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "order-app-01"}, "destination_ip": "10.0.0.11", "port": {"start": 902, "end": 902}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "order-db-01"}, "destination_ip": "10.0.0.11", "port": {"start": 902, "end": 902}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "mon-01"}, "destination_ip": "10.0.0.11", "port": {"start": 902, "end": 902}, "protocol": "TCP"},
+
+    {"source_vm": {"entity_name": "shop-web-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "shop-db-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "order-app-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+    {"source_vm": {"entity_name": "mon-01"}, "destination_vm": {"entity_name": "dns-01"}, "port": {"start": 53, "end": 53}, "protocol": "UDP"},
+
+    {"source_ip": "8.8.8.8", "destination_vm": {"entity_name": "shop-web-01"}, "port": {"start": 443, "end": 443}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "shop-web-01"}, "destination_vm": {"entity_name": "shop-db-01"}, "port": {"start": 3306, "end": 3306}, "protocol": "TCP"},
+
+    {"source_ip": "8.8.4.4", "destination_vm": {"entity_name": "order-db-01"}, "port": {"start": 3306, "end": 3306}, "protocol": "TCP"},
+    {"source_vm": {"entity_name": "order-app-01"}, "destination_vm": {"entity_name": "order-db-01"}, "port": {"start": 3306, "end": 3306}, "protocol": "TCP"}
+  ],
+  "vms": [
+    {"name": "shop-web-01", "folders": [{"entity_name": "prod-apps"}], "ip_addresses": [{"network_address": "10.0.1.0/24"}]},
+    {"name": "shop-db-01", "folders": [{"entity_name": "prod-apps"}], "ip_addresses": [{"network_address": "10.0.1.0/24"}]},
+    {"name": "order-app-01", "folders": [{"entity_name": "prod-apps"}], "ip_addresses": [{"network_address": "10.0.2.0/24"}]},
+    {"name": "order-db-01", "folders": [{"entity_name": "prod-apps"}], "ip_addresses": [{"network_address": "10.0.2.0/24"}]},
+    {"name": "mon-01", "folders": [{"entity_name": "mgmt-infra"}], "ip_addresses": [{"network_address": "10.0.9.0/24"}]}
+  ],
+  "declared": [
+    {"vm": "shop-web-01", "app": "shop", "tier": "web", "env": "prod"}
+  ]
+}

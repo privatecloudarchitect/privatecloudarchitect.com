@@ -1,0 +1,138 @@
+{
+  "window_hours": 24,
+  "total_vms": 7,
+  "role_distribution": {
+    "application": 4,
+    "isolated": 1,
+    "shared-service": 2
+  },
+  "confidence_distribution": {
+    "low": 1,
+    "none": 1,
+    "medium": 1,
+    "high": 4
+  },
+  "needs_review": 2,
+  "classifications": [
+    {
+      "vm": "order-db-01",
+      "role": "application",
+      "app_id": "order",
+      "tier": "data",
+      "service_type": null,
+      "env": "prod",
+      "zone": "dmz",
+      "confidence": "low",
+      "lenses": [
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "conflicts": [
+        "data-tier workload in dmz zone, verify exposure is intended"
+      ],
+      "basis": "app 'order' / data tier | env=prod | zone=dmz",
+      "app_source": "derived"
+    },
+    {
+      "vm": "mon-01",
+      "role": "isolated",
+      "app_id": null,
+      "tier": null,
+      "service_type": null,
+      "env": "unknown",
+      "zone": "internal",
+      "confidence": "none",
+      "lenses": [],
+      "conflicts": [],
+      "basis": "in inventory but no flows observed in the window | env=unknown | zone=internal",
+      "app_source": null
+    },
+    {
+      "vm": "dns-01",
+      "role": "shared-service",
+      "app_id": null,
+      "tier": null,
+      "service_type": "53/DNS",
+      "env": "unknown",
+      "zone": "unknown",
+      "confidence": "medium",
+      "lenses": [
+        "flow"
+      ],
+      "conflicts": [],
+      "basis": "shared-service, 4 distinct sources | env=unknown | zone=unknown",
+      "app_source": null
+    },
+    {
+      "vm": "order-app-01",
+      "role": "application",
+      "app_id": "order",
+      "tier": "unknown",
+      "service_type": null,
+      "env": "prod",
+      "zone": "internal",
+      "confidence": "high",
+      "lenses": [
+        "flow",
+        "metadata"
+      ],
+      "conflicts": [],
+      "basis": "app 'order' / unknown tier | env=prod | zone=internal",
+      "app_source": "derived"
+    },
+    {
+      "vm": "shop-db-01",
+      "role": "application",
+      "app_id": "shop",
+      "tier": "data",
+      "service_type": null,
+      "env": "prod",
+      "zone": "internal",
+      "confidence": "high",
+      "lenses": [
+        "flow",
+        "metadata"
+      ],
+      "conflicts": [],
+      "basis": "app 'shop' / data tier | env=prod | zone=internal",
+      "app_source": "derived"
+    },
+    {
+      "vm": "shop-web-01",
+      "role": "application",
+      "app_id": "shop",
+      "tier": "web",
+      "service_type": null,
+      "env": "prod",
+      "zone": "dmz",
+      "confidence": "high",
+      "lenses": [
+        "declared",
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "conflicts": [],
+      "basis": "declared app 'shop' | env=prod | zone=dmz",
+      "app_source": "declared"
+    },
+    {
+      "vm": "10.0.0.11",
+      "role": "shared-service",
+      "app_id": null,
+      "tier": null,
+      "service_type": "902/ESXi-NFC",
+      "env": "unknown",
+      "zone": "unknown",
+      "confidence": "high",
+      "lenses": [
+        "flow",
+        "identity"
+      ],
+      "conflicts": [],
+      "basis": "identified VCF component (esxi-host), 5 distinct sources | env=unknown | zone=unknown",
+      "app_source": null
+    }
+  ]
+}

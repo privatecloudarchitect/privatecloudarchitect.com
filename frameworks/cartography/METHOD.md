@@ -47,18 +47,18 @@ the supervisor lens at the root, and the flow lens's Phase 4-5 core in [`flow/`]
 | 1 · Substrate | turn the lenses on, prove they flow, start the accumulation window | flow + process | operator step |
 | 2 · Census | enumerate everything, so coverage has a denominator | inventory | operator step |
 | 3 · Multi-modal | gather raw evidence from every lens, conclude nothing yet | all four | **the supervisor lens reads the declared column** |
-| 4 · Shared services | quarantine high-fan-in common services before boundary math | flow + identity | **the flow lens, [`flow/`](flow/)** (port-only) |
+| 4 · Shared services | quarantine high-fan-in common services before boundary math | flow + identity | **the flow lens, [`flow/`](flow/)** |
 | 5 · Boundaries + tiers | cluster the shared-service-free graph into apps, assign tiers | flow | **the flow lens, [`flow/`](flow/)** |
-| 6 · Env + zone | overlay environment and security zone, orthogonal to identity | metadata + NSX | flow lens (next); the supervisor lens observes environment |
-| 7 · Arbitrate | collapse the lenses into one confidence-scored classification per workload | all four | flow lens (next) |
+| 6 · Env + zone | overlay environment and security zone, orthogonal to identity | metadata | **the flow lens, [`flow/`](flow/)**; the supervisor lens observes environment |
+| 7 · Arbitrate | collapse the lenses into one confidence-scored classification per workload | all four | **the flow lens, [`flow/`](flow/)** |
 | 8 · Persist | write the confident classifications back as durable, governed tags | the write | **the supervisor lens writes back today** |
 | 9 · Govern | re-run on a cadence; drive the unclassified backlog to zero and hold | census delta | operator cadence |
 
 Read the columns honestly: the supervisor lens covers the declared evidence of Phase 3 and the write-back
-of Phase 8; the flow lens in [`flow/`](flow/) covers Phases 4 and 5, shared-services extraction and
-boundary-plus-tier clustering, on port-only heuristics. Phases 6 and 7 (the environment and zone overlay,
-and the arbitration that fuses the lenses) plus the flow lens's identity anchor live in the platform's
-`pca vcf-opsnet` commands and are the next slice. Phases 0, 1, 2, and 9 are operator steps the method
+of Phase 8; the flow lens in [`flow/`](flow/) now covers Phases 4 through 7 end to end: shared-services extraction
+with the identity anchor, boundary-plus-tier clustering, the environment and zone overlay, and the
+arbitration that fuses them into one confidence-scored classification per VM. Nothing of the read-only
+discovery pipeline is left in the CLI. Phases 0, 1, 2, and 9 are operator steps the method
 frames but no tool performs for you.
 
 ## The target taxonomy
@@ -112,11 +112,13 @@ point tuning, micro-segmentation, and capacity planning all inherit a map they c
 - **Learn the full method** on the site: [Application Cartography: discover before you tune](https://privatecloudarchitect.com/handbook/cartography),
   then [The supervisor lens: labels are declarations](https://privatecloudarchitect.com/handbook/cartography-supervisor),
   then [Tag governance: facts, intent, and who may write](https://privatecloudarchitect.com/handbook/cartography-governance).
-- **Run the flow lens** from [`flow/`](flow/): see [`flow/README.md`](flow/README.md). It pulls the flows
-  VCF Operations for Networks collects, quarantines the shared services by fan-in, and clusters the
-  remaining VM-to-VM graph into tiered candidate applications, read-only, with its own offline
-  `--self-test`. It carries Phases 4 and 5; the environment and zone overlay, the identity anchor, and the
-  cross-lens arbitration (Phases 6 and 7) remain in the platform's `pca vcf-opsnet discover-*` commands.
+- **Run the flow lens** from [`flow/`](flow/): see [`flow/README.md`](flow/README.md). `discover_flows.py`
+  pulls the flows VCF Operations for Networks collects, quarantines the shared services by fan-in, and
+  clusters the remaining VM-to-VM graph into tiered candidate applications (Phases 4-5).
+  `discover_arbitration.py` runs the whole pipeline through Phase 7: it adds the identity anchor, the
+  environment and zone overlay, and the arbitration that fuses every lens into one confidence-scored
+  classification per VM, with the conflicts a human must confirm. Read-only, each with an offline
+  `--self-test`.
 
 Every claim on the site carries an evidence tier, defined on the [method page](https://privatecloudarchitect.com/method).
 This repo is the `repo` tier: what you can run and read for yourself.

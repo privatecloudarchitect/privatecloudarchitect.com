@@ -24,7 +24,8 @@
           "monitoring-01",
           "portal-01",
           "shop-app-01"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "ad-01",
@@ -42,7 +43,8 @@
           "monitoring-01",
           "portal-01",
           "shop-app-01"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "portal-01",
@@ -60,7 +62,8 @@
           "203.0.113.31",
           "203.0.113.32",
           "203.0.113.33"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "alpha-node",
@@ -73,7 +76,8 @@
         "basis": "only 1 distinct source(s) (< 3)",
         "sample_sources": [
           "beta-node"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "beta-node",
@@ -86,7 +90,8 @@
         "basis": "only 1 distinct source(s) (< 3)",
         "sample_sources": [
           "alpha-node"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "blog-db-01",
@@ -99,7 +104,8 @@
         "basis": "only 1 distinct source(s) (< 3)",
         "sample_sources": [
           "blog-web-01"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "blog-web-01",
@@ -114,7 +120,8 @@
         "basis": "only 1 distinct source(s) (< 3)",
         "sample_sources": [
           "203.0.113.20"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "shop-app-01",
@@ -129,7 +136,8 @@
         "basis": "only 1 distinct source(s) (< 3)",
         "sample_sources": [
           "shop-web-01"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "shop-db-01",
@@ -142,7 +150,8 @@
         "basis": "only 1 distinct source(s) (< 3)",
         "sample_sources": [
           "shop-app-01"
-        ]
+        ],
+        "component_role": null
       },
       {
         "destination": "shop-web-01",
@@ -157,7 +166,8 @@
         "basis": "only 1 distinct source(s) (< 3)",
         "sample_sources": [
           "203.0.113.10"
-        ]
+        ],
+        "component_role": null
       }
     ]
   },

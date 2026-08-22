@@ -29,9 +29,12 @@ Operations' unified identity, so you need nothing but an account.
 ## The recipe
 
 ```bash
-python3 discover_flows.py                                  # pull the last 24h, print the findings
-python3 discover_flows.py --hours 168 --min-fan-in 5       # a week, stricter shared-service threshold
+python3 discover_flows.py                                  # Phases 4-5: shared services + boundaries
 python3 discover_flows.py --hours 168 --export findings.json
+
+python3 discover_arbitration.py                            # Phases 4-7: one scored classification per VM
+python3 discover_arbitration.py --declared recs.json       # fuse the supervisor lens's export
+python3 discover_arbitration.py --hours 168 --export report.json
 ```
 
 The findings are two lists. **Shared services** are destinations reached by many distinct sources on
@@ -45,24 +48,32 @@ only evidence once you have watched long enough for it to have appeared.
 
 ## The offline self-test
 
-`python3 discover_flows.py --self-test` runs the whole pure pipeline on a shipped fixture
-(`fixtures/flows.json`, twenty-two synthetic flows covering two infrastructure shared services, a
-review case, a three-tier app, a two-tier app, and an unnamed cluster) and compares the result
-against the golden findings (`fixtures/expected-findings.json`). No vRNI, deterministic. Run it to
-confirm the analysis before you point it at an estate; the pure cores (`lib/_shared_services.py`,
-`lib/_boundaries.py`) carry no I/O, which is exactly what makes them offline-checkable.
+Both entries carry one. `python3 discover_flows.py --self-test` runs Phases 4-5 on a twenty-two-flow
+synthetic fixture; `python3 discover_arbitration.py --self-test` runs the whole Phase 4-7 pipeline on a
+fixture that exercises every path (the identity anchor typing an ESXi host, a flow-only shared service,
+a four-lens high-confidence application, a data-tier-in-dmz conflict, and a low-information VM). Each
+compares against a golden report, no vRNI, deterministic. Run them to confirm the analysis before you
+point anything at an estate; the pure cores carry no I/O, which is what makes them offline-checkable.
 
-## What this lens carries, and what it does not
+## What this lens carries
 
-It carries Phases 4 and 5 of [the method](../METHOD.md): shared-services extraction and
-boundary-plus-tier clustering, on port-only heuristics. That is the flow lens's defining capability
-and it is self-contained, flow-only.
+It carries the whole read-only pipeline of [the method](../METHOD.md), Phases 4 through 7:
 
-It does not carry the fuller triangulation: the identity anchor (vRNI's own authoritative entity
-typing, which turns a host-data-plane port guess into a proven VCF-component role), the environment
-and security-zone overlay, and the arbitration that fuses the flow lens with the supervisor and
-metadata lenses into one confidence-scored classification per workload. Those live in the platform's
-`pca vcf-opsnet discover-*` commands and are the natural next slice of this estate.
+- **Phase 4, shared services** (`lib/_shared_services.py`) with the **identity anchor**
+  (`lib/_identity.py`): vRNI's own authoritative entity typing turns a host-data-plane port guess into
+  a proven VCF-component role, so an ESXi host or NSX node is recognised with certainty rather than
+  guessed from a port.
+- **Phase 5, boundaries + tiers** (`lib/_boundaries.py`): the shared-service-free graph clustered into
+  tiered applications.
+- **Phase 6, environment + zone** (`lib/_env_zone.py`): env from naming and placement, zone from
+  security constructs and observed internet exposure.
+- **Phase 7, arbitration** (`lib/_arbitrate.py`, `discover_arbitration.py`): fuse the lenses into one
+  confidence-scored classification per VM, with the conflicts a human must confirm. The optional
+  declared lens (`--declared`, the supervisor lens's export) is authoritative where present.
+
+`discover_flows.py` runs Phases 4-5; `discover_arbitration.py` runs all of 4-7. Confirmed
+classifications hand to the [supervisor lens's write-back](../README.md) (Phase 8); keeping the map
+true on a cadence (Phase 9) is the standing governance loop.
 
 ## The method and the other lens
 
