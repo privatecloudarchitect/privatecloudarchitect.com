@@ -14,7 +14,7 @@
       </tr>
       <tr>
         <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">3 &middot; Tags</td>
-        <td style="padding:4px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">Membership is two tags (<span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">env=dev</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">sla=sla-4</span>) on the VMs. Their hosts and clusters are derived from where those VMs run, so run the reconciler on a cadence to keep the infrastructure tiers current.</td>
+        <td style="padding:4px 0;color:#3b4b5b;border-bottom:1px solid #eef2f6">Membership is two tags (<span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">env=dev</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">sla=sla-4</span>) on the VMs. Hardware is a separate plane, governed by its tier: each cluster carries a tier tag and its hosts inherit it. The reconciler derives which hosts and clusters run the posture for the fit view, so run it on a cadence to keep that mapping current.</td>
       </tr>
       <tr>
         <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">4 &middot; Blanks</td>

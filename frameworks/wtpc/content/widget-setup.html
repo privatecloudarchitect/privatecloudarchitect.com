@@ -18,7 +18,7 @@
         </tr>
         <tr>
           <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">4 &middot; Tag hygiene</td>
-          <td style="padding:4px 0;color:#3b4b5b">Membership is three vCenter tags (<span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">env=prod</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">function=db</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">sla=sla-1</span>) on the VMs. Their hosts and clusters are derived from where those VMs run, so run the reconciler on a cadence to keep the infrastructure tiers current. A group condition matches on <b>category and value together</b>. A near-miss tag yields a silently empty group, not an error.</td>
+          <td style="padding:4px 0;color:#3b4b5b">Membership is three vCenter tags (<span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">env=prod</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">function=db</span> &middot; <span style="font-family:Consolas,monospace;font-size:11px;color:#6b7886">sla=sla-1</span>) on the VMs. Hardware is a separate plane, governed by its tier: each cluster carries a tier tag and its hosts inherit it. The reconciler derives which hosts and clusters run the posture for the fit view, so run it on a cadence to keep that mapping current. A group condition matches on <b>category and value together</b>. A near-miss tag yields a silently empty group, not an error.</td>
         </tr>
         <tr>
           <td style="padding:4px 10px 4px 0;vertical-align:top;font-weight:600;color:#2f4256">5 &middot; What stays blank</td>
