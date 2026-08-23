@@ -59,6 +59,15 @@ checks. Create one instance and declare your endpoints on it.
   instance, and the checks mint on the next configuration cycle. Keep the list sorted if you
   manage it declaratively, so ordering never looks like drift.
 
+**The address list takes ranges, not just hosts.** The identifier accepts a single address, an
+FQDN, a CIDR block, or a start-to-end range, which is the platform's own AddressList grammar. A
+whole subnet is therefore one entry rather than two hundred fifty-four, and a contiguous pool is
+one range. For a large or frequently changing set, point the instance at an uploaded configuration
+file (the adapter's `conf_file_name`) instead of the inline list: upload the AddressList XML under
+Administration, Management Packs Configuration, and the instance reads its endpoints from the file.
+Compact declaration does not change the collection cost: the ceiling below is on resolved
+endpoints, so a CIDR is one line to write and still many checks to run.
+
 **Reachability is the question, not a precondition.** Declaring an application segment's
 addresses is how you learn whether the collector routes to it; a 100 percent loss row is a
 finding about the path, and a different finding than a degraded one.
@@ -135,6 +144,13 @@ Service Discovery. Install it everywhere; keep it current with the same cadence 
 patching. The dashboard's layer-3 table is the verification loop: a red Tools state is a guest
 the platform can neither measure nor protect, and the honest reading of such a guest is unknown,
 not up.
+
+This guest reading is the base availability signal for the fleet interior. Because it is collected
+through vCenter and not over the network to the guest, it covers exactly the workloads a ping check
+cannot reach: a VM on a private, inbound-isolated network reads a healthy guest figure here while
+its reachability row shows total loss (the front-door rule, section 1). Reachability and this
+liveness signal are co-primary for that reason, and the layered dashboard pairs them on the same
+row.
 
 At scale, do not hand-install onto the existing fleet: bake current Tools into the golden images
 and templates so new guests arrive instrumented, and drive the existing estate from your

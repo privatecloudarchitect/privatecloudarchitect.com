@@ -12,6 +12,39 @@ model.
 content-import recognition test on the reference instance reports the shipped packages as
 `skipped N, failed 0`, which is the id-preserving proof.
 
+## Where to start, and how to grow
+
+You do not have to stand up all five layers to get value, and you should not try to on day one.
+Availability rests on two signals that are co-primary; the other layers are depth on top of them.
+
+- **Guest liveness (layer 3).** VMware Tools reports a guest availability figure for every VM it
+  runs on, collected through vCenter with no network path to the guest. It is already there once
+  Tools is current, it costs nothing to enable, and it covers the fleet interior, including the
+  workloads no collector can route to.
+- **Reachability (layer 1).** A ping check proves the path from a collector's vantage to an
+  endpoint it can route to. It is the only signal that catches a live guest whose path is down,
+  and the right measure for anything fronted by a load balancer.
+
+Neither is sufficient alone, which is the whole point. Reachability by itself is a blind spot for a
+workload-heavy estate: a fleet of applications on private, inbound-isolated networks reads a near
+total ping loss while every one of them is healthy, because no collector routes to their interiors
+(the front-door rule below). Liveness by itself misses the live guest whose path has failed. Run
+both, and each covers the other's gap; a VM that reads healthy on one and failing on the other is a
+specific finding, not noise.
+
+The path that has worked:
+
+1. **Prove the two signals.** Enable guest liveness across the fleet (it is free) and add
+   reachability on a handful of endpoints that carry an explicit promise. Read them side by side.
+2. **Grow to the fleet.** Declare the reachability set for real (a whole subnet is one line;
+   [CONFIGURATION.md](CONFIGURATION.md) section 1 has the compact form), point every workload check
+   at its load-balancer front door, and read the two signals at fleet scale: liveness as the
+   coverage floor, reachability as the path map. A heatmap of each, the guest KPI and the delivery
+   percentage, turns thousands of objects into two at-a-glance reads.
+3. **Layer up to the full promise.** Add the platform floor, native Service Discovery, the agent
+   plane, and the target-and-error-budget close, in the order the dashboard's Setup panel walks.
+   The layered dashboard in this directory is that end state.
+
 ## The artifacts, in import order
 
 Each layer references the previous one by id, so the order matters:
@@ -106,6 +139,10 @@ proven live. The short form, in sensor-chain order:
 
 ## The rules the content encodes
 
+- **Liveness and reachability are co-primary.** The guest KPI answers "is the guest up" and the
+  ping answers "is its path open." A workload-heavy estate needs both: reachability alone goes dark
+  on every workload no collector can route to, and liveness alone misses the live guest whose path
+  failed. The layer-1 and layer-3 rows carry them together so the pair reads as one finding.
 - **Monitor the front door, not the private backend.** A workload on a private, inbound-isolated
   CIDR (a supervisor namespace, a VKS cluster, an NSX VPC, or anything reachable only through a
   load balancer) reads a steady 100% loss from the collector while it is healthy and serving
