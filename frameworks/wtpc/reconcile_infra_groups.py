@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WTPC infra-tier membership reconciler - the "follows the workload" model.
+"""WTPC posture infra-membership reconciler - the "follows the workload" model.
 
 The VMs group is tag-declarative (its members auto-follow VCFA/orchestrator deploys that carry the
 posture tags). The Host and Cluster groups are DERIVED: their members are exactly the hosts running,
@@ -18,7 +18,7 @@ and Cluster groups' includedResources, with the drift-prone tag rules dropped.
 
 Day-10 property: deploy a posture VM onto new hardware -> it is tagged (automatable) -> it joins the
 VMs group (~13 min re-resolution) -> the next reconciler run pulls its host + cluster in. No operator
-re-tagging of infrastructure, ever.
+re-tagging of infrastructure for posture membership (the hardware's tier tag is a separate, tooling-set step).
 
 Idempotent: reads current includedResources, computes the desired set, and PUTs only on a diff.
 Safe: refuses to blank a populated infra group when the VMs group resolves to zero members (a likely

@@ -73,7 +73,7 @@ The order it drives, and what each step is:
 5. `build.py postures/<P>.yaml` - the posture's super-metric DAG, created and activated in the
    posture policy programmatically.
 6. `reconcile_infra_groups.py --posture <P>` - Host and Cluster membership derived from where the
-   tagged VMs actually run (membership follows the workload; no infrastructure re-tagging, ever).
+   tagged VMs actually run (membership follows the workload; no infrastructure re-tagging for posture membership).
 7. `apply_policy_capacity.py` - each policy's capacity allocation, PATCHed from the envelope.
 8. `build_alerts.py` + `deploy_alerts.py` - the alert bundle, built offline from `alerts.yaml`
    and the exemplar's SM record, then enabled in the posture policy ONLY and disabled in

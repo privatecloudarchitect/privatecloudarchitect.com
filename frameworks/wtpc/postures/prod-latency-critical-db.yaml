@@ -31,10 +31,12 @@ membership:
   function: db
   sla: sla-1                    # sla-1 = latency-critical
 
-# --- Step 3: custom groups. MEMBERSHIP MODEL = "follows the workload". The VM tier is the
-# only tag-declarative anchor; the Host and Cluster tiers are DERIVED from it, so tagging the workload
-# (automatable via VCFA/orchestrator) is the single input and the infrastructure tiers follow VM
-# placement with no operator re-tagging.
+# --- Step 3: custom groups. MEMBERSHIP MODEL = "follows the workload". The VM's POSTURE is the
+# tag-declarative anchor; the posture's Host and Cluster GROUPS are DERIVED from where its VMs run, so
+# tagging the workload (automatable via VCFA/orchestrator) is the single input and the posture's
+# infrastructure MEMBERSHIP follows VM placement with no operator re-tagging. That membership is the
+# fit view; hardware GOVERNANCE is the separate tier unit (the cluster carries a tier tag, the host
+# inherits it).
 #
 #   VMs      = tag rule: env=prod AND workload=db AND sla=sla-1 (AND-composition VERIFIED live).
 #   Hosts    = derived: the HostSystems running a VMs-group member.
