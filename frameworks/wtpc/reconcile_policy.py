@@ -68,8 +68,9 @@ def resolve_groups(c: VcfOpsClient, posture: str) -> list[dict]:
     """The posture's three custom groups, adopted LIVE by name (robust to the record-file naming drift).
     `includePolicy=true` populates each group's current `policy` binding — the truthful read; a
     plain GET omits it. All three groups carry the posture policy in the proven-working estate: the
-    Host/Cluster SMs compute BECAUSE those objects' effective policy is the posture policy (mixed clusters
-    are resolved by priority, strictest-resident-wins — not by refusing to bind)."""
+    Host/Cluster SMs compute BECAUSE those objects have an effective policy that enables them (where an
+    untiered object lands in two posture groups, priority resolves it strictest-resident-wins, not by
+    refusing to bind; a tiered object is governed by its tier)."""
     pref = f"{GROUP_PREFIX}{posture} "
     groups = list_groups(c, include_policy=True)
     return [{"name": g["resourceKey"]["name"], "id": g["id"], "policy": g.get("policy") or g.get("policyId")}

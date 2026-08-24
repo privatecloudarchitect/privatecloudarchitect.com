@@ -54,7 +54,7 @@
     <tbody>
       <tr>
         <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6"><b style="color:#2f4256">Cluster-atomic</b><br><span style="color:#6b7886;font-size:11.5px">HA admission control, N+k host redundancy, anti-affinity, EVC</span></td>
-        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">A cluster holds exactly one of each. The strictest resident wins, unconditionally.</td>
+        <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">A cluster holds exactly one of each; the tier sets it. A resident needing more than the tier provides is a fit finding, not a cluster bump.</td>
         <td style="padding:7px 10px;color:#3b4b5b;vertical-align:top;border-bottom:1px solid #eef2f6">The <b style="color:#2f6fb0">tier</b>, as guarantees. A shortfall is a placement-fit finding, not a silent downgrade.</td>
       </tr>
       <tr>

@@ -6,9 +6,10 @@ Two things live here, both derived from the posture envelopes (the portable sour
 
 1. **Axis-precedence strictness key** — a total order over postures by the declared axis precedence
    Availability > Performance > Capacity (Cost is EXCLUDED — priced, not policed). Stricter posture =
-   higher key. This is what makes "strictest-resident-wins" deterministic: rank the global policy
-   priority list by this key and VCF Operations' highest-priority-wins selects the right policy with no
-   human choice (Policy Doctrine P3, extended).
+   higher key. It ranks the global policy priority band so selection is deterministic: a TIERED cluster is
+   governed by its own tier, and an UNTIERED cluster falls back to its strictest resident (VCF Operations'
+   highest-priority-wins, no human choice; Policy Doctrine P3, extended). Strictest-resident is the
+   fallback, not the governing model. See the doctrine's scope note.
 
 2. **Envelope feasibility** — a pure per-axis test of whether two postures can co-exist on one host.
    The density/overcommit axis is where they conflict: if posture A's TARGET overcommit exceeds posture

@@ -7,7 +7,7 @@
 # prod-grade governance. test-dev-traditional is the P1 inverse: hot-and-cheap-correctly, best-effort, density is
 # the point. Instantiated live and CO-LOCATED with the exemplar to prove mixed-SLA governance
 # (the shared-infrastructure governance doctrine): the
-# feasibility conflict, strictest-resident-wins, and the dilution signal are all provable on real
+# feasibility conflict, the untiered strictest-resident fallback, and the dilution (mis-fit) signal are all provable on real
 # shared hardware only when two postures of different strictness share a cluster.
 
 posture: test-dev-traditional
