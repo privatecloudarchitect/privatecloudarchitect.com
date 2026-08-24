@@ -13,8 +13,7 @@ add depth on top.
 
 ## Before you start
 
-- VCF Operations 9.1, with the Ping Adapter activated (you already have this).
-- An api-token, minted in the operations console under Administration, for the standalone client.
+- VCF Operations 9.1, with the Ping Adapter activated.
 - A collector group whose collector can route to the addresses you want to check.
 
 ## What is in this bundle
@@ -26,12 +25,38 @@ add depth on top.
 | `opslib.py` | The standalone Ops client it uses (stdlib only, no SDK). |
 | `import/reachability-checks.import.zip` | One view: every check with its packet loss and latency. |
 
-## Step 1 - move your list into `checks.yaml`
+The view import is useful whichever way you configure the checks. The three tool files support the
+scripted option below; the console option uses only the view import.
 
-If you started the way most teams do, with a short comma-separated list typed into a single adapter
-instance by hand, this is the upgrade. Copy `checks.example.yaml` to `checks.yaml` and put your
-endpoints under `checks:`. Each address is an IP, an FQDN, a **CIDR** (a whole subnet in one line), or
-a **range**. Gear is where the CIDR earns its keep: a `/24` of switches is one line, not 254.
+## Configure the checks: two ways
+
+Two ways to put addresses under monitoring. Both drive the same Ping Adapter instance and the same
+address list, so you can begin in the console and adopt the file-driven path later without redoing
+anything.
+
+### Option 1: in the operations console
+
+Open your Ping Adapter instance, or create one, and enter your endpoints in its address list. VMware's
+"Configuring Ping Adapter Instances," in the 9.1 configuration guide, walks the exact fields and their
+supported value ranges. Pick a collector group whose collector can route to the addresses, name the
+instance, and populate the list.
+
+The address list carries more than one IP per line. An entry can be an IP, an FQDN, a **CIDR** (a whole
+subnet at once), or a **range**, so a `/24` of switches is a single line rather than 254. That keeps a
+list you maintain by hand workable well past the point where one row per address would become unwieldy.
+
+This is the quickest way to a first picture, and it needs nothing beyond the console. Both gotchas below
+apply here; the second one, a removed address leaving its check object behind, is manual housekeeping on
+this path, and the usual reason a growing list moves to Option 2.
+
+### Option 2: converge from a file
+
+When the list outgrows hand-editing, treat `checks.yaml` as the single source of truth and let
+`reconcile_checks.py` converge the instance to it. It is level-triggered and idempotent: run it as often
+as you like, it touches only the instance you name, and it prunes the check objects for addresses you
+remove. This path also needs an api-token, minted in the operations console under Administration.
+
+Copy `checks.example.yaml` to `checks.yaml` and list your endpoints, using the same grammar as above:
 
 ```yaml
 checks:
@@ -40,48 +65,42 @@ checks:
   - address: esx-01.mgmt.example.com   # a host management interface, by name
 ```
 
-## Step 2 - converge (dry-run first)
+Then converge, dry-run first:
 
 ```
 export OPS_HOST=ops.example.com  OPS_API_TOKEN=<your-token>  OPS_INSECURE=1   # OPS_INSECURE for a self-signed CA
 
 python reconcile_checks.py             # DRY-RUN: the exact plan, no changes
 python reconcile_checks.py --execute   # create or update the instance, start it, wait for the checks
-python reconcile_checks.py --status     # read-only: every check with its loss and latency
+python reconcile_checks.py --status    # read-only: every check with its loss and latency
 ```
 
-The reconciler is level-triggered and idempotent: run it as often as you like, and it converges the
-instance to whatever `checks.yaml` says. It touches only the instance you named, and it prunes the
-check objects for addresses you remove. `--status` is your first look at the pulse, in the terminal,
-with zero extra setup.
+`--status` is your first look at the pulse in the terminal, with zero extra setup. To push a large
+address set, either let `--execute` set the list over the API (nothing to upload), or run `--config-file`
+to write VMware's native address-list XML, upload it via Administration > Management Packs Configuration,
+and point the adapter's `conf_file_name` at it. Use one path or the other, not both.
 
-## Step 3 - see it in the console
+## See it in the console
 
 Import `import/reachability-checks.import.zip` (Views > Manage > Import). The view lists every check
 with its packet loss and latency, gear included, colored so a red row reads at a glance. Drop it on any
 dashboard, or read it on its own. This view is deliberately dependency-free: it reads the raw check
 stats, so it needs no super metrics and no other content to render.
 
-## Two things that will cost you an afternoon if you miss them
+## Gotchas worth knowing
 
 - **`unique_name` must be a plain slug** (`[a-z0-9_]`). A space or punctuation there makes the adapter
-  silently load zero checks while its heartbeat stays green. The reconciler derives a safe slug if you
-  omit it.
+  silently load zero checks while its heartbeat stays green. The reconciler derives a safe slug for you;
+  if you create the instance in the console, set it deliberately.
 - **Removing an address does not delete its check object.** The ping stops, but the object lingers, red
-  and still counted. The reconciler prunes these on its next run, which is why you converge with the
-  tool rather than editing the adapter by hand.
+  and still counted. The reconciler prunes these on its next run; in the console, delete the stale check
+  object yourself.
 
-## Scaling past one line per host
+## Scaling to a large fleet
 
-Two paths, both from the same `checks.yaml`, and both honor CIDRs and ranges so a subnet is one line:
-
-- `reconcile_checks.py --execute` sets the adapter's address list over the API. Nothing to upload.
-- `reconcile_checks.py --config-file` writes VMware's native address-list XML. Upload it via
-  Administration > Management Packs Configuration and point the adapter's `conf_file_name` at it. Use
-  one path or the other, not both.
-
-For very large fleets, shard the address set across several instances on a collector group and tune the
-packet count and interval for cycle time.
+CIDRs and ranges already fold whole subnets into single lines, on either path. For a very large fleet,
+shard the address set across several instances on a collector group, and tune the packet count and
+interval for cycle time.
 
 ## Where this sits on the map, so you build in the right direction
 
