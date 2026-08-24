@@ -84,9 +84,9 @@ and point the adapter's `conf_file_name` at it. Use one path or the other, not b
 
 **Import it.** Views > Manage > Import, and choose `import/reachability-checks.import.zip`.
 
-**Confirm it landed.** The success message does not say what it contained, which is the part that trips
-people up. Go back to **Views > Manage** and search the list for **Reachability - Ping Checks**; finding
-it there is the proof it imported. The view is global, so anyone on the instance can use it.
+**Confirm it landed.** The success message does not name what it wrote, so confirm the import directly:
+return to **Views > Manage** and search the list for **Reachability - Ping Checks**. Finding it there is
+the proof it imported. The view is global, so anyone on the instance can use it.
 
 **See the data.** A view is a table definition, not a dashboard: it renders only when pointed at a
 subject. This view's subject is the ping checks, so point it at the object that owns them, the Ping
