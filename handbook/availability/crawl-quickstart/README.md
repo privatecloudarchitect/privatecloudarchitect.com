@@ -68,7 +68,7 @@ checks:
 Then converge, dry-run first:
 
 ```
-export OPS_HOST=ops.example.com  OPS_API_TOKEN=<your-token>  OPS_INSECURE=1   # OPS_INSECURE for a self-signed CA
+export OPS_HOST=ops.example.com  OPS_API_TOKEN=<your-token>  OPS_TLS_VERIFY=false   # for a self-signed CA
 
 python reconcile_checks.py             # DRY-RUN: the exact plan, no changes
 python reconcile_checks.py --execute   # create or update the instance, start it, wait for the checks

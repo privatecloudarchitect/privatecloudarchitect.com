@@ -20,7 +20,7 @@ The sheet's three rules, runnable against your own VCF Operations instance:
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
 export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
-export OPS_INSECURE=1                        # only on a self-signed lab CA
+export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
 
 python3 runway.py
 python3 runway.py --parity parity.example.json    # after editing the example

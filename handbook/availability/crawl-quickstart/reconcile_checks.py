@@ -6,7 +6,7 @@ the addresses you declare in checks.yaml (an IP, an FQDN, a CIDR, or a range). L
 idempotent, so run it as often as you like. It touches ONLY the instance named in checks.yaml, and it
 prunes the check objects for addresses you have removed. Nothing else on the estate is affected.
 
-  export OPS_HOST=ops.example.com  OPS_API_TOKEN=...  OPS_INSECURE=1   # self-signed CA
+  export OPS_HOST=ops.example.com  OPS_API_TOKEN=...  OPS_TLS_VERIFY=false   # self-signed CA
   python reconcile_checks.py                        # dry-run: the convergence plan
   python reconcile_checks.py --execute              # apply (create or update, start), then poll
   python reconcile_checks.py --status               # read-only: the checks and their loss / latency

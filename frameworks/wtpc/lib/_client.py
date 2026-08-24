@@ -22,11 +22,11 @@ Environment:
   OPS_BROKER_HOST  (optional)  Identity Broker FQDN; defaults to OPS_HOST
   OPS_REALM        (optional)  broker realm, default CUSTOMER
   OPS_API_TOKEN    (required)  the api-token from the operations console
-  OPS_INSECURE=1   (optional)  skip TLS verification (self-signed lab CA only)
+  OPS_TLS_VERIFY   (optional)  TLS verification on by default; false for a self-signed lab CA
   VCENTER_HOST     (tag steps) vCenter FQDN
   VCENTER_USERNAME (tag steps) vCenter SSO user
   VCENTER_PASSWORD (tag steps) its password
-  VCENTER_INSECURE (optional)  defaults to OPS_INSECURE
+  VCENTER_TLS_VERIFY (optional)  defaults to OPS_TLS_VERIFY
 
 `policy_index(c)` is the near-universal first read (policy name -> id); it lives here because
 almost every mutating script needs it to resolve `PCA - WTPC - Policy - <posture>` to an id.
@@ -78,6 +78,19 @@ def _require(var: str) -> str:
 
 def _ctx(insecure: bool) -> ssl.SSLContext:
     return ssl._create_unverified_context() if insecure else ssl.create_default_context()
+
+
+def _insecure(prefix: str, inherit: bool | None = None) -> bool:
+    """True when TLS verification should be skipped for this plane. Verification is on by default;
+    {prefix}_TLS_VERIFY=false (also 0/no/off) turns it off, and the legacy {prefix}_INSECURE=1 is
+    still honored. The vCenter plane passes inherit=_insecure("OPS") to defer to Ops when unset."""
+    tv = os.environ.get(f"{prefix}_TLS_VERIFY")
+    if tv is not None:
+        return tv.strip().lower() in ("0", "false", "no", "off")
+    legacy = os.environ.get(f"{prefix}_INSECURE")
+    if legacy is not None:
+        return legacy == "1"
+    return bool(inherit)
 
 
 class _Session:
@@ -132,7 +145,7 @@ class OpsSession(_Session):
 
     def __init__(self) -> None:
         self.base = f"https://{_require('OPS_HOST')}/suite-api"
-        self.insecure = os.environ.get("OPS_INSECURE") == "1"
+        self.insecure = _insecure("OPS")
         self._token = self._exchange()
 
     def _exchange(self) -> str:
@@ -164,7 +177,7 @@ class VcSession(_Session):
 
     def __init__(self) -> None:
         self.base = f"https://{_require('VCENTER_HOST')}/api"
-        self.insecure = os.environ.get("VCENTER_INSECURE", os.environ.get("OPS_INSECURE", "")) == "1"
+        self.insecure = _insecure("VCENTER", inherit=_insecure("OPS"))
         self._sid = self._login()
 
     def _login(self) -> str:

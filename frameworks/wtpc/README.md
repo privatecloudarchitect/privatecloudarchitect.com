@@ -28,10 +28,10 @@ Dependencies: Python 3 plus exactly one library, `PyYAML` (`pip install pyyaml`)
 export OPS_HOST=<ops-fqdn> OPS_BROKER_HOST=<broker-fqdn> OPS_API_TOKEN=<api-token>
 # vCenter (the tag-definition step only)
 export VCENTER_HOST=<vcenter-fqdn> VCENTER_USERNAME=<sso-user> VCENTER_PASSWORD=<password>
-export OPS_INSECURE=1        # only on a self-signed lab CA
+export OPS_TLS_VERIFY=false  # only on a self-signed lab CA
 ```
 
-`OPS_REALM` defaults to `CUSTOMER`; `VCENTER_INSECURE` defaults to `OPS_INSECURE`.
+`OPS_REALM` defaults to `CUSTOMER`; `VCENTER_TLS_VERIFY` defaults to `OPS_TLS_VERIFY`.
 
 ## Tags
 

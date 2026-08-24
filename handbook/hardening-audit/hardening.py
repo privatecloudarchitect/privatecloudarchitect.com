@@ -17,7 +17,7 @@ with their reason, which is itself part of the posture record.
   Consumption plane (firewall floor, access, audit trail):
     VCFA_HOST, VCFA_ORG, VCFA_USER, VCFA_PASSWORD
 
-  OPS_INSECURE=1 skips TLS verification on every plane (self-signed lab CA).
+  Set OPS_TLS_VERIFY=false to skip TLS verification on every plane (self-signed lab CA).
 
 Usage:  python3 hardening.py [--out DIR]
 Exit:   0 clean · 1 findings present · (skips never fail the run)
@@ -42,9 +42,14 @@ CLOUDAPI_ACCEPT = "application/json;version=40.0"
 
 
 def _ctx():
-    if os.environ.get("OPS_INSECURE") == "1":
-        return ssl._create_unverified_context()
-    return ssl.create_default_context()
+    # TLS verification is on by default; set OPS_TLS_VERIFY=false (or 0/no/off) for a
+    # self-signed CA. The legacy OPS_INSECURE=1 is still honored.
+    tv = os.environ.get("OPS_TLS_VERIFY")
+    if tv is not None:
+        verify = tv.strip().lower() not in ("0", "false", "no", "off")
+    else:
+        verify = os.environ.get("OPS_INSECURE") != "1"
+    return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
 def http(method, url, body=None, headers=None, form=False, timeout=60):

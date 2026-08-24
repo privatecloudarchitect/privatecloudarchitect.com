@@ -32,7 +32,7 @@ identity chapter teaches. Set the environment and run:
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
 export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
-export OPS_INSECURE=1                        # only on a self-signed lab CA
+export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
 
 python3 converge.py --dry-run   # reads only; shows what would change
 python3 converge.py             # run 1: created 2

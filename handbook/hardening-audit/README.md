@@ -47,7 +47,7 @@ export SDDC_HOST=<sddc-manager-fqdn> SDDC_USERNAME=<sso-user> SDDC_PASSWORD=<pas
 export OPS_HOST=<ops-fqdn> OPS_BROKER_HOST=<broker-fqdn> OPS_API_TOKEN=<api-token>
 # Consumption plane (firewall floor, access, audit trail) - an org session
 export VCFA_HOST=<vcfa-fqdn> VCFA_ORG=<org> VCFA_USER=<user> VCFA_PASSWORD=<password>
-export OPS_INSECURE=1        # only on a self-signed lab CA
+export OPS_TLS_VERIFY=false  # only on a self-signed lab CA
 
 python3 hardening.py
 ```

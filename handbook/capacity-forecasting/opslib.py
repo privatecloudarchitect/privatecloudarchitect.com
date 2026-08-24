@@ -10,7 +10,7 @@ Environment:
   OPS_BROKER_HOST (optional)  Identity Broker FQDN; defaults to OPS_HOST
   OPS_REALM       (optional)  broker realm, default CUSTOMER
   OPS_API_TOKEN   (required)  the api-token from the operations console
-  OPS_INSECURE=1  (optional)  skip TLS verification (self-signed lab CA)
+  OPS_TLS_VERIFY  (optional)  TLS verification, on by default; set false for a self-signed CA
 """
 
 import json
@@ -24,9 +24,14 @@ GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
 
 
 def _ctx():
-    if os.environ.get("OPS_INSECURE") == "1":
-        return ssl._create_unverified_context()
-    return ssl.create_default_context()
+    # TLS verification is on by default; set OPS_TLS_VERIFY=false (or 0/no/off) for a
+    # self-signed CA. The legacy OPS_INSECURE=1 is still honored.
+    tv = os.environ.get("OPS_TLS_VERIFY")
+    if tv is not None:
+        verify = tv.strip().lower() not in ("0", "false", "no", "off")
+    else:
+        verify = os.environ.get("OPS_INSECURE") != "1"
+    return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
 def bearer():
