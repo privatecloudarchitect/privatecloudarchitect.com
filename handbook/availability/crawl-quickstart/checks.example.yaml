@@ -1,0 +1,38 @@
+# Reachability crawl - the declarative source for one Ping Adapter instance.
+#
+# Copy this to checks.yaml, edit it for your estate, then run reconcile_checks.py. It converges the
+# adapter's address list to the `checks` below (dry-run first). This is the L1 reachability floor:
+# does the endpoint answer ICMP from the collector's vantage? It spans EVERYTHING with an IP - VMs,
+# host management interfaces, and the appliances and network equipment vCenter cannot see - which is
+# exactly why one managed list on one Ping Adapter instance is the whole crawl.
+
+instance:
+  # The Ping Adapter instance this file owns. reconcile_checks.py touches ONLY this instance, by name.
+  name: "Reachability - Fleet Crawl"           # the instance display name (yours to choose)
+  unique_name: reachability_fleet_crawl        # MUST be a plain slug [a-z0-9_]; a space here makes the
+                                               # adapter load zero checks while looking healthy
+  collector_group: "Default collector group"   # a collector group that can route to the addresses below
+  settings:
+    # Optional. Tune for your cycle time; these match VMware's documented ranges. Omit to use defaults.
+    number_of_packets: 20
+    packet_interval_ms: 100
+    timeout_ms: 1000
+
+# Grammar: each `address` is an individual IP, an FQDN, a CIDR (a whole subnet in one line), or a
+# range (a.b.c.1-a.b.c.254). This is VMware's own AddressList grammar - the same one the native
+# config file uses - so one line can cover a subnet of gear. Example addresses below use the
+# RFC-5737 / RFC-3849 documentation ranges; replace them with yours.
+checks:
+  # --- the reason this exists: gear vCenter cannot see, swept as subnets ---
+  - address: 192.0.2.0/24                       # a top-of-rack / management switch subnet (a /24, one line)
+  - address: 198.51.100.10                      # a PDU
+  - address: 198.51.100.11                      # a storage array controller
+  - address: 198.51.100.32-198.51.100.48        # a contiguous range of appliances
+
+  # --- host management interfaces (hosts do not take object-ping; ping the mgmt IP here) ---
+  - address: esx-01.mgmt.example.com            # FQDN preferred where it resolves
+  - address: 203.0.113.11                       # IP fallback where a name does not resolve
+
+  # --- a handful of management VMs by name (object-ping is the better tool for these at Walk) ---
+  - address: vcenter.example.com
+  - address: 203.0.113.5

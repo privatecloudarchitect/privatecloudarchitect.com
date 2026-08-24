@@ -7,6 +7,12 @@ reports: reachability checks, the platform floor, the guest and the VMware Tools
 carries it, native Service Discovery, and the agent plane, closed by the target-and-error-budget
 model.
 
+**Starting smaller?** `crawl-quickstart/` is the reachability on-ramp for a team that wants a quick
+win at low effort: one managed list of addresses on the Ping Adapter, covering virtual machines,
+host management interfaces, and the appliances and network gear vCenter cannot see, with a
+dependency-free view you can stand up in an afternoon. It is L1 of the five layers, and it grows
+into this dashboard with nothing to undo.
+
 **Provenance:** every view, column, band, and formula here was proven on a live VCF Operations
 9.1 instance (2026-08-17 and 2026-08-18), including the import shape itself. The no-force
 content-import recognition test on the reference instance reports the shipped packages as
