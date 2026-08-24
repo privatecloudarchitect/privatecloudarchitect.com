@@ -13,12 +13,14 @@ import re
 
 _MARKERS = [
     r"\bwas replaced\b", r"\bwere replaced\b", r"\breplaced by\b", r"\b(?:has|have) been replaced\b",
-    r"\bsuperseded\b", r"\bno longer\b", r"\bused to\b", r"\bformerly\b", r"\bpreviously\b",
+    r"\bsuperseded\b", r"\bused to be\b", r"\bformerly\b",
     r"\bthe original (?:rule|model|approach|design|behaviou?r|method|way|version|scheme)\b",
     r"\bthe older (?:rule|model|approach|design|behaviou?r|method|way|version|scheme)\b",
     r"\bdeprecated\b", r"\bwe (?:changed|moved|switched|renamed|replaced)\b",
-    r"\bchanged from\b", r"\bmoved from\b", r"\bhas since\b", r"\bthis is where .* was\b",
+    r"\bchanged from\b", r"\bmoved from\b",
 ]
+# Deliberately NOT markers: "no longer", "used to", "previously", "now"/"is now" - each false-positives
+# on legitimate current-state prose (a working set that "no longer fits", a tool "used to derive X").
 _RX = re.compile("|".join(_MARKERS), re.IGNORECASE)
 _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\s+")
