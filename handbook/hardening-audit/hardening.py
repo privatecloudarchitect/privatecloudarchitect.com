@@ -42,13 +42,8 @@ CLOUDAPI_ACCEPT = "application/json;version=40.0"
 
 
 def _ctx():
-    # TLS verification is on by default; set OPS_TLS_VERIFY=false (or 0/no/off) for a
-    # self-signed CA. The legacy OPS_INSECURE=1 is still honored.
-    tv = os.environ.get("OPS_TLS_VERIFY")
-    if tv is not None:
-        verify = tv.strip().lower() not in ("0", "false", "no", "off")
-    else:
-        verify = os.environ.get("OPS_INSECURE") != "1"
+    # TLS verification is on by default; set OPS_TLS_VERIFY=false (or 0/no/off) for a self-signed CA.
+    verify = os.environ.get("OPS_TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 

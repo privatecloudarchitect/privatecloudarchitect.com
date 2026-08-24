@@ -82,14 +82,11 @@ def _ctx(insecure: bool) -> ssl.SSLContext:
 
 def _insecure(prefix: str, inherit: bool | None = None) -> bool:
     """True when TLS verification should be skipped for this plane. Verification is on by default;
-    {prefix}_TLS_VERIFY=false (also 0/no/off) turns it off, and the legacy {prefix}_INSECURE=1 is
-    still honored. The vCenter plane passes inherit=_insecure("OPS") to defer to Ops when unset."""
+    {prefix}_TLS_VERIFY=false (also 0/no/off) turns it off. The vCenter plane passes
+    inherit=_insecure("OPS") to defer to Ops when its own flag is unset."""
     tv = os.environ.get(f"{prefix}_TLS_VERIFY")
     if tv is not None:
         return tv.strip().lower() in ("0", "false", "no", "off")
-    legacy = os.environ.get(f"{prefix}_INSECURE")
-    if legacy is not None:
-        return legacy == "1"
     return bool(inherit)
 
 
