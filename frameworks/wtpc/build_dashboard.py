@@ -378,14 +378,19 @@ def validate(doc, groups=None):
         assert tvm[it["widgetIdProvider"]] == "View" and tvm[it["widgetIdReceiver"]] == "MetricChart"
     # 4) every TextDisplay carries synced HTML; SM/statkey heatmap keys are non-empty
     n_text = 0
+    text_widgets = {}
     for w in ws:
         if w["type"] == "TextDisplay":
             assert w["config"]["editorData"].strip().startswith("<div"), f"{w['title']}: editorData not HTML"
+            text_widgets[w["title"]] = w["config"]["editorData"]
             n_text += 1
         if w["type"] == "Heatmap":
             c = w["config"]["configs"][0]
             assert c["colorBy"]["metricKey"] and c["sizeBy"]["metricKey"], f"{w['title']}: empty heatmap key"
     assert n_text == 8, f"expected 8 education Text widgets, got {n_text}"
+    # 5) copy discipline: authored copy states the current model, never its own history (changelog tell)
+    from lib._copy import assert_current_voice
+    assert_current_voice(text_widgets)
     types = {}
     for w in ws:
         types[w["type"]] = types.get(w["type"], 0) + 1
