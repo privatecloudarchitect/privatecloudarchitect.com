@@ -133,8 +133,13 @@ every NSX-prepared host carries an `vmk50` NSX hyperbus interface fixed at the l
 reads a permanent 100 percent even while every routable vmknic (management, vMotion, vSAN) answers at
 0 percent. The host's true reachability is its instanced `ping:<mgmt-ip>|packet_loss`, which a
 fleet-wide view cannot key on, and host availability is already the platform floor's job (connection
-state, uptime). The same trap would catch a multi-NIC VM with one non-answering NIC, so the precise
-rule is: bind object ping only to a single-homed, collector-reachable guest.
+state, uptime). The same trap would catch a multi-NIC VM with one non-answering NIC. It also catches a subtler case
+that looks single-homed: a container host (a Kubernetes node, for instance) presents one ethernet
+card, but its CNI adds virtual interfaces whose pod-network gateway addresses may not answer from
+outside the node, so the peak can read a false 100 percent while the real NIC is at 0. The precise
+rule is therefore: bind object ping only to a single-homed, collector-reachable guest with no
+unreachable container-network interfaces; monitor a container host at a front-door IP check on its
+real address instead.
 
 ## 2 · VMware Tools (the layer-3 sensor)
 

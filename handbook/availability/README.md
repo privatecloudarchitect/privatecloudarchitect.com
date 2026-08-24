@@ -72,14 +72,18 @@ Each layer references the previous one by id, so the order matters:
      a direct import.
    - `supermetrics/editor-formulas.yaml`: the by-hand path: editor-syntax formulas with the two
      id substitutions the composition metrics need if you mint your own ids.
-2. `views/availability-views.import.zip`: all twelve views in the **Views, Manage, Import** shape
+2. `views/availability-views.import.zip`: all thirteen views in the **Views, Manage, Import** shape
    (import the zip directly). Id-preserving, so the dashboard resolves them. Layer five carries
    two views, one per sensor: agentless Service Discovery and the agent's service monitors.
    Layer one carries two too: the ping-adapter tables and the object-level reachability view.
-   - `views/availability-views.contentpkg.zip`: the same twelve views for the content-import API
-     path, if you prefer one mechanism for metrics and views.
+   Layer two now carries a VM platform-floor view beside the cluster, host, and datastore floors:
+   each VM's own power state and uptime, reported by the hypervisor independent of VMware Tools, so
+   a Powered On VM whose Tools is silent is read as running rather than misread as down.
+   - `views/availability-views.contentpkg.zip`: twelve of these views for the content-import API
+     path, if you prefer one mechanism for metrics and views. The VM platform-floor view ships in
+     the Manage-Import bundle above today; the content package folds it in on its next export.
 3. `dashboard/availability-service-levels.import.zip`: the dashboard, via **Dashboards, Manage,
-   Import**, after the views. Twenty-two widgets: a collapsed Setup panel on top (expand it once:
+   Import**, after the views. Twenty-three widgets: a collapsed Setup panel on top (expand it once:
    it is the from-scratch runbook), then education beside evidence for every layer. The two
    world providers (vSphere World, Ping World) bind YOUR instance's objects automatically
    through the import remap; if a ping table ever imports unconfigured, edit the widget and
