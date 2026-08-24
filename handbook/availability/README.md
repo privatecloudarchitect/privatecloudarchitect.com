@@ -79,9 +79,8 @@ Each layer references the previous one by id, so the order matters:
    Layer two now carries a VM platform-floor view beside the cluster, host, and datastore floors:
    each VM's own power state and uptime, reported by the hypervisor independent of VMware Tools, so
    a Powered On VM whose Tools is silent is read as running rather than misread as down.
-   - `views/availability-views.contentpkg.zip`: twelve of these views for the content-import API
-     path, if you prefer one mechanism for metrics and views. The VM platform-floor view ships in
-     the Manage-Import bundle above today; the content package folds it in on its next export.
+   - `views/availability-views.contentpkg.zip`: the same thirteen views for the content-import API
+     path, if you prefer one mechanism for metrics and views.
 3. `dashboard/availability-service-levels.import.zip`: the dashboard, via **Dashboards, Manage,
    Import**, after the views. Twenty-three widgets: a collapsed Setup panel on top (expand it once:
    it is the from-scratch runbook), then education beside evidence for every layer. The two
