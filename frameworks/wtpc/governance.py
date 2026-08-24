@@ -174,7 +174,7 @@ def priority_parity(postures: dict) -> int:
         print(f"   expected strict-first: {[pn for _, pn in expected]}")
         rc = 2
     else:
-        print("\n✅ posture policies are ranked strict-first (deterministic strictest-resident-wins).")
+        print("\n✅ posture policies are ranked strict-first (deterministic; resolves the untiered fallback).")
 
     # any non-posture ranked ABOVE the least-strict posture policy is a potential shadow (warn; run_parity confirms)
     if other_ranked and posture_live:

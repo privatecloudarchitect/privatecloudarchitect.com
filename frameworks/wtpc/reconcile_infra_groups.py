@@ -272,7 +272,7 @@ def analyze(c: VcfOpsClient) -> int:
         postured = sum(len(v) for v in info["byp"].values())
         print(f"\nCLUSTER {info['name']}  ({postured} postured of {total} VMs total)")
         for p, vms in info["byp"].items():
-            gov = " ← GOVERNS (strictest resident)" if p == strictest and len(residents) > 1 else ""
+            gov = " ← GOVERNS (untiered fallback)" if p == strictest and len(residents) > 1 else ""
             print(f"   {p}: {len(vms)} {vms}{gov}")
         if len(residents) > 1:
             confs = []
@@ -283,7 +283,7 @@ def analyze(c: VcfOpsClient) -> int:
                 print(f"   ❌ MIXED-POSTURE CONFLICT on {sorted({a for a, _ in confs})} — re-place, or declare a "
                       f"named `mixed` posture (never auto-compose). Governing tier = {strictest}.")
             else:
-                print(f"   ✓ nested (no conflict) — governed by {strictest} (strictest-resident-wins).")
+                print(f"   ✓ nested (no conflict), governed by {strictest} (untiered fallback).")
         elif total and postured / total < 0.25:
             print(f"   ⚠ DILUTION: {postured}/{total} VMs drive {strictest} governance here. If a misplacement, "
                   f"quarantine the stray VM (fit finding) — do NOT convert the cluster.")
