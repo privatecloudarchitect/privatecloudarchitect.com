@@ -82,10 +82,23 @@ and point the adapter's `conf_file_name` at it. Use one path or the other, not b
 
 ## See it in the console
 
-Import `import/reachability-checks.import.zip` (Views > Manage > Import). The view lists every check
-with its packet loss and latency, gear included, colored so a red row reads at a glance. Drop it on any
-dashboard, or read it on its own. This view is deliberately dependency-free: it reads the raw check
-stats, so it needs no super metrics and no other content to render.
+**Import it.** Views > Manage > Import, and choose `import/reachability-checks.import.zip`.
+
+**Confirm it landed.** The success message does not say what it contained, which is the part that trips
+people up. Go back to **Views > Manage** and search the list for **Reachability - Ping Checks**; finding
+it there is the proof it imported. The view is global, so anyone on the instance can use it.
+
+**See the data.** A view is a table definition, not a dashboard: it renders only when pointed at a
+subject. This view's subject is the ping checks, so point it at the object that owns them, the Ping
+Adapter instance this crawl configured. The reliable path is a dashboard **View** widget: add one, assign
+it **Reachability - Ping Checks**, and set its input object to that Ping Adapter instance. The widget then
+lists every check beneath it, one row each, with its worst-in-cycle packet loss and latency, gear
+included, colored so a red row (an endpoint the collector could not reach) reads at a glance. The same
+view is offered anywhere you can browse an object's own views.
+
+The view is deliberately dependency-free, reading the raw check stats, so it needs no super metrics and no
+other content to render. For the same picture without the console, `reconcile_checks.py --status` prints
+each check's loss and latency in the terminal.
 
 ## Gotchas worth knowing
 
