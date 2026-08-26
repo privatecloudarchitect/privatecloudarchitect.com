@@ -67,13 +67,24 @@ the scalable core: N users are N documents in one file, applied in a single call
 
 ### 2. Give the project a namespace, then publish the blueprint
 
-**Watch point:** a brand-new project cannot host a Supervisor Namespace until a region and quota
-are added to it; the create fails with an opaque validation error, and this resource does not
-support `--dry-run=server`. Add the region first, then fill `manifests/20-namespace.yaml` by
-copying the spec values from a namespace that already works on your estate and apply it the same
-server-side way. Publish `blueprint/isolation-proof.blueprint.yaml` as a catalog item named
-`isolation-proof` in the project (use the VM variant instead when you want resource-level Day-2
-actions in the matrix).
+**Watch point:** the fresh-project namespace create fails with an opaque `Validation failed` when
+the spec carries a fixed `metadata.name`; the resource derives its own name, so
+`manifests/20-namespace.yaml` uses `generateName` and you create it with `kubectl create` (which
+supports `generateName`), not `kubectl apply` (which keys on a fixed name). Fill the spec by copying
+the values from a namespace that already works on your estate, including `segName` (required on a
+region whose load balancing is registered through NSX); the region the namespace names must exist on
+your organization, and no per-project console step is needed. The reconciliation, and the fully
+programmatic three-call vend (create the project, bind the roles, create the namespace by API), is
+[field note 03](https://privatecloudarchitect.com/notes/vcfa-project-vending).
+
+```bash
+# generateName-compatible; note the suffixed name it returns, then set it as VCFA_NAMESPACE
+kubectl --context vcfa-cci create -f manifests/20-namespace.yaml
+kubectl --context vcfa-cci get supervisornamespaces -n rbac-lab
+```
+
+Then publish `blueprint/isolation-proof.blueprint.yaml` as a catalog item named `isolation-proof` in
+the project (use the VM variant instead when you want resource-level Day-2 actions in the matrix).
 
 ### 3. Deploy one workload per user
 

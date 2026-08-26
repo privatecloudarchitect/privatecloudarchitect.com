@@ -5,13 +5,18 @@
 #   kubectl get supervisornamespaces -n <existing-project> <existing-namespace> -o yaml
 #
 # Watch points:
-# - A brand-new project cannot host a namespace until a region and quota are added to
-#   it; the create fails with an opaque validation error. Add the region first.
-# - This resource does not support --dry-run=server; apply it server-side directly.
+# - Name the namespace with generateName, not a fixed name. The resource derives its own
+#   name and appends a suffix, so a fixed metadata.name is rejected (an opaque
+#   "Validation failed" on a server-side apply, or a clear "name cannot be specified" on a
+#   create). Create this with `kubectl create -f`, which supports generateName; `kubectl
+#   apply` keys on a fixed name and is the wrong verb here.
+# - segName is required on a region whose load balancing is registered through NSX (set below).
+# - The region the namespace names must exist on your organization; no per-project console
+#   step is needed. This resource does not support --dry-run=server.
 apiVersion: infrastructure.cci.vmware.com/v1alpha3
 kind: SupervisorNamespace
 metadata:
-  name: rbac-lab-apps
+  generateName: rbac-lab-apps-
   namespace: rbac-lab
 spec:
   className: <your-namespace-class>
