@@ -317,9 +317,10 @@ class Vcfa:
 
     def create_project(self, name, description=""):
         """Create a project. ``name`` is a Kubernetes name - lowercase, digits, and
-        hyphens only (no spaces, underscores, or capitals). A stable, owner-legible
-        identifier is the good habit (team-payments, usr-alice); keep dates and personal
-        data out of it. See "Naming conventions" in the scripts README.
+        hyphens only (no spaces, underscores, or capitals). Name it for what it ISOLATES,
+        its owner: usually the user for a per-user project (alice), or the team for a
+        shared one (checkout-team). No type prefix; keep dates and personal data out of
+        it. See "Naming conventions" in the scripts README.
         """
         status, raw, _ = self.cci(
             "POST", "/apis/project.cci.vmware.com/v1alpha2/projects",

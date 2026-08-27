@@ -24,7 +24,7 @@ confirm they reach only their own project).
 export VCFA_HOST=vcfa.example.com VCFA_ORG=Acme VCFA_USER=admin
 export VCFA_PASSWORD="$(secret-tool lookup service vcfa-admin)"
 export TENANT_PASSWORD="$(secret-tool lookup service vcfa-tenants)"   # optional, runs the proof
-python3 per_user_isolation.py --assign alice:proj-alice --assign bob:proj-bob \
+python3 per_user_isolation.py --assign alice:alice --assign bob:bob \
     --region <your-region> [--vpc <v>] [--seg <s>] [--zone <z>]
 ```
 
@@ -97,7 +97,7 @@ python3 ../scripts/setup_catalogs_role.py --name "Namespace Self-Service User"
 # per user (or per team): import their Azure AD group AS that catalogs role, create
 # their project, bind the group Project Administrator, let them self-serve namespaces
 python3 ../scripts/e2e_tenant_setup.py \
-    --project prj-alice --ad-group "prj-alice" --provider-type SAML \
+    --project alice --ad-group "alice-admins" --provider-type SAML \
     --group-org-role "Namespace Self-Service User" --project-role admin \
     --region <your-region> [--vpc <v>] [--seg <s>] [--zone <z>] --no-namespace
 ```

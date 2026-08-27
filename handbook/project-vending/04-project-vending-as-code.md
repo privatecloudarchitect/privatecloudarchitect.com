@@ -15,8 +15,8 @@ module 00, as an account holding the organization-level project-management right
 ```
 POST /cci/kubernetes/apis/project.cci.vmware.com/v1alpha2/projects
 { "apiVersion": "project.cci.vmware.com/v1alpha2", "kind": "Project",
-  "metadata": { "name": "team-acme" },
-  "spec": { "description": "Vended project for team-acme." } }
+  "metadata": { "name": "checkout-team" },
+  "spec": { "description": "Vended project for checkout-team." } }
 ```
 
 ### 2. Bind the owner, and the operators group
@@ -26,16 +26,16 @@ with a trailing marker. Choose the owner's role by tier: `edit_adv` for a servic
 owner, `admin` if they also manage namespaces.
 
 ```
-POST .../authorization.cci.vmware.com/v1alpha1/namespaces/team-acme/projectrolebindings
+POST .../authorization.cci.vmware.com/v1alpha1/namespaces/checkout-team/projectrolebindings
 { "apiVersion": "authorization.cci.vmware.com/v1alpha1", "kind": "ProjectRoleBinding",
-  "metadata": { "name": "cci:user:alice", "namespace": "team-acme" },
+  "metadata": { "name": "cci:user:alice", "namespace": "checkout-team" },
   "roleRef": { "apiGroup": "authorization.cci.vmware.com", "kind": "ProjectRole", "name": "edit_adv" },
   "subjects": [ { "kind": "User", "name": "alice" } ] }
 ```
 
 Repeat for the operators group, so your platform team keeps administrative reach:
-`metadata.name` is `cci:group:Platform Operators`, `roleRef.name` is `admin`, and the
-subject is `{ "kind": "Group", "name": "Platform Operators@" }` (note the trailing
+`metadata.name` is `cci:group:platform-admins`, `roleRef.name` is `admin`, and the
+subject is `{ "kind": "Group", "name": "platform-admins@" }` (note the trailing
 `@` on group names).
 
 ### 3. Create the first namespace
@@ -47,9 +47,9 @@ you can see where they go. Drop the ones your estate does not use (the table aft
 says which is which).
 
 ```
-POST .../infrastructure.cci.vmware.com/v1alpha3/namespaces/team-acme/supervisornamespaces
+POST .../infrastructure.cci.vmware.com/v1alpha3/namespaces/checkout-team/supervisornamespaces
 { "apiVersion": "infrastructure.cci.vmware.com/v1alpha3", "kind": "SupervisorNamespace",
-  "metadata": { "generateName": "acme-ns-", "namespace": "team-acme" },
+  "metadata": { "generateName": "checkout-prod-us-west-1-", "namespace": "checkout-team" },
   "spec": { "className": "large",
             "regionName": "<your-region>", "vpcName": "<your-vpc>",
             "segName": "<your-service-engine-group>",
@@ -106,8 +106,8 @@ proven end to end on freshly created projects.
 
 ```bash
 python3 scripts/vend_project.py \
-    --project team-acme --owner alice --owner-role edit_adv \
-    --operators-group "Platform Operators" \
+    --project checkout-team --owner alice --owner-role edit_adv \
+    --operators-group "platform-admins" \
     --region <your-region> --vpc <your-vpc> --seg <your-service-engine-group> \
     --zone <your-zone>
 ```

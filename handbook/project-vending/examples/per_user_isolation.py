@@ -23,7 +23,7 @@ Example:
   export VCFA_PASSWORD="$(secret-tool lookup service vcfa-admin)"
   export TENANT_PASSWORD="$(secret-tool lookup service vcfa-tenants)"   # optional, runs the proof
   python3 per_user_isolation.py \
-      --assign alice:proj-alice --assign bob:proj-bob \
+      --assign alice:alice --assign bob:bob \
       --region <your-region> --vpc <your-vpc> --seg <your-seg> --zone <your-zone>
 """
 import argparse
@@ -63,11 +63,11 @@ def ns_get(client, project, name):
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    # Naming: the PROJECT half is a Kubernetes name - lowercase, digits, hyphens (e.g.
-    # usr-alice); the USER is your directory login name. See Naming conventions in
-    # ../scripts/README.md.
+    # Naming: the PROJECT half is named for its OWNER - here that is the user, so the
+    # project is usually just the user's name (alice:alice). Kubernetes name: lowercase,
+    # digits, hyphens. See Naming conventions in ../scripts/README.md.
     ap.add_argument("--assign", action="append", required=True, metavar="USER:PROJECT",
-                    help="USER:PROJECT - a user and their own project, kebab-case (e.g. alice:usr-alice); "
+                    help="USER:PROJECT - a user and their own project named for them (e.g. alice:alice); "
                          "repeat; use 2+ to show isolation")
     ap.add_argument("--role", default="edit_adv", choices=["view", "edit", "edit_adv", "admin"],
                     help="project role each user gets: view=Project Auditor, edit=Project User, "

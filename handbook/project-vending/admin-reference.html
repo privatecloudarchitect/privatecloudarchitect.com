@@ -423,19 +423,19 @@ td .m, th .m { background: none; border: none; padding: 0; }
 Authorization: Basic base64("admin@Org:password")
 # read X-VMWARE-VCLOUD-ACCESS-TOKEN as the bearer</span></span></div>
       <div class="rung"><span class="rb"><b>Create the project.</b> One POST creates the cluster-scoped project object; it carries a name and a description.<span class="cmd">POST /cci/kubernetes/apis/project.cci.vmware.com/v1alpha2/projects
-{ "kind": "Project", "metadata": { "name": "team-acme" },
-  "spec": { "description": "Vended project for team-acme." } }</span></span></div>
-      <div class="rung"><span class="rb"><b>Bind the owner and the operators.</b> One ProjectRoleBinding per subject. Users bind by bare name, groups by name with a trailing marker. Choose the owner's role by tier: <span class="m">edit_adv</span> for a services owner, <span class="m">admin</span> to also manage namespaces.<span class="cmd">POST .../authorization.cci.vmware.com/v1alpha1/namespaces/team-acme/projectrolebindings
+{ "kind": "Project", "metadata": { "name": "checkout-team" },
+  "spec": { "description": "Vended project for checkout-team." } }</span></span></div>
+      <div class="rung"><span class="rb"><b>Bind the owner and the operators.</b> One ProjectRoleBinding per subject. Users bind by bare name, groups by name with a trailing marker. Choose the owner's role by tier: <span class="m">edit_adv</span> for a services owner, <span class="m">admin</span> to also manage namespaces.<span class="cmd">POST .../authorization.cci.vmware.com/v1alpha1/namespaces/checkout-team/projectrolebindings
 { "kind": "ProjectRoleBinding",
-  "metadata": { "name": "cci:user:alice", "namespace": "team-acme" },
+  "metadata": { "name": "cci:user:alice", "namespace": "checkout-team" },
   "roleRef": { "apiGroup": "authorization.cci.vmware.com",
                "kind": "ProjectRole", "name": "edit_adv" },
   "subjects": [ { "kind": "User", "name": "alice" } ] }
-# repeat for the operators group: name "cci:group:Platform Operators",
-# roleRef admin, subject kind Group name "Platform Operators@"</span></span></div>
-      <div class="rung"><span class="rb"><b>Create the first namespace.</b> Name it by <b>generateName</b>, not a fixed name, and give it the <b>service engine group</b>. These two fields are what the old opaque error was asking for; the region and VPC resolve against the organization. Then poll to Ready.<span class="cmd">POST .../infrastructure.cci.vmware.com/v1alpha3/namespaces/team-acme/supervisornamespaces
+# repeat for the operators group: name "cci:group:platform-admins",
+# roleRef admin, subject kind Group name "platform-admins@"</span></span></div>
+      <div class="rung"><span class="rb"><b>Create the first namespace.</b> Name it by <b>generateName</b>, not a fixed name, and give it the <b>service engine group</b>. These two fields are what the old opaque error was asking for; the region and VPC resolve against the organization. Then poll to Ready.<span class="cmd">POST .../infrastructure.cci.vmware.com/v1alpha3/namespaces/checkout-team/supervisornamespaces
 { "kind": "SupervisorNamespace",
-  "metadata": { "generateName": "acme-ns-", "namespace": "team-acme" },
+  "metadata": { "generateName": "checkout-prod-us-west-1-", "namespace": "checkout-team" },
   "spec": { "className": "large",
             "regionName": "&lt;region&gt;", "vpcName": "&lt;vpc&gt;",
             "segName": "&lt;service-engine-group&gt;",

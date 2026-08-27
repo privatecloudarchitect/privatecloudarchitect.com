@@ -26,13 +26,13 @@ Example (a region that uses NSX Advanced Load Balancer):
   export VCFA_HOST=vcfa.example.com VCFA_ORG=Acme VCFA_USER=admin
   export VCFA_PASSWORD="$(some-secret-tool get vcfa-admin)"
   python3 vend_project.py \
-      --project team-acme --owner alice --owner-role edit_adv \
-      --operators-group "Platform Operators" \
+      --project checkout-team --owner alice --owner-role edit_adv \
+      --operators-group "platform-admins" \
       --region <your-region> --vpc <your-vpc> --seg <your-service-engine-group> \
       --zone <your-zone>
 
 Example (a supervisor with no service engine groups - just the required region):
-  python3 vend_project.py --project team-acme --owner alice --region <your-region>
+  python3 vend_project.py --project checkout-team --owner alice --region <your-region>
 
 Safety: this script CREATES a project and a namespace. It never deletes anything.
 Re-running with the same --project fails on the create (projects are unique); that
@@ -48,22 +48,24 @@ from vcfa import Vcfa, VcfaError
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    # Naming: a project is a Kubernetes name - lowercase, digits, hyphens, no spaces,
-    # underscores, or capitals. Good habit: the trust boundary's owner with a short type
-    # prefix (team-payments, usr-alice), no dates/tickets/PII (see Naming conventions in
-    # the scripts README).
+    # Naming (see Naming conventions in the scripts README): name the project for what it
+    # ISOLATES - its owner. A per-user boundary is named for that user (alice); a shared
+    # one for the team (checkout-team). Kubernetes name: lowercase, digits, hyphens; no
+    # spaces, underscores, capitals, or type prefix.
     ap.add_argument("--project", required=True,
-                    help="the new project's name (kebab-case, e.g. team-payments)")
+                    help="the new project's name = its owner, kebab-case (e.g. alice, or checkout-team)")
     ap.add_argument("--owner", required=True, help="the tenant owner's username")
     ap.add_argument("--owner-role", default="edit_adv", choices=["edit", "edit_adv", "admin"],
                     help="edit_adv for a services owner (default); admin to also manage namespaces")
     ap.add_argument("--operators-group", default=None,
                     help="an operators group to bind as project admin (recommended)")
-    # Naming: the platform appends '-<random>', so make this stem the namespace's PURPOSE
-    # (web-, data-, dev-), not "ns" -> team-payments-web-a1b2c. Same lowercase-hyphen rule.
+    # Naming: the namespace convention is <app>-<env>-<region>, and the platform appends
+    # '-<hash>', so pass that prefix as the stem: checkout-prod-us-west-1- becomes
+    # checkout-prod-us-west-1-g9w34 (env in dev/staging/prod/demo/sandbox). The default
+    # <project>-ns- is only a fallback.
     ap.add_argument("--namespace-stem", default=None,
-                    help="generateName stem = the namespace's purpose, e.g. web- or data- "
-                         "(default <project>-ns-)")
+                    help="generateName stem = <app>-<env>-<region>- (e.g. checkout-prod-us-west-1-); "
+                         "default <project>-ns- is a fallback")
     ap.add_argument("--region", required=True, help="a region on the org (CRD-required)")
     ap.add_argument("--vpc", default=None, help="the NSX VPC (estate-dependent; omit if not used)")
     ap.add_argument("--seg", default=None,

@@ -35,12 +35,12 @@ Example (a region that uses NSX Advanced Load Balancer):
   export VCFA_HOST=vcfa.example.com VCFA_ORG=Acme VCFA_USER=admin
   export VCFA_PASSWORD="$(some-secret-tool get vcfa-admin)"
   python3 e2e_tenant_setup.py \
-      --project team-acme --ad-group "Acme Platform Engineers" \
+      --project checkout-team --ad-group "checkout-engineers" \
       --project-role edit_adv --region <your-region> \
       --vpc <your-vpc> --seg <your-service-engine-group> --zone <your-zone>
 
 Example (a supervisor with no service engine groups - just the required region):
-  python3 e2e_tenant_setup.py --project team-acme --ad-group "Acme Platform Engineers" \
+  python3 e2e_tenant_setup.py --project checkout-team --ad-group "checkout-engineers" \
       --region <your-region>
 """
 import argparse
@@ -53,17 +53,17 @@ from vcfa import Vcfa, VcfaError
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    # Naming: a project is a Kubernetes name - lowercase, digits, hyphens, no spaces,
-    # underscores, or capitals. Good habit: the trust boundary's owner with a short type
-    # prefix (team-payments, usr-alice), no dates/tickets/PII (see Naming conventions in
-    # scripts/README.md).
+    # Naming (see Naming conventions in scripts/README.md): name the project for what it
+    # ISOLATES - its owner. This pattern usually fences ONE user, so the name is that
+    # user (alice); a shared boundary is the team (checkout-team). Kubernetes name:
+    # lowercase, digits, hyphens; no spaces, underscores, capitals, or type prefix.
     ap.add_argument("--project", required=True,
-                    help="the new project's name (kebab-case, e.g. team-payments)")
-    # Naming: mirror the project so the group-to-project mapping reads cleanly
-    # (grp-team-payments, one group per project). LDAP allows spaces; OIDC/SAML match on
-    # whatever the group claim carries.
+                    help="the new project's name = its owner, kebab-case (e.g. alice, or checkout-team)")
+    # Naming: mirror the source directory group so the join is obvious - <team>-<role>
+    # (checkout-engineers), or the user's own group for a per-user boundary. LDAP allows
+    # spaces; OIDC/SAML match on whatever the group claim carries.
     ap.add_argument("--ad-group", required=True,
-                    help="the directory group to import (e.g. grp-team-payments)")
+                    help="the directory group to import (mirror the IdP, e.g. checkout-engineers)")
     ap.add_argument("--provider-type", default="LDAP", choices=["LDAP", "OIDC", "SAML"],
                     help="the org's identity provider (see the three options + caveats at step 3): LDAP "
                          "queries a directory; OIDC/SAML match the group claim and provision users "
@@ -86,12 +86,13 @@ def main():
                     help="service engine group; needed ONLY for NSX Advanced Load Balancer regions")
     ap.add_argument("--zone", default=None, help="a zone for per-zone limits (omit for class defaults)")
     ap.add_argument("--class-name", default="large", help="the namespace class")
-    # Naming: the platform appends '-<random>' to this stem, so make it the namespace's
-    # PURPOSE (web-, data-, dev-), not "ns" -> team-payments-web-a1b2c. Same lowercase-
-    # hyphen rule as projects.
+    # Naming: the namespace convention is <app>-<env>-<region>, and the platform appends
+    # '-<hash>' to this stem, so pass that prefix: checkout-prod-us-west-1- becomes
+    # checkout-prod-us-west-1-g9w34 (env in dev/staging/prod/demo/sandbox). The default
+    # <project>-ns- is only a fallback.
     ap.add_argument("--namespace-stem", default=None,
-                    help="generateName stem = the namespace's purpose, e.g. web- or data- "
-                         "(default <project>-ns-)")
+                    help="generateName stem = <app>-<env>-<region>- (e.g. checkout-prod-us-west-1-); "
+                         "default <project>-ns- is a fallback")
     ap.add_argument("--no-namespace", action="store_true",
                     help="stop after the bindings; skip namespace creation")
     args = ap.parse_args()

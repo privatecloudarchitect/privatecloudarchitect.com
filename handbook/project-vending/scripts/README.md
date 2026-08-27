@@ -32,35 +32,38 @@ first: it is the API fundamentals as code, and module 00 walks through it.
 |---|---|---|
 | `python3 vcfa.py` | Logs in and prints who you are and the projects you can see. Your first API call. | anyone |
 | `python3 setup_catalogs_role.py --name "Namespace Self-Service User"` | Creates the custom org role that populates the new-namespace form. Idempotent. | org admin |
-| `python3 vend_project.py --project team-acme --owner alice --owner-role edit_adv --operators-group "Platform Operators" --region <r>` | Creates a project, binds the owner and operators, and creates the first namespace. `--region` is required; `--vpc`/`--seg`/`--zone` are optional per your estate. | org admin |
-| `python3 e2e_tenant_setup.py --project team-acme --ad-group "Platform Engineers" --region <r>` | The full onboarding in one run, top to bottom: authenticate, create the project, import an AD group, bind it, create the first namespace, poll to Ready. | org admin |
+| `python3 vend_project.py --project checkout-team --owner alice --owner-role edit_adv --operators-group "platform-admins" --region <r>` | Creates a project, binds the owner and operators, and creates the first namespace. `--region` is required; `--vpc`/`--seg`/`--zone` are optional per your estate. | org admin |
+| `python3 e2e_tenant_setup.py --project checkout-team --ad-group "checkout-engineers" --region <r>` | The full onboarding in one run, top to bottom: authenticate, create the project, import an AD group, bind it, create the first namespace, poll to Ready. | org admin |
 | `python3 verify_scope.py` | Logs in as a tenant and prints the projects and namespaces they can see. | the tenant |
 
 Read a script's top-of-file docstring for its full options and an example.
 
 ## Naming conventions
 
-A little discipline in names pays off for the life of the estate. There are two levels,
-and each script repeats the gist in a comment next to the name it takes.
+A name is the cheapest documentation an object carries, and the one every operator,
+script, and dashboard reads first. Principle 1 is **name for function**: the name
+describes what the object *isolates or offers* - its owner or its purpose - never a
+theme or a mascot. Two levels:
 
-**The hard rule (the platform enforces it):** projects and namespaces are Kubernetes
-objects, so their names are RFC 1123 - **lowercase letters, digits, and hyphens only**,
-starting and ending with an alphanumeric, no spaces, underscores, or capitals, 63
-characters or fewer. `team-payments` is valid; `Team_Payments` is not.
+**The hard rule (platform-enforced):** projects and namespaces are Kubernetes objects,
+so their names are RFC 1123 - **lowercase letters, digits, and hyphens only**, starting
+and ending with an alphanumeric, no spaces, underscores, or capitals, 63 characters or
+fewer. `checkout-team` is valid; `Checkout_Team` is not.
 
-**A convention worth adopting (a good habit, not enforced):**
+**The convention, per object:**
 
-| Object | Pattern | Example |
+| Object | Convention | Example |
 |---|---|---|
-| Project | the trust boundary's owner in kebab-case, with a short type prefix so they group | `team-payments`, `usr-alice`, `sandbox-bob` |
-| Namespace | the namespace's PURPOSE, not "ns" - the platform appends `-<random>` for uniqueness | stem `web-` -> `web-a1b2c`; stem `data-` -> `data-9f3k1` |
-| Directory group | mirror the project so the group-to-project mapping is legible | `grp-team-payments`, one group per project |
+| Project | the trust boundary's OWNER. This pattern most often gives each USER their own project, so the name is usually that **user**; a shared boundary is named for the **team**. No type prefix. | `alice`, `checkout-team` |
+| Namespace | `<app>-<env>-<region>` (env in dev/staging/prod/demo/sandbox); the platform appends `-<hash>`, so the generateName stem is that prefix. | stem `checkout-prod-us-west-1-` -> `checkout-prod-us-west-1-g9w34` |
+| Directory group | `<team>-<role>`, **mirroring the source directory group** so the join is obvious (a per-user group mirrors that user's directory group). | `checkout-engineers`, `platform-admins` |
 
-Principles: make the name self-describing and greppable; put the stable identity (the
-owner or the purpose) in the base and let the platform's suffix carry the uniqueness;
-keep it short; and keep dates, ticket numbers, and personal data OUT of the base name -
-the object outlives them. Pick one scheme and apply it everywhere: consistency is worth
-more than any single clever name.
+Principles: encode the dimension that varies (the owner for a project, app + env +
+region for a namespace); keep raw infra codes and volatile data - dates, tickets,
+personal data - in labels or metadata, never in the name; lowercase-kebab throughout;
+and pick one scheme and apply it everywhere. Because a per-user project fences **one
+person**, name it for that person, not a team - the name then says exactly what it
+isolates.
 
 ## Reading the estate values
 
