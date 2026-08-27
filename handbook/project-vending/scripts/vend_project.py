@@ -48,14 +48,22 @@ from vcfa import Vcfa, VcfaError
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--project", required=True, help="the new project's name")
+    # Naming: a project is a Kubernetes name - lowercase, digits, hyphens, no spaces,
+    # underscores, or capitals. Good habit: the trust boundary's owner with a short type
+    # prefix (team-payments, usr-alice), no dates/tickets/PII (see Naming conventions in
+    # the scripts README).
+    ap.add_argument("--project", required=True,
+                    help="the new project's name (kebab-case, e.g. team-payments)")
     ap.add_argument("--owner", required=True, help="the tenant owner's username")
     ap.add_argument("--owner-role", default="edit_adv", choices=["edit", "edit_adv", "admin"],
                     help="edit_adv for a services owner (default); admin to also manage namespaces")
     ap.add_argument("--operators-group", default=None,
                     help="an operators group to bind as project admin (recommended)")
+    # Naming: the platform appends '-<random>', so make this stem the namespace's PURPOSE
+    # (web-, data-, dev-), not "ns" -> team-payments-web-a1b2c. Same lowercase-hyphen rule.
     ap.add_argument("--namespace-stem", default=None,
-                    help="generateName stem for the first namespace (default: <project>-ns-)")
+                    help="generateName stem = the namespace's purpose, e.g. web- or data- "
+                         "(default <project>-ns-)")
     ap.add_argument("--region", required=True, help="a region on the org (CRD-required)")
     ap.add_argument("--vpc", default=None, help="the NSX VPC (estate-dependent; omit if not used)")
     ap.add_argument("--seg", default=None,

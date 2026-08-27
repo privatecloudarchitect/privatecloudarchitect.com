@@ -63,8 +63,12 @@ def ns_get(client, project, name):
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    # Naming: the PROJECT half is a Kubernetes name - lowercase, digits, hyphens (e.g.
+    # usr-alice); the USER is your directory login name. See Naming conventions in
+    # ../scripts/README.md.
     ap.add_argument("--assign", action="append", required=True, metavar="USER:PROJECT",
-                    help="a user and the project to isolate them in (repeat; use 2+ to show isolation)")
+                    help="USER:PROJECT - a user and their own project, kebab-case (e.g. alice:usr-alice); "
+                         "repeat; use 2+ to show isolation")
     ap.add_argument("--role", default="edit_adv", choices=["view", "edit", "edit_adv", "admin"],
                     help="project role each user gets: view=Project Auditor, edit=Project User, "
                          "edit_adv=Project Advanced User (default), admin=Project Administrator")

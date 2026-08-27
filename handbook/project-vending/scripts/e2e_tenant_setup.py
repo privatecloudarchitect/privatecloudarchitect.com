@@ -53,8 +53,17 @@ from vcfa import Vcfa, VcfaError
 def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--project", required=True, help="the new project's name")
-    ap.add_argument("--ad-group", required=True, help="the directory group to import into the org")
+    # Naming: a project is a Kubernetes name - lowercase, digits, hyphens, no spaces,
+    # underscores, or capitals. Good habit: the trust boundary's owner with a short type
+    # prefix (team-payments, usr-alice), no dates/tickets/PII (see Naming conventions in
+    # scripts/README.md).
+    ap.add_argument("--project", required=True,
+                    help="the new project's name (kebab-case, e.g. team-payments)")
+    # Naming: mirror the project so the group-to-project mapping reads cleanly
+    # (grp-team-payments, one group per project). LDAP allows spaces; OIDC/SAML match on
+    # whatever the group claim carries.
+    ap.add_argument("--ad-group", required=True,
+                    help="the directory group to import (e.g. grp-team-payments)")
     ap.add_argument("--provider-type", default="LDAP", choices=["LDAP", "OIDC", "SAML"],
                     help="the org's identity provider (see the three options + caveats at step 3): LDAP "
                          "queries a directory; OIDC/SAML match the group claim and provision users "
@@ -77,8 +86,12 @@ def main():
                     help="service engine group; needed ONLY for NSX Advanced Load Balancer regions")
     ap.add_argument("--zone", default=None, help="a zone for per-zone limits (omit for class defaults)")
     ap.add_argument("--class-name", default="large", help="the namespace class")
+    # Naming: the platform appends '-<random>' to this stem, so make it the namespace's
+    # PURPOSE (web-, data-, dev-), not "ns" -> team-payments-web-a1b2c. Same lowercase-
+    # hyphen rule as projects.
     ap.add_argument("--namespace-stem", default=None,
-                    help="generateName stem for the namespace (default: <project>-ns-)")
+                    help="generateName stem = the namespace's purpose, e.g. web- or data- "
+                         "(default <project>-ns-)")
     ap.add_argument("--no-namespace", action="store_true",
                     help="stop after the bindings; skip namespace creation")
     args = ap.parse_args()

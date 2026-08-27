@@ -38,6 +38,30 @@ first: it is the API fundamentals as code, and module 00 walks through it.
 
 Read a script's top-of-file docstring for its full options and an example.
 
+## Naming conventions
+
+A little discipline in names pays off for the life of the estate. There are two levels,
+and each script repeats the gist in a comment next to the name it takes.
+
+**The hard rule (the platform enforces it):** projects and namespaces are Kubernetes
+objects, so their names are RFC 1123 - **lowercase letters, digits, and hyphens only**,
+starting and ending with an alphanumeric, no spaces, underscores, or capitals, 63
+characters or fewer. `team-payments` is valid; `Team_Payments` is not.
+
+**A convention worth adopting (a good habit, not enforced):**
+
+| Object | Pattern | Example |
+|---|---|---|
+| Project | the trust boundary's owner in kebab-case, with a short type prefix so they group | `team-payments`, `usr-alice`, `sandbox-bob` |
+| Namespace | the namespace's PURPOSE, not "ns" - the platform appends `-<random>` for uniqueness | stem `web-` -> `web-a1b2c`; stem `data-` -> `data-9f3k1` |
+| Directory group | mirror the project so the group-to-project mapping is legible | `grp-team-payments`, one group per project |
+
+Principles: make the name self-describing and greppable; put the stable identity (the
+owner or the purpose) in the base and let the platform's suffix carry the uniqueness;
+keep it short; and keep dates, ticket numbers, and personal data OUT of the base name -
+the object outlives them. Pick one scheme and apply it everywhere: consistency is worth
+more than any single clever name.
+
 ## Reading the estate values
 
 `vend_project.py` needs your region, VPC, and service engine group names, plus a
