@@ -318,13 +318,39 @@ class Vcfa:
         return json.loads(raw)
 
     def bind_role(self, project, subject_kind, subject_name, project_role):
-        """Create a ProjectRoleBinding: grant a user or group a project role.
+        """Create a ProjectRoleBinding: grant a user or group a PROJECT ROLE.
 
-        This is THE authority for project RBAC. The REST membership arrays you
-        may find elsewhere are a read-only projection that accepts a write,
-        returns 200, and persists nothing. Bind here.
-        Users bind by bare name; groups bind by "Name@" (note the trailing @).
+        This is THE authority for project RBAC (the REST membership arrays you may
+        find elsewhere are a read-only projection that accepts a write, returns 200,
+        and persists nothing - bind here). Users bind by bare name; groups bind by
+        "Name@" (the trailing @, which this method adds).
+
+        ``project_role`` is one of four handles - console name -> handle, confirmed
+        live against /apis/authorization.cci.vmware.com/v1alpha1/projectroles, each
+        the built-in Kubernetes ClusterRole of that name:
+          * view     = Project Auditor         read-only across the project; sees
+                                               everything, changes nothing.
+          * edit     = Project User            the isolation floor: own-only on the
+                                               deployment plane, and NO reach onto the
+                                               Kubernetes workload plane (a 403) - so
+                                               not enough for the services portal.
+          * edit_adv = Project Advanced User   the services-portal floor: project-WIDE
+                                               read+write across the namespaces (note
+                                               the underscore, edit_adv not edit-adv).
+                                               Project-wide + no per-user ownership on
+                                               the workload plane is why own-only
+                                               services needs a project per user.
+          * admin    = Project Administrator   edit_adv PLUS manages the project's
+                                               namespaces (create/delete) and RBAC -
+                                               the tier that lets a user self-serve
+                                               their own namespaces.
         """
+        valid = ("view", "edit", "edit_adv", "admin")
+        if project_role not in valid:
+            raise VcfaError(
+                f"project_role must be one of {valid}: view=Project Auditor, "
+                f"edit=Project User, edit_adv=Project Advanced User, admin=Project "
+                f"Administrator. Got {project_role!r}.")
         subject = {"kind": subject_kind,
                    "name": f"{subject_name}@" if subject_kind == "Group" else subject_name}
         bname = f"cci:{subject_kind.lower()}:{subject_name}"

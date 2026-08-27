@@ -61,11 +61,14 @@ def main():
                          "just-in-time on login")
     ap.add_argument("--group-org-role", default="Organization User",
                     help="the ORGANIZATION role the imported group gets (default: Organization User)")
-    ap.add_argument("--project-role", default="edit_adv", choices=["edit", "edit_adv", "admin"],
-                    help="the PROJECT role the group is bound to (edit_adv = services self-service)")
+    ap.add_argument("--project-role", default="edit_adv", choices=["view", "edit", "edit_adv", "admin"],
+                    help="the PROJECT role the group gets (see the four roles + distinctions at step 4): "
+                         "view=Project Auditor, edit=Project User, edit_adv=Project Advanced User "
+                         "(services floor), admin=Project Administrator (self-serve namespaces)")
     ap.add_argument("--owner", default=None,
                     help="optional individual user to also bind to the project")
-    ap.add_argument("--owner-role", default="edit_adv", choices=["edit", "edit_adv", "admin"])
+    ap.add_argument("--owner-role", default="edit_adv", choices=["view", "edit", "edit_adv", "admin"],
+                    help="project role for the optional individual owner (same four roles as --project-role)")
     ap.add_argument("--region", required=True, help="a region on the org (CRD-required)")
     ap.add_argument("--vpc", default=None, help="the NSX VPC (estate-dependent; omit if unused)")
     ap.add_argument("--seg", default=None,
@@ -133,12 +136,41 @@ def main():
         print("[3b] sync the LDAP directory")
         v.sync_ldap()
 
-    # 4. Bind the group (and optional owner) to the project. This is the authority
-    #    for project RBAC; groups bind by name with a trailing '@' (vcfa.py handles it).
-    print(f"[4] bind group {args.ad_group!r} -> project role {args.project_role} on {args.project}")
+    # 4. Bind the group (and optional owner) to a PROJECT ROLE - the authority for
+    #    project RBAC (groups bind by name with a trailing '@', which vcfa.py adds).
+    #
+    #    --project-role picks how much the members can do INSIDE their project. The
+    #    four roles, least to most, with the handle you pass (console name -> handle,
+    #    confirmed live; each is the built-in Kubernetes ClusterRole of that name):
+    #
+    #    --- view  = Project Auditor -------------------------------------------------
+    #        Read-only across the project: sees everything, changes nothing. For an
+    #        observer who must look but never touch.
+    #
+    #    --- edit  = Project User ----------------------------------------------------
+    #        The isolation floor. Own-only on the deployment plane (a user sees and
+    #        acts on only their OWN work), and NO reach onto the Kubernetes workload
+    #        plane (a 403) - so NOT enough for the services portal. For catalog-only
+    #        consumers who never need kubectl.
+    #
+    #    --- edit_adv = Project Advanced User ----------------------------------------
+    #        The services-portal floor: full read+write across the project's namespaces
+    #        (VM Service, Kubernetes, and the rest). Note the underscore - edit_adv, not
+    #        edit-adv. It is project-WIDE and the workload plane has no per-user
+    #        ownership, so two edit_adv members of ONE project can act on each other's
+    #        objects - which is why own-only services needs a project per user.
+    #
+    #    --- admin = Project Administrator -------------------------------------------
+    #        Everything edit_adv can do, PLUS manages the project's namespaces (create
+    #        and delete) and its RBAC. This is the tier that lets a user SELF-SERVE
+    #        their own namespaces (edit_adv can use existing ones but not create them);
+    #        pair it with the narrow catalogs org role so the new-namespace form works
+    #        (see examples/README.md).
+    #
+    print(f"[4] bind group {args.ad_group!r} -> project role {args.project_role!r} on {args.project}")
     v.bind_role(args.project, "Group", args.ad_group, args.project_role)
     if args.owner:
-        print(f"[4b] bind owner {args.owner!r} -> {args.owner_role}")
+        print(f"[4b] bind owner {args.owner!r} -> {args.owner_role!r}")
         v.bind_role(args.project, "User", args.owner, args.owner_role)
 
     if args.no_namespace:

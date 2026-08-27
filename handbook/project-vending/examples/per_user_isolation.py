@@ -65,8 +65,9 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--assign", action="append", required=True, metavar="USER:PROJECT",
                     help="a user and the project to isolate them in (repeat; use 2+ to show isolation)")
-    ap.add_argument("--role", default="edit_adv", choices=["edit", "edit_adv", "admin"],
-                    help="the project role each user gets (default edit_adv = Project Advanced User)")
+    ap.add_argument("--role", default="edit_adv", choices=["view", "edit", "edit_adv", "admin"],
+                    help="project role each user gets: view=Project Auditor, edit=Project User, "
+                         "edit_adv=Project Advanced User (default), admin=Project Administrator")
     ap.add_argument("--region", required=True, help="a region on the org (CRD-required)")
     ap.add_argument("--vpc", default=None)
     ap.add_argument("--seg", default=None, help="service engine group; only for NSX ALB regions")
