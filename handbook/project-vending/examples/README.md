@@ -72,3 +72,45 @@ What changes with SAML / OAUTH (e.g. Azure AD):
 - **`ad_fixtures.py` does not apply.** It writes to Active Directory over LDAPS; for
   Azure AD you create the group and users through Microsoft Graph or the portal, then
   import the group here with `--provider-type SAML`.
+
+## The self-service end-state (Azure AD / SAML, Project Administrator)
+
+The refined target: pull users from Azure AD over SAML, give each their own project as
+**Project Administrator** while keeping them **Organization User**, and let them
+self-serve namespaces without seeing or touching anyone else's. Assemble it from the
+pieces already here - no new tool.
+
+Because SAML imports groups (users are just-in-time), the per-user unit is a **per-user
+Azure AD group** (one member). The group binds to the project as Project Administrator;
+the user lands there on first login. A team that shares a boundary is one group and one
+project instead.
+
+```bash
+# once per org: the narrow catalogs role that lets a Project Administrator's
+# new-namespace form work (Organization User + three catalog reads, no cross-project)
+python3 ../scripts/setup_catalogs_role.py --name "Namespace Self-Service User"
+
+# per user (or per team): import their Azure AD group AS that catalogs role, create
+# their project, bind the group Project Administrator, let them self-serve namespaces
+python3 ../scripts/e2e_tenant_setup.py \
+    --project prj-alice --ad-group "prj-alice" --provider-type SAML \
+    --group-org-role "Namespace Self-Service User" --project-role admin \
+    --region <your-region> [--vpc <v>] [--seg <s>] [--zone <z>] --no-namespace
+```
+
+What each flag secures:
+
+- `--provider-type SAML` - match Azure AD; members provision just-in-time on login.
+- `--group-org-role "Namespace Self-Service User"` - the org role is Organization User
+  plus the catalog reads, so they can open the new-namespace form yet see no other
+  project.
+- `--project-role admin` - **Project Administrator** on their OWN project: full control
+  and the right to create and manage their own namespaces (a Project Advanced User,
+  `edit_adv`, could use namespaces but not create them).
+- `--no-namespace` - provision the project and leave namespace creation to them; drop
+  it to seed a first namespace instead.
+
+The result: each user is Organization User at the org and Project Administrator of a
+project only they belong to, self-serving namespaces and resources, unable to see or
+touch anyone else's - the isolation is the project boundary, exactly as in the LDAP
+walkthrough.
