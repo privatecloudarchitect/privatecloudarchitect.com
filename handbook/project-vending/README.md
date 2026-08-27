@@ -47,6 +47,7 @@ scripts/
   README.md                   prerequisites, the four environment variables, and safety
   vcfa.py                     a minimal, commented VCFA API client (the API fundamentals as code)
   vend_project.py             create a tenant project and its first namespace, entirely by API
+  e2e_tenant_setup.py         the full onboarding top to bottom: auth, project, AD group import, bind, namespace
   setup_catalogs_role.py      create the custom org role that lets a namespace operator use the create form
   verify_scope.py             log in as a tenant and confirm exactly what they can see
 ```

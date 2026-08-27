@@ -1,7 +1,7 @@
 # Scripts
 
-Four standard-library Python scripts (no pip installs). `vcfa.py` is the shared
-client; the other three are thin command-line tools that use it. Read `vcfa.py`
+Five standard-library Python scripts (no pip installs). `vcfa.py` is the shared
+client; the other four are thin command-line tools that use it. Read `vcfa.py`
 first: it is the API fundamentals as code, and module 00 walks through it.
 
 ## Prerequisites
@@ -32,7 +32,8 @@ first: it is the API fundamentals as code, and module 00 walks through it.
 |---|---|---|
 | `python3 vcfa.py` | Logs in and prints who you are and the projects you can see. Your first API call. | anyone |
 | `python3 setup_catalogs_role.py --name "Namespace Self-Service User"` | Creates the custom org role that populates the new-namespace form. Idempotent. | org admin |
-| `python3 vend_project.py --project team-acme --owner alice --owner-role edit_adv --operators-group "Platform Operators" --region <r> --vpc <v> --seg <s> --zone <z>` | Creates a project, binds the owner and operators, and creates the first namespace. | org admin |
+| `python3 vend_project.py --project team-acme --owner alice --owner-role edit_adv --operators-group "Platform Operators" --region <r>` | Creates a project, binds the owner and operators, and creates the first namespace. `--region` is required; `--vpc`/`--seg`/`--zone` are optional per your estate. | org admin |
+| `python3 e2e_tenant_setup.py --project team-acme --ad-group "Platform Engineers" --region <r>` | The full onboarding in one run, top to bottom: authenticate, create the project, import an AD group, bind it, create the first namespace, poll to Ready. | org admin |
 | `python3 verify_scope.py` | Logs in as a tenant and prints the projects and namespaces they can see. | the tenant |
 
 Read a script's top-of-file docstring for its full options and an example.

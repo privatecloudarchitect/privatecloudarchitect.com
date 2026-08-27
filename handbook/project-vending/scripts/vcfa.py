@@ -193,6 +193,52 @@ class Vcfa:
             raise VcfaError(f"set role rights: HTTP {status}: {raw[:200]}")
         raise VcfaError("role rights did not converge after 8 closure passes")
 
+    def current_org_id(self):
+        """Return the bare org UUID of the authenticated session.
+
+        This is the value the tenant-context header wants (the directory group is
+        resolved against THIS org). The session's org.id is a URN
+        (urn:vcloud:org:<uuid>); the header wants just the <uuid>.
+        """
+        status, raw, _ = self._request("GET", "/cloudapi/1.0.0/sessions/current",
+                                        accept=CLOUDAPI_ACCEPT)
+        if status != 200:
+            raise VcfaError(f"sessions/current: HTTP {status}")
+        org_urn = json.loads(raw).get("org", {}).get("id", "")
+        return org_urn.split(":")[-1]  # urn:vcloud:org:<uuid> -> <uuid>
+
+    def find_org_role(self, name):
+        """Return the org role dict matching ``name`` (e.g. 'Organization User'), or None."""
+        for role in self.cloudapi_list("roles"):
+            if role["name"] == name:
+                return role
+        return None
+
+    def import_ad_group(self, group_name, role_name="Organization User"):
+        """Import an AD / LDAP group into this organization and assign it an org role.
+
+        REQUIRES a session-login token (what this client uses): the
+        GROUP_USER_MANAGE right that authorizes group import is present only on an
+        interactive session login and is stripped from OAuth / api-token grants, so
+        every POST /groups on those tokens 403s. The org comes from the
+        tenant-context header; the directory GUID is resolved server-side by NAME
+        (no nameInSource, no orgEntityRef needed). Users import the same way at
+        /cloudapi/1.0.0/users. Idempotent-ish: re-importing an existing group name
+        returns an HTTP error, which surfaces rather than duplicating.
+        """
+        role = self.find_org_role(role_name)
+        if role is None:
+            raise VcfaError(f"org role {role_name!r} not found in this org's roles")
+        body = {"name": group_name, "providerType": "LDAP",
+                "roleEntityRefs": [{"id": role["id"], "name": role["name"]}], "description": ""}
+        status, raw, _ = self._request(
+            "POST", "/cloudapi/1.0.0/groups",
+            accept="application/json;version=10.0.0.0-alpha", body=body,
+            tenant_context=self.current_org_id())
+        if status not in (200, 201):
+            raise VcfaError(f"import AD group {group_name!r}: HTTP {status}: {raw[:200]}")
+        return json.loads(raw)
+
     # -- CCI (projects, bindings, namespaces) ----------------------------------
     def cci(self, method, path, body=None, content_type="application/json"):
         """One call against the CCI Kubernetes-style API under /cci/kubernetes."""
