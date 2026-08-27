@@ -60,7 +60,9 @@ def main():
                          "queries a directory; OIDC/SAML match the group claim and provision users "
                          "just-in-time on login")
     ap.add_argument("--group-org-role", default="Organization User",
-                    help="the ORGANIZATION role the imported group gets (default: Organization User)")
+                    help="the ORGANIZATION role the imported group gets (see the org roles + the "
+                         "keep-it-at-the-floor rule at step 3). Default Organization User = no "
+                         "cross-project reach, the isolation floor for a tenant")
     ap.add_argument("--project-role", default="edit_adv", choices=["view", "edit", "edit_adv", "admin"],
                     help="the PROJECT role the group gets (see the four roles + distinctions at step 4): "
                          "view=Project Auditor, edit=Project User, edit_adv=Project Advanced User "
@@ -126,6 +128,37 @@ def main():
     #
     #    Whatever the source, everything AFTER this step - the project, the binding,
     #    the namespace, and the isolation - is identical.
+    #
+    #    The imported group ALSO gets an ORGANIZATION role (--group-org-role) - the
+    #    "door" in the two-plane model, separate from the project role in step 4. It
+    #    decides what the members are ACROSS the org, and for an isolated tenant it
+    #    must stay at the floor. The built-in org roles (name -> what it grants,
+    #    confirmed live; org roles are extensible, so custom ones are valid too):
+    #
+    #      * Organization User          The FLOOR, and the default here: no cross-
+    #                                   project visibility - a member sees and touches
+    #                                   only the projects they are bound to. THIS is
+    #                                   what keeps a tenant out of everyone else's
+    #                                   projects.
+    #      * <custom, e.g. "Namespace Self-Service User">
+    #                                   Organization User PLUS a few narrow rights (the
+    #                                   namespace catalog reads setup_catalogs_role.py
+    #                                   adds). Still the floor for isolation - no cross-
+    #                                   project reach - but enough to self-serve
+    #                                   namespaces. This is the org role for the admin
+    #                                   self-service end-state (see examples/README.md).
+    #      * Organization Administrator ORG-WIDE: sees and manages EVERY project in the
+    #                                   org. The isolation-breaker - NEVER give this to
+    #                                   a tenant; it is for platform operators only.
+    #      * Organization Auditor       ORG-WIDE read-only: sees every project, changes
+    #                                   nothing. For audit/compliance, not self-service
+    #                                   (org-wide visibility defeats own-only).
+    #      * Defer to Identity Provider Takes the effective role from the IdP assertion
+    #                                   instead of pinning one here - useful with OIDC/
+    #                                   SAML when the IdP drives role assignment.
+    #
+    #    The rule: a self-service tenant is Organization User (or the catalogs variant);
+    #    their real power is the PROJECT role (step 4), scoped to their own project.
     print(f"[3] import {args.provider_type} group {args.ad_group!r} as org role {args.group_org_role!r}")
     v.import_ad_group(args.ad_group, role_name=args.group_org_role, provider_type=args.provider_type)
 

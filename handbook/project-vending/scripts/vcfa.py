@@ -230,6 +230,13 @@ class Vcfa:
         for LDAP, or the group name/id the SAML claim carries (verify which your IdP
         emits - Azure AD can send the display name or the group's object id).
 
+        ``role_name`` is the ORGANIZATION role the group gets - the org-wide "door",
+        separate from the project role. Keep it at ``Organization User`` (or a narrow
+        custom variant such as the catalogs role) for an isolated tenant: it grants no
+        cross-project reach. ``Organization Administrator`` and ``Organization Auditor``
+        are org-WIDE and break own-only; ``Defer to Identity Provider`` takes the role
+        from the IdP assertion (OIDC/SAML). The real power is the per-project role.
+
         REQUIRES a session-login token (what this client uses): the group-import
         right is present only on an interactive session login and is stripped from
         OAuth/api-token grants, so those 403. The org comes from the tenant-context
