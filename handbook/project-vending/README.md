@@ -50,6 +50,9 @@ scripts/
   e2e_tenant_setup.py         the full onboarding top to bottom: auth, project, AD group import, bind, namespace
   setup_catalogs_role.py      create the custom org role that lets a namespace operator use the create form
   verify_scope.py             log in as a tenant and confirm exactly what they can see
+examples/                     runnable end-to-end demonstrations built on the client above
+  per_user_isolation.py       build a project per user and prove they cannot touch each other's
+  ad_fixtures.py              provision throwaway AD test fixtures to feed the flow (needs ldap3)
 ```
 
 ## How to use it
