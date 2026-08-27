@@ -214,22 +214,34 @@ class Vcfa:
                 return role
         return None
 
-    def import_ad_group(self, group_name, role_name="Organization User"):
-        """Import an AD / LDAP group into this organization and assign it an org role.
+    def import_ad_group(self, group_name, role_name="Organization User", provider_type="LDAP"):
+        """Import a directory group into this organization and assign it an org role.
 
-        REQUIRES a session-login token (what this client uses): the
-        GROUP_USER_MANAGE right that authorizes group import is present only on an
-        interactive session login and is stripped from OAuth / api-token grants, so
-        every POST /groups on those tokens 403s. The org comes from the
-        tenant-context header; the directory GUID is resolved server-side by NAME
-        (no nameInSource, no orgEntityRef needed). Users import the same way at
-        /cloudapi/1.0.0/users. Idempotent-ish: re-importing an existing group name
-        returns an HTTP error, which surfaces rather than duplicating.
+        ``provider_type`` selects the org's identity source and must be one of
+        ``LDAP``, ``SAML``, or ``OAUTH``:
+          * LDAP (this lab's Active Directory) - the group is resolved against the
+            directory by name.
+          * SAML (e.g. Azure AD) - the group is matched against the SAML assertion's
+            group claim, and its members are provisioned JUST-IN-TIME on first login
+            rather than pre-imported. So for SAML you import the GROUP here and skip
+            the per-user import; membership carries users in when they authenticate.
+          * OAUTH - an OIDC provider, JIT like SAML.
+        The name to pass is the group as the provider presents it: a directory name
+        for LDAP, or the group name/id the SAML claim carries (verify which your IdP
+        emits - Azure AD can send the display name or the group's object id).
+
+        REQUIRES a session-login token (what this client uses): the group-import
+        right is present only on an interactive session login and is stripped from
+        OAuth/api-token grants, so those 403. The org comes from the tenant-context
+        header; the group resolves by name server-side. Idempotent-ish: re-importing
+        an existing group name returns an HTTP error rather than duplicating.
         """
+        if provider_type not in ("LDAP", "SAML", "OAUTH"):
+            raise VcfaError(f"provider_type must be LDAP, SAML, or OAUTH; got {provider_type!r}")
         role = self.find_org_role(role_name)
         if role is None:
             raise VcfaError(f"org role {role_name!r} not found in this org's roles")
-        body = {"name": group_name, "providerType": "LDAP",
+        body = {"name": group_name, "providerType": provider_type,
                 "roleEntityRefs": [{"id": role["id"], "name": role["name"]}], "description": ""}
         status, raw, _ = self._request(
             "POST", "/cloudapi/1.0.0/groups",
@@ -239,19 +251,25 @@ class Vcfa:
             raise VcfaError(f"import AD group {group_name!r}: HTTP {status}: {raw[:200]}")
         return json.loads(raw)
 
-    def import_ad_user(self, user_name, role_name="Organization User"):
-        """Import a single AD / LDAP user into this organization, with an org role.
+    def import_ad_user(self, user_name, role_name="Organization User", provider_type="LDAP"):
+        """Import a single directory user into this organization, with an org role.
 
-        Same identity plane as import_ad_group (session-login token, tenant-context
-        header, resolve-by-name), but at /cloudapi/1.0.0/users. Import a user
-        individually when you need to reference them directly in a project binding
-        (a per-user project), as opposed to binding a whole group.
+        ``provider_type`` is one of ``LOCAL``, ``LDAP``, ``SAML``, or ``OAUTH``. For
+        SAML/OAUTH the user is normally provisioned JUST-IN-TIME on first login
+        (mapped from the assertion's claims), so pre-importing an individual user is
+        usually unnecessary - bind the group and let membership carry them in. This
+        method is mainly for LDAP, where a user must already be an org principal
+        before you can reference them directly in a project binding (a per-user
+        project). Same identity plane as import_ad_group (session-login token,
+        tenant-context header) but at /cloudapi/1.0.0/users.
         """
+        if provider_type not in ("LOCAL", "LDAP", "SAML", "OAUTH"):
+            raise VcfaError(f"provider_type must be LOCAL, LDAP, SAML, or OAUTH; got {provider_type!r}")
         role = self.find_org_role(role_name)
         if role is None:
             raise VcfaError(f"org role {role_name!r} not found in this org's roles")
         # A VcdUser keys the login name as `username` (a group uses `name`).
-        body = {"username": user_name, "providerType": "LDAP",
+        body = {"username": user_name, "providerType": provider_type,
                 "roleEntityRefs": [{"id": role["id"], "name": role["name"]}]}
         status, raw, _ = self._request(
             "POST", "/cloudapi/1.0.0/users",

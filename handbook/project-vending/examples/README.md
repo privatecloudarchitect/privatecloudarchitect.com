@@ -53,3 +53,22 @@ export AD_ADMIN_SECRET=/path/to/ad-admin.json     # JSON with a "password" key
 python3 ad_fixtures.py --group "Example AD Group" --users ExampleUser1,ExampleUser2
 python3 ad_fixtures.py --group "Example AD Group" --users ExampleUser1,ExampleUser2 --teardown
 ```
+
+## LDAP or SAML
+
+The onboarding client works with either identity source; the difference is confined
+to the import. `vcfa.import_ad_group` (and the `e2e_tenant_setup.py --provider-type`
+flag) take `LDAP` (default), `SAML`, or `OAUTH` - set it to match your org's provider.
+Everything downstream - creating the project, the `ProjectRoleBinding`, the namespace,
+and the isolation model - is identical regardless of the source.
+
+What changes with SAML / OAUTH (e.g. Azure AD):
+
+- **Import the group, not the users.** Members are provisioned just-in-time on first
+  login, mapped from the assertion's group claim, so there is no per-user import step
+  and no directory sync (`sync_ldap` is LDAP-only and is skipped automatically).
+- **The group name is what the claim carries.** Confirm what your IdP emits - Azure AD
+  can send the group's display name or its object id in the group claim.
+- **`ad_fixtures.py` does not apply.** It writes to Active Directory over LDAPS; for
+  Azure AD you create the group and users through Microsoft Graph or the portal, then
+  import the group here with `--provider-type SAML`.

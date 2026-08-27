@@ -23,8 +23,11 @@ Prerequisites:
     GROUP_USER_MANAGE right, which is present only on a session login (this client)
     and stripped from OAuth / api-token grants. That is why vcfa.py logs in with a
     session, not an API token.
-  * The AD/LDAP group must already exist in the directory the org federates to; the
-    import resolves it server-side by name.
+  * The group must already exist in the identity source the org federates to. Pass
+    --provider-type LDAP (default) or SAML/OAUTH to match your org's provider. LDAP
+    resolves the group by name against the directory; SAML/OAUTH (e.g. Azure AD)
+    match it against the assertion's group claim and provision members just-in-time
+    on first login, so you import the group and users flow in when they sign in.
   * Your estate's region (required). VPC, service engine group, and zone are optional
     and depend on how your supervisor is networked (see 04-project-vending-as-code.md).
 
@@ -51,7 +54,10 @@ def main():
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", required=True, help="the new project's name")
-    ap.add_argument("--ad-group", required=True, help="the AD/LDAP group to import into the org")
+    ap.add_argument("--ad-group", required=True, help="the directory group to import into the org")
+    ap.add_argument("--provider-type", default="LDAP", choices=["LDAP", "SAML", "OAUTH"],
+                    help="the org's identity provider: LDAP queries a directory; SAML/OAUTH (e.g. Azure "
+                         "AD) match the group claim and provision users just-in-time on login")
     ap.add_argument("--group-org-role", default="Organization User",
                     help="the ORGANIZATION role the imported group gets (default: Organization User)")
     ap.add_argument("--project-role", default="edit_adv", choices=["edit", "edit_adv", "admin"],
@@ -81,15 +87,17 @@ def main():
     print(f"[2] create project {args.project!r}")
     v.create_project(args.project, description=f"Vended for AD group {args.ad_group!r}.")
 
-    # 3. Import the AD group into the organization, with an org role.
-    print(f"[3] import AD group {args.ad_group!r} as org role {args.group_org_role!r}")
-    v.import_ad_group(args.ad_group, role_name=args.group_org_role)
+    # 3. Import the directory group into the organization, with an org role.
+    print(f"[3] import {args.provider_type} group {args.ad_group!r} as org role {args.group_org_role!r}")
+    v.import_ad_group(args.ad_group, role_name=args.group_org_role, provider_type=args.provider_type)
 
-    # 3b. Refresh the directory so a just-created group/user is visible now (see
-    #     sync_ldap's note: the workload plane has a separate provider that syncs
-    #     on its own schedule, so binding a brand-new principal may still wait).
-    print("[3b] sync the LDAP directory")
-    v.sync_ldap()
+    # 3b. For LDAP, refresh the directory so a just-created group/user is visible
+    #     now (its members still sync into the workload plane on that plane's own
+    #     schedule - see sync_ldap). SAML/OAUTH provision users just-in-time on
+    #     login, so there is no directory to sync and this step is skipped.
+    if args.provider_type == "LDAP":
+        print("[3b] sync the LDAP directory")
+        v.sync_ldap()
 
     # 4. Bind the group (and optional owner) to the project. This is the authority
     #    for project RBAC; groups bind by name with a trailing '@' (vcfa.py handles it).
