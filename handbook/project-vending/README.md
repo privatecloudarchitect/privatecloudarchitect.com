@@ -13,7 +13,7 @@ teaches authentication and the two API surfaces from scratch, and every later st
 builds on it. Everything here is generic. Fill in your estate's values and it runs
 on your appliance.
 
-## The answer
+## The answer, in five sentences
 
 VCFA access is decided on two planes, and the developer services portal lives on
 only one of them. Own-only isolation on the deployment plane (a user manages only
