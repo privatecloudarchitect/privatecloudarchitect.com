@@ -85,6 +85,12 @@ def main():
     print(f"[3] import AD group {args.ad_group!r} as org role {args.group_org_role!r}")
     v.import_ad_group(args.ad_group, role_name=args.group_org_role)
 
+    # 3b. Refresh the directory so a just-created group/user is visible now (see
+    #     sync_ldap's note: the workload plane has a separate provider that syncs
+    #     on its own schedule, so binding a brand-new principal may still wait).
+    print("[3b] sync the LDAP directory")
+    v.sync_ldap()
+
     # 4. Bind the group (and optional owner) to the project. This is the authority
     #    for project RBAC; groups bind by name with a trailing '@' (vcfa.py handles it).
     print(f"[4] bind group {args.ad_group!r} -> project role {args.project_role} on {args.project}")

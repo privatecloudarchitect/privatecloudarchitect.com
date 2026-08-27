@@ -239,6 +239,48 @@ class Vcfa:
             raise VcfaError(f"import AD group {group_name!r}: HTTP {status}: {raw[:200]}")
         return json.loads(raw)
 
+    def import_ad_user(self, user_name, role_name="Organization User"):
+        """Import a single AD / LDAP user into this organization, with an org role.
+
+        Same identity plane as import_ad_group (session-login token, tenant-context
+        header, resolve-by-name), but at /cloudapi/1.0.0/users. Import a user
+        individually when you need to reference them directly in a project binding
+        (a per-user project), as opposed to binding a whole group.
+        """
+        role = self.find_org_role(role_name)
+        if role is None:
+            raise VcfaError(f"org role {role_name!r} not found in this org's roles")
+        # A VcdUser keys the login name as `username` (a group uses `name`).
+        body = {"username": user_name, "providerType": "LDAP",
+                "roleEntityRefs": [{"id": role["id"], "name": role["name"]}]}
+        status, raw, _ = self._request(
+            "POST", "/cloudapi/1.0.0/users",
+            accept="application/json;version=10.0.0.0-alpha", body=body,
+            tenant_context=self.current_org_id())
+        if status not in (200, 201):
+            raise VcfaError(f"import AD user {user_name!r}: HTTP {status}: {raw[:200]}")
+        return json.loads(raw)
+
+    def sync_ldap(self):
+        """Trigger an LDAP directory sync so this organization picks up newly
+        created directory users and groups now, rather than at the next scheduled
+        sync. Returns True on success.
+
+        Scope note: this refreshes THIS layer's directory view - enough for a new
+        principal to log in and be seen in the org - but the Kubernetes workload
+        plane authorizes against a SEPARATE identity provider (the fleet identity
+        manager), whose sync is not this call. So immediately after creating a
+        brand-new directory user, they may be visible here yet not yet bindable to
+        a project or able to operate on the workload plane until that other
+        provider syncs (often a short, scheduled interval). Provision users ahead
+        of the moment you need to bind them, or expect a brief wait.
+        """
+        status, raw, _ = self._request("POST", "/cloudapi/1.0.0/ldap/sync",
+                                        accept=CLOUDAPI_ACCEPT)
+        if status not in (200, 202, 204):
+            raise VcfaError(f"ldap sync: HTTP {status}: {raw[:160]}")
+        return True
+
     # -- CCI (projects, bindings, namespaces) ----------------------------------
     def cci(self, method, path, body=None, content_type="application/json"):
         """One call against the CCI Kubernetes-style API under /cci/kubernetes."""
