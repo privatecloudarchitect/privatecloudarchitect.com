@@ -13,12 +13,16 @@ Prerequisites:
   * The four VCFA_* environment variables from vcfa.py, as an account holding the
     organization-level project-management right (creating projects is a provider
     or organization administrator operation, not a tenant one).
-  * Your estate's region, VPC, and service engine group names. Read them once from
-    a namespace that already works:
+  * Your estate's region name (required). VPC, service engine group, and zone are
+    OPTIONAL and depend on how your supervisor is networked - read whichever apply
+    from a namespace that already works, and pass only those:
       GET /cci/kubernetes/apis/infrastructure.cci.vmware.com/v1alpha3/namespaces/<project>/supervisornamespaces/<name>
-    and copy spec.regionName, spec.vpcName, spec.segName, and a zone name.
+    and copy spec.regionName (always) plus spec.vpcName / spec.segName / a zone name
+    IF that namespace carries them. --seg is needed only where the region load-
+    balances through NSX Advanced Load Balancer (Avi); a supervisor without service
+    engine groups omits it.
 
-Example:
+Example (a region that uses NSX Advanced Load Balancer):
   export VCFA_HOST=vcfa.example.com VCFA_ORG=Acme VCFA_USER=admin
   export VCFA_PASSWORD="$(some-secret-tool get vcfa-admin)"
   python3 vend_project.py \
@@ -26,6 +30,9 @@ Example:
       --operators-group "Platform Operators" \
       --region <your-region> --vpc <your-vpc> --seg <your-service-engine-group> \
       --zone <your-zone>
+
+Example (a supervisor with no service engine groups - just the required region):
+  python3 vend_project.py --project team-acme --owner alice --region <your-region>
 
 Safety: this script CREATES a project and a namespace. It never deletes anything.
 Re-running with the same --project fails on the create (projects are unique); that
@@ -49,10 +56,13 @@ def main():
                     help="an operators group to bind as project admin (recommended)")
     ap.add_argument("--namespace-stem", default=None,
                     help="generateName stem for the first namespace (default: <project>-ns-)")
-    ap.add_argument("--region", required=True)
-    ap.add_argument("--vpc", required=True)
-    ap.add_argument("--seg", required=True, help="the load-balancer service engine group")
-    ap.add_argument("--zone", required=True)
+    ap.add_argument("--region", required=True, help="a region on the org (CRD-required)")
+    ap.add_argument("--vpc", default=None, help="the NSX VPC (estate-dependent; omit if not used)")
+    ap.add_argument("--seg", default=None,
+                    help="the load-balancer service engine group; needed ONLY when the region "
+                         "load-balances through NSX Advanced Load Balancer (Avi). Omit otherwise.")
+    ap.add_argument("--zone", default=None,
+                    help="a zone for per-zone limit overrides; omit to inherit the class defaults")
     ap.add_argument("--class-name", default="large")
     ap.add_argument("--no-namespace", action="store_true",
                     help="create the project and bindings only, skip the namespace")

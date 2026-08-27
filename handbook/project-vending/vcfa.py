@@ -231,31 +231,43 @@ class Vcfa:
             raise VcfaError(f"bind {bname} -> {project_role} in {project}: HTTP {status}: {raw[:200]}")
         return json.loads(raw)
 
-    def create_namespace(self, project, generate_name, region, vpc, seg, zone,
+    def create_namespace(self, project, generate_name, region, vpc=None, seg=None, zone=None,
                          class_name="large", cpu_limit="2000M", memory_limit="4000Mi"):
         """Create the project's first Supervisor Namespace, fully by API.
 
-        The two fields a newcomer would not guess, and that the opaque
-        fresh-project error is really about:
+        Only two spec fields are REQUIRED by the SupervisorNamespace CRD
+        (v1alpha3): className and regionName. Everything else is optional and
+        depends on how your supervisor is networked - so this builds the spec
+        incrementally and includes an optional field only when you pass it:
           * generateName, NOT a fixed metadata.name. The platform derives the
-            name and appends a suffix; a fixed name is rejected.
-          * segName, the load-balancer service engine group. Omit it on an
-            NSX-registered load-balancing region and the create fails "SEG is
-            required". Read the value from any namespace that already works.
+            name and appends a suffix; a fixed name is rejected. (Always.)
+          * segName, the load-balancer service engine group, is required at
+            RUNTIME only when the region load-balances through NSX Advanced Load
+            Balancer (Avi) - the backend then rejects the create with "SEG is
+            required". A supervisor without NSX ALB service engine groups omits
+            it. Read it (and vpcName, and a zone) from a namespace that works:
+            GET .../namespaces/<project>/supervisornamespaces/<name>, copy spec.
+          * vpcName and classConfigOverrides.zones are likewise optional; omit
+            zones to inherit the namespace class's default limits.
         Returns the created object; poll status.phase until it reads "Created".
         """
         stem = generate_name if generate_name.endswith("-") else generate_name + "-"
+        spec = {"className": class_name, "regionName": region}
+        if vpc:
+            spec["vpcName"] = vpc
+        if seg:
+            spec["segName"] = seg
+        if zone:
+            spec["classConfigOverrides"] = {"zones": [{
+                "name": zone, "cpuLimit": cpu_limit, "cpuReservation": "0M",
+                "memoryLimit": memory_limit, "memoryReservation": "0Mi",
+                "vmClassReservations": []}]}
         status, raw, _ = self.cci(
             "POST",
             f"/apis/infrastructure.cci.vmware.com/v1alpha3/namespaces/{project}/supervisornamespaces",
             body={"apiVersion": "infrastructure.cci.vmware.com/v1alpha3", "kind": "SupervisorNamespace",
                   "metadata": {"generateName": stem, "namespace": project},
-                  "spec": {"className": class_name, "regionName": region, "vpcName": vpc,
-                           "segName": seg,
-                           "classConfigOverrides": {"zones": [{
-                               "name": zone, "cpuLimit": cpu_limit, "cpuReservation": "0M",
-                               "memoryLimit": memory_limit, "memoryReservation": "0Mi",
-                               "vmClassReservations": []}]}}})
+                  "spec": spec})
         if status not in (200, 201):
             raise VcfaError(f"create namespace in {project}: HTTP {status}: {raw[:300]}")
         return json.loads(raw)
