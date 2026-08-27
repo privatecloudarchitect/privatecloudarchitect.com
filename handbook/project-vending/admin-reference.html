@@ -1,0 +1,457 @@
+<!--
+  AC-02 · VCFA access and project vending, an admin reference
+  A single-page, printable companion to the tenant-self-service-with-isolation solution.
+  Brand: v1.2 tokens (inlined verbatim). Self-contained; open in any browser or print to PDF.
+-->
+<title>VCFA access and project vending, an admin reference</title>
+<style>
+/* ============================================================
+   PCA brand tokens + components · v1.2 · 2026-08-12
+   (v1.2: callout taxonomy per V-23 - .call.watch (caution) replaces .call.trap;
+    .call.hazard (danger) added for destructive outcomes. v1.1: network strata hue)
+   Private Cloud Architect · docs/brand/tokens/pca-brand.css
+   Artifacts inline this block verbatim, keeping this version
+   comment, so drift is detectable (governance BG-08).
+   Theming contract: 3 blocks. Light in :root; dark once via the
+   media query scoped to :root:not([data-theme="light"]); the
+   explicit [data-theme="dark"] repeat lets the toggle beat OS
+   light. Components style through tokens only.
+   ============================================================ */
+
+:root {
+  /* neutrals (paper) */
+  --paper: #edf1f5; --panel: #ffffff; --panel-2: #f4f7fa; --sunk: #e6ebf1;
+  --ink: #16202b; --soft: #46535f; --faint: #566470;
+  --line: #d4dbe4; --line-2: #b9c5d2;
+  /* accent: blueprint blue */
+  --accent: #2b5c88; --accent-fill: #e5eef7; --accent-line: #b9d0e6;
+  /* strata (layer identity: only in strata-lane components) */
+  --st-provider: #526478; --st-provider-fill: #eceff3; --st-provider-line: #c6cfd9;
+  --st-org: #544fc9;      --st-org-fill: #ecebfa;      --st-org-line: #c7c4f0;
+  --st-project: #0d8071;  --st-project-fill: #e2f3f0;  --st-project-line: #a9ded6;
+  --st-workload: #1a6aad; --st-workload-fill: #e6f0fa; --st-workload-line: #b4d2ee;
+  --st-network: #0e7f93;  --st-network-fill: #e1f2f6;  --st-network-line: #abdbe7;
+  /* provenance (pills only) */
+  --pv-live: #256b45; --pv-live-fill: #e2f1e8;
+  --pv-doc: #7d550e;  --pv-doc-fill: #f6edda;
+  /* outcomes (chips only; desirability, not status) */
+  --ok: #256b45; --ok-fill: #e2f1e8;
+  --caution: #8a5a0b; --caution-fill: #f7edda;
+  /* hazard (trap callouts only) */
+  --danger: #a93a4e; --danger-fill: #f7e7ea;
+  --shadow: 0 1px 2px rgba(22,32,43,.05), 0 10px 26px -14px rgba(22,32,43,.22);
+  /* type */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --fs-display: clamp(28px, 4.2vw, 42px);
+  --fs-h2: 21px; --fs-h3: 16px; --fs-body: 14px; --fs-small: 13px;
+  --fs-caption: 12px; --fs-micro: 11px;
+  /* space / radius */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+  --r-pill: 999px; --r-card: 12px; --r-chip: 6px; --r-code: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d131a; --panel: #151e28; --panel-2: #1a2431; --sunk: #101923;
+    --ink: #e8eef5; --soft: #a3b2c2; --faint: #8b9cad;
+    --line: #263340; --line-2: #33424f;
+    --accent: #8fb9e0; --accent-fill: #12293e; --accent-line: #2c4c6b;
+    --st-provider: #93a6b8; --st-provider-fill: #1a222c; --st-provider-line: #313e4b;
+    --st-org: #9a97f0;      --st-org-fill: #1e1c3a;      --st-org-line: #3a3768;
+    --st-project: #4fc7b4;  --st-project-fill: #0e2e2a;  --st-project-line: #1f5049;
+    --st-workload: #66aae8; --st-workload-fill: #10263c; --st-workload-line: #244766;
+    --st-network: #56c3da;  --st-network-fill: #0d2a32;  --st-network-line: #1e4d59;
+    --pv-live: #64c485; --pv-live-fill: #11291b;
+    --pv-doc: #d9a94e;  --pv-doc-fill: #2c2410;
+    --ok: #64c485; --ok-fill: #11291b;
+    --caution: #e2a94e; --caution-fill: #2f2410;
+    --danger: #e5788b; --danger-fill: #2e151b;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 34px -16px rgba(0,0,0,.62);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d131a; --panel: #151e28; --panel-2: #1a2431; --sunk: #101923;
+  --ink: #e8eef5; --soft: #a3b2c2; --faint: #8b9cad;
+  --line: #263340; --line-2: #33424f;
+  --accent: #8fb9e0; --accent-fill: #12293e; --accent-line: #2c4c6b;
+  --st-provider: #93a6b8; --st-provider-fill: #1a222c; --st-provider-line: #313e4b;
+  --st-org: #9a97f0;      --st-org-fill: #1e1c3a;      --st-org-line: #3a3768;
+  --st-project: #4fc7b4;  --st-project-fill: #0e2e2a;  --st-project-line: #1f5049;
+  --st-workload: #66aae8; --st-workload-fill: #10263c; --st-workload-line: #244766;
+  --st-network: #56c3da;  --st-network-fill: #0d2a32;  --st-network-line: #1e4d59;
+  --pv-live: #64c485; --pv-live-fill: #11291b;
+  --pv-doc: #d9a94e;  --pv-doc-fill: #2c2410;
+  --ok: #64c485; --ok-fill: #11291b;
+  --caution: #e2a94e; --caution-fill: #2f2410;
+  --danger: #e5788b; --danger-fill: #2e151b;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 34px -16px rgba(0,0,0,.62);
+}
+
+/* ---- base ---------------------------------------------------- */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans);
+  font-size: var(--fs-body); line-height: 1.55; -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%; text-rendering: optimizeLegibility; }
+.wrap { max-width: 1140px; margin: 0 auto; padding: clamp(20px, 4vw, 52px) clamp(16px, 3vw, 30px) var(--s8); }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.m { font-family: var(--font-mono); font-size: 0.86em; background: var(--sunk);
+  border: 1px solid var(--line); border-radius: var(--r-code); padding: 1px 5px; }
+b, strong { font-weight: 600; color: var(--ink); }
+p { margin: 0; max-width: 74ch; }
+p + p { margin-top: var(--s3); }
+
+/* ---- title block --------------------------------------------- */
+.tb { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel);
+  box-shadow: var(--shadow); overflow: hidden; }
+.tb-top { display: flex; align-items: center; gap: var(--s3); padding: 10px var(--s4);
+  border-bottom: 1px solid var(--line); background: var(--panel-2); flex-wrap: wrap; }
+.tb-mark { color: var(--accent); display: inline-flex; }
+.tb-wordmark { font-family: var(--font-mono); font-size: var(--fs-caption); font-weight: 600;
+  letter-spacing: .18em; color: var(--accent); }
+.tb-domain { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-micro); color: var(--faint); }
+.tb-main { padding: var(--s5) var(--s4) var(--s4); }
+.tb-main h1 { margin: 0; font-size: var(--fs-display); line-height: 1.06; letter-spacing: -.02em;
+  font-weight: 800; text-wrap: balance; }
+.tb-main h1 .k { color: var(--accent); }
+.tb-main .dek { color: var(--soft); font-size: 15px; max-width: 76ch; margin-top: var(--s3); }
+.tb-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  border-top: 1px solid var(--line); }
+.tb-cell { padding: 10px var(--s4); border-right: 1px solid var(--line); }
+.tb-cell:last-child { border-right: none; }
+.tb-cell .k { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.tb-cell .v { margin-top: 2px; font-size: var(--fs-small); color: var(--ink); font-weight: 600; }
+.tb-cell .v .m { font-weight: 400; }
+@media (max-width: 640px) { .tb-cell { border-right: none; border-top: 1px solid var(--line); } .tb-cell:first-child { border-top: none; } }
+
+/* ---- provenance pills (smallest claim unit they certify) ------ */
+.pv { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
+  font-size: var(--fs-micro); font-weight: 600; padding: 2px 8px; border-radius: var(--r-pill);
+  letter-spacing: .02em; white-space: nowrap; vertical-align: middle; }
+.pv-live { color: var(--pv-live); background: var(--pv-live-fill);
+  border: 1px solid color-mix(in oklab, var(--pv-live) 34%, transparent); }
+.pv-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--pv-live); }
+.pv-repo { color: var(--accent); background: var(--accent-fill);
+  border: 1px solid color-mix(in oklab, var(--accent) 34%, transparent); }
+.pv-doc { color: var(--pv-doc); background: var(--pv-doc-fill);
+  border: 1px dashed color-mix(in oklab, var(--pv-doc) 50%, transparent); }
+.legend { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: center; }
+
+/* ---- outcome chips (desirability, not status) ----------------- */
+.oc { display: inline-block; font-family: var(--font-mono); font-size: var(--fs-micro);
+  font-weight: 600; padding: 2px 8px; border-radius: var(--r-chip); white-space: nowrap; }
+.oc-good { color: var(--ok); background: var(--ok-fill);
+  border: 1px solid color-mix(in oklab, var(--ok) 32%, transparent); }
+.oc-caution { color: var(--caution); background: var(--caution-fill);
+  border: 1px solid color-mix(in oklab, var(--caution) 40%, transparent); }
+.oc-fact { color: var(--soft); background: var(--sunk); border: 1px solid var(--line); }
+
+/* ---- verdict + sheet index ----------------------------------- */
+.verdict { margin-top: var(--s4); border: 1px solid var(--accent-line); border-left: 4px solid var(--accent);
+  border-radius: var(--r-card); background: var(--panel); box-shadow: var(--shadow); padding: var(--s4) 18px; }
+.verdict .kick { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.verdict h2 { margin: 4px 0 0; font-size: var(--fs-h3); font-weight: 700; }
+.verdict p { margin-top: var(--s2); font-size: var(--fs-small); color: var(--soft); max-width: 90ch; }
+.sheetindex { margin-top: var(--s4); display: flex; flex-wrap: wrap; gap: 6px; }
+.sheetindex a { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600;
+  color: var(--soft); background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-pill);
+  padding: 4px 10px; text-decoration: none; }
+.sheetindex a:hover { color: var(--accent); border-color: var(--accent-line); }
+.sheetindex a .no { color: var(--accent); margin-right: 5px; }
+
+/* ---- sections ------------------------------------------------ */
+section { margin-top: clamp(44px, 6vw, 60px); }
+.actbreak { margin-top: clamp(52px, 7vw, 72px); border-top: 2px solid var(--line-2); padding-top: clamp(36px, 5vw, 48px); }
+.actbreak .actlabel { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-bottom: -8px; }
+.sechd { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap;
+  border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: var(--s5); }
+.sechd .no { font-family: var(--font-mono); font-size: var(--fs-caption); font-weight: 700; color: var(--accent); }
+.sechd h2 { margin: 0; font-size: var(--fs-h2); font-weight: 700; letter-spacing: -.012em; }
+.sechd .cap { color: var(--soft); font-size: var(--fs-caption); }
+.secintro { color: var(--soft); font-size: var(--fs-body); max-width: 76ch; margin-bottom: var(--s4); }
+.eyebrow { font-family: var(--font-mono); font-size: var(--fs-caption); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.thesis { margin-top: var(--s4); border: 1px solid var(--accent-line); border-radius: var(--r-card);
+  background: var(--accent-fill); color: var(--ink); font-size: 15px; font-weight: 600;
+  padding: var(--s3) var(--s4); text-align: center; text-wrap: balance; }
+
+/* ---- callout family (kicker states the kind) ------------------ */
+.call { margin-top: var(--s4); border: 1px solid var(--line); border-left: 3px solid var(--cc, var(--accent));
+  border-radius: 10px; background: var(--panel-2); padding: var(--s3) var(--s4);
+  font-size: var(--fs-small); color: var(--soft); max-width: 85ch; }
+.call .kick { display: inline-block; font-family: var(--font-mono); font-size: var(--fs-micro);
+  font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--cc, var(--accent));
+  margin-right: 6px; }
+.call b { color: var(--ink); }
+.call.evidence { --cc: var(--pv-live); }
+.call.pattern  { --cc: var(--st-project); border-width: 1px 1px 1px 3px; background: var(--panel); }
+.call.reading  { --cc: var(--faint); }
+.call.context  { --cc: var(--pv-doc); }
+.call.watch { --cc: var(--caution); border: 1px solid color-mix(in oklab, var(--caution) 45%, var(--line)); border-left: 3px solid var(--caution); background: var(--caution-fill); }
+.call.watch h3 { margin: 0 0 4px; font-size: var(--fs-body); font-weight: 700; color: var(--caution); }
+.call.hazard { --cc: var(--danger); border: 1.5px solid var(--danger); background: var(--danger-fill); }
+.call.hazard .kick { color: var(--danger); }
+.call.hazard h3 { margin: 0 0 4px; font-size: var(--fs-body); font-weight: 700; color: var(--danger); }
+
+/* ---- strata (containment stacks: strata lane only) ------------ */
+.strata { display: flex; flex-direction: column; }
+.stratum { border: 1px solid var(--line); border-left: 4px solid var(--sc, var(--accent));
+  border-radius: var(--r-card); background: var(--panel); box-shadow: var(--shadow);
+  padding: var(--s4) var(--s4); align-self: center; }
+.stratum.w1 { width: 100%; } .stratum.w2 { width: 94%; } .stratum.w3 { width: 88%; } .stratum.w4 { width: 82%; }
+.stratum.key { background: linear-gradient(var(--st-project-fill), var(--panel)); }
+.stratum .lh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stratum .tag { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--sc, var(--accent)); }
+.stratum h3 { margin: 0; font-size: var(--fs-h3); font-weight: 700; }
+.stratum p { margin-top: var(--s2); font-size: var(--fs-small); color: var(--soft); max-width: none; }
+.strataconn { align-self: center; color: var(--faint); font-size: var(--fs-small);
+  font-family: var(--font-mono); padding: 6px 0; }
+.st-provider { --sc: var(--st-provider); } .st-org { --sc: var(--st-org); }
+.st-project { --sc: var(--st-project); } .st-workload { --sc: var(--st-workload); }
+.st-network { --sc: var(--st-network); }
+/* accent-slot variants: the ONLY way to recolor a slotted component (no inline styles, BG-07) */
+.sc-accent { --sc: var(--accent); } .sc-caution { --sc: var(--caution); }
+.sc-live { --sc: var(--pv-live); } .sc-danger { --sc: var(--danger); }
+
+/* ---- gate rail (ordered orthogonal factors + bypass) ---------- */
+.gaterail { margin-top: var(--s4); display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: var(--s2); align-items: stretch; }
+.gate { border: 1px solid var(--line); border-top: 3px solid var(--sc, var(--accent));
+  border-radius: var(--r-card); background: var(--panel); box-shadow: var(--shadow); padding: var(--s3) var(--s4); }
+.gate .tag { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--sc, var(--accent)); }
+.gate h3 { margin: 3px 0 0; font-size: 15px; font-weight: 700; }
+.gate p { margin-top: 6px; font-size: var(--fs-small); color: var(--soft); }
+.gatearrow { align-self: center; color: var(--faint); font-family: var(--font-mono);
+  font-size: var(--fs-small); text-align: center; max-width: 90px; }
+.bypass { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--s2);
+  border: 1px dashed color-mix(in oklab, var(--caution) 55%, transparent); border-radius: var(--r-chip);
+  background: var(--caution-fill); color: var(--caution); font-family: var(--font-mono);
+  font-size: var(--fs-caption); font-weight: 600; padding: 7px var(--s3); }
+@media (max-width: 820px) { .gaterail { grid-template-columns: 1fr; } .gatearrow { max-width: none; text-align: left; } }
+
+/* ---- ladder / runbook (CSS counters) -------------------------- */
+.ladder, .runbook { margin-top: var(--s4); display: flex; flex-direction: column; gap: var(--s2);
+  counter-reset: rung; }
+.rung { counter-increment: rung; display: grid; grid-template-columns: auto 1fr; gap: var(--s3);
+  align-items: baseline; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+  padding: var(--s3) var(--s4); }
+.rung::before { content: counter(rung, decimal-leading-zero); font-family: var(--font-mono);
+  font-weight: 700; font-size: var(--fs-caption); color: var(--accent); background: var(--accent-fill);
+  border: 1px solid var(--accent-line); border-radius: var(--r-chip); padding: 3px 7px; }
+.rung .rb { font-size: var(--fs-small); color: var(--soft); }
+.rung .rb b { color: var(--ink); }
+.rung .cmd { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: var(--fs-caption);
+  color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: var(--r-chip);
+  padding: 6px 9px; overflow-x: auto; white-space: pre; }
+.delta { align-self: center; font-family: var(--font-mono); font-size: var(--fs-caption); color: var(--faint); padding-left: 44px; }
+
+/* ---- comparison pair ------------------------------------------ */
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); margin-top: var(--s4); }
+@media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+.paircard { border: 1px solid var(--line); border-top: 3px solid var(--sc, var(--accent));
+  border-radius: var(--r-card); background: var(--panel); box-shadow: var(--shadow); padding: var(--s4) 17px; }
+.paircard h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.paircard .who { font-size: var(--fs-caption); color: var(--faint); margin-top: 2px; }
+.paircard p { margin-top: var(--s2); font-size: var(--fs-small); color: var(--soft); max-width: none; }
+.paircard .chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-family: var(--font-mono); font-size: var(--fs-micro); padding: 2px 7px;
+  border-radius: var(--r-chip); background: var(--sunk); border: 1px solid var(--line); color: var(--soft); }
+
+/* ---- tables --------------------------------------------------- */
+.seeing { margin-top: var(--s4); font-size: var(--fs-small); color: var(--soft); max-width: 85ch; }
+.seeing .kick { font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--faint); margin-right: 6px; }
+.tablewrap { margin-top: var(--s3); overflow-x: auto; border: 1px solid var(--line);
+  border-radius: var(--r-card); box-shadow: var(--shadow); }
+table { border-collapse: collapse; width: 100%; font-size: var(--fs-small); min-width: 680px; background: var(--panel); }
+thead th { text-align: left; font-family: var(--font-mono); font-size: var(--fs-micro);
+  letter-spacing: .06em; text-transform: uppercase; color: var(--soft); font-weight: 600;
+  padding: 11px 13px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+tbody td { padding: 11px 13px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--soft); }
+tbody tr:last-child td { border-bottom: none; }
+td .cn { font-weight: 600; color: var(--ink); }
+td .m, th .m { background: none; border: none; padding: 0; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* ---- requirement cards + fences ------------------------------- */
+.reqs { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
+@media (max-width: 800px) { .reqs { grid-template-columns: 1fr; } }
+.req { border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--r-card);
+  background: var(--panel); box-shadow: var(--shadow); padding: var(--s4) var(--s4); }
+.req .rt { display: flex; align-items: center; gap: 10px; }
+.req .rt h3 { margin: 0; font-size: var(--fs-body); font-weight: 700; }
+.rtag { display: inline-block; font-family: var(--font-mono); font-weight: 700; font-size: var(--fs-micro);
+  color: var(--accent); background: var(--accent-fill); border: 1px solid var(--accent-line);
+  border-radius: var(--r-chip); padding: 2px 8px; }
+.req ul { margin: var(--s3) 0 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
+.req li { font-size: var(--fs-small); color: var(--soft); padding-left: 16px; position: relative; }
+.req li::before { content: "\25B8"; position: absolute; left: 0; color: var(--accent); }
+.req li b { color: var(--ink); }
+
+/* ---- roles / misc chips --------------------------------------- */
+.roles { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.role { font-family: var(--font-mono); font-size: var(--fs-micro); padding: 3px 8px;
+  border-radius: var(--r-chip); background: var(--panel); border: 1px solid var(--line-2); color: var(--ink); }
+.role.key { background: color-mix(in oklab, var(--st-project) 12%, var(--panel));
+  border-color: var(--st-project-line); color: var(--st-project); font-weight: 600; }
+.role.warnrole { background: var(--caution-fill); border-color: color-mix(in oklab, var(--caution) 40%, transparent); color: var(--caution); font-weight: 600; }
+
+/* ---- footer --------------------------------------------------- */
+.foot { margin-top: var(--s7); border-top: 1px solid var(--line); padding-top: var(--s4);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--s4); }
+.footblock h4 { margin: 0 0 var(--s2); display: flex; align-items: center; gap: var(--s2);
+  font-family: var(--font-mono); font-size: var(--fs-micro); letter-spacing: .09em;
+  text-transform: uppercase; color: var(--soft); }
+.footblock p { font-size: var(--fs-caption); color: var(--faint); max-width: none; }
+.footblock code { font-family: var(--font-mono); color: var(--soft); }
+
+/* ---- chrome --------------------------------------------------- */
+.theme { position: fixed; top: 13px; right: 13px; font-family: var(--font-mono);
+  font-size: var(--fs-caption); padding: 7px 11px; border-radius: var(--r-pill);
+  border: 1px solid var(--line); background: var(--panel); color: var(--soft); cursor: pointer;
+  box-shadow: var(--shadow); z-index: 5; }
+@media print { .theme { display: none; } body { background: #ffffff; } }
+</style>
+<button class="theme" onclick="(function(r){var cur=r.getAttribute('data-theme');var isDark=cur?cur==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme',isDark?'light':'dark');})(document.documentElement)" aria-label="Toggle color theme">&#9681; theme</button>
+
+<div class="wrap">
+
+  <header class="tb">
+    <div class="tb-top">
+      <span class="tb-mark" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="20" height="20"><g fill="currentColor"><rect x="12" y="20" width="72" height="13" rx="3.5"/><rect x="12" y="42" width="54" height="13" rx="3.5"/><rect x="12" y="64" width="36" height="13" rx="3.5"/></g></svg></span>
+      <span class="tb-wordmark">PRIVATE CLOUD ARCHITECT</span>
+      <span class="tb-domain">VCF Automation 9.1 &middot; All Apps</span>
+    </div>
+    <div class="tb-main">
+      <div class="eyebrow">Admin reference &middot; organization and project access</div>
+      <h1>Access rides <span class="k">two planes</span>, and that decides how you vend a project</h1>
+      <p class="dek">Grant a tenant by intent, not by the biggest role that clears the ticket. Access is decided on two planes with different controls, and the developer services plane answers to only one of them. That single fact sets how many projects you vend, and the vend itself is three API calls with no console step. This reference is the model, the tier ladder, the isolation ceiling, and the runbook, in that order.</p>
+    </div>
+    <div class="tb-meta">
+      <div class="tb-cell"><div class="k">Scope</div><div class="v">Organization + project RBAC</div></div>
+      <div class="tb-cell"><div class="k">Revision</div><div class="v">2026-08-26</div></div>
+      <div class="tb-cell"><div class="k">Verified against</div><div class="v">a live VCF 9.1 estate</div></div>
+      <div class="tb-cell"><div class="k">Provenance</div><div class="v legend"><span class="pv pv-live">live</span> <span class="pv pv-doc">doc</span></div></div>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <span class="kick">Verdict</span>
+    <h2>Grant by intent; and when self-service on the services plane must stay own-only, give each trust boundary its own project.</h2>
+    <p>A tenant who only deploys from the catalog and manages their own work is Organization User plus Project User. A tenant who needs the developer services portal needs Project Advanced User, which sees the whole project and holds no per-user ownership on the workload plane. So services self-service and own-only coexist only inside a project that holds one trust boundary, and the three-call vend in section 04 makes a project per boundary the affordable default rather than a last resort.</p>
+  </div>
+
+  <nav class="sheetindex" aria-label="Sections">
+    <a href="#s01"><span class="no">01</span>The two planes</a>
+    <a href="#s02"><span class="no">02</span>The tier ladder</a>
+    <a href="#s03"><span class="no">03</span>The isolation ceiling</a>
+    <a href="#s04"><span class="no">04</span>The vend runbook</a>
+  </nav>
+
+  <section id="s01">
+    <div class="sechd"><span class="no">01</span><h2>Two roles set access on two planes, and the services portal rides only one</h2><span class="cap">org role, then project role, then the plane it decides</span></div>
+    <p class="secintro">Effective access is decided by two roles applied in order, and the project role is the center of gravity. The organization role opens the portal and, for one role, bypasses everything below it. The project role grants consumption and decides which of two surfaces a tenant holds.</p>
+    <div class="gaterail">
+      <div class="gate st-org"><span class="tag">Gate 1 &middot; org role</span><h3>The door</h3><p>Organization User defers to the project role. Organization Administrator sees every deployment in every project, so self-service users are Organization User, never Administrator.</p></div>
+      <div class="gatearrow">admits into</div>
+      <div class="gate st-project"><span class="tag">Gate 2 &middot; project role</span><h3>The center of gravity</h3><p>Project User sees own work only; Advanced User and Administrator see the whole project. This role, alone, decides kubectl.</p></div>
+      <div class="gatearrow">decides the plane</div>
+      <div class="gate st-workload"><span class="tag">The surface</span><h3>Two planes</h3><p>The deployment plane for catalog items and Day-2 actions; the workload plane for the developer services portal.</p></div>
+      <div class="bypass">&#8657; Organization Administrator carries the org-wide visibility bypass: keep it off self-service users</div>
+    </div>
+    <div class="pair">
+      <div class="paircard st-org"><h3>Deployment plane</h3><div class="who">catalog items, deployments, Day-2 actions</div><p>Visibility comes from the two roles; actions come from Day-2 action policies. A Project User consumes here with own-only visibility, and this is where governed self-service lives for anyone who does not need kubectl.</p><div class="chips"><span class="chip">visibility: org + project role</span><span class="chip">actions: Day-2 policy</span></div></div>
+      <div class="paircard st-workload"><h3>Workload plane &middot; the services portal</h3><div class="who">Virtual Machine Service, Kubernetes, volumes</div><p>The Kubernetes API of each namespace, reached at the namespace endpoint. Access is the project role tier alone; Day-2 policies do not reach here. This is the plane the services tiles operate, and it begins at Advanced User.</p><div class="chips"><span class="chip">access: project role tier</span><span class="chip">policies: none apply</span></div></div>
+    </div>
+    <p class="thesis">The project role, alone, decides the workload plane. No organization right opens the services portal for a Project User.</p>
+  </section>
+
+  <section id="s02">
+    <div class="sechd"><span class="no">02</span><h2>Six tiers, each a role recipe you grant by intent</h2><span class="cap">org role plus project role, and what each unlocks</span></div>
+    <p class="secintro">Read the ladder by what the person needs to do. Every tier is one organization role and one project role; the console names and the short handles this reference uses are given once, then the handle.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">The tenant needs to</th><th scope="col">Organization role</th><th scope="col">Project role</th><th scope="col">Services portal</th></tr></thead>
+        <tbody>
+          <tr><td>Deploy from the catalog, manage only their own work</td><td>Organization User</td><td>Project User (<span class="m">edit</span>)</td><td class="outcome"><span class="oc oc-fact">no, deployment plane only</span></td></tr>
+          <tr><td>Read a project's resources without changing them</td><td>Organization User</td><td>Project Auditor (<span class="m">view</span>)</td><td class="outcome"><span class="oc oc-good">read-only</span></td></tr>
+          <tr><td>Use the services portal and switch namespaces</td><td>Organization User</td><td>Project Advanced User (<span class="m">edit_adv</span>)</td><td class="outcome"><span class="oc oc-good">full, project-wide</span></td></tr>
+          <tr><td>Create and manage namespaces and project bindings</td><td>Organization User + catalogs</td><td>Project Administrator (<span class="m">admin</span>)</td><td class="outcome"><span class="oc oc-good">full + namespace lifecycle</span></td></tr>
+          <tr><td>Read the whole organization for audit, act on nothing</td><td>Organization Auditor</td><td>none</td><td class="outcome"><span class="oc oc-caution">org-wide read: operator tier</span></td></tr>
+          <tr><td>Administer the organization and vend projects</td><td>Organization Administrator</td><td>any</td><td class="outcome"><span class="oc oc-caution">full org authority</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="seeing"><span class="kick">What to see</span>Live probes on a running VCF 9.1 estate, 2026-08-26. The Auditor and Administrator rows are amber because org-wide reach is the over-grant this model exists to contain, not a tier for a tenant. The <span class="m">view</span> tier is proven read-only: list and get allowed, create and delete denied.</p>
+    <div class="call pattern"><span class="kick">Pattern</span><b>Namespace creation needs the catalogs, not a broad grant.</b> Project Administrator carries the create-namespace right, but the new-namespace form reads org-gated catalogs (namespace classes, regions, storage classes). Deliver them with a narrow custom organization role that adds only those read rights, or publish Namespace Self-Service to the project. Neither grants org-wide visibility.</div>
+  </section>
+
+  <section id="s03">
+    <div class="sechd"><span class="no">03</span><h2>The workload plane holds no per-user ownership, so the project is the isolation unit</h2><span class="cap">why the project count follows from trust boundaries</span></div>
+    <p class="secintro">The scar first: inside one namespace, two Advanced Users are the same Kubernetes identity, so each can act on every object regardless of who created it. That is not a tuning problem to solve with a smaller grant. It is a ceiling, and it decides your project count.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">Project role</th><th scope="col">See the namespace</th><th scope="col">Read a VM</th><th scope="col">Create or delete a VM</th></tr></thead>
+        <tbody>
+          <tr><td><span class="cn">edit</span> &middot; Project User</td><td class="outcome"><span class="oc oc-good">no reach, by design</span></td><td class="outcome"><span class="oc oc-good">no, deployment plane only</span></td><td class="outcome"><span class="oc oc-good">no</span></td></tr>
+          <tr><td><span class="cn">view</span> &middot; Project Auditor</td><td class="outcome"><span class="oc oc-fact">yes</span></td><td class="outcome"><span class="oc oc-fact">read allowed</span></td><td class="outcome"><span class="oc oc-good">denied, read-only</span></td></tr>
+          <tr><td><span class="cn">edit_adv</span> &middot; Advanced User</td><td class="outcome"><span class="oc oc-fact">yes, whole project</span></td><td class="outcome"><span class="oc oc-fact">yes</span></td><td class="outcome"><span class="oc oc-caution">yes, on anyone's</span></td></tr>
+          <tr><td><span class="cn">admin</span> &middot; Project Administrator</td><td class="outcome"><span class="oc oc-fact">yes, whole project</span></td><td class="outcome"><span class="oc oc-fact">yes</span></td><td class="outcome"><span class="oc oc-caution">yes, on anyone's</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="seeing"><span class="kick">What to see</span>Live SelfSubjectAccessReview and reach probes against a real namespace, 2026-08-26. The amber cells are the ceiling: an Advanced User acts on another tenant's VM because the namespace grants one shared identity, not per-creator ownership. The <span class="m">edit</span> row is green because total absence from this plane is the isolation goal.</p>
+    <div class="pair">
+      <div class="paircard sc-caution"><h3>Shared project, many tenants</h3><div class="who">the anti-pattern for own-only services</div><p>Every Advanced User sees and can act on every namespace object in the project. A custom organization role does not open a smaller door, and a hand-authored namespace binding cannot admit a non-member, so there is no boundary below the project to carve.</p></div>
+      <div class="paircard st-project"><h3>One project per trust boundary</h3><div class="who">the recommended unit for services self-service</div><p>The owner is Advanced User in a project that holds only their own work, so project-wide equals own-only, and other projects are invisible. This is the vend in section 04, run per tenant.</p></div>
+    </div>
+    <div class="call pattern"><span class="kick">Design rule</span><b>A tenant who must self-serve the services portal and must not reach another tenant's resources gets their own project.</b> The project count is a function of the trust boundaries, not the user count: a team that trusts itself is one project; ten engineers who must not touch each other's services are ten projects, each a three-call vend.</div>
+    <div class="call reading"><span class="kick">Reading</span>Where the requirement is only deployment-plane own-only and no services portal, a single shared project works: keep tenants on <span class="m">edit</span>, whose own-only visibility scopes any granted Day-2 actions to their own deployments. That path simply does not carry the services tiles.</div>
+  </section>
+
+  <section id="s04" class="actbreak">
+    <div class="actlabel">From model to operation</div>
+    <div class="sechd"><span class="no">04</span><h2>Vend a project and its first namespace in three API calls</h2><span class="cap">no console step; the third call is the one that used to fight back</span></div>
+    <p class="secintro">Creating and deleting projects is an organization-level right no project role carries, so the vend is a provider-administrator operation. It is also fully scriptable. Three calls against the Cloud Consumption Interface, under one interactive session token, take a tenant from nothing to a Ready namespace. Values in angle brackets are estate specifics: read the region, VPC, and service engine group from a namespace that already works.</p>
+    <div class="runbook">
+      <div class="rung"><span class="rb"><b>Mint an interactive session token.</b> The interactive login carries the rights the vend needs; an automation token does not. Read the token from the response header and reuse it for all three calls.<span class="cmd">POST /cloudapi/1.0.0/sessions
+Authorization: Basic base64("admin@Org:password")
+# read X-VMWARE-VCLOUD-ACCESS-TOKEN as the bearer</span></span></div>
+      <div class="rung"><span class="rb"><b>Create the project.</b> One POST creates the cluster-scoped project object; it carries a name and a description.<span class="cmd">POST /cci/kubernetes/apis/project.cci.vmware.com/v1alpha2/projects
+{ "kind": "Project", "metadata": { "name": "team-acme" },
+  "spec": { "description": "Vended project for team-acme." } }</span></span></div>
+      <div class="rung"><span class="rb"><b>Bind the owner and the operators.</b> One ProjectRoleBinding per subject. Users bind by bare name, groups by name with a trailing marker. Choose the owner's role by tier: <span class="m">edit_adv</span> for a services owner, <span class="m">admin</span> to also manage namespaces.<span class="cmd">POST .../authorization.cci.vmware.com/v1alpha1/namespaces/team-acme/projectrolebindings
+{ "kind": "ProjectRoleBinding",
+  "metadata": { "name": "cci:user:alice", "namespace": "team-acme" },
+  "roleRef": { "apiGroup": "authorization.cci.vmware.com",
+               "kind": "ProjectRole", "name": "edit_adv" },
+  "subjects": [ { "kind": "User", "name": "alice" } ] }
+# repeat for the operators group: name "cci:group:Platform Operators",
+# roleRef admin, subject kind Group name "Platform Operators@"</span></span></div>
+      <div class="rung"><span class="rb"><b>Create the first namespace.</b> Name it by <b>generateName</b>, not a fixed name, and give it the <b>service engine group</b>. These two fields are what the old opaque error was asking for; the region and VPC resolve against the organization. Then poll to Ready.<span class="cmd">POST .../infrastructure.cci.vmware.com/v1alpha3/namespaces/team-acme/supervisornamespaces
+{ "kind": "SupervisorNamespace",
+  "metadata": { "generateName": "acme-ns-", "namespace": "team-acme" },
+  "spec": { "className": "large",
+            "regionName": "&lt;region&gt;", "vpcName": "&lt;vpc&gt;",
+            "segName": "&lt;service-engine-group&gt;",
+            "classConfigOverrides": { "zones": [ { "name": "&lt;zone&gt;",
+              "cpuLimit": "2000M", "memoryLimit": "4000Mi" } ] } } }
+# poll GET .../supervisornamespaces/&lt;derived-name&gt; until status.phase is Created</span></span></div>
+      <div class="rung"><span class="rb"><b>Verify before believing it.</b> Read the namespace back to <span class="m">status.phase: Created</span>, and confirm the owner can reach the services portal in their new namespace. A vend that has not admitted a namespace is not done.</span></div>
+    </div>
+    <div class="call watch"><span class="kick">Watch point</span><h3>The two fields the fresh-project error was really asking for</h3><p>A brand-new project can meet a complete namespace spec with an opaque validation error, and the reasonable read is that the project lacks a region. It does not. A fixed <span class="m">metadata.name</span> is rejected in favor of <span class="m">generateName</span>, and on a region whose load balancing is registered through NSX the create requires the service engine group by name. Supply both and a fresh project hosts its first namespace by API, no console step, on any organization that already carries a region.</p></div>
+    <div class="call pattern"><span class="kick">At scale</span><b>Loop the three calls over an onboarding list.</b> Each vend is seconds of API work, so a project per trust boundary is cheap. A governed variant wraps the vend behind a catalog request and an approval, so tenants ask for a project and an operator approves the vend.</div>
+  </section>
+
+  <div class="foot">
+    <div class="footblock"><h4><span class="pv pv-live">live</span> verified on a VCF 9.1 estate</h4><p>The role tiers and the workload-plane matrix were probed by real principals, and the vend reached a Ready namespace on two freshly created projects, on 2026-08-26. The view tier read read-only the same day.</p></div>
+    <div class="footblock"><h4><span class="pv pv-doc">doc</span> validate on your build</h4><p>Region, VPC, and service engine group are estate values, read from a working namespace. The account performing the vend must hold the organization-level project-management right.</p></div>
+    <div class="footblock"><h4>How to read the chips</h4><p>Outcome chips encode desirability, not HTTP status: a denial that serves isolation is <span class="oc oc-good">good</span>, an over-grant is <span class="oc oc-caution">caution</span> even when the API said yes.</p></div>
+  </div>
+
+</div>
