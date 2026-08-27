@@ -55,9 +55,10 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--project", required=True, help="the new project's name")
     ap.add_argument("--ad-group", required=True, help="the directory group to import into the org")
-    ap.add_argument("--provider-type", default="LDAP", choices=["LDAP", "SAML", "OAUTH"],
-                    help="the org's identity provider: LDAP queries a directory; SAML/OAUTH (e.g. Azure "
-                         "AD) match the group claim and provision users just-in-time on login")
+    ap.add_argument("--provider-type", default="LDAP", choices=["LDAP", "OIDC", "SAML"],
+                    help="the org's identity provider (see the three options + caveats at step 3): LDAP "
+                         "queries a directory; OIDC/SAML match the group claim and provision users "
+                         "just-in-time on login")
     ap.add_argument("--group-org-role", default="Organization User",
                     help="the ORGANIZATION role the imported group gets (default: Organization User)")
     ap.add_argument("--project-role", default="edit_adv", choices=["edit", "edit_adv", "admin"],
@@ -88,13 +89,46 @@ def main():
     v.create_project(args.project, description=f"Vended for AD group {args.ad_group!r}.")
 
     # 3. Import the directory group into the organization, with an org role.
+    #
+    #    The org's identity provider decides how the group is matched and how its
+    #    members arrive. Select it with --provider-type. The three options, each with
+    #    the caveat that comes with it:
+    #
+    #    --- Option 1: LDAP  (providerType LDAP; e.g. on-prem Active Directory) ------
+    #        The group is resolved against the directory by name, and you may ALSO
+    #        import individual users (import_ad_user) and bind them directly - handy
+    #        for a per-user project. Caveat: a newly created directory principal takes
+    #        a periodic sync before it works on the Kubernetes workload plane;
+    #        sync_ldap (step 3b) refreshes THIS org's view, but the supervisor's
+    #        identity provider syncs on its own schedule, so binding a brand-new user
+    #        may briefly wait. Fixtures: examples/ad_fixtures.py makes a throwaway
+    #        group + users over LDAPS.
+    #
+    #    --- Option 2: OIDC  (providerType OAUTH; an OpenID Connect IdP) -------------
+    #        The group is matched against the OIDC token's groups claim, and its
+    #        members are provisioned just-in-time on first login - no per-user import,
+    #        no directory to sync. Caveats: confirm your IdP passes group membership
+    #        in the token (the groups claim) and whether it carries group names or
+    #        ids; import the group by whatever it emits. Individual pre-import is
+    #        normally unnecessary - bind the group and members flow in on login.
+    #
+    #    --- Option 3: SAML  (providerType SAML; e.g. Azure AD via SAML) -------------
+    #        Same shape as OIDC: the group is matched against the SAML assertion's
+    #        group claim and members are provisioned just-in-time on login. Caveats:
+    #        Azure AD can send the group's DISPLAY NAME or its OBJECT ID in the group
+    #        claim depending on the app-registration config - import the group by
+    #        whichever your assertion carries. ad_fixtures.py does NOT apply (it
+    #        writes to on-prem AD); create the group in Azure AD via Microsoft Graph
+    #        or the portal first.
+    #
+    #    Whatever the source, everything AFTER this step - the project, the binding,
+    #    the namespace, and the isolation - is identical.
     print(f"[3] import {args.provider_type} group {args.ad_group!r} as org role {args.group_org_role!r}")
     v.import_ad_group(args.ad_group, role_name=args.group_org_role, provider_type=args.provider_type)
 
-    # 3b. For LDAP, refresh the directory so a just-created group/user is visible
-    #     now (its members still sync into the workload plane on that plane's own
-    #     schedule - see sync_ldap). SAML/OAUTH provision users just-in-time on
-    #     login, so there is no directory to sync and this step is skipped.
+    # 3b. LDAP only: refresh the directory so a just-created group/user is visible now.
+    #     OIDC and SAML provision members just-in-time on login, so there is nothing
+    #     to sync and this step is skipped.
     if args.provider_type == "LDAP":
         print("[3b] sync the LDAP directory")
         v.sync_ldap()

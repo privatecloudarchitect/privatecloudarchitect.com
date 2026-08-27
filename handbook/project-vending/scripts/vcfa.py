@@ -236,8 +236,10 @@ class Vcfa:
         header; the group resolves by name server-side. Idempotent-ish: re-importing
         an existing group name returns an HTTP error rather than duplicating.
         """
+        # OIDC is the friendly name for the OAUTH providerType enum value.
+        provider_type = "OAUTH" if str(provider_type).upper() == "OIDC" else provider_type
         if provider_type not in ("LDAP", "SAML", "OAUTH"):
-            raise VcfaError(f"provider_type must be LDAP, SAML, or OAUTH; got {provider_type!r}")
+            raise VcfaError(f"provider_type must be LDAP, OIDC (OAUTH), or SAML; got {provider_type!r}")
         role = self.find_org_role(role_name)
         if role is None:
             raise VcfaError(f"org role {role_name!r} not found in this org's roles")
@@ -263,8 +265,9 @@ class Vcfa:
         project). Same identity plane as import_ad_group (session-login token,
         tenant-context header) but at /cloudapi/1.0.0/users.
         """
+        provider_type = "OAUTH" if str(provider_type).upper() == "OIDC" else provider_type
         if provider_type not in ("LOCAL", "LDAP", "SAML", "OAUTH"):
-            raise VcfaError(f"provider_type must be LOCAL, LDAP, SAML, or OAUTH; got {provider_type!r}")
+            raise VcfaError(f"provider_type must be LOCAL, LDAP, OIDC (OAUTH), or SAML; got {provider_type!r}")
         role = self.find_org_role(role_name)
         if role is None:
             raise VcfaError(f"org role {role_name!r} not found in this org's roles")

@@ -54,24 +54,28 @@ python3 ad_fixtures.py --group "Example AD Group" --users ExampleUser1,ExampleUs
 python3 ad_fixtures.py --group "Example AD Group" --users ExampleUser1,ExampleUser2 --teardown
 ```
 
-## LDAP or SAML
+## LDAP, OIDC, or SAML
 
-The onboarding client works with either identity source; the difference is confined
-to the import. `vcfa.import_ad_group` (and the `e2e_tenant_setup.py --provider-type`
-flag) take `LDAP` (default), `SAML`, or `OAUTH` - set it to match your org's provider.
-Everything downstream - creating the project, the `ProjectRoleBinding`, the namespace,
-and the isolation model - is identical regardless of the source.
+The onboarding client works with any of the three identity sources; the difference is
+confined to the import. `e2e_tenant_setup.py --provider-type` takes `LDAP` (default),
+`OIDC`, or `SAML`, and **step 3 of that script spells out all three options and the
+caveat of each inline** - so you see them at the point of the import, not only here.
+Everything downstream (the project, the `ProjectRoleBinding`, the namespace, and the
+isolation model) is identical regardless of the source. In brief:
 
-What changes with SAML / OAUTH (e.g. Azure AD):
-
-- **Import the group, not the users.** Members are provisioned just-in-time on first
-  login, mapped from the assertion's group claim, so there is no per-user import step
-  and no directory sync (`sync_ldap` is LDAP-only and is skipped automatically).
-- **The group name is what the claim carries.** Confirm what your IdP emits - Azure AD
-  can send the group's display name or its object id in the group claim.
-- **`ad_fixtures.py` does not apply.** It writes to Active Directory over LDAPS; for
-  Azure AD you create the group and users through Microsoft Graph or the portal, then
-  import the group here with `--provider-type SAML`.
+- **LDAP** (on-prem Active Directory) - the group resolves against the directory by
+  name, and you can also import and bind individual users. A brand-new principal takes
+  a periodic sync before it works on the workload plane (`sync_ldap` refreshes the org
+  view; the supervisor plane syncs on its own schedule). `ad_fixtures.py` makes test
+  fixtures over LDAPS.
+- **OIDC** (`providerType OAUTH`) - the group matches the token's `groups` claim and
+  members provision just-in-time on first login (no per-user import, no directory
+  sync). Confirm your IdP passes group membership and whether it carries group names
+  or ids.
+- **SAML** (e.g. Azure AD) - the same just-in-time shape as OIDC, matched on the
+  assertion's group claim. Azure AD may send the group's display name or its object id,
+  so import by whichever it emits. `ad_fixtures.py` does not apply; create the group in
+  Azure AD via Microsoft Graph or the portal first.
 
 ## The self-service end-state (Azure AD / SAML, Project Administrator)
 
