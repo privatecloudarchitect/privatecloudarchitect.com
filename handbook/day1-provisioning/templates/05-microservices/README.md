@@ -44,6 +44,15 @@ Three ideas carry the whole model:
   independence is the reason to choose microservices, and the reason they are more
   moving parts to operate.
 
+## Before you deploy
+
+Fill the inputs this template marks required (the ones with no default): the target
+namespace and the storage class for the Kubernetes nodes. Each carries its
+discovery command in its description, and
+[00-reaching-the-supervisor](../../00-reaching-the-supervisor.md) collects those
+commands, including how to fetch the VKS cluster's kubeconfig for part 2. If you
+cannot yet run `kubectl get supervisornamespaces`, start there.
+
 ## Deploy it, in two parts
 
 **Part 1, the cluster (the blueprint).** Deploy `microservices.blueprint.yaml`. It

@@ -47,26 +47,22 @@ every later stage.
    these in the templates - a platform-team member vends them to you. If you do not
    have one, that is precisely the job of the companion **project-vending** series.
    You consume the result here.
-3. **`kubectl` with a Supervisor context**, for the discovery commands below and to
-   watch your deployments come up. Your platform team provides the kubeconfig /
-   `vcf context` to reach the Supervisor.
+3. **`kubectl` reaching your Supervisor.** If you cannot yet run
+   `kubectl get supervisornamespaces`, read
+   [00-reaching-the-supervisor](./00-reaching-the-supervisor.md) first: it installs
+   the vcf CLI, authenticates you, and gives you the context these templates run
+   against.
 
 ## The discovery commands (fill in your estate's values)
 
-The templates never hardcode anything specific to your cloud. Instead, each
-estate-specific input carries the command that finds the right value. You will use
-these constantly:
-
-```
-kubectl get supervisornamespaces          # a namespace you can deploy into
-kubectl get regions                        # your region slug
-kubectl get clustervirtualmachineimages    # VM images (pick an Ubuntu 24.04 vmi-... ID)
-kubectl get storageclasses                 # storage classes you are entitled to
-kubectl get virtualmachineclasses          # VM sizes (best-effort-* / guaranteed-*)
-```
-
-Supply these as the template's inputs and the same template deploys correctly on
-any cloud. That portability is why they are inputs rather than baked in.
+The templates never hardcode anything specific to your cloud. Each estate-specific
+input carries the one command that finds the right value, and
+[00-reaching-the-supervisor](./00-reaching-the-supervisor.md) lists them in one
+place: `kubectl get supervisornamespaces`, `regions`,
+`clustervirtualmachineimages`, `storageclasses`, `virtualmachineclasses`, and
+`tanzukubernetesreleases` (for the Kubernetes stages). Supply their output as the
+template's inputs and the same template deploys correctly on any cloud. That
+portability is why they are inputs rather than baked in.
 
 ## How to deploy a template
 

@@ -36,18 +36,13 @@ match. Everything in this series is that same idea at growing scale.
 
 ## Before you deploy
 
-You need three values from your own environment (the template's descriptions
-carry the discovery command for each):
-
-```
-kubectl get supervisornamespaces        # -> target_namespace_name
-kubectl get clustervirtualmachineimages # -> vm_image  (pick an Ubuntu 24.04 vmi-... ID)
-kubectl get storageclasses              # -> storage_class
-```
-
-If you do not yet have a namespace to deploy into, that is the job of the
-**project-vending** series - a platform-team member vends you a project and a
-namespace, then you consume it here.
+Fill the inputs this template marks required (the ones with no default): the target
+namespace, the region, the VM image, and the storage class. Each carries its
+discovery command in its description, and
+[00-reaching-the-supervisor](../../00-reaching-the-supervisor.md) collects those
+commands in one place and shows how to run them. If you do not have a namespace to
+deploy into yet, a platform-team member vends you one; the companion
+**project-vending** series covers that.
 
 ## Deploy it
 

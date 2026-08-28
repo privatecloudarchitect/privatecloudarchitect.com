@@ -53,6 +53,15 @@ application layer, the common move is to add a small proxy VM (HAProxy is typica
 front of the web VMs and point the LoadBalancer at the proxy. It is the same shape
 with one more tier, not a redesign.
 
+## Before you deploy
+
+Fill the inputs this template marks required (the ones with no default): the target
+namespace, the region, the VM image, and the storage class. Each carries its
+discovery command in its description, and
+[00-reaching-the-supervisor](../../00-reaching-the-supervisor.md) collects those
+commands in one place. If you cannot yet run `kubectl get supervisornamespaces`,
+start with that precursor.
+
 ## Deploy it
 
 Same paths as before. The form is the same as template 2 (one deployment now brings

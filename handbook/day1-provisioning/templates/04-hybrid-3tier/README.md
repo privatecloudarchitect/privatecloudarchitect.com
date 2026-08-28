@@ -49,6 +49,15 @@ resolve it. The Pod connects to the VM by its network IP on 5432, which works be
 the VKS nodes and the DB VM share the namespace's VPC network. You supply that IP as
 configuration, so the app image stays free of environment specifics.
 
+## Before you deploy
+
+Fill the inputs this template marks required (the ones with no default): the target
+namespace, the region, the database VM image, and the storage classes for the
+database and the Kubernetes nodes. Each carries its discovery command in its
+description, and [00-reaching-the-supervisor](../../00-reaching-the-supervisor.md)
+collects those commands, including how to fetch the VKS cluster's kubeconfig for
+part 2. If you cannot yet run `kubectl get supervisornamespaces`, start there.
+
 ## Deploy it, in two parts
 
 **Part 1, the infrastructure (the blueprint).** Deploy `hybrid-3tier.blueprint.yaml`

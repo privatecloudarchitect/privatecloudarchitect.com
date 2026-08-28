@@ -50,6 +50,15 @@ races it waits or fails with a "could not get lock" message. The bootstrap stops
 those timers before installing so the two do not collide. This is designed
 behaviour meeting a first-boot timing window, not a defect.
 
+## Before you deploy
+
+Fill the inputs this template marks required (the ones with no default): the target
+namespace, the region, the VM image, and the storage class. Each carries its
+discovery command in its description, and
+[00-reaching-the-supervisor](../../00-reaching-the-supervisor.md) collects those
+commands in one place. If you cannot yet run `kubectl get supervisornamespaces`,
+start with that precursor.
+
 ## Deploy it
 
 Same two paths as template 1 (catalog or API), with two new form fields: the admin

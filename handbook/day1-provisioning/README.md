@@ -39,13 +39,23 @@ flowchart LR
 `inputs`, `resources`), with two shifts to expect: a VM is now a declared Kubernetes
 object (a `VirtualMachine` you describe, not a vCenter clone), and every workload
 lands in a Supervisor namespace your platform vends you. The
-[orientation](./00-before-you-start.md) covers the shift in a few minutes.
+[orientation](./01-before-you-start.md) covers the shift in a few minutes.
+
+> **About these templates.** They are the worked-examples companion to the
+> [Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning)
+> chapter, meant to be read and adapted, not a live-run proof harness like the other
+> directories in this repo. Each is grounded on an application pattern proven on a
+> live VCF 9.1 estate, then generalized so it deploys on any estate. Treat a template
+> as a starting point you verify on yours, not a guaranteed drop-in.
 
 ## Start here
 
-New to any of this? Read [`00-before-you-start.md`](./00-before-you-start.md)
-first: what you need, the orientation worth having up front (what "All Apps" and
-"CCI" actually are), and how to deploy a template.
+1. **Cannot yet run `kubectl get supervisornamespaces`?** Read
+   [`00-reaching-the-supervisor.md`](./00-reaching-the-supervisor.md): install the
+   vcf CLI, authenticate, and get the context these templates run against.
+2. **New to VCF Automation?** Read
+   [`01-before-you-start.md`](./01-before-you-start.md): the orientation (what "All
+   Apps" and "CCI" actually are), the prerequisites, and how to deploy a template.
 
 ## The learning path
 
@@ -77,7 +87,8 @@ depth, with diagrams and live-proven detail, in the handbook at
 ```
 day1-app-templates/
   README.md                     # you are here: the learning path
-  00-before-you-start.md        # prerequisites + orientation + how to deploy
+  00-reaching-the-supervisor.md # get the vcf CLI, authenticate, run your first kubectl
+  01-before-you-start.md        # orientation (All Apps vs CCI), prerequisites, deploy
   templates/
     01-single-vm/               # crawl:  one VM that boots and runs
       single-vm.blueprint.yaml
