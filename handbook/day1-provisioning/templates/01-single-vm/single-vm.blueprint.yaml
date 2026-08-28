@@ -1,0 +1,214 @@
+# =============================================================================
+# Template 1 (CRAWL) - A single virtual machine
+# =============================================================================
+# The smallest thing that proves you can provision a VM from a template on VCF
+# Automation: one Ubuntu VM that boots and runs. No configuration, no network
+# front door, no clustering. You deploy it, and you watch it come up.
+#
+# This is a CCI / Supervisor-dialect cloud template. A quick orientation, because
+# this is a common point of confusion:
+#
+#   VCF Automation "All Apps" lets you author cloud templates in TWO dialects.
+#     - Classic IaaS  : resources of type Cloud.vSphere.Machine, that provision
+#                       straight to vSphere/NSX. Familiar if you come from vRA.
+#     - CCI/Supervisor: resources of type CCI.Supervisor.* , that provision into
+#                       a Supervisor namespace (Kubernetes-native). This is the
+#                       modern path, and the ONLY one that carries you all the way
+#                       to a Kubernetes microservices app later in this series.
+#
+#   We teach the CCI dialect end to end so the mental model stays consistent as the
+#   applications grow. Every resource below is a thin wrapper (CCI.Supervisor.Resource)
+#   around a raw Kubernetes manifest that VCF Automation submits to the Supervisor for you.
+#
+# Authoring this file changes nothing. DEPLOYING it (from the catalog, or via an
+# API/IaC driver) is the step that creates infrastructure. Validate first.
+# =============================================================================
+
+name: single-vm
+version: 1.0.0
+
+# formatVersion 2 is required the moment you want an `outputs:` block (below).
+# There is no reason to author a new template at version 1.
+formatVersion: 2
+
+description: |
+  A single Ubuntu virtual machine on VCF Supervisor VM Service. It boots and runs,
+  and does nothing else yet; that restraint is deliberate. The "hello world" you graduate from into cloud-init,
+  load-balanced pairs, a hybrid app, and finally Kubernetes microservices.
+
+# -----------------------------------------------------------------------------
+# INPUTS - the questions the consumer answers (catalog form, API, or IaC vars)
+# -----------------------------------------------------------------------------
+# Design rule you will see in every template here: NOTHING estate-specific is
+# hardcoded in a resource. Anything that changes between one cloud and the next -
+# the image, the size, the storage, the namespace - is an input. That is what
+# makes a template portable instead of a copy someone edits by hand.
+inputs:
+
+  app_name:
+    type: string
+    title: Application name
+    description: >-
+      A short, lowercase, kebab-case slug that every object's name is derived
+      from. Name things for their FUNCTION, never a person or a mascot: `hello-vm`,
+      `billing-api`, `edge-proxy`. Keeping it pattern-guarded here means an invalid
+      name is rejected at request time instead of failing deep in provisioning.
+    pattern: '^[a-z][a-z0-9-]{2,40}$'
+    default: hello-vm
+
+  environment:
+    type: string
+    title: Environment
+    description: >-
+      Which lifecycle slot this deployment belongs to. An enum (not a free-text
+      box) so the value is always one the rest of your tooling - tags, policies,
+      dashboards - already understands.
+    enum: [dev, staging, prod, demo, sandbox]
+    default: demo
+
+  # --- The two things you MUST supply from your own estate -------------------
+  # These have no default on purpose. They are specific to YOUR platform, and a
+  # borrowed default is how a template silently deploys the wrong thing. Each
+  # description carries the one command that discovers the right value.
+
+  target_namespace_name:
+    type: string
+    title: Target Supervisor namespace
+    description: >-
+      The Supervisor namespace to deploy INTO. You do not create it here - your
+      platform team vends it to you (see the project-vending series), and you
+      consume it. This separation is deliberate: provisioning a workload and
+      owning a tenancy boundary are different jobs with different privileges.
+      Discover the ones you can use with:  kubectl get supervisornamespaces
+    pattern: '^[a-z][a-z0-9-]+$'
+
+  region:
+    type: string
+    title: Region
+    description: >-
+      The region slug backing your namespace's project. Ask your platform team,
+      or:  kubectl get regions . Carried through to tags/labels so an object can
+      always be traced back to where it runs.
+
+  vm_image:
+    type: string
+    title: VM image (immutable ID)
+    description: >-
+      The image the VM boots from, given as its IMMUTABLE cluster-image ID
+      (looks like vmi-0a1b2c3d...), never a friendly alias like "ubuntu-latest".
+      Pinning the ID makes a deploy reproducible: it cannot drift when someone
+      re-tags the alias next month. Find a current Ubuntu 24.04 image with:
+        kubectl get clustervirtualmachineimages | grep -i ubuntu
+
+  storage_class:
+    type: string
+    title: Storage class
+    description: >-
+      Where the VM's boot disk lives. Storage classes are offered by your platform
+      and encode the tier (e.g. nvme vs sata). List what you are entitled to with:
+        kubectl get storageclasses
+
+  # --- Things with a sensible default you will rarely change -----------------
+
+  vm_class:
+    type: string
+    title: VM class (size)
+    description: >-
+      The T-shirt size. In the Supervisor model, CPU and memory come as a named
+      CLASS your platform publishes, not as loose cpu/memory numbers - so sizing
+      is governed, not a free-for-all. `best-effort-*` classes have no reservation
+      (fine for labs and dev); `guaranteed-*` reserve their resources (use for
+      prod). Confirm the exact names available to you with:
+        kubectl get virtualmachineclasses
+    default: best-effort-small
+
+  boot_disk_capacity:
+    type: string
+    title: Boot disk capacity
+    description: >-
+      Right-size the boot disk. Without this, the VM inherits the image's full
+      virtual disk - often 40-80 GB - and burns storage quota you did not intend
+      to spend. Ubuntu cloud images grow their root partition to fit on first boot,
+      so a smaller number here is enough. 20Gi is comfortable for a base VM.
+    default: 20Gi
+
+# -----------------------------------------------------------------------------
+# RESOURCES - what actually gets built
+# -----------------------------------------------------------------------------
+resources:
+
+  # 1) The namespace, REFERENCED not created ----------------------------------
+  # `existing: true` means this resource attaches to a namespace that already
+  # exists rather than creating one: you deploy INTO a boundary your platform team
+  # vends you. Every other resource hangs off it through the `context` property, so
+  # they land inside that tenancy boundary and inherit its network, quota, and policy.
+  Namespace:
+    type: CCI.Supervisor.Namespace
+    properties:
+      existing: true
+      name: ${input.target_namespace_name}
+
+  # 2) The virtual machine ----------------------------------------------------
+  # A CCI.Supervisor.Resource is a thin envelope: its `manifest` is a literal
+  # Kubernetes object that VCF Automation applies into the namespace for you. Here
+  # that object is a VirtualMachine from the vm-operator API.
+  #
+  # apiVersion v1alpha5 is chosen deliberately: it is the version that supports
+  # spec.bootDiskCapacity (the right-sizing above). Older versions ignore it.
+  VM:
+    type: CCI.Supervisor.Resource
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: vmoperator.vmware.com/v1alpha5
+        kind: VirtualMachine
+        metadata:
+          # Named for its function, derived from app_name - never hardcoded.
+          # The `-01` ordinal looks redundant for one VM, but it is a habit that
+          # pays off the moment there are two of something (template 3).
+          name: ${input.app_name}-01
+          # The standard Kubernetes recommended labels. They cost nothing today
+          # and become load-out selectors, grouping, and cost attribution later.
+          # `component` says what ROLE this plays; `part-of` ties it to the app.
+          labels:
+            app.kubernetes.io/name: ${input.app_name}-01
+            app.kubernetes.io/component: server
+            app.kubernetes.io/part-of: ${input.app_name}
+            environment: ${input.environment}
+            region: ${input.region}
+        spec:
+          # className / imageName / storageClass are the Supervisor's names for
+          # size / image / disk-tier. Notice there is NO `networks:` block: in the
+          # Supervisor model a VM automatically gets a NIC on its namespace's VPC
+          # network. You only declare networking when you need something beyond
+          # that default - which is exactly what template 3 introduces.
+          className: ${input.vm_class}
+          imageName: ${input.vm_image}
+          storageClass: ${input.storage_class}
+          bootDiskCapacity: ${input.boot_disk_capacity}
+          # Power it on at create. This is the one imperative field here;
+          # everything else is declarative desired-state.
+          powerState: PoweredOn
+
+# -----------------------------------------------------------------------------
+# OUTPUTS - what the consumer sees when it is done
+# -----------------------------------------------------------------------------
+# A template should tell you what you got and how to see it. This VM has no login
+# yet (that is template 2, cloud-init), so "working" means: it reached PoweredOn
+# and the platform gave it an address. The commands below prove exactly that.
+outputs:
+
+  namespace_name:
+    description: The Supervisor namespace this VM landed in.
+    value: ${resource.Namespace.name}
+
+  vm_name:
+    description: The virtual machine's name (within the namespace).
+    value: ${input.app_name}-01
+
+  verify_it_is_running:
+    description: >-
+      Confirm the VM powered on and received an IP. Until cloud-init (template 2)
+      there is no user to log in as - a Running VM with an address IS the success
+      condition for this stage.
+    value: 'kubectl get virtualmachine ${input.app_name}-01 -n <namespace> -o wide'

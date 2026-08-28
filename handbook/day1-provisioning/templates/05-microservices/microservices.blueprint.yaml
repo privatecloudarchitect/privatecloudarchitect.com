@@ -1,0 +1,156 @@
+# =============================================================================
+# Template 5 (RUN) - A microservices application on Kubernetes
+# =============================================================================
+# The capstone. Template 4 ran two tiers as containers on a VKS cluster beside a
+# database VM. This one is fully container-native: a set of small services, each
+# doing one job, running on a VKS Kubernetes cluster and talking to each other over
+# Kubernetes networking. No application VMs at all.
+#
+# This blueprint is short because most of the application is Kubernetes, not
+# infrastructure. It provisions the one thing microservices need from the platform:
+# a VKS guest cluster. That is the same resource you met in template 4; here the
+# cluster is the focus, not one half of a hybrid. The services themselves are in
+# microservices.k8s.yaml, applied into the cluster.
+#
+# Why a VKS guest cluster and not the Supervisor directly: a full conformant
+# Kubernetes cluster gives your services the complete Kubernetes API and runtime a
+# modern microservices app expects. It is the right home for container-native work.
+# =============================================================================
+
+name: microservices
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  A VKS Kubernetes cluster for a microservices application. The blueprint provisions
+  the cluster; the services are applied into it as Kubernetes manifests. The run
+  stage of the crawl-walk-run path.
+
+inputs:
+
+  app_name:
+    type: string
+    title: Application name
+    pattern: '^[a-z][a-z0-9-]{2,40}$'
+    default: shop
+
+  environment:
+    type: string
+    title: Environment
+    enum: [dev, staging, prod, demo, sandbox]
+    default: demo
+
+  target_namespace_name:
+    type: string
+    title: Target Supervisor namespace
+    description: 'Vended to you by your platform team.  kubectl get supervisornamespaces'
+    pattern: '^[a-z][a-z0-9-]+$'
+
+  kubernetes_release:
+    type: string
+    title: Kubernetes release (TKR)
+    description: 'Pins the cluster version and node OS image.  kubectl get tanzukubernetesreleases'
+    default: v1.31.4---vmware.1-fips-vkr.1
+
+  kubernetes_version:
+    type: string
+    title: Kubernetes version
+    default: v1.31.4+vmware.1-fips.1
+
+  vks_class:
+    type: string
+    title: VKS node VM class
+    description: 'kubectl get virtualmachineclasses'
+    default: best-effort-small
+
+  vks_storage_class:
+    type: string
+    title: VKS node storage class
+    description: 'kubectl get storageclasses'
+
+  vks_worker_replicas:
+    type: integer
+    title: VKS worker count
+    description: 'Worker nodes. Three gives a microservices app room to spread.'
+    default: 3
+    minimum: 1
+    maximum: 5
+
+# -----------------------------------------------------------------------------
+# RESOURCES
+# -----------------------------------------------------------------------------
+resources:
+
+  Namespace:
+    type: CCI.Supervisor.Namespace
+    properties:
+      existing: true
+      name: ${input.target_namespace_name}
+
+  # The VKS guest cluster: the same Cluster resource from template 4. The services
+  # in microservices.k8s.yaml run here. Everything the app needs (service discovery,
+  # load balancing, scaling) comes from Kubernetes inside this cluster; the platform
+  # provides the cluster.
+  VksCluster:
+    type: CCI.Supervisor.Resource
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: cluster.x-k8s.io/v1beta2
+        kind: Cluster
+        metadata:
+          name: ${input.app_name}-${input.environment}-vks
+          labels:
+            run.tanzu.vmware.com/tkr: ${input.kubernetes_release}
+            app.kubernetes.io/part-of: ${input.app_name}
+            app.kubernetes.io/component: vks-host
+        spec:
+          clusterNetwork:
+            pods:
+              cidrBlocks:
+                - 192.168.192.0/20
+            services:
+              cidrBlocks:
+                - 10.96.0.0/12
+            serviceDomain: cluster.local
+          topology:
+            classRef:
+              name: builtin-generic-v3.6.0
+              namespace: vmware-system-vks-public
+            version: ${input.kubernetes_version}
+            controlPlane:
+              replicas: 1                          # three for HA in production
+            workers:
+              machineDeployments:
+                - class: node-pool
+                  name: workers
+                  replicas: ${input.vks_worker_replicas}
+            variables:
+              - name: vmClass
+                value: ${input.vks_class}
+              - name: storageClass
+                value: ${input.vks_storage_class}
+              - name: bootstrapAddons
+                value:
+                  cniRef:
+                    name: antrea
+                    namespace: vmware-system-vks-public
+
+# -----------------------------------------------------------------------------
+# OUTPUTS
+# -----------------------------------------------------------------------------
+outputs:
+
+  namespace_name:
+    description: The Supervisor namespace the cluster runs in.
+    value: ${resource.Namespace.name}
+
+  vks_cluster:
+    description: The Kubernetes cluster the microservices run on.
+    value: ${input.app_name}-${input.environment}-vks
+
+  next_steps:
+    description: >-
+      The cluster is the platform. Now deploy the services: get a kubeconfig for the
+      cluster, then apply microservices.k8s.yaml into it. Full sequence in the README.
+    value: 'see README: kubeconfig -> kubectl apply -f microservices.k8s.yaml'

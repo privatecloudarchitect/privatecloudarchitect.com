@@ -1,0 +1,249 @@
+# =============================================================================
+# Template 2 (CRAWL) - A virtual machine that configures itself (cloud-init)
+# =============================================================================
+# Template 1 gave you a VM that boots and sits there. This one adds the single
+# most useful day-0 idea in the platform: cloud-init. On its first boot the VM
+# runs a bootstrap you supply - creating a login user, installing packages, and
+# starting a service - so it comes up already doing its job.
+#
+# What is new since template 1, and nothing else:
+#   * one new resource: a Secret holding the cloud-init user-data
+#   * one new field on the VM: spec.bootstrap.cloudInit, pointing at that Secret
+#
+# Everything else (the namespace reference, the VM manifest, the inputs) is the
+# template you already read. If a line here is uncommented, you have seen it before.
+#
+# Design note worth internalizing: the blueprint declares the INFRASTRUCTURE (a VM
+# of this size, from this image); cloud-init declares the day-0 CONFIGURATION (what
+# the guest OS does on first boot). Keeping the two separate is deliberate. You can
+# resize or re-image the VM without touching the config, and revise the config
+# without touching the infrastructure.
+# =============================================================================
+
+name: vm-cloud-init
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  A single Ubuntu VM that configures itself on first boot with cloud-init: it
+  creates a login user, installs nginx, and serves a page that names the host.
+  The step from "a VM exists" to "a VM that does something".
+
+inputs:
+
+  # --- Unchanged from template 1 --------------------------------------------
+  app_name:
+    type: string
+    title: Application name
+    description: >-
+      Lowercase kebab-case slug that every object's name derives from. Named for
+      function, not a person or a mascot.
+    pattern: '^[a-z][a-z0-9-]{2,40}$'
+    default: hello-web
+
+  environment:
+    type: string
+    title: Environment
+    enum: [dev, staging, prod, demo, sandbox]
+    default: demo
+
+  target_namespace_name:
+    type: string
+    title: Target Supervisor namespace
+    description: >-
+      The Supervisor namespace to deploy into, vended to you by your platform team.
+      Discover with:  kubectl get supervisornamespaces
+    pattern: '^[a-z][a-z0-9-]+$'
+
+  region:
+    type: string
+    title: Region
+    description: 'Your project''s region slug.  kubectl get regions'
+
+  vm_image:
+    type: string
+    title: VM image (immutable ID)
+    description: >-
+      The immutable cluster-image ID (vmi-...) to boot from, not a friendly alias,
+      so a deploy is reproducible.  kubectl get clustervirtualmachineimages | grep -i ubuntu
+
+  storage_class:
+    type: string
+    title: Storage class
+    description: 'Where the boot disk lives.  kubectl get storageclasses'
+
+  vm_class:
+    type: string
+    title: VM class (size)
+    description: 'The governed size class.  kubectl get virtualmachineclasses'
+    default: best-effort-small
+
+  boot_disk_capacity:
+    type: string
+    title: Boot disk capacity
+    description: >-
+      Right-size the boot disk so the deploy does not spend quota it did not mean
+      to. Ubuntu cloud images grow the root partition to fit on first boot.
+    default: 20Gi
+
+  # --- New in template 2 -----------------------------------------------------
+  admin_username:
+    type: string
+    title: Admin username
+    description: >-
+      The login user cloud-init creates on the VM, with passwordless sudo. Named
+      for its function (an operator account), not a person.
+    pattern: '^[a-z_][a-z0-9_-]{1,30}$'
+    default: appadmin
+
+  admin_password:
+    type: string
+    title: Admin password
+    description: >-
+      Password for the admin user. Marked encrypted so the platform stores it as a
+      secret and the request form masks it. This is for a lab or demo; for anything
+      real, source the credential from your secrets manager and prefer an SSH key
+      over a password. It is referenced only where cloud-init consumes it, never
+      echoed back in an output.
+    encrypted: true
+    default: change-me-on-first-use
+
+# -----------------------------------------------------------------------------
+# RESOURCES
+# -----------------------------------------------------------------------------
+resources:
+
+  # Unchanged from template 1: reference the namespace you were vended.
+  Namespace:
+    type: CCI.Supervisor.Namespace
+    properties:
+      existing: true
+      name: ${input.target_namespace_name}
+
+  # NEW (1 of 2): the cloud-init bootstrap, carried in a Secret ----------------
+  # cloud-init's user-data is a small document that describes the guest's day-0
+  # state. It travels as a Kubernetes Secret because it can hold credentials, and
+  # because the VM references it by name rather than embedding it. The `#cloud-config`
+  # first line is required: it tells cloud-init how to parse what follows.
+  #
+  # cloud-init is idempotent by design: it runs its modules once, on first boot,
+  # keyed off the instance ID. Re-running the same user-data on the same instance
+  # does not repeat the work, so a bootstrap is safe to reason about as "the state
+  # the VM reaches", not "a script that fires every boot".
+  Bootstrap:
+    type: CCI.Supervisor.Resource
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: ${input.app_name}-01-bootstrap
+        type: Opaque
+        stringData:
+          user-data: |
+            #cloud-config
+            hostname: ${input.app_name}-01
+            # Create the operator login with passwordless sudo. `lock_passwd: false`
+            # lets the password below actually work; without it cloud-init would
+            # create the user but leave the password locked.
+            users:
+              - default
+              - name: ${input.admin_username}
+                groups: [sudo]
+                sudo: ALL=(ALL) NOPASSWD:ALL
+                lock_passwd: false
+                shell: /bin/bash
+            chpasswd:
+              users:
+                - name: ${input.admin_username}
+                  password: ${input.admin_password}
+                  type: text
+              expire: false
+            # On Ubuntu, a background updater (unattended-upgrades) may hold the
+            # package lock at first boot. If your install runs while it holds the
+            # lock, the install waits or fails. This is expected behaviour, and the
+            # tell is a "could not get lock /var/lib/dpkg/lock" message. Stopping
+            # the timers before installing keeps the two from racing.
+            bootcmd:
+              - systemctl stop unattended-upgrades 2>/dev/null || true
+              - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+            packages:
+              - chrony
+              - nginx
+            runcmd:
+              - systemctl enable --now chrony
+              - systemctl enable --now nginx
+              # Replace the default page with one that names the host, so a single
+              # look proves cloud-init ran and nginx is serving.
+              - |
+                cat > /var/www/html/index.html <<HTML
+                <!doctype html><html><body style="font-family:sans-serif;margin:3em">
+                <h1>${input.app_name}</h1>
+                <p>Configured by cloud-init on host <strong>${input.app_name}-01</strong>.</p>
+                <p>Environment: ${input.environment}</p>
+                </body></html>
+                HTML
+              - systemctl restart nginx
+
+  # CHANGED (2 of 2): the VM now points at the bootstrap ----------------------
+  # The only differences from template 1's VM: a `dependsOn` so the Secret exists
+  # first, and the `spec.bootstrap.cloudInit` block that hands the guest its
+  # user-data by Secret name and key. Everything else is identical.
+  VM:
+    type: CCI.Supervisor.Resource
+    dependsOn:
+      - Bootstrap
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: vmoperator.vmware.com/v1alpha5
+        kind: VirtualMachine
+        metadata:
+          name: ${input.app_name}-01
+          labels:
+            app.kubernetes.io/name: ${input.app_name}-01
+            app.kubernetes.io/component: web
+            app.kubernetes.io/part-of: ${input.app_name}
+            environment: ${input.environment}
+            region: ${input.region}
+        spec:
+          className: ${input.vm_class}
+          imageName: ${input.vm_image}
+          storageClass: ${input.storage_class}
+          bootDiskCapacity: ${input.boot_disk_capacity}
+          powerState: PoweredOn
+          # The new field. rawCloudConfig points at the Secret by name and the key
+          # inside it. The Supervisor injects that user-data into the guest, and
+          # cloud-init runs it on first boot.
+          bootstrap:
+            cloudInit:
+              rawCloudConfig:
+                name: ${input.app_name}-01-bootstrap
+                key: user-data
+
+# -----------------------------------------------------------------------------
+# OUTPUTS
+# -----------------------------------------------------------------------------
+outputs:
+
+  namespace_name:
+    description: The Supervisor namespace this VM landed in.
+    value: ${resource.Namespace.name}
+
+  vm_name:
+    description: The VM's name (within the namespace).
+    value: ${input.app_name}-01
+
+  admin_user:
+    description: >-
+      The login user cloud-init created (passwordless sudo). Its password came from
+      the admin_password input and is not repeated here.
+    value: ${input.admin_username}
+
+  see_the_page:
+    description: >-
+      This VM has no external front door yet (that is template 3). To view the page
+      cloud-init produced, forward the VM's port to your workstation and open it:
+      kubectl port-forward -n <namespace> vm/${input.app_name}-01 8080:80  ->  http://localhost:8080/
+    value: 'kubectl port-forward -n <namespace> vm/${input.app_name}-01 8080:80'

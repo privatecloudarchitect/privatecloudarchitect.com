@@ -1,0 +1,124 @@
+# =============================================================================
+# Template 4, part 2 - the application, applied INTO the VKS cluster
+# =============================================================================
+# The blueprint stood up the platform (a database VM and a VKS Kubernetes cluster).
+# This manifest is the application that runs on it: an app tier and a web tier as
+# containers, and the front door that exposes them. You apply this with kubectl (or
+# GitOps) against the VKS cluster's kubeconfig, NOT against the Supervisor.
+#
+# The hero of this file is the cross-boundary connection. The app containers run in
+# the VKS cluster; the database runs on a VM in the same Supervisor namespace. They
+# share that namespace's VPC network, so a Pod reaches the database by the VM's
+# network IP on port 5432. The VM lives in a different Kubernetes cluster than these
+# Pods, so guest-cluster DNS does not resolve it - you connect by IP, supplied here
+# as configuration. The README shows how to read that IP after deploy.
+# =============================================================================
+---
+# The database connection, as configuration the app reads from its environment.
+# DB_HOST is the one value you fill in after deploy: the database VM's namespace IP.
+# Keeping it in a ConfigMap means the app image carries no environment specifics.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-connection
+data:
+  DB_HOST: "REPLACE_WITH_DB_VM_IP"   # kubectl get vm <app>-db-01 -n <ns> -o jsonpath='{.status.network.primaryIP4}'
+  DB_PORT: "5432"
+  DB_NAME: "storefront"              # matches the database cloud-init created
+---
+# The database credentials, kept out of the ConfigMap because they are secret.
+# Populate DB_PASSWORD with the same value you passed to the blueprint's db_password.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+type: Opaque
+stringData:
+  DB_USER: "appuser"
+  DB_PASSWORD: "REPLACE_WITH_DB_PASSWORD"
+---
+# The APP tier: the containers that talk to the database. Replace the image with your
+# application; the teaching point is the wiring, not the image. Its environment is
+# assembled from the ConfigMap and Secret above, so the same image runs unchanged in
+# any environment that provides them.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-tier
+  labels:
+    app.kubernetes.io/component: app
+spec:
+  replicas: 2                        # two, so a node loss does not take the tier down
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: app
+    spec:
+      containers:
+        - name: app
+          image: REPLACE_WITH_YOUR_APP_IMAGE
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: db-connection
+            - secretRef:
+                name: db-credentials
+---
+# A ClusterIP Service gives the app tier a stable in-cluster name. The web tier
+# reaches it as http://app.<namespace>.svc.cluster.local. This is service discovery
+# WITHIN the guest cluster, the counterpart to reaching the DB VM by IP across the
+# boundary.
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+spec:
+  selector:
+    app.kubernetes.io/component: app
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+# The WEB tier: nginx, serving the front and proxying to the app tier by its cluster
+# DNS name. Replace the nginx config or image with your real web tier as needed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-tier
+  labels:
+    app.kubernetes.io/component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: web
+    spec:
+      containers:
+        - name: web
+          image: nginxinc/nginx-unprivileged:stable
+          ports:
+            - containerPort: 8080
+---
+# The FRONT DOOR: a Service of type LoadBalancer. On a VKS cluster this is fulfilled
+# by NSX Advanced Load Balancer, which allocates an external IP. This is the guest-
+# cluster equivalent of the VirtualMachineService LoadBalancer you used for VMs in
+# template 3: same idea (a selector and an external IP), expressed in Kubernetes.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-lb
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/component: web
+  ports:
+    - port: 80
+      targetPort: 8080

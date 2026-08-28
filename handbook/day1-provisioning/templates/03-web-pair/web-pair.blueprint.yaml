@@ -1,0 +1,272 @@
+# =============================================================================
+# Template 3 (WALK) - A load-balanced web pair
+# =============================================================================
+# Now the application grows up. Template 2 was one web server, reachable only from
+# inside the namespace. This is two identical web servers behind one external front
+# door, so the application is reachable from outside and survives losing a VM.
+#
+# What is new since template 2:
+#   * a SECOND VM, identical to the first (both share one bootstrap Secret)
+#   * a LoadBalancer (VirtualMachineService) that fronts both and balances traffic
+#   * the wiring that connects them: a shared label, and a selector that matches it
+#
+# The cloud-init, the VM manifest shape, and the namespace reference are the same
+# as template 2. The lesson here is composition: more than one of a thing, and a
+# front door that spreads traffic across them.
+#
+# Scope note: this uses the LoadBalancer to balance directly across the two VMs at
+# the connection level (L4), which is all a simple web pair needs. When you need
+# L7 features (path routing, sticky sessions, TLS termination at the app layer), the
+# common pattern adds a small proxy VM such as HAProxy in front of the web VMs and
+# points the LoadBalancer at the proxy. That is a variation on this shape, not a
+# different one.
+# =============================================================================
+
+name: web-pair
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  Two identical nginx web VMs behind a single LoadBalancer front door on VCF
+  Supervisor. The application is reachable from outside and tolerates the loss of
+  one VM. The step from a single server to a load-balanced tier.
+
+inputs:
+
+  # --- Unchanged from earlier templates -------------------------------------
+  app_name:
+    type: string
+    title: Application name
+    pattern: '^[a-z][a-z0-9-]{2,40}$'
+    default: web-pair
+
+  environment:
+    type: string
+    title: Environment
+    enum: [dev, staging, prod, demo, sandbox]
+    default: demo
+
+  target_namespace_name:
+    type: string
+    title: Target Supervisor namespace
+    description: 'Vended to you by your platform team.  kubectl get supervisornamespaces'
+    pattern: '^[a-z][a-z0-9-]+$'
+
+  region:
+    type: string
+    title: Region
+    description: 'kubectl get regions'
+
+  vm_image:
+    type: string
+    title: VM image (immutable ID)
+    description: 'kubectl get clustervirtualmachineimages | grep -i ubuntu'
+
+  storage_class:
+    type: string
+    title: Storage class
+    description: 'kubectl get storageclasses'
+
+  vm_class:
+    type: string
+    title: VM class (size)
+    description: 'kubectl get virtualmachineclasses'
+    default: best-effort-small
+
+  boot_disk_capacity:
+    type: string
+    title: Boot disk capacity
+    default: 20Gi
+
+  admin_username:
+    type: string
+    title: Admin username
+    pattern: '^[a-z_][a-z0-9_-]{1,30}$'
+    default: appadmin
+
+  admin_password:
+    type: string
+    title: Admin password
+    description: 'Lab/demo only; prefer an SSH key and a vault for anything real.'
+    encrypted: true
+    default: change-me-on-first-use
+
+# -----------------------------------------------------------------------------
+# RESOURCES
+# -----------------------------------------------------------------------------
+resources:
+
+  Namespace:
+    type: CCI.Supervisor.Namespace
+    properties:
+      existing: true
+      name: ${input.target_namespace_name}
+
+  # One bootstrap, shared by BOTH web VMs -------------------------------------
+  # Both servers should be configured identically, so they share a single Secret.
+  # The page prints the host's own name, which is what lets you watch the load
+  # balancer alternate between web-01 and web-02 on refresh.
+  Bootstrap:
+    type: CCI.Supervisor.Resource
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: ${input.app_name}-web-bootstrap
+        type: Opaque
+        stringData:
+          user-data: |
+            #cloud-config
+            users:
+              - default
+              - name: ${input.admin_username}
+                groups: [sudo]
+                sudo: ALL=(ALL) NOPASSWD:ALL
+                lock_passwd: false
+                shell: /bin/bash
+            chpasswd:
+              users:
+                - name: ${input.admin_username}
+                  password: ${input.admin_password}
+                  type: text
+              expire: false
+            bootcmd:
+              - systemctl stop unattended-upgrades 2>/dev/null || true
+              - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+            packages:
+              - chrony
+              - nginx
+            runcmd:
+              - systemctl enable --now chrony
+              - systemctl enable --now nginx
+              # $(hostname) resolves per-VM at boot, so each server's page names
+              # itself. Refreshing through the load balancer shows the name change.
+              - |
+                cat > /var/www/html/index.html <<HTML
+                <!doctype html><html><body style="font-family:sans-serif;margin:3em">
+                <h1>${input.app_name}</h1>
+                <p>Served by host <strong>$(hostname)</strong>.</p>
+                <p>Refresh: the load balancer spreads requests across the pair.</p>
+                </body></html>
+                HTML
+              - systemctl restart nginx
+
+  # NEW (1 of 2): two web VMs instead of one ----------------------------------
+  # These are the template-2 VM, declared twice with ordinals -01 and -02. The one
+  # field that makes them a pool is the shared label `app: <app>-web`. The load
+  # balancer below selects on exactly that label, so anything carrying it becomes a
+  # backend. Add a Web03 with the same label and it joins the pool with no change
+  # to the load balancer.
+  Web01:
+    type: CCI.Supervisor.Resource
+    dependsOn:
+      - Bootstrap
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: vmoperator.vmware.com/v1alpha5
+        kind: VirtualMachine
+        metadata:
+          name: ${input.app_name}-web-01
+          labels:
+            app: ${input.app_name}-web            # the pool label the LB selects on
+            app.kubernetes.io/name: ${input.app_name}-web-01
+            app.kubernetes.io/component: web
+            app.kubernetes.io/part-of: ${input.app_name}
+        spec:
+          className: ${input.vm_class}
+          imageName: ${input.vm_image}
+          storageClass: ${input.storage_class}
+          bootDiskCapacity: ${input.boot_disk_capacity}
+          powerState: PoweredOn
+          bootstrap:
+            cloudInit:
+              rawCloudConfig:
+                name: ${input.app_name}-web-bootstrap
+                key: user-data
+
+  Web02:
+    type: CCI.Supervisor.Resource
+    dependsOn:
+      - Bootstrap
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: vmoperator.vmware.com/v1alpha5
+        kind: VirtualMachine
+        metadata:
+          name: ${input.app_name}-web-02
+          labels:
+            app: ${input.app_name}-web            # same label as Web01: same pool
+            app.kubernetes.io/name: ${input.app_name}-web-02
+            app.kubernetes.io/component: web
+            app.kubernetes.io/part-of: ${input.app_name}
+        spec:
+          className: ${input.vm_class}
+          imageName: ${input.vm_image}
+          storageClass: ${input.storage_class}
+          bootDiskCapacity: ${input.boot_disk_capacity}
+          powerState: PoweredOn
+          bootstrap:
+            cloudInit:
+              rawCloudConfig:
+                name: ${input.app_name}-web-bootstrap
+                key: user-data
+
+  # NEW (2 of 2): the LoadBalancer front door ---------------------------------
+  # A VirtualMachineService of type LoadBalancer. Its `selector` is the wiring: it
+  # matches every VM labelled `app: <app>-web`, which is the pair above, and NSX
+  # Advanced Load Balancer spreads incoming connections across them. Lose one VM
+  # and the LB keeps serving from the other.
+  #
+  # The external IP is allocated asynchronously after deploy, so the `wait` block
+  # holds this resource until the IP appears. It is not a render-time value, so the
+  # outputs give you the command to read it rather than the address itself.
+  LoadBalancer:
+    type: CCI.Supervisor.Resource
+    dependsOn:
+      - Web01
+      - Web02
+    properties:
+      context: ${resource.Namespace.id}
+      wait:
+        fields:
+          - path: status.loadBalancer.ingress[0].ip
+            value: '*'
+      manifest:
+        apiVersion: vmoperator.vmware.com/v1alpha5
+        kind: VirtualMachineService
+        metadata:
+          name: ${input.app_name}-lb
+        spec:
+          selector:
+            app: ${input.app_name}-web            # matches both web VMs
+          type: LoadBalancer
+          ports:
+            - name: http
+              protocol: TCP
+              port: 80
+              targetPort: 80
+
+# -----------------------------------------------------------------------------
+# OUTPUTS
+# -----------------------------------------------------------------------------
+outputs:
+
+  namespace_name:
+    description: The Supervisor namespace this deployment landed in.
+    value: ${resource.Namespace.name}
+
+  web_vms:
+    description: The two web servers behind the load balancer.
+    value: '${input.app_name}-web-01, ${input.app_name}-web-02'
+
+  reach_it:
+    description: >-
+      The front-door IP is assigned by NSX Advanced Load Balancer after deploy, not
+      at render time. Read it, then open it and refresh to watch requests spread
+      across the pair:
+      kubectl get virtualmachineservice ${input.app_name}-lb -n <namespace> -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+    value: 'kubectl get virtualmachineservice ${input.app_name}-lb -n <namespace> -o jsonpath={.status.loadBalancer.ingress[0].ip}'
