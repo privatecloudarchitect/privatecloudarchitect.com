@@ -41,12 +41,13 @@ object (a `VirtualMachine` you describe, not a vCenter clone), and every workloa
 lands in a Supervisor namespace your platform vends you. The
 [orientation](./01-before-you-start.md) covers the shift in a few minutes.
 
-> **About these templates.** They are the worked-examples companion to the
-> [Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning)
-> chapter, meant to be read and adapted, not a live-run proof harness like the other
-> directories in this repo. Each is grounded on an application pattern proven on a
-> live VCF 9.1 estate, then generalized so it deploys on any estate. Treat a template
-> as a starting point you verify on yours, not a guaranteed drop-in.
+> **About these templates.** They are the runnable half of the
+> [Building blueprints](https://privatecloudarchitect.com/handbook/building-blueprints)
+> chapter, which narrates this exact crawl-walk-run one idea at a time; read the two
+> together. They are meant to be read and adapted, not a live-run proof harness like
+> the other directories in this repo. Each is grounded on an application pattern proven
+> on a live VCF 9.1 estate, then generalized so it deploys on any estate. Treat a
+> template as a starting point you verify on yours, not a guaranteed drop-in.
 
 ## Start here
 
@@ -74,10 +75,11 @@ each step in between followed because it was one idea larger than the last.
 
 ## Companion reading on the site
 
-These templates are the hands-on half. The concepts behind them are narrated in
-depth, with diagrams and live-proven detail, in the handbook at
+These templates are the hands-on half. Their narrated walkthrough, and the concepts
+behind them, live in the handbook at
 [privatecloudarchitect.com](https://privatecloudarchitect.com):
 
+- **This series, narrated end to end** ([Building blueprints](https://privatecloudarchitect.com/handbook/building-blueprints)): the crawl-walk-run of this library as one chapter, a single idea per step from one VM to microservices, with the design reasoning and the watch points drawn out. The narrated companion to read alongside these files.
 - **What a template is, and how it deploys** ([Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning)): a blueprint becomes a per-project catalog item, and the requester owns what they deploy. The model every template here plugs into.
 - **The VM primitive**, stages 1 to 4 ([The VM Service](https://privatecloudarchitect.com/handbook/vm-service)): the class, the immutable image, the storage class, and the cloud-init Secret, which are the exact fields these blueprints set.
 - **The Kubernetes primitive**, stages 4 to 5 ([Supervisor and VKS operations](https://privatecloudarchitect.com/handbook/vks-operations)): the cluster as a spec whose nodes are outputs, the VKS resource stages 4 and 5 declare.
