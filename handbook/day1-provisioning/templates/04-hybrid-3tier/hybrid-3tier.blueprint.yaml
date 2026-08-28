@@ -76,7 +76,7 @@ inputs:
   db_storage_class:
     type: string
     title: Database storage class
-    description: 'kubectl get storageclasses'
+    description: 'kubectl get regionstorageclassquotas'
 
   db_boot_disk_capacity:
     type: string
@@ -99,7 +99,7 @@ inputs:
     title: Kubernetes release (TKR)
     description: >-
       The Tanzu Kubernetes Release label that pins the cluster version and its node
-      OS image. List what your platform offers:  kubectl get tanzukubernetesreleases
+      OS image. List what your platform offers:  kubectl get kubernetesreleases
     default: v1.31.4---vmware.1-fips-vkr.1
 
   kubernetes_version:
@@ -117,7 +117,7 @@ inputs:
   vks_storage_class:
     type: string
     title: VKS node storage class
-    description: 'Storage class for the Kubernetes node VMs.  kubectl get storageclasses'
+    description: 'Storage class for the Kubernetes node VMs.  kubectl get regionstorageclassquotas'
 
   vks_worker_replicas:
     type: integer

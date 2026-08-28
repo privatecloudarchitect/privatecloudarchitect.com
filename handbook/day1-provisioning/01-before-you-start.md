@@ -59,9 +59,9 @@ every later stage.
 The templates never hardcode anything specific to your cloud. Each estate-specific
 input carries the one command that finds the right value, and
 [00-reaching-the-supervisor](./00-reaching-the-supervisor.md) lists them in one
-place: `kubectl get supervisornamespaces`, `regions`,
-`clustervirtualmachineimages`, `storageclasses`, `virtualmachineclasses`, and
-`tanzukubernetesreleases` (for the Kubernetes stages). Supply their output as the
+place: `kubectl get supervisornamespaces`, `regions`, `regionstorageclassquotas`,
+`clustervirtualmachineimages`, `virtualmachineclasses`, and `kubernetesreleases`
+(for the Kubernetes stages). Supply their output as the
 template's inputs and the same template deploys correctly on any cloud. That
 portability is why they are inputs rather than baked in.
 

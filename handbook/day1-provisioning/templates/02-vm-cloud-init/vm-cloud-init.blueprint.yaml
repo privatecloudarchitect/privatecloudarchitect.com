@@ -70,7 +70,7 @@ inputs:
   storage_class:
     type: string
     title: Storage class
-    description: 'Where the boot disk lives.  kubectl get storageclasses'
+    description: 'Where the boot disk lives.  kubectl get regionstorageclassquotas'
 
   vm_class:
     type: string

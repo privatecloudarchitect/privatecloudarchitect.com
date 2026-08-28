@@ -65,7 +65,7 @@ inputs:
   storage_class:
     type: string
     title: Storage class
-    description: 'kubectl get storageclasses'
+    description: 'kubectl get regionstorageclassquotas'
 
   vm_class:
     type: string

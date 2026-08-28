@@ -102,27 +102,31 @@ kubectl auth whoami                     # confirms your VCF identity
 kubectl get supervisornamespaces -A     # the namespaces you can deploy into
 ```
 
-If those return without error, you have reached the Supervisor. Everything the
-templates need is now a `kubectl get` away. These are the **discovery commands**
-the templates reference for their estate-specific inputs:
+If those return without error, you have reached the Supervisor. The **discovery
+commands** the templates reference split across two scopes. At this top-level (org
+gateway) context you read the estate-wide inputs:
 
 ```bash
-kubectl get supervisornamespaces        # a namespace to deploy into (target_namespace_name)
-kubectl get regions                      # your region slug (region)
-kubectl get clustervirtualmachineimages  # VM images; pick an Ubuntu 24.04 vmi-... id (vm_image)
-kubectl get storageclasses               # storage classes you are entitled to (storage_class)
-kubectl get virtualmachineclasses        # VM sizes (vm_class)
-kubectl get tanzukubernetesreleases      # Kubernetes releases for VKS (templates 4 and 5)
+kubectl get supervisornamespaces -A       # a namespace to deploy into (target_namespace_name)
+kubectl get regions                        # your region slug (region)
+kubectl get regionstorageclassquotas       # storage you are entitled to; read the STORAGE CLASS column (storage_class)
 ```
+
+The per-VM inputs (images, sizes, Kubernetes releases) live in the Supervisor
+itself, so you read them from a per-namespace context, which the next section covers.
 
 ## Working inside one namespace
 
-The top-level context lists namespaces. To operate *inside* a specific namespace,
-switch to its per-namespace context (the CLI created one for each when you logged
-in):
+The top-level context lists namespaces and the estate-wide inputs above. The per-VM
+inputs and the workload objects live in the Supervisor, so switch to a namespace's
+per-namespace context (the CLI created one for each when you logged in) to read and
+use them:
 
 ```bash
 vcf context use <context-name>:<namespace>:<project>
+kubectl get clustervirtualmachineimages   # VM images; pick an Ubuntu 24.04 vmi-... id (vm_image)
+kubectl get virtualmachineclasses         # VM sizes (vm_class)
+kubectl get kubernetesreleases            # Kubernetes releases for VKS, templates 4 and 5 (kr for short)
 ```
 
 To re-authenticate at any time (safe to run at the start of a script; it is a no-op

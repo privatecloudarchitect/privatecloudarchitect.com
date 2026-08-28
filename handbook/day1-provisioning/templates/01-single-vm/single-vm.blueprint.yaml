@@ -106,7 +106,7 @@ inputs:
     description: >-
       Where the VM's boot disk lives. Storage classes are offered by your platform
       and encode the tier (e.g. nvme vs sata). List what you are entitled to with:
-        kubectl get storageclasses
+        kubectl get regionstorageclassquotas
 
   # --- Things with a sensible default you will rarely change -----------------
 
