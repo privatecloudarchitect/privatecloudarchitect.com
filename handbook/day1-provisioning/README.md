@@ -11,6 +11,36 @@ commented with the design and the *why* behind every non-obvious line, and each
 stage adds **exactly one new concept** to the one before it. Read them in order
 and the hard ideas arrive one at a time.
 
+## The arc, at a glance
+
+```mermaid
+flowchart LR
+    subgraph Crawl
+        T1["01 single VM<br/>boots and runs"]
+        T2["02 + cloud-init<br/>configures itself"]
+    end
+    subgraph Walk
+        T3["03 web pair<br/>+ a load balancer"]
+        T4["04 hybrid 3-tier<br/>DB VM + containers"]
+    end
+    subgraph Run
+        T5["05 microservices<br/>Kubernetes on VKS"]
+    end
+    T1 --> T2 --> T3 --> T4 --> T5
+    classDef crawl fill:#eef6ee,stroke:#7fae57,color:#1f2d1f
+    classDef walk fill:#fbf3e0,stroke:#d8ab3a,color:#3a2f14
+    classDef run fill:#eaf0f7,stroke:#4f86c6,color:#16283f
+    class T1,T2 crawl
+    class T3,T4 walk
+    class T5 run
+```
+
+**Coming from vSphere or vRA?** The template shape is familiar (`formatVersion`,
+`inputs`, `resources`), with two shifts to expect: a VM is now a declared Kubernetes
+object (a `VirtualMachine` you describe, not a vCenter clone), and every workload
+lands in a Supervisor namespace your platform vends you. The
+[orientation](./00-before-you-start.md) covers the shift in a few minutes.
+
 ## Start here
 
 New to any of this? Read [`00-before-you-start.md`](./00-before-you-start.md)
@@ -31,6 +61,16 @@ The through-line is deliberate: every template is the **CCI/Supervisor dialect**
 so you are not switching mental models as the applications get more ambitious. By
 the last stage you are running Kubernetes, having started from a single VM, and
 each step in between followed because it was one idea larger than the last.
+
+## Companion reading on the site
+
+These templates are the hands-on half. The concepts behind them are narrated in
+depth, with diagrams and live-proven detail, in the handbook at
+[privatecloudarchitect.com](https://privatecloudarchitect.com):
+
+- **What a template is, and how it deploys** ([Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning)): a blueprint becomes a per-project catalog item, and the requester owns what they deploy. The model every template here plugs into.
+- **The VM primitive**, stages 1 to 4 ([The VM Service](https://privatecloudarchitect.com/handbook/vm-service)): the class, the immutable image, the storage class, and the cloud-init Secret, which are the exact fields these blueprints set.
+- **The Kubernetes primitive**, stages 4 to 5 ([Supervisor and VKS operations](https://privatecloudarchitect.com/handbook/vks-operations)): the cluster as a spec whose nodes are outputs, the VKS resource stages 4 and 5 declare.
 
 ## What is in this folder
 
