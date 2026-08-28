@@ -23,8 +23,8 @@ each layer references the previous one by id):
 - `supermetrics/editor-formulas.yaml`: the three verdict metrics' exact formulas in super-metric
   editor syntax, object types, and units, for building them by hand.
 - `supermetrics/memory-tiering-supermetrics.import.json`: the readable form of the full six-metric
-  set the lens's views reference: the three verdict metrics plus three qualifiers (reserved and
-  pinned memory, NVMe tier size, NVMe tier used). Id-keyed; the ids are what the views bind to.
+  set the lens's views reference: the three verdict metrics plus three qualifiers (reserved memory,
+  NVMe tier size, NVMe tier used). Id-keyed; the ids are what the views bind to.
 - `supermetrics/memory-tiering-supermetrics.contentpkg.zip`: the same six metrics as an
   **id-preserving content package**, importable via the content-import UI or
   `POST /suite-api/api/content/operations/import` (multipart field `contentFile`). The import

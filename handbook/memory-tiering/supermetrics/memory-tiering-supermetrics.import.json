@@ -28,7 +28,7 @@
   ],
   "name": "PCA - MemTier - Host - Recoverable Cold DRAM GB",
   "formula": "((${this, metric=mem|consumed_average} - ${this, metric=mem|active_average}) / 1048576)",
-  "description": "UPPER BOUND on the DRAM currently holding COLD pages (consumed but not active) - i.e. the memory tiering would relocate to NVMe, freeing DRAM. The ACTIONABLE ranking metric: sort candidates by this. It is an UPPER BOUND because pinned memory (latency-sensitive VMs, DirectPath/passthrough, vGPU, SR-IOV) is counted as cold here yet cannot tier; cross-check against mem|reservedCapacity_average and the VM-type exclusion list before trusting the figure on a given host.",
+  "description": "UPPER BOUND on the DRAM currently holding COLD pages (consumed but not active) - i.e. the memory tiering would relocate to NVMe, freeing DRAM. The ACTIONABLE ranking metric: sort candidates by this. It is an UPPER BOUND because feature-pinned memory (latency-sensitive VMs, DirectPath/passthrough, vGPU, SR-IOV, FT, tiering-disabled VMs) is counted as cold here yet cannot tier; cross-check against the VM-type exclusion list before trusting the figure on a given host. Reserved memory is NOT such a pin - reservations tier normally, so they do not discount this figure.",
   "unitId": "gb"
  },
  "860ddab7-816c-452f-ad99-c5bd61ec604e": {
@@ -85,7 +85,7 @@
   "modificationTime": 1784820679145,
   "name": "PCA - MemTier - Host - Reserved Memory GB",
   "formula": "(${this, metric=mem|reservedCapacity_average} / 1048576)",
-  "description": "OBJECT: HostSystem. UNIT: GB. Pinned memory on the host - reservations guarantee physical DRAM, so this memory cannot tier to NVMe. Read it as a QUALIFIER on Recoverable Cold DRAM: up to this much of a host's cold DRAM is pinned and will not actually reclaim, so a host with high reserved memory reclaims less than its Recoverable Cold suggests. mem|reservedCapacity_average / 1048576.",
+  "description": "OBJECT: HostSystem. UNIT: GB. Reservation footprint on the host. A reservation guarantees the capacity against reclamation (ballooning or swapping); it does NOT pin the pages to DRAM, so reserved memory tiers to NVMe like any other cold memory. Read it as overcommit context, not as a discount on Recoverable Cold: a heavily reserved host has less overcommit room, but its reserved cold pages still tier. The memory that actually cannot tier is the feature-pinned exclusion list (latency-sensitive, DirectPath, vGPU, SR-IOV, FT, tiering-disabled), not reservations. mem|reservedCapacity_average / 1048576.",
   "unitId": "",
   "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
  }
