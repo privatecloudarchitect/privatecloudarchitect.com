@@ -8,31 +8,32 @@ to VCF Automation, this is the part worth reading carefully.
 Two words get used constantly and confusingly: **All Apps** and **CCI**. They are
 not two formats you choose between. They are two different things:
 
-- **All Apps** is the *mode* you work in - the VCF Automation 9.x application
-  experience (the successor to what was called "VM Apps"). Inside an All Apps org
-  you author **cloud templates** and publish them to a catalog. It is the "where,"
-  not the "how."
+- **All Apps** is the kind of **organization** you work in: the application-centric
+  VCF Automation 9.x experience, where you author **cloud templates** and publish
+  them to a catalog. It sits beside the classic **VM Apps** organization (the Aria
+  and Cloud Assembly style, still present in 9.x) rather than replacing it. It is
+  the "where," not the "how."
 
 - **CCI** (Cloud Consumption Interface) is the *plumbing* underneath. It is how VCF
   Automation talks to a **Supervisor** - a Kubernetes control plane running on your
   vSphere clusters - to provision workloads into **Supervisor namespaces**.
 
 Now the part that actually matters for these templates. A cloud template can be
-written in one of two **dialects**:
+written in one of two **dialects**, and the dialect follows the organization:
 
-| Dialect | Resource types you write | Provisions to |
-|---|---|---|
-| **Classic IaaS** | `Cloud.vSphere.Machine`, `Cloud.NSX.Network`, ... | vSphere / NSX directly |
-| **CCI / Supervisor** | `CCI.Supervisor.Namespace`, `CCI.Supervisor.Resource` | a Supervisor namespace, Kubernetes-native |
+| Dialect | Resource types you write | Native to | Provisions to |
+|---|---|---|---|
+| **Classic IaaS** | `Cloud.vSphere.Machine`, `Cloud.NSX.Network`, ... | the VM Apps org | vSphere / NSX directly |
+| **CCI / Supervisor** | `CCI.Supervisor.Namespace`, `CCI.Supervisor.Resource` | the All Apps org | a Supervisor namespace, Kubernetes-native |
 
 **This series teaches the CCI / Supervisor dialect, start to finish.** Two reasons.
-First, it is the modern, Supervisor-native path VCF is built around. Second - and
-this is the pedagogy - it is the *only* dialect that carries you smoothly from a
-single VM all the way to a Kubernetes microservices app without ever switching
-mental models. You will meet the classic dialect in the wild; when you do, you
-will recognize it as "the other way to write the same kind of template." If your
-goal is purely traditional vSphere VMs with no Kubernetes ahead of you, the
-classic dialect is a fine choice - but it is not the road this series walks.
+First, it is the modern, Supervisor-native path VCF is built around. Second, and
+this is the pedagogy, it is the *only* dialect that carries you smoothly from a
+single VM all the way to a Kubernetes microservices app without switching mental
+models. You will meet the classic dialect in the wild; when you do, you will
+recognize it as "the other way to write the same kind of template." If your goal is
+purely traditional vSphere VMs with no Kubernetes ahead of you, that is the VM Apps
+org's classic dialect: a fine choice, but not the road this series walks.
 
 Every CCI resource you will see is the same shape: a thin `CCI.Supervisor.Resource`
 wrapper around a raw Kubernetes manifest, which VCF Automation submits to the
