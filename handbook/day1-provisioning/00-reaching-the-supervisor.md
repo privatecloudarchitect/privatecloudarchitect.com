@@ -30,20 +30,36 @@ governance; you do not need it here.
 
 ## Step 1: Get the vcf CLI
 
-The `vcf` CLI (v9.0 or newer) is the canonical tool for Supervisor and VKS access.
-It replaces the older `kubectl-vsphere` plugin and the standalone `tanzu` CLI, so
-if you find guides using those, you are reading a pre-9.0 workflow.
+The `vcf` CLI is the canonical tool for Supervisor and VKS access. It does the job
+the `kubectl-vsphere` plugin and the standalone `tanzu` CLI used to do; both are
+legacy, so a guide built on them is a pre-9.0 workflow.
 
-It is **not shipped with vSphere**; you download it from Broadcom. Follow Broadcom's
-"Installing the VCF CLI in Internet Connected Environments" (or the Internet
-Restricted variant for an air-gapped site) under
-[Installing and using VCF CLI v9](https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-0/building-your-cloud-applications/getting-started-with-the-tools-for-building-applications/installing-and-using-vcf-cli-v9/vcf-cli-architecture.html).
-Then confirm it is on your path:
+It is not preinstalled on your workstation. Two places serve it, fastest first:
+
+- **Your Supervisor or VCF Automation portal.** In the vSphere Client, open a
+  Supervisor namespace and use the **Link to CLI Tools** on its Summary tab (the
+  same download page you may remember serving `kubectl-vsphere`; on 9.x it serves
+  the vcf CLI). The VCF Automation tenant portal offers the same download.
+- **The Broadcom Support Portal**, under your VCF release, listed as **VCF
+  Consumption CLI**: a per-OS archive, plus a matching OCI plugin bundle for
+  air-gapped installs.
+
+Download the archive for your OS and architecture, verify it, and put it on your
+PATH:
 
 ```bash
-vcf version
-# expect: version: v9.0.x
+shasum -a 256 -c sha256sum.txt        # verify against the checksum Broadcom publishes
+tar -xvzf vcf-cli.tar.gz              # (unzip the .zip on Windows)
+mv vcf-cli-darwin_arm64 vcf           # the binary ships as vcf-cli-<os>_<arch>
+sudo install vcf /usr/local/bin/vcf   # onto your PATH
+vcf version                           # expect a v9.x build; 9.1 is current
 ```
+
+There is no supported package-manager install. Homebrew, APT, YUM, DNF, and
+Chocolatey are not channels for the vcf CLI, so `brew install` and its equivalents
+will not find it; use the signed archive above. For an air-gapped site, install the
+plugins from the OCI bundle you downloaded (Broadcom's Internet-Restricted install
+page has the `vcf plugin upload-bundle` and `vcf plugin source` steps).
 
 ## Step 2: Get an API token
 
@@ -123,7 +139,7 @@ application manifests *into* that cluster, which needs its own kubeconfig. Fetch
 with the cluster plugin:
 
 ```bash
-vcf plugin install cluster                          # one-time; installs the cluster plugin
+vcf plugin install cluster                          # the cluster plugin (9.x may auto-install it on context use)
 vcf context use <context-name>:<namespace>:<project>
 vcf cluster kubeconfig get <cluster> --namespace <namespace> \
     --output ~/.kube/<cluster>.kubeconfig
@@ -163,8 +179,11 @@ orientation and the deploy flow, then the templates.
 
 ---
 
-*References: the login flows follow Broadcom's [Installing and using VCF CLI
-v9](https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-0/building-your-cloud-applications/getting-started-with-the-tools-for-building-applications/installing-and-using-vcf-cli-v9/vcf-cli-architecture.html)
-documentation and William Lam's walkthrough,
+*References: the install and login flows follow Broadcom's [Installing and using VCF
+CLI v9](https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-consumption/latest/consumer-interfaces-in-vcf/installing-and-using-vcf-cli-v9/vcf-cli-architecture.html)
+(the CLI architecture overview and its Internet-Connected and Internet-Restricted
+install pages) and the vSphere Supervisor [Kubernetes CLI Tools
+download](https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/vsphere-supervisor-installation-and-configuration/connecting-to-vsphere-with-tanzu-clusters/download-and-install-the-kubernetes-cli-tools-for-vsphere.html)
+page. The CCI login flags match William Lam's walkthrough,
 [Using VCF CLI to login to vSphere Supervisor when configured with VCF Automation](https://williamlam.com/2025/12/quick-tip-using-vcf-cli-to-login-to-vsphere-supervisor-when-configured-with-vcf-automation.html)
 (December 2025).*
