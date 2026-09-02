@@ -63,6 +63,9 @@ are present only on an interactive session login and are stripped from OAuth
 grants. Standardizing on the session login means the same code path can also
 onboard identities when you need it to.
 
+For both flows in full, and the rule that chooses between them, see the handbook
+chapter [The VCF Automation API](https://privatecloudarchitect.com/handbook/vcfa-api).
+
 ## Your first call
 
 Set the four environment variables from `scripts/README.md`, then:
