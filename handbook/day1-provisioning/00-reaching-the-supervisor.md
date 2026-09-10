@@ -67,6 +67,9 @@ In the **VCF Automation UI**, open your user settings and generate an **API toke
 (User Settings, then API Tokens). Keep it somewhere safe; you pass it to the CLI in
 the next step.
 
+The UI shows the token value only once, at creation, and does not let you retrieve
+it afterward, so copy it before you leave the page or you will have to mint another.
+
 This is a refresh token with a **90-day life**. The CLI trades it for short-lived
 access tokens automatically, so you authenticate once and the CLI keeps you logged
 in. When the 90 days are up, mint a new token the same way (see the watch point at
