@@ -46,15 +46,30 @@ deploy into yet, a platform-team member vends you one; the companion
 
 ## Deploy it
 
-Two ways, same template:
+Three ways, same VM. All three apply the identical VirtualMachine; the blueprint
+just wraps it so the catalog and the API can apply it on your behalf.
 
-- **All Apps catalog (the self-service way).** Import the blueprint as a template,
-  release a version, add it to your project's catalog, then Deploy and fill in the
-  form. This is the experience your end users get.
-- **API / IaC (the automation way).** Submit the template with an inputs payload
-  through the VCF Automation API or your pipeline.
+- **The one-command way (kubectl / CCI).** The same VM as a plain Kubernetes
+  manifest you apply yourself: [`single-vm.vm.yaml`](./single-vm.vm.yaml). Once you
+  have a namespace context (see
+  [00-reaching-the-supervisor](../../00-reaching-the-supervisor.md)), fill its three
+  estate values (image, storage, region; the discovery command sits beside each),
+  then one command builds it:
 
-Either way, authoring changed nothing; **Deploy** is the step that builds the VM.
+  ```
+  kubectl apply -f single-vm.vm.yaml -n <your-namespace>
+  ```
+
+  This is the CCI/CLI path, the same interface every later template's app tier uses.
+- **The catalog way (self-service).** Import the blueprint as a template, release a
+  version, add it to your project's catalog, then Deploy and fill in the form. This
+  is the experience your end users get.
+- **The API / IaC way (automation).** Submit the blueprint with an inputs payload
+  through the VCF Automation API or your pipeline, the catalog request the demo
+  bundles automate.
+
+Either way, authoring changed nothing; **Deploy** (or `kubectl apply`) is the step
+that builds the VM.
 
 ## What "working" looks like
 

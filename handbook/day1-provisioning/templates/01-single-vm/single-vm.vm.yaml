@@ -1,0 +1,40 @@
+# =============================================================================
+# Template 1 (CRAWL) - single-vm, the one-command (kubectl / CCI) deploy form
+# =============================================================================
+# This is the SAME virtual machine as single-vm.blueprint.yaml, in the form you
+# apply directly with kubectl. The blueprint wraps this exact manifest in a
+# CCI.Supervisor.Resource so the catalog (or the VCF Automation API) can apply it
+# for you; here you apply it yourself, against your Supervisor namespace.
+#
+# Prerequisite (once): a kubectl context on your namespace. Get it in
+# 00-reaching-the-supervisor.md (install the vcf CLI, vcf context create, then
+# vcf context use <context>:<namespace>).
+#
+# Then three steps:
+#   1. Fill the three <REPLACE_ME-...> values below. Each carries the one command
+#      that discovers the right value for your estate; nothing is hardcoded.
+#   2. Apply it (one command):
+#        kubectl apply -f single-vm.vm.yaml -n <your-namespace>
+#   3. Verify it reached PoweredOn with an address:
+#        kubectl get virtualmachine hello-vm-01 -n <your-namespace> -o wide
+#
+# A Running VM with an address means you provisioned real infrastructure from a
+# manifest. That is the crawl. There is no login yet; creating a user is
+# cloud-init's job, which is template 2.
+# =============================================================================
+apiVersion: vmoperator.vmware.com/v1alpha5    # the version that honors spec.bootDiskCapacity
+kind: VirtualMachine
+metadata:
+  name: hello-vm-01                           # named for its function, with the -01 ordinal habit
+  labels:
+    app.kubernetes.io/name: hello-vm-01
+    app.kubernetes.io/component: server
+    app.kubernetes.io/part-of: hello-vm
+    environment: demo
+    region: <REPLACE_ME-region>               # kubectl get regions
+spec:
+  className: best-effort-small                # size; kubectl get virtualmachineclasses
+  imageName: <REPLACE_ME-vm-image>            # immutable image id (vmi-...); kubectl get clustervirtualmachineimages | grep -i ubuntu
+  storageClass: <REPLACE_ME-storage-class>    # kubectl get regionstorageclassquotas
+  bootDiskCapacity: 20Gi                      # right-size the boot disk (image default is often 40-80Gi)
+  powerState: PoweredOn
