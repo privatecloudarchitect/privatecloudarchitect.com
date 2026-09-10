@@ -1,0 +1,79 @@
+# =============================================================================
+# Template 2 (WALK) - vm-cloud-init, the one-command (kubectl / CCI) deploy form
+# =============================================================================
+# The SAME VM + cloud-init as vm-cloud-init.blueprint.yaml, applied directly with
+# kubectl. Two objects: a Secret (the cloud-init user-data) and a VirtualMachine
+# that references it. The blueprint wraps this exact pair in CCI.Supervisor.Resource
+# so the catalog/API can apply it for you; here you apply it yourself.
+#
+# Prerequisite (once): a kubectl context on your namespace (00-reaching-the-supervisor.md).
+# Then:
+#   1. Set a real password (replace change-me-on-first-use) and fill the three
+#      <REPLACE_ME-...> values below; each has its discovery command beside it.
+#   2. kubectl apply -f vm-cloud-init.vm.yaml -n <your-namespace>
+#   3. kubectl get virtualmachine hello-web-01 -n <your-namespace> -o wide
+# Success: the VM reaches PoweredOn with an address, and (after first boot)
+# cloud-init has created the login and started nginx.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hello-web-01-bootstrap
+type: Opaque
+stringData:
+  user-data: |
+    #cloud-config
+    hostname: hello-web-01
+    users:
+      - default
+      - name: appadmin
+        groups: [sudo]
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        lock_passwd: false
+        shell: /bin/bash
+    chpasswd:
+      users:
+        - name: appadmin
+          password: change-me-on-first-use    # set a strong password before you deploy
+          type: text
+      expire: false
+    bootcmd:
+      - systemctl stop unattended-upgrades 2>/dev/null || true
+      - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+    packages:
+      - chrony
+      - nginx
+    runcmd:
+      - systemctl enable --now chrony
+      - systemctl enable --now nginx
+      - |
+        cat > /var/www/html/index.html <<HTML
+        <!doctype html><html><body style="font-family:sans-serif;margin:3em">
+        <h1>hello-web</h1>
+        <p>Configured by cloud-init on host <strong>hello-web-01</strong>.</p>
+        <p>Environment: demo</p>
+        </body></html>
+        HTML
+      - systemctl restart nginx
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: hello-web-01
+  labels:
+    app.kubernetes.io/name: hello-web-01
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: hello-web
+    environment: demo
+    region: <REPLACE_ME-region>             # kubectl get regions
+spec:
+  className: best-effort-small              # kubectl get virtualmachineclasses
+  imageName: <REPLACE_ME-vm-image>          # vmi-...; kubectl get clustervirtualmachineimages | grep -i ubuntu
+  storageClass: <REPLACE_ME-storage-class>  # kubectl get regionstorageclassquotas
+  bootDiskCapacity: 20Gi
+  powerState: PoweredOn
+  bootstrap:
+    cloudInit:
+      rawCloudConfig:
+        name: hello-web-01-bootstrap
+        key: user-data

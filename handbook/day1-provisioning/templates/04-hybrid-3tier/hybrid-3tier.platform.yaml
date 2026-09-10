@@ -1,0 +1,107 @@
+# =============================================================================
+# Template 4 (RUN) - hybrid-3tier PLATFORM, the one-command (kubectl / CCI) form
+# =============================================================================
+# The SAME platform as hybrid-3tier.blueprint.yaml, applied directly with kubectl:
+# a PostgreSQL VM (the stateful tier) and a VKS guest cluster (the home for the
+# stateless tiers), both in one namespace on one VPC network. This is HALF of the
+# hybrid app; the container tiers are in app-and-web.k8s.yaml and are applied INTO
+# the VKS cluster (a second step, against the cluster's kubeconfig, not here).
+#
+# Prerequisite (once): a kubectl context on your namespace (00-reaching-the-supervisor.md).
+# Then, part one (the platform):
+#   1. Set a real db password and fill the <REPLACE_ME-...> values below.
+#   2. kubectl apply -f hybrid-3tier.platform.yaml -n <your-namespace>
+#   3. Watch both come up:
+#        kubectl get virtualmachine storefront-db-01 -n <your-namespace> -o wide
+#        kubectl get cluster storefront-demo-vks -n <your-namespace>
+# Part two (the app), once the cluster is Ready, is in app-and-web.k8s.yaml.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: storefront-db-01-bootstrap
+type: Opaque
+stringData:
+  user-data: |
+    #cloud-config
+    hostname: storefront-db-01
+    bootcmd:
+      - systemctl stop unattended-upgrades 2>/dev/null || true
+      - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+    packages:
+      - chrony
+      - postgresql
+    runcmd:
+      - systemctl enable --now chrony
+      - systemctl enable --now postgresql
+      - |
+        sudo -u postgres psql <<SQL
+        CREATE DATABASE storefront;
+        CREATE USER appuser WITH ENCRYPTED PASSWORD 'change-me-on-first-use';
+        GRANT ALL PRIVILEGES ON DATABASE storefront TO appuser;
+        SQL
+      - sed -i "s/^#listen_addresses.*/listen_addresses = '*'/" /etc/postgresql/*/main/postgresql.conf
+      - bash -c "echo 'host all all 0.0.0.0/0 scram-sha-256' >> /etc/postgresql/*/main/pg_hba.conf"
+      - systemctl restart postgresql
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: storefront-db-01
+  labels:
+    app.kubernetes.io/name: storefront-db-01
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: storefront
+    environment: demo
+    region: <REPLACE_ME-region>             # kubectl get regions
+spec:
+  className: best-effort-small              # kubectl get virtualmachineclasses
+  imageName: <REPLACE_ME-vm-image>          # vmi-...; kubectl get clustervirtualmachineimages | grep -i ubuntu
+  storageClass: <REPLACE_ME-storage-class>  # kubectl get regionstorageclassquotas
+  bootDiskCapacity: 20Gi
+  powerState: PoweredOn
+  bootstrap:
+    cloudInit:
+      rawCloudConfig:
+        name: storefront-db-01-bootstrap
+        key: user-data
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: storefront-demo-vks
+  labels:
+    run.tanzu.vmware.com/tkr: v1.31.4---vmware.1-fips-vkr.1   # confirm: kubectl get tanzukubernetesreleases
+    app.kubernetes.io/part-of: storefront
+    app.kubernetes.io/component: vks-host
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - 192.168.192.0/20
+    services:
+      cidrBlocks:
+        - 10.96.0.0/12
+    serviceDomain: cluster.local
+  topology:
+    classRef:
+      name: builtin-generic-v3.6.0          # kubectl get clusterclasses -n vmware-system-vks-public
+      namespace: vmware-system-vks-public
+    version: v1.31.4+vmware.1-fips.1         # must pair with the tkr label above
+    controlPlane:
+      replicas: 1                            # three for HA in production
+    workers:
+      machineDeployments:
+        - class: node-pool
+          name: workers
+          replicas: 2
+    variables:
+      - name: vmClass
+        value: best-effort-small
+      - name: storageClass
+        value: <REPLACE_ME-storage-class>    # kubectl get regionstorageclassquotas
+      - name: bootstrapAddons
+        value:
+          cniRef:
+            name: antrea
+            namespace: vmware-system-vks-public

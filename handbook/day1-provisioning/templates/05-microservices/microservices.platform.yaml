@@ -1,0 +1,54 @@
+# =============================================================================
+# Template 5 (RUN) - microservices PLATFORM, the one-command (kubectl / CCI) form
+# =============================================================================
+# The SAME VKS guest cluster as microservices.blueprint.yaml, applied directly with
+# kubectl. This is the platform only: a full Kubernetes cluster. The microservices
+# themselves are in microservices.k8s.yaml and are applied INTO this cluster (a
+# second step, against the cluster's kubeconfig, not here).
+#
+# Prerequisite (once): a kubectl context on your namespace (00-reaching-the-supervisor.md).
+# Then, part one (the platform):
+#   1. Fill the <REPLACE_ME-...> value below (confirm the release/version pair too).
+#   2. kubectl apply -f microservices.platform.yaml -n <your-namespace>
+#   3. kubectl get cluster shop-demo-vks -n <your-namespace>
+# Part two (the app), once the cluster is Ready, is in microservices.k8s.yaml.
+# =============================================================================
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  name: shop-demo-vks
+  labels:
+    run.tanzu.vmware.com/tkr: v1.31.4---vmware.1-fips-vkr.1   # confirm: kubectl get tanzukubernetesreleases
+    app.kubernetes.io/part-of: shop
+    app.kubernetes.io/component: vks-host
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - 192.168.192.0/20
+    services:
+      cidrBlocks:
+        - 10.96.0.0/12
+    serviceDomain: cluster.local
+  topology:
+    classRef:
+      name: builtin-generic-v3.6.0          # kubectl get clusterclasses -n vmware-system-vks-public
+      namespace: vmware-system-vks-public
+    version: v1.31.4+vmware.1-fips.1         # must pair with the tkr label above
+    controlPlane:
+      replicas: 1                            # three for HA in production
+    workers:
+      machineDeployments:
+        - class: node-pool
+          name: workers
+          replicas: 3
+    variables:
+      - name: vmClass
+        value: best-effort-small
+      - name: storageClass
+        value: <REPLACE_ME-storage-class>    # kubectl get regionstorageclassquotas
+      - name: bootstrapAddons
+        value:
+          cniRef:
+            name: antrea
+            namespace: vmware-system-vks-public

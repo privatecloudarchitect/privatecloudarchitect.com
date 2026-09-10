@@ -1,0 +1,117 @@
+# =============================================================================
+# Template 3 (WALK) - web-pair, the one-command (kubectl / CCI) deploy form
+# =============================================================================
+# The SAME two web VMs behind a load balancer as web-pair.blueprint.yaml, applied
+# directly with kubectl. Four objects: one shared cloud-init Secret, two identical
+# VMs carrying the pool label app: web-pair-web, and a VirtualMachineService of
+# type LoadBalancer that selects that label. Lose one VM and the LB serves from the
+# other; add a third VM with the same label and it joins the pool.
+#
+# Prerequisite (once): a kubectl context on your namespace (00-reaching-the-supervisor.md).
+# Then:
+#   1. Set a real password and fill the three <REPLACE_ME-...> values below.
+#   2. kubectl apply -f web-pair.vm.yaml -n <your-namespace>
+#   3. Read the load balancer's external address (assigned asynchronously):
+#        kubectl get virtualmachineservice web-pair-lb -n <your-namespace> \
+#          -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+#      then curl it a few times; the page names the host, and it alternates.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: web-pair-web-bootstrap
+type: Opaque
+stringData:
+  user-data: |
+    #cloud-config
+    users:
+      - default
+      - name: appadmin
+        groups: [sudo]
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        lock_passwd: false
+        shell: /bin/bash
+    chpasswd:
+      users:
+        - name: appadmin
+          password: change-me-on-first-use    # set a strong password before you deploy
+          type: text
+      expire: false
+    bootcmd:
+      - systemctl stop unattended-upgrades 2>/dev/null || true
+      - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+    packages:
+      - chrony
+      - nginx
+    runcmd:
+      - systemctl enable --now chrony
+      - systemctl enable --now nginx
+      - |
+        cat > /var/www/html/index.html <<HTML
+        <!doctype html><html><body style="font-family:sans-serif;margin:3em">
+        <h1>web-pair</h1>
+        <p>Served by host <strong>$(hostname)</strong>.</p>
+        <p>Refresh: the load balancer spreads requests across the pair.</p>
+        </body></html>
+        HTML
+      - systemctl restart nginx
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: web-pair-web-01
+  labels:
+    app: web-pair-web                       # the pool label the LB selects on
+    app.kubernetes.io/name: web-pair-web-01
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: web-pair
+    environment: demo
+    region: <REPLACE_ME-region>             # kubectl get regions
+spec:
+  className: best-effort-small              # kubectl get virtualmachineclasses
+  imageName: <REPLACE_ME-vm-image>          # vmi-...; kubectl get clustervirtualmachineimages | grep -i ubuntu
+  storageClass: <REPLACE_ME-storage-class>  # kubectl get regionstorageclassquotas
+  bootDiskCapacity: 20Gi
+  powerState: PoweredOn
+  bootstrap:
+    cloudInit:
+      rawCloudConfig:
+        name: web-pair-web-bootstrap
+        key: user-data
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: web-pair-web-02
+  labels:
+    app: web-pair-web                       # same label as web-01: same pool
+    app.kubernetes.io/name: web-pair-web-02
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: web-pair
+    environment: demo
+    region: <REPLACE_ME-region>
+spec:
+  className: best-effort-small
+  imageName: <REPLACE_ME-vm-image>
+  storageClass: <REPLACE_ME-storage-class>
+  bootDiskCapacity: 20Gi
+  powerState: PoweredOn
+  bootstrap:
+    cloudInit:
+      rawCloudConfig:
+        name: web-pair-web-bootstrap
+        key: user-data
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachineService
+metadata:
+  name: web-pair-lb
+spec:
+  selector:
+    app: web-pair-web                       # matches both web VMs
+  type: LoadBalancer
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80

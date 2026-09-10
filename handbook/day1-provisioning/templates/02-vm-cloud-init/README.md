@@ -61,9 +61,18 @@ start with that precursor.
 
 ## Deploy it
 
-Same two paths as template 1 (catalog or API), with two new form fields: the admin
-username and password. You still supply your estate's namespace, image, and storage
-class (the discovery commands are in each input's description).
+Same three ways as template 1, all building the same VM-plus-cloud-init.
+
+- **The one-command way (kubectl / CCI).** The Secret and the VM as one manifest:
+  [`vm-cloud-init.vm.yaml`](./vm-cloud-init.vm.yaml). Set a real password, fill the
+  three estate values (image, storage, region), then:
+
+  ```
+  kubectl apply -f vm-cloud-init.vm.yaml -n <your-namespace>
+  ```
+- **The catalog / API ways.** Import the blueprint and Deploy from the form (or
+  submit it via the API), with two new fields this time: the admin username and
+  password. You still supply your estate's namespace, image, and storage class.
 
 ## What "working" looks like
 

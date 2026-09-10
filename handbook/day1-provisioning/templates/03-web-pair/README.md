@@ -64,9 +64,18 @@ start with that precursor.
 
 ## Deploy it
 
-Same paths as before. The form is the same as template 2 (one deployment now brings
-up two VMs and a load balancer). Supply your estate's namespace, image, and storage
-class as always.
+Same three ways, all building the pair plus the load balancer.
+
+- **The one-command way (kubectl / CCI).** The Secret, both VMs, and the
+  LoadBalancer service as one manifest: [`web-pair.vm.yaml`](./web-pair.vm.yaml).
+  Set a real password, fill the three estate values, then:
+
+  ```
+  kubectl apply -f web-pair.vm.yaml -n <your-namespace>
+  ```
+- **The catalog / API ways.** Import the blueprint and Deploy from the form (or via
+  the API); one deployment brings up two VMs and a load balancer. Supply your
+  estate's namespace, image, and storage class as always.
 
 ## What "working" looks like
 

@@ -55,8 +55,18 @@ cannot yet run `kubectl get supervisornamespaces`, start there.
 
 ## Deploy it, in two parts
 
-**Part 1, the cluster (the blueprint).** Deploy `microservices.blueprint.yaml`. It
-brings up the VKS cluster and takes a few minutes to become ready.
+**Part 1, the cluster.** Bring up the VKS cluster, either way:
+
+- **The one-command way (kubectl / CCI).** The cluster as one manifest:
+  [`microservices.platform.yaml`](./microservices.platform.yaml). Fill the estate
+  value (and confirm the release/version pair), then:
+
+  ```
+  kubectl apply -f microservices.platform.yaml -n <your-namespace>
+  ```
+- **The catalog / API way.** Deploy `microservices.blueprint.yaml`.
+
+Either way it takes a few minutes to become ready.
 
 **Part 2, the services (kubectl).** Point kubectl at the VKS cluster (your platform
 documents the login), then:

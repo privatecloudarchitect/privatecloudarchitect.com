@@ -60,9 +60,20 @@ part 2. If you cannot yet run `kubectl get supervisornamespaces`, start there.
 
 ## Deploy it, in two parts
 
-**Part 1, the infrastructure (the blueprint).** Deploy `hybrid-3tier.blueprint.yaml`
-as in the earlier templates. This brings up the database VM and the VKS cluster. The
-cluster takes several minutes to become ready (it is provisioning real nodes).
+**Part 1, the platform.** Bring up the database VM and the VKS cluster, either way:
+
+- **The one-command way (kubectl / CCI).** Both objects as one manifest:
+  [`hybrid-3tier.platform.yaml`](./hybrid-3tier.platform.yaml). Set a real db
+  password, fill the estate values, then:
+
+  ```
+  kubectl apply -f hybrid-3tier.platform.yaml -n <your-namespace>
+  ```
+- **The catalog / API way.** Deploy `hybrid-3tier.blueprint.yaml` as in the earlier
+  templates.
+
+Either way the cluster takes several minutes to become ready (it is provisioning
+real nodes).
 
 **Part 2, the application (kubectl).** Once the cluster is ready:
 
