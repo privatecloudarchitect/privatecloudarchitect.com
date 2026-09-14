@@ -1,5 +1,13 @@
 # privatecloudarchitect.com companion artifacts
 
+> **New to VMware Cloud Foundation?** Start on the site, not in this repo. The path lives at
+> **[privatecloudarchitect.com/find-your-path](https://privatecloudarchitect.com/find-your-path)**,
+> which routes you by what you came to do and what you already run: a short on-ramp if VCF is new to
+> you, a direct route if you arrived with a goal, or the whole working chain if you want to stand up
+> and keep an estate end to end. This repository is the proof layer under that path: each directory
+> backs a published sheet and proves its claims on your own build. A sheet sends you here when it is
+> time to run something; the site is where the learning is sequenced.
+
 Runnable reference artifacts behind the sheets at [privatecloudarchitect.com](https://privatecloudarchitect.com).
 Artifacts arrive in two classes. A **harness** (`handbook/<sheet>/`) backs one published sheet:
 it proves that sheet's claims on your estate, read-only or round-tripped, and leaves your estate
