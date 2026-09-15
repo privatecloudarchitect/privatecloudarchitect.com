@@ -3,6 +3,9 @@
 
 Mints the service-scoped JWT the VCF services runtime requires (rtmlib.py), then against
 https://$RTM_HOST/data-query-service:
+  0. GET /api/v1/vcenters/metrics_config   which hosts of this source have the 2-second ESX Top
+                                     set switched on (the list form of the metrics config; the
+                                     per-vCenter path is write-only);
   1. GET /api/v1/metadata           the metric names the service knows (a count);
   2. GET /api/v1/query              one instant PromQL query, scoped by sourceId, then
                                      count by (profile) for the true series count: one call
@@ -57,6 +60,18 @@ def main():
     jwt = service_jwt(bearer())
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     print(f"REAL-TIME METRICS QUERY - read {stamp}, service JWT minted for this run (35-minute lifetime)\n")
+
+    st, cfg, secs = rtm_get("/api/v1/vcenters/metrics_config", jwt)
+    if st == 200 and isinstance(cfg, list):
+        mine = next((c for c in cfg if c.get("id") == source), None)
+        if mine:
+            moids = mine.get("esxTopHostMoids") or []
+            print(f"  metrics config: ESX Top (2-second) on {len(moids)} host MOID(s) of this source"
+                  f"{'; standard on' if mine.get('standard') else ''}{'; verbose on' if mine.get('verbose') else ''} ({secs:.2f} s)")
+        else:
+            print(f"  metrics config: this source is not among the {len(cfg)} configured vCenters ({secs:.2f} s)")
+    else:
+        print(f"  metrics config: not readable on this build (HTTP {st}); the ESX Top host list stays unknown")
 
     st, meta, secs = rtm_get("/api/v1/metadata", jwt, {"limit": 10000, "sourceId": source})
     if st != 200:

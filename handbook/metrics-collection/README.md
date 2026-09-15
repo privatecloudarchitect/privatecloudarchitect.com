@@ -23,7 +23,8 @@ instance, read-only:
    platform marks as part of uniqueness, and the composite key the sheet recommends,
    `(vcenter_instance_uuid, moid)`.
 5. **The real-time path** (`rtm_query.py`): mints the service-scoped JWT the VCF services runtime
-   requires, counts the metric names collected for one vCenter, runs one PromQL instant query and
+   requires, reads which hosts of the vCenter have the 2-second ESX Top set switched on, counts
+   the metric names collected for one vCenter, runs one PromQL instant query and
    a `count by (profile)` beside it (one call returns at most 101 series and reports the cut only in a
    warning), then reads the served cadence per acquisition profile as the spacing between value
    changes at a 2-second step: 2 seconds for the ESX Top profile, 20 for the 20-second profiles.
