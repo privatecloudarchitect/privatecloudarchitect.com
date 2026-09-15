@@ -131,18 +131,33 @@ Exit code 0.
 
 ```
 $ python3 rtm_query.py --source-id <vcenter-instance-uuid>
-REAL-TIME METRICS QUERY - read 2026-09-15 01:05 UTC, service JWT minted for this run (35-minute lifetime)
+REAL-TIME METRICS QUERY - read 2026-09-15 05:36 UTC, service JWT minted for this run (35-minute lifetime)
 
-  metadata: 175 metric names collected for this source (0.53 s)
+  metadata: 175 metric names collected for this source (0.37 s)
     e.g. cpu.capacity.contention.HOST, cpu.capacity.contention.VM, cpu.capacity.usage.HOST, cpu.capacity.usage.VM, cpu.corecount.contention.HOST
 
-  instant query cpu.capacity.contention.HOST: 3 series (0.66 s)
-    labels: cluster, datacenter, feature, host, host_fqdn, host_ip, profile, provider, vc_ip
+  instant query cpu.utilization.PCORE: 101 series returned (0.58 s)
+    labels: cluster, core, datacenter, feature, host, host_fqdn, host_ip, profile, provider, vc_ip
     object identity is the MOID label (vm, host, cluster, datacenter); the vCenter half
     is the sourceId you passed, so stamp every row with it.
 
-  range vector cpu.capacity.contention.HOST[10m]: 3 series, 31 raw samples in the first; spacing 20 to 20 s (0.79 s)
-    the served grid; a step-based query_range would carry values forward and hide it.
+  count by (profile): 288 series in the store
+    ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS: 144
+    TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS: 144
+    the instant query returned 101 of 288 and warned 'Results truncated due to limit.':
+    one call returns at most 101 series; read a large object set one host at a time
+    (a label matcher such as {host="host-123"}), and treat the warning as an error in a pipeline.
+
+  cadence, cpu.utilization.PCORE at step 2s over 3 minutes, first series per profile:
+    ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS: 91 points, 86 value changes, 2 s between changes: the served cadence (0.79 s)
+    TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS: 91 points, 8 value changes, 20 s between changes: the served cadence (0.75 s)
+
+  contrast, range vector cpu.utilization.PCORE[3m]: 10 raw samples in the first series, spacing 20 to 20 s (0.59 s)
+    a range vector returns the 20-second grid for every profile; it cannot show the 2-second data.
 ```
 
 Exit code 0. A wrong `--source-id` returns a successful answer with no series and exit code 1.
+The default metric is served under two acquisition profiles on purpose: the run shows the profile
+split, the two cadences, and the 101-series ceiling in one read (three hosts of 48 cores here).
+A metric under one profile prints one cadence line; a name that is idle in the window prints
+"no value change" rather than a cadence, which is a fact about the object, not the store.

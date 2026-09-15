@@ -23,8 +23,12 @@ instance, read-only:
    platform marks as part of uniqueness, and the composite key the sheet recommends,
    `(vcenter_instance_uuid, moid)`.
 5. **The real-time path** (`rtm_query.py`): mints the service-scoped JWT the VCF services runtime
-   requires, counts the metric names collected for one vCenter, runs one PromQL instant query,
-   and reads the raw sample spacing with a range vector.
+   requires, counts the metric names collected for one vCenter, runs one PromQL instant query and
+   a `count by (profile)` beside it (one call returns at most 101 series and reports the cut only in a
+   warning), then reads the served cadence per acquisition profile as the spacing between value
+   changes at a 2-second step: 2 seconds for the ESX Top profile, 20 for the 20-second profiles.
+   A range vector is printed last as the contrast, because it returns a 20-second grid for every
+   profile and hides the 2-second data.
 
 ## Run it
 
@@ -68,6 +72,8 @@ build it was proven on and is minted fresh every run). Nothing here writes.
 - `collection_planes.py` exits 0 when every retention key sits at its default, 1 when one is tuned.
 - `rollup_check.py` exits 0 when every full hourly bucket matches the native points exactly.
 - `rtm_query.py` exits 1 when the source returns no series; check the UUID before anything else.
+  When the instant query returns fewer series than the count, the call was cut at the service's
+  ceiling: read that metric one host at a time in a pipeline, never from one call.
 
 ## Expected output
 
