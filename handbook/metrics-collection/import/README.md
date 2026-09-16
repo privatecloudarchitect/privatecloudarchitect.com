@@ -17,14 +17,14 @@ both imports take the product's own Manage > Import screens, the same path any c
 
 ## 1. Views: Visualize > Views > Manage > Import
 
-`import/views/collect-once-views.import.zip`, one file, do not unzip. It carries the six views: PCA - Collect
+`views/collect-once-views.import.zip`, one file, do not unzip. It carries the six views: PCA - Collect
 Once - VM - Configuration and State, CPU Demand and Contention, Memory Demand and Contention, Virtual Disk
 Workload, Network Workload, Storage and Guest Filesystem. You know it worked when six views with those names
 appear in the list. Views update in place by id, so a later copy of the same file replaces them.
 
 ## 2. Dashboard: Visualize > Dashboards > Manage > Import
 
-`import/dashboards/collection-strategy-guide.import.zip`, one file, do not unzip. The dashboard binds the six
+`dashboards/collection-strategy-guide.import.zip`, one file, do not unzip. The dashboard binds the six
 views by id, which is why the views go first: without them the six list widgets have nothing to show. You know
 it worked when **PCA - Collection Strategy Guide** appears under Dashboards and its six lists fill with your own
 VMs (the lists ride the vSphere World provider, so they show every VM the instance manages). The dashboard, its
@@ -42,7 +42,7 @@ Bind it one of two ways:
 - **After import:** open the dashboard, edit each of the three viewers (the widgets titled "Contention hot
   list at 20 seconds", "vCPU to physical core ratio per host", and "The 2-second tail"), choose your VCF domain
   as the source, save.
-- **Before import:** rebuild the bundle with your id in this folder: `python build_dashboard.py --source-id <id>`,
+- **Before import:** rebuild the bundle with your id in `../../frameworks/collect-once/`: `python build_dashboard.py --source-id <id>`,
   where `<id>` is the resource id of your VCF domain
   (`GET /suite-api/api/resources?resourceKind=VCFDomain&adapterKind=VcfAdapter`).
 
@@ -72,5 +72,5 @@ issue with what the screen showed.
 
 ## Rebuild instead of adjust
 
-The generators and sources live in this folder: `build_copy.py` (the teaching text), `build_views.py` (the six views
-and their bundle), `build_dashboard.py` (the dashboard and its bundle, `--source-id` to bind the viewers). The bundles under `import/` are what those generators emit; the chapter's folder carries byte copies of them.
+The generators and sources live in `../../frameworks/collect-once/`: `build_copy.py` (the teaching text), `build_views.py` (the six views
+and their bundle), `build_dashboard.py` (the dashboard and its bundle, `--source-id` to bind the viewers). The two files here are byte copies of the bundles those generators emit.

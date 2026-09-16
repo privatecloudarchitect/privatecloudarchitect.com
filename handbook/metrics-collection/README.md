@@ -1,94 +1,68 @@
-# Metrics collection harness
+# Metrics collection: the guide first, then the proof
 
-Backs the metrics-collection sheet
-([privatecloudarchitect.com/handbook/metrics-collection](https://privatecloudarchitect.com/handbook/metrics-collection)).
-The sheet's claims about what VCF Operations collects, keeps, and serves, runnable against your own
-instance, read-only:
+The chapter ([privatecloudarchitect.com/handbook/metrics-collection](https://privatecloudarchitect.com/handbook/metrics-collection))
+makes one claim in three planes: the hypervisor half of any VM utilization list is already collected once by
+VCF Operations, kept at a cadence you can name, and served through APIs you can size. This folder is the
+hands-on side of that claim, in the order a first visit should take it.
 
-1. **The three planes** (`collection_planes.py`): the vCenter adapters collect through vStats at a
-   sampling rate they own and store one value per 5 minutes; the global settings decide how long
-   the 5-minute band, the hourly roll-ups, the real-time store, and the ESX Top set are kept; the
-   default policy's allocation model is the ruler that capacity and rightsizing measure against.
-   Every retention value prints beside its product default, and a tuned value is flagged.
-2. **The roll-up** (`rollup_check.py`): the stored 5-minute value is one number per point, so
-   asking for MIN or MAX at that grain returns the same values as AVG; server-side hourly AVG and
-   MAX buckets are checked against the native points and pass only when exact to three decimals.
-   The VM's peak keys (`20_sec_peak_*`, `peak_*`) are listed: the only within-cycle maxima that
-   survive at 5-minute cadence.
-3. **The extraction coefficients** (`extract_measure.py`): points, bytes, latency, bytes per point,
-   and points per second for one VM over 7 days at native resolution and as hourly buckets, then an
-   optional fan-out of N VMs x 4 statkeys over a day. Resources with no data in a window are
-   omitted from the response; the script reports them as absence, never as zero.
-4. **The identity key** (`identity_keys.py`): the identifiers one VM carries, which of them the
-   platform marks as part of uniqueness, and the composite key the sheet recommends,
-   `(vcenter_instance_uuid, moid)`.
-5. **The real-time path** (`rtm_query.py`): mints the service-scoped JWT the VCF services runtime
-   requires, reads which hosts of the vCenter have the 2-second ESX Top set switched on, counts
-   the metric names collected for one vCenter, runs one PromQL instant query and
-   a `count by (profile)` beside it (one call returns at most 101 series and reports the cut only in a
-   warning), then reads the served cadence per acquisition profile as the spacing between value
-   changes at a 2-second step: 2 seconds for the ESX Top profile, 20 for the 20-second profiles.
-   A range vector is printed last as the contrast, because it returns a 20-second grid for every
-   profile and hides the 2-second data.
+| Step | Where | What you do | Time |
+|---|---|---|---|
+| 1 | [`import/`](import/) | Import two files into your VCF Operations and bind three widgets. You now have the **PCA - Collection Strategy Guide** running on your own VMs. | about ten minutes |
+| 2 | the dashboard | Read it top to bottom. The order of its widgets is the lesson; the list below says what each one teaches. | an hour, once |
+| 3 | [`harness/`](harness/) | Run the read-only scripts that reproduce the chapter's measurements against your instance: the planes and their retention, the roll-up check, the extraction coefficients, the identity key, the real-time path. | an afternoon |
+| 4 | [`collection-planes-atlas.html`](collection-planes-atlas.html) | The twelve plates the chapter draws, as one page you can open in a browser or hand to someone. | as needed |
 
-## Run it
+## 1. Import the guide
 
-```bash
-export OPS_HOST=<your-ops-fqdn>
-export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
-export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
+[`import/README.md`](import/README.md) is the whole procedure: the prerequisites, the two files in the order
+they must go in (views, then the dashboard that binds them), the one instance-specific step (pointing the
+three PromQL Viewers at your VCF domain), what to adjust if you want to, and what each symptom means if a
+widget stays empty. Nothing in it writes through the API; both imports take the product's own Manage >
+Import screens.
 
-python3 collection_planes.py
-python3 rollup_check.py                      # or --vm <name>; default: the busiest VM by CPU MHz
-python3 extract_measure.py --vms 50          # --vms is optional; calls run one at a time
-python3 identity_keys.py --vm <name>
+## 2. Read the guide in order
 
-export RTM_HOST=<your-vcf-instance-services-fqdn>   # fronts /data-query-service
-python3 rtm_query.py --source-id <vcenter-instance-uuid>   # VMEntityVCID from identity_keys.py
-```
+The dashboard is one tab of twenty-four widgets, laid out top to bottom as a course. Read them in this order:
 
-Stdlib Python only. `opslib.py` holds the broker exchange (the api-token flow the handbook's
-Part 0 identity chapter teaches); `rtmlib.py` holds the per-service JWT exchange that the
-Real-Time Metrics API requires in place of the suite-api bearer (`GET /api/integrations/services`
-for the `VCF_VODAP` key, then `POST /api/auth/token/exchange`; the JWT lasted 35 minutes on the
-build it was proven on and is minted fresh every run). Nothing here writes.
+1. **Start here: collect once, decide at source.** The claim, the three planes, and how to use the rest of the tab.
+2. **The VM utilization catalog, mapped to Operations.** Every counter a BI or platform team asks for, beside the
+   Operations key that already holds it, the vCenter counter behind it with its statistics level, the guest-OS
+   family Tools reports, and the decision keys only Operations carries.
+3. **Configuration and state**, with a live list of your VMs beside it. Each of the six families is a pair: the
+   text explains the keys, the list shows your own estate under exactly those keys.
+4. **CPU: demand, ready, co-stop**, with its live list.
+5. **Memory: active, consumed, the reclamation ladder**, with its live list.
+6. **Virtual disk and network**, with two live lists.
+7. **Storage and guest filesystem**, with its live list.
+8. **The mean and its hidden peak.** Click a VM in the CPU or memory list: the two charts draw the 5-minute mean
+   beside the in-cycle peak the mean hides, which is the chapter's central measurement made visible.
+9. **Real-Time Metrics: read a name, pin the feature**, with three PromQL Viewers charting queries written for the
+   strategy: the bounded contention hot list, the vCPU-to-core ratio computed live from two families, and the
+   2-second latency tail.
+10. **PromQL for the strategy.** Ten queries, the functions the engine serves, and the dialect's rules, every one
+    executed against a live instance when the guide was built.
+11. **What should not come from Operations, and when.**
+12. **Extract it: three tiers, one key, the rules, and the PromQL calls.** The contract for feeding a warehouse.
+13. **Reference: every column, statkey, unit, cadence.** The lookup table, last on purpose.
 
-## Scope, stated plainly
+## 3. Prove it on your instance
 
-- Everything was proven on one VCF Operations 9.1.0 instance with Real-Time Metrics deployed
-  (proven 2026-09-15). Retention and policy values print beside their defaults because the
-  sheet's figures are the defaults; if yours are tuned, the sheet's numbers change accordingly.
-- The coefficients `extract_measure.py` prints are inputs to your own sizing estimate, not facts
-  about the product: bytes per point and latency depend on your node and your network. Run it for a
-  day of extraction before sizing streams.
-- `rollup_check.py` needs a VM with three hours of data; a fresh instance or an idle VM reports a
-  short window rather than a verdict.
-- `rtm_query.py` needs Real-Time Metrics deployed on the VCF instance that fronts `RTM_HOST`, and a
-  `--source-id` that is the vCenter instance UUID. Any other value returns a successful empty
-  answer, because the service does not validate the source.
+[`harness/README.md`](harness/README.md) runs five stdlib-Python scripts, read-only, against your own
+instance: the planes and their retention beside the product defaults, the roll-up exactness check, the
+extraction coefficients, the identity key, and the real-time path. Each prints beside an expected transcript.
 
-## Reading the output
+## 4. The atlas
 
-- `collection_planes.py` exits 0 when every retention key sits at its default, 1 when one is tuned.
-- `rollup_check.py` exits 0 when every full hourly bucket matches the native points exactly.
-- `rtm_query.py` exits 1 when the source returns no series; check the UUID before anything else.
-  When the instant query returns fewer series than the count, the call was cut at the service's
-  ceiling: read that metric one host at a time in a pipeline, never from one call.
+`collection-planes-atlas.html` is the Collection Planes Atlas: twelve plates that draw the planes, the
+horizons, the catalog with vCenter statistics levels, the extraction contract, the regional shape, the
+domains beyond vSphere, the identity key, the real-time plane's rules, and the proof that the store's mean
+and peak keys are roll-ups of the 20-second samples. It is the same page as the artifact linked from the
+chapter.
 
-## Expected output
+## Where the guide comes from
 
-See [`expected-output.md`](expected-output.md) for the transcript shape of each script.
-
-## The atlas and the dashboard
-
-- `collection-planes-atlas.html` is the published Collection Planes Atlas, twelve plates that draw the planes,
-  the horizons, the catalog with vCenter statistics levels, the extraction contract, the regional shape, the
-  domains beyond vSphere, the identity key, the real-time plane's rules, and the proof that the store's mean
-  and peak keys are rollups of the 20-second samples. Open it in a browser; it is the same page as the
-  published artifact linked from the chapter.
-- `../../frameworks/collect-once/` is the PCA - Collection Strategy Guide: an importable VCF Operations
-  dashboard (six live VM lists, the catalog mapped to Operations keys, the hidden-peak charts, three PromQL
-  Viewers, the extraction contract with the calls behind it), its generators, the reference lists every key
-  is checked against, and `promql/`, the verified PromQL reference with `verify_promql.py`, which re-runs the
-  functions and the ten strategy queries against your own instance.
+[`../../frameworks/collect-once/`](../../frameworks/collect-once/) holds the guide's sources and generators
+(the six view definitions, the thirteen teaching widgets, the dashboard builder), the reference lists every
+key is checked against, and `promql/`, the verified PromQL reference with the script that re-runs it against
+your instance. The two files in `import/` here are byte copies of the bundles those generators emit; rebuild
+there when you change something, and the copies here follow.

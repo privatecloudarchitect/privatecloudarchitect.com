@@ -14,7 +14,7 @@ without re-deriving them. Every claim below carries its evidence; the JSON files
 | `verify_promql.py` | regenerates the three JSON files against a live instance (about 250 calls, two minutes); `--guidance-xlsx <file>` adds the per-provider classification | stdlib only; credentials in-process, never printed |
 
 The VMware guidance list (`VODAP-9.1-Metrics-List-Per-Provider.xlsx`) is read from a path you give; it is not stored in this
-repository. Source of record for the strategy these examples serve: `the Collect Once, Decide at Source charter, whose public form is the metrics-collection chapter`.
+repository. Source of record for the strategy these examples serve: the Collect Once, Decide at Source charter (its public form is the metrics-collection chapter).
 
 ## 1. How it was verified
 

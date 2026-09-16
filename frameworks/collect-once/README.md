@@ -4,8 +4,8 @@ An educational VCF Operations dashboard for any BI or platform team that plans t
 (vCenter PerformanceManager counters plus guest-OS items). It shows, live on the importing instance, that the
 hypervisor half of any such list is already collected once, at which cadence each value is kept,
 which peak keys the 5-minute mean hides, the Real-Time Metrics plane live through three PromQL Viewers charting
-queries built for the strategy (the tables in the teaching widgets are generated from `the promql folder beside the generators: `), what should not come from Operations and when, and the three-tier extraction contract
-that feeds an ELT warehouse. Source of record: `the Collect Once, Decide at Source charter, whose public form is the metrics-collection chapter`.
+queries built for the strategy (the tables in the teaching widgets are generated from the `promql/` folder beside the generators), what should not come from Operations and when, and the three-tier extraction contract
+that feeds an ELT warehouse. Source of record: the Collect Once, Decide at Source charter (its public form is the metrics-collection chapter).
 
 | Piece | Home | Generator |
 |---|---|---|
