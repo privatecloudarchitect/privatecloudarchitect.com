@@ -1,0 +1,581 @@
+[
+ {
+  "name": "sum",
+  "key": "sum",
+  "id": "fn-1",
+  "description": "Sum of values across all time series",
+  "form": "snapshot",
+  "signature": "sum(<instant vector>) [by|without (labels)]",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "by and without both work. Vector matching modifiers (on, ignoring, group_left) are parse errors."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 1,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "sum(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "min",
+  "key": "min",
+  "id": "fn-2",
+  "description": "Minimum value across all time series",
+  "form": "snapshot",
+  "signature": "min(<instant vector>) [by|without (labels)]",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 1,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "min(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "max",
+  "key": "max",
+  "id": "fn-3",
+  "description": "Maximum value across all time series",
+  "form": "snapshot",
+  "signature": "max(<instant vector>) [by|without (labels)]",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 1,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "max(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "avg",
+  "key": "avg",
+  "id": "fn-4",
+  "description": "Average value across all time series",
+  "form": "snapshot",
+  "signature": "avg(<instant vector>) [by|without (labels)]",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 1,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "avg(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "count",
+  "key": "count",
+  "id": "fn-5",
+  "description": "Number of time series in result set",
+  "form": "snapshot",
+  "signature": "count(<instant vector>) [by|without (labels)]",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 1,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "count(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "topk",
+  "key": "topk",
+  "id": "fn-6",
+  "description": "Top k time series by value",
+  "form": "count-then-snapshot",
+  "signature": "topk(k, <instant vector>) [by (labels)]",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "Evaluated per step: over a range the answer is the union of every step's top k (6 series for k=3 over 30 minutes on 6 hosts) and the legend changes as leaders change. by (label) is accepted."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "topk(3, cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "bottomk",
+  "key": "bottomk",
+  "id": "fn-7",
+  "description": "Bottom k time series by value",
+  "form": "count-then-snapshot",
+  "signature": "bottomk(k, <instant vector>) [by (labels)]",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "Per step, as topk; the union of every step's bottom k."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "bottomk(3, cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "topn_sum",
+  "key": "topn_sum",
+  "id": "fn-8",
+  "description": "Top n time series by sum",
+  "form": "count-then-snapshot",
+  "signature": "topn_sum(n, <instant vector>)",
+  "standard_promql": false,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "VCF-specific. Selects the n series with the highest sum over the whole query range and returns their raw values (checked against a manual sum over 6 hosts): exactly n series, stable legend. by (label) is accepted and ignored; VMware guidance says by and without are unsupported."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "topn_sum(3, cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "bottomn_sum",
+  "key": "bottomn_sum",
+  "id": "fn-9",
+  "description": "Bottom n time series by sum",
+  "form": "count-then-snapshot",
+  "signature": "bottomn_sum(n, <instant vector>)",
+  "standard_promql": false,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "VCF-specific. Mirror of topn_sum: the n series with the lowest sum over the range, raw values returned."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "bottomn_sum(3, cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "avg_over_time",
+  "key": "avg_over_time",
+  "id": "fn-10",
+  "description": "Average value over time range",
+  "form": "clip",
+  "signature": "avg_over_time(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "The range must sit inside a function: a bare range vector is a parse error in a range query, and the PromQL Viewer widget always runs a range query."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "avg_over_time(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "min_over_time",
+  "key": "min_over_time",
+  "id": "fn-11",
+  "description": "Minimum value over time range",
+  "form": "clip",
+  "signature": "min_over_time(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "min_over_time(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "max_over_time",
+  "key": "max_over_time",
+  "id": "fn-12",
+  "description": "Maximum value over time range",
+  "form": "clip",
+  "signature": "max_over_time(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "max_over_time(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "sum_over_time",
+  "key": "sum_over_time",
+  "id": "fn-13",
+  "description": "Sum of values over time range",
+  "form": "clip",
+  "signature": "sum_over_time(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "sum_over_time(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "count_over_time",
+  "key": "count_over_time",
+  "id": "fn-14",
+  "description": "Number of points over time range",
+  "form": "clip",
+  "signature": "count_over_time(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "Counts raw samples: 3 per minute on the 20-second profiles, 30 on the ESX Top profile. The cadence instrument."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "count_over_time(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "last_over_time",
+  "key": "last_over_time",
+  "id": "fn-15",
+  "description": "Most recent value over time range",
+  "form": "clip",
+  "signature": "last_over_time(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "last_over_time(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "abs",
+  "key": "abs",
+  "id": "fn-16",
+  "description": "Absolute value of time series",
+  "form": "snapshot",
+  "signature": "abs(<instant vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "abs(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "ceil",
+  "key": "ceil",
+  "id": "fn-17",
+  "description": "Round values up to nearest integer",
+  "form": "snapshot",
+  "signature": "ceil(<instant vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "ceil(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "floor",
+  "key": "floor",
+  "id": "fn-18",
+  "description": "Round values down to nearest integer",
+  "form": "snapshot",
+  "signature": "floor(<instant vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "floor(cpu.usagemhz.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "rate",
+  "key": "rate",
+  "id": "fn-19",
+  "description": "Per-second rate of increase over time range",
+  "form": "clip",
+  "signature": "rate(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "Counter semantics apply on this build: on a gauge (cpu.usagemhz.HOST, 84 decreases in 181 samples) rate() returned no negative value and matched a reset-adding computation (mean absolute error 4 against 282 for a plain first-to-last delta). The example in VMware guidance rate(cpu.capacity.usage.HOST{host='host-17'}[5m]) applies it to a gauge and overstates change.",
+   "Use avg_over_time or max_over_time for a level; rate and increase only on cumulative names (vmop.*.CLSTR and DCENTER, envoy_*_total)."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "rate(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "resets",
+  "key": "resets",
+  "id": "fn-20",
+  "description": "Number of counter resets over time range",
+  "form": "clip",
+  "signature": "resets(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "Equals the number of decreases inside the window (167 of 181 buckets exact on a gauge); on a gauge it counts dips, not counter resets."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "resets(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "absent",
+  "key": "absent",
+  "id": "fn-21",
+  "description": "Returns 1 if vector is empty, empty result otherwise",
+  "form": "snapshot",
+  "signature": "absent(<instant vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "Returns one series valued 1 when the selector matches nothing (an unknown name or an unmatched label), and nothing when it matches. The reconcile-absence guard for a scoped extract."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 1,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "absent(no.such.metric.HOST)",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "absent_over_time",
+  "key": "absent_over_time",
+  "id": "fn-22",
+  "description": "Returns 1 if range vector is empty, empty result otherwise",
+  "form": "clip",
+  "signature": "absent_over_time(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": true,
+  "on_guidance_page": true,
+  "cautions": [
+   "As absent, over the range."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 1,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "absent_over_time(no.such.metric.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "irate",
+  "key": "irate",
+  "id": "fn-23",
+  "description": "Per-second rate from the last two data points of the range (VMware guidance wording: uses the last two data points)",
+  "form": "clip",
+  "signature": "irate(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": false,
+  "on_guidance_page": true,
+  "cautions": [
+   "Same counter semantics as rate; on a gauge it returned no negative value and did not match a last-two-points delta."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "irate(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ },
+ {
+  "name": "increase",
+  "key": "increase",
+  "id": "fn-24",
+  "description": "Increase of a counter over the range (standard PromQL; not in VMware guidance, not in the widget list)",
+  "form": "clip",
+  "signature": "increase(<range vector>)",
+  "standard_promql": true,
+  "listed_in_widget": false,
+  "on_guidance_page": false,
+  "cautions": [
+   "Correct on the cumulative vmop.* names (vmop.vmotion.CLSTR stepped 2227 to 2230 over 24 h on the management source); returns 0 on a quiet cluster."
+  ],
+  "verified": {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "http": 200,
+   "series": 3,
+   "status": "served",
+   "error": "",
+   "warnings": [],
+   "query": "increase(cpu.usagemhz.HOST[5m])",
+   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+  }
+ }
+]

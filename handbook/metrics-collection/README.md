@@ -79,3 +79,16 @@ build it was proven on and is minted fresh every run). Nothing here writes.
 ## Expected output
 
 See [`expected-output.md`](expected-output.md) for the transcript shape of each script.
+
+## The atlas and the dashboard
+
+- `collection-planes-atlas.html` is the published Collection Planes Atlas, twelve plates that draw the planes,
+  the horizons, the catalog with vCenter statistics levels, the extraction contract, the regional shape, the
+  domains beyond vSphere, the identity key, the real-time plane's rules, and the proof that the store's mean
+  and peak keys are rollups of the 20-second samples. Open it in a browser; it is the same page as the
+  published artifact linked from the chapter.
+- `../../frameworks/collect-once/` is the PCA - Collection Strategy Guide: an importable VCF Operations
+  dashboard (six live VM lists, the catalog mapped to Operations keys, the hidden-peak charts, three PromQL
+  Viewers, the extraction contract with the calls behind it), its generators, the reference lists every key
+  is checked against, and `promql/`, the verified PromQL reference with `verify_promql.py`, which re-runs the
+  functions and the ten strategy queries against your own instance.

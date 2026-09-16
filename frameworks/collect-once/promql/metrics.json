@@ -1,0 +1,6727 @@
+[
+  {
+    "name": "Error Packet Drop",
+    "key": "tn-traffic.datapath_system_error_packet_drops",
+    "id": "extModel6271-1"
+  },
+  {
+    "name": "LWD_SNAP_SES_TOTAL_WRITE_TIME",
+    "key": "lwd.snapshot.ses.totalWriteTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-2"
+  },
+  {
+    "name": "Normalized IOPS",
+    "key": "NIOPS.VIRTUAL_DISK",
+    "id": "extModel6271-3"
+  },
+  {
+    "name": "Unmap IOs",
+    "key": "datastore.unmapIOs.HOST",
+    "id": "extModel6271-4"
+  },
+  {
+    "name": "Managed Object Reference Statistics",
+    "key": "vcDebugInfo.morefregstats.VCDBG",
+    "id": "extModel6271-5"
+  },
+  {
+    "name": "LWD_SYNC_READ_BYTES",
+    "key": "lwd.sync.readBytes.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-6"
+  },
+  {
+    "name": "Total VM Reads On vDisk",
+    "key": "storage.commands.read.VM.VDISK",
+    "id": "extModel6271-7"
+  },
+  {
+    "name": "Active Commands On Storage Adapter",
+    "key": "storage.commands.active.SADAPTER",
+    "id": "extModel6271-8"
+  },
+  {
+    "name": "CPU Core Run Or Utilization",
+    "key": "cpu.utilization.PCORE",
+    "id": "extModel6271-9"
+  },
+  {
+    "name": "Maximum VMFS PB Cache Size",
+    "key": "mem.vmfs.pbc.sizeMax.HOST",
+    "id": "extModel6271-10"
+  },
+  {
+    "name": "GPU Clocks Compute Utilization",
+    "key": "gpu.compute.clock.used.DEVICE",
+    "id": "extModel6271-11"
+  },
+  {
+    "name": "Queued Commands On Storage Path",
+    "key": "storage.commands.queued.SPATH",
+    "id": "extModel6271-12"
+  },
+  {
+    "name": "Vnic Tx Mbps",
+    "key": "platform.vnic_txmbps",
+    "id": "extModel6271-13"
+  },
+  {
+    "name": "VNA Disk Write Time",
+    "key": "vna.disk.write_time",
+    "id": "extModel6271-14"
+  },
+  {
+    "name": "Average Datastore Read IOPS On Host",
+    "key": "datastore.numberReadAveraged.HOST",
+    "id": "extModel6271-15"
+  },
+  {
+    "name": "Network Received Packets/sec (pNICs)",
+    "key": "datapath.uplink.pnic.rxpps.HOST",
+    "id": "extModel6271-16"
+  },
+  {
+    "name": "VSAN Backend Resync Read Throughput On Host",
+    "key": "tputResyncRead.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-17"
+  },
+  {
+    "name": "Resource CPU Allocation Shares On Host",
+    "key": "sys.resourceCpuAllocShares.HOST",
+    "id": "extModel6271-18"
+  },
+  {
+    "name": "MEMCTL Max",
+    "key": "mem.memctl.max.HOST",
+    "id": "extModel6271-19"
+  },
+  {
+    "name": "NFS WriteTime",
+    "key": "filesystem.writeTime.FSTYPE.FSPATH",
+    "id": "extModel6271-20"
+  },
+  {
+    "name": "PNIC Data Receive Rate On VM",
+    "key": "net.pnicBytesRx.VM",
+    "id": "extModel6271-21"
+  },
+  {
+    "name": "Cache Size",
+    "key": "vcResources.cachesz.VCRES",
+    "id": "extModel6271-22"
+  },
+  {
+    "name": "VM Guest Shutdown Operations On Datacenter",
+    "key": "vmop.shutdownGuest.DCENTER",
+    "id": "extModel6271-23"
+  },
+  {
+    "name": "disk.commandsAborted.DSTORE.LUN",
+    "key": "disk.commandsAborted.DSTORE.LUN",
+    "id": "extModel6271-24"
+  },
+  {
+    "name": "VM Host Change (cold)",
+    "key": "vmop.changeHost.CLSTR",
+    "id": "extModel6271-25"
+  },
+  {
+    "name": "VCPUs With 0% CPU Usage",
+    "key": "datapath.vcpu.0pct.HOST",
+    "id": "extModel6271-26"
+  },
+  {
+    "name": "User RPC Operations Per Second",
+    "key": "vmx.userRpc.opsPerS.VM",
+    "id": "extModel6271-27"
+  },
+  {
+    "name": "Host Power Capacity Usage - System",
+    "key": "power.capacity.usageSystem.HOST",
+    "id": "extModel6271-28"
+  },
+  {
+    "name": "Reserved Memory Capacity % On Host",
+    "key": "mem.reservedCapacityPct.HOST",
+    "id": "extModel6271-29"
+  },
+  {
+    "name": "Failed Requests To SDK Endpoint",
+    "key": "envoy_cluster_upstream_rq",
+    "id": "extModel6271-30"
+  },
+  {
+    "name": "Outbound Packet Drop Rate On Host PNIC",
+    "key": "portTxDrops.HR_VSAN_HOST_NET",
+    "id": "extModel6271-31"
+  },
+  {
+    "name": "VSAN Client Read Latency On Cluster",
+    "key": "latencyAvgRead.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-32"
+  },
+  {
+    "name": "LWD_SNAP_SES_NUM_WRITES",
+    "key": "lwd.snapshot.ses.numWrites.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-33"
+  },
+  {
+    "name": "Guest Needed Memory Reservation",
+    "key": "guest.mem.neededReservation.VM",
+    "id": "extModel6271-34"
+  },
+  {
+    "name": "Logical Router Total Bytes",
+    "key": "edge_lr_port_stats.lr_total_bytes",
+    "id": "extModel6271-35"
+  },
+  {
+    "name": "CPU System Time Per VCPU",
+    "key": "cpu.system.VM.VCPU",
+    "id": "extModel6271-36"
+  },
+  {
+    "name": "VM Register Operations On Datacenter",
+    "key": "vmop.register.DCENTER",
+    "id": "extModel6271-37"
+  },
+  {
+    "name": "Broadcast Transmit Packets Per LAG",
+    "key": "net.throughput.vds.lagTxBcast.DVS.LAG",
+    "id": "extModel6271-38"
+  },
+  {
+    "name": "Data Receive Rate On VM",
+    "key": "net.bytesRx.VM",
+    "id": "extModel6271-39"
+  },
+  {
+    "name": "MEMCTL Target",
+    "key": "mem.memctl.target.HOST",
+    "id": "extModel6271-40"
+  },
+  {
+    "name": "CPU System",
+    "key": "vcResources.systemcpuusage.VCRES",
+    "id": "extModel6271-41"
+  },
+  {
+    "name": "Average Percentage Of RDT Used CPU Time",
+    "key": "avgUsedPct.VSAN_RDT_CPU",
+    "id": "extModel6271-42"
+  },
+  {
+    "name": "VM Host And Datastore Change (powered-on VMs) Operations On Cluster",
+    "key": "vmop.xvmotion.CLSTR",
+    "id": "extModel6271-43"
+  },
+  {
+    "name": "Guest Memory Page In Rate",
+    "key": "guest.page.inRate.VM",
+    "id": "extModel6271-44"
+  },
+  {
+    "name": "VM Read Rate On vDisk",
+    "key": "virtualDisk.read.VM",
+    "id": "extModel6271-45"
+  },
+  {
+    "name": "storageAdapter.OIOsPct.HOST",
+    "key": "storageAdapter.OIOsPct.HOST",
+    "id": "extModel6271-46"
+  },
+  {
+    "name": "Multicast Transmit Packets Per LAG",
+    "key": "net.throughput.vds.lagTxMcast.DVS.LAG",
+    "id": "extModel6271-47"
+  },
+  {
+    "name": "CPU Configured",
+    "key": "cpu.corecount.provisioned.VM",
+    "id": "extModel6271-48"
+  },
+  {
+    "name": "CPU Fairness",
+    "key": "clusterServices.cpufairness.HOST",
+    "id": "extModel6271-49"
+  },
+  {
+    "name": "PNIC RX FIFO Error",
+    "key": "rxFifoErr.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-50"
+  },
+  {
+    "name": "Average Datastore Read IOPS On VM",
+    "key": "datastore.numberReadAveraged.VM",
+    "id": "extModel6271-51"
+  },
+  {
+    "name": "VM Power Off Operations On Datacenter",
+    "key": "vmop.poweroff.DCENTER",
+    "id": "extModel6271-52"
+  },
+  {
+    "name": "Task Management Error (virtReset)",
+    "key": "storage.errors.virtReset.VM",
+    "id": "extModel6271-53"
+  },
+  {
+    "name": "Task Management Error (virtResetRetry) On Storage Path",
+    "key": "storage.errors.virtResetRetry.SPATH",
+    "id": "extModel6271-54"
+  },
+  {
+    "name": "Read Latency (Adapter)",
+    "key": "storage.latency.read.SADAPTER",
+    "id": "extModel6271-55"
+  },
+  {
+    "name": "CPU Usage",
+    "key": "managementAgent.cpuUsage.HOST",
+    "id": "extModel6271-56"
+  },
+  {
+    "name": "Replication Data Transmit Rate On VM",
+    "key": "net.throughput.hbr.outbound.VM",
+    "id": "extModel6271-57"
+  },
+  {
+    "name": "disk.scsiReservationConflicts.HOST",
+    "key": "disk.scsiReservationConflicts.HOST",
+    "id": "extModel6271-58"
+  },
+  {
+    "name": "Page-fault Latency",
+    "key": "mem.latency.HOST",
+    "id": "extModel6271-59"
+  },
+  {
+    "name": "Active Memory On VM",
+    "key": "mem.active.VM",
+    "id": "extModel6271-60"
+  },
+  {
+    "name": "Total Enhanced VR Data Receive Rate",
+    "key": "lwd.hbrNetRx.HOST",
+    "id": "extModel6271-61"
+  },
+  {
+    "name": "Memory Free",
+    "key": "mem.physical.free.HOST",
+    "id": "extModel6271-62"
+  },
+  {
+    "name": "CPU Privileged",
+    "key": "vcResources.priviledgedcpuusage.VCRES",
+    "id": "extModel6271-63"
+  },
+  {
+    "name": "High VCPU Ready Percentage",
+    "key": "platform.vcpu_utilization_hist_max",
+    "id": "extModel6271-64"
+  },
+  {
+    "name": "Active Commands On VM",
+    "key": "storage.commands.active.VM",
+    "id": "extModel6271-65"
+  },
+  {
+    "name": "Replication Network Latency On VM",
+    "key": "net.latency.hbr.outbound.VM",
+    "id": "extModel6271-66"
+  },
+  {
+    "name": "Broadcast Received Packets Per PNIC",
+    "key": "net.throughput.pktsRxBroadcast.PNIC",
+    "id": "extModel6271-67"
+  },
+  {
+    "name": "Network Dropped Packets",
+    "key": "net.droppedRx.HOST",
+    "id": "extModel6271-68"
+  },
+  {
+    "name": "Total Memory Capacity On Cluster In MB",
+    "key": "mem.totalmb.CLSTR",
+    "id": "extModel6271-69"
+  },
+  {
+    "name": "PMEM Other",
+    "key": "mem.physical.user.HOST",
+    "id": "extModel6271-70"
+  },
+  {
+    "name": "Remote VSAN Write Throughput On HCI Cluster",
+    "key": "throughputWrite.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-71"
+  },
+  {
+    "name": "Failed Requests To UI Endpoint",
+    "key": "envoy_cluster_upstream_rq_retry_success",
+    "id": "extModel6271-72"
+  },
+  {
+    "name": "Worst Case Allocation",
+    "key": "cpu.cpuentitlement.VM",
+    "id": "extModel6271-73"
+  },
+  {
+    "name": "Tiered Memory Latency",
+    "key": "mem.latency.readWrite.MEMTYPE",
+    "id": "extModel6271-74"
+  },
+  {
+    "name": "NFS Socket Buffer Out Of Space Counter",
+    "key": "filesystem.socketBufferFull.FSTYPE.FSPATH",
+    "id": "extModel6271-75"
+  },
+  {
+    "name": "CPU L3 Cache Occupancy",
+    "key": "cpu.cache.l3.occupancy.VM",
+    "id": "extModel6271-76"
+  },
+  {
+    "name": "Shared Memory On Cluster",
+    "key": "mem.shared.CLSTR",
+    "id": "extModel6271-77"
+  },
+  {
+    "name": "GPU Memory Used",
+    "key": "gpu.mem.used.DEVICE",
+    "id": "extModel6271-78"
+  },
+  {
+    "name": "VSAN Clients Read Throughput On Cluster",
+    "key": "throughputRead.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-79"
+  },
+  {
+    "name": "VM StandBy Guest Operations On Cluster",
+    "key": "vmop.standbyGuest.CLSTR",
+    "id": "extModel6271-80"
+  },
+  {
+    "name": "VNA Current Sessions",
+    "key": "vna.edge_aggregate_stats.lb_current_sessions",
+    "id": "extModel6271-81"
+  },
+  {
+    "name": "vSphere Replication VM Count On Host",
+    "key": "hbr.hbrNumVms.HOST",
+    "id": "extModel6271-82"
+  },
+  {
+    "name": "disk.deviceLatency.HOST",
+    "key": "disk.deviceLatency.HOST",
+    "id": "extModel6271-83"
+  },
+  {
+    "name": "CPU Overlap Time Per VCPU",
+    "key": "cpu.overlap.VM.VCPU",
+    "id": "extModel6271-84"
+  },
+  {
+    "name": "Vnic Tx PPS",
+    "key": "platform.vnic_txpps",
+    "id": "extModel6271-85"
+  },
+  {
+    "name": "NAT Max Connections",
+    "key": "edge_aggregate_stats.fw_lr_port_nat_conn_max",
+    "id": "extModel6271-86"
+  },
+  {
+    "name": "VNA LRP Rx Drop",
+    "key": "vna.edge_aggregate_stats.lr_port_rx_drops",
+    "id": "extModel6271-87"
+  },
+  {
+    "name": "Multicast Packets Received Per PNIC",
+    "key": "net.multicastRx.PNIC",
+    "id": "extModel6271-88"
+  },
+  {
+    "name": "Swap Reclaimed Target",
+    "key": "mem.swap.target.HOST",
+    "id": "extModel6271-89"
+  },
+  {
+    "name": "Miss",
+    "key": "platform.flowcache.misses",
+    "id": "extModel6271-90"
+  },
+  {
+    "name": "VM Commands Succeeded On LUN",
+    "key": "storage.commands.success.VM.LUN",
+    "id": "extModel6271-91"
+  },
+  {
+    "name": "VNA LRP Tx Frag Ok",
+    "key": "vna.edge_aggregate_stats.lr_port_tx_frag_ok",
+    "id": "extModel6271-92"
+  },
+  {
+    "name": "Lcore Total Usage",
+    "key": "platform.edp.total_lcore_usage",
+    "id": "extModel6271-93"
+  },
+  {
+    "name": "PNIC RX Generic Error",
+    "key": "rxErr.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-94"
+  },
+  {
+    "name": "disk.used.DSTORE",
+    "key": "disk.used.DSTORE",
+    "id": "extModel6271-95"
+  },
+  {
+    "name": "Multicast Rx Packet",
+    "key": "tn-traffic.multicast_rx_packets",
+    "id": "extModel6271-96"
+  },
+  {
+    "name": "Task Management Error (deviceReset) On LUN",
+    "key": "storage.errors.deviceReset.LUN",
+    "id": "extModel6271-97"
+  },
+  {
+    "name": "Network Transmit Packets Dropped Per PNIC",
+    "key": "net.throughput.droppedTx.PNIC",
+    "id": "extModel6271-98"
+  },
+  {
+    "name": "VSAN ESA Object Read IOPS On Host",
+    "key": "iopsRead.HR_HOST_ZDOM_TOP_STATS",
+    "id": "extModel6271-99"
+  },
+  {
+    "name": "Overall Latency (Disk)",
+    "key": "storage.latency.totalDavg.LUN",
+    "id": "extModel6271-100"
+  },
+  {
+    "name": "Virtual Disk Number Of Terminations",
+    "key": "virtualDisk.commandsAborted.VM.VDISK",
+    "id": "extModel6271-101"
+  },
+  {
+    "name": "disk.kernelLatency.HOST",
+    "key": "disk.kernelLatency.HOST",
+    "id": "extModel6271-102"
+  },
+  {
+    "name": "Read rate on vDisk",
+    "key": "virtualDisk.read.VM.VDISK",
+    "id": "extModel6271-103"
+  },
+  {
+    "name": "High DP CPU Ready Count",
+    "key": "platform.network_thread.lready_count",
+    "id": "extModel6271-104"
+  },
+  {
+    "name": "PNIC TX Generic Error",
+    "key": "txErr.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-105"
+  },
+  {
+    "name": "Packet Transmit ErrorsPer PNIC",
+    "key": "net.errorsTx.PNIC",
+    "id": "extModel6271-106"
+  },
+  {
+    "name": "Memory Swapped Out On Host",
+    "key": "mem.swapout.HOST",
+    "id": "extModel6271-107"
+  },
+  {
+    "name": "mem.swapOut.HOST",
+    "key": "mem.swapOut.HOST",
+    "id": "extModel6271-108"
+  },
+  {
+    "name": "Network Received Throughput",
+    "key": "net.received.HOST",
+    "id": "extModel6271-109"
+  },
+  {
+    "name": "CPU Throughput Or Usage",
+    "key": "cpu.capacity.usage.HOST",
+    "id": "extModel6271-110"
+  },
+  {
+    "name": "disk.provisioned.DSTORE.LUN",
+    "key": "disk.provisioned.DSTORE.LUN",
+    "id": "extModel6271-111"
+  },
+  {
+    "name": "storagePath.totalReadLatency.SPATH",
+    "key": "storagePath.totalReadLatency.SPATH",
+    "id": "extModel6271-112"
+  },
+  {
+    "name": "Reclamation Threshold",
+    "key": "mem.lowfreethreshold.HOST",
+    "id": "extModel6271-113"
+  },
+  {
+    "name": "Read latency on vDisk",
+    "key": "virtualDisk.totalReadLatency.VM.VDISK",
+    "id": "extModel6271-114"
+  },
+  {
+    "name": "Memory Decompression Rate",
+    "key": "mem.decompressionRate.HOST",
+    "id": "extModel6271-115"
+  },
+  {
+    "name": "Remote VSAN Read IOPS On HCI Cluster",
+    "key": "iopsRead.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-116"
+  },
+  {
+    "name": "disk.maxQueueDepth.HOST",
+    "key": "disk.maxQueueDepth.HOST",
+    "id": "extModel6271-117"
+  },
+  {
+    "name": "Average Percentage Of ZDOM Used CPU Time",
+    "key": "avgUsedPct.VSAN_ZDOM_CPU",
+    "id": "extModel6271-118"
+  },
+  {
+    "name": "Task Management Error (abort) For VM On vDisk",
+    "key": "storage.errors.abort.VM.VDISK",
+    "id": "extModel6271-119"
+  },
+  {
+    "name": "Broadcast Received Packets Per LAG",
+    "key": "net.throughput.vds.lagRxBcast.DVS.LAG",
+    "id": "extModel6271-120"
+  },
+  {
+    "name": "Memory Read Bandwidth",
+    "key": "mem.bandwidth.read.MEMTYPE",
+    "id": "extModel6271-121"
+  },
+  {
+    "name": "FileSystem Total Size",
+    "key": "filesystem.total.FSTYPE.FSPATH",
+    "id": "extModel6271-122"
+  },
+  {
+    "name": "Unknown Unicast Rx Packet",
+    "key": "tn-traffic.hostswitch_unknown_l2_unicast_from_uplink_rx",
+    "id": "extModel6271-123"
+  },
+  {
+    "name": "Number Of Medium Seeks",
+    "key": "virtualDisk.mediumSeeks.VM.VDISK",
+    "id": "extModel6271-124"
+  },
+  {
+    "name": "Active Request Count",
+    "key": "requests.current.SERVICE",
+    "id": "extModel6271-125"
+  },
+  {
+    "name": "Inbound Packet Drop Rate Of PNIC VSwitch Port",
+    "key": "portRxDrops.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-126"
+  },
+  {
+    "name": "PNIC Error Packets In Receive Path",
+    "key": "net.throughput.errorsRx.PNIC",
+    "id": "extModel6271-127"
+  },
+  {
+    "name": "Median Enhanced VR Disk Transfer Network Latency",
+    "key": "lwd.hbrNetLatencyMedian.VM",
+    "id": "extModel6271-128"
+  },
+  {
+    "name": "Resource CPU Allocation Maximum (in MHz) On Host",
+    "key": "sys.resourceCpuAllocMax.HOST",
+    "id": "extModel6271-129"
+  },
+  {
+    "name": "Segments Written ZDOM Cleaning",
+    "key": "numSegsWrite.ZDOM_SEG_CLEANING",
+    "id": "extModel6271-130"
+  },
+  {
+    "name": "VM Reset Operations On Datacenter",
+    "key": "vmop.reset.DCENTER",
+    "id": "extModel6271-131"
+  },
+  {
+    "name": "Resource Pool CPU Usage In MHz",
+    "key": "cpu.usagemhz.RESPOOL",
+    "id": "extModel6271-132"
+  },
+  {
+    "name": "FileSystem Free Size",
+    "key": "filesystem.free.FSTYPE.FSPATH",
+    "id": "extModel6271-133"
+  },
+  {
+    "name": "disk.capacity.provisioned.DSTORE",
+    "key": "disk.capacity.provisioned.DSTORE",
+    "id": "extModel6271-134"
+  },
+  {
+    "name": "Memory Zero",
+    "key": "mem.zero.HOST",
+    "id": "extModel6271-135"
+  },
+  {
+    "name": "Write Latency (Guest)",
+    "key": "storage.latency.writeGavg.LUN",
+    "id": "extModel6271-136"
+  },
+  {
+    "name": "Queued VM Commands On LUN",
+    "key": "storage.commands.queued.VM.LUN",
+    "id": "extModel6271-137"
+  },
+  {
+    "name": "IOPS Bank Flush Bypass Write",
+    "key": "iopsBankFlushBypassWrite.ZDOM_OVERVIEW",
+    "id": "extModel6271-138"
+  },
+  {
+    "name": "LWD_SYNC_LAST_UPDATE_TIME",
+    "key": "lwd.sync.lastUpdateTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-139"
+  },
+  {
+    "name": "Resource CPU Usage On Host",
+    "key": "sys.resourceCpuUsage.HOST",
+    "id": "extModel6271-140"
+  },
+  {
+    "name": "VM Reconfigure Operations On Cluster",
+    "key": "vmop.reconfigure.CLSTR",
+    "id": "extModel6271-141"
+  },
+  {
+    "name": "mem.reservedCapacity.vmkOvrhd.VM",
+    "key": "mem.reservedCapacity.vmkOvrhd.VM",
+    "id": "extModel6271-142"
+  },
+  {
+    "name": "Minimum Overhead Heap Memory Usage",
+    "key": "vmx.overheadMemSizeMin.VM",
+    "id": "extModel6271-143"
+  },
+  {
+    "name": "Memory Kernel Usage",
+    "key": "mem.sysUsage.HOST",
+    "id": "extModel6271-144"
+  },
+  {
+    "name": "CPU Active (15 Min Peak)",
+    "key": "rescpu.actpk15.HOST",
+    "id": "extModel6271-145"
+  },
+  {
+    "name": "Resource Memory Shared",
+    "key": "sys.resourceMemCow.HOST",
+    "id": "extModel6271-146"
+  },
+  {
+    "name": "VSAN ESA Object Write Throughput On Cluster",
+    "key": "throughputWrite.HR_CLUSTER_ZDOM_TOP_STATS",
+    "id": "extModel6271-147"
+  },
+  {
+    "name": "Network Transmit Packets Dropped Per DVS",
+    "key": "net.throughput.droppedTx.DVS",
+    "id": "extModel6271-148"
+  },
+  {
+    "name": "Write Time",
+    "key": "disk.write_time",
+    "id": "extModel6271-149"
+  },
+  {
+    "name": "Datastore Latency Observed By VMs",
+    "key": "datastore.datastoreVMObservedLatency.HOST",
+    "id": "extModel6271-150"
+  },
+  {
+    "name": "Pnic Count",
+    "key": "platform.pnic_count",
+    "id": "extModel6271-151"
+  },
+  {
+    "name": "VM Average Overall Read Latency Per LUN",
+    "key": "storage.latency.read.VM.LUN",
+    "id": "extModel6271-152"
+  },
+  {
+    "name": "1-Minute System Load",
+    "key": "system.load_average_one",
+    "id": "extModel6271-153"
+  },
+  {
+    "name": "Read Latency (queue)",
+    "key": "storage.latency.readQavg.LUN",
+    "id": "extModel6271-154"
+  },
+  {
+    "name": "Host Memory Consumed",
+    "key": "mem.consumed.HOST",
+    "id": "extModel6271-155"
+  },
+  {
+    "name": "VSAN Backend Resync Read Throughput On Cluster",
+    "key": "tputResyncRead.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-156"
+  },
+  {
+    "name": "CPU Load Average 1 Min",
+    "key": "cpu.load.avg1min.HOST",
+    "id": "extModel6271-157"
+  },
+  {
+    "name": "NAT Conn Active",
+    "key": "edge_aggregate_stats.fw_lr_port_nat_conn_active",
+    "id": "extModel6271-158"
+  },
+  {
+    "name": "CPU Base Capacity (Cycle)",
+    "key": "cpu.totalCapacity.HOST",
+    "id": "extModel6271-159"
+  },
+  {
+    "name": "Unknown Unicast Tx Packet",
+    "key": "tn-traffic.hostswitch_unknown_l2_unicast_to_uplink_tx",
+    "id": "extModel6271-160"
+  },
+  {
+    "name": "VCPUs With 90% CPU Usage",
+    "key": "datapath.vcpu.90pct.HOST",
+    "id": "extModel6271-161"
+  },
+  {
+    "name": "Average Percentage Of Used CPU Time",
+    "key": "avgUsedPct.VSAN_DOM_CPU",
+    "id": "extModel6271-162"
+  },
+  {
+    "name": "disk.capacity.provisioned.POD",
+    "key": "disk.capacity.provisioned.POD",
+    "id": "extModel6271-163"
+  },
+  {
+    "name": "Resource CPU Allocation Shares On System Resources",
+    "key": "sys.resourceCpuAllocShares.SYSRES",
+    "id": "extModel6271-164"
+  },
+  {
+    "name": "Write Commands/sec (Adapter)",
+    "key": "storage.iops.write.SADAPTER",
+    "id": "extModel6271-165"
+  },
+  {
+    "name": "vMotion Operations On Datacenter",
+    "key": "vmop.vmotion.DCENTER",
+    "id": "extModel6271-166"
+  },
+  {
+    "name": "LWD_SNAP_LAST_UPDATE_TIME",
+    "key": "lwd.snapshot.lastUpdateTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-167"
+  },
+  {
+    "name": "Resource CPU Maximum Limited (1 Min) On Host",
+    "key": "sys.resourceCpuMaxLimited1.HOST",
+    "id": "extModel6271-168"
+  },
+  {
+    "name": "Datastore Throughput Usage Per LUN",
+    "key": "datastore.throughput.usage.DSTORE.LUN",
+    "id": "extModel6271-169"
+  },
+  {
+    "name": "LWD_SYNC_READS",
+    "key": "lwd.sync.reads.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-170"
+  },
+  {
+    "name": "VM Memory Read Bandwidth",
+    "key": "mem.bandwidth.read.VM.MEMTYPE",
+    "id": "extModel6271-171"
+  },
+  {
+    "name": "VM Energy Usage",
+    "key": "power.energy.VM",
+    "id": "extModel6271-172"
+  },
+  {
+    "name": "Remote VSAN Read Throughput On Cluster",
+    "key": "throughputRead.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-173"
+  },
+  {
+    "name": "Read Latency (Disk)",
+    "key": "storage.latency.readDavg.LUN",
+    "id": "extModel6271-174"
+  },
+  {
+    "name": "GPU Compute Demand",
+    "key": "gpu.compute.clock.demand.DEVICE",
+    "id": "extModel6271-175"
+  },
+  {
+    "name": "VSAN Backend Host Outstanding IO",
+    "key": "oio.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-176"
+  },
+  {
+    "name": "Rate Of Data Received Per VNIC",
+    "key": "net.bytesRx.VM.VNIC",
+    "id": "extModel6271-177"
+  },
+  {
+    "name": "LRP Rx Drop",
+    "key": "edge_aggregate_stats.lr_port_rx_drops",
+    "id": "extModel6271-178"
+  },
+  {
+    "name": "Read Throughput Per LUN On VM",
+    "key": "datastore.read.VM.LUN",
+    "id": "extModel6271-179"
+  },
+  {
+    "name": "VSAN Clients Resync Read IOPS On Host",
+    "key": "iopsResyncRead.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-180"
+  },
+  {
+    "name": "Lcore 90 Percent Number",
+    "key": "platform.edp.num_lcore_usage_gt_90percent",
+    "id": "extModel6271-181"
+  },
+  {
+    "name": "High DP CPU Ready Percentage",
+    "key": "platform.network_thread.ready_hist_max",
+    "id": "extModel6271-182"
+  },
+  {
+    "name": "Remote VSAN Write IOPS On HCI Host",
+    "key": "iopsWrite.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-183"
+  },
+  {
+    "name": "LWD_SYNC_OFFLINE",
+    "key": "lwd.sync.offline.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-184"
+  },
+  {
+    "name": "datastore.throughput.contention.DSTORE.LUN",
+    "key": "datastore.throughput.contention.DSTORE.LUN",
+    "id": "extModel6271-185"
+  },
+  {
+    "name": "VMFS Cancelled Journal Transactions",
+    "key": "filesystem.vmfs.cancelledTxn.FSTYPE.FSPATH",
+    "id": "extModel6271-186"
+  },
+  {
+    "name": "VM Datastore Change (cold) On Cluster",
+    "key": "vmop.changeDS.CLSTR",
+    "id": "extModel6271-187"
+  },
+  {
+    "name": "Failed Commands On Storage Path",
+    "key": "storage.commands.failed.SPATH",
+    "id": "extModel6271-188"
+  },
+  {
+    "name": "Memory Overhead",
+    "key": "mem.capacity.overhead.VM",
+    "id": "extModel6271-189"
+  },
+  {
+    "name": "Average Datastore Write IOPS On Host",
+    "key": "datastore.numberWriteAveraged.HOST",
+    "id": "extModel6271-190"
+  },
+  {
+    "name": "disk.kernelLatency.LUN",
+    "key": "disk.kernelLatency.LUN",
+    "id": "extModel6271-191"
+  },
+  {
+    "name": "PNIC Throughput Usage For ISCSI",
+    "key": "net.throughput.usage.iscsi.PNIC",
+    "id": "extModel6271-192"
+  },
+  {
+    "name": "System Resource Memory Shares On Host",
+    "key": "sys.resourceMemAllocShares.HOST",
+    "id": "extModel6271-193"
+  },
+  {
+    "name": "Task Management Error (busResetFailed) On Storage Path",
+    "key": "storage.errors.busResetFailed.SPATH",
+    "id": "extModel6271-194"
+  },
+  {
+    "name": "Remote VSAN Read Latency On HCI Cluster",
+    "key": "latencyAvgRead.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-195"
+  },
+  {
+    "name": "Storage DRS Datastore Bytes Read",
+    "key": "datastore.datastoreReadBytes.HOST",
+    "id": "extModel6271-196"
+  },
+  {
+    "name": "VM Total Throughput",
+    "key": "storage.throughput.total.VM",
+    "id": "extModel6271-197"
+  },
+  {
+    "name": "Task Management Error (virtReset) On LUN",
+    "key": "storage.errors.virtReset.LUN",
+    "id": "extModel6271-198"
+  },
+  {
+    "name": "Number Of Small Seeks",
+    "key": "virtualDisk.smallSeeks.VM.VDISK",
+    "id": "extModel6271-199"
+  },
+  {
+    "name": "Broadcast Packets Transmitted",
+    "key": "net.broadcastTx.HOST",
+    "id": "extModel6271-200"
+  },
+  {
+    "name": "Total Bank Latency",
+    "key": "totalBankLat.ZDOM_IO",
+    "id": "extModel6271-201"
+  },
+  {
+    "name": "Host Cache Swap In Rate On VM",
+    "key": "mem.llSwapInRate.VM",
+    "id": "extModel6271-202"
+  },
+  {
+    "name": "VM Create Operations On Cluster",
+    "key": "vmop.create.CLSTR",
+    "id": "extModel6271-203"
+  },
+  {
+    "name": "storageAdapter.write.HOST",
+    "key": "storageAdapter.write.HOST",
+    "id": "extModel6271-204"
+  },
+  {
+    "name": "storageAdapter.queued.HOST",
+    "key": "storageAdapter.queued.HOST",
+    "id": "extModel6271-205"
+  },
+  {
+    "name": "Failed Commands On VM",
+    "key": "storage.commands.failed.VM",
+    "id": "extModel6271-206"
+  },
+  {
+    "name": "disk.numberWriteAveraged.VM.LUN",
+    "key": "disk.numberWriteAveraged.VM.LUN",
+    "id": "extModel6271-207"
+  },
+  {
+    "name": "Memory Ballooned On Resource Pool",
+    "key": "mem.vmmemctl.RESPOOL",
+    "id": "extModel6271-208"
+  },
+  {
+    "name": "CPU Throttled (15 Min Average)",
+    "key": "rescpu.maxLimited15.HOST",
+    "id": "extModel6271-209"
+  },
+  {
+    "name": "MEM Overcommit Avg In 5 Min",
+    "key": "mem.overcommit.avg5min.HOST",
+    "id": "extModel6271-210"
+  },
+  {
+    "name": "Storage Throughput (Disk)",
+    "key": "storage.throughput.total.LUN",
+    "id": "extModel6271-211"
+  },
+  {
+    "name": "Storage Throughput (vDisk)",
+    "key": "storage.throughput.total.VM.VDISK",
+    "id": "extModel6271-212"
+  },
+  {
+    "name": "Network Received Throughput (vNIC)",
+    "key": "datapath.vnic.rxmbps.HOST",
+    "id": "extModel6271-213"
+  },
+  {
+    "name": "datastore.throughput.contention.DSTORE",
+    "key": "datastore.throughput.contention.DSTORE",
+    "id": "extModel6271-214"
+  },
+  {
+    "name": "Replication Data Receive Rate On Host",
+    "key": "net.throughput.hbr.inbound.HOST",
+    "id": "extModel6271-215"
+  },
+  {
+    "name": "Broadcast Transmit Packets Per PNIC",
+    "key": "net.throughput.pktsTxBroadcast.PNIC",
+    "id": "extModel6271-216"
+  },
+  {
+    "name": "GPU Memory Usage In %",
+    "key": "gpu.mem.usage.DEVICE",
+    "id": "extModel6271-217"
+  },
+  {
+    "name": "Datastore.vmfs.pbc.capMissRatio.HOST",
+    "key": "datastore.vmfs.pbc.capMissRatio.HOST",
+    "id": "extModel6271-218"
+  },
+  {
+    "name": "Memory Latency",
+    "key": "mem.capacity.contention.HOST",
+    "id": "extModel6271-219"
+  },
+  {
+    "name": "Data Transmit Rate Per PNIC",
+    "key": "net.bytesTx.PNIC",
+    "id": "extModel6271-220"
+  },
+  {
+    "name": "Miscellaneous",
+    "key": "vcDebugInfo.miscstats.VCDBG",
+    "id": "extModel6271-221"
+  },
+  {
+    "name": "Total Create Calls On NFS",
+    "key": "nfs.totalCreate.HOST",
+    "id": "extModel6271-222"
+  },
+  {
+    "name": "Read Throughput (vDisk)",
+    "key": "storage.throughput.read.VM.VDISK",
+    "id": "extModel6271-223"
+  },
+  {
+    "name": "storagePath.commandsAveraged.SPATH",
+    "key": "storagePath.commandsAveraged.SPATH",
+    "id": "extModel6271-224"
+  },
+  {
+    "name": "Memory Fairness",
+    "key": "clusterServices.memfairness.HOST",
+    "id": "extModel6271-225"
+  },
+  {
+    "name": "Network Total Throughput Per PNIC Averaged",
+    "key": "net.throughput.usage.vm.PNIC",
+    "id": "extModel6271-226"
+  },
+  {
+    "name": "Task Management Error (deviceResetFailed) On LUN",
+    "key": "storage.errors.deviceResetFailed.LUN",
+    "id": "extModel6271-227"
+  },
+  {
+    "name": "vMotion Network Throughput",
+    "key": "net.throughput.usage.vmotion.PNIC",
+    "id": "extModel6271-228"
+  },
+  {
+    "name": "VGPU Memory Utilization",
+    "key": "gpu.mem.utilization.VM.DEVICE",
+    "id": "extModel6271-229"
+  },
+  {
+    "name": "Guest Disk Request Queue",
+    "key": "guest.disk.requestQueue.VM",
+    "id": "extModel6271-230"
+  },
+  {
+    "name": "Total Cache Reference Rate",
+    "key": "rateTotalCacheRef.HR_ZDOM_VTX",
+    "id": "extModel6271-231"
+  },
+  {
+    "name": "DP CPU Tx PPS",
+    "key": "edge_dp_cpu.tx_pps",
+    "id": "extModel6271-232"
+  },
+  {
+    "name": "CPU Active (15 Min Average) On VM",
+    "key": "rescpu.actav15.VM",
+    "id": "extModel6271-233"
+  },
+  {
+    "name": "Link Speed",
+    "key": "pnic.link_speed",
+    "id": "extModel6271-234"
+  },
+  {
+    "name": "storageAdapter.queueLatency.HOST",
+    "key": "storageAdapter.queueLatency.HOST",
+    "id": "extModel6271-235"
+  },
+  {
+    "name": "Remote VSAN Read IOPS On Host",
+    "key": "iopsRead.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-236"
+  },
+  {
+    "name": "Read Time",
+    "key": "disk.read_time",
+    "id": "extModel6271-237"
+  },
+  {
+    "name": "VM CPU Usage Per VCPU",
+    "key": "cpu.usage.VM.VCPU",
+    "id": "extModel6271-238"
+  },
+  {
+    "name": "GPU Memory Uncorrected ECC Errors",
+    "key": "gpu.mem.errors.ecc.uncorrected.DEVICE",
+    "id": "extModel6271-239"
+  },
+  {
+    "name": "Guest Available Memory",
+    "key": "guest.mem.available.VM",
+    "id": "extModel6271-240"
+  },
+  {
+    "name": "Remote VSAN Congestion On Compute Cluster",
+    "key": "congestion.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-241"
+  },
+  {
+    "name": "CPU Ready",
+    "key": "cpu.ready.HOST",
+    "id": "extModel6271-242"
+  },
+  {
+    "name": "VM Power Off Operations On Cluster",
+    "key": "vmop.poweroff.CLSTR",
+    "id": "extModel6271-243"
+  },
+  {
+    "name": "Active Commands On Storage Path",
+    "key": "storage.commands.active.SPATH",
+    "id": "extModel6271-244"
+  },
+  {
+    "name": "Group CPU Sample Period",
+    "key": "rescpu.samplePeriod.HOST",
+    "id": "extModel6271-245"
+  },
+  {
+    "name": "Memory Active Per Tier",
+    "key": "mem.capacity.active.VM.MEMTYPE",
+    "id": "extModel6271-246"
+  },
+  {
+    "name": "storagePath.write.SPATH",
+    "key": "storagePath.write.SPATH",
+    "id": "extModel6271-247"
+  },
+  {
+    "name": "Remote VSAN Write Throughput On Host",
+    "key": "throughputWrite.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-248"
+  },
+  {
+    "name": "Total Packet Processing Threads On Host",
+    "key": "datapath.net.threads.count.HOST",
+    "id": "extModel6271-249"
+  },
+  {
+    "name": "Network Received Packets Per DVPort",
+    "key": "net.throughput.vds.pktsRx.DVS.PORT",
+    "id": "extModel6271-250"
+  },
+  {
+    "name": "GPU Tensor Utilization",
+    "key": "gpu.tensor.utilization.DEVICE",
+    "id": "extModel6271-251"
+  },
+  {
+    "name": "CPU System Time On VM",
+    "key": "cpu.system.VM",
+    "id": "extModel6271-252"
+  },
+  {
+    "name": "Task Management Error (abort) On LUN",
+    "key": "storage.errors.abort.LUN",
+    "id": "extModel6271-253"
+  },
+  {
+    "name": "Total Enhanced VR Average Disk Read Latency",
+    "key": "lwd.hbrDiskReadLatency.HOST",
+    "id": "extModel6271-254"
+  },
+  {
+    "name": "VSAN Clients Resync Read IOPS On Cluster",
+    "key": "iopsResyncRead.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-255"
+  },
+  {
+    "name": "Storage Reservation Conflicts On VM",
+    "key": "storage.errors.reservationConflicts.VM",
+    "id": "extModel6271-256"
+  },
+  {
+    "name": "Memory Consumed By VMs Per Tier",
+    "key": "mem.consumed.vms.MEMTYPE",
+    "id": "extModel6271-257"
+  },
+  {
+    "name": "Memory Swapped In",
+    "key": "mem.swapin.HOST",
+    "id": "extModel6271-258"
+  },
+  {
+    "name": "CPU Active (5 Min Peak) On VM",
+    "key": "rescpu.actpk5.VM",
+    "id": "extModel6271-259"
+  },
+  {
+    "name": "Disk Read Rate",
+    "key": "vcResources.diskreadsrate.VCRES",
+    "id": "extModel6271-260"
+  },
+  {
+    "name": "Remote VSAN Read IOPS On HCI Host",
+    "key": "iopsRead.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-261"
+  },
+  {
+    "name": "Lcore Number",
+    "key": "platform.edp.num_lcores",
+    "id": "extModel6271-262"
+  },
+  {
+    "name": "CPU Load Average 15 Mins",
+    "key": "cpu.load.avg15min.HOST",
+    "id": "extModel6271-263"
+  },
+  {
+    "name": "Heap",
+    "key": "mem.heap.HOST",
+    "id": "extModel6271-264"
+  },
+  {
+    "name": "Average Datastore Read IOPS Per LUN On VM",
+    "key": "datastore.numberReadAveraged.VM.LUN",
+    "id": "extModel6271-265"
+  },
+  {
+    "name": "VM Network Usage",
+    "key": "net.usage.VM",
+    "id": "extModel6271-266"
+  },
+  {
+    "name": "VSAN ESA Object Read Latency On Cluster",
+    "key": "latencyAvgRead.HR_CLUSTER_ZDOM_TOP_STATS",
+    "id": "extModel6271-267"
+  },
+  {
+    "name": "Physical Memory",
+    "key": "vcResources.physicalmemusage.VCRES",
+    "id": "extModel6271-268"
+  },
+  {
+    "name": "VNA Tier 0 Downlink Tx Packets",
+    "key": "vna.edge_lr_port_stats.t0_aggregated_tx_downlink_packets",
+    "id": "extModel6271-269"
+  },
+  {
+    "name": "Host Storage Path Throughput Usage",
+    "key": "storagePath.throughput.usage.HOST",
+    "id": "extModel6271-270"
+  },
+  {
+    "name": "CPU Co-stop On VM",
+    "key": "cpu.costop.VM",
+    "id": "extModel6271-271"
+  },
+  {
+    "name": "VM Average Overall Latency",
+    "key": "storage.latency.total.VM",
+    "id": "extModel6271-272"
+  },
+  {
+    "name": "Unmap Latency To Disk Groups On VSAN Host",
+    "key": "latencyAvgUnmap.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-273"
+  },
+  {
+    "name": "VSAN Backend Host Congestions",
+    "key": "congestion.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-274"
+  },
+  {
+    "name": "Total RX Errors",
+    "key": "datapath.uplink.pnic.rxerrortotal.HOST",
+    "id": "extModel6271-275"
+  },
+  {
+    "name": "VM Memory Write Bandwidth",
+    "key": "mem.bandwidth.write.VM.MEMTYPE",
+    "id": "extModel6271-276"
+  },
+  {
+    "name": "MEM Overcommit Avg In 15 Min",
+    "key": "mem.overcommit.avg15min.HOST",
+    "id": "extModel6271-277"
+  },
+  {
+    "name": "disk.maxTotalLatency.VM",
+    "key": "disk.maxTotalLatency.VM",
+    "id": "extModel6271-278"
+  },
+  {
+    "name": "disk.deltaused.VM",
+    "key": "disk.deltaused.VM",
+    "id": "extModel6271-279"
+  },
+  {
+    "name": "CPU Running (1 Min Peak)",
+    "key": "rescpu.runpk1.HOST",
+    "id": "extModel6271-280"
+  },
+  {
+    "name": "storageAdapter.queueDepth.HOS",
+    "key": "storageAdapter.queueDepth.HOST",
+    "id": "extModel6271-281"
+  },
+  {
+    "name": "Memory Compression Rate On VM",
+    "key": "mem.compressionRate.VM",
+    "id": "extModel6271-282"
+  },
+  {
+    "name": "PNIC Inbound Packets Per Second",
+    "key": "rxPackets.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-283"
+  },
+  {
+    "name": "Vnic Rx Eps",
+    "key": "platform.vnic_rxeps",
+    "id": "extModel6271-284"
+  },
+  {
+    "name": "Resource Memory Allocation Minimum (in KB)",
+    "key": "sys.resourceMemAllocMin.HOST",
+    "id": "extModel6271-285"
+  },
+  {
+    "name": "Host Sync Latency",
+    "key": "vcDebugInfo.hostsynclatencystats.VCDBG",
+    "id": "extModel6271-286"
+  },
+  {
+    "name": "Memory Capacity Usage",
+    "key": "mem.capacity.usage.HOST",
+    "id": "extModel6271-287"
+  },
+  {
+    "name": "Network Transmit Packets Dropped Per LAG",
+    "key": "net.throughput.vds.lagDropTx.DVS.LAG",
+    "id": "extModel6271-288"
+  },
+  {
+    "name": "storageAdapter.read.HOST",
+    "key": "storageAdapter.read.HOST",
+    "id": "extModel6271-289"
+  },
+  {
+    "name": "Average Datastore Write IOPS On VM",
+    "key": "datastore.numberWriteAveraged.VM",
+    "id": "extModel6271-290"
+  },
+  {
+    "name": "Unmap Throughput To Disk Groups On VSAN Host",
+    "key": "throughputUnmap.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-291"
+  },
+  {
+    "name": "disk.write.DSTORE.LUN",
+    "key": "disk.write.DSTORE.LUN",
+    "id": "extModel6271-292"
+  },
+  {
+    "name": "DRS Score",
+    "key": "clusterServices.clusterDrsScore.CLSTR",
+    "id": "extModel6271-293"
+  },
+  {
+    "name": "datastore.vmfs.unmapIOs.HOST",
+    "key": "datastore.vmfs.unmapIOs.HOST",
+    "id": "extModel6271-294"
+  },
+  {
+    "name": "LWD_SNAP_TOTAL_WRITES",
+    "key": "lwd.snapshot.totalWrites.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-295"
+  },
+  {
+    "name": "Task Management Error (abortRetry) On Storage Path",
+    "key": "storage.errors.abortRetry.SPATH",
+    "id": "extModel6271-296"
+  },
+  {
+    "name": "Network Packets Received Per PNIC",
+    "key": "net.packetsRx.PNIC",
+    "id": "extModel6271-297"
+  },
+  {
+    "name": "CPU Usage On VM",
+    "key": "cpu.used.VM",
+    "id": "extModel6271-298"
+  },
+  {
+    "name": "Memory Write Latency",
+    "key": "mem.latency.write.MEMTYPE",
+    "id": "extModel6271-299"
+  },
+  {
+    "name": "Total Memory",
+    "key": "system.mem_total",
+    "id": "extModel6271-300"
+  },
+  {
+    "name": "CPU Run Time Per VCPU",
+    "key": "cpu.run.VM.VCPU",
+    "id": "extModel6271-301"
+  },
+  {
+    "name": "Network Transmit Packets Per PNIC",
+    "key": "net.throughput.pktsTx.PNIC",
+    "id": "extModel6271-302"
+  },
+  {
+    "name": "Guest CPU Context Switch",
+    "key": "guest.contextSwapRate.VM",
+    "id": "extModel6271-303"
+  },
+  {
+    "name": "CPU Active (15 Min Average)",
+    "key": "rescpu.actav15.HOST",
+    "id": "extModel6271-304"
+  },
+  {
+    "name": "Network Transmit Packets Dropped Per DVPort",
+    "key": "net.throughput.vds.droppedTx.DVS.PORT",
+    "id": "extModel6271-305"
+  },
+  {
+    "name": "Memory Swapped",
+    "key": "mem.swap.current.HOST",
+    "id": "extModel6271-306"
+  },
+  {
+    "name": "Failed Reads On Storage Path",
+    "key": "storage.commands.readFailed.SPATH",
+    "id": "extModel6271-307"
+  },
+  {
+    "name": "Maximum Overhead Heap Memory Usage",
+    "key": "vmx.overheadMemSizeMax.VM",
+    "id": "extModel6271-308"
+  },
+  {
+    "name": "VM Total Throughput Per LUN",
+    "key": "storage.throughput.total.VM.LUN",
+    "id": "extModel6271-309"
+  },
+  {
+    "name": "LWD_SNAP_STATUS",
+    "key": "lwd.snapshot.status.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-310"
+  },
+  {
+    "name": "Transferred Data Per Disk",
+    "key": "hbr.hbrDiskTransferBytes.HOST",
+    "id": "extModel6271-311"
+  },
+  {
+    "name": "storagePath.numberWriteAveraged.SPATH",
+    "key": "storagePath.numberWriteAveraged.SPATH",
+    "id": "extModel6271-312"
+  },
+  {
+    "name": "Resource CPU Active (1 Min Average) On System Resources",
+    "key": "sys.resourceCpuAct1.SYSRES",
+    "id": "extModel6271-313"
+  },
+  {
+    "name": "VNA LRP Rx Frag Timeout",
+    "key": "vna.edge_aggregate_stats.lr_port_rx_frag_timeout",
+    "id": "extModel6271-314"
+  },
+  {
+    "name": "GPU Memory Used By Workloads In KB",
+    "key": "gpu.mem.used.VM.DEVICE",
+    "id": "extModel6271-315"
+  },
+  {
+    "name": "Max Limited On VM",
+    "key": "cpu.maxlimited.VM",
+    "id": "extModel6271-316"
+  },
+  {
+    "name": "disk.commands.VM.LUN",
+    "key": "disk.commands.VM.LUN",
+    "id": "extModel6271-317"
+  },
+  {
+    "name": "Remote VSAN Read Latency On Host",
+    "key": "latencyAvgRead.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-318"
+  },
+  {
+    "name": "VM Suspend Operations On Cluster",
+    "key": "vmop.suspend.CLSTR",
+    "id": "extModel6271-319"
+  },
+  {
+    "name": "Power Capacity Usage - CPU",
+    "key": "power.capacity.usageCpu.VM",
+    "id": "extModel6271-320"
+  },
+  {
+    "name": "VSAN Clients Read IOPS On Cluster",
+    "key": "iopsRead.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-321"
+  },
+  {
+    "name": "disk.read.DSTORE.LUN",
+    "key": "disk.read.DSTORE.LUN",
+    "id": "extModel6271-322"
+  },
+  {
+    "name": "VNA Service Memory Usage",
+    "key": "vna.system.mem_percent",
+    "id": "extModel6271-323"
+  },
+  {
+    "name": "Unknown Protocol Frames",
+    "key": "net.unknownProtos.HOST",
+    "id": "extModel6271-324"
+  },
+  {
+    "name": "Read Commands/sec (vDisk)",
+    "key": "storage.iops.read.VM.VDISK",
+    "id": "extModel6271-325"
+  },
+  {
+    "name": "CPU Used",
+    "key": "cpu.used.HOST",
+    "id": "extModel6271-326"
+  },
+  {
+    "name": "Task Management Error (busReset) On LUN",
+    "key": "storage.errors.busReset.LUN",
+    "id": "extModel6271-327"
+  },
+  {
+    "name": "Delayed Normalized IOPS",
+    "key": "NIOPSDelayed.VIRTUAL_DISK",
+    "id": "extModel6271-328"
+  },
+  {
+    "name": "disk.numberRead.HOST",
+    "key": "disk.numberRead.HOST",
+    "id": "extModel6271-329"
+  },
+  {
+    "name": "MEMRESVHLT",
+    "key": "mem.health.reservationState.HOST",
+    "id": "extModel6271-330"
+  },
+  {
+    "name": "CPU Thread Run Or Utilization",
+    "key": "cpu.utilization.PCPU",
+    "id": "extModel6271-331"
+  },
+  {
+    "name": "VCPUs With 85% CPU Usage",
+    "key": "datapath.vcpu.85pct.HOST",
+    "id": "extModel6271-332"
+  },
+  {
+    "name": "Task Management Error (deviceReset) On Storage Path",
+    "key": "storage.errors.deviceReset.SPATH",
+    "id": "extModel6271-333"
+  },
+  {
+    "name": "disk.totalLatency.LUN",
+    "key": "disk.totalLatency.LUN",
+    "id": "extModel6271-334"
+  },
+  {
+    "name": "Overhead Active",
+    "key": "mem.overheadTouched.VM",
+    "id": "extModel6271-335"
+  },
+  {
+    "name": "VM Memory Read Latency",
+    "key": "mem.latency.read.VM.MEMTYPE",
+    "id": "extModel6271-336"
+  },
+  {
+    "name": "Recovery Unmap Latency",
+    "key": "latencyAvgRecUnmap.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-337"
+  },
+  {
+    "name": "disk.busResets.DSTORE.LUN",
+    "key": "disk.busResets.DSTORE.LUN",
+    "id": "extModel6271-338"
+  },
+  {
+    "name": "Network Capacity Per PNIC",
+    "key": "net.throughput.provisioned.PNIC",
+    "id": "extModel6271-339"
+  },
+  {
+    "name": "Max Memory Usage",
+    "key": "service.mem.used.limit.SERVICE",
+    "id": "extModel6271-340"
+  },
+  {
+    "name": "VM Memory Capacity Overhead Reserved",
+    "key": "mem.capacity.overheadResv.VM",
+    "id": "extModel6271-341"
+  },
+  {
+    "name": "LWD_SYNC_STATUS",
+    "key": "lwd.sync.status.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-342"
+  },
+  {
+    "name": "disk.kernelReadLatency.HOST",
+    "key": "disk.kernelReadLatency.HOST",
+    "id": "extModel6271-343"
+  },
+  {
+    "name": "LRP Tx Frag Ok",
+    "key": "edge_aggregate_stats.lr_port_tx_frag_ok",
+    "id": "extModel6271-344"
+  },
+  {
+    "name": "Memory Granted On Resource Pool",
+    "key": "mem.granted.RESPOOL",
+    "id": "extModel6271-345"
+  },
+  {
+    "name": "Commands Succeeded On LUN",
+    "key": "storage.commands.success.LUN",
+    "id": "extModel6271-346"
+  },
+  {
+    "name": "VNA Tier 1 Downlink Tx Packets",
+    "key": "vna.edge_lr_port_stats.t1_aggregated_tx_downlink_packets",
+    "id": "extModel6271-347"
+  },
+  {
+    "name": "CPU Capacity Contention",
+    "key": "cpu.capacity.contention.HOST",
+    "id": "extModel6271-348"
+  },
+  {
+    "name": "Network Packets Transmitted On VM",
+    "key": "net.packetsTx.VM",
+    "id": "extModel6271-349"
+  },
+  {
+    "name": "Network Dropped Packets Per DVPort",
+    "key": "net.throughput.vds.droppedRx.DVS.PORT",
+    "id": "extModel6271-350"
+  },
+  {
+    "name": "storagePath.busResets.HOST",
+    "key": "storagePath.busResets.HOST",
+    "id": "extModel6271-351"
+  },
+  {
+    "name": "Write latency on vDisk",
+    "key": "virtualDisk.totalWriteLatency.VM.VDISK",
+    "id": "extModel6271-352"
+  },
+  {
+    "name": "High VCPU Ready Count",
+    "key": "platform.vcpu.lready_count",
+    "id": "extModel6271-353"
+  },
+  {
+    "name": "Resource CPU Running (1 Min. Average) On System Resources",
+    "key": "sys.resourceCpuRun1.SYSRES",
+    "id": "extModel6271-354"
+  },
+  {
+    "name": "Resource CPU Allocation Minimum (in MHz) On Host",
+    "key": "sys.resourceCpuAllocMin.HOST",
+    "id": "extModel6271-355"
+  },
+  {
+    "name": "VM Guest Reboot Operations On Datacenter",
+    "key": "vmop.rebootGuest.DCENTER",
+    "id": "extModel6271-356"
+  },
+  {
+    "name": "Replication Data Receive Rate",
+    "key": "hbr.hbrNetRx.HOST",
+    "id": "extModel6271-357"
+  },
+  {
+    "name": "Memory Ballooned On Host",
+    "key": "mem.vmmemctl.HOST",
+    "id": "extModel6271-358"
+  },
+  {
+    "name": "Host Power Usage",
+    "key": "power.power.HOST",
+    "id": "extModel6271-359"
+  },
+  {
+    "name": "Storage DRS Datastore Outstanding Read Requests",
+    "key": "datastore.datastoreReadOIO.HOST",
+    "id": "extModel6271-360"
+  },
+  {
+    "name": "VM CPU Usage Averaged",
+    "key": "cpu.usage.vcpus.VM",
+    "id": "extModel6271-361"
+  },
+  {
+    "name": "LWD_SNAP_SES_READS_2MS",
+    "key": "lwd.snapshot.ses.reads2ms.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-362"
+  },
+  {
+    "name": "Number Of Busy Threads",
+    "key": "threads.current.SERVICE",
+    "id": "extModel6271-363"
+  },
+  {
+    "name": "Read Latency (Guest)",
+    "key": "storage.latency.readGavg.LUN",
+    "id": "extModel6271-364"
+  },
+  {
+    "name": "Read Throughput On Datastore",
+    "key": "datastore.read.DSTORE",
+    "id": "extModel6271-365"
+  },
+  {
+    "name": "Broadcast Received Packets (PNIC)",
+    "key": "net.broadcastRx.PNIC",
+    "id": "extModel6271-366"
+  },
+  {
+    "name": "CPU Readiness Per VCPU",
+    "key": "cpu.readiness.VM.VCPU",
+    "id": "extModel6271-367"
+  },
+  {
+    "name": "Total PNICs Count",
+    "key": "datapath.uplink.pnic.count.HOST",
+    "id": "extModel6271-368"
+  },
+  {
+    "name": "Task Management Error (virtReset) On Storage Path",
+    "key": "storage.errors.virtReset.SPATH",
+    "id": "extModel6271-369"
+  },
+  {
+    "name": "Network Dropped Packets Per VNIC",
+    "key": "net.throughput.contention.VM.VNIC",
+    "id": "extModel6271-370"
+  },
+  {
+    "name": "Average Write IOPS On Datastore",
+    "key": "datastore.numberWriteAveraged.DSTORE",
+    "id": "extModel6271-371"
+  },
+  {
+    "name": "Host Sync Count",
+    "key": "vcDebugInfo.hostsyncstats.VCDBG",
+    "id": "extModel6271-372"
+  },
+  {
+    "name": "Outbound Packet Drop Rate Of PNIC VSwitch Port",
+    "key": "portTxDrops.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-373"
+  },
+  {
+    "name": "MEM Overcommit Avg In 1 Min",
+    "key": "mem.overcommit.avg1min.HOST",
+    "id": "extModel6271-374"
+  },
+  {
+    "name": "Free State",
+    "key": "mem.state.HOST",
+    "id": "extModel6271-375"
+  },
+  {
+    "name": "GPU Temperature",
+    "key": "gpu.temperature.DEVICE",
+    "id": "extModel6271-376"
+  },
+  {
+    "name": "Memory Swap In Rate On VM",
+    "key": "mem.swapinRate.VM",
+    "id": "extModel6271-377"
+  },
+  {
+    "name": "Remote VSAN Read Throughput On HCI Host",
+    "key": "throughputRead.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-378"
+  },
+  {
+    "name": "Task Management Error (virtReset) On vDisk",
+    "key": "storage.errors.virtReset.VM.VDISK",
+    "id": "extModel6271-379"
+  },
+  {
+    "name": "disk.commandsAborted.VM.LUN",
+    "key": "disk.commandsAborted.VM.LUN",
+    "id": "extModel6271-380"
+  },
+  {
+    "name": "VM Disk Usage",
+    "key": "disk.usage.VM",
+    "id": "extModel6271-381"
+  },
+  {
+    "name": "Memory Swapped On Resource Pool",
+    "key": "mem.swapped.RESPOOL",
+    "id": "extModel6271-382"
+  },
+  {
+    "name": "VM Unregister Operations On Cluster",
+    "key": "vmop.unregister.CLSTR",
+    "id": "extModel6271-383"
+  },
+  {
+    "name": "Memory Consumed By VMs",
+    "key": "mem.consumed.vms.HOST",
+    "id": "extModel6271-384"
+  },
+  {
+    "name": "disk.maxQueueDepth.LUN",
+    "key": "disk.maxQueueDepth.LUN",
+    "id": "extModel6271-385"
+  },
+  {
+    "name": "disk.numberWriteAveraged.HOST",
+    "key": "disk.numberWriteAveraged.HOST",
+    "id": "extModel6271-386"
+  },
+  {
+    "name": "LWD_NUM_FAILED_SNAPS",
+    "key": "lwd.numFailedSnapshots.HOST",
+    "id": "extModel6271-387"
+  },
+  {
+    "name": "Network Transmit Throughput (pNIC)",
+    "key": "datapath.uplink.pnic.txmbps.HOST",
+    "id": "extModel6271-388"
+  },
+  {
+    "name": "VMFS PB Cache Size",
+    "key": "mem.vmfs.pbc.size.HOST",
+    "id": "extModel6271-389"
+  },
+  {
+    "name": "Network Dropped Packets On VM",
+    "key": "net.droppedRx.VM",
+    "id": "extModel6271-390"
+  },
+  {
+    "name": "Host Power Capacity Usage",
+    "key": "power.capacity.usage.HOST",
+    "id": "extModel6271-391"
+  },
+  {
+    "name": "System Resource Memory Overhead On Host",
+    "key": "sys.resourceMemOverhead.HOST",
+    "id": "extModel6271-392"
+  },
+  {
+    "name": "Vnic Rx Mbps",
+    "key": "platform.vnic_rxmbps",
+    "id": "extModel6271-393"
+  },
+  {
+    "name": "Replication Data Receive Rate On VM",
+    "key": "net.throughput.hbr.inbound.VM",
+    "id": "extModel6271-394"
+  },
+  {
+    "name": "Guest Memory Free",
+    "key": "guest.mem.free.VM",
+    "id": "extModel6271-395"
+  },
+  {
+    "name": "Average Write IOPS On Datastore LUN",
+    "key": "datastore.numberWriteAveraged.DSTORE.LUN",
+    "id": "extModel6271-396"
+  },
+  {
+    "name": "CPU Capacity Demand",
+    "key": "cpu.capacity.demand.HOST",
+    "id": "extModel6271-397"
+  },
+  {
+    "name": "Write Latency (Queue)",
+    "key": "storage.latency.writeQavg.LUN",
+    "id": "extModel6271-398"
+  },
+  {
+    "name": "Storage DRS Datastore Read I/O Rate",
+    "key": "datastore.datastoreReadIops.HOST",
+    "id": "extModel6271-399"
+  },
+  {
+    "name": "Broadcast Packets Transmitted On VM",
+    "key": "net.broadcastTx.VM",
+    "id": "extModel6271-400"
+  },
+  {
+    "name": "Logical Router Total Packets",
+    "key": "edge_lr_port_stats.lr_total_packets",
+    "id": "extModel6271-401"
+  },
+  {
+    "name": "Packet Processing Threads With 99% CPU Usage",
+    "key": "datapath.net.threads.99pct.HOST",
+    "id": "extModel6271-402"
+  },
+  {
+    "name": "storagePath.totalReadLatency.HOST",
+    "key": "storagePath.totalReadLatency.HOST",
+    "id": "extModel6271-403"
+  },
+  {
+    "name": "VMKMEM Managed",
+    "key": "mem.kernel.managed.HOST",
+    "id": "extModel6271-404"
+  },
+  {
+    "name": "Overall Latency (vDisk)",
+    "key": "storage.latency.total.VM.VDISK",
+    "id": "extModel6271-405"
+  },
+  {
+    "name": "Broadcast Transmit Packets Per DVS",
+    "key": "net.throughput.pktsTxBroadcast.DVS",
+    "id": "extModel6271-406"
+  },
+  {
+    "name": "Inbound Packet Drop Rate On VNIC",
+    "key": "portRxDrops.HR_VSAN_VNIC_NET",
+    "id": "extModel6271-407"
+  },
+  {
+    "name": "disk.write.LUN",
+    "key": "disk.write.LUN",
+    "id": "extModel6271-408"
+  },
+  {
+    "name": "VSAN ESA Object Write Throughput On Host",
+    "key": "throughputWrite.HR_HOST_ZDOM_TOP_STATS",
+    "id": "extModel6271-409"
+  },
+  {
+    "name": "IO Requests Queued On NFS",
+    "key": "nfs.ioRequestsQueued.HOST",
+    "id": "extModel6271-410"
+  },
+  {
+    "name": "metric.sys.resourceMemAllocMin.SYSRES",
+    "key": "sys.resourceMemAllocMin.SYSRES",
+    "id": "extModel6271-411"
+  },
+  {
+    "name": "Vigor Operations Total",
+    "key": "vmx.vigor.opsTotal.VM",
+    "id": "extModel6271-412"
+  },
+  {
+    "name": "LWD_SNAP_SES_READS",
+    "key": "lwd.snapshot.ses.reads.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-413"
+  },
+  {
+    "name": "disk.provisioned.DSTORE",
+    "key": "disk.provisioned.DSTORE",
+    "id": "extModel6271-414"
+  },
+  {
+    "name": "VM Guest Shutdown Operations On Cluster",
+    "key": "vmop.shutdownGuest.CLSTR",
+    "id": "extModel6271-415"
+  },
+  {
+    "name": "metric.sys.resourceMemAllocShares.SYSRES",
+    "key": "sys.resourceMemAllocShares.SYSRES",
+    "id": "extModel6271-416"
+  },
+  {
+    "name": "Mem.capacity.usage.vmOvrhd.VM",
+    "key": "mem.capacity.usage.vmOvrhd.VM",
+    "id": "extModel6271-417"
+  },
+  {
+    "name": "Task Management Error (deviceResetRetry) On LUN",
+    "key": "storage.errors.deviceResetRetry.LUN",
+    "id": "extModel6271-418"
+  },
+  {
+    "name": "Swap Target On VM",
+    "key": "mem.swaptarget.VM",
+    "id": "extModel6271-419"
+  },
+  {
+    "name": "Read Throughput (Disk)",
+    "key": "storage.throughput.read.LUN",
+    "id": "extModel6271-420"
+  },
+  {
+    "name": "CPU Max Limited Per VCPU",
+    "key": "cpu.maxlimited.VM.VCPU",
+    "id": "extModel6271-421"
+  },
+  {
+    "name": "Network Transmit Packets/sec (pNIC)",
+    "key": "datapath.uplink.pnic.txpps.HOST",
+    "id": "extModel6271-422"
+  },
+  {
+    "name": "Average Data Transmit Rate Per PNIC",
+    "key": "net.transmitted.PNIC",
+    "id": "extModel6271-423"
+  },
+  {
+    "name": "disk.numberWrite.HOST",
+    "key": "disk.numberWrite.HOST",
+    "id": "extModel6271-424"
+  },
+  {
+    "name": "Maximum Percentage Of RDT Used CPU Time",
+    "key": "maxUsedPct.VSAN_RDT_CPU",
+    "id": "extModel6271-425"
+  },
+  {
+    "name": "Lcore Highest Usage",
+    "key": "platform.edp.highest_lcore_usage",
+    "id": "extModel6271-426"
+  },
+  {
+    "name": "Remote VSAN Write IOPS On HCI Cluster",
+    "key": "iopsWrite.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-427"
+  },
+  {
+    "name": "VSAN ESA Object Read Throughput On Cluster",
+    "key": "throughputRead.HR_CLUSTER_ZDOM_TOP_STATS",
+    "id": "extModel6271-428"
+  },
+  {
+    "name": "PCPU USED(%)",
+    "key": "cpu.usage.HOST",
+    "id": "extModel6271-429"
+  },
+  {
+    "name": "Memory Compressed On VM",
+    "key": "mem.zipped.VM",
+    "id": "extModel6271-430"
+  },
+  {
+    "name": "LWD_SNAP_SES_MAX_SUB_READS",
+    "key": "lwd.snapshot.ses.maxSubReads.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-431"
+  },
+  {
+    "name": "Segment Cleaning Read Throughput",
+    "key": "tputSegCleanRead.ZDOM_OVERVIEW",
+    "id": "extModel6271-432"
+  },
+  {
+    "name": "LWD_SNAP_SES_TOTAL_READ_BYTES",
+    "key": "lwd.snapshot.ses.totalReadBytes.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-433"
+  },
+  {
+    "name": "VNA Non-DP CPU Usage",
+    "key": "vna.system.cpu_usage",
+    "id": "extModel6271-434"
+  },
+  {
+    "name": "NFS APD State",
+    "key": "filesystem.apdState.FSTYPE.FSPATH",
+    "id": "extModel6271-435"
+  },
+  {
+    "name": "Core Utilization",
+    "key": "cpu.coreUtilization.HOST",
+    "id": "extModel6271-436"
+  },
+  {
+    "name": "CPU Contention",
+    "key": "cpu.capacity.contention.VM",
+    "id": "extModel6271-437"
+  },
+  {
+    "name": "VM Datastore Change (cold) On Datacenter",
+    "key": "vmop.changeDS.DCENTER",
+    "id": "extModel6271-438"
+  },
+  {
+    "name": "Broadcast Transmit Packets Per DVPort",
+    "key": "net.throughput.vds.pktsTxBcast.DVS.PORT",
+    "id": "extModel6271-439"
+  },
+  {
+    "name": "Non-DP CPU Usage",
+    "key": "system.cpu_usage",
+    "id": "extModel6271-440"
+  },
+  {
+    "name": "PNIC Error Packets In Transmit Path",
+    "key": "net.throughput.errorsTx.PNIC",
+    "id": "extModel6271-441"
+  },
+  {
+    "name": "disk.numberReadAveraged.HOST",
+    "key": "disk.numberReadAveraged.HOST",
+    "id": "extModel6271-442"
+  },
+  {
+    "name": "Memory Swapped On VM",
+    "key": "mem.swapped.VM",
+    "id": "extModel6271-443"
+  },
+  {
+    "name": "CPU Capacity Demand On VM",
+    "key": "cpu.capacity.demand.VM",
+    "id": "extModel6271-444"
+  },
+  {
+    "name": "Segment Cleaning Unmap Throughput",
+    "key": "tputSegCleanUnmap.ZDOM_OVERVIEW",
+    "id": "extModel6271-445"
+  },
+  {
+    "name": "Downlink Rx",
+    "key": "edge_lr_port_stats.t0_aggregated_rx_downlink_bytes",
+    "id": "extModel6271-446"
+  },
+  {
+    "name": "disk.deviceReadLatency.HOST",
+    "key": "disk.deviceReadLatency.HOST",
+    "id": "extModel6271-447"
+  },
+  {
+    "name": "PNIC Data Receive Rate On VNIC",
+    "key": "net.pnicBytesRx.VM.VNIC",
+    "id": "extModel6271-448"
+  },
+  {
+    "name": "disk.used.VM.LUN",
+    "key": "disk.used.VM.LUN",
+    "id": "extModel6271-449"
+  },
+  {
+    "name": "Write Workload Metric",
+    "key": "virtualDisk.writeLoadMetric.VM.VDISK",
+    "id": "extModel6271-450"
+  },
+  {
+    "name": "Total VM Reads On LUN",
+    "key": "storage.commands.read.VM.LUN",
+    "id": "extModel6271-451"
+  },
+  {
+    "name": "CPU Ready Per VCPU",
+    "key": "cpu.ready.VM.VCPU",
+    "id": "extModel6271-452"
+  },
+  {
+    "name": "Broadcast Received Packets Per DVS",
+    "key": "net.throughput.pktsRxBroadcast.DVS",
+    "id": "extModel6271-453"
+  },
+  {
+    "name": "Guest Memory Slab Reclaimable",
+    "key": "guest.mem.slabReclaim.VM",
+    "id": "extModel6271-454"
+  },
+  {
+    "name": "CPU Throttled (1 Min Average) On VM",
+    "key": "rescpu.maxLimited1.VM",
+    "id": "extModel6271-455"
+  },
+  {
+    "name": "Total Physical Memory On Host",
+    "key": "mem.physical.total.HOST",
+    "id": "extModel6271-456"
+  },
+  {
+    "name": "Failed VM Writes On LUN",
+    "key": "storage.commands.writeFailed.VM.LUN",
+    "id": "extModel6271-457"
+  },
+  {
+    "name": "Resource Memory Swapped",
+    "key": "sys.resourceMemSwapped.HOST",
+    "id": "extModel6271-458"
+  },
+  {
+    "name": "Average Read IOPS On Datastore",
+    "key": "datastore.numberReadAveraged.DSTORE",
+    "id": "extModel6271-459"
+  },
+  {
+    "name": "Remote VSAN Congestion On HCI Host",
+    "key": "congestion.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-460"
+  },
+  {
+    "name": "VSAN ESA Object Read Throughput On Host",
+    "key": "throughputRead.HR_HOST_ZDOM_TOP_STATS",
+    "id": "extModel6271-461"
+  },
+  {
+    "name": "Power Capacity Usage",
+    "key": "power.capacity.usage.VM",
+    "id": "extModel6271-462"
+  },
+  {
+    "name": "CPU Co-stop",
+    "key": "cpu.costop.HOST",
+    "id": "extModel6271-463"
+  },
+  {
+    "name": "Resource CPU Active (5 Min Average) On Host",
+    "key": "sys.resourceCpuAct5.HOST",
+    "id": "extModel6271-464"
+  },
+  {
+    "name": "disk.unshared.DSTORE",
+    "key": "disk.unshared.DSTORE",
+    "id": "extModel6271-465"
+  },
+  {
+    "name": "Disk Read Sector Rate",
+    "key": "vcResources.diskreadsectorrate.VCRES",
+    "id": "extModel6271-466"
+  },
+  {
+    "name": "CPU Capacity (Cycle)",
+    "key": "cpu.capacity.provisioned.HOST",
+    "id": "extModel6271-467"
+  },
+  {
+    "name": "CPU Co-Stop",
+    "key": "cpu.corecount.contention.HOST",
+    "id": "extModel6271-468"
+  },
+  {
+    "name": "Packet Transmit Errors",
+    "key": "net.errorsTx.HOST",
+    "id": "extModel6271-469"
+  },
+  {
+    "name": "Pnic Rx Error Total",
+    "key": "platform.pnic_rx_error_total",
+    "id": "extModel6271-470"
+  },
+  {
+    "name": "Memory Overhead On Host",
+    "key": "mem.overhead.HOST",
+    "id": "extModel6271-471"
+  },
+  {
+    "name": "Overhead Reserved",
+    "key": "mem.overheadMax.VM",
+    "id": "extModel6271-472"
+  },
+  {
+    "name": "Datastore Write Latency On Host",
+    "key": "datastore.totalWriteLatency.HOST",
+    "id": "extModel6271-473"
+  },
+  {
+    "name": "vNICs TX Errors Per Second",
+    "key": "datapath.vnic.txeps.HOST",
+    "id": "extModel6271-474"
+  },
+  {
+    "name": "LWD_SYNC_START_TIME",
+    "key": "lwd.sync.startTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-475"
+  },
+  {
+    "name": "disk.read.VM.LUN",
+    "key": "disk.read.VM.LUN",
+    "id": "extModel6271-476"
+  },
+  {
+    "name": "disk.totalReadLatency.HOST",
+    "key": "disk.totalReadLatency.HOST",
+    "id": "extModel6271-477"
+  },
+  {
+    "name": "VNA LRP Rx Frag Error",
+    "key": "vna.edge_aggregate_stats.lr_port_rx_frag_error",
+    "id": "extModel6271-478"
+  },
+  {
+    "name": "VNA LRP Tx Frag Error",
+    "key": "vna.edge_aggregate_stats.lr_port_tx_frag_error",
+    "id": "extModel6271-479"
+  },
+  {
+    "name": "Host Energy Usage",
+    "key": "power.energy.HOST",
+    "id": "extModel6271-480"
+  },
+  {
+    "name": "NFS Total Reads",
+    "key": "filesystem.totalReads.FSTYPE.FSPATH",
+    "id": "extModel6271-481"
+  },
+  {
+    "name": "Memory Balloon Target",
+    "key": "mem.vmmemctltarget.VM",
+    "id": "extModel6271-482"
+  },
+  {
+    "name": "CPU Idle Time Per VCPU",
+    "key": "cpu.idle.VM.VCPU",
+    "id": "extModel6271-483"
+  },
+  {
+    "name": "Read Throughput On Datastore LUN",
+    "key": "datastore.read.DSTORE.LUN",
+    "id": "extModel6271-484"
+  },
+  {
+    "name": "VSAN Clients Unmap IOPS On Host",
+    "key": "iopsUnmap.HR_HOST_DOMCLIENT",
+    "id": "extModel6271-485"
+  },
+  {
+    "name": "Max Datastore Latency On VM",
+    "key": "datastore.maxTotalLatency.VM",
+    "id": "extModel6271-486"
+  },
+  {
+    "name": "VNA Tier 0 Downlink Rx Packets",
+    "key": "vna.edge_lr_port_stats.t0_aggregated_rx_downlink_packets",
+    "id": "extModel6271-487"
+  },
+  {
+    "name": "LWD_SNAP_TOTAL_PIOS",
+    "key": "lwd.snapshot.totalPios.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-488"
+  },
+  {
+    "name": "Overall Latency (Adapter)",
+    "key": "storage.latency.total.SADAPTER",
+    "id": "extModel6271-489"
+  },
+  {
+    "name": "mem.swapIn.HOST",
+    "key": "mem.swapIn.HOST",
+    "id": "extModel6271-490"
+  },
+  {
+    "name": "Host Power Capacity Provisioned",
+    "key": "power.capacity.usagePct.HOST",
+    "id": "extModel6271-491"
+  },
+  {
+    "name": "Broadcast Packets Transmitted Per PNIC",
+    "key": "net.broadcastTx.PNIC",
+    "id": "extModel6271-492"
+  },
+  {
+    "name": "disk.write.VM",
+    "key": "disk.write.VM",
+    "id": "extModel6271-493"
+  },
+  {
+    "name": "VM Host And Datastore Change (powered-on VMs) Operations On Datacenter",
+    "key": "vmop.xvmotion.DCENTER",
+    "id": "extModel6271-494"
+  },
+  {
+    "name": "File Descriptors Used",
+    "key": "sys.resourceFdUsage.HOST",
+    "id": "extModel6271-495"
+  },
+  {
+    "name": "disk.numberWriteAveraged.DSTORE.LUN",
+    "key": "disk.numberWriteAveraged.DSTORE.LUN",
+    "id": "extModel6271-496"
+  },
+  {
+    "name": "PNIC Throughput Usage For HBR",
+    "key": "net.throughput.usage.hbr.PNIC",
+    "id": "extModel6271-497"
+  },
+  {
+    "name": "Request Count To UI Endpoint",
+    "key": "envoy_cluster_upstream_rq_total",
+    "id": "extModel6271-498"
+  },
+  {
+    "name": "VSCSI Read Throughput On VM",
+    "key": "throughputRead.VSCSI",
+    "id": "extModel6271-499"
+  },
+  {
+    "name": "LRP Tx Frag Error",
+    "key": "edge_aggregate_stats.lr_port_tx_frag_error",
+    "id": "extModel6271-500"
+  },
+  {
+    "name": "Remote VSAN Write IOPS On Cluster",
+    "key": "iopsWrite.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-501"
+  },
+  {
+    "name": "LWD_SNAP_MAX_PIOS",
+    "key": "lwd.snapshot.maxPios.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-502"
+  },
+  {
+    "name": "metric.sys.resourceMemShared.SYSRES",
+    "key": "sys.resourceMemShared.SYSRES",
+    "id": "extModel6271-503"
+  },
+  {
+    "name": "Datastore Write Latency Per LUN On VM",
+    "key": "datastore.totalWriteLatency.VM.LUN",
+    "id": "extModel6271-504"
+  },
+  {
+    "name": "LWD_SNAP_TYPE",
+    "key": "lwd.snapshot.snapshotType.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-505"
+  },
+  {
+    "name": "VM Create Operations On Datacenter",
+    "key": "vmop.create.DCENTER",
+    "id": "extModel6271-506"
+  },
+  {
+    "name": "Memory Swap Out",
+    "key": "managementAgent.swapOut.HOST",
+    "id": "extModel6271-507"
+  },
+  {
+    "name": "NFS Total Writes Failed",
+    "key": "filesystem.writesFailed.FSTYPE.FSPATH",
+    "id": "extModel6271-508"
+  },
+  {
+    "name": "Mean Avg Enhanced VR Disk Transfer Network Latency",
+    "key": "lwd.hbrNetLatency.VM",
+    "id": "extModel6271-509"
+  },
+  {
+    "name": "disk.deviceWriteLatency.HOST",
+    "key": "disk.deviceWriteLatency.HOST",
+    "id": "extModel6271-510"
+  },
+  {
+    "name": "storageAdapter.totalReadLatency.HOST",
+    "key": "storageAdapter.totalReadLatency.HOST",
+    "id": "extModel6271-511"
+  },
+  {
+    "name": "Enhanced VR Data Receive Rate",
+    "key": "lwd.hbrNetRx.VM",
+    "id": "extModel6271-512"
+  },
+  {
+    "name": "VNA Tier 1Downlink Rx Packets",
+    "key": "vna.edge_lr_port_stats.t1_aggregated_rx_downlink_packets",
+    "id": "extModel6271-513"
+  },
+  {
+    "name": "VSAN Clients Unmap Latency On Host",
+    "key": "latencyAvgUnmap.HR_HOST_DOMCLIENT",
+    "id": "extModel6271-514"
+  },
+  {
+    "name": "Task Management Error (abort) For VM",
+    "key": "storage.errors.abort.VM",
+    "id": "extModel6271-515"
+  },
+  {
+    "name": "Memory Swap-out Rate On Host",
+    "key": "mem.swap.writerate.HOST",
+    "id": "extModel6271-516"
+  },
+  {
+    "name": "Write Latency (Path)",
+    "key": "storage.latency.write.SPATH",
+    "id": "extModel6271-517"
+  },
+  {
+    "name": "Resource CPU Active (1 Min Average) On Host",
+    "key": "sys.resourceCpuAct1.HOST",
+    "id": "extModel6271-518"
+  },
+  {
+    "name": "Total Memory Capacity On Host",
+    "key": "mem.totalCapacity.HOST",
+    "id": "extModel6271-519"
+  },
+  {
+    "name": "LWD_SNAP_SES_READS_1MS",
+    "key": "lwd.snapshot.ses.reads1ms.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-520"
+  },
+  {
+    "name": "Failed Writes On LUN",
+    "key": "storage.commands.writeFailed.LUN",
+    "id": "extModel6271-521"
+  },
+  {
+    "name": "VNA LRP Rx Frag Ok",
+    "key": "vna.edge_aggregate_stats.lr_port_rx_frag_ok",
+    "id": "extModel6271-522"
+  },
+  {
+    "name": "vGPU Encoder Utilization",
+    "key": "gpu.encode.utilization.VM.DEVICE",
+    "id": "extModel6271-523"
+  },
+  {
+    "name": "Storage DRS Datastore Normalized Read Latency",
+    "key": "datastore.datastoreNormalReadLatency.HOST",
+    "id": "extModel6271-524"
+  },
+  {
+    "name": "Resource Memory Allocation Maximum (in KB)",
+    "key": "sys.resourceMemAllocMax.HOST",
+    "id": "extModel6271-525"
+  },
+  {
+    "name": "PNICs RX Errors Per Second",
+    "key": "datapath.uplink.pnic.rxeps.HOST",
+    "id": "extModel6271-526"
+  },
+  {
+    "name": "Avg Bank B-tree Latency",
+    "key": "latencyAvgBankBtree.ZDOM_IO",
+    "id": "extModel6271-527"
+  },
+  {
+    "name": "Datastore Write Throughput On Host",
+    "key": "datastore.write.HOST",
+    "id": "extModel6271-528"
+  },
+  {
+    "name": "Write Throughput On Datastore",
+    "key": "datastore.write.DSTORE",
+    "id": "extModel6271-529"
+  },
+  {
+    "name": "Compression Saved",
+    "key": "mem.zipSaved.VM",
+    "id": "extModel6271-530"
+  },
+  {
+    "name": "Write Latency (Disk)",
+    "key": "storage.latency.writeDavg.LUN",
+    "id": "extModel6271-531"
+  },
+  {
+    "name": "Virtual Disk Throughput Contention",
+    "key": "virtualDisk.throughput.cont.VM.VDISK",
+    "id": "extModel6271-532"
+  },
+  {
+    "name": "Insertion Error",
+    "key": "platform.flowcache.insertion_errors",
+    "id": "extModel6271-533"
+  },
+  {
+    "name": "Scoreboard Statistics",
+    "key": "vcDebugInfo.scoreboard.VCDBG",
+    "id": "extModel6271-534"
+  },
+  {
+    "name": "VGPU Tensor Utilization",
+    "key": "gpu.tensor.utilization.VM.DEVICE",
+    "id": "extModel6271-535"
+  },
+  {
+    "name": "CPU Latency On VM",
+    "key": "cpu.latency.VM",
+    "id": "extModel6271-536"
+  },
+  {
+    "name": "CPU Capacity Entitlement",
+    "key": "cpu.capacity.entitlement.VM",
+    "id": "extModel6271-537"
+  },
+  {
+    "name": "Active Memory On Cluster",
+    "key": "mem.active.CLSTR",
+    "id": "extModel6271-538"
+  },
+  {
+    "name": "Memory Granted On Host",
+    "key": "mem.granted.HOST",
+    "id": "extModel6271-539"
+  },
+  {
+    "name": "Shared Memory On VM",
+    "key": "mem.shared.VM",
+    "id": "extModel6271-540"
+  },
+  {
+    "name": "VNA Disk Read Time",
+    "key": "vna.disk.read_time",
+    "id": "extModel6271-541"
+  },
+  {
+    "name": "APD State",
+    "key": "datastore.vmfs.apdState.HOST",
+    "id": "extModel6271-542"
+  },
+  {
+    "name": "Clock Speed Of Host CPU",
+    "key": "vmx.cpuSpeed.VM",
+    "id": "extModel6271-543"
+  },
+  {
+    "name": "LRP Tx Drop",
+    "key": "edge_aggregate_stats.lr_port_tx_drops",
+    "id": "extModel6271-544"
+  },
+  {
+    "name": "Network Packets Received On VM",
+    "key": "net.packetsRx.VM",
+    "id": "extModel6271-545"
+  },
+  {
+    "name": "storagePath.totalWriteLatency.HOST",
+    "key": "storagePath.totalWriteLatency.HOST",
+    "id": "extModel6271-546"
+  },
+  {
+    "name": "Memory Entitlement On VM",
+    "key": "mem.entitlement.VM",
+    "id": "extModel6271-547"
+  },
+  {
+    "name": "Broadcast Received Packets On VM",
+    "key": "net.broadcastRx.VM",
+    "id": "extModel6271-548"
+  },
+  {
+    "name": "Memory Active On VM",
+    "key": "mem.usage.VM",
+    "id": "extModel6271-549"
+  },
+  {
+    "name": "Storage Commands/sec (Path)",
+    "key": "storage.iops.total.SPATH",
+    "id": "extModel6271-550"
+  },
+  {
+    "name": "LRP Rx RPF Drop",
+    "key": "edge_aggregate_stats.lr_port_rx_rpf_drops",
+    "id": "extModel6271-551"
+  },
+  {
+    "name": "disk.totalLatency.HOST",
+    "key": "disk.totalLatency.HOST",
+    "id": "extModel6271-552"
+  },
+  {
+    "name": "LWD_SNAP_SES_MAX_ACTIVE_WRITES",
+    "key": "lwd.snapshot.ses.maxActiveWrites.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-553"
+  },
+  {
+    "name": "disk.provisioned.VM",
+    "key": "disk.provisioned.VM",
+    "id": "extModel6271-554"
+  },
+  {
+    "name": "vSphere Replication Average I/O Stall On VM",
+    "key": "virtualDisk.hbr.stallLatencyMS.VM",
+    "id": "extModel6271-555"
+  },
+  {
+    "name": "Remote VSAN Write Latency On HCI Host",
+    "key": "latencyAvgWrite.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-556"
+  },
+  {
+    "name": "LRP Rx Frag Timeout",
+    "key": "edge_aggregate_stats.lr_port_rx_frag_timeout",
+    "id": "extModel6271-557"
+  },
+  {
+    "name": "CPU Co-Stop Per VCPU",
+    "key": "cpu.corecount.contention.VM.VCPU",
+    "id": "extModel6271-558"
+  },
+  {
+    "name": "CPU Wait Time On VM",
+    "key": "cpu.wait.VM",
+    "id": "extModel6271-559"
+  },
+  {
+    "name": "Memory Granted On VM",
+    "key": "mem.granted.VM",
+    "id": "extModel6271-560"
+  },
+  {
+    "name": "Storage Throughput (Path)",
+    "key": "storage.throughput.total.SPATH",
+    "id": "extModel6271-561"
+  },
+  {
+    "name": "VSAN Clients Recovery Write Throughput On Host",
+    "key": "throughputRecWrite.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-562"
+  },
+  {
+    "name": "PNIC Throughput Usage For NFS",
+    "key": "net.throughput.usage.nfs.PNIC",
+    "id": "extModel6271-563"
+  },
+  {
+    "name": "Average Read IOPS On Datastore LUN",
+    "key": "datastore.numberReadAveraged.DSTORE.LUN",
+    "id": "extModel6271-564"
+  },
+  {
+    "name": "Task Management Error (virtResetFailed) On LUN",
+    "key": "storage.errors.virtResetFailed.LUN",
+    "id": "extModel6271-565"
+  },
+  {
+    "name": "Pod Disk Capacity Usage",
+    "key": "disk.capacity.usage.POD",
+    "id": "extModel6271-566"
+  },
+  {
+    "name": "CPU Running (1 Min Peak) On VM",
+    "key": "rescpu.runpk1.VM",
+    "id": "extModel6271-567"
+  },
+  {
+    "name": "Data Receive Rate Per PNIC",
+    "key": "net.received.PNIC",
+    "id": "extModel6271-568"
+  },
+  {
+    "name": "Data Transmit Rate On VM",
+    "key": "net.bytesTx.VM",
+    "id": "extModel6271-569"
+  },
+  {
+    "name": "VSAN Clients Write IOPS On Cluster",
+    "key": "iopsWrite.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-570"
+  },
+  {
+    "name": "Network Transmit Throughput Per PNIC",
+    "key": "net.throughput.transmitRate.PNIC",
+    "id": "extModel6271-571"
+  },
+  {
+    "name": "Memory Swap-in Rate On Host",
+    "key": "mem.swapinRate.HOST",
+    "id": "extModel6271-572"
+  },
+  {
+    "name": "Remote VSAN Read Throughput On Host",
+    "key": "throughputRead.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-573"
+  },
+  {
+    "name": "Remote VSAN Outstanding IO On Cluster",
+    "key": "oio.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-574"
+  },
+  {
+    "name": "Multicast Received Packets Per LAG",
+    "key": "net.throughput.vds.lagRxMcast.DVS.LAG",
+    "id": "extModel6271-575"
+  },
+  {
+    "name": "Vnic Rx PPS",
+    "key": "platform.vnic_rxpps",
+    "id": "extModel6271-576"
+  },
+  {
+    "name": "Number Of VM Reads",
+    "key": "storage.commands.read.VM",
+    "id": "extModel6271-577"
+  },
+  {
+    "name": "Average Data Transmit Rate On VM",
+    "key": "net.transmitted.VM.VNIC",
+    "id": "extModel6271-578"
+  },
+  {
+    "name": "Count Of Virtual Storage Catalog Objects",
+    "key": "vslm.catalog.count.METHOD.DSTORE",
+    "id": "extModel6271-579"
+  },
+  {
+    "name": "Average Current Sessions Per Second",
+    "key": "edge_aggregate_stats.lb_current_session_rate",
+    "id": "extModel6271-580"
+  },
+  {
+    "name": "Network Transmit Throughput (vNIC)",
+    "key": "datapath.vnic.txmbps.HOST",
+    "id": "extModel6271-581"
+  },
+  {
+    "name": "Write Leaf Owner Latency",
+    "key": "writeLeafOwnerLatency.HOST_DOMOWNER",
+    "id": "extModel6271-582"
+  },
+  {
+    "name": "Task Management Error (abortFailed) On LUN",
+    "key": "storage.errors.abortFailed.LUN",
+    "id": "extModel6271-583"
+  },
+  {
+    "name": "Count Of Virtual Storage Object API Calls",
+    "key": "vslm.api.count.METHOD.DSTORE",
+    "id": "extModel6271-584"
+  },
+  {
+    "name": "LWD_SNAP_SES_WRITES_5MS",
+    "key": "lwd.snapshot.ses.writes5ms.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-585"
+  },
+  {
+    "name": "PNIC Outbound Packet Error Rate",
+    "key": "txPacketsLossRate.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-586"
+  },
+  {
+    "name": "Average Percentage Of Running ZDOM CPU Time",
+    "key": "avgRunPct.VSAN_ZDOM_CPU",
+    "id": "extModel6271-587"
+  },
+  {
+    "name": "datastore.commandsAborted.DSTORE",
+    "key": "datastore.commandsAborted.DSTORE",
+    "id": "extModel6271-588"
+  },
+  {
+    "name": "Packet Processing Threads With 70% CPU Usage",
+    "key": "datapath.net.threads.70pct.HOST",
+    "id": "extModel6271-589"
+  },
+  {
+    "name": "VM Reset Operations On Cluster",
+    "key": "vmop.reset.CLSTR",
+    "id": "extModel6271-590"
+  },
+  {
+    "name": "Broadcast Tx Packet",
+    "key": "tn-traffic.broadcast_tx_packets",
+    "id": "extModel6271-591"
+  },
+  {
+    "name": "Write Latency (us)",
+    "key": "virtualDisk.writeLatencyUS.VM.VDISK",
+    "id": "extModel6271-592"
+  },
+  {
+    "name": "Group CPU Sample Count On VM",
+    "key": "rescpu.sampleCount.VM",
+    "id": "extModel6271-593"
+  },
+  {
+    "name": "Overall Latency (Kernel)",
+    "key": "storage.latency.totalKavg.LUN",
+    "id": "extModel6271-594"
+  },
+  {
+    "name": "Virtual Memory",
+    "key": "vcResources.virtualmemusage.VCRES",
+    "id": "extModel6271-595"
+  },
+  {
+    "name": "VSAN Clients Write Latency On Cluster",
+    "key": "latencyAvgWrite.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-596"
+  },
+  {
+    "name": "Network Transmit Packets Per DVS",
+    "key": "net.throughput.pktsTx.DVS",
+    "id": "extModel6271-597"
+  },
+  {
+    "name": "Flow Number",
+    "key": "platform.flowcache.num_flows",
+    "id": "extModel6271-598"
+  },
+  {
+    "name": "Task Management Error (lunResetFailed) On LUN",
+    "key": "storage.errors.lunResetFailed.LUN",
+    "id": "extModel6271-599"
+  },
+  {
+    "name": "VNA NAT Conn Active",
+    "key": "vna.edge_aggregate_stats.fw_lr_port_nat_conn_active",
+    "id": "extModel6271-600"
+  },
+  {
+    "name": "Network Received Throughput On VM",
+    "key": "net.received.VM",
+    "id": "extModel6271-601"
+  },
+  {
+    "name": "Task Management Error (lunResetFailed) On Storage Path",
+    "key": "storage.errors.lunResetFailed.SPATH",
+    "id": "extModel6271-602"
+  },
+  {
+    "name": "Active VM Commands On vDisk",
+    "key": "storage.commands.active.VM.VDISK",
+    "id": "extModel6271-603"
+  },
+  {
+    "name": "Guest Total Memory",
+    "key": "guest.mem.total.VM",
+    "id": "extModel6271-604"
+  },
+  {
+    "name": "Write Commands/sec",
+    "key": "storage.iops.write.LUN",
+    "id": "extModel6271-605"
+  },
+  {
+    "name": "Host Power Capacity Usage - Idle",
+    "key": "power.capacity.usageIdle.HOST",
+    "id": "extModel6271-606"
+  },
+  {
+    "name": "PNIC Throughput Usage For FT",
+    "key": "net.throughput.usage.ft.PNIC",
+    "id": "extModel6271-607"
+  },
+  {
+    "name": "vSphere Replication Average Disk Read Latency On VM",
+    "key": "virtualDisk.hbr.readLatencyMS.VM",
+    "id": "extModel6271-608"
+  },
+  {
+    "name": "Read Workload Metric",
+    "key": "virtualDisk.readLoadMetric.VM.VDISK",
+    "id": "extModel6271-609"
+  },
+  {
+    "name": "Memory Allocated",
+    "key": "mem.capacity.provisioned.HOST",
+    "id": "extModel6271-610"
+  },
+  {
+    "name": "Failed VM Reads",
+    "key": "storage.commands.readFailed.VM",
+    "id": "extModel6271-611"
+  },
+  {
+    "name": "VM Unregister Operations On Datacenter",
+    "key": "vmop.unregister.DCENTER",
+    "id": "extModel6271-612"
+  },
+  {
+    "name": "CPU Wait Time Per VCPU",
+    "key": "cpu.wait.VM.VCPU",
+    "id": "extModel6271-613"
+  },
+  {
+    "name": "GPU Temperature (Shutdown)",
+    "key": "gpu.shutdown.temperature.DEVICE",
+    "id": "extModel6271-614"
+  },
+  {
+    "name": "System Statistics",
+    "key": "vcDebugInfo.systemstats.VCDBG",
+    "id": "extModel6271-615"
+  },
+  {
+    "name": "Mem.capacity.usage.vm.VM",
+    "key": "mem.capacity.usage.vm.VM",
+    "id": "extModel6271-616"
+  },
+  {
+    "name": "Number Of Protected VMs Under Enhanced VR",
+    "key": "lwd.hbrNumVMs.HOST",
+    "id": "extModel6271-617"
+  },
+  {
+    "name": "Multicast Tx Packet",
+    "key": "tn-traffic.multicast_tx_packets",
+    "id": "extModel6271-618"
+  },
+  {
+    "name": "VGPU Memory Used By Workloads In GB",
+    "key": "gpu.mem.used.gb.VM.DEVICE",
+    "id": "extModel6271-619"
+  },
+  {
+    "name": "Unknown Protocol Frames Per PNIC",
+    "key": "net.unknownProtos.PNIC",
+    "id": "extModel6271-620"
+  },
+  {
+    "name": "VNA Bridge Port Rx Drop",
+    "key": "vna.edge_aggregate_stats.bridge_port_rx_drops",
+    "id": "extModel6271-621"
+  },
+  {
+    "name": "Max Datastore Latency On Host",
+    "key": "datastore.maxTotalLatency.HOST",
+    "id": "extModel6271-622"
+  },
+  {
+    "name": "Replication Network Latency On Host",
+    "key": "hbr.hbrNetLatency.HOST",
+    "id": "extModel6271-623"
+  },
+  {
+    "name": "PCPUs With 75% CPU Usage",
+    "key": "datapath.pcpu.75pct.HOST",
+    "id": "extModel6271-624"
+  },
+  {
+    "name": "Network CPU Utilization",
+    "key": "datapath.net.threads.total.HOST",
+    "id": "extModel6271-625"
+  },
+  {
+    "name": "Compressed Memory On Host",
+    "key": "mem.compressed.HOST",
+    "id": "extModel6271-626"
+  },
+  {
+    "name": "Remote VSAN Read Latency On Cluster",
+    "key": "latencyAvgRead.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-627"
+  },
+  {
+    "name": "Total VM Commands On vDisk",
+    "key": "storage.commands.total.VM.VDISK",
+    "id": "extModel6271-628"
+  },
+  {
+    "name": "VNA LRP Tx No ARP Drop",
+    "key": "vna.edge_aggregate_stats.lr_port_tx_no_arp_drops",
+    "id": "extModel6271-629"
+  },
+  {
+    "name": "Write Request Size",
+    "key": "virtualDisk.writeIOSize.VM.VDISK",
+    "id": "extModel6271-630"
+  },
+  {
+    "name": "Read Commands/sec (Path)",
+    "key": "storage.iops.read.SPATH",
+    "id": "extModel6271-631"
+  },
+  {
+    "name": "Storage DRS Datastore Bytes Written",
+    "key": "datastore.datastoreWriteBytes.HOST",
+    "id": "extModel6271-632"
+  },
+  {
+    "name": "Active VM Commands On LUN",
+    "key": "storage.commands.active.VM.LUN",
+    "id": "extModel6271-633"
+  },
+  {
+    "name": "Broadcast Received Packets Per DVPort",
+    "key": "net.throughput.vds.pktsRxBcast.DVS.PORT",
+    "id": "extModel6271-634"
+  },
+  {
+    "name": "Datastore Read Latency On Host",
+    "key": "datastore.totalReadLatency.HOST",
+    "id": "extModel6271-635"
+  },
+  {
+    "name": "Host Cache Swap In",
+    "key": "mem.llSwapIn.HOST",
+    "id": "extModel6271-636"
+  },
+  {
+    "name": "VM Destroy Operations On Datacenter",
+    "key": "vmop.destroy.DCENTER",
+    "id": "extModel6271-637"
+  },
+  {
+    "name": "Network Received Missed Packets/sec (pNICs)",
+    "key": "datapath.uplink.pnic.rxmissed.HOST",
+    "id": "extModel6271-638"
+  },
+  {
+    "name": "Memory Swap In Rate On Host",
+    "key": "mem.swap.readrate.HOST",
+    "id": "extModel6271-639"
+  },
+  {
+    "name": "Pnic Tx Mbps",
+    "key": "platform.pnic_txmbps",
+    "id": "extModel6271-640"
+  },
+  {
+    "name": "Memory Granted On Cluster",
+    "key": "mem.granted.CLSTR",
+    "id": "extModel6271-641"
+  },
+  {
+    "name": "Remote VSAN Write IOPS On Host",
+    "key": "iopsWrite.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-642"
+  },
+  {
+    "name": "Write Throughput (vDisk)",
+    "key": "storage.throughput.write.VM.VDISK",
+    "id": "extModel6271-643"
+  },
+  {
+    "name": "VM Average Overall Write Latency",
+    "key": "storage.latency.write.VM",
+    "id": "extModel6271-644"
+  },
+  {
+    "name": "storageAdapter.numberWriteAveraged.HOST",
+    "key": "storageAdapter.numberWriteAveraged.HOST",
+    "id": "extModel6271-645"
+  },
+  {
+    "name": "Guest Disk Request Queue Averaged",
+    "key": "guest.disk.requestQueueAvg.VM",
+    "id": "extModel6271-646"
+  },
+  {
+    "name": "Task Management Error (abort) On Storage Path",
+    "key": "storage.errors.abort.SPATH",
+    "id": "extModel6271-647"
+  },
+  {
+    "name": "Bridge Port Tx Drop",
+    "key": "edge_aggregate_stats.bridge_port_tx_drops",
+    "id": "extModel6271-648"
+  },
+  {
+    "name": "Write Latency (vDisk)",
+    "key": "storage.latency.write.VM.VDISK",
+    "id": "extModel6271-649"
+  },
+  {
+    "name": "CPU Demand On VM",
+    "key": "cpu.demand.VM",
+    "id": "extModel6271-650"
+  },
+  {
+    "name": "Datastore Disk Capacity Usage Per LUN",
+    "key": "disk.capacity.usage.DSTORE.LUN",
+    "id": "extModel6271-651"
+  },
+  {
+    "name": "List Wait Latency Bank Flush Bypass Write",
+    "key": "latbankFlushBypassWriteListWait.ZDOM_OVERVIEW",
+    "id": "extModel6271-652"
+  },
+  {
+    "name": "CPU Idle Time Per PCPU",
+    "key": "cpu.idle.PCPU",
+    "id": "extModel6271-653"
+  },
+  {
+    "name": "Host Cache Swap Out Rate On Host",
+    "key": "mem.llSwapOutRate.HOST",
+    "id": "extModel6271-654"
+  },
+  {
+    "name": "storagePath.read.SPATH",
+    "key": "storagePath.read.SPATH",
+    "id": "extModel6271-655"
+  },
+  {
+    "name": "Tiered Memory Consumed",
+    "key": "mem.tier.consumed.MEMTYPE",
+    "id": "extModel6271-656"
+  },
+  {
+    "name": "Segments Read ZDOM Cleaning",
+    "key": "numSegsRead.ZDOM_SEG_CLEANING",
+    "id": "extModel6271-657"
+  },
+  {
+    "name": "VCPUs With 75% CPU Usage",
+    "key": "datapath.vcpu.75pct.HOST",
+    "id": "extModel6271-658"
+  },
+  {
+    "name": "Count Of Virtual CPUs",
+    "key": "vmx.numVCPUs.VM",
+    "id": "extModel6271-659"
+  },
+  {
+    "name": "Remote VSAN Outstanding IO On Host",
+    "key": "oio.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-660"
+  },
+  {
+    "name": "Network Received Packets Per PNIC",
+    "key": "net.throughput.pktsRx.PNIC",
+    "id": "extModel6271-661"
+  },
+  {
+    "name": "Cache Misses Per IO",
+    "key": "missesPerIO.HR_ZDOM_VTX",
+    "id": "extModel6271-662"
+  },
+  {
+    "name": "Task Management Error (abortRetry) On LUN",
+    "key": "storage.errors.abortRetry.LUN",
+    "id": "extModel6271-663"
+  },
+  {
+    "name": "Multicast Received Packets Per PNIC",
+    "key": "net.throughput.pktsRxMulticast.PNIC",
+    "id": "extModel6271-664"
+  },
+  {
+    "name": "Enhanced VR Data Transmit Rate",
+    "key": "lwd.hbrNetTx.VM",
+    "id": "extModel6271-665"
+  },
+  {
+    "name": "Task Management Error (deviceResetFailed) On Storage Path",
+    "key": "storage.errors.deviceResetFailed.SPATH",
+    "id": "extModel6271-666"
+  },
+  {
+    "name": "Vnic Count",
+    "key": "platform.vnic_count",
+    "id": "extModel6271-667"
+  },
+  {
+    "name": "Enhanced VR Average Transferred Data Per Disk",
+    "key": "lwd.hbrDiskTransferBytes.VM",
+    "id": "extModel6271-668"
+  },
+  {
+    "name": "VM Write Throughput",
+    "key": "storage.throughput.write.VM",
+    "id": "extModel6271-669"
+  },
+  {
+    "name": "Count Of Failed Virtual Storage Object API Calls",
+    "key": "vslm.fault.count.METHOD.DSTORE",
+    "id": "extModel6271-670"
+  },
+  {
+    "name": "disk.numberRead.VM.LUN",
+    "key": "disk.numberRead.VM.LUN",
+    "id": "extModel6271-671"
+  },
+  {
+    "name": "Storage vMotion Operations On Datacenter",
+    "key": "vmop.svmotion.DCENTER",
+    "id": "extModel6271-672"
+  },
+  {
+    "name": "storageAdapter.outstandingIOs.HOST",
+    "key": "storageAdapter.outstandingIOs.HOST",
+    "id": "extModel6271-673"
+  },
+  {
+    "name": "PNIC 802.3x Pause Rate",
+    "key": "pauseCount.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-674"
+  },
+  {
+    "name": "VM StandBy Guest Operations On Datacenter",
+    "key": "vmop.standbyGuest.DCENTER",
+    "id": "extModel6271-675"
+  },
+  {
+    "name": "Guest Memory Swap Space Remaining",
+    "key": "guest.swap.spaceRemaining.VM",
+    "id": "extModel6271-676"
+  },
+  {
+    "name": "Outbound Packet Drop Rate On VNIC",
+    "key": "portTxDrops.HR_VSAN_VNIC_NET",
+    "id": "extModel6271-677"
+  },
+  {
+    "name": "CPU Active (5 Min Average)",
+    "key": "rescpu.actav5.HOST",
+    "id": "extModel6271-678"
+  },
+  {
+    "name": "CPU Readiness",
+    "key": "cpu.readiness.HOST",
+    "id": "extModel6271-679"
+  },
+  {
+    "name": "Resource CPU Maximum Limited (5 Min) On Host",
+    "key": "sys.resourceCpuMaxLimited5.HOST",
+    "id": "extModel6271-680"
+  },
+  {
+    "name": "Guest Physically Usable Memory",
+    "key": "guest.mem.physUsable.VM",
+    "id": "extModel6271-681"
+  },
+  {
+    "name": "metric.sys.resourceMemConsumed.SYSRES",
+    "key": "sys.resourceMemConsumed.SYSRES",
+    "id": "extModel6271-682"
+  },
+  {
+    "name": "VSAN Clients Recovery Write Throughput On Cluster",
+    "key": "throughputRecWrite.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-683"
+  },
+  {
+    "name": "System Call Rate",
+    "key": "vcResources.syscallsrate.VCRES",
+    "id": "extModel6271-684"
+  },
+  {
+    "name": "VM Clone Operations On Cluster",
+    "key": "vmop.clone.CLSTR",
+    "id": "extModel6271-685"
+  },
+  {
+    "name": "PNIC Outbound Packets Per Second",
+    "key": "txPackets.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-686"
+  },
+  {
+    "name": "VM Power On Operations On Datacenter",
+    "key": "vmop.poweron.DCENTER",
+    "id": "extModel6271-687"
+  },
+  {
+    "name": "VNA Tunnel Port Tx Drop",
+    "key": "vna.edge_aggregate_stats.tunnel_port_tx_drops",
+    "id": "extModel6271-688"
+  },
+  {
+    "name": "storagePath.read.HOST",
+    "key": "storagePath.read.HOST",
+    "id": "extModel6271-689"
+  },
+  {
+    "name": "Failed Reads On NFS",
+    "key": "nfs.readsFailed.HOST",
+    "id": "extModel6271-690"
+  },
+  {
+    "name": "NFS Total Writes",
+    "key": "filesystem.totalWrites.FSTYPE.FSPATH",
+    "id": "extModel6271-691"
+  },
+  {
+    "name": "Segment Cleaning Write Throughput",
+    "key": "tputSegCleanWrite.ZDOM_OVERVIEW",
+    "id": "extModel6271-692"
+  },
+  {
+    "name": "CPU Throttled (5 Min Average) On VM",
+    "key": "rescpu.maxLimited5.VM",
+    "id": "extModel6271-693"
+  },
+  {
+    "name": "Data Center Disk Usage",
+    "key": "disk.usage.DCENTER",
+    "id": "extModel6271-694"
+  },
+  {
+    "name": "Broadcast Packets Transmitted Per VNIC",
+    "key": "net.broadcastTx.VM.VNIC",
+    "id": "extModel6271-695"
+  },
+  {
+    "name": "disk.totalWriteLatency.HOST",
+    "key": "disk.totalWriteLatency.HOST",
+    "id": "extModel6271-696"
+  },
+  {
+    "name": "disk.read.LUN",
+    "key": "disk.read.LUN",
+    "id": "extModel6271-697"
+  },
+  {
+    "name": "CPU Co-Stop On VM",
+    "key": "cpu.corecount.contention.VM",
+    "id": "extModel6271-698"
+  },
+  {
+    "name": "Max Number Of Threads",
+    "key": "threads.max.SERVICE",
+    "id": "extModel6271-699"
+  },
+  {
+    "name": "Multicast Packets Transmitted Per PNIC",
+    "key": "net.multicastTx.PNIC",
+    "id": "extModel6271-700"
+  },
+  {
+    "name": "Multicast Transmit Packets Per DVPort",
+    "key": "net.throughput.vds.pktsTxMcast.DVS.PORT",
+    "id": "extModel6271-701"
+  },
+  {
+    "name": "NFS Read Issue Time",
+    "key": "filesystem.readIssueTime.FSTYPE.FSPATH",
+    "id": "extModel6271-702"
+  },
+  {
+    "name": "Queued Commands On LUN",
+    "key": "storage.commands.queued.LUN",
+    "id": "extModel6271-703"
+  },
+  {
+    "name": "CPU Co-stop (vCPU)",
+    "key": "cpu.costop.VM.VCPU",
+    "id": "extModel6271-704"
+  },
+  {
+    "name": "Average Disk Read Latency",
+    "key": "hbr.hbrDiskReadLatency.HOST",
+    "id": "extModel6271-705"
+  },
+  {
+    "name": "Checksum Mismatch Count",
+    "key": "checksumMismatchCount.HR_RDT_NET",
+    "id": "extModel6271-706"
+  },
+  {
+    "name": "Filesystem APD State",
+    "key": "nfs.apdState.HOST",
+    "id": "extModel6271-707"
+  },
+  {
+    "name": "VNA Load Balancer CPU Usage",
+    "key": "vna.edge_aggregate_stats.lb_cpu_usage",
+    "id": "extModel6271-708"
+  },
+  {
+    "name": "Host Cache Swap Out",
+    "key": "mem.llSwapOut.HOST",
+    "id": "extModel6271-709"
+  },
+  {
+    "name": "LWD_SNAP_OVERLAP_WAIT_WRITES",
+    "key": "lwd.snapshot.overlapWaitWrites.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-710"
+  },
+  {
+    "name": "Task Management Error (lunReset) On Storage Path",
+    "key": "storage.errors.lunReset.SPATH",
+    "id": "extModel6271-711"
+  },
+  {
+    "name": "NFS Total Create Calls Failed",
+    "key": "filesystem.createFailed.FSTYPE.FSPATH",
+    "id": "extModel6271-712"
+  },
+  {
+    "name": "Memory Swap-out Rate",
+    "key": "mem.swapoutRate.HOST",
+    "id": "extModel6271-713"
+  },
+  {
+    "name": "Read Latency (Path)",
+    "key": "storage.latency.read.SPATH",
+    "id": "extModel6271-714"
+  },
+  {
+    "name": "VM Network Usage Per VNIC",
+    "key": "net.usage.VM.VNIC",
+    "id": "extModel6271-715"
+  },
+  {
+    "name": "Tier 0 Downlink Tx Packets",
+    "key": "edge_lr_port_stats.t0_aggregated_tx_downlink_packets",
+    "id": "extModel6271-716"
+  },
+  {
+    "name": "Guest CPU Run Queue",
+    "key": "guest.cpu.runQueue.VM",
+    "id": "extModel6271-717"
+  },
+  {
+    "name": "Max Request Count",
+    "key": "requests.max.SERVICE",
+    "id": "extModel6271-718"
+  },
+  {
+    "name": "Datastore Read Latency Per LUN On VM",
+    "key": "datastore.totalReadLatency.VM.LUN",
+    "id": "extModel6271-719"
+  },
+  {
+    "name": "Virtual Disk Throughput Usage",
+    "key": "virtualDisk.throughput.usage.VM.VDISK",
+    "id": "extModel6271-720"
+  },
+  {
+    "name": "VSCSI Write Throughput On VM",
+    "key": "throughputWrite.VSCSI",
+    "id": "extModel6271-721"
+  },
+  {
+    "name": "disk.kernelWriteLatency.HOST",
+    "key": "disk.kernelWriteLatency.HOST",
+    "id": "extModel6271-722"
+  },
+  {
+    "name": "Host Network Usage Per PNIC",
+    "key": "net.usage.PNIC",
+    "id": "extModel6271-723"
+  },
+  {
+    "name": "Remote VSAN Congestion On Compute Host",
+    "key": "congestion.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-724"
+  },
+  {
+    "name": "VM Write Iops Per LUN",
+    "key": "storage.iops.write.VM.LUN",
+    "id": "extModel6271-725"
+  },
+  {
+    "name": "VMKMEM Minfree",
+    "key": "mem.kernel.minfree.HOST",
+    "id": "extModel6271-726"
+  },
+  {
+    "name": "Network Received Throughput Per PNIC",
+    "key": "net.throughput.receiveRate.PNIC",
+    "id": "extModel6271-727"
+  },
+  {
+    "name": "Read Request Size",
+    "key": "virtualDisk.readIOSize.VM.VDISK",
+    "id": "extModel6271-728"
+  },
+  {
+    "name": "VSCSI Write Latency On VM",
+    "key": "latencyWrite.VSCSI",
+    "id": "extModel6271-729"
+  },
+  {
+    "name": "Storage Reservation Conflicts On Storage Path",
+    "key": "storage.errors.reservationConflicts.VM.LUN",
+    "id": "extModel6271-730"
+  },
+  {
+    "name": "System Uptime On Host",
+    "key": "sys.uptime.HOST",
+    "id": "extModel6271-731"
+  },
+  {
+    "name": "Packet Processing Threads With 80% CPU Usage",
+    "key": "datapath.net.threads.80pct.HOST",
+    "id": "extModel6271-732"
+  },
+  {
+    "name": "metric.sys.resourceMemOverhead.SYSRES",
+    "key": "sys.resourceMemOverhead.SYSRES",
+    "id": "extModel6271-733"
+  },
+  {
+    "name": "Congestion",
+    "key": "congestion.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-734"
+  },
+  {
+    "name": "Write Commands/sec (vDisk)",
+    "key": "storage.iops.write.VM.VDISK",
+    "id": "extModel6271-735"
+  },
+  {
+    "name": "VM Average Overall Write Latency Per LUN",
+    "key": "storage.latency.write.VM.LUN",
+    "id": "extModel6271-736"
+  },
+  {
+    "name": "storageAdapter.throughput.usag.HOST",
+    "key": "storageAdapter.throughput.usag.HOST",
+    "id": "extModel6271-737"
+  },
+  {
+    "name": "CPU Running (1 Min Average) On VM",
+    "key": "rescpu.runav1.VM",
+    "id": "extModel6271-738"
+  },
+  {
+    "name": "VSAN ESA Object Read IOPS On Cluster",
+    "key": "iopsRead.HR_CLUSTER_ZDOM_TOP_STATS",
+    "id": "extModel6271-739"
+  },
+  {
+    "name": "Total Read On Storage Adapter",
+    "key": "storage.commands.read.SADAPTER",
+    "id": "extModel6271-740"
+  },
+  {
+    "name": "Network Transmit Throughput",
+    "key": "net.transmitted.HOST",
+    "id": "extModel6271-741"
+  },
+  {
+    "name": "Heap Free",
+    "key": "mem.heapfree.HOST",
+    "id": "extModel6271-742"
+  },
+  {
+    "name": "VNA DP CPU Rx PPS",
+    "key": "vna.edge_dp_cpu.rx_pps",
+    "id": "extModel6271-743"
+  },
+  {
+    "name": "Host Cache Swap Used On Host",
+    "key": "mem.llSwapUsed.HOST",
+    "id": "extModel6271-744"
+  },
+  {
+    "name": "Multicast Packets Received Per VNIC",
+    "key": "net.multicastRx.VM.VNIC",
+    "id": "extModel6271-745"
+  },
+  {
+    "name": "vMotion Network Round Trip",
+    "key": "vmotion.rtt.VM",
+    "id": "extModel6271-746"
+  },
+  {
+    "name": "Current Memory Usage",
+    "key": "service.mem.used.SERVICE",
+    "id": "extModel6271-747"
+  },
+  {
+    "name": "disk.unshared.VM",
+    "key": "disk.unshared.VM",
+    "id": "extModel6271-748"
+  },
+  {
+    "name": "Network Received Packets/sec",
+    "key": "datapath.vnic.rxpps.HOST",
+    "id": "extModel6271-749"
+  },
+  {
+    "name": "Maximum Percentage Of Running CPU Time",
+    "key": "maxRunPct.VSAN_ZDOM_CPU",
+    "id": "extModel6271-750"
+  },
+  {
+    "name": "disk.numberReadAveraged.VM.LUN",
+    "key": "disk.numberReadAveraged.VM.LUN",
+    "id": "extModel6271-751"
+  },
+  {
+    "name": "disk.used.DSTORE.LUN",
+    "key": "disk.used.DSTORE.LUN",
+    "id": "extModel6271-752"
+  },
+  {
+    "name": "VM Memory Consumed",
+    "key": "mem.consumed.VM",
+    "id": "extModel6271-753"
+  },
+  {
+    "name": "CPU Demand",
+    "key": "cpu.demand.HOST",
+    "id": "extModel6271-754"
+  },
+  {
+    "name": "mem.swapunreserved.HOST",
+    "key": "mem.swapunreserved.HOST",
+    "id": "extModel6271-755"
+  },
+  {
+    "name": "GPU Encoder Utilization",
+    "key": "gpu.encode.utilization.DEVICE",
+    "id": "extModel6271-756"
+  },
+  {
+    "name": "disk.deviceLatency.LUN",
+    "key": "disk.deviceLatency.LUN",
+    "id": "extModel6271-757"
+  },
+  {
+    "name": "VM Memory Latency",
+    "key": "mem.capacity.contention.VM",
+    "id": "extModel6271-758"
+  },
+  {
+    "name": "Memory Swapped Out On VM",
+    "key": "mem.swapout.VM",
+    "id": "extModel6271-759"
+  },
+  {
+    "name": "LWD_SNAP_SES_SUB_READS",
+    "key": "lwd.snapshot.ses.subReads.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-760"
+  },
+  {
+    "name": "Average Number Of Outstanding Read Requests",
+    "key": "virtualDisk.readOIO.VM.VDISK",
+    "id": "extModel6271-761"
+  },
+  {
+    "name": "vMotion Operations On Cluster",
+    "key": "vmop.vmotion.CLSTR",
+    "id": "extModel6271-762"
+  },
+  {
+    "name": "Received Packet Rate",
+    "key": "vcResources.packetrecvrate.VCRES",
+    "id": "extModel6271-763"
+  },
+  {
+    "name": "Current Failover Level",
+    "key": "clusterServices.failover.CLSTR",
+    "id": "extModel6271-764"
+  },
+  {
+    "name": "Session Statistics",
+    "key": "vcDebugInfo.sessionstats.VCDBG",
+    "id": "extModel6271-765"
+  },
+  {
+    "name": "Created Flow Number",
+    "key": "platform.flowcache.num_flows_created",
+    "id": "extModel6271-766"
+  },
+  {
+    "name": "LWD_SNAP_SES_SUB_WRITES",
+    "key": "lwd.snapshot.ses.subWrites.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-767"
+  },
+  {
+    "name": "Network Received Packets Per DVS",
+    "key": "net.throughput.pktsRx.DVS",
+    "id": "extModel6271-768"
+  },
+  {
+    "name": "PShare Common",
+    "key": "mem.pshare.common.HOST",
+    "id": "extModel6271-769"
+  },
+  {
+    "name": "Failed Writes On VM",
+    "key": "storage.commands.writeFailed.VM",
+    "id": "extModel6271-770"
+  },
+  {
+    "name": "Tier 0 Downlink Rx Packets",
+    "key": "edge_lr_port_stats.t0_aggregated_rx_downlink_packets",
+    "id": "extModel6271-771"
+  },
+  {
+    "name": "CPU Reserved Capacity On Host",
+    "key": "cpu.reservedCapacity.HOST",
+    "id": "extModel6271-772"
+  },
+  {
+    "name": "Network Packets Received Per VNIC",
+    "key": "net.packetsRx.VM.VNIC",
+    "id": "extModel6271-773"
+  },
+  {
+    "name": "disk.commandsAveraged.VM.LUN",
+    "key": "disk.commandsAveraged.VM.LUN",
+    "id": "extModel6271-774"
+  },
+  {
+    "name": "Host Power Capacity Usage - VM",
+    "key": "power.capacity.usageVm.HOST",
+    "id": "extModel6271-775"
+  },
+  {
+    "name": "PCPUs With 95% CPU Usage",
+    "key": "datapath.pcpu.95pct.HOST",
+    "id": "extModel6271-776"
+  },
+  {
+    "name": "Pnic Rx Missed",
+    "key": "platform.pnic_rx_missed",
+    "id": "extModel6271-777"
+  },
+  {
+    "name": "disk.unshared.VM.LUN",
+    "key": "disk.unshared.VM.LUN",
+    "id": "extModel6271-778"
+  },
+  {
+    "name": "Network Transmit Packets Per DVPort",
+    "key": "net.throughput.vds.pktsTx.DVS.PORT",
+    "id": "extModel6271-779"
+  },
+  {
+    "name": "Remote VSAN Read Latency On HCI Host",
+    "key": "latencyAvgRead.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-780"
+  },
+  {
+    "name": "PNIC RX Missed Error",
+    "key": "rxMissErr.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-781"
+  },
+  {
+    "name": "disk.actualused.VM",
+    "key": "disk.actualused.VM",
+    "id": "extModel6271-782"
+  },
+  {
+    "name": "CPU Usage Per PCPU",
+    "key": "cpu.usage.PCPU",
+    "id": "extModel6271-783"
+  },
+  {
+    "name": "Read Latency (vDisk)",
+    "key": "storage.latency.read.VM.VDISK",
+    "id": "extModel6271-784"
+  },
+  {
+    "name": "Memory Pre-copy Bandwidth",
+    "key": "vmotion.precopy.network.bw.VM",
+    "id": "extModel6271-785"
+  },
+  {
+    "name": "Packet Receive Errors",
+    "key": "net.errorsRx.HOST",
+    "id": "extModel6271-786"
+  },
+  {
+    "name": "storageAdapter.throughput.cont.HOST",
+    "key": "storageAdapter.throughput.cont.HOST",
+    "id": "extModel6271-787"
+  },
+  {
+    "name": "GPU Compute Limit",
+    "key": "gpu.compute.clock.limit.DEVICE",
+    "id": "extModel6271-788"
+  },
+  {
+    "name": "disk.numberReadAveraged.DSTORE.LUN",
+    "key": "disk.numberReadAveraged.DSTORE.LUN",
+    "id": "extModel6271-789"
+  },
+  {
+    "name": "Resource CPU Active (5 Min Average) On System Resources",
+    "key": "sys.resourceCpuAct5.SYSRES",
+    "id": "extModel6271-790"
+  },
+  {
+    "name": "VM Guest Reboot Operations On Cluster",
+    "key": "vmop.rebootGuest.CLSTR",
+    "id": "extModel6271-791"
+  },
+  {
+    "name": "Replication Data Transmit Rate On Host",
+    "key": "net.throughput.hbr.outbound.HOST",
+    "id": "extModel6271-792"
+  },
+  {
+    "name": "Datastore Throughput Usage",
+    "key": "datastore.throughput.usage.DSTORE",
+    "id": "extModel6271-793"
+  },
+  {
+    "name": "storagePath.numberReadAveraged.SPATH",
+    "key": "storagePath.numberReadAveraged.SPATH",
+    "id": "extModel6271-794"
+  },
+  {
+    "name": "VM Memory Capacity",
+    "key": "mem.capacity.provisioned.VM",
+    "id": "extModel6271-795"
+  },
+  {
+    "name": "PNIC Throughput Outbound",
+    "key": "txThroughput.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-796"
+  },
+  {
+    "name": "Average Write IOPS On LUN",
+    "key": "datastore.numberWriteAveraged.LUN",
+    "id": "extModel6271-797"
+  },
+  {
+    "name": "Broadcast Received Packets",
+    "key": "net.broadcastRx.HOST",
+    "id": "extModel6271-798"
+  },
+  {
+    "name": "Network Host Max Latency",
+    "key": "maxLatency.RDT_NETWORK_LATENCY",
+    "id": "extModel6271-799"
+  },
+  {
+    "name": "Pnic Rx PPS",
+    "key": "platform.pnic_rxpps",
+    "id": "extModel6271-800"
+  },
+  {
+    "name": "Average Datastore Write IOPS Per LUN On VM",
+    "key": "datastore.numberWriteAveraged.VM.LUN",
+    "id": "extModel6271-801"
+  },
+  {
+    "name": "VM CPU Usage In MHz",
+    "key": "cpu.usagemhz.VM",
+    "id": "extModel6271-802"
+  },
+  {
+    "name": "disk.capacity.DSTORE",
+    "key": "disk.capacity.DSTORE",
+    "id": "extModel6271-803"
+  },
+  {
+    "name": "PNIC RX CRC Error",
+    "key": "rxCrcErr.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-804"
+  },
+  {
+    "name": "vSphere Replication Average Disk Read Latency",
+    "key": "virtualDisk.hbr.readLatencyMS.HOST",
+    "id": "extModel6271-805"
+  },
+  {
+    "name": "Task Management Error (busResetRetry) On LUN",
+    "key": "storage.errors.busResetRetry.LUN",
+    "id": "extModel6271-806"
+  },
+  {
+    "name": "VSAN ESA Object Write IOPS On Cluster",
+    "key": "iopsWrite.HR_CLUSTER_ZDOM_TOP_STATS",
+    "id": "extModel6271-807"
+  },
+  {
+    "name": "VMFS Working Set",
+    "key": "mem.vmfs.pbc.workingSet.HOST",
+    "id": "extModel6271-808"
+  },
+  {
+    "name": "Shared Memory Via Page Sharing On Host",
+    "key": "mem.pshare.shared.HOST",
+    "id": "extModel6271-809"
+  },
+  {
+    "name": "GPU Power Usage",
+    "key": "gpu.power.used.DEVICE",
+    "id": "extModel6271-810"
+  },
+  {
+    "name": "CPU Active (15 Min Peak) On VM",
+    "key": "rescpu.actpk15.VM",
+    "id": "extModel6271-811"
+  },
+  {
+    "name": "metric.sys.resourceMemZero.SYSRES",
+    "key": "sys.resourceMemZero.SYSRES",
+    "id": "extModel6271-812"
+  },
+  {
+    "name": "CPU Running (5 Min Peak)",
+    "key": "rescpu.runpk5.HOST",
+    "id": "extModel6271-813"
+  },
+  {
+    "name": "Compressed Memory On VM",
+    "key": "mem.compressed.VM",
+    "id": "extModel6271-814"
+  },
+  {
+    "name": "Recovery Write IOPS (Owner) On Host",
+    "key": "iopsRecWrite.HOST_DOMOWNER",
+    "id": "extModel6271-815"
+  },
+  {
+    "name": "datastore.vmfs.unmapSize.HOST",
+    "key": "datastore.vmfs.unmapSize.HOST",
+    "id": "extModel6271-816"
+  },
+  {
+    "name": "Packet Processing Threads With 25% CPU Usage",
+    "key": "datapath.net.threads.25pct.HOST",
+    "id": "extModel6271-817"
+  },
+  {
+    "name": "Total Read On Storage Path",
+    "key": "storage.commands.read.SPATH",
+    "id": "extModel6271-818"
+  },
+  {
+    "name": "vMotion Migration Time",
+    "key": "vmotion.dst.migration.time.VM",
+    "id": "extModel6271-819"
+  },
+  {
+    "name": "VM Read Throughput Per LUN",
+    "key": "storage.throughput.read.VM.LUN",
+    "id": "extModel6271-820"
+  },
+  {
+    "name": "Network Dropped Packets Per DVS",
+    "key": "net.throughput.droppedRx.DVS",
+    "id": "extModel6271-821"
+  },
+  {
+    "name": "LWD_SNAP_SES_READS_5MS",
+    "key": "lwd.snapshot.ses.reads5ms.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-822"
+  },
+  {
+    "name": "Active Write Memory On VM",
+    "key": "mem.activewrite.VM",
+    "id": "extModel6271-823"
+  },
+  {
+    "name": "Network Transmit Dropped Packets On VM",
+    "key": "net.droppedTx.VM",
+    "id": "extModel6271-824"
+  },
+  {
+    "name": "Network Received Packets Per LAG",
+    "key": "net.throughput.vds.lagRx.DVS.LAG",
+    "id": "extModel6271-825"
+  },
+  {
+    "name": "Multicast Transmit Packets Per DVS",
+    "key": "net.throughput.pktsTxMulticast.DVS",
+    "id": "extModel6271-826"
+  },
+  {
+    "name": "Total Read On LUN",
+    "key": "storage.commands.read.LUN",
+    "id": "extModel6271-827"
+  },
+  {
+    "name": "metric.sys.resourceMemMapped.SYSRES",
+    "key": "sys.resourceMemMapped.SYSRES",
+    "id": "extModel6271-828"
+  },
+  {
+    "name": "Failed Reads On Storage Adapter",
+    "key": "storage.commands.readFailed.SADAPTER",
+    "id": "extModel6271-829"
+  },
+  {
+    "name": "Failed Commands On Storage Adapter",
+    "key": "storage.commands.failed.SADAPTER",
+    "id": "extModel6271-830"
+  },
+  {
+    "name": "Persistent Memory Reservation Managed By DRS",
+    "key": "pmem.drsmanaged.reservation.HOST",
+    "id": "extModel6271-831"
+  },
+  {
+    "name": "Tunnel Port Rx Drop",
+    "key": "edge_aggregate_stats.tunnel_port_rx_drops",
+    "id": "extModel6271-832"
+  },
+  {
+    "name": "Total Cache Miss Rate",
+    "key": "rateTotalCacheMiss.HR_ZDOM_VTX",
+    "id": "extModel6271-833"
+  },
+  {
+    "name": "mem.swapIn.VM",
+    "key": "mem.swapIn.VM",
+    "id": "extModel6271-834"
+  },
+  {
+    "name": "CPU Running (5 Min Average) On VM",
+    "key": "rescpu.runav5.VM",
+    "id": "extModel6271-835"
+  },
+  {
+    "name": "disk.read.VM",
+    "key": "disk.read.VM",
+    "id": "extModel6271-836"
+  },
+  {
+    "name": "CPU Swap Wait On VM",
+    "key": "cpu.swapwait.VM",
+    "id": "extModel6271-837"
+  },
+  {
+    "name": "Maximum Percentage Of ZDOM Used CPU Time",
+    "key": "maxUsedPct.VSAN_ZDOM_CPU",
+    "id": "extModel6271-838"
+  },
+  {
+    "name": "Effective CPU Resources",
+    "key": "clusterServices.effectivecpu.CLSTR",
+    "id": "extModel6271-839"
+  },
+  {
+    "name": "VNA Average Current Sessions Per Second",
+    "key": "vna.edge_aggregate_stats.lb_current_session_rate",
+    "id": "extModel6271-840"
+  },
+  {
+    "name": "Storage DRS Datastore Write Workload Metric",
+    "key": "datastore.datastoreWriteLoadMetric.HOST",
+    "id": "extModel6271-841"
+  },
+  {
+    "name": "GPU Compute Utilization",
+    "key": "gpu.compute.utilization.DEVICE",
+    "id": "extModel6271-842"
+  },
+  {
+    "name": "VM Register Operations On Cluster",
+    "key": "vmop.register.CLSTR",
+    "id": "extModel6271-843"
+  },
+  {
+    "name": "Disk Usage",
+    "key": "sys.diskUsage.HOST",
+    "id": "extModel6271-844"
+  },
+  {
+    "name": "VM Memory Write Latency",
+    "key": "mem.latency.write.VM.MEMTYPE",
+    "id": "extModel6271-845"
+  },
+  {
+    "name": "Persistent Memory Available Reservation",
+    "key": "pmem.available.reservation.HOST",
+    "id": "extModel6271-846"
+  },
+  {
+    "name": "CPU Throttled (15 Min Average) On VM",
+    "key": "rescpu.maxLimited15.VM",
+    "id": "extModel6271-847"
+  },
+  {
+    "name": "Idle Time Per Disk",
+    "key": "hbr.hbrDiskTransferIdle.HOST",
+    "id": "extModel6271-848"
+  },
+  {
+    "name": "Network Throughput Contention",
+    "key": "net.throughput.contention.HOST",
+    "id": "extModel6271-849"
+  },
+  {
+    "name": "Network Total Throughput Per PNIC",
+    "key": "net.throughput.usage.PNIC",
+    "id": "extModel6271-850"
+  },
+  {
+    "name": "Network Transmit Dropped Packets",
+    "key": "net.droppedTx.HOST",
+    "id": "extModel6271-851"
+  },
+  {
+    "name": "mem.reservedCapacity.userworld.VM",
+    "key": "mem.reservedCapacity.userworld.VM",
+    "id": "extModel6271-852"
+  },
+  {
+    "name": "disk.read.HOST",
+    "key": "disk.read.HOST",
+    "id": "extModel6271-853"
+  },
+  {
+    "name": "Recovery Unmap IOPS",
+    "key": "iopsRecUnmap.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-854"
+  },
+  {
+    "name": "LWD_SNAP_SES_TOTAL_WRITE_BYTES",
+    "key": "lwd.snapshot.ses.totalWriteBytes.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-855"
+  },
+  {
+    "name": "Host Cache Swap Out Rate On VM",
+    "key": "mem.llSwapOutRate.VM",
+    "id": "extModel6271-856"
+  },
+  {
+    "name": "APD Timeouts",
+    "key": "datastore.vmfs.apdCount.HOST",
+    "id": "extModel6271-857"
+  },
+  {
+    "name": "Shared Memory On Resource Pool",
+    "key": "mem.shared.RESPOOL",
+    "id": "extModel6271-858"
+  },
+  {
+    "name": "vSphere Replication VM Count",
+    "key": "hbr.vms.HOST",
+    "id": "extModel6271-859"
+  },
+  {
+    "name": "disk.used.VM",
+    "key": "disk.used.VM",
+    "id": "extModel6271-860"
+  },
+  {
+    "name": "Network Transmit Packets Per LAG",
+    "key": "net.throughput.vds.lagTx.DVS.LAG",
+    "id": "extModel6271-861"
+  },
+  {
+    "name": "disk.queueReadLatency.HOST",
+    "key": "disk.queueReadLatency.HOST",
+    "id": "extModel6271-862"
+  },
+  {
+    "name": "Power Limit For A GPU In W",
+    "key": "gpu.power.limit.DEVICE",
+    "id": "extModel6271-863"
+  },
+  {
+    "name": "Group CPU Sample Count",
+    "key": "rescpu.sampleCount.HOST",
+    "id": "extModel6271-864"
+  },
+  {
+    "name": "Transmit Packets Dropped Per VNIC",
+    "key": "net.droppedTx.VM.VNIC",
+    "id": "extModel6271-865"
+  },
+  {
+    "name": "Latency",
+    "key": "esxtokend.requests.latency.GROUP.GROUP",
+    "id": "extModel6271-866"
+  },
+  {
+    "name": "Failed VM Commands On LUN",
+    "key": "storage.commands.failed.VM.LUN",
+    "id": "extModel6271-867"
+  },
+  {
+    "name": "VSAN Backend Resync Read Latency On Host",
+    "key": "latAvgResyncRead.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-868"
+  },
+  {
+    "name": "Replication Data Transmit Rate",
+    "key": "hbr.hbrNetTx.HOST",
+    "id": "extModel6271-869"
+  },
+  {
+    "name": "disk.deltaused.DSTORE",
+    "key": "disk.deltaused.DSTORE",
+    "id": "extModel6271-870"
+  },
+  {
+    "name": "VSCSI Read IOPS On VM",
+    "key": "iopsRead.VSCSI",
+    "id": "extModel6271-871"
+  },
+  {
+    "name": "CPU Idle Time On VM",
+    "key": "cpu.idle.VM",
+    "id": "extModel6271-872"
+  },
+  {
+    "name": "Resource Memory Mapped",
+    "key": "sys.resourceMemMapped.HOST",
+    "id": "extModel6271-873"
+  },
+  {
+    "name": "LWD_SNAP_SES_MAX_SUB_WRITES",
+    "key": "lwd.snapshot.ses.maxSubWrites.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-874"
+  },
+  {
+    "name": "LWD_SNAP_SES_WRITES_1MS",
+    "key": "lwd.snapshot.ses.writes1ms.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-875"
+  },
+  {
+    "name": "VM Destroy Operations On Cluster",
+    "key": "vmop.destroy.CLSTR",
+    "id": "extModel6271-876"
+  },
+  {
+    "name": "Read Commands/sec (Disk)",
+    "key": "storage.iops.read.LUN",
+    "id": "extModel6271-877"
+  },
+  {
+    "name": "PNIC TX Carrier Error",
+    "key": "txCarErr.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-878"
+  },
+  {
+    "name": "VNA Bridge Port Tx Drop",
+    "key": "vna.edge_aggregate_stats.bridge_port_tx_drops",
+    "id": "extModel6271-879"
+  },
+  {
+    "name": "Write Rate On vDisk",
+    "key": "virtualDisk.write.VM.VDISK",
+    "id": "extModel6271-880"
+  },
+  {
+    "name": "Multicast Received Packets Per DVPort",
+    "key": "net.throughput.vds.pktsRxMcast.DVS.PORT",
+    "id": "extModel6271-881"
+  },
+  {
+    "name": "LRP Tx No ARP Drop",
+    "key": "edge_aggregate_stats.lr_port_tx_no_arp_drops",
+    "id": "extModel6271-882"
+  },
+  {
+    "name": "Activation Latency",
+    "key": "vcDebugInfo.activationlatencystats.VCDBG",
+    "id": "extModel6271-883"
+  },
+  {
+    "name": "VCPUs With 50% CPU Usage",
+    "key": "datapath.vcpu.50pct.HOST",
+    "id": "extModel6271-884"
+  },
+  {
+    "name": "CPU Core Count Usage",
+    "key": "cpu.corecount.usage.HOST",
+    "id": "extModel6271-885"
+  },
+  {
+    "name": "Reservation Available",
+    "key": "mem.unreserved.HOST",
+    "id": "extModel6271-886"
+  },
+  {
+    "name": "Network Transmit Packets/sec (vNIC)",
+    "key": "datapath.vnic.txpps.HOST",
+    "id": "extModel6271-887"
+  },
+  {
+    "name": "Network Total Packets/sec",
+    "key": "net.throughput.packetsPerSec.PNIC",
+    "id": "extModel6271-888"
+  },
+  {
+    "name": "Read Commands/sec (Adapter)",
+    "key": "storage.iops.read.SADAPTER",
+    "id": "extModel6271-889"
+  },
+  {
+    "name": "Decompression Rate",
+    "key": "mem.decompressionRate.VM",
+    "id": "extModel6271-890"
+  },
+  {
+    "name": "Total Writes Failed On NFS",
+    "key": "nfs.writesFailed.HOST",
+    "id": "extModel6271-891"
+  },
+  {
+    "name": "VSCSI Read Latency On VM",
+    "key": "latencyRead.VSCSI",
+    "id": "extModel6271-892"
+  },
+  {
+    "name": "disk.commandsAveraged.HOST",
+    "key": "disk.commandsAveraged.HOST",
+    "id": "extModel6271-893"
+  },
+  {
+    "name": "Resource Memory Share Saved",
+    "key": "sys.resourceMemShared.HOST",
+    "id": "extModel6271-894"
+  },
+  {
+    "name": "VM DRS Score",
+    "key": "clusterServices.vmDrsScore.VM",
+    "id": "extModel6271-895"
+  },
+  {
+    "name": "Receive Packets Dropped Per VNIC",
+    "key": "net.droppedRx.VM.VNIC",
+    "id": "extModel6271-896"
+  },
+  {
+    "name": "Total Writes On Storage Path",
+    "key": "storage.commands.write.SPATH",
+    "id": "extModel6271-897"
+  },
+  {
+    "name": "MISSRT",
+    "key": "mem.missrate.MEMTYPE",
+    "id": "extModel6271-898"
+  },
+  {
+    "name": "Read Issue Time On NFS",
+    "key": "nfs.readIssueTime.HOST",
+    "id": "extModel6271-899"
+  },
+  {
+    "name": "Minimum CPU Usage Of Packet Processing Threads",
+    "key": "datapath.net.threads.min.HOST",
+    "id": "extModel6271-900"
+  },
+  {
+    "name": "Total Writes On Storage Adapter",
+    "key": "storage.commands.write.SADAPTER",
+    "id": "extModel6271-901"
+  },
+  {
+    "name": "LWD_SNAP_TIME",
+    "key": "lwd.snapshot.elapsedTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-902"
+  },
+  {
+    "name": "Shared Memory On Host",
+    "key": "mem.shared.HOST",
+    "id": "extModel6271-903"
+  },
+  {
+    "name": "Memory Ballooned On Cluster",
+    "key": "mem.vmmemctl.CLSTR",
+    "id": "extModel6271-904"
+  },
+  {
+    "name": "Downlink Tx",
+    "key": "edge_lr_port_stats.t0_aggregated_tx_downlink_bytes",
+    "id": "extModel6271-905"
+  },
+  {
+    "name": "disk.write.HOST",
+    "key": "disk.write.HOST",
+    "id": "extModel6271-906"
+  },
+  {
+    "name": "RDT Network Host Min Latency",
+    "key": "minLatency.RDT_NETWORK_LATENCY",
+    "id": "extModel6271-907"
+  },
+  {
+    "name": "CPU Running (15 Min Average)",
+    "key": "rescpu.runav15.HOST",
+    "id": "extModel6271-908"
+  },
+  {
+    "name": "VM Read Iops",
+    "key": "storage.iops.read.VM",
+    "id": "extModel6271-909"
+  },
+  {
+    "name": "Effective Memory Resources",
+    "key": "clusterServices.effectivemem.CLSTR",
+    "id": "extModel6271-910"
+  },
+  {
+    "name": "Multicast Packets Transmitted From VM",
+    "key": "net.multicastTx.VM",
+    "id": "extModel6271-911"
+  },
+  {
+    "name": "Average Percentage Of Running RDT CPU Time",
+    "key": "avgRunPct.VSAN_RDT_CPU",
+    "id": "extModel6271-912"
+  },
+  {
+    "name": "vGPU Decoder Utilization",
+    "key": "gpu.decode.utilization.VM.DEVICE",
+    "id": "extModel6271-913"
+  },
+  {
+    "name": "Buffer Size",
+    "key": "vcResources.buffersz.VCRES",
+    "id": "extModel6271-914"
+  },
+  {
+    "name": "Storage Reservation Conflicts On LUN",
+    "key": "storage.errors.reservationConflicts.LUN",
+    "id": "extModel6271-915"
+  },
+  {
+    "name": "Memory Reserved",
+    "key": "mem.reservedCapacity.HOST",
+    "id": "extModel6271-916"
+  },
+  {
+    "name": "Total vNICs Count",
+    "key": "datapath.vnic.count.HOST",
+    "id": "extModel6271-917"
+  },
+  {
+    "name": "Total Packet Drop",
+    "key": "tn-traffic.datapath_total_packet_drops",
+    "id": "extModel6271-918"
+  },
+  {
+    "name": "vMotion Configured Memory On VM",
+    "key": "vmotion.mem.sizemb.VM",
+    "id": "extModel6271-919"
+  },
+  {
+    "name": "Remote VSAN Read IOPS On Cluster",
+    "key": "iopsRead.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-920"
+  },
+  {
+    "name": "Resource CPU Allocation Minimum (in MHz)",
+    "key": "sys.resourceCpuAllocMin.SYSRES",
+    "id": "extModel6271-921"
+  },
+  {
+    "name": "mem.reservedCapacity.vm.VM",
+    "key": "mem.reservedCapacity.vm.VM",
+    "id": "extModel6271-922"
+  },
+  {
+    "name": "Network Total Throughput On VM",
+    "key": "net.throughput.usage.VM",
+    "id": "extModel6271-923"
+  },
+  {
+    "name": "GPU Memory Utilization",
+    "key": "gpu.mem.utilization.DEVICE",
+    "id": "extModel6271-924"
+  },
+  {
+    "name": "Total Failed Create Calls On NFS",
+    "key": "nfs.createFailed.HOST",
+    "id": "extModel6271-925"
+  },
+  {
+    "name": "Read Latency (us)",
+    "key": "virtualDisk.readLatencyUS.VM.VDISK",
+    "id": "extModel6271-926"
+  },
+  {
+    "name": "PShare SharedSave",
+    "key": "mem.pshare.sharedSave.HOST",
+    "id": "extModel6271-927"
+  },
+  {
+    "name": "Resource Memory Touched",
+    "key": "sys.resourceMemTouched.HOST",
+    "id": "extModel6271-928"
+  },
+  {
+    "name": "CPU Entitlement On VM",
+    "key": "cpu.entitlement.VM",
+    "id": "extModel6271-929"
+  },
+  {
+    "name": "Storage DRS Datastore Outstanding Write Requests",
+    "key": "datastore.datastoreWriteOIO.HOST",
+    "id": "extModel6271-930"
+  },
+  {
+    "name": "VSAN Backend Resync Read Latency On Cluster",
+    "key": "latAvgResyncRead.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-931"
+  },
+  {
+    "name": "Network Packets Transmitted Per PNIC",
+    "key": "net.packetsTx.PNIC",
+    "id": "extModel6271-932"
+  },
+  {
+    "name": "Page Fault Rate",
+    "key": "vcResources.pagefaultrate.VCRES",
+    "id": "extModel6271-933"
+  },
+  {
+    "name": "VNA Logical Router Total Packets",
+    "key": "vna.edge_lr_port_stats.lr_total_packets",
+    "id": "extModel6271-934"
+  },
+  {
+    "name": "CPU Running (15 Min Peak)",
+    "key": "rescpu.runpk15.HOST",
+    "id": "extModel6271-935"
+  },
+  {
+    "name": "Cluster Memory Usage",
+    "key": "mem.consumed.CLSTR",
+    "id": "extModel6271-936"
+  },
+  {
+    "name": "Host Cache Swap In Rate On Host",
+    "key": "mem.llSwapInRate.HOST",
+    "id": "extModel6271-937"
+  },
+  {
+    "name": "Pnic Rx Eps",
+    "key": "platform.pnic_rxeps",
+    "id": "extModel6271-938"
+  },
+  {
+    "name": "disk.used.POD",
+    "key": "disk.used.POD",
+    "id": "extModel6271-939"
+  },
+  {
+    "name": "Storage I/O Control Datastore Maximum Queue Depth",
+    "key": "datastore.datastoreMaxQueueDepth.HOST",
+    "id": "extModel6271-940"
+  },
+  {
+    "name": "Guest Memory Active",
+    "key": "guest.mem.activeFileCache.VM",
+    "id": "extModel6271-941"
+  },
+  {
+    "name": "storagePath.maxTotalLatency.HOST",
+    "key": "storagePath.maxTotalLatency.HOST",
+    "id": "extModel6271-942"
+  },
+  {
+    "name": "VNA Tier 0 Downlink Tx",
+    "key": "vna.edge_lr_port_stats.t0_aggregated_tx_downlink_bytes",
+    "id": "extModel6271-943"
+  },
+  {
+    "name": "metric.sys.resourceMemCow.SYSRES",
+    "key": "sys.resourceMemCow.SYSRES",
+    "id": "extModel6271-944"
+  },
+  {
+    "name": "vNICs RX Errors Per Second",
+    "key": "datapath.vnic.rxeps.HOST",
+    "id": "extModel6271-945"
+  },
+  {
+    "name": "Disk Write Rate",
+    "key": "vcResources.diskwritesrate.VCRES",
+    "id": "extModel6271-946"
+  },
+  {
+    "name": "Packet Processing Threads With 97% CPU Usage",
+    "key": "datapath.net.threads.97pct.HOST",
+    "id": "extModel6271-947"
+  },
+  {
+    "name": "Remote VSAN Outstanding IO On HCI Host",
+    "key": "oio.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-948"
+  },
+  {
+    "name": "NFS Total Create Calls",
+    "key": "filesystem.totalCreate.FSTYPE.FSPATH",
+    "id": "extModel6271-949"
+  },
+  {
+    "name": "Static Power",
+    "key": "power.capacity.usageStatic.VM",
+    "id": "extModel6271-950"
+  },
+  {
+    "name": "Pnic Tx PPS",
+    "key": "platform.pnic_txpps",
+    "id": "extModel6271-951"
+  },
+  {
+    "name": "DP CPU Rx PPS",
+    "key": "edge_dp_cpu.rx_pps",
+    "id": "extModel6271-952"
+  },
+  {
+    "name": "GPU Utilization",
+    "key": "gpu.utilization.DEVICE",
+    "id": "extModel6271-953"
+  },
+  {
+    "name": "disk.queueLatency.HOST",
+    "key": "disk.queueLatency.HOST",
+    "id": "extModel6271-954"
+  },
+  {
+    "name": "Total Read Calls On NFS",
+    "key": "nfs.totalReads.HOST",
+    "id": "extModel6271-955"
+  },
+  {
+    "name": "LWD_SNAP_TOTAL_WRITE_BYTES",
+    "key": "lwd.snapshot.totalWriteBytes.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-956"
+  },
+  {
+    "name": "Active Memory On Host",
+    "key": "mem.active.HOST",
+    "id": "extModel6271-957"
+  },
+  {
+    "name": "Activation Count",
+    "key": "vcDebugInfo.activationstats.VCDBG",
+    "id": "extModel6271-958"
+  },
+  {
+    "name": "LWD_SNAP_CHANGED_BYTES",
+    "key": "lwd.snapshot.changedBytes.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-959"
+  },
+  {
+    "name": "CPU Active (5 Min Average) On VM",
+    "key": "rescpu.actav5.VM",
+    "id": "extModel6271-960"
+  },
+  {
+    "name": "disk.queueWriteLatency.HOST",
+    "key": "disk.queueWriteLatency.HOST",
+    "id": "extModel6271-961"
+  },
+  {
+    "name": "vGPU Compute Utilization",
+    "key": "gpu.compute.utilization.VM.DEVICE",
+    "id": "extModel6271-962"
+  },
+  {
+    "name": "mem.reservedCapacity.vmOvhd.VM",
+    "key": "mem.reservedCapacity.vmOvhd.VM",
+    "id": "extModel6271-963"
+  },
+  {
+    "name": "Host Power Capacity Usable",
+    "key": "power.capacity.usable.HOST",
+    "id": "extModel6271-964"
+  },
+  {
+    "name": "VSAN Clients Recovery Write Latency On Cluster",
+    "key": "latencyAvgRecWrite.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-965"
+  },
+  {
+    "name": "CPU Core Count Provisioned",
+    "key": "cpu.corecount.provisioned.HOST",
+    "id": "extModel6271-966"
+  },
+  {
+    "name": "Demand-to-entitlement Ratio",
+    "key": "cpu.demandEntitlementRatio.VM",
+    "id": "extModel6271-967"
+  },
+  {
+    "name": "VMFS APD Count",
+    "key": "filesystem.vmfs.apdCount.FSTYPE.FSPATH",
+    "id": "extModel6271-968"
+  },
+  {
+    "name": "Write Latency (Kernel)",
+    "key": "storage.latency.writeKavg.LUN",
+    "id": "extModel6271-969"
+  },
+  {
+    "name": "PNICs TX Errors Per Second",
+    "key": "datapath.uplink.pnic.txeps.HOST",
+    "id": "extModel6271-970"
+  },
+  {
+    "name": "VSAN ESA Object Write IOPS On Host",
+    "key": "iopsWrite.HR_HOST_ZDOM_TOP_STATS",
+    "id": "extModel6271-971"
+  },
+  {
+    "name": "Guest Needed Memory",
+    "key": "guest.mem.needed.VM",
+    "id": "extModel6271-972"
+  },
+  {
+    "name": "Storage I/O Control Normalized Latency",
+    "key": "datastore.sizeNormalizedDatastoreLatency.HOST",
+    "id": "extModel6271-973"
+  },
+  {
+    "name": "Resource CPU Maximum Limited (1 Min) On System Resources",
+    "key": "sys.resourceCpuMaxLimited1.SYSRES",
+    "id": "extModel6271-974"
+  },
+  {
+    "name": "VM Total Iops Per LUN",
+    "key": "storage.iops.total.VM.LUN",
+    "id": "extModel6271-975"
+  },
+  {
+    "name": "storageAdapter.numberReadAveraged.HOST",
+    "key": "storageAdapter.numberReadAveraged.HOST",
+    "id": "extModel6271-976"
+  },
+  {
+    "name": "Maximum Percentage Of Running RDT CPU Time",
+    "key": "maxRunPct.VSAN_RDT_CPU",
+    "id": "extModel6271-977"
+  },
+  {
+    "name": "VM Total Iops",
+    "key": "storage.iops.total.VM",
+    "id": "extModel6271-978"
+  },
+  {
+    "name": "CPU Running (5 Min Peak) On VM",
+    "key": "rescpu.runpk5.VM",
+    "id": "extModel6271-979"
+  },
+  {
+    "name": "Multicast Packets Transmitted Per VNIC",
+    "key": "net.multicastTx.VM.VNIC",
+    "id": "extModel6271-980"
+  },
+  {
+    "name": "Host Disk Usage",
+    "key": "disk.usage.HOST",
+    "id": "extModel6271-981"
+  },
+  {
+    "name": "Number Of Large Seeks",
+    "key": "virtualDisk.largeSeeks.VM.VDISK",
+    "id": "extModel6271-982"
+  },
+  {
+    "name": "Cache Memory",
+    "key": "memory.mem_cache",
+    "id": "extModel6271-983"
+  },
+  {
+    "name": "CPU Active (1 Min Peak)",
+    "key": "rescpu.actpk1.HOST",
+    "id": "extModel6271-984"
+  },
+  {
+    "name": "FileSystem Free Percent",
+    "key": "filesystem.freePct.FSTYPE.FSPATH",
+    "id": "extModel6271-985"
+  },
+  {
+    "name": "Storage DRS Datastore Read Workload Metric",
+    "key": "datastore.datastoreReadLoadMetric.HOST",
+    "id": "extModel6271-986"
+  },
+  {
+    "name": "CPU Throttled (1 Min Average)",
+    "key": "rescpu.maxLimited1.HOST",
+    "id": "extModel6271-987"
+  },
+  {
+    "name": "High VCPU Usage Percentage",
+    "key": "platform.vcpu.ready_hist_max",
+    "id": "extModel6271-988"
+  },
+  {
+    "name": "Failed Writes On Storage Adapter",
+    "key": "storage.commands.writeFailed.SADAPTER",
+    "id": "extModel6271-989"
+  },
+  {
+    "name": "Local Client Cache Hit IOPS",
+    "key": "clientCacheHits.HR_HOST_DOMCLIENT",
+    "id": "extModel6271-990"
+  },
+  {
+    "name": "Task Management Error (deviceResetRetry) On Storage Path",
+    "key": "storage.errors.deviceResetRetry.SPATH",
+    "id": "extModel6271-991"
+  },
+  {
+    "name": "disk.numberWrite.VM.LUN",
+    "key": "disk.numberWrite.VM.LUN",
+    "id": "extModel6271-992"
+  },
+  {
+    "name": "Unmap Size",
+    "key": "datastore.unmapSize.HOST",
+    "id": "extModel6271-993"
+  },
+  {
+    "name": "Storage Commands/sec (Disk)",
+    "key": "storage.iops.total.LUN",
+    "id": "extModel6271-994"
+  },
+  {
+    "name": "Network Received Throughput (pNIC)",
+    "key": "datapath.uplink.pnic.rxmbps.HOST",
+    "id": "extModel6271-995"
+  },
+  {
+    "name": "Network Usable Capacity",
+    "key": "net.throughput.usable.HOST",
+    "id": "extModel6271-996"
+  },
+  {
+    "name": "PNIC Inbound Packet Error Rate",
+    "key": "rxPacketsLossRate.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-997"
+  },
+  {
+    "name": "Resource Memory Zero",
+    "key": "sys.resourceMemZero.HOST",
+    "id": "extModel6271-998"
+  },
+  {
+    "name": "Storage I/O Control Aggregated IOPS",
+    "key": "datastore.datastoreIops.HOST",
+    "id": "extModel6271-999"
+  },
+  {
+    "name": "Context Switch Rate",
+    "key": "vcResources.ctxswitchesrate.VCRES",
+    "id": "extModel6271-1000"
+  },
+  {
+    "name": "disk.maxTotalLatency.HOST",
+    "key": "disk.maxTotalLatency.HOST",
+    "id": "extModel6271-1001"
+  },
+  {
+    "name": "Total GPU Memory In KB",
+    "key": "gpu.mem.total.DEVICE",
+    "id": "extModel6271-1002"
+  },
+  {
+    "name": "Packet Processing Threads With 85% CPU Usage",
+    "key": "datapath.net.threads.85pct.HOST",
+    "id": "extModel6271-1003"
+  },
+  {
+    "name": "NFS Write Issue Time",
+    "key": "filesystem.writeIssueTime.FSTYPE.FSPATH",
+    "id": "extModel6271-1004"
+  },
+  {
+    "name": "VMKMEM Ursvd",
+    "key": "mem.kernel.unreserved.HOST",
+    "id": "extModel6271-1005"
+  },
+  {
+    "name": "Bridge Port Rx Drop",
+    "key": "edge_aggregate_stats.bridge_port_rx_drops",
+    "id": "extModel6271-1006"
+  },
+  {
+    "name": "Throughput Bank Flush Bypass Write",
+    "key": "tputBankFlushBypassWrite.ZDOM_OVERVIEW",
+    "id": "extModel6271-1007"
+  },
+  {
+    "name": "Rate Of Data Received Per PNIC",
+    "key": "net.bytesRx.PNIC",
+    "id": "extModel6271-1008"
+  },
+  {
+    "name": "VMFS Journal Transactions",
+    "key": "filesystem.vmfs.totalTxn.FSTYPE.FSPATH",
+    "id": "extModel6271-1009"
+  },
+  {
+    "name": "VSAN Clients Recovery Write Latency On Host",
+    "key": "latencyAvgRecWrite.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-1010"
+  },
+  {
+    "name": "VM Suspend Operations On Datacenter",
+    "key": "vmop.suspend.DCENTER",
+    "id": "extModel6271-1011"
+  },
+  {
+    "name": "Guest Memory Buffers",
+    "key": "guest.mem.buffers.VM",
+    "id": "extModel6271-1012"
+  },
+  {
+    "name": "Inventory Statistics",
+    "key": "vcDebugInfo.inventorystats.VCDBG",
+    "id": "extModel6271-1013"
+  },
+  {
+    "name": "Datastore Disk Capacity Usage",
+    "key": "disk.capacity.usage.DSTORE",
+    "id": "extModel6271-1014"
+  },
+  {
+    "name": "Read Latency (Kernel)",
+    "key": "storage.latency.readKavg.LUN",
+    "id": "extModel6271-1015"
+  },
+  {
+    "name": "vCenter Server service statistics",
+    "key": "vcDebugInfo.vcservicestats.VCDBG",
+    "id": "extModel6271-1016"
+  },
+  {
+    "name": "Memory Savings",
+    "key": "mem.zip.saved.HOST",
+    "id": "extModel6271-1017"
+  },
+  {
+    "name": "Memory Compression Rate",
+    "key": "mem.compressionRate.HOST",
+    "id": "extModel6271-1018"
+  },
+  {
+    "name": "VM Template Deploy Operations On Cluster",
+    "key": "vmop.deploy.CLSTR",
+    "id": "extModel6271-1019"
+  },
+  {
+    "name": "VM Write Rate On vDisk",
+    "key": "virtualDisk.write.VM",
+    "id": "extModel6271-1020"
+  },
+  {
+    "name": "VCPU Count",
+    "key": "platform.vcpu_utilization_hist_count",
+    "id": "extModel6271-1021"
+  },
+  {
+    "name": "Memory Ballooned",
+    "key": "mem.memctl.current.HOST",
+    "id": "extModel6271-1022"
+  },
+  {
+    "name": "Host Network Usage",
+    "key": "net.usage.HOST",
+    "id": "extModel6271-1023"
+  },
+  {
+    "name": "CPU Throughput Or Usage In MHz",
+    "key": "cpu.usagemhz.CLSTR",
+    "id": "extModel6271-1024"
+  },
+  {
+    "name": "disk.commands.HOST",
+    "key": "disk.commands.HOST",
+    "id": "extModel6271-1025"
+  },
+  {
+    "name": "PCPU Partner Busy Time(%)",
+    "key": "cpu.partnerBusyTime.PCPU",
+    "id": "extModel6271-1026"
+  },
+  {
+    "name": "CPU Running (15 Min Average) On VM",
+    "key": "rescpu.runav15.VM",
+    "id": "extModel6271-1027"
+  },
+  {
+    "name": "Flow Table Number",
+    "key": "platform.flowcache.num_flow_tables",
+    "id": "extModel6271-1028"
+  },
+  {
+    "name": "disk.queueLatency.LUN",
+    "key": "disk.queueLatency.LUN",
+    "id": "extModel6271-1029"
+  },
+  {
+    "name": "disk.scsiReservationCnflctsPct.HOST",
+    "key": "disk.scsiReservationCnflctsPct.HOST",
+    "id": "extModel6271-1030"
+  },
+  {
+    "name": "Remote VSAN Write Throughput On Cluster",
+    "key": "throughputWrite.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-1031"
+  },
+  {
+    "name": "Packet Processing Threads With 50% CPU Usage",
+    "key": "datapath.net.threads.50pct.HOST",
+    "id": "extModel6271-1032"
+  },
+  {
+    "name": "disk.actualused.DSTORE",
+    "key": "disk.actualused.DSTORE",
+    "id": "extModel6271-1033"
+  },
+  {
+    "name": "Storage Commands/sec (Adapter)",
+    "key": "storage.iops.total.SADAPTER",
+    "id": "extModel6271-1034"
+  },
+  {
+    "name": "Virtual Disk Number Of Resets",
+    "key": "virtualDisk.busResets.VM.VDISK",
+    "id": "extModel6271-1035"
+  },
+  {
+    "name": "GPU Decoder Utilization",
+    "key": "gpu.decode.utilization.DEVICE",
+    "id": "extModel6271-1036"
+  },
+  {
+    "name": "VNA Tunnel Port Rx Drop",
+    "key": "vna.edge_aggregate_stats.tunnel_port_rx_drops",
+    "id": "extModel6271-1037"
+  },
+  {
+    "name": "Receive Packets Dropped Per PNIC",
+    "key": "net.droppedRx.PNIC",
+    "id": "extModel6271-1038"
+  },
+  {
+    "name": "vCenter Server LRO statistics",
+    "key": "vcDebugInfo.lrostats.VCDBG",
+    "id": "extModel6271-1039"
+  },
+  {
+    "name": "Vnic Tx Eps",
+    "key": "platform.vnic_txeps",
+    "id": "extModel6271-1040"
+  },
+  {
+    "name": "VM Heartbeat",
+    "key": "sys.heartbeat.VM",
+    "id": "extModel6271-1041"
+  },
+  {
+    "name": "Storage DRS Datastore Write I/O Rate",
+    "key": "datastore.datastoreWriteIops.HOST",
+    "id": "extModel6271-1042"
+  },
+  {
+    "name": "VM Write Throughput Per LUN",
+    "key": "storage.throughput.write.VM.LUN",
+    "id": "extModel6271-1043"
+  },
+  {
+    "name": "CPU Usage Per VCPU",
+    "key": "cpu.used.VM.VCPU",
+    "id": "extModel6271-1044"
+  },
+  {
+    "name": "Multicast Received Packets Per DVS",
+    "key": "net.throughput.pktsRxMulticast.DVS",
+    "id": "extModel6271-1045"
+  },
+  {
+    "name": "Remote VSAN Congestion On HCI Cluster",
+    "key": "congestion.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-1046"
+  },
+  {
+    "name": "Task Management Error (abortFailed) On Storage Path",
+    "key": "storage.errors.abortFailed.SPATH",
+    "id": "extModel6271-1047"
+  },
+  {
+    "name": "Broadcast Received Packets (vNIC)",
+    "key": "net.broadcastRx.VM.VNIC",
+    "id": "extModel6271-1048"
+  },
+  {
+    "name": "GPU Memory Corrected ECC Errors",
+    "key": "gpu.mem.errors.ecc.corrected.DEVICE",
+    "id": "extModel6271-1049"
+  },
+  {
+    "name": "Failed Writes On Storage Path",
+    "key": "storage.commands.writeFailed.SPATH",
+    "id": "extModel6271-1050"
+  },
+  {
+    "name": "CPU Running (5 Min Average)",
+    "key": "rescpu.runav5.HOST",
+    "id": "extModel6271-1051"
+  },
+  {
+    "name": "Enhanced VR Average Transfer Success Time Per Disk",
+    "key": "lwd.hbrDiskTransferSuccess.VM",
+    "id": "extModel6271-1052"
+  },
+  {
+    "name": "Rate of Writing Data to LUN",
+    "key": "datastore.write.VM.LUN",
+    "id": "extModel6271-1053"
+  },
+  {
+    "name": "PCPUs With 90% CPU Usage",
+    "key": "datapath.pcpu.90pct.HOST",
+    "id": "extModel6271-1054"
+  },
+  {
+    "name": "DP CPU Usage",
+    "key": "edge_dp_cpu.percentage_busy_cycles",
+    "id": "extModel6271-1055"
+  },
+  {
+    "name": "VNA LRP Rx RPF Drop",
+    "key": "vna.edge_aggregate_stats.lr_port_rx_rpf_drops",
+    "id": "extModel6271-1056"
+  },
+  {
+    "name": "VCPUs With 95% CPU Usage",
+    "key": "datapath.vcpu.95pct.HOST",
+    "id": "extModel6271-1057"
+  },
+  {
+    "name": "Average Read IOPS On LUN",
+    "key": "datastore.numberReadAveraged.LUN",
+    "id": "extModel6271-1058"
+  },
+  {
+    "name": "storagePath.throughput.cont.HOST",
+    "key": "storagePath.throughput.cont.HOST",
+    "id": "extModel6271-1059"
+  },
+  {
+    "name": "Guest Memory Page Out Rate",
+    "key": "guest.page.outRate.VM",
+    "id": "extModel6271-1060"
+  },
+  {
+    "name": "Active Write Memory On Host",
+    "key": "mem.activewrite.HOST",
+    "id": "extModel6271-1061"
+  },
+  {
+    "name": "Commands Succeeded On VM",
+    "key": "storage.commands.success.VM",
+    "id": "extModel6271-1062"
+  },
+  {
+    "name": "disk.capacity.contention.DSTORE",
+    "key": "disk.capacity.contention.DSTORE",
+    "id": "extModel6271-1063"
+  },
+  {
+    "name": "Recovery Write IOPS On Host",
+    "key": "iopsRecWrite.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-1064"
+  },
+  {
+    "name": "Resource CPU Usage On System Resources",
+    "key": "sys.resourceCpuUsage.SYSRES",
+    "id": "extModel6271-1065"
+  },
+  {
+    "name": "VMFS PB Cache Overhead",
+    "key": "mem.vmfs.pbc.overhead.HOST",
+    "id": "extModel6271-1066"
+  },
+  {
+    "name": "VM Memory Active",
+    "key": "mem.capacity.usage.VM",
+    "id": "extModel6271-1067"
+  },
+  {
+    "name": "Group CPU Sample Period On VM",
+    "key": "rescpu.samplePeriod.VM",
+    "id": "extModel6271-1068"
+  },
+  {
+    "name": "Total GPU Memory In GB",
+    "key": "gpu.mem.total.gb.DEVICE",
+    "id": "extModel6271-1069"
+  },
+  {
+    "name": "OS Uptime",
+    "key": "sys.osUptime.VM",
+    "id": "extModel6271-1070"
+  },
+  {
+    "name": "Read Time On NFS",
+    "key": "nfs.readTime.HOST",
+    "id": "extModel6271-1071"
+  },
+  {
+    "name": "High VCPU Usage Count",
+    "key": "platform.vcpu_utilization_hist_gt90pct_count",
+    "id": "extModel6271-1072"
+  },
+  {
+    "name": "CPU Throughput (pCPU)",
+    "key": "datapath.pcpu.totalcpu.HOST",
+    "id": "extModel6271-1073"
+  },
+  {
+    "name": "VM Host And Datastore Change On Cluster",
+    "key": "vmop.changeHostDS.CLSTR",
+    "id": "extModel6271-1074"
+  },
+  {
+    "name": "Mem.capacity.usage.userworld.VM",
+    "key": "mem.capacity.usage.userworld.VM",
+    "id": "extModel6271-1075"
+  },
+  {
+    "name": "Multicast Packets Transmitted",
+    "key": "net.multicastTx.HOST",
+    "id": "extModel6271-1076"
+  },
+  {
+    "name": "Disk Write Sector Rate",
+    "key": "vcResources.diskwritesectorrate.VCRES",
+    "id": "extModel6271-1077"
+  },
+  {
+    "name": "Resource CPU Running (5 Min. Average) On System Resources",
+    "key": "sys.resourceCpuRun5.SYSRES",
+    "id": "extModel6271-1078"
+  },
+  {
+    "name": "Storage I/O Control Active Time Percentage",
+    "key": "datastore.siocActiveTimePercentage.HOST",
+    "id": "extModel6271-1079"
+  },
+  {
+    "name": "Successful Transfer Time Per Disk",
+    "key": "hbr.hbrDiskTransferSuccess.HOST",
+    "id": "extModel6271-1080"
+  },
+  {
+    "name": "PNIC Throughput Inbound",
+    "key": "rxThroughput.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-1081"
+  },
+  {
+    "name": "VNA Tier 0 Downlink Rx",
+    "key": "vna.edge_lr_port_stats.t0_aggregated_rx_downlink_bytes",
+    "id": "extModel6271-1082"
+  },
+  {
+    "name": "GPU Memory Used By Workloads In GB",
+    "key": "gpu.mem.used.gb.DEVICE",
+    "id": "extModel6271-1083"
+  },
+  {
+    "name": "Task Management Error (lunReset) On LUN",
+    "key": "storage.errors.lunReset.LUN",
+    "id": "extModel6271-1084"
+  },
+  {
+    "name": "Task Management Error (busResetFailed) On LUN",
+    "key": "storage.errors.busResetFailed.LUN",
+    "id": "extModel6271-1085"
+  },
+  {
+    "name": "NFS IO Requests Queued",
+    "key": "filesystem.ioRequestsQueued.FSTYPE.FSPATH",
+    "id": "extModel6271-1086"
+  },
+  {
+    "name": "Guest Memory Huge Pages",
+    "key": "guest.hugePage.total.VM",
+    "id": "extModel6271-1087"
+  },
+  {
+    "name": "MTU",
+    "key": "pnic.mtu",
+    "id": "extModel6271-1088"
+  },
+  {
+    "name": "VNA LRP Tx Drop",
+    "key": "vna.edge_aggregate_stats.lr_port_tx_drops",
+    "id": "extModel6271-1089"
+  },
+  {
+    "name": "VM Reconfigure Operations On Datacenter",
+    "key": "vmop.reconfigure.DCENTER",
+    "id": "extModel6271-1090"
+  },
+  {
+    "name": "disk.commandsAborted.HOST",
+    "key": "disk.commandsAborted.HOST",
+    "id": "extModel6271-1091"
+  },
+  {
+    "name": "Memory Consumed Per Tier",
+    "key": "mem.capacity.consumed.VM.MEMTYPE",
+    "id": "extModel6271-1092"
+  },
+  {
+    "name": "Task Management Error (busReset) On Storage Path",
+    "key": "storage.errors.busReset.SPATH",
+    "id": "extModel6271-1093"
+  },
+  {
+    "name": "NFS Readtime",
+    "key": "filesystem.readTime.FSTYPE.FSPATH",
+    "id": "extModel6271-1094"
+  },
+  {
+    "name": "vGPU Memory Reserved",
+    "key": "gpu.mem.reserved.VM.DEVICE",
+    "id": "extModel6271-1095"
+  },
+  {
+    "name": "PCPUs With 85% CPU Usage",
+    "key": "datapath.pcpu.85pct.HOST",
+    "id": "extModel6271-1096"
+  },
+  {
+    "name": "GPU Temperature (Slowdown)",
+    "key": "gpu.slowdown.temperature.DEVICE",
+    "id": "extModel6271-1097"
+  },
+  {
+    "name": "Total Writes On LUN",
+    "key": "storage.commands.write.LUN",
+    "id": "extModel6271-1098"
+  },
+  {
+    "name": "Memory Entitlement",
+    "key": "mem.mementitlement.VM",
+    "id": "extModel6271-1099"
+  },
+  {
+    "name": "VSAN ESA Object Write Latency On Cluster",
+    "key": "latencyAvgWrite.HR_CLUSTER_ZDOM_TOP_STATS",
+    "id": "extModel6271-1100"
+  },
+  {
+    "name": "CPU Running (15 Min Peak) On VM",
+    "key": "rescpu.runpk15.VM",
+    "id": "extModel6271-1101"
+  },
+  {
+    "name": "Remote VSAN Read Throughput On HCI Cluster",
+    "key": "throughputRead.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-1102"
+  },
+  {
+    "name": "Latency Bank Flush Bypass Write",
+    "key": "latBankFlushBypassWrite.ZDOM_OVERVIEW",
+    "id": "extModel6271-1103"
+  },
+  {
+    "name": "disk.totalLatency.DCENTER",
+    "key": "disk.totalLatency.DCENTER",
+    "id": "extModel6271-1104"
+  },
+  {
+    "name": "Task Management Error (virtResetRetry) On LUN",
+    "key": "storage.errors.virtResetRetry.LUN",
+    "id": "extModel6271-1105"
+  },
+  {
+    "name": "Failed Commands On LUN",
+    "key": "storage.commands.failed.LUN",
+    "id": "extModel6271-1106"
+  },
+  {
+    "name": "Multicast Received Packets",
+    "key": "net.multicastRx.HOST",
+    "id": "extModel6271-1107"
+  },
+  {
+    "name": "Memory Usable Capacity",
+    "key": "mem.capacity.usable.HOST",
+    "id": "extModel6271-1108"
+  },
+  {
+    "name": "Multicast Packets Received On VM",
+    "key": "net.multicastRx.VM",
+    "id": "extModel6271-1109"
+  },
+  {
+    "name": "Recovery Unmap Throughput",
+    "key": "throughputRecUnmap.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-1110"
+  },
+  {
+    "name": "mem.swapOut.VM",
+    "key": "mem.swapOut.VM",
+    "id": "extModel6271-1111"
+  },
+  {
+    "name": "Write Throughput (Path)",
+    "key": "storage.throughput.write.SPATH",
+    "id": "extModel6271-1112"
+  },
+  {
+    "name": "Storage Commands/sec (vDisk)",
+    "key": "storage.iops.total.VM.VDISK",
+    "id": "extModel6271-1113"
+  },
+  {
+    "name": "Overall Latency (Path)",
+    "key": "storage.latency.total.SPATH",
+    "id": "extModel6271-1114"
+  },
+  {
+    "name": "Enhanced VR Average Idle Time Per Disk",
+    "key": "lwd.hbrDiskTransferIdle.VM",
+    "id": "extModel6271-1115"
+  },
+  {
+    "name": "Memory Consumed",
+    "key": "mem.usage.HOST",
+    "id": "extModel6271-1116"
+  },
+  {
+    "name": "PCPUs With 50% CPU Usage",
+    "key": "datapath.pcpu.50pct.HOST",
+    "id": "extModel6271-1117"
+  },
+  {
+    "name": "storagePath.totalWriteLatency.SPATH",
+    "key": "storagePath.totalWriteLatency.SPATH",
+    "id": "extModel6271-1118"
+  },
+  {
+    "name": "Network Total Throughput Per VNIC",
+    "key": "net.throughput.usage.VM.VNIC",
+    "id": "extModel6271-1119"
+  },
+  {
+    "name": "Remote VSAN Write Latency On HCI Cluster",
+    "key": "latencyAvgWrite.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-1120"
+  },
+  {
+    "name": "Data Transmit Rate Per VNIC",
+    "key": "net.bytesTx.VM.VNIC",
+    "id": "extModel6271-1121"
+  },
+  {
+    "name": "CPU Throttled (5 Min Average)",
+    "key": "rescpu.maxLimited5.HOST",
+    "id": "extModel6271-1122"
+  },
+  {
+    "name": "Memory Read Latency",
+    "key": "mem.latency.read.MEMTYPE",
+    "id": "extModel6271-1123"
+  },
+  {
+    "name": "Recovery Write IOPS On Cluster",
+    "key": "iopsRecWrite.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-1124"
+  },
+  {
+    "name": "VSCSI Write IOPS On VM",
+    "key": "iopsWrite.VSCSI",
+    "id": "extModel6271-1125"
+  },
+  {
+    "name": "Pnic Tx Eps",
+    "key": "platform.pnic_txeps",
+    "id": "extModel6271-1126"
+  },
+  {
+    "name": "GPU Memory Reserved",
+    "key": "gpu.mem.reserved.DEVICE",
+    "id": "extModel6271-1127"
+  },
+  {
+    "name": "storagePath.commandsAborted.HOST",
+    "key": "storagePath.commandsAborted.HOST",
+    "id": "extModel6271-1128"
+  },
+  {
+    "name": "disk.provisioned.VM.LUN",
+    "key": "disk.provisioned.VM.LUN",
+    "id": "extModel6271-1129"
+  },
+  {
+    "name": "LWD_SNAP_SES_TOTAL_READ_TIME",
+    "key": "lwd.snapshot.ses.totalReadTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1130"
+  },
+  {
+    "name": "PNIC Data Transmit Rate On VM",
+    "key": "net.pnicBytesTx.VM",
+    "id": "extModel6271-1131"
+  },
+  {
+    "name": "CPU Run Time On VM",
+    "key": "cpu.run.VM",
+    "id": "extModel6271-1132"
+  },
+  {
+    "name": "Failed Reads On LUN",
+    "key": "storage.commands.readFailed.LUN",
+    "id": "extModel6271-1133"
+  },
+  {
+    "name": "TCP Inbound Throughout",
+    "key": "tcpRxThroughput.HR_VSAN_TCPIP_STATS",
+    "id": "extModel6271-1134"
+  },
+  {
+    "name": "VM Downtime (hypervisor)",
+    "key": "vmotion.vmkernel.downtime.VM",
+    "id": "extModel6271-1135"
+  },
+  {
+    "name": "Read Throughput (Path)",
+    "key": "storage.throughput.read.SPATH",
+    "id": "extModel6271-1136"
+  },
+  {
+    "name": "Queued Commands On Storage Adapter",
+    "key": "storage.commands.queued.SADAPTER",
+    "id": "extModel6271-1137"
+  },
+  {
+    "name": "Memory Write Bandwidth",
+    "key": "mem.bandwidth.write.MEMTYPE",
+    "id": "extModel6271-1138"
+  },
+  {
+    "name": "Resource CPU Maximum Limited (5 Min) On System Resources",
+    "key": "sys.resourceCpuMaxLimited5.SYSRES",
+    "id": "extModel6271-1139"
+  },
+  {
+    "name": "Read Throughput On LUN",
+    "key": "datastore.read.LUN",
+    "id": "extModel6271-1140"
+  },
+  {
+    "name": "Memory Used",
+    "key": "managementAgent.memUsed.HOST",
+    "id": "extModel6271-1141"
+  },
+  {
+    "name": "Guest Memory Huge Page Size",
+    "key": "guest.hugePage.size.VM",
+    "id": "extModel6271-1142"
+  },
+  {
+    "name": "Storage DRS Datastore Normalized Write Latency",
+    "key": "datastore.datastoreNormalWriteLatency.HOST",
+    "id": "extModel6271-1143"
+  },
+  {
+    "name": "Total Journal Transactions On VMFS",
+    "key": "datastore.vmfs.totalTxn.HOST",
+    "id": "extModel6271-1144"
+  },
+  {
+    "name": "Memory Swap In",
+    "key": "managementAgent.swapIn.HOST",
+    "id": "extModel6271-1145"
+  },
+  {
+    "name": "LRP Rx Frag Error",
+    "key": "edge_aggregate_stats.lr_port_rx_frag_error",
+    "id": "extModel6271-1146"
+  },
+  {
+    "name": "VM Power Usage",
+    "key": "power.power.VM",
+    "id": "extModel6271-1147"
+  },
+  {
+    "name": "Packet Processing Threads With 90% CPU Usage",
+    "key": "datapath.net.threads.90pct.HOST",
+    "id": "extModel6271-1148"
+  },
+  {
+    "name": "VNA Logical Router Total Bytes",
+    "key": "vna.edge_lr_port_stats.lr_total_bytes",
+    "id": "extModel6271-1149"
+  },
+  {
+    "name": "Commands Succeeded On Storage Adapter",
+    "key": "storage.commands.success.SADAPTER",
+    "id": "extModel6271-1150"
+  },
+  {
+    "name": "Broadcast Rx Packet",
+    "key": "tn-traffic.broadcast_rx_packets",
+    "id": "extModel6271-1151"
+  },
+  {
+    "name": "Packet Receive Errors Per PNIC",
+    "key": "net.errorsRx.PNIC",
+    "id": "extModel6271-1152"
+  },
+  {
+    "name": "Overall Latency (Guest)",
+    "key": "storage.latency.totalGavg.LUN",
+    "id": "extModel6271-1153"
+  },
+  {
+    "name": "Total VM Writes On vDisk",
+    "key": "storage.commands.write.VM.VDISK",
+    "id": "extModel6271-1154"
+  },
+  {
+    "name": "Guest Memory Page Size",
+    "key": "guest.page.size.VM",
+    "id": "extModel6271-1155"
+  },
+  {
+    "name": "metric.sys.resourceMemAllocMax.SYSRES",
+    "key": "sys.resourceMemAllocMax.SYSRES",
+    "id": "extModel6271-1156"
+  },
+  {
+    "name": "Task Management Error (lunResetRetry) On Storage Path",
+    "key": "storage.errors.lunResetRetry.SPATH",
+    "id": "extModel6271-1157"
+  },
+  {
+    "name": "TCP Outbound Throughout",
+    "key": "tcpTxThroughput.HR_VSAN_TCPIP_STATS",
+    "id": "extModel6271-1158"
+  },
+  {
+    "name": "mem.reservedCapacity.userworld.HOST",
+    "key": "mem.reservedCapacity.userworld.HOST",
+    "id": "extModel6271-1159"
+  },
+  {
+    "name": "Memory Swap Out Rate On VM",
+    "key": "mem.swapoutRate.VM",
+    "id": "extModel6271-1160"
+  },
+  {
+    "name": "Sent Packet Rate",
+    "key": "vcResources.packetsentrate.VCRES",
+    "id": "extModel6271-1161"
+  },
+  {
+    "name": "Memory Bandwidth Total",
+    "key": "mem.bandwidth.total.MEMTYPE",
+    "id": "extModel6271-1162"
+  },
+  {
+    "name": "Queued Commands On VM",
+    "key": "storage.commands.queued.VM",
+    "id": "extModel6271-1163"
+  },
+  {
+    "name": "Power Capacity Usage - Memory",
+    "key": "power.capacity.usageMem.VM",
+    "id": "extModel6271-1164"
+  },
+  {
+    "name": "CPU Wait Time On Host",
+    "key": "cpu.wait.HOST",
+    "id": "extModel6271-1165"
+  },
+  {
+    "name": "VM Read Iops Per LUN",
+    "key": "storage.iops.read.VM.LUN",
+    "id": "extModel6271-1166"
+  },
+  {
+    "name": "Write Throughput (Disk)",
+    "key": "storage.throughput.write.LUN",
+    "id": "extModel6271-1167"
+  },
+  {
+    "name": "Number Of Caches Controlled By The Virtual Flash Module",
+    "key": "vflashModule.numActiveVMDKs.HOST",
+    "id": "extModel6271-1168"
+  },
+  {
+    "name": "GPU Memory Demand",
+    "key": "gpu.mem.demand.DEVICE",
+    "id": "extModel6271-1169"
+  },
+  {
+    "name": "Task Management Error (lunResetRetry) On LUN",
+    "key": "storage.errors.lunResetRetry.LUN",
+    "id": "extModel6271-1170"
+  },
+  {
+    "name": "CPU Idle Time",
+    "key": "cpu.idle.HOST",
+    "id": "extModel6271-1171"
+  },
+  {
+    "name": "Inbound Packet Drop Rate On Host PNIC",
+    "key": "portRxDrops.HR_VSAN_HOST_NET",
+    "id": "extModel6271-1172"
+  },
+  {
+    "name": "storageAdapter.maxTotalLatency.HOST",
+    "key": "storageAdapter.maxTotalLatency.HOST",
+    "id": "extModel6271-1173"
+  },
+  {
+    "name": "Memory Compressed",
+    "key": "mem.zip.zipped.HOST",
+    "id": "extModel6271-1174"
+  },
+  {
+    "name": "Avg Percentage Of Running CPU Time",
+    "key": "avgRunPct.VSAN_DOM_CPU",
+    "id": "extModel6271-1175"
+  },
+  {
+    "name": "VM Power On Operations On Cluster",
+    "key": "vmop.poweron.CLSTR",
+    "id": "extModel6271-1176"
+  },
+  {
+    "name": "CPU Latency",
+    "key": "cpu.latency.HOST",
+    "id": "extModel6271-1177"
+  },
+  {
+    "name": "Packet Processing Threads With 0% CPU Usage",
+    "key": "datapath.net.threads.0pct.HOST",
+    "id": "extModel6271-1178"
+  },
+  {
+    "name": "Remote VSAN Write Throughput On HCI Host",
+    "key": "throughputWrite.HR_HCI_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-1179"
+  },
+  {
+    "name": "VMFS APD State",
+    "key": "filesystem.vmfs.apdState.FSTYPE.FSPATH",
+    "id": "extModel6271-1180"
+  },
+  {
+    "name": "VM Average Overall Read Latency",
+    "key": "storage.latency.read.VM",
+    "id": "extModel6271-1181"
+  },
+  {
+    "name": "Average I/O stall",
+    "key": "hbr.hbrDiskStallLatency.HOST",
+    "id": "extModel6271-1182"
+  },
+  {
+    "name": "Average Read Requests Per Second On vDisk",
+    "key": "virtualDisk.numberReadAveraged.VM.VDISK",
+    "id": "extModel6271-1183"
+  },
+  {
+    "name": "VM Throughput Contention",
+    "key": "net.throughput.contention.VM",
+    "id": "extModel6271-1184"
+  },
+  {
+    "name": "VSAN ESA Object Read Latency On Host",
+    "key": "latencyAvgRead.HR_HOST_ZDOM_TOP_STATS",
+    "id": "extModel6271-1185"
+  },
+  {
+    "name": "CPU Active (1 Min Peak) On VM",
+    "key": "rescpu.actpk1.VM",
+    "id": "extModel6271-1186"
+  },
+  {
+    "name": "vSphere Replication Average I/O Stall",
+    "key": "virtualDisk.hbr.stallLatencyMS.HOST",
+    "id": "extModel6271-1187"
+  },
+  {
+    "name": "Service Memory Usage",
+    "key": "system.mem_percent",
+    "id": "extModel6271-1188"
+  },
+  {
+    "name": "Transmit Packets Dropped Per PNIC",
+    "key": "net.droppedTx.PNIC",
+    "id": "extModel6271-1189"
+  },
+  {
+    "name": "Hit",
+    "key": "platform.flowcache.hits",
+    "id": "extModel6271-1190"
+  },
+  {
+    "name": "Resource CPU Running (5 Min. Average) On Host",
+    "key": "sys.resourceCpuRun5.HOST",
+    "id": "extModel6271-1191"
+  },
+  {
+    "name": "Network Usable Capacity Per PNIC",
+    "key": "net.throughput.usable.PNIC",
+    "id": "extModel6271-1192"
+  },
+  {
+    "name": "Guest Memory Cached",
+    "key": "guest.mem.cached.VM",
+    "id": "extModel6271-1193"
+  },
+  {
+    "name": "Storage vMotion Operations On Cluster",
+    "key": "vmop.svmotion.CLSTR",
+    "id": "extModel6271-1194"
+  },
+  {
+    "name": "Power Capacity Usage - Other",
+    "key": "power.capacity.usageOther.VM",
+    "id": "extModel6271-1195"
+  },
+  {
+    "name": "VSAN Clients Write Throughput On Cluster",
+    "key": "throughputWrite.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-1196"
+  },
+  {
+    "name": "PNIC RX Buffer Overflow Error",
+    "key": "rxOvErr.HR_VSAN_PNIC_NET",
+    "id": "extModel6271-1197"
+  },
+  {
+    "name": "Pnic Rx Mbps",
+    "key": "platform.pnic_rxmbps",
+    "id": "extModel6271-1198"
+  },
+  {
+    "name": "Host CPU Usage In MHz",
+    "key": "cpu.usagemhz.HOST",
+    "id": "extModel6271-1199"
+  },
+  {
+    "name": "Tunnel Port Tx Drop",
+    "key": "edge_aggregate_stats.tunnel_port_tx_drops",
+    "id": "extModel6271-1200"
+  },
+  {
+    "name": "disk.write.VM.LUN",
+    "key": "disk.write.VM.LUN",
+    "id": "extModel6271-1201"
+  },
+  {
+    "name": "datastore.busResets.DSTORE",
+    "key": "datastore.busResets.DSTORE",
+    "id": "extModel6271-1202"
+  },
+  {
+    "name": "CPU Swap Wait Time Per VCPU",
+    "key": "cpu.swapwait.VM.VCPU",
+    "id": "extModel6271-1203"
+  },
+  {
+    "name": "Network Received Packets Dropped Per LAG",
+    "key": "net.throughput.vds.lagDropRx.DVS.LAG",
+    "id": "extModel6271-1204"
+  },
+  {
+    "name": "Tier 1 Downlink Rx Packets",
+    "key": "edge_lr_port_stats.t1_aggregated_rx_downlink_packets",
+    "id": "extModel6271-1205"
+  },
+  {
+    "name": "CPU Readiness On VM",
+    "key": "cpu.readiness.VM",
+    "id": "extModel6271-1206"
+  },
+  {
+    "name": "Network Dropped Packets Per PNIC",
+    "key": "net.throughput.contention.PNIC",
+    "id": "extModel6271-1207"
+  },
+  {
+    "name": "LRP Rx Frag Ok",
+    "key": "edge_aggregate_stats.lr_port_rx_frag_ok",
+    "id": "extModel6271-1208"
+  },
+  {
+    "name": "Total Enhanced VR Data Transmit Rate",
+    "key": "lwd.hbrNetTx.HOST",
+    "id": "extModel6271-1209"
+  },
+  {
+    "name": "Flow Table Size",
+    "key": "platform.flowcache.flow_table_size",
+    "id": "extModel6271-1210"
+  },
+  {
+    "name": "Network Received Packets Dropped Per PNIC",
+    "key": "net.throughput.droppedRx.PNIC",
+    "id": "extModel6271-1211"
+  },
+  {
+    "name": "Local Client Cache Hit Rate",
+    "key": "clientCacheHitRate.HR_HOST_DOMCLIENT",
+    "id": "extModel6271-1212"
+  },
+  {
+    "name": "LWD_SNAP_SES_MAX_ACTIVE_READS",
+    "key": "lwd.snapshot.ses.maxActiveReads.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1213"
+  },
+  {
+    "name": "CPU Overlap Time On VM",
+    "key": "cpu.overlap.VM",
+    "id": "extModel6271-1214"
+  },
+  {
+    "name": "Task Management Error (virtResetFailed) On Storage Path",
+    "key": "storage.errors.virtResetFailed.SPATH",
+    "id": "extModel6271-1215"
+  },
+  {
+    "name": "CPU Active (5 Min Peak)",
+    "key": "rescpu.actpk5.HOST",
+    "id": "extModel6271-1216"
+  },
+  {
+    "name": "Total CPU Capacity On Cluster In MHz",
+    "key": "cpu.totalmhz.CLSTR",
+    "id": "extModel6271-1217"
+  },
+  {
+    "name": "Packet Processing Threads With 95% CPU Usage",
+    "key": "datapath.net.threads.95pct.HOST",
+    "id": "extModel6271-1218"
+  },
+  {
+    "name": "Minimum Clock Speed Of The VCPUs",
+    "key": "vmx.vcpusMhzMin.VM",
+    "id": "extModel6271-1219"
+  },
+  {
+    "name": "CPU Throughput (vCPU)",
+    "key": "datapath.vcpu.totalcpu.HOST",
+    "id": "extModel6271-1220"
+  },
+  {
+    "name": "RDT Network VNIC Average Latency",
+    "key": "avgLatency.RDT_NETWORK_LATENCY",
+    "id": "extModel6271-1221"
+  },
+  {
+    "name": "mem.swapunreserved.VM",
+    "key": "mem.swapunreserved.VM",
+    "id": "extModel6271-1222"
+  },
+  {
+    "name": "Iterations Per Second",
+    "key": "vmx.poll.itersPerS.VM",
+    "id": "extModel6271-1223"
+  },
+  {
+    "name": "Average Number Of Outstanding Write Requests",
+    "key": "virtualDisk.writeOIO.VM.VDISK",
+    "id": "extModel6271-1224"
+  },
+  {
+    "name": "CPU Active (1 Min Average) On VM",
+    "key": "rescpu.actav1.VM",
+    "id": "extModel6271-1225"
+  },
+  {
+    "name": "LWD_SYNC_TYPE",
+    "key": "lwd.sync.syncType.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1226"
+  },
+  {
+    "name": "VSAN Client Unmap Throughput On Host",
+    "key": "throughputUnmap.HR_HOST_DOMCLIENT",
+    "id": "extModel6271-1227"
+  },
+  {
+    "name": "VM Memory Entitlement",
+    "key": "mem.capacity.entitlement.VM",
+    "id": "extModel6271-1228"
+  },
+  {
+    "name": "VM Template Deploy Operations On Datacenter",
+    "key": "vmop.deploy.DCENTER",
+    "id": "extModel6271-1229"
+  },
+  {
+    "name": "Max Percentage Of Running CPU Time",
+    "key": "maxRunPct.VSAN_DOM_CPU",
+    "id": "extModel6271-1230"
+  },
+  {
+    "name": "Tier 1 Downlink Tx Packets",
+    "key": "edge_lr_port_stats.t1_aggregated_tx_downlink_packets",
+    "id": "extModel6271-1231"
+  },
+  {
+    "name": "Data Transmit Rate",
+    "key": "net.bytesTx.HOST",
+    "id": "extModel6271-1232"
+  },
+  {
+    "name": "CPU User",
+    "key": "vcResources.usercpuusage.VCRES",
+    "id": "extModel6271-1233"
+  },
+  {
+    "name": "storagePath.commandsAveraged.HOST",
+    "key": "storagePath.commandsAveraged.HOST",
+    "id": "extModel6271-1234"
+  },
+  {
+    "name": "Total Writes On VM",
+    "key": "storage.commands.write.VM",
+    "id": "extModel6271-1235"
+  },
+  {
+    "name": "Active Commands On LUN",
+    "key": "storage.commands.active.LUN",
+    "id": "extModel6271-1236"
+  },
+  {
+    "name": "Memory Precopy Time",
+    "key": "vmotion.precopy.time.VM",
+    "id": "extModel6271-1237"
+  },
+  {
+    "name": "Swap Storage Consumed On Cluster",
+    "key": "mem.swapused.CLSTR",
+    "id": "extModel6271-1238"
+  },
+  {
+    "name": "Current Sessions",
+    "key": "edge_aggregate_stats.lb_current_sessions",
+    "id": "extModel6271-1239"
+  },
+  {
+    "name": "Swap Storage Consumed",
+    "key": "mem.swapused.HOST",
+    "id": "extModel6271-1240"
+  },
+  {
+    "name": "Resource CPU Running (1 Min. Average) On Host",
+    "key": "sys.resourceCpuRun1.HOST",
+    "id": "extModel6271-1241"
+  },
+  {
+    "name": "Remote VSAN Outstanding IO On HCI Cluster",
+    "key": "oio.HR_HCI_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-1242"
+  },
+  {
+    "name": "Total VM Writes On LUN",
+    "key": "storage.commands.write.VM.LUN",
+    "id": "extModel6271-1243"
+  },
+  {
+    "name": "High VCPU Ready Total Count",
+    "key": "platform.vcpu.total_lready_count",
+    "id": "extModel6271-1244"
+  },
+  {
+    "name": "Write Commands/sec (Path)",
+    "key": "storage.iops.write.SPATH",
+    "id": "extModel6271-1245"
+  },
+  {
+    "name": "LWD_SNAP_OFFLINE",
+    "key": "lwd.snapshot.offline.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1246"
+  },
+  {
+    "name": "VM Downtime (guest)",
+    "key": "vmotion.downtime.VM",
+    "id": "extModel6271-1247"
+  },
+  {
+    "name": "Page-fault Latency On VM",
+    "key": "mem.latency.VM",
+    "id": "extModel6271-1248"
+  },
+  {
+    "name": "Network Packets Transmitted Per VNIC",
+    "key": "net.packetsTx.VM.VNIC",
+    "id": "extModel6271-1249"
+  },
+  {
+    "name": "Locking Statistics",
+    "key": "vcDebugInfo.lockstats.VCDBG",
+    "id": "extModel6271-1250"
+  },
+  {
+    "name": "storagePath.numberWriteAveraged.HOST",
+    "key": "storagePath.numberWriteAveraged.HOST",
+    "id": "extModel6271-1251"
+  },
+  {
+    "name": "LWD_NUM_SNAPS",
+    "key": "lwd.numSnapshots.HOST",
+    "id": "extModel6271-1252"
+  },
+  {
+    "name": "Rate Of Replication Data Transmit On VM",
+    "key": "hbr.hbrNetTx.VM",
+    "id": "extModel6271-1253"
+  },
+  {
+    "name": "storageAdapter.commandsAveraged.HOST",
+    "key": "storageAdapter.commandsAveraged.HOST",
+    "id": "extModel6271-1254"
+  },
+  {
+    "name": "Maximum Clock Speed Of The VCPUs",
+    "key": "vmx.vcpusMhzMax.VM",
+    "id": "extModel6271-1255"
+  },
+  {
+    "name": "metric.sys.resourceMemSwapped.SYSRES",
+    "key": "sys.resourceMemSwapped.SYSRES",
+    "id": "extModel6271-1256"
+  },
+  {
+    "name": "Remote VSAN Write Latency On Cluster",
+    "key": "latencyAvgWrite.HR_COMPUTE_CLUSTER_REMOTEDOMCLIENT",
+    "id": "extModel6271-1257"
+  },
+  {
+    "name": "Remote VSAN Write Latency On Host",
+    "key": "latencyAvgWrite.HR_COMPUTE_HOST_REMOTEDOMCLIENT",
+    "id": "extModel6271-1258"
+  },
+  {
+    "name": "Used Memory",
+    "key": "system.mem_used",
+    "id": "extModel6271-1259"
+  },
+  {
+    "name": "Write Issue Time On NFS",
+    "key": "nfs.writeIssueTime.HOST",
+    "id": "extModel6271-1260"
+  },
+  {
+    "name": "Resource Memory Consumed",
+    "key": "sys.resourceMemConsumed.HOST",
+    "id": "extModel6271-1261"
+  },
+  {
+    "name": "VM Read Throughput",
+    "key": "storage.throughput.read.VM",
+    "id": "extModel6271-1262"
+  },
+  {
+    "name": "VMFS PB Cache Capacity Miss Ratio",
+    "key": "mem.vmfs.pbc.capMissRatio.HOST",
+    "id": "extModel6271-1263"
+  },
+  {
+    "name": "Core Utilization (PCPU)",
+    "key": "cpu.coreUtilization.PCPU",
+    "id": "extModel6271-1264"
+  },
+  {
+    "name": "Socket Buffer Full Count On NFS",
+    "key": "nfs.socketBufferFull.HOST",
+    "id": "extModel6271-1265"
+  },
+  {
+    "name": "CPU Swap Wait Time",
+    "key": "cpu.swapwait.HOST",
+    "id": "extModel6271-1266"
+  },
+  {
+    "name": "Multicast Transmit Packets Per PNIC",
+    "key": "net.throughput.pktsTxMulticast.PNIC",
+    "id": "extModel6271-1267"
+  },
+  {
+    "name": "NFS Total Reads Failed",
+    "key": "filesystem.readsFailed.FSTYPE.FSPATH",
+    "id": "extModel6271-1268"
+  },
+  {
+    "name": "Bypass Write Percentage",
+    "key": "bypassWritePercent.ZDOM_OVERVIEW",
+    "id": "extModel6271-1269"
+  },
+  {
+    "name": "Write Latency (Adapter)",
+    "key": "storage.latency.write.SADAPTER",
+    "id": "extModel6271-1270"
+  },
+  {
+    "name": "Write Time On NFS",
+    "key": "nfs.writeTime.HOST",
+    "id": "extModel6271-1271"
+  },
+  {
+    "name": "Rate Of Replication Data Receive On VM",
+    "key": "hbr.hbrNetRx.VM",
+    "id": "extModel6271-1272"
+  },
+  {
+    "name": "Maximum CPU Usage Of Packet Processing Threads",
+    "key": "datapath.net.threads.max.HOST",
+    "id": "extModel6271-1273"
+  },
+  {
+    "name": "Overall Latency (Queue)",
+    "key": "storage.latency.totalQavg.LUN",
+    "id": "extModel6271-1274"
+  },
+  {
+    "name": "IOPS Limit",
+    "key": "iopsLimit.VIRTUAL_DISK",
+    "id": "extModel6271-1275"
+  },
+  {
+    "name": "VM Host Change (cold) On Datacenter",
+    "key": "vmop.changeHost.DCENTER",
+    "id": "extModel6271-1276"
+  },
+  {
+    "name": "Maximum VMFS Working Set",
+    "key": "mem.vmfs.pbc.workingSetMax.HOST",
+    "id": "extModel6271-1277"
+  },
+  {
+    "name": "Task Management Error (busResetRetry) On Storage Path",
+    "key": "storage.errors.busResetRetry.SPATH",
+    "id": "extModel6271-1278"
+  },
+  {
+    "name": "VM Clone Operations On Datacenter",
+    "key": "vmop.clone.DCENTER",
+    "id": "extModel6271-1279"
+  },
+  {
+    "name": "CPU Ready On VM",
+    "key": "cpu.ready.VM",
+    "id": "extModel6271-1280"
+  },
+  {
+    "name": "disk.busResets.HOST",
+    "key": "disk.busResets.HOST",
+    "id": "extModel6271-1281"
+  },
+  {
+    "name": "VSAN ESA Object Write Latency On Host",
+    "key": "latencyAvgWrite.HR_HOST_ZDOM_TOP_STATS",
+    "id": "extModel6271-1282"
+  },
+  {
+    "name": "Network Packets Transmitted",
+    "key": "net.packetsTx.HOST",
+    "id": "extModel6271-1283"
+  },
+  {
+    "name": "Commands Succeeded On Storage Path",
+    "key": "storage.commands.success.SPATH",
+    "id": "extModel6271-1284"
+  },
+  {
+    "name": "VNA DP CPU Usage",
+    "key": "vna.edge_dp_cpu.percentage_busy_cycles",
+    "id": "extModel6271-1285"
+  },
+  {
+    "name": "Utilization",
+    "key": "cpu.utilization.HOST",
+    "id": "extModel6271-1286"
+  },
+  {
+    "name": "CPU Active (1 Min Average)",
+    "key": "rescpu.actav1.HOST",
+    "id": "extModel6271-1287"
+  },
+  {
+    "name": "disk.busResets.VM.LUN",
+    "key": "disk.busResets.VM.LUN",
+    "id": "extModel6271-1288"
+  },
+  {
+    "name": "OIO",
+    "key": "oio.HR_CLUSTER_DOMCOMPMGR",
+    "id": "extModel6271-1289"
+  },
+  {
+    "name": "Shared Common",
+    "key": "mem.sharedcommon.HOST",
+    "id": "extModel6271-1290"
+  },
+  {
+    "name": "Average Write Requests Per Second On vDisk",
+    "key": "virtualDisk.numberWriteAveraged.VM.VDISK",
+    "id": "extModel6271-1291"
+  },
+  {
+    "name": "Unmap IOPS",
+    "key": "iopsUnmap.HR_HOST_DOMCOMPMGR",
+    "id": "extModel6271-1292"
+  },
+  {
+    "name": "Memory Swapped In On VM",
+    "key": "mem.swapin.VM",
+    "id": "extModel6271-1293"
+  },
+  {
+    "name": "System Uptime On VM",
+    "key": "sys.uptime.VM",
+    "id": "extModel6271-1294"
+  },
+  {
+    "name": "Load Balancer CPU Usage",
+    "key": "edge_aggregate_stats.lb_cpu_usage",
+    "id": "extModel6271-1295"
+  },
+  {
+    "name": "Power Cap",
+    "key": "power.powerCap.HOST",
+    "id": "extModel6271-1296"
+  },
+  {
+    "name": "Cancelled Journal Transactions On VMFS",
+    "key": "datastore.vmfs.cancelledTxn.HOST",
+    "id": "extModel6271-1297"
+  },
+  {
+    "name": "CPU Usage On Host",
+    "key": "cpu.used.PCPU",
+    "id": "extModel6271-1298"
+  },
+  {
+    "name": "disk.provisioned.POD",
+    "key": "disk.provisioned.POD",
+    "id": "extModel6271-1299"
+  },
+  {
+    "name": "Network Transmit Throughput On VM",
+    "key": "net.transmitted.VM",
+    "id": "extModel6271-1300"
+  },
+  {
+    "name": "LWD_SYNC_TIME",
+    "key": "lwd.sync.elapsedTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1301"
+  },
+  {
+    "name": "Mem.capacity.usage.vmkOvrhd.VM",
+    "key": "mem.capacity.usage.vmkOvrhd.VM",
+    "id": "extModel6271-1302"
+  },
+  {
+    "name": "Total Write Calls On NFS",
+    "key": "nfs.totalWrites.HOST",
+    "id": "extModel6271-1303"
+  },
+  {
+    "name": "Latency Of Virtual Storage Object API Calls",
+    "key": "vslm.api.latency.METHOD.DSTORE",
+    "id": "extModel6271-1304"
+  },
+  {
+    "name": "Network Total Throughput",
+    "key": "net.throughput.usage.HOST",
+    "id": "extModel6271-1305"
+  },
+  {
+    "name": "VM CPU Usage In MHz Per VCPU",
+    "key": "cpu.usagemhz.VM.VCPU",
+    "id": "extModel6271-1306"
+  },
+  {
+    "name": "PCPUs With 0% CPU Usage",
+    "key": "datapath.pcpu.0pct.HOST",
+    "id": "extModel6271-1307"
+  },
+  {
+    "name": "Enhanced VR Average Disk Read Latency",
+    "key": "lwd.hbrDiskReadLatency.VM",
+    "id": "extModel6271-1308"
+  },
+  {
+    "name": "Max Latency Bank Flush Bypass Write",
+    "key": "bankFlushBypassWriteLatencyMaxUs.ZDOM_OVERVIEW",
+    "id": "extModel6271-1309"
+  },
+  {
+    "name": "Memory Overhead On VM",
+    "key": "mem.overhead.VM",
+    "id": "extModel6271-1310"
+  },
+  {
+    "name": "CPU Load Average 5 Mins",
+    "key": "cpu.load.avg5min.HOST",
+    "id": "extModel6271-1311"
+  },
+  {
+    "name": "LWD_SNAP_SES_WRITES_2MS",
+    "key": "lwd.snapshot.ses.writes2ms.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1312"
+  },
+  {
+    "name": "Slow Path",
+    "key": "platform.flowcache.slowpath",
+    "id": "extModel6271-1313"
+  },
+  {
+    "name": "Max Percentage Of Used CPU Time",
+    "key": "maxUsedPct.VSAN_DOM_CPU",
+    "id": "extModel6271-1314"
+  },
+  {
+    "name": "VM Average Overall Latency Per LUN",
+    "key": "storage.latency.total.VM.LUN",
+    "id": "extModel6271-1315"
+  },
+  {
+    "name": "LWD_SNAP_STUNTIME",
+    "key": "lwd.snapshot.stunTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1316"
+  },
+  {
+    "name": "Network Received Packets",
+    "key": "net.packetsRx.HOST",
+    "id": "extModel6271-1317"
+  },
+  {
+    "name": "storageAdapter.totalWriteLatency.HOST",
+    "key": "storageAdapter.totalWriteLatency.HOST",
+    "id": "extModel6271-1318"
+  },
+  {
+    "name": "Failed VM Reads On LUN",
+    "key": "storage.commands.readFailed.VM.LUN",
+    "id": "extModel6271-1319"
+  },
+  {
+    "name": "Write Throughput On LUN",
+    "key": "datastore.write.DSTORE.LUN",
+    "id": "extModel6271-1320"
+  },
+  {
+    "name": "VNA DP CPU Tx PPS",
+    "key": "vna.edge_dp_cpu.tx_pps",
+    "id": "extModel6271-1321"
+  },
+  {
+    "name": "Memory Ballooned On VM",
+    "key": "mem.vmmemctl.VM",
+    "id": "extModel6271-1322"
+  },
+  {
+    "name": "Memory Consumed By Userworlds",
+    "key": "mem.consumed.userworlds.HOST",
+    "id": "extModel6271-1323"
+  },
+  {
+    "name": "LWD_SNAP_VSS_BACKUP_TYPE",
+    "key": "lwd.snapshot.vssBackupType.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1324"
+  },
+  {
+    "name": "Active Memory On Resource Pool",
+    "key": "mem.active.RESPOOL",
+    "id": "extModel6271-1325"
+  },
+  {
+    "name": "storagePath.write.HOST",
+    "key": "storagePath.write.HOST",
+    "id": "extModel6271-1326"
+  },
+  {
+    "name": "CPU Running (1 Min Average)",
+    "key": "rescpu.runav1.HOST",
+    "id": "extModel6271-1327"
+  },
+  {
+    "name": "VSAN Read Latency",
+    "key": "latencyAvgWrite.HOST_DOMOWNER",
+    "id": "extModel6271-1328"
+  },
+  {
+    "name": "Resource Pool Memory Consumed",
+    "key": "mem.consumed.RESPOOL",
+    "id": "extModel6271-1329"
+  },
+  {
+    "name": "Data Receive Rate",
+    "key": "net.bytesRx.HOST",
+    "id": "extModel6271-1330"
+  },
+  {
+    "name": "PNIC Data Transmit Rate On VNIC",
+    "key": "net.pnicBytesTx.VM.VNIC",
+    "id": "extModel6271-1331"
+  },
+  {
+    "name": "Average Clock Speed Of The VCPUs",
+    "key": "vmx.vcpusMhzMean.VM",
+    "id": "extModel6271-1332"
+  },
+  {
+    "name": "Memory Swap Used",
+    "key": "managementAgent.swapUsed.HOST",
+    "id": "extModel6271-1333"
+  },
+  {
+    "name": "Data Receive Rate Per VNIC",
+    "key": "net.received.VM.VNIC",
+    "id": "extModel6271-1334"
+  },
+  {
+    "name": "Network Capacity",
+    "key": "net.throughput.provisioned.HOST",
+    "id": "extModel6271-1335"
+  },
+  {
+    "name": "LWD_SNAP_VSS_BACKUP_CONTEXT",
+    "key": "lwd.snapshot.vssBackupContext.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1336"
+  },
+  {
+    "name": "storageAdapter.maxTotalLatency.SADAPTER",
+    "key": "storageAdapter.maxTotalLatency.SADAPTER",
+    "id": "extModel6271-1337"
+  },
+  {
+    "name": "storagePath.numberReadAveraged.HOST",
+    "key": "storagePath.numberReadAveraged.HOST",
+    "id": "extModel6271-1338"
+  },
+  {
+    "name": "Host Cache Swap Used On VM",
+    "key": "mem.llSwapUsed.VM",
+    "id": "extModel6271-1339"
+  },
+  {
+    "name": "VM Host And Datastore Change On Datacenter",
+    "key": "vmop.changeHostDS.DCENTER",
+    "id": "extModel6271-1340"
+  },
+  {
+    "name": "CPU Throughput Or Usage On VM",
+    "key": "cpu.capacity.usage.VM",
+    "id": "extModel6271-1341"
+  },
+  {
+    "name": "LWD_SNAP_START_TIME",
+    "key": "lwd.snapshot.startTime.VM.VDISK.LWDSNAPSHOT.LWDVENDOR",
+    "id": "extModel6271-1342"
+  },
+  {
+    "name": "disk.unshared.DSTORE.LUN",
+    "key": "disk.unshared.DSTORE.LUN",
+    "id": "extModel6271-1343"
+  },
+  {
+    "name": "VM CPU Usage",
+    "key": "cpu.usage.VM",
+    "id": "extModel6271-1344"
+  },
+  {
+    "name": "VM Write Iops",
+    "key": "storage.iops.write.VM",
+    "id": "extModel6271-1345"
+  }
+]

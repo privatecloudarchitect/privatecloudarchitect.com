@@ -1,0 +1,801 @@
+<title>The Collection Planes Atlas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#f3f5f7; --paper-2:#e9edf1; --ink:#16212b; --ink-2:#4a5866; --ink-3:#7b8894; --grid:#d5dbe1; --rule:#c3cbd3;
+  --steel:#4b6a8a; --teal:#0f8a86; --amber:#c9861c; --plum:#7a4d8f; --olive:#6b7d2a; --rose:#c2453f;
+  --steel-bg:#e3eaf1; --teal-bg:#dcefee; --amber-bg:#f6ead6; --plum-bg:#ece2f1; --olive-bg:#e8ecd8; --rose-bg:#f6e0de;
+  --card:#ffffff; --shadow:0 1px 0 rgba(22,33,43,.06), 0 8px 24px rgba(22,33,43,.06);
+  --display:"Fraunces",Georgia,"Times New Roman",serif; --body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif; --mono:"IBM Plex Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f171e; --paper-2:#141f28; --ink:#e6ecf1; --ink-2:#b4c0cb; --ink-3:#8494a2; --grid:#243240; --rule:#33424f;
+    --steel:#8fb0d0; --teal:#3fc4bd; --amber:#f0b24e; --plum:#bb8fd4; --olive:#b7c766; --rose:#ff8f88;
+    --steel-bg:#1a2733; --teal-bg:#122a2a; --amber-bg:#2c2214; --plum-bg:#26192d; --olive-bg:#1f2415; --rose-bg:#2e1a19;
+    --card:#151f28; --shadow:0 1px 0 rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f171e; --paper-2:#141f28; --ink:#e6ecf1; --ink-2:#b4c0cb; --ink-3:#8494a2; --grid:#243240; --rule:#33424f;
+  --steel:#8fb0d0; --teal:#3fc4bd; --amber:#f0b24e; --plum:#bb8fd4; --olive:#b7c766; --rose:#ff8f88;
+  --steel-bg:#1a2733; --teal-bg:#122a2a; --amber-bg:#2c2214; --plum-bg:#26192d; --olive-bg:#1f2415; --rose-bg:#2e1a19;
+  --card:#151f28; --shadow:0 1px 0 rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:32px 32px;background-position:-1px -1px}
+.wrap{max-width:1200px;margin:0 auto;padding-inline:20px;padding-block:32px 96px}
+.measure{max-width:70ch}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.2rem,5vw,3.6rem);line-height:1.05;font-variation-settings:"opsz" 144}
+h2{font-size:clamp(1.5rem,3vw,2.1rem);line-height:1.15}
+h3{font-size:1.1rem;font-family:var(--body);font-weight:600}
+p{margin:0 0 1em}
+a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.lede{font-size:1.15rem;color:var(--ink-2);max-width:62ch}
+.hero{padding-block:24px 8px;border-bottom:1px solid var(--rule);margin-bottom:28px}
+.hero .who{display:flex;flex-wrap:wrap;gap:8px 24px;font-family:var(--mono);font-size:.8rem;color:var(--ink-3);margin-top:16px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:18px 0 6px;font-size:.9rem}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+.sw.steel{background:var(--steel)} .sw.teal{background:var(--teal)} .sw.amber{background:var(--amber)} .sw.plum{background:var(--plum)} .sw.olive{background:var(--olive)} .sw.rose{background:var(--rose)}
+.index{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:22px 0 8px;padding:0;list-style:none}
+.index li{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:10px 12px;font-size:.92rem;display:flex;gap:10px;align-items:baseline}
+.index .no{font-family:var(--mono);color:var(--ink-3);font-size:.8rem;min-width:2.2em}
+.index a{color:var(--ink);text-decoration:none}
+.index a:hover{text-decoration:underline}
+.plate{margin-top:56px;padding-top:24px;border-top:1px solid var(--rule)}
+.plate-hd{display:grid;grid-template-columns:auto 1fr;gap:14px 20px;align-items:start;margin-bottom:14px}
+.plate-hd .no{font-family:var(--mono);font-size:.85rem;color:var(--ink-3);padding-top:.55em}
+.plate-hd .cap{font-family:var(--mono);font-size:.8rem;color:var(--ink-3);margin-top:6px}
+figure{margin:18px 0 0;background:var(--card);border:1px solid var(--rule);border-radius:8px;box-shadow:var(--shadow);padding:12px 12px 10px;overflow-x:auto}
+figure svg{display:block;width:100%;height:auto;min-width:640px}
+figcaption{font-size:.9rem;color:var(--ink-2);padding:10px 4px 2px;border-top:1px dashed var(--rule);margin-top:10px}
+figcaption b{color:var(--ink)}
+.read{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px 28px;margin-top:18px}
+.read h3{margin-bottom:6px}
+.read p,.read li{font-size:.97rem}
+.read ul{margin:0;padding-left:1.1em}
+.read li{margin-bottom:.35em}
+.trade{margin-top:18px;border-left:3px solid var(--amber);background:var(--amber-bg);padding:12px 16px;border-radius:0 6px 6px 0}
+.trade h3{margin-bottom:6px}
+.trade p{margin:0 0 .5em;font-size:.97rem}
+.trap{border-left-color:var(--rose);background:var(--rose-bg)}
+.rule-strip{margin-top:18px;border-left:3px solid var(--teal);background:var(--teal-bg);padding:12px 16px;border-radius:0 6px 6px 0}
+.rule-strip p{margin:0;font-size:.97rem}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+table{border-collapse:collapse;width:100%;font-size:.93rem;margin-top:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.76rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+td .num{color:var(--ink)}
+.tbl{overflow-x:auto}
+.closing{margin-top:56px;padding:26px 24px;background:var(--card);border:1px solid var(--rule);border-radius:8px;box-shadow:var(--shadow)}
+.closing h2{margin-bottom:10px}
+.foot{margin-top:40px;font-size:.85rem;color:var(--ink-3);border-top:1px solid var(--rule);padding-top:14px}
+.foot p{margin:0 0 .5em}
+/* SVG grammar: every diagram uses these classes so both themes hold */
+svg text{font-family:var(--body);font-size:13px;fill:var(--ink)}
+svg .t-mono{font-family:var(--mono);font-size:12px;fill:var(--ink-2)}
+svg .t-small{font-size:11.5px;fill:var(--ink-2)}
+svg .t-label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;fill:var(--ink-3);font-family:var(--mono)}
+svg .t-title{font-family:var(--body);font-weight:600;font-size:14px;fill:var(--ink)}
+svg .t-big{font-family:var(--mono);font-weight:500;font-size:20px;fill:var(--ink)}
+svg .t-inv{fill:var(--paper)}
+svg .box{fill:var(--card);stroke:var(--rule);stroke-width:1}
+svg .box-steel{fill:var(--steel-bg);stroke:var(--steel)} svg .box-teal{fill:var(--teal-bg);stroke:var(--teal)} svg .box-amber{fill:var(--amber-bg);stroke:var(--amber)} svg .box-plum{fill:var(--plum-bg);stroke:var(--plum)} svg .box-olive{fill:var(--olive-bg);stroke:var(--olive)} svg .box-rose{fill:var(--rose-bg);stroke:var(--rose)}
+svg .ln{stroke:var(--ink-3);stroke-width:1.4;fill:none} svg .ln-steel{stroke:var(--steel)} svg .ln-teal{stroke:var(--teal)} svg .ln-amber{stroke:var(--amber)} svg .ln-plum{stroke:var(--plum)} svg .ln-olive{stroke:var(--olive)} svg .ln-rose{stroke:var(--rose)}
+svg .thick{stroke-width:6;stroke-linecap:round} svg .mid{stroke-width:3;stroke-linecap:round} svg .dash{stroke-dasharray:6 5}
+svg .fill-steel{fill:var(--steel)} svg .fill-teal{fill:var(--teal)} svg .fill-amber{fill:var(--amber)} svg .fill-plum{fill:var(--plum)} svg .fill-olive{fill:var(--olive)} svg .fill-rose{fill:var(--rose)} svg .fill-ink3{fill:var(--ink-3)} svg .fill-grid{fill:var(--grid)}
+svg .axis{stroke:var(--rule);stroke-width:1} svg .gridline{stroke:var(--grid);stroke-width:1}
+svg .dot{fill:var(--ink)} svg .dot-teal{fill:var(--teal)} svg .dot-amber{fill:var(--amber)} svg .dot-steel{fill:var(--steel)}
+svg .band{opacity:.9}
+@media (max-width:640px){ body{background-size:24px 24px} .wrap{padding-inline:16px} figure{padding:8px} .plate-hd{grid-template-columns:1fr} }
+@media (prefers-reduced-motion: no-preference){ .index li{transition:transform .15s ease} .index li:hover{transform:translateY(-1px)} }
+
+/* node diagrams: HTML boxes on a grid, connectors drawn by the runtime from real geometry */
+.diagram{position:relative;display:grid;align-items:stretch;padding:8px 4px 4px}
+.diagram .edges{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:1}
+.diagram .edges path{fill:none;stroke-linecap:round}
+.node{position:relative;z-index:2;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:10px 12px 8px;min-width:0;font-size:.86rem;line-height:1.38;color:var(--ink-2)}
+.node h4{margin:0 0 4px;font:600 .92rem/1.3 var(--body);color:var(--ink)}
+.node p{margin:0 0 3px}
+.node .n-tag{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px}
+.node .n-cap{display:block;font-family:var(--mono);font-size:.74rem;color:var(--ink-2);margin-bottom:6px}
+.node .n-big{display:block;font-family:var(--mono);font-size:1.25rem;font-weight:500;color:var(--ink);margin:2px 0 4px}
+.node .n-chip{display:inline-block;font-family:var(--mono);font-size:.72rem;border:1px solid var(--rule);border-radius:4px;padding:2px 8px;margin-top:6px;color:var(--ink)}
+.node .n-mono{font-family:var(--mono);font-size:.78rem;color:var(--ink);overflow-wrap:anywhere}
+.node.n-steel{background:var(--steel-bg);border-color:var(--steel)} .node.n-teal{background:var(--teal-bg);border-color:var(--teal)} .node.n-amber{background:var(--amber-bg);border-color:var(--amber)} .node.n-plum{background:var(--plum-bg);border-color:var(--plum)} .node.n-olive{background:var(--olive-bg);border-color:var(--olive)} .node.n-rose{background:var(--rose-bg);border-color:var(--rose)}
+.node.n-plain{background:var(--card)}
+.node.n-host{display:flex;flex-direction:column;justify-content:center;text-align:center}
+.ngroup{position:relative;z-index:0;background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;margin:-6px;padding:6px 10px}
+.ngroup .n-tag{display:block;font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.strip{display:flex;align-items:center;gap:10px;margin-top:8px;font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.strip svg{flex:1 1 auto;height:14px;min-width:80px;display:block}
+.strip .strip-end{text-transform:none;letter-spacing:0;color:var(--ink-2);white-space:nowrap}
+.kvrow{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:baseline;margin-top:6px}
+.kvrow .k{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);white-space:nowrap}
+.kvrow .v{font-family:var(--mono);font-size:.78rem;color:var(--ink);overflow-wrap:anywhere}
+.matrix{display:grid;grid-template-columns:minmax(200px,1.3fr) repeat(5,minmax(64px,.55fr)) minmax(220px,1.6fr);gap:0;align-items:center;font-size:.9rem}
+.matrix>div{padding:10px 10px;border-bottom:1px solid var(--grid);min-width:0}
+.matrix .mh{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);text-align:center;border-bottom:1px solid var(--rule)}
+.matrix .mh b{display:block;font-size:1.15rem;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:500}
+.matrix .md{text-align:center}
+.matrix .md i{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--grid)}
+.matrix .md i.on{width:22px;height:22px} .matrix .md i.teal{background:var(--teal)} .matrix .md i.amber{background:var(--amber)}
+.matrix .mn b{display:block;color:var(--ink)} .matrix .mn span{color:var(--ink-2);font-size:.85rem}
+.matrix .mw{color:var(--ink-2);font-size:.85rem}
+.matrix .mfoot{grid-column:1 / -1;color:var(--ink-2);font-size:.85rem;border-bottom:0;padding-top:12px}
+.bar{display:flex;align-items:center;gap:0;height:28px;border-radius:5px;background:var(--grid);overflow:hidden;margin:8px 0}
+.bar .fill{height:100%;background:var(--amber);display:flex;align-items:center;padding-left:10px;font-family:var(--mono);font-size:.78rem;color:var(--paper);white-space:nowrap}
+.bar .rest{font-family:var(--mono);font-size:.78rem;color:var(--ink-2);padding-left:10px;white-space:nowrap}
+.panel{padding:12px 4px 4px;border-top:1px dashed var(--rule)}
+.panel:first-child{border-top:0;padding-top:4px}
+.panel h4{margin:0 0 8px;font:600 .95rem/1.3 var(--body);color:var(--ink)}
+.panel p{font-size:.9rem;color:var(--ink-2);margin:0 0 6px}
+.panel .two{display:grid;grid-template-columns:minmax(260px,1.2fr) minmax(220px,1fr);gap:8px 24px;align-items:center}
+@media (max-width:720px){ .diagram{grid-template-columns:1fr !important;grid-template-rows:none !important} .diagram .node,.diagram .ngroup{grid-column:auto !important;grid-row:auto !important} .diagram .ngroup{display:none} .diagram .edges{display:none} .matrix{grid-template-columns:1fr repeat(5,1fr)} .matrix .mw{grid-column:1 / -1;padding-top:0} .panel .two{grid-template-columns:1fr} }
+figure .diagram svg.edges,figure .strip svg{min-width:0;width:auto}
+figure .strip svg{width:100%}
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">A visual companion to Collect Once, Decide at Source</div>
+  <h1>The Collection Planes Atlas</h1>
+  <p class="lede">One ESX host is measured by three planes at four cadences, kept in five stores with six retention windows, and read by four decisions and a warehouse. This atlas draws that landscape once, in order, from the catalog a warehouse asks for to the calls that fetch it, so the global extraction strategy can be seen rather than remembered.</p>
+  <div class="legend" aria-label="Color legend">
+    <span><i class="sw steel"></i>vCenter and its PerformanceManager</span>
+    <span><i class="sw teal"></i>VCF Operations analytics store</span>
+    <span><i class="sw amber"></i>Real-Time Metrics</span>
+    <span><i class="sw plum"></i>Agents, collectors, and network hardware</span>
+    <span><i class="sw olive"></i>The CMDB</span>
+    <span><i class="sw rose"></i>Loss, limits, traps</span>
+  </div>
+  <div class="who"><span>Grounding: VCF 9.1, one reference estate, live reads 2026-09-14 to 2026-09-16</span><span>VMware guidance labeled doc, measured facts labeled live</span></div>
+  <ol class="index" aria-label="Plates in reading order">
+    <li><span class="no">01</span><a href="#p1">Three planes read one host</a></li>
+    <li><span class="no">02</span><a href="#p2">What each store keeps and loses</a></li>
+    <li><span class="no">03</span><a href="#p3">Horizons and extraction deadlines</a></li>
+    <li><span class="no">04</span><a href="#p4">Decisions and the grain they consume</a></li>
+    <li><span class="no">05</span><a href="#p5">The catalog: what a warehouse asks for, and where it lives</a></li>
+    <li><span class="no">06</span><a href="#p6">The extraction contract</a></li>
+    <li><span class="no">07</span><a href="#p7">Decide in region, ship the thin layer</a></li>
+    <li><span class="no">08</span><a href="#p8">Collection domains beyond vSphere</a></li>
+    <li><span class="no">09</span><a href="#p9">One key across every system</a></li>
+    <li><span class="no">10</span><a href="#p10">Reading Real-Time Metrics without getting burned</a></li>
+    <li><span class="no">11</span><a href="#p11">Two planes, one set of samples: the proof, and the calls</a></li>
+    <li><span class="no">12</span><a href="#p12">Tradeoffs at a glance</a></li>
+  </ol>
+</header>
+
+<section class="plate" id="p1">
+  <div class="plate-hd"><span class="no">Plate 01</span><div><h2>Three planes read one host</h2><div class="cap">the same counters, three readers, three schedules</div></div></div>
+  <figure>
+  <div class="diagram" id="d-planes" style="grid-template-columns:minmax(170px,190px) minmax(300px,1.35fr) minmax(260px,1fr);gap:22px 26px;" role="img" aria-label="One ESX host feeds three collection planes: vCenter PerformanceManager, the VCF Operations analytics store through vStats, and Real-Time Metrics through acquisition profiles."><div class="node n-plain n-host" data-id="host" style="grid-column:1 / span 1;grid-row:1 / span 3;"><h4>One ESX host</h4><p>CPU, memory, disk, network</p><p>per host, VM, core, device</p><span class="n-chip">hostd counters</span><br><span class="n-chip">vStats · esxtop set</span></div><div class="node n-steel" data-id="m1" style="grid-column:2 / span 1;grid-row:1 / span 1;"><h4>vCenter PerformanceManager</h4><p>20-second real-time samples, kept only briefly</p><p>rollups: 5 min for 1 day · 30 min for 1 week · 2 h for 1 month · 1 day for 1 year</p><p>shaped by the statistics level: 1 by default, 3 and 4 carry a vpxd memory risk</p><div class="strip"><span>cadence 20 s</span><svg viewBox="0 0 300 14" preserveAspectRatio="xMinYMid meet"><circle cx="10" cy="7" r="2.6" class="dot-steel"/><circle cx="30" cy="7" r="2.6" class="dot-steel"/><circle cx="50" cy="7" r="2.6" class="dot-steel"/><circle cx="70" cy="7" r="2.6" class="dot-steel"/><circle cx="90" cy="7" r="2.6" class="dot-steel"/><circle cx="110" cy="7" r="2.6" class="dot-steel"/><circle cx="130" cy="7" r="2.6" class="dot-steel"/><circle cx="150" cy="7" r="2.6" class="dot-steel"/><circle cx="170" cy="7" r="2.6" class="dot-steel"/><circle cx="190" cy="7" r="2.6" class="dot-steel"/><circle cx="210" cy="7" r="2.6" class="dot-steel"/><circle cx="230" cy="7" r="2.6" class="dot-steel"/><circle cx="250" cy="7" r="2.6" class="dot-steel"/><circle cx="270" cy="7" r="2.6" class="dot-steel"/><circle cx="290" cy="7" r="2.6" class="dot-steel"/></svg><span class="strip-end">5 min</span></div></div><div class="node n-plain" data-id="c1" style="grid-column:3 / span 1;grid-row:1 / span 1;"><h4>Charts and SOAP clients</h4><p>vSphere performance charts, any SDK client</p><p>a monitoring platform's vCenter integration re-pulls this same path</p><p>a warehouse pulling here duplicates what plane 2 holds</p><span class="n-chip" style="border-color:var(--rose);color:var(--rose)">not the analytics input</span></div><div class="node n-teal" data-id="m2" style="grid-column:2 / span 1;grid-row:2 / span 1;"><h4>VCF Operations vCenter adapter</h4><p>pulls through vStats every 20 s, independent of the statistics level</p><p>stores one value per statkey per 5 min: the mean of 15 samples (2 to 4 percent off)</p><p>twelve 20_sec_peak keys on a VM keep the within-cycle maximum; a host has none</p><div class="strip"><span>cadence 20 s to 5 min</span><svg viewBox="0 0 300 14" preserveAspectRatio="xMinYMid meet"><circle cx="8" cy="7" r="2.4" class="dot-teal"/><circle cx="22" cy="7" r="2.4" class="dot-teal"/><circle cx="36" cy="7" r="2.4" class="dot-teal"/><circle cx="50" cy="7" r="2.4" class="dot-teal"/><circle cx="64" cy="7" r="2.4" class="dot-teal"/><circle cx="78" cy="7" r="2.4" class="dot-teal"/><circle cx="92" cy="7" r="2.4" class="dot-teal"/><circle cx="106" cy="7" r="2.4" class="dot-teal"/><circle cx="120" cy="7" r="2.4" class="dot-teal"/><circle cx="134" cy="7" r="2.4" class="dot-teal"/><circle cx="148" cy="7" r="2.4" class="dot-teal"/><circle cx="162" cy="7" r="2.4" class="dot-teal"/><circle cx="176" cy="7" r="2.4" class="dot-teal"/><circle cx="190" cy="7" r="2.4" class="dot-teal"/><circle cx="204" cy="7" r="2.4" class="dot-teal"/><path d="M222,7 L246,7" class="ln ln-teal"/><path d="M241,3 L247,7 L241,11" class="ln ln-teal"/><rect x="256" y="1" width="12" height="12" rx="2" class="fill-teal"/></svg><span class="strip-end">one value</span></div></div><div class="node n-plain" data-id="c2" style="grid-column:3 / span 1;grid-row:2 / span 1;"><h4>Analytics store and the decisions</h4><p>5-minute points for 6 months, then hourly for 36 months</p><p>computes utilization, rightsizing, capacity, reclaim, placement</p><p>suite API: native points, exact server-side rollups, latest values</p><span class="n-chip" style="border-color:var(--teal)">the extraction source</span></div><div class="node n-amber" data-id="m3" style="grid-column:2 / span 1;grid-row:3 / span 1;"><h4>Real-Time Metrics (9.1, optional, per VCF instance)</h4><p>pulls vCenter, ESX, NSX, vSAN through acquisition profiles</p><p>ESXi 20 s · vCenter 20 s and 60 s · PerformanceManager set at 20 s · ESX Top 2 s per opted-in host</p><p>Essentials always on; Standard needs a Large deployment</p><div class="strip"><span>cadence 2 s / 20 s</span><svg viewBox="0 0 300 14" preserveAspectRatio="xMinYMid meet"><circle cx="5.0" cy="7" r="1.5" class="dot-amber"/><circle cx="8.9" cy="7" r="1.5" class="dot-amber"/><circle cx="12.9" cy="7" r="1.5" class="dot-amber"/><circle cx="16.9" cy="7" r="1.5" class="dot-amber"/><circle cx="20.8" cy="7" r="1.5" class="dot-amber"/><circle cx="24.8" cy="7" r="1.5" class="dot-amber"/><circle cx="28.7" cy="7" r="1.5" class="dot-amber"/><circle cx="32.7" cy="7" r="1.5" class="dot-amber"/><circle cx="36.6" cy="7" r="1.5" class="dot-amber"/><circle cx="40.6" cy="7" r="1.5" class="dot-amber"/><circle cx="44.5" cy="7" r="1.5" class="dot-amber"/><circle cx="48.5" cy="7" r="1.5" class="dot-amber"/><circle cx="52.4" cy="7" r="1.5" class="dot-amber"/><circle cx="56.4" cy="7" r="1.5" class="dot-amber"/><circle cx="60.3" cy="7" r="1.5" class="dot-amber"/><circle cx="64.2" cy="7" r="1.5" class="dot-amber"/><circle cx="68.2" cy="7" r="1.5" class="dot-amber"/><circle cx="72.2" cy="7" r="1.5" class="dot-amber"/><circle cx="76.1" cy="7" r="1.5" class="dot-amber"/><circle cx="80.0" cy="7" r="1.5" class="dot-amber"/><circle cx="84.0" cy="7" r="1.5" class="dot-amber"/><circle cx="88.0" cy="7" r="1.5" class="dot-amber"/><circle cx="91.9" cy="7" r="1.5" class="dot-amber"/><circle cx="95.9" cy="7" r="1.5" class="dot-amber"/><circle cx="99.8" cy="7" r="1.5" class="dot-amber"/><circle cx="103.8" cy="7" r="1.5" class="dot-amber"/><circle cx="107.7" cy="7" r="1.5" class="dot-amber"/><circle cx="111.7" cy="7" r="1.5" class="dot-amber"/><circle cx="115.6" cy="7" r="1.5" class="dot-amber"/><circle cx="119.6" cy="7" r="1.5" class="dot-amber"/><circle cx="123.5" cy="7" r="1.5" class="dot-amber"/><circle cx="127.5" cy="7" r="1.5" class="dot-amber"/><circle cx="131.4" cy="7" r="1.5" class="dot-amber"/><circle cx="135.3" cy="7" r="1.5" class="dot-amber"/><circle cx="139.3" cy="7" r="1.5" class="dot-amber"/><circle cx="143.2" cy="7" r="1.5" class="dot-amber"/><circle cx="147.2" cy="7" r="1.5" class="dot-amber"/><circle cx="151.2" cy="7" r="1.5" class="dot-amber"/><circle cx="155.1" cy="7" r="1.5" class="dot-amber"/><circle cx="159.1" cy="7" r="1.5" class="dot-amber"/><circle cx="163.0" cy="7" r="1.5" class="dot-amber"/><circle cx="167.0" cy="7" r="1.5" class="dot-amber"/><circle cx="170.9" cy="7" r="1.5" class="dot-amber"/><circle cx="174.8" cy="7" r="1.5" class="dot-amber"/><circle cx="178.8" cy="7" r="1.5" class="dot-amber"/><circle cx="182.8" cy="7" r="1.5" class="dot-amber"/><circle cx="186.7" cy="7" r="1.5" class="dot-amber"/><circle cx="190.7" cy="7" r="1.5" class="dot-amber"/><circle cx="194.6" cy="7" r="1.5" class="dot-amber"/><circle cx="198.6" cy="7" r="1.5" class="dot-amber"/><circle cx="202.5" cy="7" r="1.5" class="dot-amber"/><circle cx="206.5" cy="7" r="1.5" class="dot-amber"/><circle cx="210.4" cy="7" r="1.5" class="dot-amber"/><circle cx="214.4" cy="7" r="1.5" class="dot-amber"/><circle cx="218.3" cy="7" r="1.5" class="dot-amber"/><circle cx="222.2" cy="7" r="1.5" class="dot-amber"/><circle cx="226.2" cy="7" r="1.5" class="dot-amber"/><circle cx="230.2" cy="7" r="1.5" class="dot-amber"/><circle cx="234.1" cy="7" r="1.5" class="dot-amber"/><circle cx="238.1" cy="7" r="1.5" class="dot-amber"/><circle cx="242.0" cy="7" r="1.5" class="dot-amber"/><circle cx="246.0" cy="7" r="1.5" class="dot-amber"/><circle cx="249.9" cy="7" r="1.5" class="dot-amber"/><circle cx="253.9" cy="7" r="1.5" class="dot-amber"/><circle cx="257.8" cy="7" r="1.5" class="dot-amber"/><circle cx="261.8" cy="7" r="1.5" class="dot-amber"/><circle cx="265.7" cy="7" r="1.5" class="dot-amber"/><circle cx="269.7" cy="7" r="1.5" class="dot-amber"/><circle cx="273.6" cy="7" r="1.5" class="dot-amber"/><circle cx="277.6" cy="7" r="1.5" class="dot-amber"/><circle cx="281.5" cy="7" r="1.5" class="dot-amber"/><circle cx="285.4" cy="7" r="1.5" class="dot-amber"/><circle cx="289.4" cy="7" r="1.5" class="dot-amber"/><circle cx="293.4" cy="7" r="1.5" class="dot-amber"/><circle cx="297.3" cy="7" r="1.5" class="dot-amber"/></svg><span class="strip-end">2 min</span></div></div><div class="node n-plain" data-id="c3" style="grid-column:3 / span 1;grid-row:3 / span 1;"><h4>Real-time store and the workbench</h4><p>15 days by setting; ESX Top 24 hours by setting, cut per source at the store's own moments</p><p>PromQL API keyed by sourceId, labels carry the object MOIDs</p><p>Troubleshooting Workbench, an ESX Top view of at most 6 hours</p><span class="n-chip" style="border-color:var(--amber)">the hot-set, regional</span></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[{"a": "host", "b": "m1", "cls": "ln-steel", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "host", "b": "m2", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "host", "b": "m3", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "m1", "b": "c1", "cls": "ln-steel", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "m2", "b": "c2", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "m3", "b": "c3", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}]</script></div>
+  <figcaption><b>How to read it.</b> Follow one color across the row: the reader, what it keeps, and who consumes it. The dotted strips show sample density on the same time base, so the 2-second strip is what ESX Top costs and the single teal square is what the 5-minute store keeps of fifteen samples.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>Where the planes come from</h3><ul>
+      <li><b>Plane 1</b> is vCenter's own history, shaped by its statistics level. Raising the level changes vCenter's charts and its vpxd load, and nothing downstream <span class="num">doc + live</span>.</li>
+      <li><b>Plane 2</b> is the platform's input. The adapter reads through vStats at 20 seconds no matter what the level says, and both vCenters on the reference estate sit at Level 1 while Operations holds every counter it needs <span class="num">live</span>.</li>
+      <li><b>Plane 3</b> is new in 9.1 and optional. It is a pull of its own with its own store, addressed per VCF instance, and it is the only plane that serves 2-second values <span class="num">doc + live</span>.</li>
+    </ul></div>
+    <div><h3>What the counts look like on one small source</h3><ul>
+      <li>Real-Time Metrics catalog of <span class="num">437</span> names; <span class="num">175</span> collected for the management vCenter, <span class="num">171</span> for the workload vCenter <span class="num">live</span>.</li>
+      <li>Five acquisition profiles, all Essentials: ESXi 20 s (<span class="num">83</span> names), vCenter 20 s (<span class="num">46</span>), vCenter 60 s (<span class="num">3</span>), a PerformanceManager set served at 20 s although its profile name carries 300 (<span class="num">41</span>), ESX Top 2 s (<span class="num">21</span>, nineteen of them also under the 20 s profile) <span class="num">live</span>.</li>
+      <li>Series on the management source: <span class="num">5,391</span>, of which <span class="num">1,341</span> are the 2-second set <span class="num">live</span>.</li>
+    </ul></div>
+  </div>
+  <div class="trade"><h3>Tradeoff</h3><p>For the vSphere estate the collection problem is already solved by plane 2. A second 20-second pull from vCenter, whether by a warehouse or by a monitoring platform's vCenter integration, adds load on vpxd and truth to nothing, because the analytics store already keeps the 5-minute mean and the peak keys. The strategy question is therefore extraction, not collection: which plane, at which grain, for which decision.</p></div>
+</section>
+
+<section class="plate" id="p2">
+  <div class="plate-hd"><span class="no">Plate 02</span><div><h2>What each store keeps and loses</h2><div class="cap">the 5-minute value is a mean; the peak survives only in the peak keys or on the real-time plane</div></div></div>
+  <figure>
+  <svg viewBox="0 0 1200 600" role="img" aria-label="Top: twenty-second samples over three five-minute cycles with the stored mean and the lost maximum. Bottom: the median peak lost per counter at the five-minute grain, measured live.">
+    <text x="70.0" y="34.0" class="t-title" data-max="700">Fifteen samples in, one value out (illustrative shape, measured numbers)</text>
+    <line x1="70.0" y1="250.0" x2="1150.0" y2="250.0" class="axis"/>
+    <line x1="70.0" y1="60.0" x2="70.0" y2="250.0" class="axis"/>
+    <rect x="70.0" y="180.3" width="343.6" height="69.7" rx="0" class="fill-teal" opacity=".18"/>
+    <line x1="70.0" y1="180.3" x2="413.6" y2="180.3" class="ln ln-teal thick"/>
+    <line x1="119.1" y1="158.7" x2="119.1" y2="180.3" class="ln ln-rose dash"/>
+    <text x="241.8" y="242.0" class="t-mono" text-anchor="middle" data-max="100">mean 37</text>
+    <text x="119.1" y="149.7" class="t-mono" text-anchor="middle" data-max="80">max 48</text>
+    <line x1="425.9" y1="60.0" x2="425.9" y2="250.0" class="gridline"/>
+    <rect x="438.2" y="157.7" width="343.6" height="92.3" rx="0" class="fill-teal" opacity=".18"/>
+    <line x1="438.2" y1="157.7" x2="781.8" y2="157.7" class="ln ln-teal thick"/>
+    <line x1="610.0" y1="124.6" x2="610.0" y2="157.7" class="ln ln-rose dash"/>
+    <text x="610.0" y="242.0" class="t-mono" text-anchor="middle" data-max="100">mean 49</text>
+    <text x="610.0" y="115.6" class="t-mono" text-anchor="middle" data-max="80">max 66</text>
+    <line x1="794.1" y1="60.0" x2="794.1" y2="250.0" class="gridline"/>
+    <rect x="806.4" y="168.2" width="343.6" height="81.8" rx="0" class="fill-teal" opacity=".18"/>
+    <line x1="806.4" y1="168.2" x2="1150.0" y2="168.2" class="ln ln-teal thick"/>
+    <line x1="1076.4" y1="132.7" x2="1076.4" y2="168.2" class="ln ln-rose dash"/>
+    <text x="978.2" y="242.0" class="t-mono" text-anchor="middle" data-max="100">mean 43</text>
+    <text x="1076.4" y="123.7" class="t-mono" text-anchor="middle" data-max="80">max 62</text>
+    <polyline points="70.0,180.0 94.5,178.2 119.1,158.7 143.6,172.3 168.2,159.2 192.7,167.2 217.3,181.4 241.8,175.3 266.4,195.3 290.9,189.2 315.5,202.2 340.0,201.2 364.5,188.3 389.1,171.2 413.6,184.5 438.2,158.6 462.7,144.8 487.3,136.5 511.8,150.7 536.4,161.7 560.9,152.0 585.5,143.1 610.0,124.6 634.5,184.7 659.1,187.8 683.6,184.7 708.2,173.3 732.7,151.9 757.3,163.7 781.8,147.8 806.4,151.5 830.9,163.2 855.5,164.4 880.0,185.1 904.5,191.3 929.1,191.4 953.6,179.3 978.2,184.9 1002.7,183.7 1027.3,169.7 1051.8,166.6 1076.4,132.7 1100.9,146.9 1125.5,148.4 1150.0,163.3" class="ln"/>
+    <!-- samples -->
+    <circle cx="70.0" cy="180.0" r="2.6" class="dot"/>
+    <circle cx="94.5" cy="178.2" r="2.6" class="dot"/>
+    <circle cx="119.1" cy="158.7" r="2.6" class="dot"/>
+    <circle cx="143.6" cy="172.3" r="2.6" class="dot"/>
+    <circle cx="168.2" cy="159.2" r="2.6" class="dot"/>
+    <circle cx="192.7" cy="167.2" r="2.6" class="dot"/>
+    <circle cx="217.3" cy="181.4" r="2.6" class="dot"/>
+    <circle cx="241.8" cy="175.3" r="2.6" class="dot"/>
+    <circle cx="266.4" cy="195.3" r="2.6" class="dot"/>
+    <circle cx="290.9" cy="189.2" r="2.6" class="dot"/>
+    <circle cx="315.5" cy="202.2" r="2.6" class="dot"/>
+    <circle cx="340.0" cy="201.2" r="2.6" class="dot"/>
+    <circle cx="364.5" cy="188.3" r="2.6" class="dot"/>
+    <circle cx="389.1" cy="171.2" r="2.6" class="dot"/>
+    <circle cx="413.6" cy="184.5" r="2.6" class="dot"/>
+    <circle cx="438.2" cy="158.6" r="2.6" class="dot"/>
+    <circle cx="462.7" cy="144.8" r="2.6" class="dot"/>
+    <circle cx="487.3" cy="136.5" r="2.6" class="dot"/>
+    <circle cx="511.8" cy="150.7" r="2.6" class="dot"/>
+    <circle cx="536.4" cy="161.7" r="2.6" class="dot"/>
+    <circle cx="560.9" cy="152.0" r="2.6" class="dot"/>
+    <circle cx="585.5" cy="143.1" r="2.6" class="dot"/>
+    <circle cx="610.0" cy="124.6" r="2.6" class="dot"/>
+    <circle cx="634.5" cy="184.7" r="2.6" class="dot"/>
+    <circle cx="659.1" cy="187.8" r="2.6" class="dot"/>
+    <circle cx="683.6" cy="184.7" r="2.6" class="dot"/>
+    <circle cx="708.2" cy="173.3" r="2.6" class="dot"/>
+    <circle cx="732.7" cy="151.9" r="2.6" class="dot"/>
+    <circle cx="757.3" cy="163.7" r="2.6" class="dot"/>
+    <circle cx="781.8" cy="147.8" r="2.6" class="dot"/>
+    <circle cx="806.4" cy="151.5" r="2.6" class="dot"/>
+    <circle cx="830.9" cy="163.2" r="2.6" class="dot"/>
+    <circle cx="855.5" cy="164.4" r="2.6" class="dot"/>
+    <circle cx="880.0" cy="185.1" r="2.6" class="dot"/>
+    <circle cx="904.5" cy="191.3" r="2.6" class="dot"/>
+    <circle cx="929.1" cy="191.4" r="2.6" class="dot"/>
+    <circle cx="953.6" cy="179.3" r="2.6" class="dot"/>
+    <circle cx="978.2" cy="184.9" r="2.6" class="dot"/>
+    <circle cx="1002.7" cy="183.7" r="2.6" class="dot"/>
+    <circle cx="1027.3" cy="169.7" r="2.6" class="dot"/>
+    <circle cx="1051.8" cy="166.6" r="2.6" class="dot"/>
+    <circle cx="1076.4" cy="132.7" r="2.6" class="dot"/>
+    <circle cx="1100.9" cy="146.9" r="2.6" class="dot"/>
+    <circle cx="1125.5" cy="148.4" r="2.6" class="dot"/>
+    <circle cx="1150.0" cy="163.3" r="2.6" class="dot"/>
+    <text x="60.0" y="254.0" class="t-small" text-anchor="end" data-max="30">0</text>
+    <text x="60.0" y="64.0" class="t-small" text-anchor="end" data-max="30">100</text>
+    <text x="241.8" y="270.0" class="t-small" text-anchor="middle" data-max="120">cycle 1 · 5 min</text>
+    <text x="610.0" y="270.0" class="t-small" text-anchor="middle" data-max="120">cycle 2 · 5 min</text>
+    <text x="978.2" y="270.0" class="t-small" text-anchor="middle" data-max="120">cycle 3 · 5 min</text>
+    <text x="70.0" y="292.0" class="t-small" data-max="1080">dots: 20-second samples (vStats) · teal bar: the one stored value, the mean of 15 · dashed rose: the peak the mean hides, unless a peak key keeps it</text>
+    <line x1="70.0" y1="322.0" x2="1150.0" y2="322.0" class="gridline"/>
+    <text x="70.0" y="350.0" class="t-title" data-max="800">Median peak lost per counter at the 5-minute grain (live: 3 hours, 36 windows)</text>
+    <line x1="370.0" y1="366.0" x2="370.0" y2="536.0" class="gridline"/>
+    <text x="370.0" y="552.0" class="t-small" text-anchor="middle" data-max="40">0%</text>
+    <line x1="506.5" y1="366.0" x2="506.5" y2="536.0" class="gridline"/>
+    <text x="506.5" y="552.0" class="t-small" text-anchor="middle" data-max="40">25%</text>
+    <line x1="643.1" y1="366.0" x2="643.1" y2="536.0" class="gridline"/>
+    <text x="643.1" y="552.0" class="t-small" text-anchor="middle" data-max="40">50%</text>
+    <line x1="779.6" y1="366.0" x2="779.6" y2="536.0" class="gridline"/>
+    <text x="779.6" y="552.0" class="t-small" text-anchor="middle" data-max="40">75%</text>
+    <line x1="916.2" y1="366.0" x2="916.2" y2="536.0" class="gridline"/>
+    <text x="916.2" y="552.0" class="t-small" text-anchor="middle" data-max="40">100%</text>
+    <line x1="1052.7" y1="366.0" x2="1052.7" y2="536.0" class="gridline"/>
+    <text x="1052.7" y="552.0" class="t-small" text-anchor="middle" data-max="40">125%</text>
+    <text x="358.0" y="388.0" class="t-small" text-anchor="end" data-max="290">memory active (a slow average already)</text>
+    <rect x="370.0" y="372.0" width="43.7" height="24.0" rx="3" class="fill-rose" opacity=".85"/>
+    <text x="421.7" y="388.0" class="t-mono" data-max="50">8%</text>
+    <text x="358.0" y="432.0" class="t-small" text-anchor="end" data-max="290">CPU MHz</text>
+    <rect x="370.0" y="416.0" width="98.3" height="24.0" rx="3" class="fill-rose" opacity=".85"/>
+    <rect x="468.3" y="416.0" width="38.2" height="24.0" rx="3" class="fill-rose" opacity=".45"/>
+    <text x="514.5" y="432.0" class="t-mono" data-max="90">18 to 25%</text>
+    <line x1="583.0" y1="412.0" x2="583.0" y2="444.0" class="ln ln-rose"/>
+    <text x="589.0" y="432.0" class="t-small" data-max="70">p90 39%</text>
+    <text x="703.7" y="432.0" class="t-small" data-max="80">worst 60%</text>
+    <text x="358.0" y="476.0" class="t-small" text-anchor="end" data-max="290">network usage</text>
+    <rect x="370.0" y="460.0" width="294.9" height="24.0" rx="3" class="fill-rose" opacity=".85"/>
+    <text x="672.9" y="476.0" class="t-mono" data-max="50">54%</text>
+    <text x="358.0" y="520.0" class="t-small" text-anchor="end" data-max="290">host CPU contention</text>
+    <rect x="370.0" y="504.0" width="393.2" height="24.0" rx="3" class="fill-rose" opacity=".85"/>
+    <text x="771.2" y="520.0" class="t-mono" data-max="50">72%</text>
+    <line x1="1014.5" y1="500.0" x2="1014.5" y2="532.0" class="ln ln-rose"/>
+    <text x="1020.5" y="520.0" class="t-small" data-max="70">p90 118%</text>
+    <text x="70.0" y="578.0" class="t-small" data-max="1080">host CPU contention: worst window 4.6x the mean, off this scale</text>
+    <text x="70.0" y="596.0" class="t-small" data-max="1080">MIN and MAX asked at the 5-minute grain return the mean: nothing inside the interval is recoverable</text>
+  </svg>
+  <figcaption><b>How to read it.</b> The left panel is the mechanism, the right panel is its price. A slow counter like active memory loses almost nothing to the mean; a bursty counter like host CPU contention loses most of its peak, and that is the one counter a reallocation decision cares about.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>What survives, and where</h3><ul>
+      <li>The stored 5-minute value is the mean of the fifteen 20-second samples in the cycle ending at its timestamp, within 2 to 4 percent <span class="num">live</span>.</li>
+      <li>Twelve VM keys keep the within-cycle maximum, the <span class="num">20_sec_peak</span> kind (CPU ready, co-stop, overlap, other wait; memory contention; network usage and packets per second; virtual-disk latency; the guest's run queue, disk queue, context switches, page-out rate); a host has none. The keys named "highest of all instances" are the busiest disk, vCPU, core, or adapter averaged over the cycle, not a time peak. The one testable within-cycle key tracks the window maximum, and plate 11 shows the 20-second plane reproducing it <span class="num">doc + live</span>.</li>
+      <li>Server-side hourly AVG and MAX are exact against the native points, so downsampling on the server costs no truth <span class="num">live</span>.</li>
+    </ul></div>
+    <div><h3>What this settles for the raw-versus-real-time argument</h3><ul>
+      <li>Utilization, rightsizing, and capacity read means and long windows; the 5-minute grain serves them without loss that matters.</li>
+      <li>Contention bursts are the one thing the mean hides badly; they belong to the peak keys or to the real-time plane, for a scoped set, in region.</li>
+      <li>Live troubleshooting is not a BI decision; it rides the real-time plane and stays there.</li>
+    </ul></div>
+  </div>
+  <div class="trade"><h3>Tradeoff</h3><p>Pulling native 5-minute points for everything costs about twelve times the hourly tier for no decision gain, and it still does not recover peaks, because the peak was averaged away before it was stored. Spend native resolution only on the contention keys of a scoped hot-set, and take the peak keys where they exist.</p></div>
+</section>
+
+<section class="plate" id="p3">
+  <div class="plate-hd"><span class="no">Plate 03</span><div><h2>Horizons and extraction deadlines</h2><div class="cap">how long each grain exists anywhere, on a log scale</div></div></div>
+  <figure>
+  <svg viewBox="0 0 1200 608" role="img" aria-label="A log-scale timeline showing how long each store keeps each grain, with the extraction deadlines that follow.">
+    <text x="250.0" y="32.0" class="t-title" data-max="800">Retention by store and grain (settings at their defaults on the reference estate)</text>
+    <line x1="250.0" y1="50.0" x2="250.0" y2="420.0" class="gridline"/>
+    <line x1="447.6" y1="50.0" x2="447.6" y2="420.0" class="gridline"/>
+    <line x1="645.1" y1="50.0" x2="645.1" y2="420.0" class="gridline"/>
+    <line x1="798.5" y1="50.0" x2="798.5" y2="420.0" class="gridline"/>
+    <line x1="892.4" y1="50.0" x2="892.4" y2="420.0" class="gridline"/>
+    <line x1="962.6" y1="50.0" x2="962.6" y2="420.0" class="gridline"/>
+    <line x1="1049.6" y1="50.0" x2="1049.6" y2="420.0" class="gridline"/>
+    <line x1="1083.2" y1="50.0" x2="1083.2" y2="420.0" class="gridline"/>
+    <line x1="1136.2" y1="50.0" x2="1136.2" y2="420.0" class="gridline"/>
+    <text x="236.0" y="75.0" class="t-small" text-anchor="end" data-max="225">vCenter real-time, 20 s</text>
+    <rect x="250.0" y="62.0" width="361.7" height="16.0" rx="3" class="fill-steel band"  style="opacity:.55"/>
+    <line x1="611.7" y1="70.0" x2="655.7" y2="70.0" class="ln ln-steel dash"/>
+    <text x="663.7" y="74.0" class="t-small" data-max="496">kept briefly, then rolled up</text>
+    <text x="236.0" y="127.0" class="t-small" text-anchor="end" data-max="225">vCenter rollups</text>
+    <rect x="525.2" y="114.0" width="558.0" height="16.0" rx="3" class="fill-steel band"/>
+    <text x="525.2" y="146.0" class="t-small" data-max="635">5 min for 1 day · 30 min for 1 week · 2 h for 1 month · 1 day for 1 year</text>
+    <text x="236.0" y="179.0" class="t-small" text-anchor="end" data-max="225">Operations 5-minute</text>
+    <rect x="525.2" y="166.0" width="524.4" height="16.0" rx="3" class="fill-teal band"/>
+    <text x="525.2" y="198.0" class="t-small" data-max="635">6 months by setting; measured cutover about 197.7 days</text>
+    <text x="236.0" y="231.0" class="t-small" text-anchor="end" data-max="225">Operations hourly</text>
+    <rect x="645.1" y="218.0" width="491.1" height="16.0" rx="3" class="fill-teal band"/>
+    <text x="645.1" y="250.0" class="t-small" data-max="515">36 months by setting</text>
+    <text x="236.0" y="283.0" class="t-small" text-anchor="end" data-max="225">Real-Time Metrics 20 s</text>
+    <rect x="394.6" y="270.0" width="534.6" height="16.0" rx="3" class="fill-amber band"/>
+    <text x="939.2" y="282.0" class="t-small" data-max="221">15 days by setting</text>
+    <text x="236.0" y="335.0" class="t-small" text-anchor="end" data-max="225">Real-Time Metrics ESX Top 2 s</text>
+    <rect x="283.4" y="322.0" width="515.1" height="16.0" rx="3" class="fill-amber band"  style="opacity:.55"/>
+    <line x1="798.5" y1="330.0" x2="842.5" y2="330.0" class="ln ln-amber dash"/>
+    <text x="283.4" y="354.0" class="t-small" data-max="877">24 hours by setting, applied lazily per source: about 80 h served, then a 24 h step</text>
+    <text x="236.0" y="387.0" class="t-small" text-anchor="end" data-max="225">Zabbix history and trends</text>
+    <rect x="447.6" y="374.0" width="635.6" height="16.0" rx="3" class="fill-plum band"  style="opacity:.55"/>
+    <line x1="1083.2" y1="382.0" x2="1127.2" y2="382.0" class="ln ln-plum dash"/>
+    <text x="447.6" y="406.0" class="t-small" data-max="712">configurable per item; trends are hourly min, avg, max, count</text>
+    <line x1="250.0" y1="432.0" x2="1150.0" y2="432.0" class="axis"/>
+    <line x1="798.5" y1="432.0" x2="798.5" y2="444.0" class="ln ln-teal mid"/>
+    <text x="804.5" y="456.0" class="t-small" data-max="355">gold layer: daily</text>
+    <line x1="851.5" y1="432.0" x2="851.5" y2="464.0" class="ln ln-amber mid"/>
+    <text x="857.5" y="476.0" class="t-small" data-max="302">real-time hot-set: within days</text>
+    <line x1="1040.3" y1="432.0" x2="1040.3" y2="484.0" class="ln ln-teal mid"/>
+    <text x="1034.3" y="496.0" class="t-small" text-anchor="end" data-max="784">native 5-minute: before the 6-month rollup</text>
+    <line x1="250.0" y1="526.0" x2="1150.0" y2="526.0" class="axis"/>
+    <line x1="250.0" y1="521.0" x2="250.0" y2="531.0" class="axis"/>
+    <text x="250.0" y="548.0" class="t-mono" text-anchor="middle" data-max="44">1 s</text>
+    <line x1="447.6" y1="521.0" x2="447.6" y2="531.0" class="axis"/>
+    <text x="447.6" y="548.0" class="t-mono" text-anchor="middle" data-max="44">1 min</text>
+    <line x1="645.1" y1="521.0" x2="645.1" y2="531.0" class="axis"/>
+    <text x="645.1" y="548.0" class="t-mono" text-anchor="middle" data-max="44">1 h</text>
+    <line x1="798.5" y1="521.0" x2="798.5" y2="531.0" class="axis"/>
+    <text x="798.5" y="548.0" class="t-mono" text-anchor="middle" data-max="44">1 d</text>
+    <line x1="892.4" y1="521.0" x2="892.4" y2="531.0" class="axis"/>
+    <text x="892.4" y="548.0" class="t-mono" text-anchor="middle" data-max="44">1 w</text>
+    <line x1="962.6" y1="521.0" x2="962.6" y2="531.0" class="axis"/>
+    <text x="962.6" y="548.0" class="t-mono" text-anchor="middle" data-max="44">1 mo</text>
+    <line x1="1049.6" y1="521.0" x2="1049.6" y2="531.0" class="axis"/>
+    <text x="1049.6" y="548.0" class="t-mono" text-anchor="middle" data-max="44">6 mo</text>
+    <line x1="1083.2" y1="521.0" x2="1083.2" y2="531.0" class="axis"/>
+    <text x="1083.2" y="548.0" class="t-mono" text-anchor="middle" data-max="44">1 y</text>
+    <line x1="1136.2" y1="521.0" x2="1136.2" y2="531.0" class="axis"/>
+    <text x="1136.2" y="548.0" class="t-mono" text-anchor="middle" data-max="44">3 y</text>
+    <text x="250.0" y="578.0" class="t-small" data-max="900">Extraction deadlines follow from the horizons:</text>
+    <text x="250.0" y="594.0" class="t-small" data-max="900">anything you want at a grain must leave its store before that grain rolls up or expires.</text>
+  </svg>
+  <figcaption><b>How to read it.</b> Each bar starts at the grain's cadence and ends where the store stops keeping it. A bar that ends early is a deadline: the hot-set must be extracted within days, native 5-minute data within six months, and ESX Top within hours, because on this build its cut arrives in one step when the store gets to it.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>The settings behind the bars (all at defaults)</h3><ul>
+      <li><span class="num">TIME_SERIES_DATA_RETENTION_IN_MONTHS = 6</span>, then <span class="num">ROLLUP_TIME_SERIES_DATA_RETENTION_IN_MONTHS = 36</span> <span class="num">live</span>.</li>
+      <li><span class="num">REALTIME_DATA_RETENTION_IN_DAYS = 15</span>; <span class="num">ESX_TOP_DATA_RETENTION_IN_HOURS = 24</span> <span class="num">live</span>. The 6-hour figure in the 9.1 pages is the ESX Top view's maximum time range, not retention <span class="num">doc</span>.</li>
+      <li>The vCenter rollup ladder is documented; the real-time window is short and is not a store <span class="num">doc</span>.</li>
+    </ul></div>
+    <div><h3>What lazy enforcement means for a pipeline</h3><ul>
+      <li>A served horizon can run past its setting for days and then drop in one step. Never plan on data older than the setting being there, and never assume a fixed cut.</li>
+      <li>Watermark on bucket-end timestamps and reconcile absence against inventory and collector health before calling a gap a decision.</li>
+    </ul></div>
+  </div>
+  <div class="trade"><h3>Tradeoff</h3><p>Longer retention on the platform buys extraction slack, not analysis: the warehouse still needs its own tiers. The cheaper move is to extract each grain once, well inside its horizon, and to keep the platform's retention at defaults unless a documented limit or a proven gap says otherwise.</p></div>
+</section>
+
+<section class="plate" id="p4">
+  <div class="plate-hd"><span class="no">Plate 04</span><div><h2>Decisions and the grain they consume</h2><div class="cap">granularity is a per-decision parameter, not a property of the pipeline</div></div></div>
+  <figure>
+  <div class="matrix" role="table" aria-label="Decisions against the grain they consume"><div class="mh"></div><div class="mh"><b>2 s</b>ESX Top</div><div class="mh"><b>20 s</b>real-time</div><div class="mh"><b>5 min</b>native</div><div class="mh"><b>1 h</b>rollup</div><div class="mh"><b>1 day</b>gold</div><div class="mh" style="text-align:left">why this grain</div><div class="mn"><b>Utilization BI</b><span>usage over time</span></div><div class="md"><i class=""></i></div><div class="md"><i class=""></i></div><div class="md"><i class="on teal"></i></div><div class="md"><i class="on teal"></i></div><div class="md"><i class="on teal"></i></div><div class="mw">means are the utilization signal; hourly is enough</div><div class="mn"><b>Rightsizing</b><span>p95 and peak over 30 to 90 days</span></div><div class="md"><i class=""></i></div><div class="md"><i class=""></i></div><div class="md"><i class="on teal"></i></div><div class="md"><i class="on teal"></i></div><div class="md"><i class="on teal"></i></div><div class="mw">hourly AVG plus hourly MAX keeps the peak 5-minute value; read the platform's projection too</div><div class="mn"><b>Capacity planning</b><span>time remaining, demand trend</span></div><div class="md"><i class=""></i></div><div class="md"><i class=""></i></div><div class="md"><i class=""></i></div><div class="md"><i class="on teal"></i></div><div class="md"><i class="on teal"></i></div><div class="mw">daily gold values plus hourly windows; the risk level is a quantile dial on recent demand</div><div class="mn"><b>Sharing and reallocation</b><span>steady state plus contention bursts</span></div><div class="md"><i class=""></i></div><div class="md"><i class="on amber"></i></div><div class="md"><i class="on amber"></i></div><div class="md"><i class="on amber"></i></div><div class="md"><i class=""></i></div><div class="mw">hourly for the steady state; peak keys or a 20-second hot-set for the bursts (up to 4.6x hidden by the mean)</div><div class="mn"><b>Live troubleshooting</b><span>the incident, right now</span></div><div class="md"><i class="on amber"></i></div><div class="md"><i class="on amber"></i></div><div class="md"><i class=""></i></div><div class="md"><i class=""></i></div><div class="md"><i class=""></i></div><div class="mw">not a BI decision; rides the real-time plane and stays there</div><div class="mfoot">large dot: the grain the decision reads · small dot: available but not needed · teal: the analytics store · amber: the real-time plane. Every decision except live troubleshooting reads a coarser grain than the endpoint emits; the one that needs bursts takes them from the peak keys or a scoped real-time hot-set.</div></div>
+  <figcaption><b>How to read it.</b> Read across a decision to find its grain, then down a grain to find who needs it. The two right-hand columns carry every warehouse decision; the two left-hand columns carry the incident work that never leaves the region.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>The platform already computes the decisions</h3><ul>
+      <li>Rightsizing is the maximum projected utilization out to 30 days past the policy's Time Remaining warning threshold, shaped by the policy risk level <span class="num">doc + live</span>.</li>
+      <li>Sharing and reallocation have four public surfaces: reclaim per reason, rightsize per reason, workload placement, and the recommendation catalog (<span class="num">1,254</span> definitions here), plus <span class="num">18</span> per-VM decision statkeys <span class="num">live</span>.</li>
+      <li>Capacity ratios live in the policy (CPU 4:1, memory 1:1, disk 2:1 here); the risk level is a quantile dial on recency-weighted demand, so a warehouse percentile over a fixed window is a different estimator and will disagree by design.</li>
+    </ul></div>
+    <div><h3>Path chooser</h3><ul>
+      <li>Hypervisor-visible signal? Operations, extracted. Never a second pull.</li>
+      <li>A burst or contention question? Peak keys first; a scoped 20-second hot-set from Real-Time Metrics if the key does not exist.</li>
+      <li>Inside the guest? An in-guest agent. Off vSphere? Zabbix. Identity and business context? The CMDB.</li>
+    </ul></div>
+  </div>
+  <div class="trade"><h3>Tradeoff</h3><p>Recomputing a decision in the warehouse from raw counters buys independence at the price of disagreement with the platform's own number. Read the platform's decision, record the policy's risk level beside it as provenance, and compute only what the platform does not: cross-estate comparisons, cost, and history beyond its retention.</p></div>
+</section>
+
+<section class="plate" id="p5">
+  <div class="plate-hd"><span class="no">Plate 05</span><div><h2>The catalog: what a warehouse asks for, and where it lives</h2><div class="cap">nine families, the vCenter counter with its statistics level, the Operations key, the tier; every key checked against a live statkey list</div></div></div>
+  <figure>
+  <div class="diagram" id="d-catalog" style="grid-template-columns:minmax(250px,1fr) minmax(250px,1fr) minmax(250px,1fr);gap:16px 18px;" role="img" aria-label="Nine cards, one per family a utilization list asks for: the vCenter counter with its statistics level, the Operations key with its peak key, and the tier that carries it."><div class="node n-teal" data-id="f1" style="grid-column:1 / span 1;grid-row:1 / span 1;"><h4>Configuration and state</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">no counter for the inventory fields; sys.uptime L1, sys.osUptime L4</span><span class="k">operations</span><span class="v">config|hardware|num_Cpu, mem|guest_provisioned, sys|poweredOn, sys|uptime_latest, sys|osUptime_latest; properties for power and connection state, Tools, template, identity</span><span class="k">tier</span><span class="v">gold, daily</span></div></div><div class="node n-teal" data-id="f2" style="grid-column:2 / span 1;grid-row:1 / span 1;"><h4>CPU</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">cpu.usage L1, cpu.usagemhz L1, cpu.ready L1, cpu.demand L2, cpu.costop L2, cpu.latency L2, cpu.swapwait L3, cpu.readiness L4</span><span class="k">operations</span><span class="v">cpu|demandPct, cpu|demandmhz, cpu|usagemhz_average, cpu|readyPct, cpu|costopPct, cpu|swapwaitPct, cpu|iowaitPct, cpu|capacity_contentionPct; in-cycle peaks cpu|20_sec_peak_readyPct, cpu|20_sec_peak_costopPct, cpu|20_sec_peak_overlap, cpu|20_sec_peak_iowaitPct</span><span class="k">tier</span><span class="v">hourly AVG and MAX; ready, co-stop, contention and their peaks to the hot-set</span></div></div><div class="node n-teal" data-id="f3" style="grid-column:3 / span 1;grid-row:1 / span 1;"><h4>Memory</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">mem.consumed L1, mem.vmmemctl L1, mem.usage L1, mem.swapinRate L1, mem.active L2, mem.compressed L2, mem.swapped L2, mem.latency L2</span><span class="k">operations</span><span class="v">mem|active_average, mem|consumed_average, mem|usage_average, mem|balloonPct, mem|compressed_average, mem|swapped_average, mem|swapinRate_average, mem|swapoutRate_average, mem|host_contentionPct; in-cycle peak mem|20_sec_peak_host_contentionPct</span><span class="k">tier</span><span class="v">hourly AVG and MAX; contention and its peak to the hot-set</span></div></div><div class="node n-plum" data-id="f4" style="grid-column:1 / span 1;grid-row:2 / span 1;"><h4>Guest OS through VMware Tools</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">no counter; VMware Tools reports it, so a blank is absence</span><span class="k">operations</span><span class="v">guest|mem.free_latest, guest|mem.needed_latest, guest|mem.physUsable_latest, guest|used_memory, guest|swap.spaceRemaining_latest, guest|page.inRate_latest, guest|page.outRate_latest, guest|cpu_queue, guest|disk_queue, guest|contextSwapRate_latest; in-cycle peaks for the queues, context switches, page-out; guestfilesystem|capacity_total, guestfilesystem|usage_total, guestfilesystem|percentage_total</span><span class="k">tier</span><span class="v">hourly; the filesystem totals gold</span></div><p style="margin-top:6px">the run queue is stored per vCPU and the disk queue divided by 100 relative to the real-time plane</p></div><div class="node n-teal" data-id="f5" style="grid-column:2 / span 1;grid-row:2 / span 1;"><h4>Virtual disk</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">virtualDisk.numberReadAveraged L1, virtualDisk.numberWriteAveraged L1, virtualDisk.totalReadLatency L1, virtualDisk.totalWriteLatency L1, virtualDisk.read L2, virtualDisk.write L2, virtualDisk.readOIO L2, virtualDisk.writeOIO L2, disk.usage L1</span><span class="k">operations</span><span class="v">under virtualDisk:Aggregate of all instances: numberReadAveraged_average, numberWriteAveraged_average, totalReadLatency_average, totalWriteLatency_average, vDiskOIO; virtualDisk|read_average, virtualDisk|write_average, disk|usage_average; in-cycle peak virtualDisk|20_sec_peak_totalLatency_average; highest of all instances: peak_vDisk_iops, peak_vDisk_readLatency, peak_vDisk_writeLatency</span><span class="k">tier</span><span class="v">hourly AVG and MAX; the latency peak to the hot-set</span></div></div><div class="node n-teal" data-id="f6" style="grid-column:3 / span 1;grid-row:2 / span 1;"><h4>Network</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">net.usage L1, net.received L2, net.transmitted L2, net.packetsRx L2, net.packetsTx L2, net.droppedRx L2, net.droppedTx L2</span><span class="k">operations</span><span class="v">net|usage_average, net|received_average, net|transmitted_average; in-cycle peaks net|20_sec_peak_usage_average, net|20_sec_peak_packetsPerSec; under net:Aggregate of all instances: packetsRxPerSec, packetsTxPerSec, droppedPct; net|droppedTx_summation</span><span class="k">tier</span><span class="v">hourly AVG and MAX</span></div></div><div class="node n-teal" data-id="f7" style="grid-column:1 / span 1;grid-row:3 / span 1;"><h4>VM storage</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">disk.used L1, disk.provisioned L1, disk.unshared L1</span><span class="k">operations</span><span class="v">diskspace|used, diskspace|provisionedSpace, diskspace|notshared, diskspace|snapshot|used, summary|snapshot_count, summary|snapshotSpace</span><span class="k">tier</span><span class="v">gold, daily</span></div></div><div class="node n-teal" data-id="f8" style="grid-column:2 / span 1;grid-row:3 / span 1;"><h4>Decisions only Operations carries</h4><div class="kvrow"><span class="k">vcenter</span><span class="v">no counter: the platform's own analytics</span><span class="k">operations</span><span class="v">summary|oversized, summary|oversized|vcpus, summary|oversized|memory, summary|undersized, summary|undersized|vcpus, summary|undersized|memory, summary|idle, OnlineCapacityAnalytics|cpu|recommendedSize, OnlineCapacityAnalytics|mem|recommendedSize, OnlineCapacityAnalytics|diskspace|recommendedSize; cost|reclaimableCost where costing is configured</span><span class="k">tier</span><span class="v">gold, daily</span></div><p style="margin-top:6px">read them; never recompute them</p></div><div class="node n-plain" data-id="legend" style="grid-column:3 / span 1;grid-row:3 / span 1;"><h4>How the cards were checked</h4><p>L is the vCenter statistics level of the counter, read live from PerformanceManager on vCenter 9.1; every counter above L1 is one a direct pull would have to raise the level for.</p><p>Every Operations key on these cards is on the reference VM's statkey list (273 collected of 983 in the adapter catalog), asserted when the atlas is built; keys named in the text but not collected there are said so.</p><span class="n-chip" style="border-color:var(--teal)">bind from a live statkey list</span></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[]</script></div>
+  <figcaption><b>How to read it.</b> Each card is a family a utilization list asks for. The first line is the vCenter counter the list usually derives from, with the statistics level vCenter needs to keep it beyond its real-time window; the second is the Operations key that holds it, with its within-cycle peak key where one exists; the last is the tier that carries it. A card without a vCenter line is something only Operations or VMware Tools produces.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>What the levels settle</h3><ul>
+      <li>vCenter keeps a counter beyond its real-time window only at or above the counter's level, and the default is 1. Demand, co-stop, active and swapped memory, and the packet and drop counters sit at level 2; swap wait at 3; readiness and OS uptime at 4 <span class="num">live</span>.</li>
+      <li>Operations reads every counter here through vStats at 20 seconds whatever the level says, so a list that would force the level up on vCenter is already served at level 1 by plane 2 <span class="num">live</span>.</li>
+      <li>The peak keys are two kinds. Twelve <span class="num">20_sec_peak</span> keys on a VM keep the highest 20-second sample of the cycle; the <span class="num">peak_</span> keys, "Highest ... of all instances" in the definitions in VMware guidance, are the busiest disk, vCPU, core, or adapter averaged over the cycle, and a host has only those <span class="num">doc + live</span>.</li>
+    </ul></div>
+    <div><h3>What only Operations or Tools produces</h3><ul>
+      <li>The guest family through VMware Tools: free, needed, and usable memory, swap space remaining, page rates, run and disk queues, context switches, filesystem totals. Conditional on Tools; a blank is absence, never zero <span class="num">live</span>.</li>
+      <li>The decision keys: oversized and undersized with the reclaimable amounts, the recommended size under the policy's risk level, idle, snapshot space and count. Read them; never recompute them <span class="num">live</span>.</li>
+      <li>Instanced families (virtual-disk latency, IOPS, outstanding IO; network packets and drops) carry the VM value under the Aggregate of all instances instance; the plain key returns nothing <span class="num">live</span>.</li>
+    </ul></div>
+  </div>
+  <div class="trade trap"><h3>Trap</h3><p>A catalog lists more keys than a resource collects. On the reference VM, <span class="num">273</span> statkeys are collected out of <span class="num">983</span> in the adapter's VirtualMachine catalog, and seven of the nineteen catalog peak keys are not among them. Read a resource's own statkey list once and bind those names; a view, a super metric, or an extract bound to a catalog name renders a dash and teaches nothing.</p></div>
+</section>
+
+<section class="plate" id="p6">
+  <div class="plate-hd"><span class="no">Plate 06</span><div><h2>The extraction contract</h2><div class="cap">three tiers at three resolutions, one key, one watermark, one reconciliation</div></div></div>
+  <figure>
+  <div class="diagram" id="d-contract" style="grid-template-columns:minmax(150px,170px) minmax(260px,1.3fr) minmax(230px,1.1fr) minmax(170px,190px);gap:18px 26px;" role="img" aria-label="Three extraction tiers drawn as pipes from the platform to the warehouse: gold daily, analysis hourly, hot-set native."><div class="node n-teal" data-id="t1" style="grid-column:1 / span 1;grid-row:1 / span 1;"><h4>Gold layer</h4><span class="n-big">daily</span></div><div class="node n-plain" data-id="k1" style="grid-column:2 / span 1;grid-row:1 / span 1;"><span class="n-tag">call</span><p>stats/latest/query with maxSamples=1 for the decision statkeys, plus a daily inventory sync and diff</p></div><div class="node n-plain" data-id="l1" style="grid-column:3 / span 1;grid-row:1 / span 1;"><span class="n-tag">lands as</span><p>one row per object per day</p><span class="n-mono">tens of MB per region per day</span></div><div class="node n-teal" data-id="s1" style="grid-column:4 / span 1;grid-row:1 / span 1;"><span class="n-tag">serves</span><p>utilization, capacity, rightsizing verdicts</p></div><div class="node n-teal" data-id="t2" style="grid-column:1 / span 1;grid-row:2 / span 1;"><h4>Analysis tier</h4><span class="n-big">hourly</span></div><div class="node n-plain" data-id="k2" style="grid-column:2 / span 1;grid-row:2 / span 1;"><span class="n-tag">call</span><p>server-side hourly AVG and MAX (intervalType, rollUpType), exact against the native points</p></div><div class="node n-plain" data-id="l2" style="grid-column:3 / span 1;grid-row:2 / span 1;"><span class="n-tag">lands as</span><p>one row per object, statkey, hour</p><span class="n-mono">144 MB per day at 10,000 VMs x 20 statkeys</span></div><div class="node n-teal" data-id="s2" style="grid-column:4 / span 1;grid-row:2 / span 1;"><span class="n-tag">serves</span><p>30 to 90 day windows, p95, peaks of the 5-minute value</p></div><div class="node n-amber" data-id="t3" style="grid-column:1 / span 1;grid-row:3 / span 1;"><h4>Hot-set</h4><span class="n-big">native</span></div><div class="node n-plain" data-id="k3" style="grid-column:2 / span 1;grid-row:3 / span 1;"><span class="n-tag">call</span><p>native 5-minute contention keys on a scoped set; or Real-Time Metrics query_range at 20 s or 2 s, sourceId per source</p></div><div class="node n-plain" data-id="l3" style="grid-column:3 / span 1;grid-row:3 / span 1;"><span class="n-tag">lands as</span><p>one row per object, statkey, sample, kept in region</p><span class="n-mono">1.7 GB per day per region at 10,000 VMs x 20 statkeys, if shipped</span></div><div class="node n-amber" data-id="s3" style="grid-column:4 / span 1;grid-row:3 / span 1;"><span class="n-tag">serves</span><p>burst detection, reallocation evidence, incident replay</p></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[{"a": "t1", "b": "k1", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 4, "dash": false, "arrow": true}, {"a": "k1", "b": "l1", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "l1", "b": "s1", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "t2", "b": "k2", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 4, "dash": false, "arrow": true}, {"a": "k2", "b": "l2", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "l2", "b": "s2", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "t3", "b": "k3", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 4, "dash": false, "arrow": true}, {"a": "k3", "b": "l3", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "l3", "b": "s3", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}]</script></div><div class="panel"><h4>Rules that ride every tier</h4><p>Watermark on bucket-end timestamps with a two-cycle settling margin · idempotent upsert on (resource, statkey, timestamp) · batch wide: hundreds of resources x the statkey subset x a day per call · never poll latest faster than the 5-minute cycle.</p><p>Reconcile absence against inventory and collector health before landing it: a resource missing from a response had no data, it was not at zero. Key every row on (vCenter instance UUID, MOID); stamp real-time rows with the sourceId and the profile they were queried under. Re-mint tokens on a schedule, never persist them; treat a truncation warning or an empty answer as something to investigate.</p></div>
+  <figcaption><b>How to read it.</b> Left to right is one extraction: the source tier, the call that reads it, the shape it lands in, and the question it serves. The sizes are the measured coefficients extrapolated to a 10,000-VM region, so a design can be sized before the first run.</figcaption>
+  </figure>
+  <div class="tbl"><table aria-label="Measured extraction coefficients">
+    <thead><tr><th>Coefficient</th><th>Value</th><th>How it was read</th></tr></thead>
+    <tbody>
+      <tr><td>Bytes per point, native and hourly</td><td><span class="num">about 30 B</span></td><td>one VM over 7 days, live</td></tr>
+      <tr><td>Latency per call</td><td><span class="num">0.5 s + 4 µs per point</span></td><td>sequential read-only calls, live</td></tr>
+      <tr><td>Throughput at wide batches</td><td><span class="num">49,000 points per second</span></td><td>48,000 points per call, live</td></tr>
+      <tr><td>Result cap</td><td><span class="num">none found at 70 objects x 4 statkeys</span></td><td>live; the real-time API is different, see plate 10</td></tr>
+      <tr><td>Native 5-minute availability</td><td><span class="num">served for at least 90 days</span></td><td>live, before the 6-month rollup</td></tr>
+      <tr><td>10,000 VMs x 20 statkeys, one day</td><td><span class="num">5-minute 57.6 M points, 1.7 GB, about 20 min · hourly 4.8 M points, 144 MB, about 100 s</span></td><td>extrapolation from the coefficients</td></tr>
+      <tr><td>30-day backfill</td><td><span class="num">52 GB at 5-minute · 4.3 GB hourly</span></td><td>extrapolation</td></tr>
+    </tbody></table></div>
+  <div class="trade trap"><h3>The outage lesson</h3><p>On the reference estate no metrics were stored for any vCenter adapter for nineteen days during a 9.1.0 upgrade with snapshot reverts. An extract without a reconciliation step would have landed zero demand for every object. A fleet-wide plateau in the age of the newest point is the signature of a collection outage, not of a quiet estate.</p></div>
+</section>
+
+<section class="plate" id="p7">
+  <div class="plate-hd"><span class="no">Plate 07</span><div><h2>Decide in region, ship the thin layer</h2><div class="cap">one Operations instance per region, the real-time plane per VCF instance, one collector per domain beyond vSphere, the warehouse in the middle</div></div></div>
+  <figure>
+  <div class="diagram" id="d-topology" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr;gap:16px 14px;" role="img" aria-label="Three regions. Above the warehouse, each region&#x27;s vSphere planes: vCenters and hosts through an outbound-only cloud proxy into a regional Operations instance and Real-Time Metrics, then a regional decision layer. Below the warehouse, each region&#x27;s domains beyond vSphere: agents on guests and bare metal, and network hardware polled without an agent, into a regional domain collector. Every lane ships a thin tier to the central BI platform in the middle; native, real-time, and raw data stay in region."><div class="ngroup " style="grid-column:1 / 3;grid-row:1 / 5;"><span class="n-tag"></span></div><div class="ngroup " style="grid-column:1 / 3;grid-row:6 / 8;"><span class="n-tag"></span></div><div class="ngroup " style="grid-column:3 / 5;grid-row:1 / 5;"><span class="n-tag"></span></div><div class="ngroup " style="grid-column:3 / 5;grid-row:6 / 8;"><span class="n-tag"></span></div><div class="ngroup " style="grid-column:5 / 7;grid-row:1 / 5;"><span class="n-tag"></span></div><div class="ngroup " style="grid-column:5 / 7;grid-row:6 / 8;"><span class="n-tag"></span></div><div class="node n-steel" data-id="src0" style="grid-column:1 / span 2;grid-row:1 / span 1;"><span class="n-tag">AMER · vSphere planes</span><p>vCenters, ESX, NSX: the hypervisor's view</p></div><div class="node n-plain" data-id="px0" style="grid-column:1 / span 2;grid-row:2 / span 1;"><h4>Cloud proxy, outbound only on 443</h4><p>buffers at most one hour when the node is unreachable; groups fail over after 10 minutes</p></div><div class="node n-teal" data-id="ops0" style="grid-column:1 / span 1;grid-row:3 / span 1;"><h4>Operations instance</h4><p>5-minute and hourly stores; the four decisions, per region</p></div><div class="node n-amber" data-id="rtm0" style="grid-column:2 / span 1;grid-row:3 / span 1;"><h4>Real-Time Metrics</h4><p>per VCF instance; 15 days, 2 s and 20 s</p></div><div class="node n-plain" data-id="dl0" style="grid-column:1 / span 2;grid-row:4 / span 1;"><h4>Regional decision layer</h4><p>gold daily and hourly rollups extracted here; native hot-set and real-time data stay here</p></div><div class="node n-plain" data-id="dc0" style="grid-column:1 / span 2;grid-row:6 / span 1;"><span class="n-tag">AMER · beyond vSphere</span><h4>Domain collector and raw store, per region</h4><p>an OpenTelemetry gateway, a Prometheus with recording rules, or a Zabbix proxy and server; aggregates to hourly min, avg, max, count at the edge; raw stays here</p></div><div class="node n-plum" data-id="ag0" style="grid-column:1 / span 1;grid-row:7 / span 1;"><span class="n-tag">guest OS and bare metal</span><p>one agent per host: OpenTelemetry Collector, Telegraf, Prometheus exporters, or the Zabbix agent</p></div><div class="node n-plum" data-id="hw0" style="grid-column:2 / span 1;grid-row:7 / span 1;"><span class="n-tag">network hardware</span><p>no agent: SNMP polls, gNMI subscriptions, flow export, from the domain collector or a network-monitoring platform</p></div><div class="node n-steel" data-id="src1" style="grid-column:3 / span 2;grid-row:1 / span 1;"><span class="n-tag">EMEA · vSphere planes</span><p>vCenters, ESX, NSX: the hypervisor's view</p></div><div class="node n-plain" data-id="px1" style="grid-column:3 / span 2;grid-row:2 / span 1;"><h4>Cloud proxy, outbound only on 443</h4><p>buffers at most one hour when the node is unreachable; groups fail over after 10 minutes</p></div><div class="node n-teal" data-id="ops1" style="grid-column:3 / span 1;grid-row:3 / span 1;"><h4>Operations instance</h4><p>5-minute and hourly stores; the four decisions, per region</p></div><div class="node n-amber" data-id="rtm1" style="grid-column:4 / span 1;grid-row:3 / span 1;"><h4>Real-Time Metrics</h4><p>per VCF instance; 15 days, 2 s and 20 s</p></div><div class="node n-plain" data-id="dl1" style="grid-column:3 / span 2;grid-row:4 / span 1;"><h4>Regional decision layer</h4><p>gold daily and hourly rollups extracted here; native hot-set and real-time data stay here</p></div><div class="node n-plain" data-id="dc1" style="grid-column:3 / span 2;grid-row:6 / span 1;"><span class="n-tag">EMEA · beyond vSphere</span><h4>Domain collector and raw store, per region</h4><p>an OpenTelemetry gateway, a Prometheus with recording rules, or a Zabbix proxy and server; aggregates to hourly min, avg, max, count at the edge; raw stays here</p></div><div class="node n-plum" data-id="ag1" style="grid-column:3 / span 1;grid-row:7 / span 1;"><span class="n-tag">guest OS and bare metal</span><p>one agent per host: OpenTelemetry Collector, Telegraf, Prometheus exporters, or the Zabbix agent</p></div><div class="node n-plum" data-id="hw1" style="grid-column:4 / span 1;grid-row:7 / span 1;"><span class="n-tag">network hardware</span><p>no agent: SNMP polls, gNMI subscriptions, flow export, from the domain collector or a network-monitoring platform</p></div><div class="node n-steel" data-id="src2" style="grid-column:5 / span 2;grid-row:1 / span 1;"><span class="n-tag">APJ · vSphere planes</span><p>vCenters, ESX, NSX: the hypervisor's view</p></div><div class="node n-plain" data-id="px2" style="grid-column:5 / span 2;grid-row:2 / span 1;"><h4>Cloud proxy, outbound only on 443</h4><p>buffers at most one hour when the node is unreachable; groups fail over after 10 minutes</p></div><div class="node n-teal" data-id="ops2" style="grid-column:5 / span 1;grid-row:3 / span 1;"><h4>Operations instance</h4><p>5-minute and hourly stores; the four decisions, per region</p></div><div class="node n-amber" data-id="rtm2" style="grid-column:6 / span 1;grid-row:3 / span 1;"><h4>Real-Time Metrics</h4><p>per VCF instance; 15 days, 2 s and 20 s</p></div><div class="node n-plain" data-id="dl2" style="grid-column:5 / span 2;grid-row:4 / span 1;"><h4>Regional decision layer</h4><p>gold daily and hourly rollups extracted here; native hot-set and real-time data stay here</p></div><div class="node n-plain" data-id="dc2" style="grid-column:5 / span 2;grid-row:6 / span 1;"><span class="n-tag">APJ · beyond vSphere</span><h4>Domain collector and raw store, per region</h4><p>an OpenTelemetry gateway, a Prometheus with recording rules, or a Zabbix proxy and server; aggregates to hourly min, avg, max, count at the edge; raw stays here</p></div><div class="node n-plum" data-id="ag2" style="grid-column:5 / span 1;grid-row:7 / span 1;"><span class="n-tag">guest OS and bare metal</span><p>one agent per host: OpenTelemetry Collector, Telegraf, Prometheus exporters, or the Zabbix agent</p></div><div class="node n-plum" data-id="hw2" style="grid-column:6 / span 1;grid-row:7 / span 1;"><span class="n-tag">network hardware</span><p>no agent: SNMP polls, gNMI subscriptions, flow export, from the domain collector or a network-monitoring platform</p></div><div class="node n-olive" data-id="bi" style="grid-column:2 / span 4;grid-row:5 / span 1;"><h4>Central BI platform and warehouse</h4><p>receives one thin tier per domain and lands each as its own lane: vSphere from Operations on (vCenter instance UUID, MOID); operating system and application from the agent domain on the host's CI; network from the fabric domain on the device's CI; joined across domains only through the CMDB</p><span class="n-mono">vSphere lane, per region per day: gold tens of MB · hourly 144 MB · native 1.7 GB if it ever crosses</span></div><div class="node n-plain" data-id="legend" style="grid-column:1 / span 6;grid-row:8 / span 1;"><p>teal: the vSphere lane's thin tiers cross the WAN · plum: the agent and network domains' thin tiers, hourly statistics computed at the edge · dashed rose: what shape A would ship (every native point), the thing the regional shape avoids. Real-Time Metrics and every domain's raw store stay in region: on one small vSphere source that is about 5,400 series, 17.5 million samples a day on the 20-second grid plus 58 million a day in the 2-second set.</p></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[{"a": "src0", "b": "px0", "cls": "ln-steel", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "px0", "b": "ops0", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "ops0", "b": "dl0", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "dl0", "b": "bi", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 3, "dash": false, "arrow": true}, {"a": "ag0", "b": "dc0", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 2.4, "dash": false, "arrow": true}, {"a": "hw0", "b": "dc0", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 2.4, "dash": false, "arrow": true}, {"a": "dc0", "b": "bi", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 3, "dash": false, "arrow": true}, {"a": "src1", "b": "px1", "cls": "ln-steel", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "px1", "b": "ops1", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "ops1", "b": "dl1", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "dl1", "b": "bi", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 3, "dash": false, "arrow": true}, {"a": "ag1", "b": "dc1", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 2.4, "dash": false, "arrow": true}, {"a": "hw1", "b": "dc1", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 2.4, "dash": false, "arrow": true}, {"a": "dc1", "b": "bi", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 3, "dash": false, "arrow": true}, {"a": "src2", "b": "px2", "cls": "ln-steel", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "px2", "b": "ops2", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "ops2", "b": "dl2", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 2.4, "dash": false, "arrow": true}, {"a": "dl2", "b": "bi", "cls": "ln-teal", "sa": "bottom", "sb": "top", "w": 3, "dash": false, "arrow": true}, {"a": "ag2", "b": "dc2", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 2.4, "dash": false, "arrow": true}, {"a": "hw2", "b": "dc2", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 2.4, "dash": false, "arrow": true}, {"a": "dc2", "b": "bi", "cls": "ln-plum", "sa": "top", "sb": "bottom", "w": 3, "dash": false, "arrow": true}, {"a": "dl0", "b": "bi", "cls": "ln-rose", "sa": "right", "sb": "left", "w": 5, "dash": true, "arrow": false}]</script></div>
+  <figcaption><b>How to read it.</b> Each region is a complete collect-and-decide unit: the vSphere planes above the warehouse, the agent and network domains below it. The only traffic that has to leave a region is the decision layer and the hourly tiers, one per domain; native, real-time, and raw agent data are regional by design, not by accident.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>Limits in VMware guidance that bound the shape <span class="num">doc</span></h3><ul>
+      <li>One Operations instance per fleet; one fleet per region is a named scenario; the cloud proxy is mandatory in the first 9.1 instance and outbound only.</li>
+      <li>Unified proxy sizes: Small up to 16,000 VMs, Standard 16,000 to 80,000. Node limits from the 9.0 table: Medium 30,000 objects and 5 million metrics; Large 44,000 and 8 million; Extra Large 100,000 and 20 million.</li>
+      <li>Proxy to node: RTT under 50 ms, 15 to 200 Mbps. Persistence buffers at most one hour; a collector group fails over after 10 minutes.</li>
+    </ul></div>
+    <div><h3>Why shape B</h3><ul>
+      <li>A single global instance puts every region's collection behind one WAN and one node ceiling; a per-region instance keeps collection local and ships what is small.</li>
+      <li>The WAN carries decisions and hourly aggregates, which compress a 10,000-VM region to about 144 MB a day; native points would be twelve times that, and the real-time plane hundreds of times.</li>
+      <li>The same shape holds beyond vSphere: one collector per domain per region keeps the raw series local, computes the hourly statistics at the edge, and ships them as their own lane; not every domain has to pass through Operations to reach the warehouse (plate 08).</li>
+    </ul></div>
+  </div>
+  <div class="trade"><h3>Tradeoff</h3><p>Regional instances cost a second set of policies, groups, and dashboards to keep consistent, which is a content-management problem with a known cure (versioned, generated content). A global instance costs WAN bandwidth, a hard node ceiling, and an hour of buffer as the only protection against a link outage. The second cost is structural; the first is procedural.</p></div>
+</section>
+
+<section class="plate" id="p8">
+  <div class="plate-hd"><span class="no">Plate 08</span><div><h2>Collection domains beyond vSphere</h2><div class="cap">one collector per domain, raw in the region, one thin tier each, joined only through the CMDB; five doors into Operations</div></div></div>
+  <figure>
+  <div class="diagram" id="d-domains" style="grid-template-columns:minmax(210px,1fr) minmax(230px,1.1fr) minmax(190px,.9fr) minmax(190px,.9fr);gap:16px 24px;" role="img" aria-label="Three collection domains as rows, vSphere, the agent domain, and the network domain, each with a source, a regional source of record that keeps the raw data, and a thin tier; all three land in the central warehouse as separate lanes, joined only through the CMDB."><div class="node n-teal" data-id="v1" style="grid-column:1 / span 1;grid-row:1 / span 1;"><span class="n-tag">vSphere domain · source</span><p>vCenters and ESX, read through Operations; Real-Time Metrics per VCF instance; Operations for Networks for the flows the estate itself exports (vDS and NSX IPFIX)</p></div><div class="node n-teal" data-id="v2" style="grid-column:2 / span 1;grid-row:1 / span 1;"><span class="n-tag">source of record, raw in region</span><p>the regional Operations instance: the 5-minute store, exact hourly rollups, the four decisions; native points stay here</p></div><div class="node n-teal" data-id="v3" style="grid-column:3 / span 1;grid-row:1 / span 1;"><span class="n-tag">thin tier</span><p>gold daily; hourly AVG and MAX</p><span class="n-mono">key: (vCenter instance UUID, MOID)</span></div><div class="node n-plum" data-id="a1" style="grid-column:1 / span 1;grid-row:2 / span 1;"><span class="n-tag">agent domain · source</span><p>guest operating systems, bare metal, databases; one agent per host: OpenTelemetry Collector, Telegraf, Prometheus exporters, or the Zabbix agent</p></div><div class="node n-plum" data-id="a2" style="grid-column:2 / span 1;grid-row:2 / span 1;"><span class="n-tag">source of record, raw in region</span><p>a regional collector with its own store: an OpenTelemetry gateway, a Prometheus with recording rules, or a Zabbix server behind its proxies; raw stays here</p></div><div class="node n-plum" data-id="a3" style="grid-column:3 / span 1;grid-row:2 / span 1;"><span class="n-tag">thin tier</span><p>hourly min, avg, max, count per series, computed at the edge</p><span class="n-mono">key: the host's CI (serial or FQDN)</span></div><div class="node n-plum" data-id="n1" style="grid-column:1 / span 1;grid-row:3 / span 1;"><span class="n-tag">network domain · source</span><p>switches, routers, access points, firewalls: no agent; SNMP polls, gNMI subscriptions, NetFlow and IPFIX flows</p></div><div class="node n-plum" data-id="n2" style="grid-column:2 / span 1;grid-row:3 / span 1;"><span class="n-tag">source of record, raw in region</span><p>the same regional collector, or a network-monitoring platform such as DX NetOps or AppNeta; raw stays here</p></div><div class="node n-plum" data-id="n3" style="grid-column:3 / span 1;grid-row:3 / span 1;"><span class="n-tag">thin tier</span><p>hourly interface and flow statistics</p><span class="n-mono">key: the device's CI (serial or system name)</span></div><div class="node n-olive n-host" data-id="wh" style="grid-column:4 / span 1;grid-row:1 / span 3;"><h4>Central warehouse</h4><p>one lane per domain, landed separately; no cross-domain join by name</p></div><div class="node n-olive" data-id="cmdb" style="grid-column:4 / span 1;grid-row:4 / span 1;"><span class="n-tag">identity</span><h4>The CMDB as the identity spine</h4><p>every host and device is a CI; the vSphere pair resolves to one; joins across domains follow CMDB relationships</p></div><div class="node n-plain" data-id="rules" style="grid-column:1 / span 3;grid-row:4 / span 1;"><h4>The same contract in every lane</h4><p>watermark on bucket-end timestamps; idempotent upsert; absence reconciled against the domain's inventory and collector health before it becomes a number; one agent per host, whichever door it feeds</p></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[{"a": "v1", "b": "v2", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "v2", "b": "v3", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "v3", "b": "wh", "cls": "ln-teal", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "a1", "b": "a2", "cls": "ln-plum", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "a2", "b": "a3", "cls": "ln-plum", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "a3", "b": "wh", "cls": "ln-plum", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "n1", "b": "n2", "cls": "ln-plum", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "n2", "b": "n3", "cls": "ln-plum", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "n3", "b": "wh", "cls": "ln-plum", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "cmdb", "b": "wh", "cls": "ln-olive", "sa": "top", "sb": "bottom", "w": 2.4, "dash": false, "arrow": true}]</script></div>
+  <figcaption><b>How to read it.</b> Each row is a domain with its own source of record, and the columns are the three steps the vSphere lane already follows: collect where the signal lives, keep the raw data in the region, ship a thin tier. Not everything passes through VCF Operations, and it need not: the warehouse lands one lane per domain and joins across them through the CMDB, never through names.</figcaption>
+  </figure>
+  <div class="tbl"><table aria-label="The three standard collectors, the open-source agent's door into VCF Operations, and the stated tool, as their documentation states them">
+    <thead><tr><th>Collector</th><th>Runs as</th><th>Hosts and operating systems</th><th>Network hardware</th><th>Aggregates at the edge</th><th>Ships to the warehouse</th></tr></thead>
+    <tbody>
+      <tr><td>OpenTelemetry Collector <span class="num">doc</span></td><td>the agent pattern, "alongside the application or on the same host, such as a sidecar or DaemonSet", or the gateway pattern, "one or more Collector instances running as a standalone service", an endpoint "per cluster, per data center, or per region"</td><td>the Host Metrics receiver (metrics in beta): cpu, disk, load, filesystem, memory, network, paging on every platform in its table; processes, process, system on the platforms it lists</td><td>the SNMP receiver, v1, v2c, v3, stability alpha</td><td>the gateway centralizes policy such as filtering and sampling; its documented cons are "one more thing to maintain and that can fail", added latency when collectors cascade, higher resource usage</td><td>exporters from the regional gateway, so the WAN carries one stream per region</td></tr>
+      <tr><td>Telegraf <span class="num">doc</span></td><td>an agent per host, or a collector host for the pollers</td><td>the host inputs: cpu, mem, disk, diskio, net</td><td>the snmp input, "polling SNMP agents with individual OIDs or complete SNMP tables", versions 1, 2, 3; gnmi, which "consumes telemetry data based on gNMI subscriptions"; netflow, "a collector for Netflow v5, Netflow v9 and IPFIX flow information"</td><td>the BasicStats aggregator: "counts, differences, minima, maxima, mean values" and more, emitted every period, 30 s by default; set the period to the hour for the analysis tier</td><td>an output plugin to the warehouse's ingest; raw stays in the region's store</td></tr>
+      <tr><td>Prometheus exporters with Agent mode <span class="num">doc</span></td><td>exporters per host, scraped by a regional Prometheus, or by Agent mode, which "disables querying, alerting, and local storage" while scraping and service discovery stay the same</td><td>node_exporter, "hardware and OS metrics exposed by *NIX kernels" (cpu, meminfo, diskstats, netdev, filesystem); windows_exporter, "a Prometheus exporter for Windows machines" (cpu, logical_disk, memory, net, os, service)</td><td>snmp_exporter, "the recommended way to expose SNMP data in a format which Prometheus can ingest", with the if_mib module for switches, access points, or routers; snmp.yml comes from the generator, not by hand</td><td>recording rules "precompute frequently needed or computationally expensive expressions and save their result as a new set of time series", evaluated per rule group at a regular interval</td><td>remote write of the recorded series; the regional TSDB keeps the raw scrape</td></tr>
+      <tr><td>Open-source Telegraf into VCF Operations <span class="num">doc</span></td><td>the same open-source agent on a vCenter VM or a physical server, Linux or Windows, configured by VMware guidance's helper script or by hand "to post metrics to cloud proxy"; its life cycle stays on the target machine</td><td>"application services and operating systems", "curated and non-curated"; alerts for the supported application services only</td><td>none</td><td>none at the agent; the data lands in Operations as application-monitoring metrics, viewed there and shared with the application team</td><td>the same extraction contract as every other Operations object, through the cloud proxy on port 443 (8443 deprecated in 9.1)</td></tr>
+      <tr><td>Zabbix 7.0 LTS, the stated tool <span class="num">doc</span></td><td>agent or agent 2 per host; proxies per site, buffering one hour by default</td><td>operating-system items</td><td>SNMP v1, v2, v3 items, "on devices such as printers, network switches, routers or UPS"</td><td>trends: hourly min, avg, max, count per item, kept beside the raw history</td><td>history.get, trend.get, file export, connectors</td></tr>
+    </tbody></table></div>
+  <div class="tbl"><table aria-label="Five doors into VCF Operations">
+    <thead><tr><th>Door into VCF Operations</th><th>What VMware guidance documents</th><th>Direction</th><th>Use it for</th></tr></thead>
+    <tbody>
+      <tr><td>Native adapters, and the vSphere Supervisor pack <span class="num">doc</span></td><td>the vSphere planes of plate 01; the Supervisor pack "can monitor both VKS clusters and vSphere Supervisor" through "a push-based model that leverages Telegraf"</td><td>pull; push for Supervisor</td><td>the hypervisor, NSX, vSAN, VCF; Supervisor and VKS</td></tr>
+      <tr><td>Management Pack Builder, lead with it <span class="num">doc</span></td><td>"a no-code solution for bringing in data from an external API and either creating new resources or extending VCF Operations and third party objects with new data, relationships, and events"; in the product since 9.0; HTTP and Prometheus data sources, Prometheus added in 9.1; in 9.1.1 the AI Assistant for VCF builds packs, "Admins can build management packs with AI without API expertise", on Private AI Services or a private Google Gemini instance</td><td>pull, from any HTTP API or Prometheus endpoint</td><td>any system with an API and no stable pack; a regional Prometheus that already holds the agent domain, so one collector serves both stores</td></tr>
+      <tr><td>Open-source Telegraf <span class="num">doc</span></td><td>the row above; the only agent path this atlas names</td><td>push, from inside the guest or server</td><td>guest operating systems and application services on VMs and physical servers</td></tr>
+      <tr><td>Marketplace management packs <span class="num">doc</span></td><td>the 9.1 list "contains management packs which are currently supported by VCF Operations", eighteen of them; being listed is necessary, not sufficient, so take the packs whose direction is stable: the databases, Avi, HCX, vSphere Replication, Identity Manager, Orchestrator, ServiceNow, Aggregator, Network Devices; Supervisor and VKS have their own pack, row one</td><td>pull, VMware-supported</td><td>a system with a stable supported pack; Network Devices as the operations lens on physical devices behind DX NetOps, and the SNMP ingestion path</td></tr>
+      <tr><td>Suite API push <span class="num">doc</span></td><td>create a resource under an adapter kind, add stats and properties, add relationships, push events; the push adapter kind is the OPENAPI type, created on first use</td><td>push, from your own code</td><td>numbers a pipeline already holds: derived KPIs, scores, facts from systems with no API to poll</td></tr>
+    </tbody></table></div>
+  <div class="read">
+    <div><h3>Choosing the collector</h3><ul>
+      <li><b>One collector per domain, one agent per host.</b> Two agents for one signal is the failure mode; an agent posting to Operations and a second agent do not share a guest.</li>
+      <li><b>Choose by where the data must live.</b> When the data must exist in Operations, pick the door by source type: open-source Telegraf for guest counters, viewed there and shared with the application team; the builder for any API or Prometheus source; a stable pack where one exists; the API push for derived numbers. A neutral collector's own store when the data must not depend on the VCF stack, for residency, another team's ownership, or an estate that is mostly not vSphere.</li>
+      <li><b>Network hardware runs no agent.</b> Poll it, subscribe to it, or receive its flows, from the domain collector or from a network-monitoring platform such as Broadcom's DX NetOps or AppNeta. VCF Operations for Networks reads the flows the VMware estate itself exports, vSphere Distributed Switch and NSX IPFIX, and is not the physical network's monitor. Inside Operations, the Network Devices pack follows DX NetOps as the operations lens on devices and the SNMP ingestion path.</li>
+    </ul></div>
+    <div><h3>What every domain ships</h3><ul>
+      <li>Hourly min, avg, max, count per series, computed where the collector already knows how: BasicStats, recording rules, or trends. The raw series stay in the domain's regional store, as native points stay in Operations.</li>
+      <li>A daily gold layer where the domain computes decisions of its own; otherwise the hourly tier is the whole feed.</li>
+      <li>Its own key: the vCenter pair for vSphere, a CI for a server or a device; cross-domain joins follow the CMDB's relationships.</li>
+    </ul></div>
+  </div>
+  <div class="trade"><h3>Tradeoff</h3><p>A neutral collector buys independence from the platform and one pipeline for every operating system and device, at the price of a second store to run and a second identity to keep straight. A door into Operations buys the one extraction contract for that domain, native rollups and the same key discipline, at the price of the node's object and metric limits and a dependency on the VCF stack. Both are sound; the builder's Prometheus source lets one collector serve both, and two agents on one host is what is not.</p></div>
+</section>
+
+<section class="plate" id="p9">
+  <div class="plate-hd"><span class="no">Plate 09</span><div><h2>One key across every system</h2><div class="cap">a managed object ID is unique only inside its vCenter; the pair is unique everywhere</div></div></div>
+  <figure>
+  <div class="diagram" id="d-key" style="grid-template-columns:minmax(250px,1fr) minmax(260px,1.15fr) minmax(250px,1fr);gap:22px 30px;" role="img" aria-label="Four systems around one composite key: vCenter instance UUID plus managed object ID, with the field each system uses for each half."><div class="node n-steel" data-id="vc" style="grid-column:1 / span 1;grid-row:1 / span 1;"><h4>vCenter</h4><div class="kvrow"><span class="k">uuid half</span><span class="v">about.instanceUuid</span><span class="k">moid half</span><span class="v">_moId (vm-123, host-45)</span></div><p style="margin-top:6px">instanceUuid on the VM</p></div><div class="node n-teal" data-id="ops" style="grid-column:3 / span 1;grid-row:1 / span 1;"><h4>VCF Operations</h4><div class="kvrow"><span class="k">uuid half</span><span class="v">VMEntityVCID</span><span class="k">moid half</span><span class="v">VMEntityObjectID</span></div><p style="margin-top:6px">both marked as the uniqueness pair</p></div><div class="node n-olive n-host" data-id="key" style="grid-column:2 / span 1;grid-row:1 / span 2;"><h4>The global object key</h4><span class="n-big">(vcenter_instance_uuid, moid)</span><p>the VM instance UUID rides along as a continuity attribute, never as the key</p><p>Three datacenters on the reference estate all carry datacenter-3; names rename and collide; only the pair survives every alias. One vCenter dimension resolves every name to it.</p></div><div class="node n-amber" data-id="rtm" style="grid-column:1 / span 1;grid-row:2 / span 1;"><h4>Real-Time Metrics</h4><div class="kvrow"><span class="k">uuid half</span><span class="v">the sourceId you queried under</span><span class="k">moid half</span><span class="v">vm, host, cluster, datacenter labels</span></div><p style="margin-top:6px">stamp every row with sourceId and profile</p></div><div class="node n-olive" data-id="cmdb" style="grid-column:3 / span 1;grid-row:2 / span 1;"><h4>ServiceNow CMDB</h4><div class="kvrow"><span class="k">uuid half</span><span class="v">vcenter_uuid</span><span class="k">moid half</span><span class="v">morid or object_id</span></div><p style="margin-top:6px">cmdb_ci_vmware_instance and the guest CI</p></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[{"a": "vc", "b": "key", "cls": "ln-steel", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "rtm", "b": "key", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "ops", "b": "key", "cls": "ln-teal", "sa": "left", "sb": "right", "w": 2.4, "dash": false, "arrow": true}, {"a": "cmdb", "b": "key", "cls": "ln-olive", "sa": "left", "sb": "right", "w": 2.4, "dash": false, "arrow": true}]</script></div>
+  <figcaption><b>How to read it.</b> Each system names the two halves differently and carries both natively, which is why no mapping table is needed, only a vCenter dimension that turns every alias (UUID, FQDN, adapter instance, fleet component id) into the same row.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>Verified equalities <span class="num">live</span></h3><ul>
+      <li>Operations <span class="num">VMEntityObjectID</span> equals the vCenter MOID; <span class="num">VMEntityVCID</span> equals vCenter <span class="num">about.instanceUuid</span>; <span class="num">VMEntityInstanceUUID</span> equals the VM's <span class="num">config.instanceUuid</span>.</li>
+      <li>Real-Time Metrics labels carry the MOIDs and the vCenter's name or IP, never its UUID; the UUID is the sourceId you pass, so stamp it.</li>
+    </ul></div>
+    <div><h3>CMDB side <span class="num">doc</span></h3><ul>
+      <li>The vCenter model keys a VM as a <span class="num">cmdb_ci_vmware_instance</span> plus a guest server CI; the identifier fields are the vCenter UUID and the MOID.</li>
+      <li>The Operations management pack maps <span class="num">object_id</span> from <span class="num">VMEntityObjectID</span> and <span class="num">vcenter_uuid</span> from <span class="num">VMEntityVCID</span>, the same pair.</li>
+    </ul></div>
+  </div>
+  <div class="trade trap"><h3>Trap</h3><p>Keying on the MOID alone works until the second vCenter, and keying on the name works until the first rename. Both failures are silent: rows join to the wrong object and every decision downstream inherits it.</p></div>
+</section>
+
+<section class="plate" id="p10">
+  <div class="plate-hd"><span class="no">Plate 10</span><div><h2>Reading Real-Time Metrics without getting burned</h2><div class="cap">seven behaviors of the PromQL API that an extractor must encode, all measured</div></div></div>
+  <figure>
+  <div class="panel"><h4>1 · The selector decides what you see, not the store</h4><svg viewBox="0 0 1200 168" role="img" aria-label="The same 2-second series read two ways: a range vector returns ten samples twenty seconds apart; a two-second-step range query returns ninety-one points changing every two seconds.">
+    <text x="40.0" y="26.0" class="t-mono" data-max="420">cpu.utilization.PCORE{profile=&quot;ESX_TOP_...&quot;}[3m]</text>
+    <text x="500.0" y="26.0" class="t-small" data-max="640">a range vector: 10 samples, 20 s apart, on every profile</text>
+    <line x1="52.0" y1="46.0" x2="460.0" y2="46.0" class="gridline"/>
+    <circle cx="60.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="104.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="148.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="192.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="236.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="280.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="324.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="368.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="412.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <circle cx="456.0" cy="46.0" r="3.2" class="dot-steel"/>
+    <text x="40.0" y="84.0" class="t-mono" data-max="420">query_range with step=2s over the same 3 minutes</text>
+    <text x="500.0" y="84.0" class="t-small" data-max="640">91 points, 86 to 89 value changes, 2 s apart: the served cadence</text>
+    <line x1="52.0" y1="104.0" x2="460.0" y2="104.0" class="gridline"/>
+    <circle cx="60.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="64.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="68.9" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="73.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="77.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="82.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="86.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="91.1" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="95.5" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="100.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="104.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="108.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="113.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="117.7" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="122.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="126.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="131.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="135.5" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="139.9" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="144.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="148.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="153.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="157.7" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="162.1" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="166.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="171.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="175.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="179.9" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="184.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="188.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="193.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="197.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="202.1" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="206.5" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="211.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="215.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="219.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="224.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="228.7" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="233.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="237.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="242.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="246.5" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="250.9" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="255.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="259.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="264.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="268.7" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="273.1" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="277.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="282.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="286.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="290.9" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="295.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="299.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="304.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="308.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="313.1" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="317.5" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="322.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="326.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="330.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="335.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="339.7" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="344.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="348.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="353.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="357.5" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="361.9" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="366.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="370.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="375.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="379.7" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="384.1" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="388.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="393.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="397.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="401.9" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="406.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="410.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="415.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="419.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="424.1" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="428.5" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="433.0" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="437.4" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="441.8" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="446.3" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="450.7" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="455.2" cy="104.0" r="1.7" class="dot-amber"/>
+    <circle cx="459.6" cy="104.0" r="1.7" class="dot-amber"/>
+    <text x="40.0" y="136.0" class="t-small" data-max="1120">A step carries the last value forward between changes, so the instrument is the spacing between value changes at a fine step, per profile.</text>
+    <text x="40.0" y="154.0" class="t-small" data-max="1120">max_over_time over a window reads the 2-second values on the server.</text>
+  </svg></div><div class="panel"><h4>2 · One call returns at most 101 series, and flags it only in warnings</h4><div class="two"><div><div class="bar"><div class="fill" style="width:35%">101 returned</div><div class="rest">of 288 in the store, by count by (profile)</div></div></div><p>warnings: ["Results truncated due to limit."]; limit accepts 1 to 101; no page token. Read cardinality with count(), partition by host, fail the pipeline on the warning.</p></div></div><div class="panel"><h4>3 · The same name can come from two profiles; pin it</h4><div class="diagram" id="d-profiles" style="grid-template-columns:minmax(220px,.9fr) minmax(300px,1.4fr);gap:12px 40px;" role="img" aria-label="One metric name served under two acquisition profiles, each with its own cadence."><div class="node n-plain n-host" data-id="name" style="grid-column:1 / span 1;grid-row:1 / span 2;"><span class="n-mono" style="font-size:.9rem">cpu.utilization.PCORE</span></div><div class="node n-amber" data-id="pa" style="grid-column:2 / span 1;grid-row:1 / span 1;"><span class="n-mono">profile=ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS</span><p>144 series · a value every 2 s</p></div><div class="node n-steel" data-id="pb" style="grid-column:2 / span 1;grid-row:2 / span 1;"><span class="n-mono">profile=TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS</span><p>144 series · a value every 20 s</p></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[{"a": "name", "b": "pa", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "name", "b": "pb", "cls": "ln-steel", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}]</script></div><p style="margin-top:10px">Nineteen names sit under both on this build; an unpinned query mixes both cadences in one answer (52 and 49 of the 101 rows returned here). Stamp each landed row with its profile, not only its sourceId.</p></div><div class="panel"><h4>4 · Retention is a setting the store applies late, per source</h4><div class="two"><svg viewBox="0 0 640 120" role="img" aria-label="The two Real-Time Metrics retention windows: fifteen days for the 20-second series, and the ESX Top setting of 24 hours against about 80 hours served.">
+    <text x="30.0" y="22.0" class="t-small" data-max="400">20-second series: 15 days by setting</text>
+    <rect x="30.0" y="30.0" width="543.8" height="12.0" rx="2" class="fill-amber" opacity=".9"/>
+    <text x="30.0" y="64.0" class="t-small" data-max="420">ESX Top: 24 h by setting (amber), about 80 h served (rose)</text>
+    <rect x="30.0" y="72.0" width="36.2" height="10.0" rx="2" class="fill-amber" opacity=".6"/>
+    <rect x="66.2" y="72.0" width="83.4" height="10.0" rx="2" class="fill-rose" opacity=".6"/>
+    <line x1="30.0" y1="96.0" x2="610.0" y2="96.0" class="axis"/>
+    <line x1="30.0" y1="92.0" x2="30.0" y2="100.0" class="axis"/>
+    <text x="30.0" y="116.0" class="t-mono" text-anchor="middle" data-max="30">0d</text>
+    <line x1="66.2" y1="92.0" x2="66.2" y2="100.0" class="axis"/>
+    <text x="66.2" y="116.0" class="t-mono" text-anchor="middle" data-max="30">1d</text>
+    <line x1="138.8" y1="92.0" x2="138.8" y2="100.0" class="axis"/>
+    <text x="138.8" y="116.0" class="t-mono" text-anchor="middle" data-max="30">3d</text>
+    <line x1="211.2" y1="92.0" x2="211.2" y2="100.0" class="axis"/>
+    <text x="211.2" y="116.0" class="t-mono" text-anchor="middle" data-max="30">5d</text>
+    <line x1="392.5" y1="92.0" x2="392.5" y2="100.0" class="axis"/>
+    <text x="392.5" y="116.0" class="t-mono" text-anchor="middle" data-max="30">10d</text>
+    <line x1="573.8" y1="92.0" x2="573.8" y2="100.0" class="axis"/>
+    <text x="573.8" y="116.0" class="t-mono" text-anchor="middle" data-max="30">15d</text>
+  </svg><p>ESX Top is 24 hours by setting, yet about 80 hours were served on one source until the store cut it back in a single 24-hour step, while the other source kept its old cut; a 16.6-hour test at a one-hour setting changed neither horizon. Extract 2-second data within hours, and never plan on the setting.</p></div></div><div class="panel"><h4>5 · Identity and tokens</h4><p>sourceId is required and not validated: a wrong id, or a name outside that source's catalog, returns a successful empty answer. A vCenter is addressed by its instance UUID, an NSX manager by its cluster UUID.</p><p>The service JWT lasts 35 minutes from the bearer session it was exchanged from, not from the exchange; re-mint the bearer and the JWT together on one schedule, and never let a cleanup path depend on an exchange.</p></div><div class="panel"><h4>6 · The dialect, read against VMware guidance's own page</h4><div class="tbl"><table aria-label="PromQL dialect facts verified on the build"><thead><tr><th>Fact</th><th>As the engine answered it</th></tr></thead><tbody><tr><td>Labels are lowercase</td><td>VMware guidance's <span class="num">HOST='host-17'</span> returns 0 series with status success; <span class="num">host</span> matches</td></tr><tr><td>offset parses and does nothing</td><td>61 of 61 points identical to the unshifted series; VMware guidance lists it unsupported</td></tr><tr><td>Subqueries run on instant queries only</td><td>a subquery or a bare range vector as the outermost expression of a range query is a parse error, and the widget always runs a range query</td></tr><tr><td>rate() applies counter semantics to a gauge</td><td>on a gauge with 96 decreases in 181 samples, no negative value; VMware guidance's rate-on-CPU example overstates change</td></tr><tr><td>topn_sum(n, x) is a VCF extension</td><td>the n series with the highest sum over the query range, raw values, stable legend; by is accepted and ignored; topk is per step</td></tr><tr><td>absent() returns 1 for an unmatched selector</td><td>the reconcile-absence guard as a query; an unknown name or an unmatched label returns one series valued 1</td></tr></tbody></table></div></div>
+  <figcaption><b>How to read it.</b> Panel 1 is the mistake this atlas itself made once: a range vector returns a 20-second grid for every profile, and reading that as the store's grid produces a confident wrong claim. The other panels are the rules an extractor writes into code, not into a runbook; panel 6 is the dialect itself, read against VMware guidance's own page.</figcaption>
+  </figure>
+  <div class="rule-strip"><p><b>The extractor's seven lines.</b> Pin the profile with a label matcher. Read cardinality with <span class="num">count by (profile)</span> and partition by host so no call nears 101. Measure cadence as value-change spacing at a fine step. Stamp rows with sourceId and profile. Treat the truncation warning and an empty answer as errors to investigate, never as zeros. Write labels lowercase and take the names from the metadata endpoint, never from a picker. Never rate a gauge.</p></div>
+</section>
+
+<section class="plate" id="p11">
+  <div class="plate-hd"><span class="no">Plate 11</span><div><h2>Two planes, one set of samples: the proof, and the calls</h2><div class="cap">the store's mean and peak keys are rollups of the 20-second series; the seven calls a pipeline makes; ten queries built for the strategy, verified</div></div></div>
+  <figure>
+  <div class="panel"><h4>1 · The store's mean and peak keys are rollups of the same samples</h4><svg viewBox="0 0 1200 236" role="img" aria-label="Real-Time Metrics rolled up per 5-minute cycle against the store&#x27;s mean and peak keys: median ratios for four names.">
+    <text x="40.0" y="26.0" class="t-title" data-max="1120">Real-Time Metrics rolled up per 5-minute cycle, over the store&#x27;s keys (median ratio; 36 buckets per VM, 3 VMs per name)</text>
+    <line x1="420.0" y1="40.0" x2="420.0" y2="200.0" class="gridline"/>
+    <text x="420.0" y="214.0" class="t-mono" text-anchor="middle" data-max="40">0.0</text>
+    <line x1="620.0" y1="40.0" x2="620.0" y2="200.0" class="gridline"/>
+    <text x="620.0" y="214.0" class="t-mono" text-anchor="middle" data-max="40">0.5</text>
+    <line x1="820.0" y1="40.0" x2="820.0" y2="200.0" class="gridline"/>
+    <text x="820.0" y="214.0" class="t-mono" text-anchor="middle" data-max="40">1.0</text>
+    <text x="408.0" y="68.0" class="t-mono" text-anchor="end" data-max="370">net.throughput.usage.VM</text>
+    <rect x="420.0" y="56.0" width="391.2" height="12.0" rx="3" class="fill-teal" opacity=".9"/>
+    <text x="817.2" y="66.0" class="t-small" data-max="80">mean 0.98</text>
+    <rect x="420.0" y="72.0" width="396.4" height="12.0" rx="3" class="fill-amber" opacity=".9"/>
+    <text x="822.4" y="82.0" class="t-small" data-max="80">peak 0.99</text>
+    <text x="408.0" y="108.0" class="t-mono" text-anchor="end" data-max="370">guest.contextSwapRate.VM</text>
+    <rect x="420.0" y="96.0" width="400.0" height="12.0" rx="3" class="fill-teal" opacity=".9"/>
+    <text x="826.0" y="106.0" class="t-small" data-max="80">mean 1.00</text>
+    <rect x="420.0" y="112.0" width="400.0" height="12.0" rx="3" class="fill-amber" opacity=".9"/>
+    <text x="826.0" y="122.0" class="t-small" data-max="80">peak 1.00</text>
+    <text x="408.0" y="148.0" class="t-mono" text-anchor="end" data-max="370">guest.cpu.runQueue.VM</text>
+    <rect x="420.0" y="136.0" width="400.0" height="14.0" rx="3" class="fill-rose" opacity=".35"/>
+    <text x="828.0" y="148.0" class="t-small" data-max="290">= vCPU count: stored per vCPU</text>
+    <text x="408.0" y="188.0" class="t-mono" text-anchor="end" data-max="370">guest.disk.requestQueueAvg.VM</text>
+    <rect x="420.0" y="176.0" width="400.0" height="14.0" rx="3" class="fill-rose" opacity=".35"/>
+    <text x="828.0" y="188.0" class="t-small" data-max="290">100 x: stored divided by 100</text>
+    <text x="40.0" y="232.0" class="t-small" data-max="1120">teal: the samples&#x27; average over the cycle against the stored mean · amber: their maximum against the 20_sec_peak key · 1.00 means the same samples</text>
+  </svg></div><div class="panel"><h4>2 · The seven calls, in order</h4><div class="diagram" id="d-calls" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr;gap:10px 12px;" role="img" aria-label="The seven calls of an extractor against the Real-Time Metrics query service, left to right: mint, address, discover, size, pull, land, bound."><div class="node n-plain" data-id="s1" style="grid-column:1 / span 1;grid-row:1 / span 1;"><span class="n-tag">1 · mint</span><p style="overflow-wrap:anywhere">the suite API session exchanges the VCF_VODAP service key for a 35-minute JWT; re-mint bearer and JWT together</p></div><div class="node n-plain" data-id="s2" style="grid-column:2 / span 1;grid-row:1 / span 1;"><span class="n-tag">2 · address</span><p style="overflow-wrap:anywhere">https://&lt;instance services FQDN&gt;/data-query-service/api/v1/ with the JWT as a bearer</p></div><div class="node n-plain" data-id="s3" style="grid-column:3 / span 1;grid-row:1 / span 1;"><span class="n-tag">3 · discover</span><p style="overflow-wrap:anywhere">vcenters/metrics_config lists the vCenter ids; metadata with sourceId lists the names a source serves; NSX by cluster UUID</p></div><div class="node n-amber" data-id="s4" style="grid-column:4 / span 1;grid-row:1 / span 1;"><span class="n-tag">4 · size</span><p style="overflow-wrap:anywhere">count by (profile) per name; pin feature or profile; partition by host under the 101-series cap; fail on warnings</p></div><div class="node n-amber" data-id="s5" style="grid-column:5 / span 1;grid-row:1 / span 1;"><span class="n-tag">5 · pull</span><p style="overflow-wrap:anywhere">query_range with sourceId, start, end, step 20s (2s for ESX Top); a few hours per call</p></div><div class="node n-plain" data-id="s6" style="grid-column:6 / span 1;grid-row:1 / span 1;"><span class="n-tag">6 · land</span><p style="overflow-wrap:anywhere">data.result carries labels and [epoch, value]; key on (sourceId, vm or host), the store's (VMEntityVCID, VMEntityObjectID); stamp feature and profile</p></div><div class="node n-plain" data-id="s7" style="grid-column:7 / span 1;grid-row:1 / span 1;"><span class="n-tag">7 · bound</span><p style="overflow-wrap:anywhere">15 days for 20 s, a per-source cut for 2 s; extract within hours, keep it in the region, never a BI feed</p></div><svg class="edges" aria-hidden="true"></svg><script type="application/json" class="edge-spec">[{"a": "s1", "b": "s2", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "s2", "b": "s3", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "s3", "b": "s4", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "s4", "b": "s5", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "s5", "b": "s6", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}, {"a": "s6", "b": "s7", "cls": "ln-amber", "sa": "right", "sb": "left", "w": 2.4, "dash": false, "arrow": true}]</script></div></div><div class="panel"><h4>3 · Ten queries for the strategy, verified on the reference estate on 2026-09-16</h4><div class="tbl"><table aria-label="Ten strategy queries"><thead><tr><th>Id</th><th>Lane</th><th>Query</th><th>The decision it serves</th></tr></thead><tbody><tr><td><span class="num">E1</span></td><td>discovery</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">count by (profile) (cpu.capacity.contention.VM)</span></td><td>Which profile serves a name, at what cadence, and whether a call will hit the 101-series ceiling. Run it once per name before an extract or a widget.</td></tr><tr><td><span class="num">E2</span></td><td>hot-set</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">topn_sum(5, cpu.capacity.contention.VM{feature=&#x27;TROUBLESHOOTING&#x27;})</span></td><td>The scoped hot-set the charter allows out of Real-Time Metrics: the five most contended VMs over the window, raw 20-second values, five series whatever the estate size.</td></tr><tr><td><span class="num">E3</span></td><td>cross-plane</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">max_over_time(net.throughput.usage.VM{vm=&#x27;&lt;vm&gt;&#x27;}[5m])</span></td><td>Proof for the extraction contract: the 5-minute analytics store already keeps the mean and the in-cycle peak of this plane (net|usage_average, net|20_sec_peak_usage_average). Ship the store's keys and hourly rollups, not the samples.</td></tr><tr><td><span class="num">E4</span></td><td>cross-plane</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">guest.cpu.runQueue.VM / cpu.corecount.provisioned.VM</span></td><td>Operations stores the guest run queue per vCPU (guest|cpu_queue) and the guest disk queue divided by 100 (guest|disk_queue); the real-time plane stores the raw values. A warehouse that mixes planes checks the scale per key first.</td></tr><tr><td><span class="num">E5</span></td><td>gold layer</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">sum by (host_fqdn) (cpu.corecount.provisioned.VM) / count by (host_fqdn) (cpu.utilization.PCORE{feature=&#x27;TROUBLESHOOTING&#x27;})</span></td><td>The capacity policy input (the charter's CPU 4:1 ratio) as one daily number per host: provisioned vCPUs over physical cores, from two families joined on host_fqdn.</td></tr><tr><td><span class="num">E6</span></td><td>troubleshooting</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">max_over_time(storage.latency.totalKavg.LUN{feature=&#x27;ESX_TOP&#x27;}[1m])</span></td><td>What the 5-minute mean hides at the storage layer: the worst 2-second kernel latency inside each minute, per host. Read within hours, per source; the 2-second set is cut per source at the store's own moments.</td></tr><tr><td><span class="num">E7</span></td><td>troubleshooting</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">topn_sum(5, cpu.utilization.PCORE{feature=&#x27;ESX_TOP&#x27;, host_fqdn=&#x27;&lt;host_fqdn&gt;&#x27;})</span></td><td>Placement and imbalance evidence: the five busiest physical cores of one host; the host matcher keeps the answer under the 101-series ceiling on any host size.</td></tr><tr><td><span class="num">E8</span></td><td>gold layer</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">increase(vmop.vmotion.CLSTR[1h])</span></td><td>vmop.* are cumulative counters (the vCenter data profile), so increase() gives migrations per window per cluster: the churn number for the gold layer. rate() belongs here, never on a gauge.</td></tr><tr><td><span class="num">E9</span></td><td>discovery</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">absent(cpu.capacity.contention.VM{vm=&#x27;&lt;vm&gt;&#x27;})</span></td><td>The reconcile-absence rule as a query: a scoped object that stops reporting returns 1 here and nothing in the data call. Land it as a gap to reconcile, never as zero.</td></tr><tr><td><span class="num">E10</span></td><td>troubleshooting</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">mem.tier.consumed.MEMTYPE{feature=&#x27;ESX_TOP&#x27;}</span></td><td>Tiering engagement per host and tier (the mem label), the input of the memory-tiering lens; on a DRAM-only host the mem label carries one value.</td></tr></tbody></table></div><div class="tbl"><table aria-label="Functions by call form"><thead><tr><th>Call form</th><th>Functions served (* served but absent from the widget's list)</th></tr></thead><tbody><tr><td>snapshot: a bare metric or a selector</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">sum, min, max, avg, count, abs, ceil, floor, absent</span></td></tr><tr><td>count, then snapshot</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">topk, bottomk, topn_sum, bottomn_sum</span></td></tr><tr><td>clip: the window inside the function</td><td><span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">avg_over_time, min_over_time, max_over_time, sum_over_time, count_over_time, last_over_time, rate, resets, absent_over_time, irate*, increase*</span></td></tr></tbody></table></div><p style="margin-top:10px">Refused by the engine: <span style="font-family:var(--mono);font-size:.84rem;overflow-wrap:anywhere">stddev, stdvar, quantile, count_values, group; round, sqrt, log, delta, deriv, predict_linear, sort_desc, clamp_max, label_replace, histogram_quantile, quantile_over_time, stddev_over_time, changes, time(), vector(), scalar(); on, ignoring, group_left; unary minus; the @ modifier</span>. The functions and queries are regenerated from the companion's verified reference (docs/reference/promql) so this plate cannot drift from what the engine answered.</p></div>
+  <figcaption><b>How to read it.</b> Panel 1 puts the two planes side by side per 5-minute cycle: the ratio of the real-time plane's average and maximum to the store's mean and peak keys. Panel 2 is the extractor's path as calls, left to right. Panel 3 is the language as the engine answered it: ten queries with the decision each serves, the functions by call form, and what was refused.</figcaption>
+  </figure>
+  <div class="read">
+    <div><h3>What the comparison settles</h3><ul>
+      <li>The guest family matches exactly: mean and peak ratios of 1.00 on every one of 36 buckets for three VMs. The two planes are reading the same 20-second samples <span class="num">live</span>.</li>
+      <li>Network usage sits at 0.96 to 0.98 for the mean and 0.95 to 0.97 for the peak: two collection paths sampling at different phases, not two truths <span class="num">live</span>.</li>
+      <li>Two guest keys are normalized in the store and raw on the real-time plane: the run queue per vCPU, the disk queue divided by 100. A join across planes scales per key first <span class="num">live</span>.</li>
+    </ul></div>
+    <div><h3>What it settles for the design</h3><ul>
+      <li>A warehouse that extracts the store's mean and peak keys and the hourly MAX rollup keeps what a 20-second feed would give it for these families, without the volume.</li>
+      <li>The real-time plane earns its lane for what the store has no key for: the 2-second tail, per-core hot spots, the contention series of a scoped set within hours.</li>
+      <li>The row key is the same on both planes: sourceId and the object label are the store's (VMEntityVCID, VMEntityObjectID) pair, so the hot-set joins the tiers with no lookup.</li>
+    </ul></div>
+  </div>
+  <div class="rule-strip"><p><b>What not to do, one line each.</b> No rate() on a gauge: the engine reads a dip as a counter reset. No offset: it parses and does nothing. No subquery in a range call. No unpinned name that serves two cadences. No join across planes without the per-key scale check. No key copied from a picker without the metadata endpoint's word that the source serves it.</p></div>
+</section>
+
+<section class="plate" id="p12">
+  <div class="plate-hd"><span class="no">Plate 12</span><div><h2>Tradeoffs at a glance</h2><div class="cap">the choices a global ELT design keeps making, and which way the evidence leans</div></div></div>
+  <div class="tbl"><table aria-label="Tradeoffs">
+    <thead><tr><th>Choice</th><th>The tempting option</th><th>What it costs</th><th>Where the evidence leans</th></tr></thead>
+    <tbody>
+      <tr><td>vCenter statistics level</td><td>raise it to 3 or 4 to "get more data", or to keep the level 2 to 4 counters a utilization list asks for</td><td>vpxd memory risk and bigger vCenter databases; nothing changes for Operations or Real-Time Metrics, which read demand, co-stop, active memory, and readiness at 20 seconds whatever the level says</td><td>leave it at 1; the platform's planes do not read it <span class="num">doc + live</span></td></tr>
+      <tr><td>Second pull of vSphere counters</td><td>point Zabbix or another collector at the vCenter API</td><td>duplicate load on vpxd, a second and different truth, no peaks recovered</td><td>extract from Operations; keep the domain collector for what is off vSphere <span class="num">doc</span></td></tr>
+      <tr><td>Native points versus rollups</td><td>land every 5-minute point in the warehouse</td><td>twelve times the hourly tier, 52 GB per 30-day backfill at 10,000 VMs x 20 keys, and the peaks are still means</td><td>hourly AVG and MAX on the server, exact; native only for a scoped hot-set <span class="num">live</span></td></tr>
+      <tr><td>Real-Time Metrics as a feed</td><td>stream the 20-second and 2-second series to the center</td><td>tens of millions of samples a day per small source, a 15-day horizon, a 101-series ceiling per call, retention applied late</td><td>a regional troubleshooting store; extract only the contention series for the scoped set <span class="num">live</span></td></tr>
+      <tr><td>Percentiles</td><td>recompute p95 and rightsizing from raw counters</td><td>a different estimator from the platform's recency-weighted projection; the two will disagree by design</td><td>read the platform's number and record the policy risk level as provenance <span class="num">doc + live</span></td></tr>
+      <tr><td>Topology</td><td>one global Operations instance</td><td>one WAN in the collection path, one node ceiling, one hour of proxy buffer as the only outage protection</td><td>one instance per region, decide in region, ship the thin tiers <span class="num">doc</span></td></tr>
+      <tr><td>Retention on the platform</td><td>raise every retention key to be safe</td><td>storage on the node, and no change to what the warehouse must keep</td><td>defaults; extract each grain once, inside its horizon <span class="num">live</span></td></tr>
+      <tr><td>Agents on a guest</td><td>one agent per monitoring tool, several per host</td><td>duplicate load and two truths per guest, the same failure as a second vCenter pull</td><td>one collector per domain, one agent per host; open-source Telegraf posting to Operations, or a neutral collector, never both on one guest <span class="num">doc</span></td></tr>
+      <tr><td>Domains beyond vSphere</td><td>route every domain through VCF Operations to have one platform</td><td>ties the agent and network domains to the VCF stack and its node limits; devices that run no agent gain nothing from it</td><td>one collector per domain, raw in region, a thin tier per domain to the warehouse; Operations owns the vSphere lane and whatever enters through a door: open-source Telegraf, the builder, a stable pack, the API push <span class="num">doc</span></td></tr>
+      <tr><td>Getting data into Operations</td><td>install every marketplace pack, and a managed agent on every guest</td><td>paths whose direction is not stable, and a node ceiling spent on packs nobody reads</td><td>the Management Pack Builder for any API or Prometheus source, open-source Telegraf for guests, the packs whose direction is stable, the API push for your own numbers <span class="num">doc</span></td></tr>
+      <tr><td>Keys from a picker</td><td>copy a metric key from the PromQL Viewer's Metrics tab, or a statkey from the adapter catalog</td><td>the tab lists 1,345 names, the engine 437, a source 171 to 175, and four tab keys differ from the served name by letter case; the adapter catalog lists 983 VM keys where a VM collects 273</td><td>read the metadata endpoint per source and a resource's own statkey list, and bind what they say <span class="num">live</span></td></tr>
+      <tr><td>Joining the two planes</td><td>land real-time and store values for one key in one column</td><td>the guest run queue is per vCPU in the store and raw on the plane, the disk queue divided by 100; the rest agree within a few percent</td><td>compare one object per key first and scale; the guest family is exact, network usage within 5 percent <span class="num">live</span></td></tr>
+      <tr><td>Absence in an extract</td><td>land a missing resource as zero</td><td>a nineteen-day outage would have read as zero demand across the estate</td><td>reconcile against inventory and collector health first <span class="num">live</span></td></tr>
+    </tbody></table></div>
+  <div class="trade"><h3>The thread through every row</h3><p>Each tempting option buys the feeling of completeness with load, cost, or a second truth. Each evidence-backed option keeps one source of record per signal and moves the smallest artifact that still carries the decision.</p></div>
+</section>
+
+<section class="closing">
+  <h2>The strategy in one breath</h2>
+  <p class="measure">Collect once, at the plane that already owns the signal. Decide in region, where the native data lives. Extract by tier: the gold layer daily, the analysis windows hourly and exact, the hot-set native and scoped. Key everything on the pair every system already carries. Beyond vSphere, one collector per domain, raw in the region, one thin tier each, joined through the CMDB. Bind the catalog to a live statkey list, never to a picker. Treat the real-time plane as the truth for a burst and a troubleshooting store for everything else, read it with its seven rules in code, and remember that its samples are the ones the store already rolled up. Reconcile absence before it becomes a number.</p>
+  <p class="measure" style="margin:0;color:var(--ink-2)">Every figure on this page generalizes as a mechanism, not as a size: the coefficients were measured on one estate and are re-measured on yours with the companion harness.</p>
+</section>
+
+<footer class="foot">
+  <p>Source of record: the Collect Once, Decide at Source charter and its lab records. VMware guidance pages read for this atlas, by title on Broadcom TechDocs for VCF 9.1: Real-Time Metrics Details (the policy workspace), Real-time Data in the Workbench, List of Global Settings, Deploy Real-Time Metrics, the VCF Operations cloud proxy and topology pages, and the 9.0 sizing knowledge base article; Zabbix 7.0 LTS documentation for history, trends, proxies, export, and SNMP items, the current LTS line, re-read on the 7.4 pages; ServiceNow documentation for the vCenter CMDB model. For the collection domains beyond vSphere: the OpenTelemetry Collector pages (Collector, Agent deployment pattern, Gateway deployment pattern) and the Host Metrics and SNMP receiver READMEs; the Telegraf plugin directory and the BasicStats and SNMP input READMEs; the Prometheus node_exporter, windows_exporter, and snmp_exporter READMEs, Prometheus Agent Mode, and Defining recording rules; and, on Broadcom TechDocs for VCF 9.1, Monitoring Applications Using Open Source Telegraf, What Are The Different Types of Telegraf Agents in VCF Operations, Management Pack Builder, List of Management Packs, Management Pack for Network Devices, Key Features of the vSphere Supervisor Management Pack, the VCF Operations what's new for 9.1, Virtual Machine Metrics, the PromQL Widget and PromQL Queries pages, the per-provider Real-Time Metrics list linked from the Real-Time Metrics policy page, and, for VCF Operations for Networks, Enabling IPFIX Configuration; the vSphere Web Services API for PerformanceManager counters and PerfMetricIntSeries; the VCF blog of 2026-09-03 on the AI Assistant for VCF; the DX NetOps and AppNeta product pages on Broadcom's network observability site; the suite API push routes from the 9.1 public OpenAPI document.</p>
+  <p>Measured facts come from live reads of one VCF 9.1 estate between 2026-09-14 and 2026-09-16 and generalize as mechanisms; sizes and coefficients are inputs to your own estimate. The ten queries, the function table, and the catalog's key checks are regenerated from the companion's reference files.</p>
+</footer>
+<script id="atlas-runtime">
+(function(){
+  var NS="http://www.w3.org/2000/svg";
+  function pt(r,box,side){var x=r.left-box.left,y=r.top-box.top,w=r.width,h=r.height;
+    if(side==="right")return[x+w,y+h/2];if(side==="left")return[x,y+h/2];if(side==="top")return[x+w/2,y];return[x+w/2,y+h];}
+  function draw(d){
+    var svg=d.querySelector("svg.edges"),specEl=d.querySelector("script.edge-spec");if(!svg||!specEl)return;
+    var spec=[];try{spec=JSON.parse(specEl.textContent);}catch(e){return;}
+    var box=d.getBoundingClientRect();while(svg.firstChild)svg.removeChild(svg.firstChild);
+    if(window.matchMedia("(max-width: 720px)").matches){svg.setAttribute("width",0);svg.setAttribute("height",0);return;}
+    svg.setAttribute("width",d.scrollWidth);svg.setAttribute("height",d.scrollHeight);svg.setAttribute("viewBox","0 0 "+d.scrollWidth+" "+d.scrollHeight);
+    var defs=document.createElementNS(NS,"defs");svg.appendChild(defs);var mk={};
+    spec.forEach(function(e){
+      var A=d.querySelector('[data-id="'+e.a+'"]'),B=d.querySelector('[data-id="'+e.b+'"]');if(!A||!B)return;
+      var p=pt(A.getBoundingClientRect(),box,e.sa),q=pt(B.getBoundingClientRect(),box,e.sb);
+      var dx=q[0]-p[0],dy=q[1]-p[1],c1,c2;
+      if(e.sa==="right"||e.sa==="left"){var k=Math.max(30,Math.abs(dx)*0.5);c1=[p[0]+(e.sa==="right"?k:-k),p[1]];c2=[q[0]+(e.sb==="left"?-k:k),q[1]];}
+      else{var k2=Math.max(24,Math.abs(dy)*0.5);c1=[p[0],p[1]+(e.sa==="bottom"?k2:-k2)];c2=[q[0],q[1]+(e.sb==="top"?-k2:k2)];}
+      var path=document.createElementNS(NS,"path");
+      path.setAttribute("d","M"+p[0].toFixed(1)+","+p[1].toFixed(1)+" C"+c1[0].toFixed(1)+","+c1[1].toFixed(1)+" "+c2[0].toFixed(1)+","+c2[1].toFixed(1)+" "+q[0].toFixed(1)+","+q[1].toFixed(1));
+      path.setAttribute("class","ln "+e.cls);path.setAttribute("stroke-width",e.w);if(e.dash)path.setAttribute("stroke-dasharray","7 6");
+      if(e.arrow){var id="m"+e.cls.replace(/[^a-z0-9]/g,"");if(!mk[id]){var m=document.createElementNS(NS,"marker");m.setAttribute("id",id+"-"+d.id);m.setAttribute("viewBox","0 0 10 10");m.setAttribute("refX","9");m.setAttribute("refY","5");m.setAttribute("markerWidth","7");m.setAttribute("markerHeight","7");m.setAttribute("orient","auto-start-reverse");var tp=document.createElementNS(NS,"path");tp.setAttribute("d","M0,0 L10,5 L0,10 z");tp.setAttribute("class","fill-"+e.cls.replace("ln-",""));m.appendChild(tp);defs.appendChild(m);mk[id]=1;}
+        path.setAttribute("marker-end","url(#"+id+"-"+d.id+")");}
+      svg.appendChild(path);});
+  }
+  function drawAll(){document.querySelectorAll(".diagram").forEach(draw);}
+  function clampLabels(){document.querySelectorAll("svg text[data-max]").forEach(function(t){try{var max=parseFloat(t.getAttribute("data-max"));var len=t.getComputedTextLength();if(len>max+0.5){t.setAttribute("textLength",max);t.setAttribute("lengthAdjust","spacingAndGlyphs");}}catch(e){}});}
+  function go(){drawAll();clampLabels();}
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(go);}else{go();}
+  window.addEventListener("load",go);var to;window.addEventListener("resize",function(){clearTimeout(to);to=setTimeout(drawAll,120);});
+  if(window.ResizeObserver){var ro=new ResizeObserver(function(){clearTimeout(to);to=setTimeout(drawAll,60);});document.querySelectorAll(".diagram").forEach(function(d){ro.observe(d);});}
+})();
+</script>
+</div>

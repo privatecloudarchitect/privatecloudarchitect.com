@@ -1,0 +1,832 @@
+{
+ "generated": "2026-09-16",
+ "build": "VCF Operations 9.1 (<host on the reference estate>)",
+ "placeholders": {
+  "<vm>": "vm-31039",
+  "<host_fqdn>": "<host on the reference estate>"
+ },
+ "examples": [
+  {
+   "id": "E1",
+   "lane": "discovery",
+   "title": "Cardinality and cadence before any extract",
+   "query": "count by (profile) (cpu.capacity.contention.VM)",
+   "decision": "Which profile serves a name, at what cadence, and whether a call will hit the 101-series ceiling. Run it once per name before an extract or a widget.",
+   "reads": "one series per profile whose value is the number of series; a name under two profiles returns two rows, and the extract pins feature or profile.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 1,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "count by (profile) (cpu.capacity.contention.VM)",
+    "substitutions": {},
+    "sample_last_values": [
+     [
+      "TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS",
+      "42"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E2",
+   "lane": "hot-set",
+   "title": "Contention hot list at 20 seconds, bounded",
+   "query": "topn_sum(5, cpu.capacity.contention.VM{feature='TROUBLESHOOTING'})",
+   "decision": "The scoped hot-set the charter allows out of Real-Time Metrics: the five most contended VMs over the window, raw 20-second values, five series whatever the estate size.",
+   "reads": "a stable legend of five VMs (MOID in the vm label, readable host in host_fqdn); the value is CPU contention percent every 20 seconds.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 5,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "topn_sum(5, cpu.capacity.contention.VM{feature='TROUBLESHOOTING'})",
+    "substitutions": {},
+    "sample_last_values": [
+     [
+      "<host on the reference estate>",
+      "0.96"
+     ],
+     [
+      "<host on the reference estate>",
+      "0.94"
+     ],
+     [
+      "<host on the reference estate>",
+      "0.79"
+     ],
+     [
+      "<host on the reference estate>",
+      "0.7"
+     ],
+     [
+      "<host on the reference estate>",
+      "0.75"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E3",
+   "lane": "cross-plane",
+   "title": "The store's peak key, reproduced from the 20-second samples",
+   "query": "max_over_time(net.throughput.usage.VM{vm='<vm>'}[5m])",
+   "companion": "avg_over_time(net.throughput.usage.VM{vm='<vm>'}[5m])",
+   "decision": "Proof for the extraction contract: the 5-minute analytics store already keeps the mean and the in-cycle peak of this plane (net|usage_average, net|20_sec_peak_usage_average). Ship the store's keys and hourly rollups, not the samples.",
+   "reads": "per 5-minute cycle, the maximum and the average of the fifteen samples; compared live with the Operations keys below.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 1,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "max_over_time(net.throughput.usage.VM{vm='vm-31039'}[5m])",
+    "substitutions": {
+     "<vm>": "vm-31039"
+    },
+    "sample_last_values": [
+     [
+      "<host on the reference estate>",
+      "11568.88"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E4",
+   "lane": "cross-plane",
+   "title": "Same samples, different units across planes",
+   "query": "guest.cpu.runQueue.VM / cpu.corecount.provisioned.VM",
+   "decision": "Operations stores the guest run queue per vCPU (guest|cpu_queue) and the guest disk queue divided by 100 (guest|disk_queue); the real-time plane stores the raw values. A warehouse that mixes planes checks the scale per key first.",
+   "reads": "the run queue normalized per vCPU, the number Operations shows; without the division the two planes disagree by the vCPU count.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 29,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "guest.cpu.runQueue.VM / cpu.corecount.provisioned.VM",
+    "substitutions": {},
+    "sample_last_values": [
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E5",
+   "lane": "gold",
+   "title": "vCPU to physical core ratio per host, computed live",
+   "query": "sum by (host_fqdn) (cpu.corecount.provisioned.VM) / count by (host_fqdn) (cpu.utilization.PCORE{feature='TROUBLESHOOTING'})",
+   "decision": "The capacity policy input (the charter's CPU 4:1 ratio) as one daily number per host: provisioned vCPUs over physical cores, from two families joined on host_fqdn.",
+   "reads": "one series per host; 1.0 means one vCPU per core; the count of PCORE series is the host's core count.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 3,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "sum by (host_fqdn) (cpu.corecount.provisioned.VM) / count by (host_fqdn) (cpu.utilization.PCORE{feature='TROUBLESHOOTING'})",
+    "substitutions": {},
+    "sample_last_values": [
+     [
+      "<host on the reference estate>",
+      "2.9583333333333335"
+     ],
+     [
+      "<host on the reference estate>",
+      "2.4375"
+     ],
+     [
+      "<host on the reference estate>",
+      "2.5208333333333335"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E6",
+   "lane": "troubleshooting",
+   "title": "The 2-second tail: kernel latency per LUN, per host",
+   "query": "max_over_time(storage.latency.totalKavg.LUN{feature='ESX_TOP'}[1m])",
+   "filter_form": "max_over_time(storage.latency.totalKavg.LUN{feature='ESX_TOP'}[1m]) > 100",
+   "decision": "What the 5-minute mean hides at the storage layer: the worst 2-second kernel latency inside each minute, per host. Read within hours, per source; the 2-second set is cut per source at the store's own moments.",
+   "reads": "one series per host with an ESX Top opt-in; spikes of a few hundred milliseconds in one minute against a mean of a few milliseconds.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 9,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "max_over_time(storage.latency.totalKavg.LUN{feature='ESX_TOP'}[1m])",
+    "substitutions": {},
+    "sample_last_values": [
+     [
+      "<host on the reference estate>",
+      "15.92"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "42.32"
+     ],
+     [
+      "<host on the reference estate>",
+      "28.91"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E7",
+   "lane": "troubleshooting",
+   "title": "Per-core hot spots on one host at 2 seconds",
+   "query": "topn_sum(5, cpu.utilization.PCORE{feature='ESX_TOP', host_fqdn='<host_fqdn>'})",
+   "decision": "Placement and imbalance evidence: the five busiest physical cores of one host; the host matcher keeps the answer under the 101-series ceiling on any host size.",
+   "reads": "five per-core series at 2-second cadence; a core pinned near 100 while the host mean is low is the scheduling story the mean cannot tell.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 5,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "topn_sum(5, cpu.utilization.PCORE{feature='ESX_TOP', host_fqdn='<host on the reference estate>'})",
+    "substitutions": {
+     "<host_fqdn>": "<host on the reference estate>"
+    },
+    "sample_last_values": [
+     [
+      "<host on the reference estate>",
+      "91.15"
+     ],
+     [
+      "<host on the reference estate>",
+      "54.68"
+     ],
+     [
+      "<host on the reference estate>",
+      "79.42"
+     ],
+     [
+      "<host on the reference estate>",
+      "41.18"
+     ],
+     [
+      "<host on the reference estate>",
+      "55.17"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E8",
+   "lane": "gold",
+   "title": "Counters, the right function: operations churn per cluster",
+   "query": "increase(vmop.vmotion.CLSTR[1h])",
+   "companion": "sum by (cluster) (increase(vmop.vmotion.CLSTR[6h]))",
+   "decision": "vmop.* are cumulative counters (the vCenter data profile), so increase() gives migrations per window per cluster: the churn number for the gold layer. rate() belongs here, never on a gauge.",
+   "reads": "vMotions per hour per cluster MOID; 0 on a quiet cluster.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 1,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "increase(vmop.vmotion.CLSTR[1h])",
+    "substitutions": {},
+    "sample_last_values": [
+     [
+      "domain-c20011",
+      "0"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E9",
+   "lane": "discovery",
+   "title": "Absence is a value to reconcile",
+   "query": "absent(cpu.capacity.contention.VM{vm='<vm>'})",
+   "decision": "The reconcile-absence rule as a query: a scoped object that stops reporting returns 1 here and nothing in the data call. Land it as a gap to reconcile, never as zero.",
+   "reads": "empty while the VM reports; one series valued 1 when it does not (an unknown MOID returns 1 immediately).",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 0,
+    "status": "empty",
+    "error": "",
+    "warnings": [],
+    "query": "absent(cpu.capacity.contention.VM{vm='vm-31039'})",
+    "substitutions": {
+     "<vm>": "vm-31039"
+    },
+    "sample_last_values": [],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "empty",
+    "as_expected": true
+   }
+  },
+  {
+   "id": "E10",
+   "lane": "troubleshooting",
+   "title": "Memory tiers at 2 seconds",
+   "query": "mem.tier.consumed.MEMTYPE{feature='ESX_TOP'}",
+   "decision": "Tiering engagement per host and tier (the mem label), the input of the memory-tiering lens; on a DRAM-only host the mem label carries one value.",
+   "reads": "one series per host and tier at 2-second cadence.",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 5,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "mem.tier.consumed.MEMTYPE{feature='ESX_TOP'}",
+    "substitutions": {},
+    "sample_last_values": [
+     [
+      "<host on the reference estate>",
+      "370152.17"
+     ],
+     [
+      "<host on the reference estate>",
+      "417199.14"
+     ],
+     [
+      "<host on the reference estate>",
+      "403792.06"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ],
+     [
+      "<host on the reference estate>",
+      "0"
+     ]
+    ],
+    "build": "VCF Operations 9.1 (<host on the reference estate>)",
+    "expected": "served",
+    "as_expected": true
+   }
+  }
+ ],
+ "dialect": [
+  {
+   "fact": "labels are lowercase: VMware guidance's HOST='host-17' matches nothing, host matches",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 0,
+    "status": "empty",
+    "error": "",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST{HOST='host-17'}",
+    "expected": "empty",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "a bare range vector is a parse error in a range query",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 400,
+    "series": 0,
+    "status": "refused",
+    "error": "Expression incomplete or buggy: parse error: Matrix Selector not supported as outermost operation for a range query",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST[5m]",
+    "expected": "refused",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "a subquery is a parse error in a range query",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 400,
+    "series": 0,
+    "status": "refused",
+    "error": "Expression incomplete or buggy: parse error: subquery not supported as outermost operation for a range query",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST[30m:5m]",
+    "expected": "refused",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "unary minus is a parse error",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 400,
+    "series": 0,
+    "status": "refused",
+    "error": "Expression incomplete or buggy: parse error: unary operation is not supported",
+    "warnings": [],
+    "query": "-cpu.usagemhz.HOST",
+    "expected": "refused",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "vector matching modifiers are parse errors",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 400,
+    "series": 0,
+    "status": "refused",
+    "error": "Expression incomplete or buggy: parse error: grouping operations are not supported",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST / on(host) mem.consumed.HOST",
+    "expected": "refused",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "arithmetic between two label-matched series works",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 3,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST / mem.consumed.HOST",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "comparison with bool works",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 3,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST > bool 80",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "or works",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 3,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST or mem.consumed.HOST",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "unless works (empty when the right side matches every series, all series when it matches none)",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 3,
+    "status": "served",
+    "error": "",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST unless no.such.metric.HOST",
+    "expected": "served",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "the @ modifier fails",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 500,
+    "series": 0,
+    "status": "refused",
+    "error": "Query Range API execution failed.",
+    "warnings": [],
+    "query": "cpu.usagemhz.HOST @ 1789556680",
+    "expected": "refused",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "stddev, quantile, count_values fail",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 500,
+    "series": 0,
+    "status": "refused",
+    "error": "Query Range API execution failed.",
+    "warnings": [],
+    "query": "quantile(0.95, cpu.usagemhz.HOST)",
+    "expected": "refused",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "round and sqrt are unsupported functions",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 400,
+    "series": 0,
+    "status": "refused",
+    "error": "Expression incomplete or buggy: parse error: unsupported function with name \"round\"",
+    "warnings": [],
+    "query": "round(cpu.usagemhz.HOST)",
+    "expected": "refused",
+    "as_expected": true
+   }
+  },
+  {
+   "fact": "offset parses but does not shift (VMware guidance: unsupported in 9.1)",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "points": 61,
+    "same_as_unshifted": 61,
+    "shifted_matches": 0,
+    "status": "accepted-ignored"
+   }
+  },
+  {
+   "fact": "a subquery works only as the outermost expression of an instant query",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "http": 200,
+    "series": 3,
+    "error": "",
+    "status": "served"
+   }
+  },
+  {
+   "fact": "rate() on a gauge applies counter semantics (decreases read as resets)",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "gauge": "cpu.usagemhz.HOST",
+    "decreases_in_raw": 96,
+    "raw_points": 181,
+    "negative_rate_values": 0,
+    "mean_abs_err_vs_counter_style": 15.139,
+    "mean_abs_err_vs_plain_delta": 1439.842
+   }
+  },
+  {
+   "fact": "topn_sum(n, x) returns the n series with the highest sum over the query range, raw values",
+   "verified": {
+    "date": "2026-09-16",
+    "source": "<source id>",
+    "returned": [
+     "<host on the reference estate>",
+     "<host on the reference estate>",
+     "<host on the reference estate>"
+    ],
+    "expected_by_manual_sum": [
+     "<host on the reference estate>",
+     "<host on the reference estate>",
+     "<host on the reference estate>"
+    ],
+    "match": true
+   }
+  }
+ ],
+ "crossplane": [
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "net.throughput.usage.VM",
+   "ops_mean_key": "net|usage_average",
+   "ops_peak_key": "net|20_sec_peak_usage_average",
+   "vm": "vm-31012",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    24.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 0.975,
+   "mean_rel_err_median": 0.026,
+   "peak_ratio_rtm_over_ops_median": 0.987,
+   "peak_rel_err_median": 0.055
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "net.throughput.usage.VM",
+   "ops_mean_key": "net|usage_average",
+   "ops_peak_key": "net|20_sec_peak_usage_average",
+   "vm": "vm-31039",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    24.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 0.983,
+   "mean_rel_err_median": 0.017,
+   "peak_ratio_rtm_over_ops_median": 0.991,
+   "peak_rel_err_median": 0.043
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "net.throughput.usage.VM",
+   "ops_mean_key": "net|usage_average",
+   "ops_peak_key": "net|20_sec_peak_usage_average",
+   "vm": "vm-31015",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    24.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 0.978,
+   "mean_rel_err_median": 0.024,
+   "peak_ratio_rtm_over_ops_median": 1.006,
+   "peak_rel_err_median": 0.069
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.contextSwapRate.VM",
+   "ops_mean_key": "guest|contextSwapRate_latest",
+   "ops_peak_key": "guest|20_sec_peak_contextSwapRate_latest",
+   "vm": "vm-31027",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    24.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 0.998,
+   "mean_rel_err_median": 0.004,
+   "peak_ratio_rtm_over_ops_median": 1.0,
+   "peak_rel_err_median": 0.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.contextSwapRate.VM",
+   "ops_mean_key": "guest|contextSwapRate_latest",
+   "ops_peak_key": "guest|20_sec_peak_contextSwapRate_latest",
+   "vm": "vm-31009",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    24.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 1.0,
+   "mean_rel_err_median": 0.003,
+   "peak_ratio_rtm_over_ops_median": 1.0,
+   "peak_rel_err_median": 0.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.contextSwapRate.VM",
+   "ops_mean_key": "guest|contextSwapRate_latest",
+   "ops_peak_key": "guest|20_sec_peak_contextSwapRate_latest",
+   "vm": "vm-31014",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    4.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 1.0,
+   "mean_rel_err_median": 0.001,
+   "peak_ratio_rtm_over_ops_median": 1.0,
+   "peak_rel_err_median": 0.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.cpu.runQueue.VM",
+   "ops_mean_key": "guest|cpu_queue",
+   "ops_peak_key": "guest|20_sec_peak_cpu_queue",
+   "vm": "vm-31027",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    24.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 24.0,
+   "mean_rel_err_median": 23.0,
+   "peak_ratio_rtm_over_ops_median": 24.0,
+   "peak_rel_err_median": 23.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.cpu.runQueue.VM",
+   "ops_mean_key": "guest|cpu_queue",
+   "ops_peak_key": "guest|20_sec_peak_cpu_queue",
+   "vm": "vm-13016",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    6.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 6.0,
+   "mean_rel_err_median": 5.0,
+   "peak_ratio_rtm_over_ops_median": 6.0,
+   "peak_rel_err_median": 5.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.cpu.runQueue.VM",
+   "ops_mean_key": "guest|cpu_queue",
+   "ops_peak_key": "guest|20_sec_peak_cpu_queue",
+   "vm": "vm-7006",
+   "vm_name": "the reference estate's workload domain-nsx01a",
+   "num_cpu": [
+    6.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 6.0,
+   "mean_rel_err_median": 5.0,
+   "peak_ratio_rtm_over_ops_median": 6.0,
+   "peak_rel_err_median": 5.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.disk.requestQueueAvg.VM",
+   "ops_mean_key": "guest|disk_queue",
+   "ops_peak_key": "guest|20_sec_peak_disk_queue",
+   "vm": "vm-29008",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    8.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 99.493,
+   "mean_rel_err_median": 98.493,
+   "peak_ratio_rtm_over_ops_median": 100.0,
+   "peak_rel_err_median": 99.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.disk.requestQueueAvg.VM",
+   "ops_mean_key": "guest|disk_queue",
+   "ops_peak_key": "guest|20_sec_peak_disk_queue",
+   "vm": "vm-31027",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    24.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 99.654,
+   "mean_rel_err_median": 98.654,
+   "peak_ratio_rtm_over_ops_median": 100.0,
+   "peak_rel_err_median": 99.0
+  },
+  {
+   "date": "2026-09-16",
+   "source": "<source id>",
+   "rtm_name": "guest.disk.requestQueueAvg.VM",
+   "ops_mean_key": "guest|disk_queue",
+   "ops_peak_key": "guest|20_sec_peak_disk_queue",
+   "vm": "vm-5040",
+   "vm_name": "the reference estate",
+   "num_cpu": [
+    16.0
+   ],
+   "buckets": 35,
+   "mean_ratio_rtm_over_ops_median": 100.0,
+   "mean_rel_err_median": 99.0,
+   "peak_ratio_rtm_over_ops_median": 100.0,
+   "peak_rel_err_median": 99.0
+  }
+ ]
+}
