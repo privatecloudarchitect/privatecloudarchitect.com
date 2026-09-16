@@ -140,12 +140,10 @@ svg .band{opacity:.9}
 .panel h4{margin:0 0 8px;font:600 .95rem/1.3 var(--body);color:var(--ink)}
 .panel p{font-size:.9rem;color:var(--ink-2);margin:0 0 6px}
 .panel .two{display:grid;grid-template-columns:minmax(260px,1.2fr) minmax(220px,1fr);gap:8px 24px;align-items:center}
-@media (max-width:720px){ .diagram{grid-template-columns:1fr !important;grid-template-rows:none !important} .diagram .node,.diagram .ngroup{grid-column:auto !important;grid-row:auto !important} .diagram .ngroup{display:none} .diagram .edges{display:none} .matrix{grid-template-columns:1fr repeat(5,1fr)} .matrix .mw{grid-column:1 / -1;padding-top:0} .panel .two{grid-template-columns:1fr} }
+@media (max-width:720px){ .diagram{grid-template-columns:1fr !important;grid-template-rows:none !important} .diagram .node,.diagram .ngroup{grid-column:auto !important;grid-row:auto !important} .diagram .ngroup{display:none} .diagram .edges{display:none} .matrix{grid-template-columns:minmax(96px,1.6fr) repeat(5,minmax(0,1fr));font-size:.8rem} .matrix>div{padding:8px 4px} .matrix .mn{overflow-wrap:anywhere} .matrix .mn span{font-size:.78rem} .matrix .mw{grid-column:1 / -1;padding-top:0} .panel .two{grid-template-columns:1fr} }
 figure .diagram svg.edges,figure .strip svg{min-width:0;width:auto}
 figure .strip svg{width:100%}
-</style>
-
-<div class="wrap">
+</style><div class="wrap">
 <header class="hero">
   <div class="eyebrow">A visual companion to Collect Once, Decide at Source</div>
   <h1>The Collection Planes Atlas</h1>
