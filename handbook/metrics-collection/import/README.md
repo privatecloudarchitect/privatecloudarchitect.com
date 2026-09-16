@@ -36,20 +36,27 @@ have no REST surface on this product.
 
 The three viewers chart one VCF domain's Real-Time Metrics, and the dashboard JSON carries that domain's
 resource id verbatim; the importer does not remap it. The committed value is a placeholder
-(`00000000-0000-4000-8000-000000000000`, named "the VCF domain you choose at import") that charts nothing.
+(`00000000-0000-4000-8000-000000000000`, named "the VCF domain you choose at import"), so straight after
+import each viewer shows the message "Unable to establish a connection with the Real-time metrics component.
+Please verify the Cloud Proxy status and review the logs." That message is the unbound source, not a proxy
+fault; bind the source before you read any log.
+
 Bind it one of two ways:
 
-- **After import:** open the dashboard, edit each of the three viewers (the widgets titled "Contention hot
-  list at 20 seconds", "vCPU to physical core ratio per host", and "The 2-second tail"), choose your VCF domain
-  as the source, save.
+- **After import, in the dashboard:** edit each of the three viewers (the widgets titled "Contention hot list
+  at 20 seconds", "vCPU to physical core ratio per host", and "The 2-second tail"). Under Output Data, the
+  Source field reads "No applicable VCF instance selected"; its list is grouped by VCF instance and offers each
+  instance's domains (the management domain and the workload domains). Choose the domain whose vCenter holds
+  the VMs you want charted, leave the toggle beside it at vCenter / vSAN (the default: the guide's queries name
+  vCenter metric families, and the NSX setting reads the NSX manager's families under other names), and save.
+  One viewer charts one domain; to chart a second domain, duplicate the widget and bind the copy.
 - **Before import:** rebuild the bundle with your id in `../../frameworks/collect-once/`: `python build_dashboard.py --source-id <id>`,
-  where `<id>` is the resource id of your VCF domain
+  where `<id>` is the resource id of the domain
   (`GET /suite-api/api/resources?resourceKind=VCFDomain&adapterKind=VcfAdapter`).
 
 The three queries run as written on any instance; they name metric families and features, never a host or a
-VM. The reference estate's own copy was built with its source id bound, so the placeholder path above is the
-guide's description of the widget editor rather than a rehearsed import; if yours behaves differently, open an
-issue with what the screen showed.
+VM. Rehearsed 2026-09-16 on a 9.1.0 instance with Real-Time Metrics deployed: the import accepts the
+placeholder, the six lists fill, and the three viewers show the message above until a domain is bound, and chart as soon as a domain is chosen in the editor and saved.
 
 ## What you may want to adjust
 
@@ -65,8 +72,10 @@ issue with what the screen showed.
 
 - **The six lists are empty.** The views were not imported, or were imported after the dashboard. Import the
   views, then delete and re-import the dashboard.
-- **The three viewers are empty.** Step 3 was skipped, the instance has no Real-Time Metrics service, or, for
-  the tail viewer only, the hosts do not have the ESX Top set enabled.
+- **The three viewers say "Unable to establish a connection with the Real-time metrics component".** The
+  source is not bound (step 3). Bind it before reading logs; if the message stays with a domain chosen, check
+  that the Real-Time Metrics service runs on that domain's VCF instance.
+- **The tail viewer alone stays empty.** The hosts do not have the ESX Top 2-second set enabled.
 - **The storage and filesystem columns are empty for a VM.** No VMware Tools in that VM.
 - **The two charts are empty.** They follow the selected VM: click a row in the CPU or memory list.
 
