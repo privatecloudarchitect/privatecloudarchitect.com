@@ -8,6 +8,40 @@ Two HARD Day-2 action policies, shipped as one change, named per the sheet's con
 **Provenance:** the policy type, body shape, and regime flip were proven on a live VCF 9.1 estate
 (All Apps), 2026-08-08 through 2026-08-11.
 
+## What is here
+
+| Step | File | What it does |
+|---|---|---|
+| 1 | [`governance.py`](governance.py) | Read-only. Asks the policy plane to describe itself: the types this build declares, the three schemas each publishes, the capability flags and limits that make them unequal, the action selectors and the tree their wildcards form, the policies your organization holds, and the decision log with the rank the plane gave each applied policy and the effective definition it computed. Writes two records with every organization value replaced by a placeholder. |
+| 2 | `--rehearse` | Optional. Runs the platform's own dry run of one more policy, reads back the decisions it would have produced, and proves the policy list is unchanged. |
+| 3 | [`policies/`](policies/) | The two-policy first change, as importable bodies. |
+
+```bash
+export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
+export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token      # mode 0600
+export TLS_VERIFY=false                                    # only on a self-signed lab CA
+
+python3 governance.py                # read-only
+python3 governance.py --rehearse     # also ask what one more policy would do
+```
+
+`policy-model.json` and `decisions.json` are what it writes, and the chapter's plates render them.
+
+### About `--rehearse`
+
+`POST /policy/api/policies` takes a `dryRun` query parameter. The plane answers 202, creates nothing, and returns
+a `Location` naming the decisions it *would* have produced, one per target the policy would touch. That is the
+only way to see the regime flip below and the union arithmetic before they are real, and it is the single most
+useful call on this API.
+
+The flag sends that call with a grant naming a group that exists nowhere, follows the location, and reports how
+many targets would be affected and how many policies would then apply to each. It then re-reads the policy list
+and **stops hard if anything was created**. On the reference estate: 8 targets affected, 4 policies applying
+where 3 apply today, policy list 3 before and 3 after.
+
+There is a narrower mode the script does not use, worth knowing about: `?validationOnly=true` checks the policy
+body and returns it without creating anything, which is the cheap gate for a pipeline.
+
 ## Why two policies travel together
 
 The first HARD Day-2 action policy in a project ends the permissive default for every principal

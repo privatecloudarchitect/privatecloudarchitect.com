@@ -1,0 +1,224 @@
+{
+ "captured_utc": "2026-09-17T17:29:01Z",
+ "types": [
+  {
+   "id": "com.vmware.policy.supervisor.iaas",
+   "displayName": "IaaS Resource Policy",
+   "config": {
+    "enableDryRun": true,
+    "enableUpdateNotification": true,
+    "enableEnforcementType": false,
+    "enableSingleProjectScope": false,
+    "enableOpaRegoCriteria": false,
+    "enablePolicyValidation": true,
+    "enableReconciliation": false,
+    "maxNumberOfPoliciesPerOrg": 10,
+    "maxNumberOfPoliciesPerProject": 5
+   },
+   "says": [
+    "automationPolicy"
+   ],
+   "matches": [
+    "name",
+    "object.spec.className",
+    "object.spec.regionName"
+   ],
+   "applies": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "required": [],
+   "enums": {}
+  },
+  {
+   "id": "com.vmware.policy.deployment.action",
+   "displayName": "Day 2 Actions Policy",
+   "config": {
+    "enableDryRun": true,
+    "enableUpdateNotification": true,
+    "enableEnforcementType": true,
+    "enableSingleProjectScope": false,
+    "enableOpaRegoCriteria": false,
+    "enablePolicyValidation": false,
+    "enableReconciliation": false,
+    "maxNumberOfPoliciesPerOrg": -1,
+    "maxNumberOfPoliciesPerProject": -1
+   },
+   "says": [
+    "allowedActions"
+   ],
+   "matches": [
+    "blueprintId",
+    "catalogItemId",
+    "createdBy",
+    "id",
+    "name",
+    "ownedBy",
+    "ownerType",
+    "resources"
+   ],
+   "applies": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "required": [],
+   "enums": {}
+  },
+  {
+   "id": "com.vmware.policy.deployment.lease",
+   "displayName": "Lease Policy",
+   "config": {
+    "enableDryRun": true,
+    "enableUpdateNotification": true,
+    "enableEnforcementType": true,
+    "enableSingleProjectScope": false,
+    "enableOpaRegoCriteria": false,
+    "enablePolicyValidation": false,
+    "enableReconciliation": false,
+    "maxNumberOfPoliciesPerOrg": -1,
+    "maxNumberOfPoliciesPerProject": -1
+   },
+   "says": [
+    "leaseGrace",
+    "leaseTermMax",
+    "leaseTotalTermMax"
+   ],
+   "matches": [
+    "blueprintId",
+    "catalogItemId",
+    "createdBy",
+    "id",
+    "name",
+    "ownedBy",
+    "ownerType",
+    "resources"
+   ],
+   "applies": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "required": [
+    "leaseTermMax",
+    "leaseTotalTermMax"
+   ],
+   "enums": {}
+  },
+  {
+   "id": "com.vmware.policy.approval",
+   "displayName": "Approval Policy",
+   "config": {
+    "enableDryRun": false,
+    "enableUpdateNotification": false,
+    "enableEnforcementType": false,
+    "enableSingleProjectScope": false,
+    "enableOpaRegoCriteria": false,
+    "enablePolicyValidation": false,
+    "enableReconciliation": false,
+    "maxNumberOfPoliciesPerOrg": -1,
+    "maxNumberOfPoliciesPerProject": -1
+   },
+   "says": [
+    "actions",
+    "approvalMode",
+    "approverType",
+    "approvers",
+    "autoApprovalDecision",
+    "autoApprovalExpiry",
+    "level"
+   ],
+   "matches": [
+    "blueprintId",
+    "catalogItemId",
+    "deploymentId",
+    "deploymentName",
+    "ownedBy",
+    "ownerType",
+    "requestedBy",
+    "resources"
+   ],
+   "applies": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "required": [
+    "actions",
+    "approvalMode",
+    "approvers",
+    "autoApprovalDecision",
+    "autoApprovalExpiry",
+    "level"
+   ],
+   "enums": {
+    "approvalMode": [
+     "ANY_OF",
+     "ALL_OF"
+    ],
+    "approverType": [
+     "USER",
+     "ROLE"
+    ],
+    "autoApprovalDecision": [
+     "APPROVE",
+     "REJECT",
+     "NO_EXPIRY"
+    ]
+   }
+  }
+ ],
+ "actionSelectors": {
+  "count": 27,
+  "tree": {
+   "*": {
+    "label": "every action of every kind",
+    "children": {
+     "CCI.Supervisor.Resource.*": {
+      "leaves": 19,
+      "kinds": {
+       "PersistentVolumeClaim": [
+        "Delete.Disk"
+       ],
+       "VirtualMachine": [
+        "Add.Disk",
+        "Create.Snapshot",
+        "Delete.Snapshot",
+        "Get.Password",
+        "PowerOff",
+        "PowerOn",
+        "RemoteConsole",
+        "Remove.Disk",
+        "Resize",
+        "Revert.Snapshot",
+        "Suspend",
+        "WebConsole"
+       ],
+       "VirtualMachineGroup": [
+        "Create.Snapshot",
+        "Delete.Snapshot",
+        "PowerOff",
+        "PowerOn",
+        "Revert.Snapshot",
+        "Suspend"
+       ]
+      }
+     },
+     "Deployment.*": {
+      "leaves": 5,
+      "kinds": {
+       "(direct)": [
+        "ChangeLease",
+        "Delete",
+        "EditDeployment",
+        "PowerOff",
+        "PowerOn"
+       ]
+      }
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,197 @@
+{
+ "captured_utc": "2026-09-17T17:29:01Z",
+ "decisions": 200,
+ "decisionsHeld": 229,
+ "targets": 38,
+ "policiesAppliedPerDecision": {
+  "0": 33,
+  "1": 52,
+  "2": 70,
+  "3": 45
+ },
+ "ranksAssigned": {
+  "1": 167,
+  "2": 115,
+  "3": 45
+ },
+ "held": {
+  "total": 3,
+  "byType": {
+   "com.vmware.policy.deployment.action": 3
+  },
+  "byScope": {
+   "project": 2,
+   "organization": 1
+  },
+  "byEnforcement": {
+   "HARD": 3
+  }
+ },
+ "worked": {
+  "0": {
+   "policiesApplied": [],
+   "effective": [
+    {
+     "authorities": [
+      "ROLE:{{authority-1}}"
+     ],
+     "actions": [
+      "*"
+     ]
+    }
+   ],
+   "description": "Update deployment access list from [{{authority-2}}: [CCI.Supervisor.Resource.VirtualMachine.Add.Disk, *]], [{{authority-3}}: [*]] to [{{authority-1}}: [*]]."
+  },
+  "1": {
+   "policiesApplied": [
+    {
+     "rank": 1,
+     "status": "ENFORCED",
+     "enforcement": "HARD",
+     "scope": "organization",
+     "name": "{{policy-4}}"
+    }
+   ],
+   "effective": [
+    {
+     "authorities": [
+      "GROUP:{{authority-2}}"
+     ],
+     "actions": [
+      "*"
+     ]
+    }
+   ],
+   "description": "Update deployment access list from [{{authority-1}}: [*]] to [{{authority-2}}: [*]]."
+  },
+  "2": {
+   "policiesApplied": [
+    {
+     "rank": 1,
+     "status": "ENFORCED",
+     "enforcement": "HARD",
+     "scope": "organization",
+     "name": "{{policy-4}}"
+    },
+    {
+     "rank": 2,
+     "status": "ENFORCED",
+     "enforcement": "HARD",
+     "scope": "project",
+     "name": "{{policy-5}}"
+    }
+   ],
+   "effective": [
+    {
+     "authorities": [
+      "GROUP:{{authority-2}}"
+     ],
+     "actions": [
+      "*"
+     ]
+    },
+    {
+     "authorities": [
+      "USER:{{authority-4}}"
+     ],
+     "actions": [
+      "*"
+     ]
+    },
+    {
+     "authorities": [
+      "USER:{{authority-5}}"
+     ],
+     "actions": []
+    }
+   ],
+   "description": "Update deployment access list from [{{authority-1}}: [*]] to [{{authority-2}}: [*]], [{{authority-4}}: [*]], [{{authority-5}}: []]."
+  },
+  "3": {
+   "policiesApplied": [
+    {
+     "rank": 1,
+     "status": "ENFORCED",
+     "enforcement": "HARD",
+     "scope": "organization",
+     "name": "{{policy-2}}"
+    },
+    {
+     "rank": 2,
+     "status": "ENFORCED",
+     "enforcement": "HARD",
+     "scope": "project",
+     "name": "{{policy-1}}"
+    },
+    {
+     "rank": 3,
+     "status": "ENFORCED",
+     "enforcement": "HARD",
+     "scope": "project",
+     "name": "{{policy-3}}"
+    }
+   ],
+   "effective": [
+    {
+     "authorities": [
+      "GROUP:{{authority-2}}"
+     ],
+     "actions": [
+      "CCI.Supervisor.Resource.VirtualMachine.Add.Disk",
+      "*"
+     ]
+    },
+    {
+     "authorities": [
+      "GROUP:{{authority-3}}"
+     ],
+     "actions": [
+      "*"
+     ]
+    }
+   ],
+   "description": "Update deployment access list from [{{authority-1}}: [*]] to [{{authority-2}}: [CCI.Supervisor.Resource.VirtualMachine.Add.Disk, *]], [{{authority-3}}: [*]]."
+  }
+ },
+ "rehearsal": {
+  "targetsAffected": 8,
+  "policiesBefore": 3,
+  "policiesAfter": 3,
+  "wouldApplyPerTarget": [
+   4
+  ],
+  "sample": [
+   {
+    "policiesThatWouldApply": 4,
+    "wouldBecome": [
+     {
+      "authorities": [
+       "GROUP:zz-rehearsal-group@"
+      ],
+      "actions": [
+       "Deployment.PowerOn"
+      ]
+     },
+     {
+      "authorities": [
+       "GROUP:{{authority-2}}"
+      ],
+      "actions": [
+       "*"
+      ]
+     },
+     {
+      "authorities": [
+       "GROUP:{{authority-3}}"
+      ],
+      "actions": [
+       "CCI.Supervisor.Resource.VirtualMachine.Add.Disk",
+       "CCI.Supervisor.Resource.VirtualMachine.Delete.Snapshot",
+       "CCI.Supervisor.Resource.VirtualMachine.Create.Snapshot"
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}
