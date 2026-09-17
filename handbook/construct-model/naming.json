@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-17T02:50:26Z",
+ "captured_utc": "2026-09-17T03:25:41Z",
  "audited_objects": 51,
  "constructs": {
   "project": {
@@ -45,17 +45,17 @@
   "vpc": {
    "objects": 1,
    "conform": 0,
-   "convention": "vpc-<tenant/project>-<region>",
+   "convention": "vpc-<consumer>-<region>[-<ordinal>]",
    "example": "vpc-checkout-eu-west-1",
-   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+$",
+   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+(-\\d{2,})?$",
    "verdict": "rename"
   },
   "vpc-subnet": {
    "objects": 3,
    "conform": 0,
-   "convention": "<vpc>-<function>",
-   "example": "vpc-checkout-eu-west-1-private",
-   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+-(private|public|transit)$",
+   "convention": "<access-mode>-<purpose?>-<ordinal>",
+   "example": "private-web-01",
+   "pattern": "^(private|private-tgw|public)(-[a-z0-9-]+)?-\\d{2,}$",
    "verdict": "rename"
   },
   "vm-class": {

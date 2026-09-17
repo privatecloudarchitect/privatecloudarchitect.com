@@ -93,17 +93,17 @@
    "construct": "vpc",
    "plane": "network",
    "plane_title": "NSX network",
-   "convention": "vpc-<tenant/project>-<region>",
+   "convention": "vpc-<consumer>-<region>[-<ordinal>]",
    "example": "vpc-checkout-eu-west-1",
-   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+$"
+   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+(-\\d{2,})?$"
   },
   {
    "construct": "vpc-subnet",
    "plane": "network",
    "plane_title": "NSX network",
-   "convention": "<vpc>-<function>",
-   "example": "vpc-checkout-eu-west-1-private",
-   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+-(private|public|transit)$"
+   "convention": "<access-mode>-<purpose?>-<ordinal>",
+   "example": "private-web-01",
+   "pattern": "^(private|private-tgw|public)(-[a-z0-9-]+)?-\\d{2,}$"
   },
   {
    "construct": "nsx-project",

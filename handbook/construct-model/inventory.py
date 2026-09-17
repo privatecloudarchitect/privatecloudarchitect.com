@@ -113,7 +113,10 @@ def audit_names(standard, observed):
         if not names or not rule:
             continue
         rx = re.compile(rule["pattern"])
-        conform = sum(1 for n in names if rx.match(n))
+        # Some kinds are presented as colon-scoped paths (a subnet reads "<project>:<vpc>:<subnet>"), and the
+        # operator only ever chooses the last segment. A colon cannot appear in a conforming name, so taking the
+        # last segment is safe for every construct and is the only fair thing to lint.
+        conform = sum(1 for n in names if rx.match(n.rsplit(":", 1)[-1]))
         out[construct] = {"objects": len(names), "conform": conform, "convention": rule["convention"],
                           "example": rule["example"], "pattern": rule["pattern"],
                           "verdict": "keep" if conform == len(names) else ("refine" if conform else "rename")}
