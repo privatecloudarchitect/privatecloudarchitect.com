@@ -9,7 +9,7 @@ inventory.py: the construct model read through the Cloud Consumption Interface, 
 
   taxonomy: 13 VMware API groups, 99 kinds; 60 published at the top level, 40 under a project
   published: 1 region(s), 3 zone(s), 3 namespace class(es), 1 VPC(s), 3 subnet(s), 3 storage-class quota(s), 16 VM class summaries
-  {{project-1}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 4, 'roles': ['admin', 'edit', 'edit_adv'], 'fields': ['roleRef', 'subjects']}; images 3; 
+  {{project-1}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 4, 'roles': ['admin', 'edit', 'edit_adv'], 'fields': ['roleRef', 'subjects']}; images 3;
      {{namespace-1}}: phase Created; bound {'region': '{{region-1}}', 'zone': None, 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 0, 'vmClasses': 0, 'classOverrides': False}; workloads {'virtualMachines': 7, 'vksClusters': 2
      {{namespace-2}}: phase Created; bound {'region': '{{region-1}}', 'zone': None, 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 0, 'vmClasses': 0, 'classOverrides': False}; workloads {'virtualMachines': 3, 'vksClusters': 1
      {{namespace-3}}: phase Created; bound {'region': '{{region-1}}', 'zone': None, 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 0, 'vmClasses': 0, 'classOverrides': False}; workloads {'virtualMachines': 5, 'vksClusters': 1
