@@ -1,0 +1,187 @@
+{
+ "captured_utc": "2026-09-17T00:54:53Z",
+ "organization": "{{org}}",
+ "published": {
+  "regions": [
+   {
+    "name": "{{region-1}}",
+    "loadBalancerType": "NSX_REGISTERED_AVI"
+   }
+  ],
+  "zones": [
+   {
+    "name": "{{zone-1}}",
+    "region": "{{region-1}}",
+    "cpuLimit": "60000M",
+    "memoryLimit": "131072Mi",
+    "cpuUsed": "20000M",
+    "memoryUsed": "40000Mi"
+   },
+   {
+    "name": "{{zone-2}}",
+    "region": "{{region-1}}",
+    "cpuLimit": "60000M",
+    "memoryLimit": "131072Mi",
+    "cpuUsed": "60000M",
+    "memoryUsed": "120000Mi"
+   },
+   {
+    "name": "{{zone-3}}",
+    "region": "{{region-1}}",
+    "cpuLimit": "60000M",
+    "memoryLimit": "131072Mi",
+    "cpuUsed": "60000M",
+    "memoryUsed": "120000Mi"
+   }
+  ],
+  "namespace_classes": [
+   {
+    "name": "{{class-1}}"
+   },
+   {
+    "name": "{{class-2}}"
+   },
+   {
+    "name": "{{class-3}}"
+   }
+  ],
+  "vpcs": [
+   {
+    "name": "{{vpc-1}}",
+    "region": "{{region-1}}",
+    "privateIPs": 1
+   }
+  ],
+  "subnets": 3,
+  "storage_class_quotas": 3,
+  "vm_class_summaries": 16
+ },
+ "projects": [
+  {
+   "name": "{{project-1}}",
+   "bindings": {
+    "regions": 0,
+    "classes": 0,
+    "vpcs": 0,
+    "subnets": 0,
+    "serviceEngineGroups": 0,
+    "infraPolicies": 0
+   },
+   "roleBindings": {
+    "count": 4,
+    "roles": [
+     "admin",
+     "edit",
+     "edit_adv"
+    ],
+    "fields": [
+     "roleRef",
+     "subjects"
+    ]
+   },
+   "namespaces": [
+    {
+     "name": "{{namespace-1}}",
+     "phase": "Created",
+     "bound": {
+      "region": "{{region-1}}",
+      "zone": null,
+      "class": "{{class-1}}",
+      "vpc": "{{vpc-1}}",
+      "storageClasses": 0,
+      "vmClasses": 0,
+      "classOverrides": false
+     },
+     "specFields": [
+      "classConfigOverrides",
+      "className",
+      "description",
+      "regionName",
+      "segName",
+      "vpcName"
+     ],
+     "workloads": {
+      "virtualMachines": 7,
+      "vksClusters": 2
+     }
+    },
+    {
+     "name": "{{namespace-2}}",
+     "phase": "Created",
+     "bound": {
+      "region": "{{region-1}}",
+      "zone": null,
+      "class": "{{class-1}}",
+      "vpc": "{{vpc-1}}",
+      "storageClasses": 0,
+      "vmClasses": 0,
+      "classOverrides": false
+     },
+     "specFields": [
+      "classConfigOverrides",
+      "className",
+      "description",
+      "regionName",
+      "segName",
+      "vpcName"
+     ],
+     "workloads": {
+      "virtualMachines": 3,
+      "vksClusters": 1
+     }
+    },
+    {
+     "name": "{{namespace-3}}",
+     "phase": "Created",
+     "bound": {
+      "region": "{{region-1}}",
+      "zone": null,
+      "class": "{{class-1}}",
+      "vpc": "{{vpc-1}}",
+      "storageClasses": 0,
+      "vmClasses": 0,
+      "classOverrides": false
+     },
+     "specFields": [
+      "classConfigOverrides",
+      "className",
+      "description",
+      "regionName",
+      "segName",
+      "vpcName"
+     ],
+     "workloads": {
+      "virtualMachines": 5,
+      "vksClusters": 1
+     }
+    }
+   ],
+   "images": 3,
+   "catalogItems": 10
+  },
+  {
+   "name": "{{project-2}}",
+   "bindings": {
+    "regions": 0,
+    "classes": 0,
+    "vpcs": 0,
+    "subnets": 0,
+    "serviceEngineGroups": 0,
+    "infraPolicies": 0
+   },
+   "roleBindings": {
+    "count": 2,
+    "roles": [
+     "edit"
+    ],
+    "fields": [
+     "roleRef",
+     "subjects"
+    ]
+   },
+   "namespaces": [],
+   "images": 3,
+   "catalogItems": 10
+  }
+ ]
+}

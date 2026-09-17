@@ -1,0 +1,1425 @@
+{
+ "captured_utc": "2026-09-17T00:54:53Z",
+ "taxonomy": [
+  {
+   "group": "authorization.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ProjectRole",
+   "resource": "projectroles",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 4
+  },
+  {
+   "group": "authorization.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ProjectRoleBinding",
+   "resource": "projectrolebindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "avi.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionLBSetting",
+   "resource": "regionlbsettings",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "count": 1
+  },
+  {
+   "group": "avi.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SEGBinding",
+   "resource": "segbindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "avi.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SEG",
+   "resource": "segs",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "count": 1
+  },
+  {
+   "group": "blueprint.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "BlueprintResourceType",
+   "resource": "blueprintresourcetypes",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "blueprint.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "BlueprintExportRequest",
+   "resource": "blueprintexportrequests",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "blueprint.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "Blueprint",
+   "resource": "blueprints",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "blueprint.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "BlueprintImportRequest",
+   "resource": "blueprintimportrequests",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "blueprint.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "BlueprintVersion",
+   "resource": "blueprintversions",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "Instance",
+   "resource": "instances",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "CatalogItemVersion",
+   "resource": "catalogitemversions",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "CatalogItem",
+   "resource": "catalogitems",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "InstanceRequests",
+   "resource": "instancerequests",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "InstanceActions",
+   "resource": "instanceactions",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "InstanceResource",
+   "resource": "instanceresources",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "InstanceUserEvents",
+   "resource": "instanceuserevents",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "core.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterResource",
+   "resource": "clusterresources",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "core.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "Cluster",
+   "resource": "clusters",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterBackupLocationCredential",
+   "resource": "clusterbackuplocationcredentials",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterBackupLocation",
+   "resource": "clusterbackuplocations",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterBackup",
+   "resource": "clusterbackups",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterDataProtection",
+   "resource": "clusterdataprotections",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterRestore",
+   "resource": "clusterrestores",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterSchedule",
+   "resource": "clusterschedules",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "image.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "Image",
+   "resource": "images",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha3",
+   "kind": "SupervisorNamespace",
+   "resource": "supervisornamespaces",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha2",
+   "kind": "SupervisorNamespace",
+   "resource": "supervisornamespaces",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha2",
+   "kind": "SupervisorNamespaceClass",
+   "resource": "supervisornamespaceclasses",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ],
+   "count": 3
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha2",
+   "kind": "SupervisorNamespaceClassConfig",
+   "resource": "supervisornamespaceclassconfigs",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ],
+   "count": 4
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SupervisorNamespaceMetricsRequest",
+   "resource": "supervisornamespacemetricsrequests",
+   "namespaced": false,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionInfraPolicyBinding",
+   "resource": "regioninfrapolicybindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionInfraPolicy",
+   "resource": "regioninfrapolicies",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 0
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionStorageClassQuota",
+   "resource": "regionstorageclassquotas",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 3
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ResourceMetricsRequest",
+   "resource": "resourcemetricsrequests",
+   "namespaced": true,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionVirtualMachineClassSummary",
+   "resource": "regionvirtualmachineclasssummaries",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 16
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SupervisorNamespaceClassBinding",
+   "resource": "supervisornamespaceclassbindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionMonitorTokenRequest",
+   "resource": "regionmonitortokenrequests",
+   "namespaced": false,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "UtilizationMetricsRequest",
+   "resource": "utilizationmetricsrequests",
+   "namespaced": false,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SupervisorNamespaceCaptureRequest",
+   "resource": "supervisornamespacecapturerequests",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SupervisorNamespaceRegionalOptionsRequest",
+   "resource": "supervisornamespaceregionaloptionsrequests",
+   "namespaced": true,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionVirtualMachineClassQuota",
+   "resource": "regionvirtualmachineclassquotas",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 0
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "BootstrapConfiguration",
+   "resource": "bootstrapconfigurations",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ],
+   "count": "HTTP 403"
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VksCredentialRequest",
+   "resource": "vkscredentialrequests",
+   "namespaced": false,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VirtualMachineRemoteConsoleRequest",
+   "resource": "virtualmachineremoteconsolerequests",
+   "namespaced": true,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "operations.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "PriceEstimateRequest",
+   "resource": "priceestimaterequests",
+   "namespaced": true,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterPolicy",
+   "resource": "clusterpolicies",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterPolicyInsight",
+   "resource": "clusterpolicyinsights",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterPolicySchema",
+   "resource": "clusterpolicyschemas",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ClusterPolicyTemplate",
+   "resource": "clusterpolicytemplates",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ]
+  },
+  {
+   "group": "topology.cci.vmware.com",
+   "version": "v1alpha2",
+   "kind": "Region",
+   "resource": "regions",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 1
+  },
+  {
+   "group": "topology.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionBinding",
+   "resource": "regionbindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "topology.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "Zone",
+   "resource": "zones",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 3
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "DistributedVLANConnection",
+   "resource": "distributedvlanconnections",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "FirewallPolicy",
+   "resource": "firewallpolicies",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "GatewayConnection",
+   "resource": "gatewayconnections",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPAddressAllocation",
+   "resource": "ipaddressallocations",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPBlockAllocationState",
+   "resource": "ipblockallocationstates",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 3
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPBlock",
+   "resource": "ipblocks",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 3
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPBlockUsage",
+   "resource": "ipblockusages",
+   "namespaced": false,
+   "verbs": [
+    "get"
+   ]
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPSecVPNDPDProfile",
+   "resource": "ipsecvpndpdprofiles",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPSecVPNIKEProfile",
+   "resource": "ipsecvpnikeprofiles",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 8
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPSecVPNLocalEndpoint",
+   "resource": "ipsecvpnlocalendpoints",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPSecVPN",
+   "resource": "ipsecvpns",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPSecVPNSession",
+   "resource": "ipsecvpnsessions",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "IPSecVPNTunnelProfile",
+   "resource": "ipsecvpntunnelprofiles",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 8
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "Limit",
+   "resource": "limits",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "LimitState",
+   "resource": "limitstates",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "LoadBalancer",
+   "resource": "loadbalancers",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "NetworkSecurityGroup",
+   "resource": "networksecuritygroups",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "NetworkService",
+   "resource": "networkservices",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 415
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "PolicyRead",
+   "resource": "policyreads",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "get"
+   ]
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "PolicyWrite",
+   "resource": "policywrites",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "get",
+    "list"
+   ],
+   "count": "HTTP 403"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionNetworkingCapabilities",
+   "resource": "regionnetworkingcapabilities",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SecurityProfileAttachment",
+   "resource": "securityprofileattachments",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SecurityProfile",
+   "resource": "securityprofiles",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 5
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SecurityStrategy",
+   "resource": "securitystrategies",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 5
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SubnetBinding",
+   "resource": "subnetbindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ]
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "Subnet",
+   "resource": "subnets",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 3
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "TGWAttachment",
+   "resource": "tgwattachments",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "TGWCentralizedConfig",
+   "resource": "tgwcentralizedconfigs",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "TGWFirewallPolicy",
+   "resource": "tgwfirewallpolicies",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "TGWNATRule",
+   "resource": "tgwnatrules",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "TGWStaticRoute",
+   "resource": "tgwstaticroutes",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "TransitGateway",
+   "resource": "transitgateways",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCAttachment",
+   "resource": "vpcattachments",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCBinding",
+   "resource": "vpcbindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ]
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCConnectivityProfileBinding",
+   "resource": "vpcconnectivityprofilebindings",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ]
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCConnectivityProfile",
+   "resource": "vpcconnectivityprofiles",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCGatewayFirewallPolicy",
+   "resource": "vpcgatewayfirewallpolicies",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCIPAddressAllocation",
+   "resource": "vpcipaddressallocations",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCIPAddressUsage",
+   "resource": "vpcipaddressusages",
+   "namespaced": false,
+   "verbs": [
+    "get"
+   ]
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCLimitState",
+   "resource": "vpclimitstates",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCNATRule",
+   "resource": "vpcnatrules",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCNetworkSecurityGroup",
+   "resource": "vpcnetworksecuritygroups",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCRead",
+   "resource": "vpcreads",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "get"
+   ]
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPC",
+   "resource": "vpcs",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCServiceProfile",
+   "resource": "vpcserviceprofiles",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "count": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VPCWrite",
+   "resource": "vpcwrites",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "get",
+    "list"
+   ],
+   "count": "HTTP 403"
+  },
+  {
+   "group": "project.cci.vmware.com",
+   "version": "v1alpha2",
+   "kind": "Project",
+   "resource": "projects",
+   "namespaced": false,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ],
+   "count": 2
+  }
+ ]
+}
