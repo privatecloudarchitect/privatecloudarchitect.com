@@ -1,0 +1,86 @@
+{
+ "captured_utc": "2026-09-17T02:50:26Z",
+ "audited_objects": 51,
+ "constructs": {
+  "project": {
+   "objects": 2,
+   "conform": 2,
+   "convention": "<team / app-portfolio>",
+   "example": "checkout-team",
+   "pattern": "^[a-z][a-z0-9-]{2,30}$",
+   "verdict": "keep"
+  },
+  "supervisor-namespace": {
+   "objects": 3,
+   "conform": 0,
+   "convention": "<app>-<env>-<region>-<sup-hash>",
+   "example": "checkout-prod-eu-west-1-g9w34",
+   "pattern": "^[a-z][a-z0-9-]+-(dev|staging|prod|demo|sandbox)-[a-z]{2}-[a-z]+-\\d+-[a-z0-9]{5}$",
+   "verdict": "rename"
+  },
+  "region": {
+   "objects": 1,
+   "conform": 1,
+   "convention": "<geo>-<direction>-<ordinal>",
+   "example": "eu-west-1",
+   "pattern": "^[a-z]{2}-[a-z]+-\\d+$",
+   "verdict": "keep"
+  },
+  "supervisor-zone": {
+   "objects": 3,
+   "conform": 0,
+   "convention": "<region>-az<n>",
+   "example": "eu-west-1-az1",
+   "pattern": "^[a-z]{2}-[a-z]+-\\d+-az\\d+$",
+   "verdict": "rename"
+  },
+  "namespace-class": {
+   "objects": 3,
+   "conform": 0,
+   "convention": "ns-<profile>-<size>",
+   "example": "ns-general-small",
+   "pattern": "^ns-[a-z]+-(tiny|small|medium|large|xlarge)$",
+   "verdict": "rename"
+  },
+  "vpc": {
+   "objects": 1,
+   "conform": 0,
+   "convention": "vpc-<tenant/project>-<region>",
+   "example": "vpc-checkout-eu-west-1",
+   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+$",
+   "verdict": "rename"
+  },
+  "vpc-subnet": {
+   "objects": 3,
+   "conform": 0,
+   "convention": "<vpc>-<function>",
+   "example": "vpc-checkout-eu-west-1-private",
+   "pattern": "^vpc-[a-z0-9-]+-[a-z]{2}-[a-z]+-\\d+-(private|public|transit)$",
+   "verdict": "rename"
+  },
+  "vm-class": {
+   "objects": 16,
+   "conform": 0,
+   "convention": "<qos>-<profile?>-<size>",
+   "example": "guaranteed-general-large",
+   "pattern": "^(guaranteed|best-effort)-([a-z]+-)?(xsmall|small|medium|large|xlarge)$",
+   "verdict": "rename"
+  },
+  "virtualmachine": {
+   "objects": 15,
+   "conform": 1,
+   "convention": "<app>-<role>-<ordinal>",
+   "example": "checkout-web-01",
+   "pattern": "^[a-z][a-z0-9-]+-[a-z]+-\\d{2,}$",
+   "verdict": "refine"
+  },
+  "vks-cluster": {
+   "objects": 4,
+   "conform": 2,
+   "convention": "<app>-<env>-vks",
+   "example": "checkout-prod-vks",
+   "pattern": "^[a-z][a-z0-9-]+-(dev|staging|prod|demo|sandbox)-vks$",
+   "verdict": "refine"
+  }
+ }
+}
