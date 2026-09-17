@@ -56,8 +56,15 @@ crossroads put to the platform rather than asserted:
            SupervisorNamespace.infrastructure.cci.vmware.com "{{namespace-1}}" is invalid: [metadata.namespace: Namespace mismatch:
            value is "{{project-2}}" in the resource and "{{project-1}}" in the path]
      the namespace is unchanged: phase Created, conditions {'Ready': 'True', 'PolicyApplied': 'True', 'Realized': 'True'}
+     the Tenant Manager surface, where the project assignment IS a field:
+       PUT   the whole object, projectAssignment = a sibling project    HTTP 400
+             Changing project assignment of a namespace is not allowed.
+       PUT   the whole object, projectAssignment = null                 HTTP 400
+             validation error on field 'projectAssignment': may not be null
+       POST  an import naming a namespace that exists nowhere           HTTP 400
+             Namespace import is not supported for a supervisor associated with NSX Manager.
 
-wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only) and bindings.json (5 refused attempts); every estate name replaced by a stable label
+wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only) and bindings.json (5 refused attempts plus 3 on the Tenant Manager); every estate name replaced by a stable label
 ```
 
 Read the five rows as two answers.
@@ -72,8 +79,17 @@ fifth row asks the same question in the form the interface does answer, and the 
 namespace in the body has to match the namespace in the path. The parent is the path. That is also why the
 chapter says a namespace belongs to exactly one project rather than that it has a project field.
 
-What the run does **not** establish: that no surface anywhere can reassign a namespace. This is one interface.
-The Tenant Manager's own namespace update takes a body carrying the project assignment, and a tenant identity is
-refused there for want of a right before the change is evaluated. A documented cross-project path does exist and
-it is a copy, not a move: capture the namespace as a blueprint and redeploy it under another project, leaving the
-original where it is.
+**The second group is the one that settles it.** A structural refusal only tells you an interface has no field for
+something. The tenant manager's namespace body does carry the project assignment, and asked there with an identity
+permitted to write, the platform states the rule in a sentence: changing it is not allowed. The field may not be
+null either, so a namespace cannot even be released to no project. The binding is therefore permanent by rule
+rather than by interface shape, and it holds whatever pathway put the namespace there.
+
+**The third row is the adoption pathway.** A namespace can be created on the Supervisor directly, and the platform
+has an import that would bring such a namespace into a project. On this estate it is refused because the Supervisor
+is attached to an NSX manager, which is what VPC networking means, and the check runs before the namespace is even
+looked up. Where that path is closed, every namespace is born through this interface, with its project chosen at
+that moment and never after. What a Supervisor on vSphere networking answers is untested here and not claimed.
+
+A documented cross-project path does exist and it is a copy, not a move: capture the namespace as a blueprint and
+redeploy it under another project, leaving the original where it is.

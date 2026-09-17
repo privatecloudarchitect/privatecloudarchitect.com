@@ -214,6 +214,106 @@ def probe_bindings(c, project, namespace, other_project, L):
             "conditions": health, "spec_unchanged": True, "attempts": asked}, None
 
 
+
+# ---- the second surface: the Tenant Manager, whose namespace body carries the project assignment
+#
+# The Cloud Consumption Interface has no project field to change, so its refusal is structural and says nothing
+# about the platform's intent. The Tenant Manager's own namespace API is the one place the assignment IS a field
+# in the update body, which makes it the only surface that can answer the question in words. Writing there needs a
+# right a project team does not have, so this runs only when you supply a bearer that holds it.
+TM_VER = "application/json;version=9.1.0"
+
+
+def probe_tenant_manager(host, bearer, namespace_name, scrub):
+    """Ask the Tenant Manager whether a namespace's project assignment can change. Every attempt is refused.
+
+    The organization is resolved by looking for the one that actually holds the namespace we probed, because the
+    identifier the token endpoint takes is not the identifier this API's tenant context takes.
+    """
+    ctx_org = {"v": None}
+
+    def tm(method, path, body=None):
+        h = {"Authorization": f"Bearer {bearer}", "Accept": TM_VER}
+        if ctx_org["v"]:
+            h["X-VMWARE-VCLOUD-TENANT-CONTEXT"] = ctx_org["v"].rsplit(":", 1)[-1]
+        if body is not None:
+            h["Content-Type"] = "application/json"
+        req = urllib.request.Request(f"https://{host}{path}", data=json.dumps(body).encode() if body is not None else None,
+                                     method=method, headers=h)
+        try:
+            with urllib.request.urlopen(req, context=ctx(), timeout=90) as r:
+                raw = r.read()
+                try:
+                    return r.status, json.loads(raw or b"null")
+                except ValueError:
+                    return r.status, None
+        except urllib.error.HTTPError as e:
+            raw = e.read()
+            try:
+                return e.code, json.loads(raw)
+            except ValueError:
+                return e.code, raw.decode(errors="replace")[:300]
+        except (urllib.error.URLError, OSError) as e:
+            return None, str(e)
+
+    st0, orgs = tm("GET", "/cloudapi/1.0.0/orgs")
+    if st0 != 200:
+        return None, f"the Tenant Manager refused this bearer (HTTP {st0}); it needs one that can manage namespaces"
+    sub = None
+    for o in (orgs.get("values") or []):
+        ctx_org["v"] = o["id"]
+        stx, nsx = tm("GET", "/cloudapi/v1/namespaceSummaries")
+        if stx == 200:
+            sub = next((v for v in (nsx.get("values") or []) if v["name"] == namespace_name), None)
+            if sub:
+                break
+    if not sub:
+        return None, "the namespace this run probed is not visible on the Tenant Manager under any organization"
+    st, pas = tm("GET", "/cloudapi/v1/projectAssignments")
+    if st != 200:
+        return None, f"project assignments answered HTTP {st}"
+    assignments = pas.get("values") or []
+    st3, full = tm("GET", f"/cloudapi/v1/namespaces/{sub['id']}")
+    if st3 != 200:
+        return None, f"the namespace could not be read back (HTTP {st3})"
+    mine = full["projectAssignment"]["id"]
+    sibling = next((a for a in assignments if a["id"] != mine), None)
+    asked, before = [], json.dumps(full.get("projectAssignment"), sort_keys=True)
+
+    def ask(question, sent, body):
+        st4, r4 = tm("PUT", f"/cloudapi/v1/namespaces/{sub['id']}", body)
+        answer = r4.get("message") if isinstance(r4, dict) else r4
+        asked.append({"question": question, "method": "PUT", "sent": sent, "status": st4,
+                      "answer": scrub(answer.strip()) if isinstance(answer, str) else answer})
+
+    if sibling:
+        ask("can the project assignment be changed to another project?",
+            "the whole object, projectAssignment = a sibling project",
+            {**json.loads(json.dumps(full)), "projectAssignment": {"id": sibling["id"], "name": sibling.get("name")}})
+    ask("can a namespace be detached from its project?", "the whole object, projectAssignment = null",
+        {**json.loads(json.dumps(full)), "projectAssignment": None})
+
+    # the other way a namespace could arrive in a project: adopting one that already exists on the Supervisor.
+    # The name below exists nowhere, so nothing can be imported; what comes back is whether the path is open at all.
+    stv, vcs = tm("GET", "/cloudapi/1.0.0/virtualCenters")
+    vc = next((v for v in (vcs.get("values") or []) if v.get("vcId")), None) if stv == 200 else None
+    if vc and ctx_org["v"]:
+        body = {"name": "zz-probe-namespace-that-exists-nowhere",
+                "org": {"id": ctx_org["v"]},
+                "projectAssignment": {"id": mine},
+                "vcenter": {"id": vc["vcId"], "name": vc.get("name")}}
+        sti, ri = tm("POST", "/cloudapi/v1/namespaces/import", body)
+        answer = ri.get("message") if isinstance(ri, dict) else ri
+        asked.append({"question": "can a namespace created on the Supervisor be adopted into a project?",
+                      "method": "POST", "sent": "an import naming a namespace that exists nowhere", "status": sti,
+                      "answer": scrub(answer.strip()) if isinstance(answer, str) else answer})
+
+    st5, after = tm("GET", f"/cloudapi/v1/namespaces/{sub['id']}")
+    if st5 != 200 or json.dumps(after.get("projectAssignment"), sort_keys=True) != before:
+        raise SystemExit("FATAL: the namespace's project assignment is not what it was; not writing a record")
+    return {"namespace": scrub(sub["name"]), "attempts": asked}, None
+
+
 def main():
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
     refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
@@ -351,6 +451,25 @@ def main():
                     if a["answer"]:
                         print(f"           {a['answer'][:170]}")
                 print(f"     the namespace is unchanged: phase {bindings['phase']}, conditions {bindings['conditions']}")
+            prov_file = os.environ.get("VCFA_PROVIDER_BEARER_FILE")
+            if bindings is not None and prov_file and os.path.exists(prov_file):
+                def scrub_all(text):
+                    known = [(real, label) for m in L.maps.values() for real, label in m.items()]
+                    for real, label in sorted(known, key=lambda kv: -len(kv[0])):
+                        text = text.replace(real, "{{%s}}" % label)
+                    return UUID.sub("{{id}}", text)
+                tm_rec, why = probe_tenant_manager(host, open(prov_file, encoding="utf-8").read().strip(), first_ns[1], scrub_all)
+                if tm_rec is None:
+                    print(f"     the Tenant Manager surface: skipped ({why})")
+                else:
+                    print("     the Tenant Manager surface, where the project assignment IS a field:")
+                    for a in tm_rec["attempts"]:
+                        print(f"       {a['method']:<5} {a['sent']:<58} HTTP {a['status']}")
+                        if a["answer"]:
+                            print(f"             {a['answer'][:150]}")
+                    bindings["tenant_manager"] = tm_rec
+            elif bindings is not None:
+                print("     the Tenant Manager surface: not asked (set VCFA_PROVIDER_BEARER_FILE; see the README)")
     elif first_ns:
         print("\n  bindings: not asked (pass --probe-bindings to send the refused attempts; see the README)")
 
@@ -394,7 +513,8 @@ def main():
             for name in m:
                 assert not re.search(r"(?<![A-Za-z0-9-])" + re.escape(name) + r"(?![A-Za-z0-9-])", re.sub(r"\{\{[^}]*\}\}", "", text4)), f"a {fam} name reached the bindings record"
         open(os.path.join(out_dir, "bindings.json"), "w", encoding="utf-8").write(text4 + "\n")
-        wrote += " and bindings.json (%d refused attempts)" % len(bindings["attempts"])
+        n_tm = len((bindings.get("tenant_manager") or {}).get("attempts") or [])
+        wrote += " and bindings.json (%d refused attempts%s)" % (len(bindings["attempts"]), f" plus {n_tm} on the Tenant Manager" if n_tm else "")
     print(f"\nwrote {wrote}; every estate name replaced by a stable label")
 
 

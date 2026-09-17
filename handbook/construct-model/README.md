@@ -13,7 +13,7 @@ plates are rendered from the records in this folder; run the script and you have
 | `taxonomy.json` | The interface as declared on the reference estate, 2026-09-16: 13 VMware API groups, one line per kind. |
 | `estate.json` | The tree as it stood: one organization, two projects, three namespaces, and what each bound. |
 | `naming.json` | The conformance audit of that estate: per construct, how many names conform, the grammar they should follow, and a verdict of keep, refine, or rename. Counts only, never a name. |
-| `bindings.json` | What the interface answered when the script asked whether a namespace's class, region, VPC, and parent project can be changed after create. Five attempts, each with the question, what was sent, and the server's own sentence. Written only when you pass `--probe-bindings`. |
+| `bindings.json` | What each surface answered when the script asked whether a namespace's class, region, VPC, and parent project can be changed after create. Five attempts on this interface, and three more on the tenant manager when you supply a bearer that may write there. Each carries the question, what was sent, and the server's own sentence. Written only when you pass `--probe-bindings`. |
 | `expected-output.md` | The transcript of that run. |
 
 ## Run it
@@ -48,6 +48,26 @@ Two things to know before you run it on an estate you care about:
 
 It asks about the first namespace it finds, and needs a second project to exist for the last question.
 
+### The second surface, and why it matters
+
+This interface has no project field at all: the project is the path an object is addressed by. So its refusal is
+structural, and a structural refusal only tells you an interface has no field for something. It cannot tell you
+whether the platform *intends* the binding to be permanent.
+
+The tenant manager's own namespace API does carry the project as a writable field, which makes it the one surface
+that can answer in words. Writing there needs a right a project team does not hold, so the script asks only when
+you give it a bearer that does:
+
+```bash
+export VCFA_PROVIDER_BEARER_FILE=/path/to/bearer    # mode 0600; an identity that may manage namespaces
+python3 inventory.py --probe-bindings
+```
+
+It then asks three more questions, all refused: reassign the namespace to a sibling project, detach it from its
+project entirely, and import a namespace that does not exist. The third is the adoption pathway, which is how a
+namespace standing on the Supervisor would be brought into a project. Without that bearer the script says the
+surface was not asked, rather than guessing.
+
 ## Scope, stated plainly
 
 - Read-only, under one organization's bearer: the records hold what that organization can see, which is the
@@ -59,11 +79,16 @@ It asks about the first namespace it finds, and needs a second project to exist 
   that happens to look like a placeholder is not a leak.
 - Workloads are counted behind each namespace's own endpoint (the VM service and the cluster API); a namespace
   that has not reached phase Created has no endpoint yet and reports none.
-- The refusal record covers this interface only. A second surface, the Tenant Manager's own namespace update,
-  takes a body carrying the project assignment; a tenant identity is refused there for want of a right before
-  the change is evaluated, so whether a provider identity could reassign a namespace that way is untested here.
-  What is documented is a cross-project copy rather than a move: a namespace can be captured as a blueprint and
-  redeployed under another project, and the original stays where it is.
+- On the reference estate both surfaces refuse, and the second one refuses in a sentence: changing the project
+  assignment of a namespace is not allowed, and the field may not be null either, so a namespace cannot be moved
+  or released. What is documented as a cross-project copy rather than a move: a namespace can be captured as a
+  blueprint and redeployed under another project, and the original stays where it is.
+- The adoption pathway is refused on the reference estate for a reason specific to it: the Supervisor is attached
+  to an NSX manager, which is what VPC networking means. The check runs before the namespace is looked up, so a
+  namespace standing on the Supervisor cannot be adopted there whatever its state. What a Supervisor on vSphere
+  networking answers is not something this run can tell you. Note also that an empty or malformed import body
+  answers "This operation is denied", which reads like a rights problem and is not; the script sends a
+  well-formed one.
 - Recorded on one 9.1 organization on 2026-09-16, and the bindings asked on 2026-09-17; your counts will differ,
   the shapes should not.
 - The naming audit is a format check, not a judgement of meaning: a name can satisfy its pattern and still say

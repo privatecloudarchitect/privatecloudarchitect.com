@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-17T15:10:39Z",
+ "captured_utc": "2026-09-17T16:47:24Z",
  "namespace": "{{namespace-1}}",
  "phase": "Created",
  "conditions": {
@@ -44,5 +44,31 @@
    "status": 422,
    "answer": "SupervisorNamespace.infrastructure.cci.vmware.com \"{{namespace-1}}\" is invalid: [metadata.namespace: Namespace mismatch: value is \"{{project-2}}\" in the resource and \"{{project-1}}\" in the path]"
   }
- ]
+ ],
+ "tenant_manager": {
+  "namespace": "{{namespace-1}}",
+  "attempts": [
+   {
+    "question": "can the project assignment be changed to another project?",
+    "method": "PUT",
+    "sent": "the whole object, projectAssignment = a sibling project",
+    "status": 400,
+    "answer": "[ {{id}} ] Changing project assignment of a namespace is not allowed."
+   },
+   {
+    "question": "can a namespace be detached from its project?",
+    "method": "PUT",
+    "sent": "the whole object, projectAssignment = null",
+    "status": 400,
+    "answer": "[ {{id}} ] validation error on field 'projectAssignment': may not be null"
+   },
+   {
+    "question": "can a namespace created on the Supervisor be adopted into a project?",
+    "method": "POST",
+    "sent": "an import naming a namespace that exists nowhere",
+    "status": 400,
+    "answer": "[ {{id}} ] Namespace import is not supported for a supervisor associated with NSX Manager."
+   }
+  ]
+ }
 }
