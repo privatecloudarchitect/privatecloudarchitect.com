@@ -1,0 +1,375 @@
+{
+  "captured": "2026-09-17T00:28:44Z",
+  "calls": [
+    {
+      "id": "A1",
+      "title": "Flow A: the stored refresh token traded for a bearer",
+      "request": {
+        "method": "POST",
+        "path": "/oauth/tenant/{{org}}/token",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json"
+        },
+        "body": "grant_type=refresh_token&refresh_token={{refresh-token}}"
+      },
+      "response": {
+        "status": 200,
+        "elapsed_ms": 629,
+        "headers": {
+          "x-vmware-vcloud-request-id": "{{id-1}}",
+          "x-frame-options": "SAMEORIGIN",
+          "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+          "content-type": "application/json"
+        },
+        "body": {
+          "access_token": "{{bearer · 1333 chars}}",
+          "token_type": "Bearer",
+          "expires_in": 3600,
+          "refresh_token": "{{refresh-token · 32 chars}}"
+        }
+      },
+      "note": "the bearer lives expires_in seconds; a refresh token comes back beside it: store the value that comes back",
+      "bearer_claims": {
+        "lifetime_s": 3600,
+        "has_exp": true,
+        "claims_present": [
+          "aud",
+          "email",
+          "exp",
+          "groups",
+          "iat",
+          "iss",
+          "jti",
+          "name",
+          "nbf",
+          "number_of_groups",
+          "number_of_roles",
+          "org_display_name",
+          "org_id",
+          "org_name",
+          "preferred_username",
+          "roles"
+        ]
+      }
+    },
+    {
+      "id": "A2",
+      "title": "Who the bearer is, as the platform sees it",
+      "request": {
+        "method": "GET",
+        "path": "/cloudapi/1.0.0/sessions/current",
+        "headers": {
+          "Authorization": "Bearer {{bearer}}",
+          "Accept": "application/json;version=9.1.0"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "elapsed_ms": 417,
+        "headers": {
+          "x-vmware-vcloud-request-id": "{{id-2}}",
+          "x-frame-options": "SAMEORIGIN",
+          "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+          "content-type": "application/json;version=9.1.0",
+          "cache-control": "no-store, must-revalidate",
+          "link": "<https://{{host}}/cloudapi/1.0.0/orgs/urn%3Avcloud%3Aorg%3A{{id-5}}>;rel=\"down\";title=\"urn:vcloud:org:{{id-5}}\";type=\"application/json\";model=\"Org\""
+        },
+        "body": {
+          "id": "urn:vcloud:session:{{id-3}}",
+          "site": {
+            "name": "{{host}}",
+            "id": "urn:vcloud:site:{{id-6}}"
+          },
+          "user": {
+            "name": "{{user}}",
+            "id": "urn:vcloud:user:{{id-4}}"
+          },
+          "org": {
+            "name": "{{org}}",
+            "id": "urn:vcloud:org:{{id-5}}"
+          },
+          "operatingOrg": {
+            "name": "{{org}}",
+            "id": "urn:vcloud:org:{{id-5}}"
+          },
+          "location": "{{id-5}}@{{id-6}}",
+          "roles": [
+            "Organization Administrator"
+          ],
+          "roleRefs": [
+            {
+              "name": "Organization Administrator",
+              "id": "urn:vcloud:role:{{id-7}}"
+            }
+          ],
+          "sessionIdleTimeoutMinutes": 0
+        }
+      },
+      "note": "the session behind the bearer: the user, the organization, the roles"
+    },
+    {
+      "id": "A3",
+      "title": "The count of effective rights under the OAuth bearer",
+      "request": {
+        "method": "GET",
+        "path": "/cloudapi/1.0.0/sessions/current/rights?pageSize=1",
+        "headers": {
+          "Authorization": "Bearer {{bearer}}",
+          "Accept": "application/json;version=9.1.0"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "elapsed_ms": 365,
+        "headers": {
+          "x-vmware-vcloud-request-id": "{{id-8}}",
+          "x-frame-options": "SAMEORIGIN",
+          "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+          "content-type": "application/json;version=9.1.0",
+          "cache-control": "no-store, must-revalidate",
+          "link": "<https://{{host}}/cloudapi/1.0.0/sessions/current/rights?filter=&sortAsc=name&pageSize=1&sortDesc=&page=2>;rel=\"nextPage\";type=\"application/json\";model=\"Rights\""
+        },
+        "body": {
+          "resultTotal": 134,
+          "pageCount": 134,
+          "page": 1,
+          "pageSize": 1,
+          "associations": null,
+          "values": [
+            {
+              "name": "Access Any Namespace: Edit",
+              "id": "urn:vcloud:right:{{id-9}}",
+              "description": "Access Any Namespace: Edit",
+              "bundleKey": "RIGHT_NAMESPACE_ALL_USAGE_MANAGE",
+              "category": "urn:vcloud:rightsCategory:{{id-10}}",
+              "serviceNamespace": "com.vmware.vcloud",
+              "rightType": "MODIFY",
+              "impliedRights": null,
+              "isPublishable": null
+            }
+          ]
+        }
+      },
+      "note": "one page of one, and resultTotal declares the count; the page size is capped at 128 on this collection"
+    },
+    {
+      "id": "A4",
+      "title": "The deployment plane, same bearer",
+      "request": {
+        "method": "GET",
+        "path": "/iaas/api/about",
+        "headers": {
+          "Authorization": "Bearer {{bearer}}",
+          "Accept": "application/json"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "elapsed_ms": 362,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+          "strict-transport-security": "max-age=31536000 ; includeSubDomains",
+          "x-frame-options": "SAMEORIGIN"
+        },
+        "body": {
+          "supportedApis": [
+            {
+              "apiVersion": "2019-01-15",
+              "documentationLink": "/iaas-api/swagger/v3/api-docs/Deprecated-2019-01-15",
+              "deprecationPolicy": {
+                "deprecatedAt": "2021-07-15",
+                "description": "This is a deprecated version of IAAS API, please use the latest one"
+              }
+            },
+            {
+              "apiVersion": "2021-07-15",
+              "documentationLink": "/iaas-api/swagger/v3/api-docs/2021-07-15"
+            }
+          ],
+          "latestApiVersion": "2021-07-15"
+        }
+      },
+      "note": "the IaaS surface VM Apps organizations lean on"
+    },
+    {
+      "id": "A5",
+      "title": "The control plane, same bearer",
+      "request": {
+        "method": "GET",
+        "path": "/cci/kubernetes/api",
+        "headers": {
+          "Authorization": "Bearer {{bearer}}",
+          "Accept": "application/json"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "elapsed_ms": 517,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-cache, private"
+        },
+        "body": {
+          "kind": "APIVersions",
+          "versions": [
+            "v1"
+          ],
+          "serverAddressByClientCIDRs": [
+            {
+              "clientCIDR": "0.0.0.0/0",
+              "serverAddress": "*:6443"
+            }
+          ]
+        }
+      },
+      "note": "the Cloud Consumption Interface, a Kubernetes-style API; All Apps organizations live here"
+    },
+    {
+      "id": "B1",
+      "title": "Flow B: the Basic session login; the bearer is a response header",
+      "request": {
+        "method": "POST",
+        "path": "/cloudapi/1.0.0/sessions",
+        "headers": {
+          "Authorization": "Basic {{base64 of user@org:password}}",
+          "Accept": "application/json;version=9.1.0"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "elapsed_ms": 570,
+        "headers": {
+          "x-vmware-vcloud-request-id": "{{id-11}}",
+          "x-frame-options": "SAMEORIGIN",
+          "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+          "content-type": "application/json;version=9.1.0",
+          "cache-control": "no-store, must-revalidate",
+          "link": "<https://{{host}}/cloudapi/1.0.0/orgs/urn%3Avcloud%3Aorg%3A{{id-5}}>;rel=\"down\";title=\"urn:vcloud:org:{{id-5}}\";type=\"application/json\";model=\"Org\"",
+          "x-vmware-vcloud-access-token": "{{bearer · 1333 chars}}"
+        },
+        "body": {
+          "id": "urn:vcloud:session:{{id-12}}",
+          "site": {
+            "name": "{{host}}",
+            "id": "urn:vcloud:site:{{id-6}}"
+          },
+          "user": {
+            "name": "{{user}}",
+            "id": "urn:vcloud:user:{{id-4}}"
+          },
+          "org": {
+            "name": "{{org}}",
+            "id": "urn:vcloud:org:{{id-5}}"
+          },
+          "operatingOrg": {
+            "name": "{{org}}",
+            "id": "urn:vcloud:org:{{id-5}}"
+          },
+          "location": "{{id-5}}@{{id-6}}",
+          "roles": [
+            "Organization Administrator"
+          ],
+          "roleRefs": [
+            {
+              "name": "Organization Administrator",
+              "id": "urn:vcloud:role:{{id-7}}"
+            }
+          ],
+          "sessionIdleTimeoutMinutes": 0
+        }
+      },
+      "note": "the bearer is not in the body: read X-VMWARE-VCLOUD-ACCESS-TOKEN, case-insensitively",
+      "bearer_claims": {
+        "lifetime_s": 3600,
+        "has_exp": true,
+        "claims_present": [
+          "aud",
+          "email",
+          "exp",
+          "groups",
+          "iat",
+          "iss",
+          "jti",
+          "name",
+          "nbf",
+          "number_of_groups",
+          "number_of_roles",
+          "org_display_name",
+          "org_id",
+          "org_name",
+          "preferred_username",
+          "roles"
+        ]
+      }
+    },
+    {
+      "id": "B2",
+      "title": "The count of effective rights under the session bearer",
+      "request": {
+        "method": "GET",
+        "path": "/cloudapi/1.0.0/sessions/current/rights?pageSize=1",
+        "headers": {
+          "Authorization": "Bearer {{bearer}}",
+          "Accept": "application/json;version=9.1.0"
+        },
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "elapsed_ms": 366,
+        "headers": {
+          "x-vmware-vcloud-request-id": "{{id-13}}",
+          "x-frame-options": "SAMEORIGIN",
+          "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
+          "content-type": "application/json;version=9.1.0",
+          "cache-control": "no-store, must-revalidate",
+          "link": "<https://{{host}}/cloudapi/1.0.0/sessions/current/rights?filter=&sortAsc=name&pageSize=1&sortDesc=&page=2>;rel=\"nextPage\";type=\"application/json\";model=\"Rights\""
+        },
+        "body": {
+          "resultTotal": 136,
+          "pageCount": 136,
+          "page": 1,
+          "pageSize": 1,
+          "associations": null,
+          "values": [
+            {
+              "name": "Access Any Namespace: Edit",
+              "id": "urn:vcloud:right:{{id-9}}",
+              "description": "Access Any Namespace: Edit",
+              "bundleKey": "RIGHT_NAMESPACE_ALL_USAGE_MANAGE",
+              "category": "urn:vcloud:rightsCategory:{{id-10}}",
+              "serviceNamespace": "com.vmware.vcloud",
+              "rightType": "MODIFY",
+              "impliedRights": null,
+              "isPublishable": null
+            }
+          ]
+        }
+      },
+      "note": "the same user, the same organization, the same role"
+    },
+    {
+      "id": "R",
+      "title": "The arrival rule's delta, by name",
+      "request": null,
+      "response": null,
+      "delta": {
+        "oauth_rights": 134,
+        "session_rights": 136,
+        "present_under_session_only": [
+          "Group / User: Manage",
+          "Role: Create, Edit, Delete, or Copy"
+        ],
+        "present_under_oauth_only": []
+      },
+      "note": "the rights the session login carries and the OAuth grant is stripped of; no role edit adds them to the OAuth path"
+    }
+  ]
+}
