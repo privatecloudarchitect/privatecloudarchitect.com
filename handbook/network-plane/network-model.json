@@ -1,0 +1,756 @@
+{
+ "captured_utc": "2026-09-17T22:23:26Z",
+ "catalog": [
+  {
+   "group": "networking.k8s.io",
+   "kind": "IngressClass",
+   "resource": "ingressclasses",
+   "scope": "top level",
+   "writable": true,
+   "family": "other",
+   "held": "HTTP 403"
+  },
+  {
+   "group": "networking.k8s.io",
+   "kind": "Ingress",
+   "resource": "ingresses",
+   "scope": "project",
+   "writable": true,
+   "family": "other"
+  },
+  {
+   "group": "networking.k8s.io",
+   "kind": "IPAddress",
+   "resource": "ipaddresses",
+   "scope": "top level",
+   "writable": true,
+   "family": "other",
+   "held": "HTTP 403"
+  },
+  {
+   "group": "networking.k8s.io",
+   "kind": "NetworkPolicy",
+   "resource": "networkpolicies",
+   "scope": "project",
+   "writable": true,
+   "family": "other"
+  },
+  {
+   "group": "networking.k8s.io",
+   "kind": "ServiceCIDR",
+   "resource": "servicecidrs",
+   "scope": "top level",
+   "writable": true,
+   "family": "other",
+   "held": "HTTP 403"
+  },
+  {
+   "group": "avi.vmware.com",
+   "kind": "RegionLBSetting",
+   "resource": "regionlbsettings",
+   "scope": "top level",
+   "writable": true,
+   "family": "other",
+   "held": 1
+  },
+  {
+   "group": "avi.vmware.com",
+   "kind": "SEGBinding",
+   "resource": "segbindings",
+   "scope": "project",
+   "writable": true,
+   "family": "other"
+  },
+  {
+   "group": "avi.vmware.com",
+   "kind": "SEG",
+   "resource": "segs",
+   "scope": "top level",
+   "writable": true,
+   "family": "other",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "DistributedVLANConnection",
+   "resource": "distributedvlanconnections",
+   "scope": "top level",
+   "writable": false,
+   "family": "the chain",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "FirewallPolicy",
+   "resource": "firewallpolicies",
+   "scope": "top level",
+   "writable": true,
+   "family": "security",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "GatewayConnection",
+   "resource": "gatewayconnections",
+   "scope": "top level",
+   "writable": false,
+   "family": "the chain",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPAddressAllocation",
+   "resource": "ipaddressallocations",
+   "scope": "top level",
+   "writable": true,
+   "family": "addressing",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPBlockAllocationState",
+   "resource": "ipblockallocationstates",
+   "scope": "top level",
+   "writable": false,
+   "family": "addressing",
+   "held": 3
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPBlock",
+   "resource": "ipblocks",
+   "scope": "top level",
+   "writable": true,
+   "family": "addressing",
+   "held": 3
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPBlockUsage",
+   "resource": "ipblockusages",
+   "scope": "top level",
+   "writable": false,
+   "family": "addressing"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPSecVPNDPDProfile",
+   "resource": "ipsecvpndpdprofiles",
+   "scope": "top level",
+   "writable": true,
+   "family": "site to site",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPSecVPNIKEProfile",
+   "resource": "ipsecvpnikeprofiles",
+   "scope": "top level",
+   "writable": true,
+   "family": "site to site",
+   "held": 8
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPSecVPNLocalEndpoint",
+   "resource": "ipsecvpnlocalendpoints",
+   "scope": "top level",
+   "writable": true,
+   "family": "site to site",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPSecVPN",
+   "resource": "ipsecvpns",
+   "scope": "top level",
+   "writable": true,
+   "family": "site to site",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPSecVPNSession",
+   "resource": "ipsecvpnsessions",
+   "scope": "top level",
+   "writable": true,
+   "family": "site to site",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "IPSecVPNTunnelProfile",
+   "resource": "ipsecvpntunnelprofiles",
+   "scope": "top level",
+   "writable": true,
+   "family": "site to site",
+   "held": 8
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "Limit",
+   "resource": "limits",
+   "scope": "top level",
+   "writable": true,
+   "family": "limits and capability",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "LimitState",
+   "resource": "limitstates",
+   "scope": "top level",
+   "writable": false,
+   "family": "limits and capability",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "LoadBalancer",
+   "resource": "loadbalancers",
+   "scope": "top level",
+   "writable": true,
+   "family": "services",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "NetworkSecurityGroup",
+   "resource": "networksecuritygroups",
+   "scope": "top level",
+   "writable": true,
+   "family": "security",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "NetworkService",
+   "resource": "networkservices",
+   "scope": "top level",
+   "writable": false,
+   "family": "services",
+   "held": 415
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "PolicyRead",
+   "resource": "policyreads",
+   "scope": "top level",
+   "writable": true,
+   "family": "the write surface"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "PolicyWrite",
+   "resource": "policywrites",
+   "scope": "top level",
+   "writable": true,
+   "family": "the write surface",
+   "held": "HTTP 403"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "RegionNetworkingCapabilities",
+   "resource": "regionnetworkingcapabilities",
+   "scope": "top level",
+   "writable": false,
+   "family": "limits and capability",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "SecurityProfileAttachment",
+   "resource": "securityprofileattachments",
+   "scope": "top level",
+   "writable": false,
+   "family": "security",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "SecurityProfile",
+   "resource": "securityprofiles",
+   "scope": "top level",
+   "writable": false,
+   "family": "security",
+   "held": 5
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "SecurityStrategy",
+   "resource": "securitystrategies",
+   "scope": "top level",
+   "writable": false,
+   "family": "security",
+   "held": 5
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "SubnetBinding",
+   "resource": "subnetbindings",
+   "scope": "project",
+   "writable": true,
+   "family": "bound under a project"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "Subnet",
+   "resource": "subnets",
+   "scope": "top level",
+   "writable": true,
+   "family": "the chain",
+   "held": 3
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "TGWAttachment",
+   "resource": "tgwattachments",
+   "scope": "top level",
+   "writable": true,
+   "family": "the chain",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "TGWCentralizedConfig",
+   "resource": "tgwcentralizedconfigs",
+   "scope": "top level",
+   "writable": true,
+   "family": "routing and translation",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "TGWFirewallPolicy",
+   "resource": "tgwfirewallpolicies",
+   "scope": "top level",
+   "writable": true,
+   "family": "security",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "TGWNATRule",
+   "resource": "tgwnatrules",
+   "scope": "top level",
+   "writable": true,
+   "family": "routing and translation",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "TGWStaticRoute",
+   "resource": "tgwstaticroutes",
+   "scope": "top level",
+   "writable": true,
+   "family": "routing and translation",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "TransitGateway",
+   "resource": "transitgateways",
+   "scope": "top level",
+   "writable": true,
+   "family": "the chain",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCAttachment",
+   "resource": "vpcattachments",
+   "scope": "top level",
+   "writable": true,
+   "family": "the chain",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCBinding",
+   "resource": "vpcbindings",
+   "scope": "project",
+   "writable": true,
+   "family": "bound under a project"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCConnectivityProfileBinding",
+   "resource": "vpcconnectivityprofilebindings",
+   "scope": "project",
+   "writable": true,
+   "family": "bound under a project"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCConnectivityProfile",
+   "resource": "vpcconnectivityprofiles",
+   "scope": "top level",
+   "writable": true,
+   "family": "the chain",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCGatewayFirewallPolicy",
+   "resource": "vpcgatewayfirewallpolicies",
+   "scope": "top level",
+   "writable": true,
+   "family": "security",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCIPAddressAllocation",
+   "resource": "vpcipaddressallocations",
+   "scope": "top level",
+   "writable": true,
+   "family": "addressing",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCIPAddressUsage",
+   "resource": "vpcipaddressusages",
+   "scope": "top level",
+   "writable": false,
+   "family": "addressing"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCLimitState",
+   "resource": "vpclimitstates",
+   "scope": "top level",
+   "writable": false,
+   "family": "limits and capability",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCNATRule",
+   "resource": "vpcnatrules",
+   "scope": "top level",
+   "writable": true,
+   "family": "routing and translation",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCNetworkSecurityGroup",
+   "resource": "vpcnetworksecuritygroups",
+   "scope": "top level",
+   "writable": true,
+   "family": "security",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCRead",
+   "resource": "vpcreads",
+   "scope": "top level",
+   "writable": true,
+   "family": "the write surface"
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPC",
+   "resource": "vpcs",
+   "scope": "top level",
+   "writable": true,
+   "family": "the chain",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCServiceProfile",
+   "resource": "vpcserviceprofiles",
+   "scope": "top level",
+   "writable": false,
+   "family": "services",
+   "held": 1
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "VPCWrite",
+   "resource": "vpcwrites",
+   "scope": "top level",
+   "writable": true,
+   "family": "the write surface",
+   "held": "HTTP 403"
+  }
+ ],
+ "families": [
+  {
+   "family": "the chain",
+   "kinds": [
+    "DistributedVLANConnection",
+    "GatewayConnection",
+    "Subnet",
+    "TGWAttachment",
+    "TransitGateway",
+    "VPCAttachment",
+    "VPCConnectivityProfile",
+    "VPC"
+   ]
+  },
+  {
+   "family": "addressing",
+   "kinds": [
+    "IPAddressAllocation",
+    "IPBlockAllocationState",
+    "IPBlock",
+    "IPBlockUsage",
+    "VPCIPAddressAllocation",
+    "VPCIPAddressUsage"
+   ]
+  },
+  {
+   "family": "security",
+   "kinds": [
+    "FirewallPolicy",
+    "NetworkSecurityGroup",
+    "SecurityProfileAttachment",
+    "SecurityProfile",
+    "SecurityStrategy",
+    "TGWFirewallPolicy",
+    "VPCGatewayFirewallPolicy",
+    "VPCNetworkSecurityGroup"
+   ]
+  },
+  {
+   "family": "routing and translation",
+   "kinds": [
+    "TGWCentralizedConfig",
+    "TGWNATRule",
+    "TGWStaticRoute",
+    "VPCNATRule"
+   ]
+  },
+  {
+   "family": "site to site",
+   "kinds": [
+    "IPSecVPNDPDProfile",
+    "IPSecVPNIKEProfile",
+    "IPSecVPNLocalEndpoint",
+    "IPSecVPN",
+    "IPSecVPNSession",
+    "IPSecVPNTunnelProfile"
+   ]
+  },
+  {
+   "family": "limits and capability",
+   "kinds": [
+    "Limit",
+    "LimitState",
+    "RegionNetworkingCapabilities",
+    "VPCLimitState"
+   ]
+  },
+  {
+   "family": "services",
+   "kinds": [
+    "LoadBalancer",
+    "NetworkService",
+    "VPCServiceProfile"
+   ]
+  },
+  {
+   "family": "bound under a project",
+   "kinds": [
+    "SubnetBinding",
+    "VPCBinding",
+    "VPCConnectivityProfileBinding"
+   ]
+  },
+  {
+   "family": "the write surface",
+   "kinds": [
+    "PolicyRead",
+    "PolicyWrite",
+    "VPCRead",
+    "VPCWrite"
+   ]
+  }
+ ],
+ "accessModes": [
+  "Public",
+  "PrivateTGW",
+  "Private"
+ ],
+ "accessModeDoc": "AccessMode defines the access mode for a VPC Subnet. Defaults to Private. Supported values: - Public: Subnet is accessible from external networks. IPs are allocated from the VPC's external IPBlocks unless\n          explicitly specified.\n- PrivateTGW: Subnet is accessible via a connected Transit Gateway (TGW). IPs are allocated from the VPC's\n              private-TGW IPBlocks unless explicitly specified.\n- Private: Subnet is only accessible within the VPC. IPs are allocated from the VPC's private IPBlocks unless\n           explicitly specified.",
+ "strategies": [
+  {
+   "name": "none",
+   "description": "'None' security strategy implies the attached VPC would not have any security strategy attached to it. This strategy will be marked as the 'Default' security strategy by the system by default",
+   "rules": []
+  },
+  {
+   "name": "vpc-external-connectivity",
+   "description": "Allow only Outgoing Communications, deny all incoming connections. VPC to VPC communication is blocked",
+   "rules": [
+    {
+     "name": "Allow-Essential-Services",
+     "action": "JumpToApplication",
+     "from": [
+      "Any"
+     ],
+     "to": [
+      "Any"
+     ]
+    },
+    {
+     "name": "Allow-OUT",
+     "action": "JumpToApplication",
+     "from": [
+      "{VPC_DEFAULT_GROUP}"
+     ],
+     "to": [
+      "Any"
+     ]
+    },
+    {
+     "name": "Deny-All",
+     "action": "Drop",
+     "from": [
+      "Any"
+     ],
+     "to": [
+      "Any"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "vpc-isolation",
+   "description": "Deny any communication between VPCs within the project. All workloads within the VPC to be allowed to communicate",
+   "rules": [
+    {
+     "name": "Allow-within-VPC",
+     "action": "JumpToApplication",
+     "from": [
+      "{VPC_DEFAULT_GROUP}"
+     ],
+     "to": [
+      "{VPC_DEFAULT_GROUP}"
+     ]
+    },
+    {
+     "name": "Deny-All",
+     "action": "Drop",
+     "from": [
+      "Any"
+     ],
+     "to": [
+      "Any"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "vpc-isolation-with-essential-services",
+   "description": "Deny all communication to VPCs except for essential services like ICMP, DNS, NTP and DHCP. All workloads within the VPC to be allowed to communicate",
+   "rules": [
+    {
+     "name": "Allow-Essential-Services",
+     "action": "JumpToApplication",
+     "from": [
+      "Any"
+     ],
+     "to": [
+      "Any"
+     ]
+    },
+    {
+     "name": "Allow-within-VPC",
+     "action": "JumpToApplication",
+     "from": [
+      "{VPC_DEFAULT_GROUP}"
+     ],
+     "to": [
+      "{VPC_DEFAULT_GROUP}"
+     ]
+    },
+    {
+     "name": "Deny-All",
+     "action": "Drop",
+     "from": [
+      "Any"
+     ],
+     "to": [
+      "Any"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "vpc-secure-connection",
+   "description": "Allow all outgoing communications, deny incoming connections. Allow VPC to VPC within project",
+   "rules": [
+    {
+     "name": "Allow-Essential-Services",
+     "action": "JumpToApplication",
+     "from": [
+      "Any"
+     ],
+     "to": [
+      "Any"
+     ]
+    },
+    {
+     "name": "Allow_within_Project",
+     "action": "JumpToApplication",
+     "from": [
+      "{PROJECT_DEFAULT_GROUP}"
+     ],
+     "to": [
+      "Any"
+     ]
+    },
+    {
+     "name": "Deny-All",
+     "action": "Drop",
+     "from": [
+      "Any"
+     ],
+     "to": [
+      "Any"
+     ]
+    }
+   ]
+  }
+ ],
+ "profiles": [
+  {
+   "name": "{{netobj-5}}",
+   "isDefault": true,
+   "strategy": "none"
+  },
+  {
+   "name": "{{netobj-7}}",
+   "isDefault": false,
+   "strategy": "vpc-isolation"
+  },
+  {
+   "name": "{{netobj-8}}",
+   "isDefault": false,
+   "strategy": "vpc-isolation-with-essential-services"
+  },
+  {
+   "name": "{{netobj-9}}",
+   "isDefault": false,
+   "strategy": "vpc-external-connectivity"
+  },
+  {
+   "name": "{{netobj-10}}",
+   "isDefault": false,
+   "strategy": "vpc-secure-connection"
+  }
+ ],
+ "attached": [
+  {
+   "vpc": "{{netobj-4}}",
+   "profile": "{{netobj-5}}",
+   "strategy": "none"
+  }
+ ],
+ "predefinedServices": 415
+}

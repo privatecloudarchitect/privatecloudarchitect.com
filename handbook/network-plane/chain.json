@@ -1,0 +1,162 @@
+{
+ "captured_utc": "2026-09-17T22:23:26Z",
+ "ipBlocks": [
+  {
+   "name": "{{netobj-1}}",
+   "cidrs": [
+    "198.18.0.0/16"
+   ],
+   "visibility": "External",
+   "ipAddressType": "IPv4",
+   "systemOwned": false,
+   "subnetExclusive": false
+  },
+  {
+   "name": "{{netobj-2}}",
+   "cidrs": [
+    "192.0.2.0/16"
+   ],
+   "visibility": "Private",
+   "ipAddressType": "IPv4",
+   "systemOwned": true,
+   "subnetExclusive": false
+  },
+  {
+   "name": "{{netobj-3}}",
+   "cidrs": [
+    "198.51.100.0/16"
+   ],
+   "visibility": "Private",
+   "ipAddressType": "IPv4",
+   "systemOwned": false,
+   "subnetExclusive": false
+  }
+ ],
+ "vpcs": [
+  {
+   "name": "{{netobj-4}}",
+   "privateIPs": [
+    "192.0.2.0/16"
+   ],
+   "loadBalancerVPCEndpoint": {
+    "enabled": true
+   }
+  }
+ ],
+ "connectivityProfiles": [
+  {
+   "name": "{{netobj-5}}",
+   "isDefault": true,
+   "externalIPBlockNames": [
+    "{{netobj-1}}"
+   ],
+   "privateTGWIPBlockNames": [
+    "{{netobj-3}}"
+   ],
+   "transitGatewayName": "{{netobj-5}}"
+  }
+ ],
+ "transitGateways": [
+  {
+   "name": "{{netobj-5}}",
+   "isDefault": true,
+   "transitSubnets": [
+    "198.19.0.0/21"
+   ]
+  }
+ ],
+ "vpcAttachments": [
+  {
+   "name": "{{netobj-14}}",
+   "vpcName": "{{netobj-4}}",
+   "vpcConnectivityProfileName": "{{netobj-5}}"
+  }
+ ],
+ "tgwAttachments": [
+  {
+   "name": "{{netobj-15}}",
+   "transitGatewayName": "{{netobj-5}}",
+   "gatewayConnectionName": "{{netobj-6}}",
+   "routeAdvertisementRules": [
+    {
+     "routeAdvertisementType": "Public"
+    }
+   ]
+  }
+ ],
+ "gatewayConnections": [
+  {
+   "name": "{{netobj-6}}",
+   "advertiseOutboundNetworks": {
+    "allowExternalBlockNames": [
+     "{{netobj-1}}"
+    ],
+    "allowPrivate": false
+   },
+   "natConfig": {
+    "enableSNAT": false
+   }
+  }
+ ],
+ "subnets": [
+  {
+   "name": "{{netobj-11}}",
+   "accessMode": "Public",
+   "backing": "VLAN",
+   "systemOwned": false,
+   "declares": [
+    "accessMode",
+    "advancedConfig",
+    "ipAddresses",
+    "ipBlockNames",
+    "subnetDHCPConfig",
+    "systemOwned",
+    "vlanConnectionName"
+   ]
+  },
+  {
+   "name": "{{netobj-12}}",
+   "accessMode": "Public",
+   "backing": "VLAN",
+   "systemOwned": false,
+   "declares": [
+    "accessMode",
+    "advancedConfig",
+    "ipAddresses",
+    "ipBlockNames",
+    "subnetDHCPConfig",
+    "systemOwned",
+    "vlanConnectionName"
+   ]
+  },
+  {
+   "name": "{{netobj-13}}",
+   "accessMode": "Private",
+   "backing": "overlay",
+   "systemOwned": true,
+   "declares": [
+    "accessMode",
+    "advancedConfig",
+    "ipAddresses",
+    "ipv4SubnetSize",
+    "subnetDHCPConfig",
+    "systemOwned"
+   ]
+  }
+ ],
+ "nat": [
+  {
+   "action": "SNAT",
+   "source": "192.0.2.0/16",
+   "translatedTo": "198.18.0.0",
+   "systemOwned": true
+  }
+ ],
+ "allocations": [
+  {
+   "address": "198.18.0.0",
+   "fromBlockVisibility": "External"
+  }
+ ],
+ "note": "addresses are documentation ranges substituted for the estate's own; the structure is the lesson"
+}
