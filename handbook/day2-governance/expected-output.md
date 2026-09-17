@@ -74,6 +74,27 @@ authority it stores:
 | `GROUP:` | `GROUP:Engineers@` | a group from the identity source | yes, it is part of the name |
 | `USER:` | `USER:jsmith` | one person | no |
 
+## What the platform will and will not catch in a policy you write
+
+Probed with `?validationOnly=true`, which creates nothing:
+
+| What you send | What happens |
+|---|---|
+| an action selector that exists nowhere | refused, and the refusal lists every legal selector back at you |
+| a lease body missing its two required numbers | refused by field name |
+| an authority with no `USER:` / `GROUP:` / `ROLE:` prefix | **accepted**, and it will match nobody |
+| an action policy with no `allowedActions` key at all | **accepted** |
+
+So the body check is real for actions and required fields and absent for authorities. A policy naming a group
+that does not exist, or a bare string, is created happily and then does nothing, which presents as a policy that
+is not working rather than one that is malformed. Check the authority yourself against the grammar above.
+
+The `enablePolicyValidation` flag on a type does not mean "the platform checks this one". Every type is
+schema-checked. The flag marks a second, type-specific stage, and you can tell you reached it because the
+refusal reads `Policy validation failed. Error: ...` rather than naming a field. Only the infrastructure type
+has one, and the two stages can disagree: that type declares nothing in its required list and the second stage
+still refuses a body that omits its match constraints.
+
 ## After a real write
 
 Effects settle in roughly 16 to 20 seconds. A read inside that window reports the previous regime, so poll until
