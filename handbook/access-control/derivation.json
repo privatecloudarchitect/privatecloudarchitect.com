@@ -1,0 +1,181 @@
+{
+ "captured_utc": "2026-09-17T14:05:51Z",
+ "organization_gateway": {
+  "status": 201,
+  "groups": 63,
+  "extra_claims": [
+   "org",
+   "token"
+  ],
+  "from_rights": [
+   "vcf:Billing: View",
+   "vcf:Blueprint Request: Manage",
+   "vcf:Blueprint Request: View",
+   "vcf:Blueprint: Manage",
+   "vcf:Blueprint: View",
+   "vcf:Catalog Instance: Manage",
+   "vcf:Catalog: Manage",
+   "vcf:Catalog: Request",
+   "vcf:Catalog: View",
+   "vcf:Connectivity Profile: Manage",
+   "vcf:Connectivity Profile: View",
+   "vcf:Content Library Item: Manage",
+   "vcf:Content Library Item: View",
+   "vcf:Distributed Firewall: Manage",
+   "vcf:Distributed Firewall: View",
+   "vcf:IP Blocks: Manage",
+   "vcf:IP Blocks: View",
+   "vcf:Namespace Class: Manage",
+   "vcf:Namespace Class: View",
+   "vcf:Namespace Self-Service Settings: Manage",
+   "vcf:Namespace Self-Service Settings: View",
+   "vcf:Namespace: Manage",
+   "vcf:Namespace: View",
+   "vcf:Network Security Group: Manage",
+   "vcf:Network Security Group: View",
+   "vcf:Network Service: View",
+   "vcf:Projects: Manage",
+   "vcf:Projects: View",
+   "vcf:Projects: View Limited",
+   "vcf:Region Load Balancer Setting: View",
+   "vcf:Regions: View",
+   "vcf:Self-Service Namespace: Manage",
+   "vcf:Self-Service Namespace: View",
+   "vcf:Self-Service VPC: Manage",
+   "vcf:Self-Service VPC: View",
+   "vcf:Service Engine Group Self-Service Settings: Manage",
+   "vcf:Service Engine Group Self-Service Settings: View",
+   "vcf:Service Engine Group: Manage",
+   "vcf:Service Engine Group: View",
+   "vcf:Subnet: Manage",
+   "vcf:Subnet: View",
+   "vcf:Transit Gateway Firewall: Manage",
+   "vcf:Transit Gateway Firewall: View",
+   "vcf:Transit Gateway Services: Manage",
+   "vcf:Transit Gateway Services: View",
+   "vcf:Transit Gateway: Manage",
+   "vcf:Transit Gateway: View",
+   "vcf:VCFA Infra Policy: Simple View",
+   "vcf:VPC Gateway Firewall: Manage",
+   "vcf:VPC Gateway Firewall: View",
+   "vcf:VPC Network Security Group: Manage",
+   "vcf:VPC Network Security Group: View",
+   "vcf:VPC Security Profile: Manage",
+   "vcf:VPC Security Profile: View",
+   "vcf:VPC Self-Service Settings: Manage",
+   "vcf:VPC Self-Service Settings: View",
+   "vcf:VPC Service Profile: Manage",
+   "vcf:VPC Service Profile: View",
+   "vcf:VPC Services: Manage",
+   "vcf:VPC Services: View",
+   "vcf:VPC: Manage",
+   "vcf:VPC: View"
+  ],
+  "system": [
+   "system:authenticated"
+  ],
+  "plane_scoped": []
+ },
+ "project_roles": [
+  {
+   "name": "view",
+   "description": "This is a read-only role on namespaces in a project"
+  },
+  {
+   "name": "edit",
+   "description": "This role allows modification of namespaces in a project"
+  },
+  {
+   "name": "admin",
+   "description": "This role allows modification and deletion of namespaces in a project"
+  },
+  {
+   "name": "edit_adv",
+   "description": "This role allows modification of namespaces in a project"
+  }
+ ],
+ "authority": {
+  "kind": "ProjectRoleBinding",
+  "status": 200,
+  "bindings": 4,
+  "by_role": {
+   "admin": 2,
+   "edit": 1,
+   "edit_adv": 1
+  },
+  "subject_kinds": [
+   "Group",
+   "User"
+  ],
+  "name_shape": "cci:<subject-kind>:<subject>"
+ },
+ "projection": {
+  "surface": "project-service REST arrays",
+  "status": 200,
+  "arrays_present": [
+   "administrators"
+  ],
+  "note": "accepts a write, returns 200, persists nothing; it mirrors the project's admin group"
+ },
+ "workload_plane": {
+  "status": 201,
+  "groups": 2,
+  "endpoint_shape": "/proxy/k8s/namespaces/urn:vcloud:namespace:<uuid>",
+  "from_rights": [],
+  "system": [
+   "system:authenticated"
+  ],
+  "plane_scoped": [
+   "edit-<project-uid>-<project>@<realm>"
+  ]
+ },
+ "access_reviews": [
+  {
+   "verb": "list",
+   "apiGroup": "vmoperator.vmware.com",
+   "resource": "virtualmachines",
+   "without_scope": false,
+   "with_scope": true,
+   "reason_shape": "RBAC: allowed by RoleBinding \"<binding>\" of ClusterRole \"<binding>\" to Group \"<binding>\""
+  },
+  {
+   "verb": "create",
+   "apiGroup": "vmoperator.vmware.com",
+   "resource": "virtualmachines",
+   "without_scope": false,
+   "with_scope": true,
+   "reason_shape": "RBAC: allowed by RoleBinding \"<binding>\" of ClusterRole \"<binding>\" to Group \"<binding>\""
+  },
+  {
+   "verb": "delete",
+   "apiGroup": "vmoperator.vmware.com",
+   "resource": "virtualmachines",
+   "without_scope": false,
+   "with_scope": true,
+   "reason_shape": "RBAC: allowed by RoleBinding \"<binding>\" of ClusterRole \"<binding>\" to Group \"<binding>\""
+  },
+  {
+   "verb": "create",
+   "apiGroup": "core",
+   "resource": "secrets",
+   "without_scope": false,
+   "with_scope": true,
+   "reason_shape": "RBAC: allowed by RoleBinding \"<binding>\" of ClusterRole \"<binding>\" to Group \"<binding>\""
+  },
+  {
+   "verb": "create",
+   "apiGroup": "core",
+   "resource": "namespaces",
+   "without_scope": false,
+   "with_scope": false
+  }
+ ],
+ "real_reads": {
+  "virtualmachines": 200,
+  "secrets": 200
+ },
+ "rules_review": {
+  "status": 201,
+  "resource_rules": 186
+ }
+}
