@@ -13,6 +13,7 @@ plates are rendered from the records in this folder; run the script and you have
 | `taxonomy.json` | The interface as declared on the reference estate, 2026-09-16: 13 VMware API groups, one line per kind. |
 | `estate.json` | The tree as it stood: one organization, two projects, three namespaces, and what each bound. |
 | `naming.json` | The conformance audit of that estate: per construct, how many names conform, the grammar they should follow, and a verdict of keep, refine, or rename. Counts only, never a name. |
+| `bindings.json` | What the interface answered when the script asked whether a namespace's class, region, VPC, and parent project can be changed after create. Five attempts, each with the question, what was sent, and the server's own sentence. Written only when you pass `--probe-bindings`. |
 | `expected-output.md` | The transcript of that run. |
 
 ## Run it
@@ -23,8 +24,29 @@ export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token      # mode 0600; the api-
 export TLS_VERIFY=false                                    # only on a self-signed lab CA
 export OUT_DIR=.
 
-python3 inventory.py
+python3 inventory.py                       # read-only
+python3 inventory.py --probe-bindings      # also ask whether a namespace's bindings can be changed
 ```
+
+### About `--probe-bindings`
+
+The chapter claims a namespace binds four planes at create and refuses to rebind them. That claim should be the
+platform's answer, not ours, so the flag asks it and records the reply. It sends five requests the server is
+built to refuse, and every one carries a value that cannot be applied anyway: a class, a region and a VPC named
+`zz-probe-value-that-exists-nowhere`, and a parent project sent in the body while the URL still addresses the
+real parent, which is the shape a Kubernetes API server rejects as a mismatch rather than a move. The script
+reads the namespace before and after and **refuses to write the record if one byte of its spec moved**.
+
+Two things to know before you run it on an estate you care about:
+
+- **Patching a field the server accepts is not a no-op.** Any accepted patch, even one setting a field to the
+  value it already holds, dispatches a tenant-manager edit task on that namespace; the next request then answers
+  `409 ... edit in progress` instead of the question you asked. The script sends only values that cannot be
+  applied, and waits out a 409 rather than reporting it as an answer.
+- **There is no dry run.** The interface rejects `dryRun=All`, so aiming at values the server cannot apply is
+  the safe substitute, not a preference.
+
+It asks about the first namespace it finds, and needs a second project to exist for the last question.
 
 ## Scope, stated plainly
 
@@ -37,7 +59,13 @@ python3 inventory.py
   that happens to look like a placeholder is not a leak.
 - Workloads are counted behind each namespace's own endpoint (the VM service and the cluster API); a namespace
   that has not reached phase Created has no endpoint yet and reports none.
-- Recorded on one 9.1 organization on 2026-09-16; your counts will differ, the shapes should not.
+- The refusal record covers this interface only. A second surface, the Tenant Manager's own namespace update,
+  takes a body carrying the project assignment; a tenant identity is refused there for want of a right before
+  the change is evaluated, so whether a provider identity could reassign a namespace that way is untested here.
+  What is documented is a cross-project copy rather than a move: a namespace can be captured as a blueprint and
+  redeployed under another project, and the original stays where it is.
+- Recorded on one 9.1 organization on 2026-09-16, and the bindings asked on 2026-09-17; your counts will differ,
+  the shapes should not.
 - The naming audit is a format check, not a judgement of meaning: a name can satisfy its pattern and still say
   nothing about what the object isolates. Read the verdict as a work list and assign the last word yourself.
 - Tune the standard to your estate before you audit against it. The vocabularies are the parts that travel least

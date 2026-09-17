@@ -29,11 +29,13 @@ import os
 import re
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 
 CCI = "/cci/kubernetes"
+INFRA = "infrastructure.cci.vmware.com/v1alpha3"
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 NS_FIELDS = ("regionName", "zoneName", "className", "vpcName", "segName", "storageClasses", "vmClasses", "initialClassConfigOverrides", "description")
 
@@ -84,6 +86,23 @@ class Cci:
             return st, body.get("items", [])
         return st, []
 
+    def send(self, method, path, body, ctype="application/json"):
+        """Only ever used for attempts the server is expected to refuse; see probe_bindings."""
+        req = urllib.request.Request(f"https://{self.host}{CCI}{path}", data=json.dumps(body).encode(), method=method,
+                                     headers={"Authorization": f"Bearer {self.bearer}", "Accept": "application/json", "Content-Type": ctype})
+        try:
+            with urllib.request.urlopen(req, context=ctx(), timeout=60) as r:
+                return r.status, json.loads(r.read() or b"null")
+        except urllib.error.HTTPError as e:
+            raw = e.read()
+            try:
+                return e.code, json.loads(raw)
+            except ValueError:
+                return e.code, raw.decode(errors="replace")[:400]
+        except (urllib.error.URLError, OSError) as e:
+            return None, str(e)
+
+
 
 # ---- the naming audit: the names above, against the standard shipped beside this script
 STANDARD_FILE = "naming-standard.json"
@@ -121,6 +140,78 @@ def audit_names(standard, observed):
                           "example": rule["example"], "pattern": rule["pattern"],
                           "verdict": "keep" if conform == len(names) else ("refine" if conform else "rename")}
     return out
+
+
+
+# ---- the bindings a namespace makes at create: asked of the platform, not inferred
+#
+# Every request below is one the server refuses by design, and each carries a value no server can apply:
+#   * a class, region, and VPC name that exist nowhere ("zz-probe-..."), so even an accepted edit has nothing to bind to;
+#   * a parent project taken from the estate, sent in the body while the URL still addresses the real parent, which is
+#     the shape a Kubernetes API server rejects as a namespace mismatch rather than a move.
+# The one thing this function must never send is a patch whose value IS applicable. A patch of any spec field with a
+# value the server accepts (even the field's current value) dispatches a real tenant-manager edit task on the namespace,
+# after which the next attempt answers HTTP 409 "edit in progress" instead of the question you asked. The function
+# reads the namespace before and after and refuses to write a record if one byte of its spec moved.
+SENTINEL = "zz-probe-value-that-exists-nowhere"
+IMMUTABLE_FIELDS = ("className", "regionName", "vpcName")
+
+
+def probe_bindings(c, project, namespace, other_project, L):
+    """Ask the interface whether the create-time bindings and the parent project can be changed."""
+    base = f"/apis/{INFRA}/namespaces/{project}/supervisornamespaces/{namespace}"
+    st, before = c.get(base)
+    if st != 200:
+        return None, f"the namespace could not be read back (HTTP {st})"
+    frozen = json.dumps(before.get("spec"), sort_keys=True)
+    asked = []
+
+    def scrub(text):
+        """The server quotes the namespace and the projects back at you; those are estate names.
+
+        One pass, longest name first. Family-by-family replacement is wrong here: a namespace name can contain a
+        project name, so replacing projects first breaks the namespace name before it can be matched as a whole.
+        """
+        if not isinstance(text, str):
+            return text
+        known = [(real, label) for m in L.maps.values() for real, label in m.items()]
+        for real, label in sorted(known, key=lambda kv: -len(kv[0])):
+            text = text.replace(real, "{{%s}}" % label)
+        return UUID.sub("{{id}}", text)
+
+    def record(question, method, sent, st, body):
+        answer = body.get("message") if isinstance(body, dict) else body
+        asked.append({"question": question, "method": method, "sent": sent, "status": st,
+                      "answer": scrub(answer.strip()) if isinstance(answer, str) else answer})
+
+    def patient(fn, tries=20):
+        """A 409 means an edit is already in flight on this namespace; it is not an answer to the question."""
+        for i in range(tries):
+            st, body = fn()
+            if st != 409:
+                return st, body
+            time.sleep(15)
+        return st, body
+
+    for field in IMMUTABLE_FIELDS:
+        st, body = patient(lambda f=field: c.send("PATCH", base, {"spec": {f: SENTINEL}}, "application/merge-patch+json"))
+        record(f"can spec.{field} be changed after create?", "PATCH", f"spec.{field} = a value that exists nowhere", st, body)
+
+    st, body = patient(lambda: c.send("PATCH", base, {"metadata": {"namespace": SENTINEL}}, "application/merge-patch+json"))
+    record("can the parent project be changed by patching metadata.namespace?", "PATCH", "metadata.namespace = a project that does not exist", st, body)
+
+    if other_project:
+        moved = json.loads(json.dumps(before)); moved["metadata"]["namespace"] = other_project
+        st, body = patient(lambda: c.send("PUT", base, moved))
+        record("can the namespace be re-parented into another project that really exists?", "PUT",
+               "the whole object, body.metadata.namespace = a sibling project, URL unchanged", st, body)
+
+    st, after = c.get(base)
+    if st != 200 or json.dumps(after.get("spec"), sort_keys=True) != frozen:
+        raise SystemExit("FATAL: the namespace's spec is not what it was before these attempts; not writing a record")
+    health = {cnd.get("type"): cnd.get("status") for cnd in (after.get("status", {}).get("conditions") or [])}
+    return {"namespace": L.get("namespace", namespace), "phase": after.get("status", {}).get("phase"),
+            "conditions": health, "spec_unchanged": True, "attempts": asked}, None
 
 
 def main():
@@ -184,6 +275,7 @@ def main():
     st, projects = c.items("/apis/project.cci.vmware.com/v1alpha2/projects")
     observed["projects"] = [p["metadata"]["name"] for p in projects]
     observed["namespaces"], observed["virtual-machines"], observed["vks-clusters"] = [], [], []
+    first_ns = None
     for p in projects:
         pname = p["metadata"]["name"]; label = L.get("project", pname)
         proj = {"name": label, "bindings": {}, "roleBindings": None, "namespaces": []}
@@ -205,8 +297,10 @@ def main():
         proj["images"] = len(imgs) if st == 200 else f"HTTP {st}"
         st, cats = c.items(f"/apis/catalog.cci.vmware.com/v1alpha1/namespaces/{pname}/catalogitems")
         proj["catalogItems"] = len(cats) if st == 200 else f"HTTP {st}"
-        st, nss = c.items(f"/apis/infrastructure.cci.vmware.com/v1alpha3/namespaces/{pname}/supervisornamespaces")
+        st, nss = c.items(f"/apis/{INFRA}/namespaces/{pname}/supervisornamespaces")
         observed["namespaces"] += [n["metadata"]["name"] for n in nss]
+        if nss and first_ns is None:
+            first_ns = (pname, nss[0]["metadata"]["name"])
         for n in nss:
             sp, stt = n.get("spec") or {}, n.get("status") or {}
             ns = {"name": L.get("namespace", n["metadata"]["name"]), "phase": stt.get("phase"),
@@ -238,6 +332,27 @@ def main():
             print(f"     {construct:<22} {v['conform']:>3} of {v['objects']:<3} {v['verdict']:<7} {v['convention']}  e.g. {v['example']}")
     else:
         print(f"\n  naming: skipped ({STANDARD_FILE} is not beside this script)")
+
+    # ---- 4b. optional: ask whether the bindings and the parent can be changed (every attempt is one the server refuses)
+    bindings = None
+    if "--probe-bindings" in sys.argv:
+        if not first_ns:
+            print("\n  bindings: skipped (no namespace to ask about)")
+        else:
+            pname, nsname = first_ns
+            sibling = next((q["metadata"]["name"] for q in projects if q["metadata"]["name"] != pname), None)
+            print(f"\n  bindings: asking {L.get('namespace', nsname, braces=False)} whether its create-time bindings and its parent can be changed")
+            bindings, why = probe_bindings(c, pname, nsname, sibling, L)
+            if bindings is None:
+                print(f"     skipped: {why}")
+            else:
+                for a in bindings["attempts"]:
+                    print(f"     {a['method']:<5} {a['sent']:<62} HTTP {a['status']}")
+                    if a["answer"]:
+                        print(f"           {a['answer'][:170]}")
+                print(f"     the namespace is unchanged: phase {bindings['phase']}, conditions {bindings['conditions']}")
+    elif first_ns:
+        print("\n  bindings: not asked (pass --probe-bindings to send the refused attempts; see the README)")
 
     # ---- 5. write, sanitized
     stamp = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
@@ -271,6 +386,15 @@ def main():
         text3 = json.dumps({"captured_utc": stamp, "audited_objects": sum(v["objects"] for v in naming.values()), "constructs": naming}, indent=1, ensure_ascii=False)
         open(os.path.join(out_dir, "naming.json"), "w", encoding="utf-8").write(text3 + "\n")
         wrote += " and naming.json (counts only)"
+    if bindings is not None:
+        text4 = UUID.sub("{{id}}", json.dumps({"captured_utc": stamp, **bindings}, indent=1, ensure_ascii=False))
+        for secret in (c.bearer, refresh, host, org):
+            assert secret not in text4, "an estate value reached the bindings record"
+        for fam, m in L.maps.items():
+            for name in m:
+                assert not re.search(r"(?<![A-Za-z0-9-])" + re.escape(name) + r"(?![A-Za-z0-9-])", re.sub(r"\{\{[^}]*\}\}", "", text4)), f"a {fam} name reached the bindings record"
+        open(os.path.join(out_dir, "bindings.json"), "w", encoding="utf-8").write(text4 + "\n")
+        wrote += " and bindings.json (%d refused attempts)" % len(bindings["attempts"])
     print(f"\nwrote {wrote}; every estate name replaced by a stable label")
 
 

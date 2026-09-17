@@ -21,8 +21,8 @@ inventory.py: the construct model read through the Cloud Consumption Interface, 
      region                   1 of 1   keep    <geo>-<direction>-<ordinal>  e.g. eu-west-1
      supervisor-zone          0 of 3   rename  <region>-az<n>  e.g. eu-west-1-az1
      namespace-class          0 of 3   rename  ns-<profile>-<size>  e.g. ns-general-small
-     vpc                      0 of 1   rename  vpc-<tenant/project>-<region>  e.g. vpc-checkout-eu-west-1
-     vpc-subnet               0 of 3   rename  <vpc>-<function>  e.g. vpc-checkout-eu-west-1-private
+     vpc                      0 of 1   rename  vpc-<consumer>-<region>[-<ordinal>]  e.g. vpc-checkout-eu-west-1
+     vpc-subnet               0 of 3   rename  <access-mode>-<purpose?>-<ordinal>  e.g. private-web-01
      vm-class                 0 of 16  rename  <qos>-<profile?>-<size>  e.g. guaranteed-general-large
      virtualmachine           1 of 15  refine  <app>-<role>-<ordinal>  e.g. checkout-web-01
      vks-cluster              2 of 4   refine  <app>-<env>-vks  e.g. checkout-prod-vks
@@ -37,3 +37,43 @@ declared, with scope, verbs, and the count of each top-level kind), [`estate.jso
 Six of fifty-one names conformed on that run, which is the ordinary result for an estate that grew before it had a
 standard: the region and the projects conform, and the namespaces, zones, classes, VPC, subnets, and VM classes do
 not. The verdict column is the work list, and the rename order is outermost boundary first.
+
+## Asking whether the bindings hold: `--probe-bindings`
+
+With the flag, the same run adds a fifth section and a fourth record. This is the chapter's claim about the
+crossroads put to the platform rather than asserted:
+
+```
+  bindings: asking namespace-1 whether its create-time bindings and its parent can be changed
+     PATCH spec.className = a value that exists nowhere                   HTTP 422
+           SupervisorNamespace.infrastructure.cci.vmware.com "{{namespace-1}}" is invalid: [spec.className: Property cannot be updated]
+     PATCH spec.regionName = a value that exists nowhere                  HTTP 422
+           SupervisorNamespace.infrastructure.cci.vmware.com "{{namespace-1}}" is invalid: [spec.regionName: Property cannot be updated]
+     PATCH spec.vpcName = a value that exists nowhere                     HTTP 422
+           SupervisorNamespace.infrastructure.cci.vmware.com "{{namespace-1}}" is invalid: [spec.vpcName: Property cannot be updated]
+     PATCH metadata.namespace = a project that does not exist             HTTP 200
+     PUT   the whole object, body.metadata.namespace = a sibling project, URL unchanged HTTP 422
+           SupervisorNamespace.infrastructure.cci.vmware.com "{{namespace-1}}" is invalid: [metadata.namespace: Namespace mismatch:
+           value is "{{project-2}}" in the resource and "{{project-1}}" in the path]
+     the namespace is unchanged: phase Created, conditions {'Ready': 'True', 'PolicyApplied': 'True', 'Realized': 'True'}
+
+wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only) and bindings.json (5 refused attempts); every estate name replaced by a stable label
+```
+
+Read the five rows as two answers.
+
+**The class, the region, and the VPC are frozen.** All three come back `Property cannot be updated`. The guard
+runs before the value is validated, which is why a class that exists nowhere still draws the immutability error
+rather than a not-found: the field is refused whatever you put in it.
+
+**The parent project is not a field at all.** The fourth row is the one that does not refuse: a patch naming a
+different parent is accepted, and the parent simply is not part of what a patch carries, so nothing moves. The
+fifth row asks the same question in the form the interface does answer, and the answer names the rule: the
+namespace in the body has to match the namespace in the path. The parent is the path. That is also why the
+chapter says a namespace belongs to exactly one project rather than that it has a project field.
+
+What the run does **not** establish: that no surface anywhere can reassign a namespace. This is one interface.
+The Tenant Manager's own namespace update takes a body carrying the project assignment, and a tenant identity is
+refused there for want of a right before the change is evaluated. A documented cross-project path does exist and
+it is a copy, not a move: capture the namespace as a blueprint and redeploy it under another project, leaving the
+original where it is.

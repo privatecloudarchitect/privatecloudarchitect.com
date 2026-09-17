@@ -1,0 +1,48 @@
+{
+ "captured_utc": "2026-09-17T15:10:39Z",
+ "namespace": "{{namespace-1}}",
+ "phase": "Created",
+ "conditions": {
+  "Ready": "True",
+  "PolicyApplied": "True",
+  "Realized": "True"
+ },
+ "spec_unchanged": true,
+ "attempts": [
+  {
+   "question": "can spec.className be changed after create?",
+   "method": "PATCH",
+   "sent": "spec.className = a value that exists nowhere",
+   "status": 422,
+   "answer": "SupervisorNamespace.infrastructure.cci.vmware.com \"{{namespace-1}}\" is invalid: [spec.className: Property cannot be updated]"
+  },
+  {
+   "question": "can spec.regionName be changed after create?",
+   "method": "PATCH",
+   "sent": "spec.regionName = a value that exists nowhere",
+   "status": 422,
+   "answer": "SupervisorNamespace.infrastructure.cci.vmware.com \"{{namespace-1}}\" is invalid: [spec.regionName: Property cannot be updated]"
+  },
+  {
+   "question": "can spec.vpcName be changed after create?",
+   "method": "PATCH",
+   "sent": "spec.vpcName = a value that exists nowhere",
+   "status": 422,
+   "answer": "SupervisorNamespace.infrastructure.cci.vmware.com \"{{namespace-1}}\" is invalid: [spec.vpcName: Property cannot be updated]"
+  },
+  {
+   "question": "can the parent project be changed by patching metadata.namespace?",
+   "method": "PATCH",
+   "sent": "metadata.namespace = a project that does not exist",
+   "status": 200,
+   "answer": null
+  },
+  {
+   "question": "can the namespace be re-parented into another project that really exists?",
+   "method": "PUT",
+   "sent": "the whole object, body.metadata.namespace = a sibling project, URL unchanged",
+   "status": 422,
+   "answer": "SupervisorNamespace.infrastructure.cci.vmware.com \"{{namespace-1}}\" is invalid: [metadata.namespace: Namespace mismatch: value is \"{{project-2}}\" in the resource and \"{{project-1}}\" in the path]"
+  }
+ ]
+}
