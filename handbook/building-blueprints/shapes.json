@@ -1,0 +1,249 @@
+{
+ "captured_utc": "2026-09-18T21:39:06Z",
+ "declarableTypes": [
+  "CCI.Supervisor.Namespace",
+  "CCI.Supervisor.Resource",
+  "CCI.VPC",
+  "CCI.VPC.Configuration",
+  "Util.PasswordEntry"
+ ],
+ "census": [
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 1281,
+   "inputs": 1,
+   "resources": 2,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 26198,
+   "inputs": 15,
+   "resources": 4,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 1596,
+   "inputs": 0,
+   "resources": 4,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 7888,
+   "inputs": 5,
+   "resources": 4,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 14291,
+   "inputs": 8,
+   "resources": 2,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 1000,
+   "inputs": 2,
+   "resources": 2,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 840,
+   "inputs": 2,
+   "resources": 2,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 16388,
+   "inputs": 9,
+   "resources": 4,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 1033,
+   "inputs": 0,
+   "resources": 0,
+   "resourceTypes": []
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 48100,
+   "inputs": 13,
+   "resources": 8,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 3274,
+   "inputs": 4,
+   "resources": 3,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "bytes": 2368,
+   "inputs": 2,
+   "resources": 2,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{project-2}}",
+   "bytes": 7888,
+   "inputs": 5,
+   "resources": 4,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  },
+  {
+   "project": "{{project-2}}",
+   "bytes": 46639,
+   "inputs": 13,
+   "resources": 8,
+   "resourceTypes": [
+    "CCI.Supervisor.Namespace",
+    "CCI.Supervisor.Resource"
+   ]
+  }
+ ],
+ "unparsed": 0,
+ "resourceDeclarations": 49,
+ "resourceTypesUsed": {
+  "CCI.Supervisor.Namespace": 13,
+  "CCI.Supervisor.Resource": 13
+ },
+ "typesNeverUsed": [
+  "CCI.VPC",
+  "CCI.VPC.Configuration",
+  "Util.PasswordEntry"
+ ],
+ "inputTypes": {
+  "string": 73,
+  "integer": 2,
+  "boolean": 4
+ },
+ "sizeRange": [
+  840,
+  48100
+ ],
+ "schemaJoins": [
+  {
+   "blueprint": "{{blueprint-2}}",
+   "inputs": 15,
+   "properties": 15,
+   "identicalKeys": true,
+   "required": 1
+  },
+  {
+   "blueprint": "{{blueprint-4}}",
+   "inputs": 5,
+   "properties": 5,
+   "identicalKeys": true,
+   "required": 2
+  },
+  {
+   "blueprint": "{{blueprint-5}}",
+   "inputs": 8,
+   "properties": 8,
+   "identicalKeys": true,
+   "required": 1
+  },
+  {
+   "blueprint": "{{blueprint-6}}",
+   "inputs": 2,
+   "properties": 2,
+   "identicalKeys": true,
+   "required": 1
+  },
+  {
+   "blueprint": "{{blueprint-7}}",
+   "inputs": 2,
+   "properties": 2,
+   "identicalKeys": true,
+   "required": 1
+  },
+  {
+   "blueprint": "{{blueprint-8}}",
+   "inputs": 9,
+   "properties": 9,
+   "identicalKeys": true,
+   "required": 1
+  },
+  {
+   "blueprint": "{{blueprint-10}}",
+   "inputs": 13,
+   "properties": 13,
+   "identicalKeys": true,
+   "required": 1
+  },
+  {
+   "blueprint": "{{blueprint-12}}",
+   "inputs": 2,
+   "properties": 2,
+   "identicalKeys": true,
+   "required": 2
+  },
+  {
+   "blueprint": "{{blueprint-13}}",
+   "inputs": 5,
+   "properties": 5,
+   "identicalKeys": true,
+   "required": 2
+  },
+  {
+   "blueprint": "{{blueprint-14}}",
+   "inputs": 13,
+   "properties": 13,
+   "identicalKeys": true,
+   "required": 1
+  }
+ ],
+ "schemaMatches": 10,
+ "generatorAddsPerProperty": {
+  "encrypted": 64
+ },
+ "requiredByInputType": {
+  "string|required": 13,
+  "boolean|not-required": 2
+ }
+}
