@@ -18,7 +18,8 @@ whole reason the design exists, so this checks it instead of repeating it:
   4. the REHEARSAL CHECK, in the same pass: whether this plane honours a server-side dry run. It does not,
      and it does not refuse one either, which is the most expensive fact in this chapter.
 
-Without --probe-elevation nothing here writes.
+Without --probe-elevation nothing here writes. A run without the flag also does NOT erase a probe block a
+previous run captured: an optional probe fills a section of the record, and it does not get to delete one.
 
 Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
@@ -271,6 +272,22 @@ def main():
               f"which is the only way to learn whether a revert is possible. It writes to a live access "
               f"object, so it takes the name from you.")
 
+    # A read-only run must not blank a probe block a previous run captured. The first version of this script
+    # overwrote the record every time, so a plain re-read erased the scope-axis result and the chapter that
+    # renders it published empty values under a live badge. An optional probe writes a section of the record;
+    # it does not get to delete one.
+    if elevation is None:
+        prior = os.path.join(out_dir, "elevation.json")
+        if os.path.exists(prior):
+            try:
+                kept = (json.load(open(prior, encoding="utf-8")) or {}).get("elevation")
+            except ValueError:
+                kept = None
+            if kept:
+                elevation = dict(kept)
+                elevation.setdefault("capturedBy", "an earlier run with the probe flag")
+                print(f"\n  elevation: carrying forward the probe block captured earlier; this run did not "
+                      f"re-probe and has not erased it")
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "policyTypes": types, "access": access, "deploymentLeaseFields": lease_fields,
                "elevation": elevation}

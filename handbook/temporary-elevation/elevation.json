@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-18T18:20:53Z",
+ "captured_utc": "2026-09-18T23:35:37Z",
  "policyTypes": [
   {
    "id": "com.vmware.policy.supervisor.iaas",
@@ -49,5 +49,30 @@
  "deploymentLeaseFields": [
   "leaseGracePeriodDays"
  ],
- "elevation": null
+ "elevation": {
+  "baseRole": "edit",
+  "elevatedTo": "edit_adv",
+  "steps": [
+   {
+    "step": "server-side apply carrying dryRun=All",
+    "status": 200,
+    "roleAfter": "edit_adv",
+    "rehearsed": false
+   },
+   {
+    "step": "elevate",
+    "status": 200,
+    "roleAfter": "edit_adv",
+    "took": true
+   },
+   {
+    "step": "revert",
+    "status": 200,
+    "roleAfter": "edit",
+    "restored": true
+   }
+  ],
+  "restored": true,
+  "inPlaceMutable": true
+ }
 }
