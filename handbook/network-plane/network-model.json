@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-17T22:23:26Z",
+ "captured_utc": "2026-09-17T23:57:35Z",
  "catalog": [
   {
    "group": "networking.k8s.io",
@@ -577,6 +577,14 @@
   "Private"
  ],
  "accessModeDoc": "AccessMode defines the access mode for a VPC Subnet. Defaults to Private. Supported values: - Public: Subnet is accessible from external networks. IPs are allocated from the VPC's external IPBlocks unless\n          explicitly specified.\n- PrivateTGW: Subnet is accessible via a connected Transit Gateway (TGW). IPs are allocated from the VPC's\n              private-TGW IPBlocks unless explicitly specified.\n- Private: Subnet is only accessible within the VPC. IPs are allocated from the VPC's private IPBlocks unless\n           explicitly specified.",
+ "natActions": [
+  "SNAT",
+  "DNAT",
+  "Reflexive",
+  "NoSNAT",
+  "NoDNAT"
+ ],
+ "natActionDoc": "Action represents action of NAT Rule. Valid values: SNAT, DNAT, Reflexive, NoSNAT and NoDNAT.",
  "strategies": [
   {
    "name": "none",

@@ -271,10 +271,12 @@ def main():
                         "systemOwned": bool(sp.get("systemOwned")),
                         "declares": sorted(k for k in sp if k not in ("regionName", "vpcName"))})
     st, oa = c.get(f"/openapi/v3/apis/{VPC_GROUP}")
-    access_doc = None
+    access_doc = nat_doc = None
     for k, v in ((oa.get("components", {}) or {}).get("schemas", {}) or {}).items():
         if k.endswith("SubnetSpec"):
             access_doc = ((v.get("properties") or {}).get("accessMode") or {}).get("description")
+        if k.endswith("VPCNATRuleSpec"):
+            nat_doc = ((v.get("properties") or {}).get("action") or {}).get("description")
     modes = re.findall(r"- (Public|PrivateTGW|Private):", access_doc or "")
     print(f"\n  subnets: {len(subnets)}; the platform documents {len(modes)} access modes: {', '.join(modes) or 'not declared'}")
     for s in subnets:
@@ -320,8 +322,12 @@ def main():
                      "fromBlockVisibility": (o.get("spec") or {}).get("ipAddressBlockVisibility")})
              for o in c.items("vpcipaddressallocations")]
     services = len(c.items("networkservices"))
+    natkind = next((e for e in catalog if e["kind"] == "VPCNATRule"), {})
+    allockind = next((e for e in catalog if e["kind"] == "VPCIPAddressAllocation"), {})
     print(f"\n  egress: {len(nat)} translation rule(s), {len(alloc)} allocated address(es), "
           f"{services} predefined services rules can name")
+    print(f"     the interface allows {len(re.findall(chr(92) + 'b(SNAT|DNAT|Reflexive|NoSNAT|NoDNAT)' + chr(92) + 'b', nat_doc or ''))} NAT actions; "
+          f"a tenant may create rules: {natkind.get('writable')}, and allocate more addresses: {allockind.get('writable')}")
     for n in nat:
         print(f"     {n['action']} {n['source']} -> {n['translatedTo']} (system owned: {n['systemOwned']})")
     for g in gwconn:
@@ -339,6 +345,8 @@ def main():
                                "families": [{"family": f, "kinds": [e["kind"] for e in vpc_kinds if e["family"] == f]}
                                             for f, _ in FAMILIES if any(e["family"] == f for e in vpc_kinds)],
                                "accessModes": modes, "accessModeDoc": access_doc,
+                               "natActions": re.findall(r"\b(SNAT|DNAT|Reflexive|NoSNAT|NoDNAT)\b", nat_doc or ""),
+                               "natActionDoc": nat_doc,
                                "strategies": strategies, "profiles": profs, "attached": attached,
                                "predefinedServices": services},
         "chain.json": {"captured_utc": stamp, "ipBlocks": blocks, "vpcs": vpcs, "connectivityProfiles": profiles,
