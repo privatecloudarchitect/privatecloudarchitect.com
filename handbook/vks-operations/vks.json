@@ -1,0 +1,559 @@
+{
+ "captured_utc": "2026-09-18T18:42:30Z",
+ "fleetKinds": [
+  {
+   "group": "core.management.kubernetes.vmware.com",
+   "resource": "clusterresources",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": false
+  },
+  {
+   "group": "core.management.kubernetes.vmware.com",
+   "resource": "clusters",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": false
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "resource": "clusterbackuplocationcredentials",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "resource": "clusterbackuplocations",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "resource": "clusterbackups",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "resource": "clusterdataprotections",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "resource": "clusterrestores",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  },
+  {
+   "group": "dataprotection.management.kubernetes.vmware.com",
+   "resource": "clusterschedules",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "resource": "clusterpolicies",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "resource": "clusterpolicyinsights",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": false
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "resource": "clusterpolicyschemas",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": false
+  },
+  {
+   "group": "policy.management.kubernetes.vmware.com",
+   "resource": "clusterpolicytemplates",
+   "declared": [
+    "create",
+    "delete",
+    "deletecollection",
+    "get",
+    "list",
+    "patch",
+    "update",
+    "watch"
+   ],
+   "allowed": [
+    "get",
+    "create",
+    "update",
+    "patch",
+    "delete"
+   ],
+   "declaresWrite": true,
+   "permitsWrite": true
+  }
+ ],
+ "misleadingDeclarations": 4,
+ "fleetClusters": [
+  {
+   "project": "{{{{project-2}}}}",
+   "phase": "Ready",
+   "state": "Healthy",
+   "cpu": {
+    "allocatable": "5790m",
+    "requested": "3378m",
+    "allocatedPercentage": 58
+   },
+   "memory": {
+    "allocatable": "8500Mi",
+    "requested": "3775Mi",
+    "allocatedPercentage": 44
+   },
+   "healthComponents": [
+    "controllerManagerHealth",
+    "etcdHealth",
+    "schedulerHealth"
+   ],
+   "healthMessage": "Cluster is healthy",
+   "statusKeys": [
+    "allocatedCpu",
+    "allocatedMemory",
+    "health",
+    "phase",
+    "state"
+   ],
+   "specKeys": [
+    "selector"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "phase": "Ready",
+   "state": "Healthy",
+   "cpu": {
+    "allocatable": "3860m",
+    "requested": "3028m",
+    "allocatedPercentage": 78
+   },
+   "memory": {
+    "allocatable": "12088Mi",
+    "requested": "3483Mi",
+    "allocatedPercentage": 28
+   },
+   "healthComponents": [
+    "controllerManagerHealth",
+    "etcdHealth",
+    "schedulerHealth"
+   ],
+   "healthMessage": "Cluster is healthy",
+   "statusKeys": [
+    "allocatedCpu",
+    "allocatedMemory",
+    "health",
+    "phase",
+    "state"
+   ],
+   "specKeys": [
+    "selector"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "phase": "Ready",
+   "state": "Healthy",
+   "cpu": {
+    "allocatable": "5790m",
+    "requested": "4028m",
+    "allocatedPercentage": 69
+   },
+   "memory": {
+    "allocatable": "8500Mi",
+    "requested": "4623Mi",
+    "allocatedPercentage": 54
+   },
+   "healthComponents": [
+    "controllerManagerHealth",
+    "etcdHealth",
+    "schedulerHealth"
+   ],
+   "healthMessage": "Cluster is healthy",
+   "statusKeys": [
+    "allocatedCpu",
+    "allocatedMemory",
+    "health",
+    "phase",
+    "state"
+   ],
+   "specKeys": [
+    "selector"
+   ]
+  },
+  {
+   "project": "{{{{project-2}}}}",
+   "phase": "Ready",
+   "state": "Healthy",
+   "cpu": {
+    "allocatable": "3860m",
+    "requested": "3028m",
+    "allocatedPercentage": 78
+   },
+   "memory": {
+    "allocatable": "12088Mi",
+    "requested": "3483Mi",
+    "allocatedPercentage": 28
+   },
+   "healthComponents": [
+    "controllerManagerHealth",
+    "etcdHealth",
+    "schedulerHealth"
+   ],
+   "healthMessage": "Cluster is healthy",
+   "statusKeys": [
+    "allocatedCpu",
+    "allocatedMemory",
+    "health",
+    "phase",
+    "state"
+   ],
+   "specKeys": [
+    "selector"
+   ]
+  }
+ ],
+ "managedComponents": 50,
+ "declaredClusters": [
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "builtin-generic-v3.6.0",
+   "version": "v1.35.2+vmware.1",
+   "controlPlaneReplicas": 1,
+   "workerPools": [
+    {
+     "class": "node-pool",
+     "replicas": 2
+    }
+   ],
+   "variables": [
+    "bootstrapAddons",
+    "kubernetes",
+    "storageClass",
+    "vmClass"
+   ],
+   "phase": "Provisioned",
+   "specKeys": [
+    "clusterNetwork",
+    "controlPlaneEndpoint",
+    "controlPlaneRef",
+    "infrastructureRef",
+    "topology"
+   ],
+   "generation": 4,
+   "observedGeneration": 4,
+   "controlPlaneEndpointPort": 6443,
+   "mayEdit": {
+    "get": true,
+    "patch": true,
+    "update": true,
+    "delete": true
+   }
+  },
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "builtin-generic-v3.6.0",
+   "version": "v1.35.5+vmware.1",
+   "controlPlaneReplicas": 1,
+   "workerPools": [
+    {
+     "class": "node-pool",
+     "replicas": 1
+    }
+   ],
+   "variables": [
+    "bootstrapAddons",
+    "kubernetes",
+    "storageClass",
+    "vmClass"
+   ],
+   "phase": "Provisioned",
+   "specKeys": [
+    "clusterNetwork",
+    "controlPlaneEndpoint",
+    "controlPlaneRef",
+    "infrastructureRef",
+    "topology"
+   ],
+   "generation": 4,
+   "observedGeneration": 4,
+   "controlPlaneEndpointPort": 6443,
+   "mayEdit": {
+    "get": true,
+    "patch": true,
+    "update": true,
+    "delete": true
+   }
+  },
+  {
+   "namespace": "{{namespace-2}}",
+   "class": "builtin-generic-v3.6.0",
+   "version": "v1.35.2+vmware.1",
+   "controlPlaneReplicas": 1,
+   "workerPools": [
+    {
+     "class": "node-pool",
+     "replicas": 2
+    }
+   ],
+   "variables": [
+    "bootstrapAddons",
+    "kubernetes",
+    "storageClass",
+    "vmClass"
+   ],
+   "phase": "Provisioned",
+   "specKeys": [
+    "clusterNetwork",
+    "controlPlaneEndpoint",
+    "controlPlaneRef",
+    "infrastructureRef",
+    "topology"
+   ],
+   "generation": 4,
+   "observedGeneration": 4,
+   "controlPlaneEndpointPort": 6443,
+   "mayEdit": {
+    "get": true,
+    "patch": true,
+    "update": true,
+    "delete": true
+   }
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "class": "builtin-generic-v3.6.0",
+   "version": "v1.35.5+vmware.1",
+   "controlPlaneReplicas": 1,
+   "workerPools": [
+    {
+     "class": "node-pool",
+     "replicas": 1
+    }
+   ],
+   "variables": [
+    "bootstrapAddons",
+    "kubernetes",
+    "storageClass",
+    "vmClass"
+   ],
+   "phase": "Provisioned",
+   "specKeys": [
+    "clusterNetwork",
+    "controlPlaneEndpoint",
+    "controlPlaneRef",
+    "infrastructureRef",
+    "topology"
+   ],
+   "generation": 4,
+   "observedGeneration": 4,
+   "controlPlaneEndpointPort": 6443,
+   "mayEdit": {
+    "get": true,
+    "patch": true,
+    "update": true,
+    "delete": true
+   }
+  }
+ ],
+ "ownership": {
+  "machines": 10,
+  "vms": 15,
+  "vmsOwned": 10,
+  "owners": {
+   "KubeadmControlPlane": 4,
+   "MachineSet": 6
+  }
+ },
+ "scope": {
+  "clusterScoped": 403,
+  "namespaced": 200,
+  "message": "clusters.cluster.x-k8s.io is forbidden: User \"{{user-1}}\" cannot list resource \"clusters\" in API group \"cluster.x-k8s.io\" at the cluster scope"
+ },
+ "selfRules": {
+  "namespaceEndpoint": {
+   "rules": 186,
+   "incomplete": true
+  },
+  "orgGateway": {
+   "rules": 145,
+   "incomplete": false
+  }
+ }
+}
