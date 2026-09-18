@@ -37,7 +37,13 @@ import urllib.request
 CCI = "/cci/kubernetes"
 INFRA = "infrastructure.cci.vmware.com/v1alpha3"
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-NS_FIELDS = ("regionName", "zoneName", "className", "vpcName", "segName", "storageClasses", "vmClasses", "initialClassConfigOverrides", "description")
+# The namespace spec on VCF 9.1, as the interface declares it. `zoneName` and a top-level `storageClasses`
+# and `vmClasses` are NOT here: the zone is named inside classConfigOverrides.zones[].name, the storage limit
+# inside classConfigOverrides.storageClasses[], and the effective class sets are reported in status. The field
+# was `initialClassConfigOverrides` on an earlier build; reading the removed name returns nothing and prints as
+# an empty binding, which reads exactly like a namespace that bound nothing.
+NS_FIELDS = ("regionName", "className", "vpcName", "segName", "classConfigOverrides", "description")
+NS_STATUS_FIELDS = ("storageClasses", "vmClasses", "zones")
 
 
 def ctx():
@@ -365,7 +371,10 @@ def main():
     observed["vm-classes"] = [m["metadata"]["name"] for m in vmcs]
     estate["published"] = {
         "regions": [{"name": L.get("region", r["metadata"]["name"]), "loadBalancerType": (r.get("status") or {}).get("loadBalancerType")} for r in regions],
-        "zones": [{"name": L.get("zone", z["metadata"]["name"]), "region": L.get("region", (z.get("spec") or {}).get("regionName", "")), "cpuLimit": (z.get("spec") or {}).get("cpuLimit"), "memoryLimit": (z.get("spec") or {}).get("memoryLimit"), "cpuUsed": (z.get("status") or {}).get("cpuUsed"), "memoryUsed": (z.get("status") or {}).get("memoryUsed")} for z in zones],
+        # Label a zone by the readable name in its spec, not by its object name. The object name is an
+        # opaque identifier and the name every other object refers to a zone by is spec.zoneName; labelling
+        # by the object name gives the same zone two different placeholders in one record.
+        "zones": [{"name": L.get("zone", (z.get("spec") or {}).get("zoneName") or z["metadata"]["name"]), "region": L.get("region", (z.get("spec") or {}).get("regionName", "")), "cpuLimit": (z.get("spec") or {}).get("cpuLimit"), "memoryLimit": (z.get("spec") or {}).get("memoryLimit"), "cpuUsed": (z.get("status") or {}).get("cpuUsed"), "memoryUsed": (z.get("status") or {}).get("memoryUsed")} for z in zones],
         "namespace_classes": [{"name": L.get("class", k["metadata"]["name"])} for k in classes],
         "vpcs": [{"name": L.get("vpc", v["metadata"]["name"]), "region": L.get("region", (v.get("spec") or {}).get("regionName", "")), "privateIPs": len((v.get("spec") or {}).get("privateIPs") or [])} for v in vpcs],
         "subnets": len(subnets), "storage_class_quotas": len(scq), "vm_class_summaries": len(vmcs),
@@ -404,9 +413,10 @@ def main():
         for n in nss:
             sp, stt = n.get("spec") or {}, n.get("status") or {}
             ns = {"name": L.get("namespace", n["metadata"]["name"]), "phase": stt.get("phase"),
-                  "bound": {"region": L.get("region", sp["regionName"]) if sp.get("regionName") else None, "zone": L.get("zone", sp["zoneName"]) if sp.get("zoneName") else None,
+                  "bound": {"region": L.get("region", sp["regionName"]) if sp.get("regionName") else None,
+                            "zone": L.get("zone", ((sp.get("classConfigOverrides") or {}).get("zones") or [{}])[0].get("name")) if ((sp.get("classConfigOverrides") or {}).get("zones") or [{}])[0].get("name") else None,
                             "class": L.get("class", sp["className"]) if sp.get("className") else None, "vpc": L.get("vpc", sp["vpcName"]) if sp.get("vpcName") else None,
-                            "storageClasses": len(sp.get("storageClasses") or []), "vmClasses": len(sp.get("vmClasses") or []), "classOverrides": bool(sp.get("initialClassConfigOverrides"))},
+                            "storageClasses": len((stt.get("storageClasses") or [])), "vmClasses": len((stt.get("vmClasses") or [])), "classOverrides": bool(sp.get("classConfigOverrides"))},
                   "specFields": sorted(sp.keys()), "workloads": {}}
             ep = stt.get("namespaceEndpointURL")
             if ep:

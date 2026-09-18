@@ -1,0 +1,370 @@
+{
+ "captured_utc": "2026-09-18T15:51:22Z",
+ "units": {
+  "cpu": "M",
+  "memory": "Mi",
+  "note": "cpu is SI mega (a 60000M limit is 60 GHz); memory and storage are binary mebi (a 131072Mi limit is 128 GiB). Two unit families in one object, so a figure carried without its suffix cannot be converted later."
+ },
+ "zones": [
+  {
+   "name": "{{zone-1}}",
+   "budget": {
+    "cpuLimit": 60000,
+    "cpuReservation": 6000,
+    "memoryLimit": 131072,
+    "memoryReservation": 16384
+   },
+   "used": {
+    "cpu": 20000,
+    "memory": 40000,
+    "cpuReservation": 0,
+    "memoryReservation": 0
+   },
+   "objectNameIsAnIdentifier": true
+  },
+  {
+   "name": "{{zone-2}}",
+   "budget": {
+    "cpuLimit": 60000,
+    "cpuReservation": 6000,
+    "memoryLimit": 131072,
+    "memoryReservation": 16384
+   },
+   "used": {
+    "cpu": 60000,
+    "memory": 120000,
+    "cpuReservation": 0,
+    "memoryReservation": 0
+   },
+   "objectNameIsAnIdentifier": true
+  },
+  {
+   "name": "{{zone-3}}",
+   "budget": {
+    "cpuLimit": 60000,
+    "cpuReservation": 6000,
+    "memoryLimit": 131072,
+    "memoryReservation": 16384
+   },
+   "used": {
+    "cpu": 60000,
+    "memory": 120000,
+    "cpuReservation": 0,
+    "memoryReservation": 0
+   },
+   "objectNameIsAnIdentifier": true
+  }
+ ],
+ "namespaces": [
+  {
+   "name": "{{namespace-1}}",
+   "class": "large",
+   "zones": [
+    {
+     "zone": "{{zone-3}}",
+     "cpuLimit": 60000,
+     "cpuReservation": 0,
+     "memoryLimit": 120000,
+     "memoryReservation": 0
+    }
+   ],
+   "storage": [
+    {
+     "class": "{{storageclass-2}}",
+     "limit": 300000
+    }
+   ]
+  },
+  {
+   "name": "{{namespace-2}}",
+   "class": "large",
+   "zones": [
+    {
+     "zone": "{{zone-2}}",
+     "cpuLimit": 60000,
+     "cpuReservation": 0,
+     "memoryLimit": 120000,
+     "memoryReservation": 0
+    }
+   ],
+   "storage": [
+    {
+     "class": "{{storageclass-2}}",
+     "limit": 300000
+    }
+   ]
+  },
+  {
+   "name": "{{namespace-3}}",
+   "class": "large",
+   "zones": [
+    {
+     "zone": "{{zone-1}}",
+     "cpuLimit": 20000,
+     "cpuReservation": 0,
+     "memoryLimit": 40000,
+     "memoryReservation": 0
+    }
+   ],
+   "storage": [
+    {
+     "class": "{{storageclass-2}}",
+     "limit": 300000
+    }
+   ]
+  }
+ ],
+ "ledger": [
+  {
+   "zone": "{{zone-1}}",
+   "namespaces": 1,
+   "sumOfLimits": 20000,
+   "sumOfReservations": 0,
+   "zoneReportsUsed": 20000,
+   "matches": "the sum of the namespaces' limits",
+   "cpuFree": 40000,
+   "memoryFree": 91072,
+   "reservationBudget": 6000,
+   "reservationDrawnDown": 0
+  },
+  {
+   "zone": "{{zone-2}}",
+   "namespaces": 1,
+   "sumOfLimits": 60000,
+   "sumOfReservations": 0,
+   "zoneReportsUsed": 60000,
+   "matches": "the sum of the namespaces' limits",
+   "cpuFree": 0,
+   "memoryFree": 11072,
+   "reservationBudget": 6000,
+   "reservationDrawnDown": 0
+  },
+  {
+   "zone": "{{zone-3}}",
+   "namespaces": 1,
+   "sumOfLimits": 60000,
+   "sumOfReservations": 0,
+   "zoneReportsUsed": 60000,
+   "matches": "the sum of the namespaces' limits",
+   "cpuFree": 0,
+   "memoryFree": 11072,
+   "reservationBudget": 6000,
+   "reservationDrawnDown": 0
+  }
+ ],
+ "classes": [
+  "large",
+  "small",
+  "medium"
+ ],
+ "configs": {
+  "small-scoped-az3": {
+   "zoneList": [
+    "*"
+   ],
+   "cpuLimit": 10000,
+   "cpuReservation": 0,
+   "memoryLimit": 65536,
+   "memoryReservation": 0,
+   "storage": [
+    {
+     "class": "{{storageclass-4}}",
+     "limit": 102400
+    }
+   ],
+   "vmClasses": 4
+  },
+  "medium": {
+   "zoneList": [
+    "*"
+   ],
+   "cpuLimit": 20000,
+   "cpuReservation": 0,
+   "memoryLimit": 20000,
+   "memoryReservation": 0,
+   "storage": [
+    {
+     "class": "{{storageclass-2}}",
+     "limit": 200000
+    }
+   ],
+   "vmClasses": 4
+  },
+  "small": {
+   "zoneList": [
+    "*"
+   ],
+   "cpuLimit": 10000,
+   "cpuReservation": 0,
+   "memoryLimit": 10000,
+   "memoryReservation": 0,
+   "storage": [
+    {
+     "class": "{{storageclass-2}}",
+     "limit": 100000
+    }
+   ],
+   "vmClasses": 4
+  },
+  "large": {
+   "zoneList": [
+    "*"
+   ],
+   "cpuLimit": 40000,
+   "cpuReservation": 2000,
+   "memoryLimit": 40000,
+   "memoryReservation": 8192,
+   "storage": [
+    {
+     "class": "{{storageclass-2}}",
+     "limit": 400000
+    }
+   ],
+   "vmClasses": 4
+  }
+ },
+ "contract": {
+  "agree": 1,
+  "total": 15,
+  "byField": {
+   "cpuLimit": {
+    "same": 0,
+    "above": 2,
+    "below": 1
+   },
+   "cpuReservation": {
+    "same": 0,
+    "above": 0,
+    "below": 3
+   },
+   "memoryLimit": {
+    "same": 1,
+    "above": 2,
+    "below": 0
+   },
+   "memoryReservation": {
+    "same": 0,
+    "above": 0,
+    "below": 3
+   },
+   "storageLimit": {
+    "same": 0,
+    "above": 0,
+    "below": 3
+   }
+  },
+  "widest": {
+   "class": "large",
+   "field": "memoryLimit",
+   "promised": 40000,
+   "held": 120000,
+   "times": 3.0
+  }
+ },
+ "overrides": [
+  {
+   "case": "cpu limit above the class config",
+   "status": 200,
+   "outcome": "accepted",
+   "held": {
+    "cpuLimit": "20000M",
+    "memoryLimit": "10000Mi",
+    "storageLimit": null
+   }
+  },
+  {
+   "case": "cpu limit below the class config",
+   "status": 200,
+   "outcome": "accepted",
+   "held": {
+    "cpuLimit": "5000M",
+    "memoryLimit": "10000Mi",
+    "storageLimit": null
+   }
+  },
+  {
+   "case": "no override at all",
+   "status": 400,
+   "outcome": "refused",
+   "message": "Zone should be specified in Namespace or in Namespace class"
+  },
+  {
+   "case": "the zone named, but no numbers with it",
+   "status": 422,
+   "outcome": "refused",
+   "message": "SupervisorNamespace.infrastructure.cci.vmware.com \"probe-ovr-\" is invalid: [spec.classConfigOverrides.zones[0].memoryLimit: Required value, spec.classConfigOverrides.zones[0].cpuLimit: Required value, spec.classConfigOverrides.zones[0].memoryReservation: Required value, spec.classConfigOverrides.zones[0].cpuReservation: Required value]"
+  },
+  {
+   "case": "storage below the class config",
+   "status": 200,
+   "outcome": "accepted",
+   "held": {
+    "cpuLimit": "10000M",
+    "memoryLimit": "10000Mi",
+    "storageLimit": "50000Mi"
+   }
+  },
+  {
+   "case": "storage above the class config",
+   "status": 400,
+   "outcome": "refused",
+   "message": "Requested storage limit 200000MiB for {{storageclass-2}} is more than available storage limit 100000MiB. Override limits to reduce the requested value or change the namespace class selected."
+  }
+ ],
+ "storage": [
+  {
+   "storageClass": "{{storageclass-1}}",
+   "capacity": 6332764,
+   "consumed": 0,
+   "unit": "Mi",
+   "capacityTiB": 6.04,
+   "consumedTiB": 0.0
+  },
+  {
+   "storageClass": "{{storageclass-2}}",
+   "capacity": 18830489,
+   "consumed": 900000,
+   "unit": "Mi",
+   "capacityTiB": 17.96,
+   "consumedTiB": 0.86
+  },
+  {
+   "storageClass": "{{storageclass-3}}",
+   "capacity": 18830489,
+   "consumed": 0,
+   "unit": "Mi",
+   "capacityTiB": 17.96,
+   "consumedTiB": 0.0
+  }
+ ],
+ "vmClasses": {
+  "count": 16,
+  "requireReservation": 0,
+  "sample": [
+   {
+    "name": "best-effort-2xlarge",
+    "cpuCount": 8,
+    "memory": "65536Mi",
+    "reservationRequired": false
+   },
+   {
+    "name": "best-effort-4xlarge",
+    "cpuCount": 16,
+    "memory": "131072Mi",
+    "reservationRequired": false
+   },
+   {
+    "name": "best-effort-8xlarge",
+    "cpuCount": 32,
+    "memory": "131072Mi",
+    "reservationRequired": false
+   },
+   {
+    "name": "best-effort-large",
+    "cpuCount": 4,
+    "memory": "16384Mi",
+    "reservationRequired": false
+   }
+  ]
+ }
+}

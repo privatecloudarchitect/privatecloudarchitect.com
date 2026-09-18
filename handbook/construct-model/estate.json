@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-17T16:47:24Z",
+ "captured_utc": "2026-09-18T15:58:06Z",
  "organization": "{{org}}",
  "published": {
   "regions": [
@@ -85,12 +85,12 @@
      "phase": "Created",
      "bound": {
       "region": "{{region-1}}",
-      "zone": null,
+      "zone": "{{zone-3}}",
       "class": "{{class-1}}",
       "vpc": "{{vpc-1}}",
-      "storageClasses": 0,
-      "vmClasses": 0,
-      "classOverrides": false
+      "storageClasses": 1,
+      "vmClasses": 4,
+      "classOverrides": true
      },
      "specFields": [
       "classConfigOverrides",
@@ -110,12 +110,12 @@
      "phase": "Created",
      "bound": {
       "region": "{{region-1}}",
-      "zone": null,
+      "zone": "{{zone-2}}",
       "class": "{{class-1}}",
       "vpc": "{{vpc-1}}",
-      "storageClasses": 0,
-      "vmClasses": 0,
-      "classOverrides": false
+      "storageClasses": 1,
+      "vmClasses": 4,
+      "classOverrides": true
      },
      "specFields": [
       "classConfigOverrides",
@@ -135,12 +135,12 @@
      "phase": "Created",
      "bound": {
       "region": "{{region-1}}",
-      "zone": null,
+      "zone": "{{zone-1}}",
       "class": "{{class-1}}",
       "vpc": "{{vpc-1}}",
-      "storageClasses": 0,
-      "vmClasses": 0,
-      "classOverrides": false
+      "storageClasses": 1,
+      "vmClasses": 4,
+      "classOverrides": true
      },
      "specFields": [
       "classConfigOverrides",
