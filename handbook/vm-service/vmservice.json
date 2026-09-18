@@ -1,0 +1,600 @@
+{
+ "captured_utc": "2026-09-18T19:25:29Z",
+ "vocabulary": [
+  "clustervirtualmachineimages",
+  "virtualmachineclasses",
+  "virtualmachinegrouppublishrequests",
+  "virtualmachinegroups",
+  "virtualmachineimagecaches",
+  "virtualmachineimages",
+  "virtualmachinepublishrequests",
+  "virtualmachinereplicasets",
+  "virtualmachines",
+  "virtualmachineservices",
+  "virtualmachinesetresourcepolicies",
+  "virtualmachinesnapshots",
+  "virtualmachinewebconsolerequests"
+ ],
+ "apiVersions": [
+  "v1alpha1",
+  "v1alpha2",
+  "v1alpha3",
+  "v1alpha4",
+  "v1alpha5"
+ ],
+ "preferred": "v1alpha5",
+ "primitive": {
+  "apiVersion": "v1alpha5",
+  "specFields": [
+   "biosUUID",
+   "bootstrap",
+   "className",
+   "hardware",
+   "image",
+   "imageName",
+   "instanceUUID",
+   "network",
+   "powerOffMode",
+   "powerState",
+   "promoteDisksMode",
+   "restartMode",
+   "storageClass",
+   "suspendMode",
+   "volumes"
+  ],
+  "statusFields": [
+   "biosUUID",
+   "changeBlockTracking",
+   "class",
+   "conditions",
+   "guest",
+   "hardware",
+   "hardwareVersion",
+   "instanceUUID",
+   "network",
+   "nodeName",
+   "powerState",
+   "storage",
+   "uniqueID",
+   "volumes",
+   "zone"
+  ],
+  "namesImageTwoWays": true,
+  "powerFields": [
+   "powerOffMode",
+   "powerState",
+   "restartMode",
+   "suspendMode"
+  ],
+  "powerDeclaredEqualsObserved": true
+ },
+ "arrivals": {
+  "total": 15,
+  "controllerOwned": 10,
+  "catalogWrapped": 3,
+  "rawOnTheWire": 2,
+  "claimedButAbsent": 0
+ },
+ "canTheMachineTell": {
+  "catalogHaveAMarker": 0,
+  "rawHaveAMarker": 0,
+  "keysInCommon": [
+   "mgmt.proxy.vmware.com/allowlist",
+   "mgmt.proxy.vmware.com/watermark",
+   "topology.kubernetes.io/zone",
+   "virtualmachine.vmoperator.vmware.com/first-boot-done",
+   "vmoperator.vmware.com/backup-version",
+   "vmoperator.vmware.com/created-at-build-version",
+   "vmoperator.vmware.com/created-at-schema-version",
+   "vmoperator.vmware.com/last-resized-vm-class",
+   "vmoperator.vmware.com/manager-id",
+   "vmoperator.vmware.com/upgraded-to-build-version",
+   "vmoperator.vmware.com/upgraded-to-feature-version",
+   "vmoperator.vmware.com/upgraded-to-schema-version"
+  ]
+ },
+ "machines": [
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "best-effort-small",
+   "controllerOwner": null,
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "app.kubernetes.io/component",
+    "app.kubernetes.io/name",
+    "app.kubernetes.io/part-of",
+    "postgres-cluster",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/backup-version",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version"
+   ],
+   "name": "{{vm-1}}"
+  },
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "best-effort-small",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-2}}"
+  },
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "best-effort-small",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "cluster.x-k8s.io/deployment-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-3}}"
+  },
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "best-effort-small",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "cluster.x-k8s.io/deployment-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-4}}"
+  },
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "best-effort-medium",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-5}}"
+  },
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "best-effort-medium",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "cluster.x-k8s.io/deployment-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-6}}"
+  },
+  {
+   "namespace": "{{namespace-1}}",
+   "class": "best-effort-large",
+   "controllerOwner": null,
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "topology.kubernetes.io/zone",
+    "vm-selector"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/backup-version",
+    "vmoperator.vmware.com/bootstrap-hash-customspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version"
+   ],
+   "name": "{{vm-7}}"
+  },
+  {
+   "namespace": "{{namespace-2}}",
+   "class": "best-effort-small",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-8}}"
+  },
+  {
+   "namespace": "{{namespace-2}}",
+   "class": "best-effort-small",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "cluster.x-k8s.io/deployment-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-9}}"
+  },
+  {
+   "namespace": "{{namespace-2}}",
+   "class": "best-effort-small",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "cluster.x-k8s.io/deployment-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-10}}"
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "class": "best-effort-xsmall",
+   "controllerOwner": null,
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/backup-version",
+    "vmoperator.vmware.com/bootstrap-hash-customspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version"
+   ],
+   "name": "{{vm-11}}"
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "class": "best-effort-xsmall",
+   "controllerOwner": null,
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/backup-version",
+    "vmoperator.vmware.com/bootstrap-hash-customspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version"
+   ],
+   "name": "{{vm-12}}"
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "class": "best-effort-medium",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-13}}"
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "class": "best-effort-medium",
+   "controllerOwner": "VSphereMachine",
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "capv.vmware.com/cluster.name",
+    "capv.vmware.com/cluster.role",
+    "capw.vmware.com/cluster.name",
+    "capw.vmware.com/cluster.role",
+    "cluster.x-k8s.io/cluster-name",
+    "cluster.x-k8s.io/deployment-name",
+    "topology.kubernetes.io/zone"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version",
+    "vsphere-cluster-module-group",
+    "vsphere-cluster-module-group-uuid",
+    "vsphere-tag"
+   ],
+   "name": "{{vm-14}}"
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "class": "best-effort-small",
+   "controllerOwner": null,
+   "specPowerState": "PoweredOn",
+   "statusPowerState": "PoweredOn",
+   "labelKeys": [
+    "topology.kubernetes.io/zone",
+    "vm-selector"
+   ],
+   "annotationKeys": [
+    "mgmt.proxy.vmware.com/allowlist",
+    "mgmt.proxy.vmware.com/watermark",
+    "virtualmachine.vmoperator.vmware.com/first-boot-done",
+    "vmoperator.vmware.com/backup-version",
+    "vmoperator.vmware.com/bootstrap-hash-configspec",
+    "vmoperator.vmware.com/created-at-build-version",
+    "vmoperator.vmware.com/created-at-schema-version",
+    "vmoperator.vmware.com/last-resized-vm-class",
+    "vmoperator.vmware.com/manager-id",
+    "vmoperator.vmware.com/upgraded-to-build-version",
+    "vmoperator.vmware.com/upgraded-to-feature-version",
+    "vmoperator.vmware.com/upgraded-to-schema-version"
+   ],
+   "name": "{{vm-15}}"
+  }
+ ],
+ "blueprintResourceTypes": [
+  "CCI.Supervisor.Namespace",
+  "CCI.Supervisor.Resource",
+  "CCI.VPC",
+  "CCI.VPC.Configuration",
+  "Util.PasswordEntry"
+ ],
+ "wrappedKinds": {
+  "Cluster": 4,
+  "Secret": 1,
+  "VirtualMachineImage": 5,
+  "VirtualMachineClass": 5,
+  "SubnetSet": 5,
+  "VirtualMachine": 5,
+  "KubeadmControlPlane": 3,
+  "VSphereCluster": 3
+ },
+ "classes": [
+  {
+   "name": "best-effort-large",
+   "hasPolicyBlock": true,
+   "allPolicyValuesZero": true
+  },
+  {
+   "name": "best-effort-medium",
+   "hasPolicyBlock": true,
+   "allPolicyValuesZero": true
+  },
+  {
+   "name": "best-effort-small",
+   "hasPolicyBlock": true,
+   "allPolicyValuesZero": true
+  },
+  {
+   "name": "best-effort-xsmall",
+   "hasPolicyBlock": true,
+   "allPolicyValuesZero": true
+  }
+ ],
+ "publishedClasses": 16,
+ "requireReservation": 0,
+ "exposure": {
+  "LoadBalancer": 6
+ },
+ "deployments": 8
+}
