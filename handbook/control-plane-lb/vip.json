@@ -1,0 +1,117 @@
+{
+ "captured_utc": "2026-09-18T22:21:21Z",
+ "counts": {
+  "virtualServices": 5,
+  "addressObjects": 5,
+  "policySets": 5,
+  "pools": 7,
+  "selectionRules": 7
+ },
+ "graph": [
+  {
+   "virtualService": "{{vs-1}}",
+   "ports": [
+    443,
+    6443
+   ],
+   "enabled": true,
+   "hasDirectPoolRef": false,
+   "addressObject": true,
+   "policySets": 1,
+   "poolsSelected": [
+    {
+     "pool": "{{pool-1}}",
+     "members": 3,
+     "marksApiserverPort": false
+    },
+    {
+     "pool": "{{pool-2}}",
+     "members": 3,
+     "marksApiserverPort": true
+    }
+   ]
+  },
+  {
+   "virtualService": "{{vs-2}}",
+   "ports": [
+    53
+   ],
+   "enabled": true,
+   "hasDirectPoolRef": false,
+   "addressObject": true,
+   "policySets": 1,
+   "poolsSelected": [
+    {
+     "pool": "{{pool-4}}",
+     "members": 3,
+     "marksApiserverPort": false
+    },
+    {
+     "pool": "{{pool-3}}",
+     "members": 3,
+     "marksApiserverPort": false
+    }
+   ]
+  },
+  {
+   "virtualService": "{{vs-3}}",
+   "ports": [
+    5000
+   ],
+   "enabled": true,
+   "hasDirectPoolRef": false,
+   "addressObject": true,
+   "policySets": 1,
+   "poolsSelected": [
+    {
+     "pool": "{{pool-5}}",
+     "members": 3,
+     "marksApiserverPort": false
+    }
+   ]
+  },
+  {
+   "virtualService": "{{vs-4}}",
+   "ports": [
+    443
+   ],
+   "enabled": true,
+   "hasDirectPoolRef": false,
+   "addressObject": true,
+   "policySets": 1,
+   "poolsSelected": [
+    {
+     "pool": "{{pool-6}}",
+     "members": 3,
+     "marksApiserverPort": false
+    }
+   ]
+  },
+  {
+   "virtualService": "{{vs-5}}",
+   "ports": [
+    10093
+   ],
+   "enabled": true,
+   "hasDirectPoolRef": false,
+   "addressObject": true,
+   "policySets": 1,
+   "poolsSelected": [
+    {
+     "pool": "{{pool-7}}",
+     "members": 1,
+     "marksApiserverPort": false
+    }
+   ]
+  }
+ ],
+ "reconciles": true,
+ "poolsSelectedByARule": 7,
+ "poolSizes": {
+  "1": 1,
+  "3": 6
+ },
+ "emptyPools": 0,
+ "addressesAllocated": 5,
+ "note": "a virtual service reaches its pools through an l4 policy set, not a direct reference, so one virtual service can front several pools chosen per port"
+}
