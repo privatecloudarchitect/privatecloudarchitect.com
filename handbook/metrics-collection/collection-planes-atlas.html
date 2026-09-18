@@ -393,10 +393,11 @@ figure .strip svg{width:100%}
   <figcaption><b>How to read it.</b> Each bar starts at the grain's cadence and ends where the store stops keeping it. A bar that ends early is a deadline: the hot-set must be extracted within days, native 5-minute data within six months, and ESX Top within hours, because on this build its cut arrives in one step when the store gets to it.</figcaption>
   </figure>
   <div class="read">
-    <div><h3>The settings behind the bars (all at defaults)</h3><ul>
+    <div><h3>The settings behind the bars, as this instance reports them</h3><ul>
       <li><span class="num">TIME_SERIES_DATA_RETENTION_IN_MONTHS = 6</span>, then <span class="num">ROLLUP_TIME_SERIES_DATA_RETENTION_IN_MONTHS = 36</span> <span class="num">live</span>.</li>
       <li><span class="num">REALTIME_DATA_RETENTION_IN_DAYS = 15</span>; <span class="num">ESX_TOP_DATA_RETENTION_IN_HOURS = 24</span> <span class="num">live</span>. The 6-hour figure in the 9.1 pages is the ESX Top view's maximum time range, not retention <span class="num">doc</span>.</li>
       <li>The vCenter rollup ladder is documented; the real-time window is short and is not a store <span class="num">doc</span>.</li>
+        <li><b>The platform will not tell you whether these are defaults.</b> The settings API answers a key and its value and nothing else: there is no default beside it and no defaults endpoint to compare against, so an instance cannot be asked whether a retention setting was ever changed. That matters most when you inherit one. Record what you set, because the platform keeps no memory of what it started as <span class="num">live</span>.</li>
     </ul></div>
     <div><h3>What lazy enforcement means for a pipeline</h3><ul>
       <li>A served horizon can run past its setting for days and then drop in one step. Never plan on data older than the setting being there, and never assume a fixed cut.</li>
