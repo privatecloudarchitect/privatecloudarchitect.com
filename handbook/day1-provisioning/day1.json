@@ -1,0 +1,390 @@
+{
+ "captured_utc": "2026-09-18T16:56:20Z",
+ "vocabulary": [
+  {
+   "group": "blueprint.cci.vmware.com/v1alpha1",
+   "resource": "blueprintresourcetypes",
+   "kind": "BlueprintResourceType",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  },
+  {
+   "group": "blueprint.cci.vmware.com/v1alpha1",
+   "resource": "blueprintexportrequests",
+   "kind": "BlueprintExportRequest",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "writable": true
+  },
+  {
+   "group": "blueprint.cci.vmware.com/v1alpha1",
+   "resource": "blueprints",
+   "kind": "Blueprint",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "writable": true
+  },
+  {
+   "group": "blueprint.cci.vmware.com/v1alpha1",
+   "resource": "blueprintimportrequests",
+   "kind": "BlueprintImportRequest",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "writable": true
+  },
+  {
+   "group": "blueprint.cci.vmware.com/v1alpha1",
+   "resource": "blueprintversions",
+   "kind": "BlueprintVersion",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "writable": true
+  },
+  {
+   "group": "catalog.cci.vmware.com/v1alpha1",
+   "resource": "instances",
+   "kind": "Instance",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "get",
+    "list",
+    "patch",
+    "update"
+   ],
+   "writable": true
+  },
+  {
+   "group": "catalog.cci.vmware.com/v1alpha1",
+   "resource": "catalogitemversions",
+   "kind": "CatalogItemVersion",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  },
+  {
+   "group": "catalog.cci.vmware.com/v1alpha1",
+   "resource": "catalogitems",
+   "kind": "CatalogItem",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  },
+  {
+   "group": "catalog.cci.vmware.com/v1alpha1",
+   "resource": "instancerequests",
+   "kind": "InstanceRequests",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  },
+  {
+   "group": "catalog.cci.vmware.com/v1alpha1",
+   "resource": "instanceactions",
+   "kind": "InstanceActions",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  },
+  {
+   "group": "catalog.cci.vmware.com/v1alpha1",
+   "resource": "instanceresources",
+   "kind": "InstanceResource",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  },
+  {
+   "group": "catalog.cci.vmware.com/v1alpha1",
+   "resource": "instanceuserevents",
+   "kind": "InstanceUserEvents",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  },
+  {
+   "group": "image.cci.vmware.com/v1alpha1",
+   "resource": "images",
+   "kind": "Image",
+   "namespaced": true,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "writable": false
+  }
+ ],
+ "surfaces": {
+  "classicDeployments": 8,
+  "cciInstances": 8,
+  "classicFields": [
+   "blueprintId",
+   "blueprintVersion",
+   "catalogItemId",
+   "catalogItemVersion",
+   "createdAt",
+   "createdBy",
+   "description",
+   "iconId",
+   "id",
+   "inputs",
+   "lastUpdatedAt",
+   "lastUpdatedBy",
+   "leaseGracePeriodDays",
+   "name",
+   "orgId",
+   "outputs",
+   "ownedBy",
+   "ownerType",
+   "projectId",
+   "status"
+  ],
+  "cciFields": [
+   "creationTimestamp",
+   "description",
+   "inputs",
+   "leaseGracePeriodDays",
+   "name",
+   "namespace",
+   "outputs",
+   "sourceRef",
+   "status",
+   "uid"
+  ],
+  "onlyOnClassic": [
+   "blueprintId",
+   "blueprintVersion",
+   "catalogItemId",
+   "catalogItemVersion",
+   "createdAt",
+   "createdBy",
+   "iconId",
+   "id",
+   "lastUpdatedAt",
+   "lastUpdatedBy",
+   "orgId",
+   "ownedBy",
+   "ownerType",
+   "projectId"
+  ],
+  "onlyOnCci": [
+   "creationTimestamp",
+   "namespace",
+   "sourceRef",
+   "uid"
+  ],
+  "identityFieldsOnlyOnClassic": [
+   "createdBy",
+   "lastUpdatedBy",
+   "ownedBy",
+   "ownerType"
+  ]
+ },
+ "tree": [
+  {
+   "project": "{{project-1}}",
+   "blueprints": 12,
+   "versions": 21,
+   "catalogItems": 10,
+   "versionsByBlueprint": {
+    "{{blueprint-2}}": [
+     "1.1.0",
+     "1.4.0",
+     "1.5.0",
+     "3.1.0",
+     "3.2.0"
+    ],
+    "{{blueprint-4}}": [
+     "1"
+    ],
+    "{{blueprint-5}}": [
+     "1.1.0",
+     "3.1.0",
+     "3.1.1",
+     "4.0.1",
+     "4.1.0"
+    ],
+    "{{blueprint-6}}": [
+     "1.0.0"
+    ],
+    "{{blueprint-7}}": [
+     "1.0.0"
+    ],
+    "{{blueprint-8}}": [
+     "1.0.0",
+     "1.1.0"
+    ],
+    "{{blueprint-10}}": [
+     "2.1.0",
+     "3.1.0",
+     "3.1.1",
+     "3.1.2"
+    ],
+    "{{blueprint-12}}": [
+     "1",
+     "1.1"
+    ]
+   },
+   "versionObjectNamesJoinWith": ":"
+  },
+  {
+   "project": "{{project-2}}",
+   "blueprints": 2,
+   "versions": 2,
+   "catalogItems": 10,
+   "versionsByBlueprint": {
+    "Example Blueprint": [
+     "1"
+    ],
+    "Tradition-VM-Pair": [
+     "1"
+    ]
+   },
+   "versionObjectNamesJoinWith": ":"
+  }
+ ],
+ "catalogScoping": {
+  "identicalAcrossProjects": true,
+  "projectsCompared": 2,
+  "itemsPerProject": [
+   10,
+   10
+  ],
+  "markedGlobal": 0,
+  "carryingAProjectList": 10,
+  "total": 10
+ },
+ "schema": {
+  "keys": [
+   "encrypted",
+   "properties",
+   "required",
+   "type"
+  ],
+  "properties": 5,
+  "required": 2,
+  "carriesTheTemplate": false
+ },
+ "resourceTypes": [
+  "CCI.Supervisor.Namespace",
+  "CCI.Supervisor.Resource",
+  "CCI.VPC",
+  "CCI.VPC.Configuration",
+  "Util.PasswordEntry"
+ ],
+ "images": {
+  "count": 3,
+  "objectNameIsTheDisplayName": false,
+  "objectNameIsAUuid": false,
+  "specFields": [
+   "contentLibraryName",
+   "displayName",
+   "type"
+  ],
+  "statusFields": [
+   "sizeInBytes",
+   "status"
+  ]
+ },
+ "release": {
+  "cases": [
+   {
+    "case": "a version object under a name of your choosing",
+    "face": "cci",
+    "status": 422,
+    "outcome": "refused",
+    "message": "BlueprintVersion.blueprint.cci.vmware.com \"wrong-name\" is invalid: [metadata.name: metadata.name must equal 'spec.blueprintName:spec.version'. Expected 'probe-day1-release:1.0.0' but got 'wrong-name']"
+   },
+   {
+    "case": "release a version with publishToCatalog true",
+    "face": "cci",
+    "status": 200,
+    "outcome": "accepted",
+    "catalogItemsBefore": 10,
+    "catalogItemsAfter": 11
+   },
+   {
+    "case": "DELETE the version object",
+    "face": "cci",
+    "status": 200,
+    "outcome": "accepted",
+    "versionStillExists": true,
+    "publishToCatalogAfter": false,
+    "catalogItemsAfter": 10,
+    "verdict": "the object survives and publishToCatalog flips to false: this is an unrelease"
+   },
+   {
+    "case": "DELETE the same version",
+    "face": "classic",
+    "status": 405,
+    "outcome": "refused",
+    "message": "Method 'DELETE' is not supported."
+   },
+   {
+    "case": "unrelease the same version, by its own name",
+    "face": "classic",
+    "status": 200,
+    "outcome": "accepted",
+    "message": ""
+   },
+   {
+    "case": "DELETE the blueprint object",
+    "face": "cci",
+    "status": 200,
+    "outcome": "accepted"
+   }
+  ],
+  "residue": []
+ }
+}
