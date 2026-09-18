@@ -47,10 +47,18 @@ def ctx():
 class Labels:
     """Stable placeholders: the first group met is {{group-1}}, the second policy is {{policy-2}}."""
 
+    # The product's own vocabulary is never an estate name. A principal can be called exactly what a platform
+    # object is called (this estate has a user named "admin" and a project role named "admin"), and registering
+    # one teaches the scrubber to blank the other. A name in RESERVED identifies no estate and is left alone.
+    RESERVED = {"admin", "view", "edit", "user", "users", "group", "groups", "owner", "auditor", "auditors",
+                "administrator", "administrators", "default", "system", "none", "all"}
+
     def __init__(self):
         self.maps = {}
 
     def get(self, family, name):
+        if str(name) in self.RESERVED:
+            return name
         m = self.maps.setdefault(family, {})
         if name not in m:
             m[name] = f"{family}-{len(m) + 1}"
@@ -61,8 +69,13 @@ class Labels:
         if not isinstance(text, str):
             return text
         known = [(real, label) for m in self.maps.values() for real, label in m.items()]
+        # Longest first so a contained name cannot corrupt a longer one, and on a WORD BOUNDARY so a short
+        # name is not replaced inside an unrelated word. A principal really can be called "admin", and a naive
+        # replace turns the field name "administrators" into "{{user-3}}istrators". The leak check below uses
+        # the same boundary, so what the scrub replaces and what the check looks for are one rule.
         for real, label in sorted(known, key=lambda kv: -len(kv[0])):
-            text = text.replace(real, "{{%s}}" % label)
+            text = re.sub(r"(?<![A-Za-z0-9-])" + re.escape(real) + r"(?![A-Za-z0-9-])",
+                          "{{%s}}" % label, text)
         return UUID.sub("{{id}}", text)
 
 
