@@ -1,0 +1,53 @@
+{
+ "captured_utc": "2026-09-18T18:20:53Z",
+ "policyTypes": [
+  {
+   "id": "com.vmware.policy.supervisor.iaas",
+   "timeBoundedFields": [],
+   "governs": "what the supervisor plane will accept"
+  },
+  {
+   "id": "com.vmware.policy.deployment.action",
+   "timeBoundedFields": [],
+   "governs": "what a principal may do to a deployment"
+  },
+  {
+   "id": "com.vmware.policy.deployment.lease",
+   "timeBoundedFields": [],
+   "governs": "how long a deployment lives"
+  },
+  {
+   "id": "com.vmware.policy.approval",
+   "timeBoundedFields": [],
+   "governs": "whether a request needs a human"
+  }
+ ],
+ "access": {
+  "projectRoleBindingFields": [
+   "metadata",
+   "roleRef",
+   "subjects"
+  ],
+  "projectRoleBindingMetadataFields": [
+   "name",
+   "namespace",
+   "uid"
+  ],
+  "projectRoleFields": [
+   "metadata",
+   "spec"
+  ],
+  "anyExpiryField": [],
+  "bindings": 4,
+  "roles": [
+   "view",
+   "edit",
+   "admin",
+   "edit_adv"
+  ]
+ },
+ "deploymentLeaseFields": [
+  "leaseGracePeriodDays"
+ ],
+ "elevation": null
+}

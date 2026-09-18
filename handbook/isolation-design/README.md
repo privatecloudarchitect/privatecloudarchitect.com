@@ -53,7 +53,6 @@ estate with a self-signed CA, add `--insecure-skip-tls-verify=true` to the `set-
 ### 1. Provision the project and all four bindings (one apply each)
 
 ```bash
-kubectl --context vcfa-cci apply --server-side --dry-run=server -f manifests/00-project.yaml
 kubectl --context vcfa-cci apply --server-side -f manifests/00-project.yaml
 kubectl --context vcfa-cci apply --server-side -f manifests/10-rolebindings.yaml
 
@@ -64,6 +63,14 @@ kubectl --context vcfa-cci get projectrolebindings.authorization.cci.vmware.com 
 **Watch point:** plain `kubectl apply` is rejected on this plane ("Annotation updates are not
 supported"); `--server-side` is required, and it is what makes the manifests idempotent. This is
 the scalable core: N users are N documents in one file, applied in a single call.
+
+**Watch point, and the reason there is no rehearsal step above:** `--dry-run=server` is **not
+honoured on this plane, and it is not refused either**. Asked on 2026-09-18 against VCF Automation
+9.1, a server-side apply carrying `?dryRun=All` returned HTTP 200 and **applied the change**: a
+`ProjectRoleBinding` moved from one role to another, and a `Project` took a new description that was
+still there 45 seconds later. Both were reverted. An earlier revision of this file opened with a
+`--dry-run=server` of `00-project.yaml`; that command creates the project. Treat every write on this
+plane as a write, and rehearse against a project nobody depends on instead.
 
 ### 2. Give the project a namespace, then publish the blueprint
 

@@ -12,7 +12,9 @@
 #   apply` keys on a fixed name and is the wrong verb here.
 # - segName is required on a region whose load balancing is registered through NSX (set below).
 # - The region the namespace names must exist on your organization; no per-project console
-#   step is needed. This resource does not support --dry-run=server.
+#   step is needed. This resource does not support --dry-run=server, which is the SAFE answer:
+#   it refuses. On the project and rolebinding kinds the same flag is accepted, ignored, and the
+#   write is applied (verified 2026-09-18). Never treat --dry-run=server as a rehearsal here.
 apiVersion: infrastructure.cci.vmware.com/v1alpha3
 kind: SupervisorNamespace
 metadata:
