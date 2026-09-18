@@ -1,0 +1,100 @@
+{
+ "captured_utc": "2026-09-18T22:35:25Z",
+ "instances": [
+  {
+   "label": "the instance asked about",
+   "domains": {
+    "total": 2,
+    "management": 1,
+    "workload": 1
+   },
+   "releases": 19,
+   "bundles": {
+    "total": 327,
+    "byStatus": {
+     "PENDING": 297,
+     "SUCCESSFUL": 29,
+     "FAILED": 1
+    }
+   },
+   "upgradables": 4,
+   "distinctBundlesOffered": 3,
+   "offeredAndStaged": 0,
+   "unstagedGB": 33.2,
+   "join": [
+    {
+     "upgradableStatus": "PENDING",
+     "bundleType": "VMWARE_SOFTWARE",
+     "downloadStatus": "PENDING",
+     "sizeMB": 7229.5,
+     "staged": false
+    },
+    {
+     "upgradableStatus": "PENDING",
+     "bundleType": "VMWARE_SOFTWARE",
+     "downloadStatus": "PENDING",
+     "sizeMB": 26051.6,
+     "staged": false
+    },
+    {
+     "upgradableStatus": "PENDING",
+     "bundleType": "VMWARE_SOFTWARE",
+     "downloadStatus": "PENDING",
+     "sizeMB": 699.5,
+     "staged": false
+    },
+    {
+     "upgradableStatus": "PENDING",
+     "bundleType": "VMWARE_SOFTWARE",
+     "downloadStatus": "PENDING",
+     "sizeMB": 7229.5,
+     "staged": false
+    }
+   ],
+   "workloadDomainRefusal": {
+    "status": 400,
+    "message": "Management Domain with ID {{id}} not found."
+   },
+   "depot": {
+    "via": "v1/services-config",
+    "services": [
+     {
+      "type": "VCF_DEPOT",
+      "nodes": 1
+     }
+    ]
+   }
+  },
+  {
+   "label": "the rehearsal instance",
+   "domains": {
+    "total": 1,
+    "management": 1,
+    "workload": 0
+   },
+   "releases": 19,
+   "bundles": {
+    "total": 325,
+    "byStatus": {
+     "PENDING": 298,
+     "SUCCESSFUL": 27
+    }
+   },
+   "upgradables": 0,
+   "distinctBundlesOffered": 0,
+   "offeredAndStaged": 0,
+   "unstagedGB": 0.0,
+   "join": [],
+   "workloadDomainRefusal": null,
+   "depot": {
+    "via": "v1/services-config",
+    "services": [
+     {
+      "type": "VCF_DEPOT",
+      "nodes": 1
+     }
+    ]
+   }
+  }
+ ]
+}
