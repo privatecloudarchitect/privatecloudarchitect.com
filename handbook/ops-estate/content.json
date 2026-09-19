@@ -1,0 +1,322 @@
+{
+ "captured_utc": "2026-09-19T03:02:31Z",
+ "owner": "PCA",
+ "census": [
+  {
+   "class": "custom groups",
+   "total": 63,
+   "owned": 14,
+   "conformingToSchema": 14,
+   "fieldCounts": {
+    "4": 14
+   }
+  },
+  {
+   "class": "super metrics",
+   "total": 177,
+   "owned": 100,
+   "conformingToSchema": 100,
+   "fieldCounts": {
+    "4": 92,
+    "5": 8
+   }
+  },
+  {
+   "class": "alert definitions",
+   "total": 1824,
+   "owned": 13,
+   "conformingToSchema": 10,
+   "fieldCounts": {
+    "4": 3,
+    "3": 3,
+    "5": 7
+   }
+  },
+  {
+   "class": "symptom definitions",
+   "total": 2926,
+   "owned": 24,
+   "conformingToSchema": 0,
+   "fieldCounts": {
+    "3": 24
+   }
+  },
+  {
+   "class": "policies",
+   "total": 41,
+   "owned": 7,
+   "conformingToSchema": 7,
+   "fieldCounts": {
+    "4": 7
+   }
+  },
+  {
+   "class": "report definitions",
+   "total": 136,
+   "owned": 0,
+   "conformingToSchema": 0,
+   "fieldCounts": {}
+  },
+  {
+   "class": "reports",
+   "total": 0,
+   "owned": 0,
+   "conformingToSchema": 0,
+   "fieldCounts": {}
+  },
+  {
+   "class": "notification rules",
+   "total": 5,
+   "owned": 0,
+   "conformingToSchema": 0,
+   "fieldCounts": {}
+  }
+ ],
+ "totals": {
+  "objects": 5172,
+  "owned": 158,
+  "conformingToSchema": 131
+ },
+ "ownedNames": [
+  "PCA - Availability - Check - Packet Delivery (%)",
+  "PCA - Availability - Check Unreachable (FQDN)",
+  "PCA - Availability - Check Unreachable (IP)",
+  "PCA - Availability - Fleet Reachability Degraded",
+  "PCA - Availability - Group - Checks",
+  "PCA - Availability - Ping Instance - Checks (count)",
+  "PCA - Availability - Ping Instance - Checks Reachable (count)",
+  "PCA - Availability - Ping Instance - Checks Unreachable (count)",
+  "PCA - Availability - Ping Instance - Reachability SLI (%)",
+  "PCA - Availability - Policy - Checks",
+  "PCA - Availability - Reachability SLI below 100",
+  "PCA - Availability - Worst-of-cycle loss at 100 (FQDN)",
+  "PCA - Availability - Worst-of-cycle loss at 100 (IP)",
+  "PCA - MemTier - Cluster - Fleet Actual Uplift GB",
+  "PCA - MemTier - Cluster - Fleet Capex Avoided USD",
+  "PCA - MemTier - Cluster - Fleet DRAM Avoided USD",
+  "PCA - MemTier - Cluster - Fleet Uplift GB",
+  "PCA - MemTier - Cluster - Hosts Actively Tiering",
+  "PCA - MemTier - Cluster - Hosts Over Gate",
+  "PCA - MemTier - Cluster - Recoverable Cold DRAM GB",
+  "PCA - MemTier - Cluster - Untiered Hosts",
+  "PCA - MemTier - Cluster - Worst Host Active pct of DRAM",
+  "PCA - MemTier - Host - Active pct of DRAM",
+  "PCA - MemTier - Host - Actual Tiering Uplift GB",
+  "PCA - MemTier - Host - Capex Avoided USD",
+  "PCA - MemTier - Host - DRAM Avoided USD",
+  "PCA - MemTier - Host - NVMe Tier Used GB",
+  "PCA - MemTier - Host - Price Delta USD per GB",
+  "PCA - MemTier - Host - Recoverable Cold DRAM GB",
+  "PCA - MemTier - Host - Reserved Memory GB",
+  "PCA - MemTier - Host - Tiering Uplift GB",
+  "PCA - Rightsizing - Cluster - Oversized VM Count (VMs)",
+  "PCA - Rightsizing - VM - Memory Oversized (%)",
+  "PCA - Rightsizing - VM - Memory Workload %",
+  "PCA - Rightsizing - VM - Recommended Memory (GB)",
+  "PCA - Shared - Cluster - Consumed pct of HA DRAM",
+  "PCA - Shared - Cluster - Cost Coverage (%)",
+  "PCA - Shared - Cluster - Fleet Reclaimable Cost (USD/mo)",
+  "PCA - Shared - Cluster - Total Cost (USD/mo)",
+  "PCA - Shared - Host - Consumed pct of DRAM",
+  "PCA - Shared - VM - Memory Reclaimable (GB)",
+  "PCA - WTPC - Admission control not enabled",
+  "PCA - WTPC - Capacity Envelope Breach - prod-latency-critical-db",
+  "PCA - WTPC - Cluster - Breach Reclaimable Memory (prod-latency-critical-db)",
+  "PCA - WTPC - Cluster - Breach Reclaimable Memory (test-dev-traditional)",
+  "PCA - WTPC - Cluster - CPU Overcommit (vCPU per pCPU)",
+  "PCA - WTPC - Cluster - Cluster VMs (count)",
+  "PCA - WTPC - Cluster - Cost Coverage (%)",
+  "PCA - WTPC - Cluster - Cost per Workload (USD/mo)",
+  "PCA - WTPC - Cluster - Density Position vs Target (test-dev-traditional)",
+  "PCA - WTPC - Cluster - Hosts Over CPU Envelope (count) (prod-latency-critical-db)",
+  "PCA - WTPC - Cluster - Hosts Over CPU Envelope (count) (test-dev-traditional)",
+  "PCA - WTPC - Cluster - Hosts Over Memory Envelope (count) (prod-latency-critical-db)",
+  "PCA - WTPC - Cluster - Hosts Over Memory Envelope (count) (test-dev-traditional)",
+  "PCA - WTPC - Cluster - Member Hosts (count)",
+  "PCA - WTPC - Cluster - Member VMs prod-latency-critical-db (count)",
+  "PCA - WTPC - Cluster - Member VMs test-dev-traditional (count)",
+  "PCA - WTPC - Cluster - Memory Overcommit (x DRAM)",
+  "PCA - WTPC - Cluster - Mixed Posture Flag (count)",
+  "PCA - WTPC - Cluster - Postured Share (%)",
+  "PCA - WTPC - Cluster - Postured VMs (count)",
+  "PCA - WTPC - Cluster - Reclaimable Envelope Position (prod-latency-critical-db)",
+  "PCA - WTPC - Cluster - Reclaimable Envelope Position (test-dev-traditional)",
+  "PCA - WTPC - Cluster - Reclaimable Memory (%)",
+  "PCA - WTPC - Cluster - Total Cost (USD/mo)",
+  "PCA - WTPC - Cluster - Uncovered Strict VMs (count)",
+  "PCA - WTPC - Cluster - Unpostured VMs (count)",
+  "PCA - WTPC - Cluster - VMs Over Contention Breach (count) (prod-latency-critical-db)",
+  "PCA - WTPC - Cluster - VMs Over Contention Breach (count) (test-dev-traditional)",
+  "PCA - WTPC - Cluster - VMs Over Ready Breach (count) (prod-latency-critical-db)",
+  "PCA - WTPC - Cluster - VMs Over Ready Breach (count) (test-dev-traditional)",
+  "PCA - WTPC - Cluster - VMs Swapping (count)",
+  "PCA - WTPC - Cluster - Worst Host Memory Overcommit (x DRAM)",
+  "PCA - WTPC - Cluster - Worst VM CPU Co-stop (%)",
+  "PCA - WTPC - Cluster - Worst VM CPU Ready (%)",
+  "PCA - WTPC - Cluster - Worst VM Memory Contention (%)",
+  "PCA - WTPC - Consumed % of HA DRAM over 100",
+  "PCA - WTPC - Cost Envelope Breach - prod-latency-critical-db",
+  "PCA - WTPC - DRS not fully automated",
+  "PCA - WTPC - Failover level below N+1",
+  "PCA - WTPC - Floor Breach - Failover Headroom - prod-latency-critical-db",
+  "PCA - WTPC - Floor Breach - HA/DRS Config - prod-latency-critical-db",
+  "PCA - WTPC - Floor Breach - VM Swapping - prod-latency-critical-db",
+  "PCA - WTPC - Group - estate-governance (Clusters)",
+  "PCA - WTPC - Group - prod-latency-critical-db (Clusters)",
+  "PCA - WTPC - Group - prod-latency-critical-db (Hosts)",
+  "PCA - WTPC - Group - prod-latency-critical-db (VMs)",
+  "PCA - WTPC - Group - test-dev-traditional (Clusters)",
+  "PCA - WTPC - Group - test-dev-traditional (Hosts)",
+  "PCA - WTPC - Group - test-dev-traditional (VMs)",
+  "PCA - WTPC - HA config issues present",
+  "PCA - WTPC - Host - Breach CPU Overcommit (prod-latency-critical-db)",
+  "PCA - WTPC - Host - Breach CPU Overcommit (test-dev-traditional)",
+  "PCA - WTPC - Host - Breach Memory Overcommit (prod-latency-critical-db)",
+  "PCA - WTPC - Host - Breach Memory Overcommit (test-dev-traditional)",
+  "PCA - WTPC - Host - CPU Overcommit (vCPU per pCPU)",
+  "PCA - WTPC - Host - CPU Overcommit Envelope Position (prod-latency-critical-db)",
+  "PCA - WTPC - Host - CPU Overcommit Envelope Position (test-dev-traditional)",
+  "PCA - WTPC - Host - Memory Overcommit (x DRAM)",
+  "PCA - WTPC - Host - Memory Overcommit Envelope Position (prod-latency-critical-db)",
+  "PCA - WTPC - Host - Memory Overcommit Envelope Position (test-dev-traditional)",
+  "PCA - WTPC - Host - VM Memory Provisioned (GB)",
+  "PCA - WTPC - Host - VM vCPU Allocated (count)",
+  "PCA - WTPC - Host over its tier CPU Overcommit ceiling (dedicated)",
+  "PCA - WTPC - Host over its tier CPU Overcommit ceiling (density)",
+  "PCA - WTPC - Host over its tier CPU Overcommit ceiling (performance)",
+  "PCA - WTPC - Host over its tier CPU Overcommit ceiling (standard)",
+  "PCA - WTPC - Host over its tier Memory Overcommit ceiling (dedicated)",
+  "PCA - WTPC - Host over its tier Memory Overcommit ceiling (density)",
+  "PCA - WTPC - Host over its tier Memory Overcommit ceiling (performance)",
+  "PCA - WTPC - Host over its tier Memory Overcommit ceiling (standard)",
+  "PCA - WTPC - Member VMs over Contention breach",
+  "PCA - WTPC - Member VMs over Ready breach",
+  "PCA - WTPC - Member VMs swapping",
+  "PCA - WTPC - Member hosts over CPU envelope",
+  "PCA - WTPC - Member hosts over Memory envelope",
+  "PCA - WTPC - Performance Envelope Breach - prod-latency-critical-db",
+  "PCA - WTPC - Policy - prod-latency-critical-db",
+  "PCA - WTPC - Policy - test-dev-traditional",
+  "PCA - WTPC - Reclaimable position past breach",
+  "PCA - WTPC - Tier - dedicated",
+  "PCA - WTPC - Tier - dedicated (Clusters)",
+  "PCA - WTPC - Tier - dedicated (Hosts)",
+  "PCA - WTPC - Tier - dedicated - Host CPU Overcommit Position",
+  "PCA - WTPC - Tier - dedicated - Host Capacity Breach",
+  "PCA - WTPC - Tier - dedicated - Host Memory Overcommit Position",
+  "PCA - WTPC - Tier - density",
+  "PCA - WTPC - Tier - density (Clusters)",
+  "PCA - WTPC - Tier - density - Host CPU Overcommit Position",
+  "PCA - WTPC - Tier - density - Host Capacity Breach",
+  "PCA - WTPC - Tier - density - Host Memory Overcommit Position",
+  "PCA - WTPC - Tier - performance",
+  "PCA - WTPC - Tier - performance (Clusters)",
+  "PCA - WTPC - Tier - performance - Host CPU Overcommit Position",
+  "PCA - WTPC - Tier - performance - Host Capacity Breach",
+  "PCA - WTPC - Tier - performance - Host Memory Overcommit Position",
+  "PCA - WTPC - Tier - standard",
+  "PCA - WTPC - Tier - standard (Clusters)",
+  "PCA - WTPC - Tier - standard (Hosts)",
+  "PCA - WTPC - Tier - standard - Host CPU Overcommit Position",
+  "PCA - WTPC - Tier - standard - Host Capacity Breach",
+  "PCA - WTPC - Tier - standard - Host Memory Overcommit Position",
+  "PCA - WTPC - VM - Breach CPU Co-stop (prod-latency-critical-db)",
+  "PCA - WTPC - VM - Breach CPU Ready (prod-latency-critical-db)",
+  "PCA - WTPC - VM - Breach CPU Ready (test-dev-traditional)",
+  "PCA - WTPC - VM - Breach Memory Balloon (prod-latency-critical-db)",
+  "PCA - WTPC - VM - Breach Memory Contention (prod-latency-critical-db)",
+  "PCA - WTPC - VM - Breach Memory Contention (test-dev-traditional)",
+  "PCA - WTPC - VM - CPU Co-stop Envelope Position (prod-latency-critical-db)",
+  "PCA - WTPC - VM - CPU Ready Envelope Position (prod-latency-critical-db)",
+  "PCA - WTPC - VM - CPU Ready Envelope Position (test-dev-traditional)",
+  "PCA - WTPC - VM - Memory Balloon Envelope Position (prod-latency-critical-db)",
+  "PCA - WTPC - VM - Memory Contention Envelope Position (prod-latency-critical-db)",
+  "PCA - WTPC - VM - Memory Contention Envelope Position (test-dev-traditional)",
+  "PCA - WTPC - VM - Memory Reservation Coverage (%)",
+  "PCA - WTPC - VM - Uncovered Memory (GB)",
+  "PCA - WTPC - VM over CPU Ready envelope",
+  "PCA - WTPC - VM over Memory Contention envelope"
+ ],
+ "prefixWithoutSeparatorWouldAlsoClaim": 1,
+ "integrity": {
+  "references": 3358,
+  "dangling": 0,
+  "byEdge": [
+   {
+    "edge": "alert definition -> symptom definition",
+    "references": 3337,
+    "dangling": 0
+   },
+   {
+    "edge": "custom group -> policy",
+    "references": 19,
+    "dangling": 0
+   },
+   {
+    "edge": "notification rule -> alert definition",
+    "references": 2,
+    "dangling": 0
+   }
+  ],
+  "negatedSymptomReferences": 34,
+  "groupsCarryingAPolicy": 19,
+  "groupsTotal": 63
+ },
+ "definedVersusSet": {
+  "explicitlySet": 75,
+  "explicitlyEnabled": 63,
+  "explicitlyDisabled": 12,
+  "alertDefinitionsOnTheInstance": 1824,
+  "unsetAndThereforeNull": 1749
+ },
+ "noReadSurface": [
+  {
+   "path": "/suite-api/api/dashboards",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/views",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/dashboard",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/view",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/viewdefinitions",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/content",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/content/dashboards",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/content/views",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/content/operations",
+   "status": 404
+  },
+  {
+   "path": "/suite-api/api/resources/dashboards",
+   "status": 400
+  },
+  {
+   "path": "/suite-api/api/reports/views",
+   "status": 400
+  },
+  {
+   "path": "/suite-api/api/supermetrics/dashboards",
+   "status": 400
+  }
+ ]
+}
