@@ -1,0 +1,182 @@
+{
+ "captured_utc": "2026-09-19T09:14:50Z",
+ "owner": "PCA",
+ "definitions": {
+  "total": 1824,
+  "owned": 13,
+  "universalFields": [
+   "adapterKindKey",
+   "cancelCycles",
+   "forVCDTenants",
+   "id",
+   "name",
+   "resourceKindKey",
+   "states",
+   "subType",
+   "type",
+   "waitCycles"
+  ],
+  "distinctFields": 11,
+  "ownedByResourceKind": {
+   "VirtualMachine": 1,
+   "ping_adapter_instance": 1,
+   "ip_type": 1,
+   "HostSystem": 4,
+   "fqdn_type": 1,
+   "ClusterComputeResource": 5
+  },
+  "ownedSeverity": {
+   "CRITICAL": 11,
+   "WARNING": 2
+  },
+  "estateSeverity": {
+   "AUTO": 718,
+   "CRITICAL": 545,
+   "WARNING": 380,
+   "IMMEDIATE": 121,
+   "INFORMATION": 60
+  }
+ },
+ "defaultPolicyReview": {
+  "explicitEntries": 75,
+  "enabledEntries": 63,
+  "ownedEntries": 13,
+  "ownedEnabled": 1,
+  "ownedEnabledNames": [
+   "PCA - WTPC - Performance Envelope Breach - prod-latency-critical-db"
+  ],
+  "ownedEnabledKinds": [
+   "VirtualMachine"
+  ]
+ },
+ "blastRadius": {
+  "kind": "VirtualMachine",
+  "resources": 103,
+  "queried": 103,
+  "resolved": 103,
+  "underTheDefaultPolicy": 2
+ },
+ "thresholds": {
+  "estateConditionTypes": {
+   "CONDITION_HT": 676,
+   "CONDITION_MESSAGE_EVENT": 543,
+   "CONDITION_PROPERTY_STRING": 703,
+   "CONDITION_FAULT": 795,
+   "CONDITION_PROPERTY_NUMERIC": 173,
+   "CONDITION_DT": 33,
+   "CONDITION_LOG": 3
+  },
+  "ownedConditionTypes": {
+   "CONDITION_HT": 20,
+   "CONDITION_PROPERTY_NUMERIC": 4
+  },
+  "ownedValues": {
+   "1.0": 14,
+   "100.0": 4,
+   "0.0": 6
+  },
+  "ownedOperators": {
+   "GT": 18,
+   "LT": 2,
+   "GT_EQ": 2,
+   "NOT_EQ": 2
+  },
+  "ownedReadingASuperMetric": 18,
+  "ownedTotal": 24
+ },
+ "debounce": {
+  "estateWait": {
+   "1": 1771,
+   "3": 42,
+   "2": 9,
+   "6": 1,
+   "865": 1
+  },
+  "estateCancel": {
+   "1": 1768,
+   "9": 7,
+   "12": 16,
+   "6": 1,
+   "3": 30,
+   "2": 2
+  },
+  "ownedWait": {
+   "1": 13
+  },
+  "ownedCancel": {
+   "1": 13
+  },
+  "statesPerDefinition": {
+   "1": 1824
+  },
+  "impactDetail": {
+   "health": 1580,
+   "risk": 213,
+   "efficiency": 31
+  },
+  "withoutADescription": 528,
+  "longestWait": 865,
+  "longestWaitIsVendorContent": true
+ },
+ "routing": {
+  "rules": 5,
+  "enabled": 1,
+  "withNoFilterAtAll": 3,
+  "fields": [
+   "actionStatuses",
+   "alertControlStates",
+   "alertDefinitionIdFilters",
+   "alertStatuses",
+   "alertTypeFilters",
+   "criticalities",
+   "enabled",
+   "id",
+   "name",
+   "pluginId",
+   "properties",
+   "resourceFilters",
+   "resourceKindFilters",
+   "ruleType",
+   "sendHeartbeat",
+   "templateId"
+  ],
+  "hasAPolicyField": false,
+  "perRule": [
+   {
+    "enabled": false,
+    "alertDefinitionFilters": 1,
+    "resourceFilters": 3,
+    "resourceKindFilters": 0,
+    "criticalities": 1
+   },
+   {
+    "enabled": true,
+    "alertDefinitionFilters": 1,
+    "resourceFilters": 0,
+    "resourceKindFilters": 0,
+    "criticalities": 0
+   },
+   {
+    "enabled": false,
+    "alertDefinitionFilters": 0,
+    "resourceFilters": 0,
+    "resourceKindFilters": 0,
+    "criticalities": 0
+   },
+   {
+    "enabled": false,
+    "alertDefinitionFilters": 0,
+    "resourceFilters": 0,
+    "resourceKindFilters": 0,
+    "criticalities": 0
+   },
+   {
+    "enabled": false,
+    "alertDefinitionFilters": 0,
+    "resourceFilters": 0,
+    "resourceKindFilters": 0,
+    "criticalities": 0
+   }
+  ]
+ }
+}
