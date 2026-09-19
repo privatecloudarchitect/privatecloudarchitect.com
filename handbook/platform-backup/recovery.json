@@ -1,0 +1,252 @@
+{
+ "captured_utc": "2026-09-19T02:14:28Z",
+ "planes": [
+  {
+   "plane": "the lifecycle manager",
+   "reached": true,
+   "configured": true,
+   "schedule": {
+    "field": "frequency",
+    "says": "WEEKLY",
+    "daysListed": 7,
+    "days": [
+     "MONDAY",
+     "TUESDAY",
+     "WEDNESDAY",
+     "THURSDAY",
+     "FRIDAY",
+     "SATURDAY",
+     "SUNDAY"
+    ],
+    "atHour": 4,
+    "atMinute": 0,
+    "onStateChange": false,
+    "enabled": true,
+    "retention": {
+     "numberOfMostRecentBackups": 30,
+     "numberOfDaysOfHourlyBackups": 7,
+     "numberOfDaysOfDailyBackups": 30
+    }
+   },
+   "target": {
+    "protocol": "SFTP",
+    "port": 22,
+    "server": "{{target-1}}",
+    "directory": "{{path-1}}",
+    "username": "sftp",
+    "fingerprintPinned": true
+   },
+   "runs": {
+    "total": 314,
+    "byStatus": {
+     "Successful": 314
+    },
+    "carryingAnError": 0,
+    "hourOfDay": {
+     "14": 1,
+     "4": 313
+    }
+   },
+   "coverage": {
+    "firstDay": "2025-09-18",
+    "lastDay": "2026-09-18",
+    "windowDays": 366,
+    "daysCovered": 314,
+    "daysUncovered": 52,
+    "gaps": 6,
+    "longestGapDays": 19,
+    "longestGap": [
+     "2026-08-19",
+     "2026-09-06"
+    ],
+    "gapsBySize": [
+     {
+      "days": 19,
+      "from": "2026-08-19",
+      "to": "2026-09-06"
+     },
+     {
+      "days": 17,
+      "from": "2026-03-07",
+      "to": "2026-03-23"
+     },
+     {
+      "days": 7,
+      "from": "2025-10-17",
+      "to": "2025-10-23"
+     },
+     {
+      "days": 6,
+      "from": "2026-01-22",
+      "to": "2026-01-27"
+     },
+     {
+      "days": 2,
+      "from": "2025-11-27",
+      "to": "2025-11-28"
+     },
+     {
+      "days": 1,
+      "from": "2025-09-24",
+      "to": "2025-09-24"
+     }
+    ]
+   },
+   "whatARunDoes": [
+    "QuiesceSystem",
+    "BackupSDDCManagerDatabase",
+    "BackupSDDCManagerConfiguration",
+    "BackupSDDCManagerSystemConfiguration",
+    "PackageSDDCManagerBackup",
+    "SaveSDDCManagerBackup",
+    "DeleteOldSddcManagerBackups",
+    "UnquiesceSystem"
+   ],
+   "aRunTakesSeconds": 30,
+   "tasksRead": 1304
+  },
+  {
+   "plane": "the management vCenter",
+   "reached": true,
+   "schedule": {
+    "field": "recurrence_info.days",
+    "daysListed": 0,
+    "says": null,
+    "emptyDayListMeans": "every day",
+    "atHour": 23,
+    "atMinute": 59,
+    "enabled": true,
+    "retention": {
+     "max_count": 30
+    }
+   },
+   "target": {
+    "protocol": "SFTP",
+    "server": "{{target-1}}",
+    "directory": "{{path-1}}",
+    "username": "sftp"
+   },
+   "parts": {
+    "catalog": [
+     {
+      "id": "supervisors",
+      "optional": true,
+      "selectedByDefault": true,
+      "what": "Supervisors control plane state backup restore script"
+     },
+     {
+      "id": "seat",
+      "optional": true,
+      "selectedByDefault": true,
+      "what": "Historical data (Statistics, Events, and Tasks)"
+     },
+     {
+      "id": "common",
+      "optional": false,
+      "selectedByDefault": true,
+      "what": "VCSA inventory and configuration"
+     }
+    ],
+    "selected": [
+     "common"
+    ],
+    "deselectedDefaults": [
+     "supervisors",
+     "seat"
+    ]
+   },
+   "runs": {
+    "total": 364,
+    "mostRecent": {
+     "state": "SUCCEEDED",
+     "progress": 100,
+     "messages": 0
+    }
+   },
+   "coverage": {
+    "firstDay": "2025-08-29",
+    "lastDay": "2026-09-18",
+    "windowDays": 386,
+    "daysCovered": 358,
+    "daysUncovered": 28,
+    "gaps": 4,
+    "longestGapDays": 20,
+    "longestGap": [
+     "2026-08-18",
+     "2026-09-06"
+    ],
+    "gapsBySize": [
+     {
+      "days": 20,
+      "from": "2026-08-18",
+      "to": "2026-09-06"
+     },
+     {
+      "days": 6,
+      "from": "2026-01-21",
+      "to": "2026-01-26"
+     },
+     {
+      "days": 1,
+      "from": "2025-09-23",
+      "to": "2025-09-23"
+     },
+     {
+      "days": 1,
+      "from": "2025-11-27",
+      "to": "2025-11-27"
+     }
+    ]
+   },
+   "restoreEvidence": {
+    "status": 500,
+    "message": "{\"messages\": [{\"args\": [\"RESTORE\"], \"default_message\": \"Status for 'RESTORE' does not exist.\", \"id\": \"com.vmware.applmgmt.err_status_does_not_exist\"}]}"
+   }
+  },
+  {
+   "plane": "the network manager",
+   "reached": true,
+   "schedule": {
+    "field": "resource_type",
+    "says": "WeeklyBackupSchedule",
+    "daysListed": 5,
+    "days": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "dayNumbering": "the plane publishes integers; a run observed on a Friday carries 5, which fixes 6 and 0-or-7 as the two absent days under either convention this platform could be using",
+    "atHour": 7,
+    "atMinute": 0,
+    "enabled": true,
+    "inventorySummaryIntervalMinutes": 240
+   },
+   "target": {
+    "protocol": "sftp",
+    "port": 22,
+    "server": "{{target-1}}",
+    "directory": "{{path-1}}",
+    "username": "sftp",
+    "authScheme": "PASSWORD",
+    "fingerprintPinned": true
+   },
+   "runs": {
+    "overall": "SUCCESS",
+    "clusterBackupsReported": 1,
+    "inventoryBackupsReported": 1,
+    "mostRecentClusterBackupUtc": "2026-09-18T07:00:00Z",
+    "historyDepth": "only the most recent is reported"
+   },
+   "coverage": null,
+   "restoreEvidence": {
+    "status": 200,
+    "state": "INITIAL",
+    "description": "Restore process didn't yet start"
+   }
+  }
+ ],
+ "distinctTargets": 1,
+ "planesRead": 3
+}
