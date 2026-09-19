@@ -18,6 +18,43 @@ into this dashboard with nothing to undo.
 content-import recognition test on the reference instance reports the shipped packages as
 `skipped N, failed 0`, which is the id-preserving proof.
 
+## Reading the arm back: `promise.py`
+
+Everything else in this folder stands the arm up. `promise.py` reads it back, which is the check nobody
+runs. A computed promise gets verified on the day it ships and then never again, and the three ways it
+quietly stops being true are all readable in one pass:
+
+```bash
+export OPS_HOST=<your-ops-fqdn>
+export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
+export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
+export OPS_OWNER="PCA"                       # the owner prefix your content carries
+export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
+
+python3 promise.py
+```
+
+1. **The content is still there.** The five reachability metrics, found by the *role* each plays rather than
+   by an exact name, so an estate that renamed the initiative does not read as a missing promise.
+2. **It is still computing.** The current value of each roll-up on the ping adapter instance, each with the
+   **age** of the reading. A value without its timestamp is not evidence that anything is computing, and a
+   set of readings that all stopped at the same age is one dead collector rather than a failing fleet.
+3. **The denominator is what you think.** It walks the relationship tree: the adapter's direct children
+   against the raw check objects, showing how many addresses fold under a name check. Counting objects
+   instead of depth-1 children inflates the denominator and understates the SLI silently.
+
+It then reports the **shape** of the failure rather than only its size, grouping checks by anonymised address
+block, because five unreachable endpoints spread across three blocks is five problems and five in one block
+is one routing boundary. A percentage cannot tell those apart.
+
+Finally it crosses the guest layer against the floor beneath it: every machine's guest availability KPI, which
+rides VMware Tools, against the hypervisor's own uptime, which does not. A KPI of zero with a climbing uptime
+is **blind, not down**; a KPI of zero with no uptime reading at all is **unknown**, which is a third answer and
+a different ticket. On the reference estate 26 machines read a guest KPI of zero and not one of them was
+confirmed stopped by the floor.
+
+It writes `promise.json`, names no address, check or machine, and changes nothing.
+
 ## Where to start, and how to grow
 
 You do not have to stand up all five layers to get value, and you should not try to on day one.

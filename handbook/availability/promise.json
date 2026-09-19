@@ -1,0 +1,93 @@
+{
+ "captured_utc": "2026-09-19T19:39:06Z",
+ "owner": "PCA",
+ "content": {
+  "checks": {
+   "present": true,
+   "id": "{{id}}",
+   "formulaLength": 181
+  },
+  "reachable": {
+   "present": true,
+   "id": "{{id}}",
+   "formulaLength": 231
+  },
+  "unreachable": {
+   "present": true,
+   "id": "{{id}}",
+   "formulaLength": 141
+  },
+  "sli": {
+   "present": true,
+   "id": "{{id}}",
+   "formulaLength": 149
+  },
+  "delivery": {
+   "present": true,
+   "id": "{{id}}",
+   "formulaLength": 40
+  }
+ },
+ "computed": {
+  "sli": {
+   "value": 58.33333206176758,
+   "ageMinutes": 12.9
+  },
+  "reachable": {
+   "value": 7.0,
+   "ageMinutes": 12.9
+  },
+  "checks": {
+   "value": 12.0,
+   "ageMinutes": 12.9
+  },
+  "unreachable": {
+   "value": 5.0,
+   "ageMinutes": 12.9
+  }
+ },
+ "tree": {
+  "directChildren": 12,
+  "byKind": {
+   "ip_type": 11,
+   "fqdn_type": 1
+  },
+  "rawObjects": {
+   "ip_type": 12,
+   "fqdn_type": 1
+  },
+  "foldedUnderAName": 1,
+  "lossDistribution": {
+   "0.0": 7,
+   "100.0": 5
+  },
+  "byBlock": {
+   "block A": {
+    "reachable": 1,
+    "unreachable": 0
+   },
+   "block B": {
+    "reachable": 5,
+    "unreachable": 0
+   },
+   "block C": {
+    "reachable": 0,
+    "unreachable": 5
+   },
+   "a name check": {
+    "reachable": 1,
+    "unreachable": 0
+   }
+  }
+ },
+ "guest": {
+  "machines": 103,
+  "reporting": 103,
+  "kpiHundred": 77,
+  "kpiZero": 26,
+  "kpiZeroButUptimeClimbing": 9,
+  "kpiZeroAndUptimeZero": 0,
+  "kpiZeroAndNoUptimeAtAll": 17
+ },
+ "pingInstances": 1
+}
