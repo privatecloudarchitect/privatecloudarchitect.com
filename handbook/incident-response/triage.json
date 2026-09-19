@@ -1,0 +1,79 @@
+{
+ "captured_utc": "2026-09-19T18:14:36Z",
+ "owner": "PCA",
+ "queue": {
+  "instances": 1167,
+  "active": 259,
+  "closed": 908,
+  "activeFromOwnedDefinitions": 6,
+  "ageDays": {
+   "min": 0,
+   "median": 67,
+   "max": 438,
+   "startedInTheLastWeek": 2,
+   "standingOverAMonth": 153,
+   "standingOverAYear": 4
+  },
+  "closedDurationHours": {
+   "median": 1.17,
+   "underAnHour": 202,
+   "overADay": 181,
+   "counted": 900
+  },
+  "byImpact": {
+   "EFFICIENCY": {
+    "active": 1,
+    "medianAgeDays": 11,
+    "oldestDays": 11
+   },
+   "HEALTH": {
+    "active": 69,
+    "medianAgeDays": 12,
+    "oldestDays": 438
+   },
+   "RISK": {
+    "active": 189,
+    "medianAgeDays": 67,
+    "oldestDays": 203
+   }
+  },
+  "byLevel": {
+   "CRITICAL": 98,
+   "IMMEDIATE": 42,
+   "WARNING": 101,
+   "INFORMATION": 18
+  },
+  "distinctDefinitions": 47,
+  "distinctObjects": 100,
+  "topShare": 116,
+  "controlStates": {
+   "OPEN": 259
+  },
+  "suspended": 0
+ },
+ "corpus": {
+  "file": "gotchas.md",
+  "entries": 169,
+  "carrying": {
+   "symptom": 142,
+   "root cause": 132,
+   "fix": 137,
+   "evidence": 97,
+   "cross-link": 103,
+   "heading claims verification": 87,
+   "corrects an earlier reading": 27,
+   "quotes an HTTP status": 85,
+   "layer": 61,
+   "mentions a log": 21
+  },
+  "layerTags": {
+   "structural design": 27,
+   "information contract": 27,
+   "other wording": 25,
+   "processing logic": 5,
+   "platform configuration": 2,
+   "architectural": 2
+  },
+  "layerTagged": 88
+ }
+}
