@@ -1,9 +1,59 @@
-# Firewall-policy round-trip harness
+# Microsegmentation: posture audit + firewall-policy round-trip
 
 Backs the microsegmentation sheet
 ([privatecloudarchitect.com/handbook/microsegmentation](https://privatecloudarchitect.com/handbook/microsegmentation)).
+
+Two pieces, and **run them in this order**:
+
+- **`posture.py`** reads what your org's posture actually is and, before that, whether this region
+  can enforce one at all. Read-only.
+- **`run.sh`** proves the three write disciplines by round-tripping a rule. It writes (safely, and
+  it tears down), and it cannot succeed where the firewall capabilities are not entitled.
+
+## posture.py: what is attached, and what can be enforced
+
+```bash
+export VCFA_HOST=<your-org-gateway-fqdn>
+export VCFA_TOKEN=<a bearer for /cci/kubernetes>
+export VCFA_TLS_VERIFY=false        # only on a self-signed lab CA
+python3 posture.py                  # writes posture.json beside the script
+```
+
+Four reads, in the order that fails fastest:
+
+1. **Entitlement.** `regionnetworkingcapabilities/<region>` carries a capability list: a type, a
+   state, and where the state is false the platform's own reason and the licence it wants. **This
+   is the pre-write read.** The chapter's `Realized` check verifies a write that was accepted; it
+   cannot tell you a write was never going to be. On the reference estate four capabilities are
+   unavailable and all four are firewall capabilities (distributed, VPC gateway, transit-gateway,
+   and the security profile itself), while `NetworkSecurityGroup` is entitled: **the vocabulary a
+   rule speaks works, and every surface that could enforce a rule does not.**
+
+   Shape trap: the capability list sits at the **top level** of the object, beside `metadata`, not
+   under `spec` or `status` where a reader of this API looks first. Read the wrong key and the
+   object looks like a region reporting nothing.
+
+2. **The strategy ladder**, each with its description quoted verbatim. There is more than one
+   isolation strategy and the difference between them is one clause: pure isolation denies the
+   services a workload needs to function, and the essential-services rung carves out ICMP, DNS,
+   NTP and DHCP. Paraphrasing a security description inside quotation marks publishes a different
+   specification than the one the reviewer approves.
+
+3. **Posture per VPC**: which profile each VPC is attached to, which strategies it carries, and
+   whether its north-south dial is on. An unattached profile is a posture nobody is running. Note
+   that `SecurityProfileAttachment` carries **no status conditions** on this build, so there is no
+   `Realized` to verify an attachment against.
+
+4. **The floor**: the default section's rules with the disabled flag on each. Shape trap, and this
+   one is about which call you make: the **collection view trims `rules[]`**, so a floor audited
+   from the list reads as a section with no rules in it. `posture.py` reads every section by name.
+
+Exit code 0 when the firewall capabilities are entitled, 1 when they are not.
+
+## run.sh: the write disciplines
+
 The sheet teaches three write disciplines for firewall-as-code; this harness proves all three on
-your own estate in about a minute:
+your own estate in about a minute, **where the capabilities allow it**:
 
 1. **Ship disabled, enable deliberately.** The section lands with its rule `disabled: true`,
    gets reviewed in place, and the enable is a one-field flip you can diff before applying.
@@ -21,6 +71,13 @@ your own estate in about a minute:
 
 No traffic on your estate changes at any step. Teardown deletes both objects; run with `KEEP=1`
 to keep them for inspection instead.
+
+**If `Firewall.DistributedFirewall` is not entitled on your region, step 2 fails** with an HTTP 500
+naming the licence, and the group from step 1 is the only thing that was created. Run `posture.py`
+first and you will know before you start. Re-run against the reference estate on 2026-09-20, that
+is exactly what happened: the group created and Realized in under five seconds, the section create
+returned `operation not supported in Region <region>: NSX licenses must have all of [DFW]`, and the
+teardown left no residue.
 
 ## Prereqs
 
