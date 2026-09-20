@@ -125,3 +125,34 @@ One more read-path detail: the **list** view of `firewallpolicies` trims `rules[
 ## Expected output
 
 See [`expected-output.md`](expected-output.md) for the transcript shape a healthy run produces.
+
+## Where a rule about a pod belongs
+
+The objects above segment virtual machines at the VPC boundary. A rule about a **pod** has three
+documented homes, and the choice is architectural rather than tactical. None of the three was
+exercised here (the firewall capabilities on the reference estate are not entitled), so what follows
+is a reading of the published references, each of which is linked from the sheet:
+
+| placement | what it is | what it costs |
+|---|---|---|
+| DFW rules on namespace subnets | a rule per namespace, source and destination set to that namespace's subnet | addresses again: it hard-codes the subnet, which is the failure the sheet opens on |
+| Convert Kubernetes NetworkPolicy to DFW | an import API takes policy UUIDs and produces vDefend DFW policies plus Antrea groups | documented as one-way, and the originals are deleted from the cluster on import |
+| Antrea-native, with tiers | cluster and namespace policies evaluated on their own tier ladder inside the cluster | a second enforcement engine with a second precedence model |
+
+Three things worth carrying from those references into any design:
+
+- **The conversion is lossy in named ways.** Named ports, SCTP, and selector expressions past a
+  documented complexity limit do not carry across, and the import runs either all-or-nothing or
+  skip-and-continue depending on the error mode you pass.
+- **A Kubernetes NetworkPolicy cannot express a default deny** the way a firewall section can.
+  Closing an estate on the Antrea side takes a cluster-scoped policy on the baseline tier.
+- **Allow DNS egress before the baseline deny lands.** It is the classic casualty: apply the deny
+  first and every pod in the namespace loses name resolution at once.
+
+## Precedence: where your rules sit relative to everyone else's
+
+Documented for NSX 4.1, with the VPC level added at 4.1.1, and worth confirming on your own release:
+rules evaluate **default space first, then project, then VPC east-west**. Everything this folder
+creates is at the bottom level. A provider rule in the default space decides the outcome before your
+rule is read, and none of the objects a tenant can list belongs to the levels above it, so a
+tenant-side audit is complete about one level and silent about two.
