@@ -108,6 +108,34 @@ python3 reconcile_infra_groups.py --analyze   # occupancy, mixed-posture feasibi
 python3 compliance_rollup.py              # one ranked row per posture on the normalized scale
 ```
 
+### Is any of it governing anything? `audit_deployment.py`
+
+Those gates check a posture you name. This one asks the estate-wide question that comes before them, and it
+is the question a content inventory cannot answer:
+
+```bash
+python3 audit_deployment.py               # read-only, estate-wide, no posture argument
+```
+
+Four reads, in the order a deployment fails:
+
+1. **The groups, with the mechanism that resolves each one.** Two mechanisms are in play and they behave
+   oppositely. A **tag rule** re-resolves on an interval and reflects reality, so it empties when the tagging
+   stops. A **static list** is written once by a reconciler and holds until something rewrites it, so it keeps
+   governing hardware whose workloads left months ago. An empty tag rule and an empty static list are
+   different failures with different owners, and a populated static list is the one that can be lying.
+2. **What actually governs each object**, bucketed into the two families the framework declares. The claim is
+   that a workload takes a posture, a host or cluster takes a tier, and the two never compete for one object.
+   That is testable by counting objects in the wrong family rather than by reasoning about the model.
+3. **The envelope as enforced**, read from the policy export, which carries all three surfaces together: the
+   overcommit dials, the super metric enablement and the alert enablement. They drift independently, so a
+   posture can have the right dials and compute none of the metrics its scorecard renders. Note that the
+   settings endpoint does **not** serve the overcommit dials; it serves time-remaining criticality thresholds.
+4. **The ratio worth publishing**: how many framework policies govern at least one object, over how many
+   exist. On the reference estate that was **2 of 6**, while every other count in the inventory read healthy.
+
+It writes `deployment.json`, names no machine, host or cluster, and changes nothing.
+
 ## Teardown, scoped
 
 `destroy.py` is the deliberate inverse, never a build phase: reverse dependency order, only

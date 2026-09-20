@@ -1,0 +1,272 @@
+{
+ "captured_utc": "2026-09-20T19:08:16Z",
+ "prefix": "PCA - WTPC",
+ "groups": [
+  {
+   "group": "Tier - dedicated (Hosts)",
+   "mechanism": "static list",
+   "members": 2,
+   "policy": "PCA - WTPC - Tier - dedicated",
+   "autoResolve": true
+  },
+  {
+   "group": "Tier - density (Clusters)",
+   "mechanism": "tag rule",
+   "members": 0,
+   "policy": "PCA - WTPC - Tier - density",
+   "autoResolve": true
+  },
+  {
+   "group": "Tier - standard (Hosts)",
+   "mechanism": "static list",
+   "members": 4,
+   "policy": "PCA - WTPC - Tier - standard",
+   "autoResolve": true
+  },
+  {
+   "group": "Group - test-dev-traditional (VMs)",
+   "mechanism": "tag rule",
+   "members": 0,
+   "policy": "PCA - WTPC - Policy - test-dev-traditional",
+   "autoResolve": true
+  },
+  {
+   "group": "Group - prod-latency-critical-db (Clusters)",
+   "mechanism": "tag rule",
+   "members": 0,
+   "policy": "PCA - WTPC - Policy - prod-latency-critical-db",
+   "autoResolve": true
+  },
+  {
+   "group": "Group - estate-governance (Clusters)",
+   "mechanism": "static list",
+   "members": 3,
+   "policy": null,
+   "autoResolve": true
+  },
+  {
+   "group": "Group - prod-latency-critical-db (Hosts)",
+   "mechanism": "tag rule",
+   "members": 0,
+   "policy": "PCA - WTPC - Policy - prod-latency-critical-db",
+   "autoResolve": true
+  },
+  {
+   "group": "Tier - standard (Clusters)",
+   "mechanism": "tag rule",
+   "members": 2,
+   "policy": "PCA - WTPC - Tier - standard",
+   "autoResolve": true
+  },
+  {
+   "group": "Tier - performance (Clusters)",
+   "mechanism": "tag rule",
+   "members": 0,
+   "policy": "PCA - WTPC - Tier - performance",
+   "autoResolve": true
+  },
+  {
+   "group": "Group - prod-latency-critical-db (VMs)",
+   "mechanism": "tag rule",
+   "members": 0,
+   "policy": "PCA - WTPC - Policy - prod-latency-critical-db",
+   "autoResolve": true
+  },
+  {
+   "group": "Group - test-dev-traditional (Clusters)",
+   "mechanism": "static list",
+   "members": 2,
+   "policy": null,
+   "autoResolve": true
+  },
+  {
+   "group": "Tier - dedicated (Clusters)",
+   "mechanism": "tag rule",
+   "members": 1,
+   "policy": "PCA - WTPC - Tier - dedicated",
+   "autoResolve": true
+  },
+  {
+   "group": "Group - test-dev-traditional (Hosts)",
+   "mechanism": "static list",
+   "members": 4,
+   "policy": null,
+   "autoResolve": true
+  }
+ ],
+ "groupsByMechanism": {
+  "static list": 5,
+  "tag rule": 8
+ },
+ "emptyByMechanism": {
+  "tag rule": 6
+ },
+ "governance": {
+  "VirtualMachine": {
+   "objects": 103,
+   "resolved": 103,
+   "byFamily": {
+    "outside the framework": 103
+   },
+   "expectedFamily": "posture",
+   "wrongFamily": 0,
+   "byPolicy": {}
+  },
+  "HostSystem": {
+   "objects": 11,
+   "resolved": 11,
+   "byFamily": {
+    "tier": 6,
+    "outside the framework": 5
+   },
+   "expectedFamily": "tier",
+   "wrongFamily": 0,
+   "byPolicy": {
+    "Tier - standard": 4,
+    "Tier - dedicated": 2
+   }
+  },
+  "ClusterComputeResource": {
+   "objects": 5,
+   "resolved": 5,
+   "byFamily": {
+    "tier": 3,
+    "outside the framework": 2
+   },
+   "expectedFamily": "tier",
+   "wrongFamily": 0,
+   "byPolicy": {
+    "Tier - standard": 2,
+    "Tier - dedicated": 1
+   }
+  }
+ },
+ "misplaced": [
+  {
+   "kind": "VirtualMachine",
+   "wrongFamily": 0
+  },
+  {
+   "kind": "HostSystem",
+   "wrongFamily": 0
+  },
+  {
+   "kind": "ClusterComputeResource",
+   "wrongFamily": 0
+  }
+ ],
+ "policies": 6,
+ "parity": {
+  "Policy - prod-latency-critical-db": 0,
+  "Policy - test-dev-traditional": 0,
+  "Tier - dedicated": 3,
+  "Tier - performance": 0,
+  "Tier - standard": 6,
+  "Tier - density": 0
+ },
+ "envelopes": {
+  "Policy - prod-latency-critical-db": {
+   "overcommit": {
+    "mem/demand": 1.0,
+    "cpu/demand": 1.0,
+    "diskspace/alloc": 2.0,
+    "mem": 1.0,
+    "cpu/alloc": 1.5,
+    "cpu": 1.0,
+    "diskspace/demand": 1.0,
+    "diskspace": 1.0,
+    "mem/alloc": 1.0
+   },
+   "superMetrics": 68,
+   "superMetricsEnabled": 42,
+   "alerts": 5,
+   "alertsEnabled": 5
+  },
+  "Policy - test-dev-traditional": {
+   "overcommit": {
+    "mem/demand": 1.0,
+    "cpu/demand": 1.0,
+    "diskspace/alloc": 4.0,
+    "mem": 1.0,
+    "cpu/alloc": 4.0,
+    "cpu": 1.0,
+    "diskspace/demand": 1.0,
+    "diskspace": 1.0,
+    "mem/alloc": 2.0
+   },
+   "superMetrics": 50,
+   "superMetricsEnabled": 24,
+   "alerts": 0,
+   "alertsEnabled": 0
+  },
+  "Tier - dedicated": {
+   "overcommit": {
+    "mem/demand": 1.0,
+    "cpu/demand": 1.0,
+    "diskspace/alloc": 2.0,
+    "mem": 1.0,
+    "cpu/alloc": 1.5,
+    "cpu": 1.0,
+    "diskspace/demand": 1.0,
+    "diskspace": 1.0,
+    "mem/alloc": 1.0
+   },
+   "superMetrics": 72,
+   "superMetricsEnabled": 49,
+   "alerts": 3,
+   "alertsEnabled": 3
+  },
+  "Tier - density": {
+   "overcommit": {
+    "mem/demand": 1.0,
+    "cpu/demand": 1.0,
+    "diskspace/alloc": 4.0,
+    "mem": 1.0,
+    "cpu/alloc": 8.0,
+    "cpu": 1.0,
+    "diskspace/demand": 1.0,
+    "diskspace": 1.0,
+    "mem/alloc": 4.0
+   },
+   "superMetrics": 72,
+   "superMetricsEnabled": 49,
+   "alerts": 3,
+   "alertsEnabled": 3
+  },
+  "Tier - performance": {
+   "overcommit": {
+    "mem/demand": 1.0,
+    "cpu/demand": 1.0,
+    "diskspace/alloc": 4.0,
+    "mem": 1.0,
+    "cpu/alloc": 6.0,
+    "cpu": 1.0,
+    "diskspace/demand": 1.0,
+    "diskspace": 1.0,
+    "mem/alloc": 2.0
+   },
+   "superMetrics": 72,
+   "superMetricsEnabled": 49,
+   "alerts": 3,
+   "alertsEnabled": 3
+  },
+  "Tier - standard": {
+   "overcommit": {
+    "mem/demand": 1.0,
+    "cpu/demand": 1.0,
+    "diskspace/alloc": 4.0,
+    "mem": 1.0,
+    "cpu/alloc": 8.0,
+    "cpu": 1.0,
+    "diskspace/demand": 1.0,
+    "diskspace": 1.0,
+    "mem/alloc": 2.5
+   },
+   "superMetrics": 72,
+   "superMetricsEnabled": 49,
+   "alerts": 3,
+   "alertsEnabled": 3
+  }
+ },
+ "policiesGoverningSomething": 2
+}
