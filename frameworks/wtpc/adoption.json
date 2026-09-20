@@ -1,0 +1,99 @@
+{
+ "captured_utc": "2026-09-20T19:33:23Z",
+ "prefix": "PCA - WTPC",
+ "categories": {
+  "env": {
+   "present": true,
+   "cardinalityMatches": true,
+   "declaredValues": 6
+  },
+  "function": {
+   "present": false,
+   "cardinalityMatches": false,
+   "declaredValues": 6
+  },
+  "sla": {
+   "present": true,
+   "cardinalityMatches": true,
+   "declaredValues": 4
+  }
+ },
+ "categoriesRead": true,
+ "assignments": {
+  "machines": 103,
+  "withAnyTag": 7,
+  "withATaxonomyTag": 0,
+  "byCategory": {}
+ },
+ "groups": [
+  {
+   "group": "Tier - dedicated (Hosts)",
+   "mechanism": "static list",
+   "members": 2
+  },
+  {
+   "group": "Tier - density (Clusters)",
+   "mechanism": "tag rule",
+   "members": 0
+  },
+  {
+   "group": "Tier - standard (Hosts)",
+   "mechanism": "static list",
+   "members": 4
+  },
+  {
+   "group": "Group - test-dev-traditional (VMs)",
+   "mechanism": "tag rule",
+   "members": 0
+  },
+  {
+   "group": "Group - prod-latency-critical-db (Clusters)",
+   "mechanism": "tag rule",
+   "members": 0
+  },
+  {
+   "group": "Group - estate-governance (Clusters)",
+   "mechanism": "static list",
+   "members": 3
+  },
+  {
+   "group": "Group - prod-latency-critical-db (Hosts)",
+   "mechanism": "tag rule",
+   "members": 0
+  },
+  {
+   "group": "Tier - standard (Clusters)",
+   "mechanism": "tag rule",
+   "members": 2
+  },
+  {
+   "group": "Tier - performance (Clusters)",
+   "mechanism": "tag rule",
+   "members": 0
+  },
+  {
+   "group": "Group - prod-latency-critical-db (VMs)",
+   "mechanism": "tag rule",
+   "members": 0
+  },
+  {
+   "group": "Group - test-dev-traditional (Clusters)",
+   "mechanism": "static list",
+   "members": 2
+  },
+  {
+   "group": "Tier - dedicated (Clusters)",
+   "mechanism": "tag rule",
+   "members": 1
+  },
+  {
+   "group": "Group - test-dev-traditional (Hosts)",
+   "mechanism": "static list",
+   "members": 4
+  }
+ ],
+ "tagRuleGroups": 8,
+ "tagRuleGroupsEmpty": 6,
+ "deriveWouldRefuse": true,
+ "stopsAt": "1 · the categories: a declared category is missing, so its rule can never match"
+}
