@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-20T21:00:47Z",
+ "captured_utc": "2026-09-20T21:15:18Z",
  "family": {
   "VirtualMachine": {
    "statKeys": 331,
@@ -319,21 +319,58 @@
     "reporting": 1,
     "nonZero": 1
    }
+  },
+  "Datastore": {
+   "cost|allocation|allocationBasedAllocatedCost": {
+    "objects": 12,
+    "reporting": 12,
+    "nonZero": 9
+   },
+   "cost|allocation|allocationBasedUnAllocatedCost": {
+    "objects": 12,
+    "reporting": 12,
+    "nonZero": 12
+   },
+   "cost|allocation|storageRateByAllocation": {
+    "objects": 12,
+    "reporting": 12,
+    "nonZero": 12
+   },
+   "cost|effectiveAllocatedTotalCost": {
+    "objects": 12,
+    "reporting": 12,
+    "nonZero": 9
+   },
+   "cost|effectiveUnallocatedTotalCost": {
+    "objects": 12,
+    "reporting": 12,
+    "nonZero": 12
+   },
+   "cost|storageRate": {
+    "objects": 12,
+    "reporting": 12,
+    "nonZero": 12
+   },
+   "cost|totalCost": {
+    "objects": 12,
+    "reporting": 12,
+    "nonZero": 12
+   }
   }
  },
  "composition": {
   "consumption": {
    "checked": 91,
    "withinACent": 91,
-   "exactToTheFloat": 5,
-   "largestDifference": 6.482e-07,
+   "exactToTheFloat": 7,
+   "largestDifference": 6.631e-07,
    "passes": true
   },
   "ownership": {
    "checked": 11,
    "withinACent": 11,
    "exactToTheFloat": 0,
-   "largestDifference": 0.0001239181,
+   "largestDifference": 0.0001086593,
    "passes": true
   }
  },

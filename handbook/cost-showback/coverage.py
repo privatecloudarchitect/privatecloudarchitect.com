@@ -141,9 +141,8 @@ def main():
 
     # ---- 2. coverage, per key, on the two models that carry data
     coverage, models = {}, {}
-    for kind, keys in (("VirtualMachine", sample.get("VirtualMachine", [])),
-                       ("HostSystem", sample.get("HostSystem", [])),
-                       ("ClusterComputeResource", sample.get("ClusterComputeResource", []))):
+    for kind in KINDS:
+        keys = sample.get(kind, [])
         rl = resources(tok, kind)
         ids = [r["identifier"] for r in rl]
         vals = latest(tok, ids, keys)
