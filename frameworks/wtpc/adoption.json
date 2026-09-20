@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-20T19:33:23Z",
+ "captured_utc": "2026-09-20T19:49:25Z",
  "prefix": "PCA - WTPC",
  "categories": {
   "env": {
@@ -94,6 +94,20 @@
  ],
  "tagRuleGroups": 8,
  "tagRuleGroupsEmpty": 6,
- "deriveWouldRefuse": true,
+ "derive": {
+  "guard": "REFUSING to reconcile: the VMs group is empty (likely a transient re-resolution).",
+  "postures": {
+   "test-dev-traditional": {
+    "vmsGroupMembers": 0,
+    "wouldRefuse": true
+   },
+   "prod-latency-critical-db": {
+    "vmsGroupMembers": 0,
+    "wouldRefuse": true
+   }
+  },
+  "posturesRefusing": 2,
+  "posturesTotal": 2
+ },
  "stopsAt": "1 · the categories: a declared category is missing, so its rule can never match"
 }

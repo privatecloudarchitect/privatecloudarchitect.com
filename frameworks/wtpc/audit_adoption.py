@@ -48,6 +48,11 @@ from lib._client import OpsSession, _ctx
 from lib._taxonomy import categories as declared_categories
 
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+VMS_GROUP = re.compile(r"^Group - (?P<posture>.+) \(VMs\)$")
+
+# The guard's own words, from the reconciler this framework ships. Quoted rather than paraphrased, because a
+# chapter that reports a refusal should report the sentence the operator will actually see in the terminal.
+DERIVE_GUARD = "REFUSING to reconcile: the VMs group is empty (likely a transient re-resolution)."
 
 
 def _session_id():
@@ -198,9 +203,23 @@ def main():
           f"have no members")
 
     # ---- link 4: the derive, and 5: what it all governs
-    derive = "would refuse" if empty else "has members to derive from"
-    print(f"\n  4. DERIVE: the host and cluster derive {derive}. The estate refuses to reconcile from an "
-          f"empty VMs group on purpose, so an empty workload half cannot blank a populated hardware half")
+    # The guard's condition is the guard's, not a plausible restatement of it. reconcile_infra_groups.py
+    # refuses on `not vm_ids` for the posture it was invoked with, so the predicate is per posture and it
+    # reads ONE group: that posture's VMs group. "Some tag rule somewhere is empty" is a different, broader
+    # claim and would misreport an estate whose tier groups are empty while its posture VMs groups are not.
+    derive = {}
+    for row in rows:
+        m = VMS_GROUP.match(row["group"])
+        if m:
+            n = row["members"]
+            derive[m.group("posture")] = {"vmsGroupMembers": n, "wouldRefuse": not n}
+    refusing = sorted(k for k, v in derive.items() if v["wouldRefuse"])
+    print(f"\n  4. DERIVE: {len(refusing)} of {len(derive)} posture(s) would refuse to reconcile")
+    for posture, v in sorted(derive.items()):
+        verdict = "WOULD REFUSE" if v["wouldRefuse"] else "has members to derive from"
+        print(f"     {posture:<28} VMs group {v['vmsGroupMembers']} member(s): {verdict}")
+    print(f"     the guard is `not vm_ids` in reconcile_infra_groups.py, read per posture, so an empty "
+          f"workload half cannot blank a populated hardware half")
 
     # ---- the verdict: the first incomplete link
     stops_at = None
@@ -218,7 +237,9 @@ def main():
                "categories": cats, "categoriesRead": vc_reachable,
                "assignments": assign, "groups": rows,
                "tagRuleGroups": len(tagrule), "tagRuleGroupsEmpty": len(empty),
-               "deriveWouldRefuse": bool(empty), "stopsAt": stops_at}
+               "derive": {"guard": DERIVE_GUARD, "postures": derive,
+                          "posturesRefusing": len(refusing), "posturesTotal": len(derive)},
+               "stopsAt": stops_at}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
     for var in ("OPS_HOST", "OPS_BROKER_HOST", "VCENTER_HOST", "VCENTER_USERNAME"):
         v = os.environ.get(var)
