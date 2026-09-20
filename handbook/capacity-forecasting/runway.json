@@ -1,0 +1,59 @@
+{
+ "captured_utc": "2026-09-20T20:39:20Z",
+ "clusters": 5,
+ "models": [
+  "alloc",
+  "demand"
+ ],
+ "axes": [
+  "cpu",
+  "mem",
+  "diskspace"
+ ],
+ "capDays": 366,
+ "criticalDays": 90.0,
+ "warningDays": 120.0,
+ "severitySource": "the policy's own TIME_REMAINING block (inherited)",
+ "atCap": 4,
+ "pairsCompared": 30,
+ "pairsDivergent": 0,
+ "reservations": {
+  "machines": 103,
+  "withAReservation": 0
+ },
+ "estateRunwayDays": 0.0,
+ "boundBy": "alloc.cpu",
+ "rows": [
+  {
+   "cluster": 1,
+   "binding": "alloc.cpu",
+   "runwayDays": 0.0,
+   "atCap": false
+  },
+  {
+   "cluster": 2,
+   "binding": null,
+   "runwayDays": 366.0,
+   "atCap": true
+  },
+  {
+   "cluster": 3,
+   "binding": null,
+   "runwayDays": 366.0,
+   "atCap": true
+  },
+  {
+   "cluster": 4,
+   "binding": null,
+   "runwayDays": 366.0,
+   "atCap": true
+  },
+  {
+   "cluster": 5,
+   "binding": null,
+   "runwayDays": 366.0,
+   "atCap": true
+  }
+ ],
+ "keysInFamily": 14
+}

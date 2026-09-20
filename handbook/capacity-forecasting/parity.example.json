@@ -1,8 +1,9 @@
 {
-  "comment-1": "Ruler-parity expectations: for each policy that is a projection ruler, declare strings that must appear in its settings read. Encode your allocation ratios or any setting whose drift would silently change the projection.",
-  "comment-2": "Replace the policy name and needles with your own, then run: python3 runway.py --parity parity.example.json",
-  "<your allocation policy name>": [
-    "<a substring that encodes your declared overcommit ratio>",
-    "<another setting string the ruler depends on>"
-  ]
+  "comment-1": "Ruler-parity expectations: for each policy that governs a cluster you project, declare the allocation ratios it should carry. The gate parses the policy's CAPACITY_ALLOCATION_MODEL block and compares numbers, so 1 does not satisfy 1.5 and formatting does not matter.",
+  "comment-2": "Axis names are the platform's own: cpu, memory, diskspace. Replace the policy name and ratios with yours, then: python3 runway.py --parity parity.example.json",
+  "<your allocation policy name>": {
+    "cpu": 1.5,
+    "memory": 1.0,
+    "diskspace": 2.0
+  }
 }
