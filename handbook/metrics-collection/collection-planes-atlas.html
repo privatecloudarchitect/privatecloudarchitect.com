@@ -156,7 +156,7 @@ figure .strip svg{width:100%}
     <span><i class="sw olive"></i>The CMDB</span>
     <span><i class="sw rose"></i>Loss, limits, traps</span>
   </div>
-  <div class="who"><span>Grounding: VCF 9.1, one reference estate, live reads 2026-09-14 to 2026-09-16</span><span>VMware guidance labeled doc, measured facts labeled live</span></div>
+  <div class="who"><span>Grounding: VCF 9.1, one reference estate, live reads 2026-09-14 to 2026-09-16, re-verified 2026-09-21</span><span>VMware guidance labeled doc, measured facts labeled live</span></div>
   <ol class="index" aria-label="Plates in reading order">
     <li><span class="no">01</span><a href="#p1">Three planes read one host</a></li>
     <li><span class="no">02</span><a href="#p2">What each store keeps and loses</a></li>
@@ -188,7 +188,7 @@ figure .strip svg{width:100%}
     <div><h3>What the counts look like on one small source</h3><ul>
       <li>Real-Time Metrics catalog of <span class="num">437</span> names; <span class="num">175</span> collected for the management vCenter, <span class="num">171</span> for the workload vCenter <span class="num">live</span>.</li>
       <li>Five acquisition profiles, all Essentials: ESXi 20 s (<span class="num">83</span> names), vCenter 20 s (<span class="num">46</span>), vCenter 60 s (<span class="num">3</span>), a PerformanceManager set served at 20 s although its profile name carries 300 (<span class="num">41</span>), ESX Top 2 s (<span class="num">21</span>, nineteen of them also under the 20 s profile) <span class="num">live</span>.</li>
-      <li>Series on the management source: <span class="num">5,391</span>, of which <span class="num">1,341</span> are the 2-second set <span class="num">live</span>.</li>
+      <li>Series on the management source: <span class="num">5,386</span>, of which <span class="num">1,339</span> are the 2-second set; the workload source carries <span class="num">2,927</span> <span class="num">live</span>. A series count is an inventory measurement rather than a platform constant: the same read a week earlier returned 5,391 and 1,341 here, and 2,316 on the workload source before it grew. Read your own before you size anything on it.</li>
     </ul></div>
   </div>
   <div class="trade"><h3>Tradeoff</h3><p>For the vSphere estate the collection problem is already solved by plane 2. A second 20-second pull from vCenter, whether by a warehouse or by a monitoring platform's vCenter integration, adds load on vpxd and truth to nothing, because the analytics store already keeps the 5-minute mean and the peak keys. The strategy question is therefore extraction, not collection: which plane, at which grain, for which decision.</p></div>
@@ -311,7 +311,7 @@ figure .strip svg{width:100%}
   <div class="read">
     <div><h3>What survives, and where</h3><ul>
       <li>The stored 5-minute value is the mean of the fifteen 20-second samples in the cycle ending at its timestamp, within 2 to 4 percent <span class="num">live</span>.</li>
-      <li>Twelve VM keys keep the within-cycle maximum, the <span class="num">20_sec_peak</span> kind (CPU ready, co-stop, overlap, other wait; memory contention; network usage and packets per second; virtual-disk latency; the guest's run queue, disk queue, context switches, page-out rate); a host has none. The keys named "highest of all instances" are the busiest disk, vCPU, core, or adapter averaged over the cycle, not a time peak. The one testable within-cycle key tracks the window maximum, and plate 11 shows the 20-second plane reproducing it <span class="num">doc + live</span>.</li>
+      <li>Twelve VM keys keep the within-cycle maximum, the <span class="num">20_sec_peak</span> kind (CPU ready, co-stop, overlap, other wait; memory contention; network usage and packets per second; virtual-disk latency; the guest's run queue, disk queue, context switches, page-out rate); a host has none, and neither does a cluster. Twelve is the full set and not a guarantee: swept across sixty machines, <span class="num">45</span> carry all twelve, <span class="num">10</span> carry eight (the four guest keys absent, which is what a machine without guest-level collection looks like), and <span class="num">5</span> carry one. Build a panel on the twelve and it renders empty on the machines that have fewer, so count them per machine before you promise the view. The keys named "highest of all instances" are the busiest disk, vCPU, core, or adapter averaged over the cycle, not a time peak. The one testable within-cycle key tracks the window maximum, and plate 11 shows the 20-second plane reproducing it <span class="num">doc + live</span>.</li>
       <li>Server-side hourly AVG and MAX are exact against the native points, so downsampling on the server costs no truth <span class="num">live</span>.</li>
     </ul></div>
     <div><h3>What this settles for the raw-versus-real-time argument</h3><ul>
