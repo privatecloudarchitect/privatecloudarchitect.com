@@ -149,7 +149,7 @@ Three things worth carrying from those references into any design:
 - **Allow DNS egress before the baseline deny lands.** It is the classic casualty: apply the deny
   first and every pod in the namespace loses name resolution at once.
 
-## Precedence: where your rules sit relative to everyone else's
+## Precedence: which category your rules land in
 
 **The invisibility is measurable; the ordering is not, from here.** On a 9.1 estate a tenant token
 lists exactly one firewall policy, the VPC default section, and the transit-gateway and VPC-gateway
@@ -157,10 +157,17 @@ firewall collections return HTTP 200 with no items at all. So a tenant-side audi
 partial: correct about the level it covers, silent about everything above it, with nothing in the
 response marking the gap.
 
-The **ordering** is doc-tier and it is stated verbatim only in the 4.2 administration guide: rules
-evaluate **default space first, then project, then VPC east-west**. That is the most recent verbatim
-statement of it located; the 9.1 line carries its own precedence section, so confirm the order on
-your release rather than on this page.
+The **ordering** is doc-tier and it is a ladder of policy **categories**, not of spaces: rules evaluate
+**Infrastructure** (highest, the provider's, in the infra space), then **Environment** (the project
+administrator's, covering inter-VPC and north-south on the transit gateway), then **Application**
+(lowest, the VPC administrator's). The one policy a tenant can see here reads `category: Application`,
+which is exactly where the role model puts it, and the guidance states that rules in the two higher
+categories are not visible to a VPC administrator.
+
+The categories are bridged on purpose: a **Jump to Application** action lets a permissive rule above
+hand evaluation down, which is why every permissive rule template in the shipped security strategies
+carries `"action": "JumpToApplication"` and how a tenant gets to layer restrictions underneath a
+provider's allow.
 
 ## Version currency
 
