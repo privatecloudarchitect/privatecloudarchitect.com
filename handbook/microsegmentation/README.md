@@ -135,7 +135,7 @@ is a reading of the published references, each of which is linked from the sheet
 
 | placement | what it is | what it costs |
 |---|---|---|
-| DFW rules on namespace subnets | a rule per namespace, source and destination set to that namespace's subnet | addresses again: it hard-codes the subnet, which is the failure the sheet opens on |
+| Firewall rules on the namespace's addresses | a rule per namespace, written against the addresses that namespace occupies | addresses again: it hard-codes today's allocation, which is the failure the sheet opens on |
 | Convert Kubernetes NetworkPolicy to DFW | an import API takes policy UUIDs and produces vDefend DFW policies plus Antrea groups | documented as one-way, and the originals are deleted from the cluster on import |
 | Antrea-native, with tiers | cluster and namespace policies evaluated on their own tier ladder inside the cluster | a second enforcement engine with a second precedence model |
 
@@ -151,8 +151,26 @@ Three things worth carrying from those references into any design:
 
 ## Precedence: where your rules sit relative to everyone else's
 
-Documented for NSX 4.1, with the VPC level added at 4.1.1, and worth confirming on your own release:
-rules evaluate **default space first, then project, then VPC east-west**. Everything this folder
-creates is at the bottom level. A provider rule in the default space decides the outcome before your
-rule is read, and none of the objects a tenant can list belongs to the levels above it, so a
-tenant-side audit is complete about one level and silent about two.
+**The invisibility is measurable; the ordering is not, from here.** On a 9.1 estate a tenant token
+lists exactly one firewall policy, the VPC default section, and the transit-gateway and VPC-gateway
+firewall collections return HTTP 200 with no items at all. So a tenant-side audit is structurally
+partial: correct about the level it covers, silent about everything above it, with nothing in the
+response marking the gap.
+
+The **ordering** is doc-tier and it is stated verbatim only in the 4.2 administration guide: rules
+evaluate **default space first, then project, then VPC east-west**. That is the most recent verbatim
+statement of it located; the 9.1 line carries its own precedence section, so confirm the order on
+your release rather than on this page.
+
+## Version currency
+
+This estate runs 9.1, and the product has been renamed: what older corpuses call the NSX distributed
+firewall is documented on the current line as **vDefend Firewall**. Two 9.1 changes matter to anyone
+who hits the entitlement refusal above:
+
+- **Licensing changed shape.** Subscription-based licence files replace the 25-character keys, and
+  usage is submitted from License Hub on a 180-day cadence. An entitlement gap on 9.1 is therefore
+  not always a purchase; it can be a licence that was never re-registered under the new model.
+- **The firewall can be enabled per cluster.** 9.1 added per-cluster distributed firewall
+  enablement, so a cluster can sit outside the firewall's scope for a reason unrelated to licensing.
+  Read the capability list first, then work out which of the two you are looking at.
