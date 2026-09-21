@@ -91,11 +91,26 @@ before and after each step.
 | the boot disk the platform made | names the machine | deleted with it | released, matching its size |
 | a volume you made and attached | none | **survives, still Bound** | held until you delete it yourself |
 
-Ownership is the whole mechanism, and it is readable before you delete anything. The platform's boot disk
-carries an owner reference back to the `VirtualMachine`, so Kubernetes garbage collection takes it. A volume
-you created carries none, which is correct because it is yours and may be meant to outlive several machines.
-The consequence is that nothing reports the difference: no event, no status change, and the orphan looks
-exactly like a volume in active use.
+**The documentation says the opposite, for a newer API line than VCF 9.1 serves.** The VM Operator
+documentation states that when a VM is deleted, PVCs *still attached* (listed in `spec.volumes`) "are
+automatically deleted along with it", while a previously detached one has its owner reference removed "so it
+survives instead of being cascade-deleted". It also documents a `vmoperator.vmware.com/keep-owner-ref`
+annotation to opt out, which only makes sense if the owner reference is normally present.
+
+On this estate it was never present: the attached volume carried no owner reference even while attached, and
+survived. Those documentation examples use `v1alpha6`; this Supervisor serves up to `v1alpha5` and answers
+404 for `v1alpha6`, so the likeliest reading is a behaviour that changed between the two. That is a reading,
+not a finding.
+
+**And the door you delete through decides it.** The same unowned volume was removed when the **deployment**
+was deleted instead of the machine. Kubernetes garbage collection had no handle on it, because it had no
+owner reference; the record did, because it was tracking it as a resource. That is the strongest practical
+argument here for deleting through the thing that claims a machine.
+
+**So test it rather than trusting either answer.** Assume the documented rule on a build that does not
+implement it and orphans accumulate quietly; assume this estate's result on a build that does and a volume
+you meant to keep is cascade-deleted. Attach a throwaway volume to a throwaway machine, delete the machine,
+and look. The two answers differ by whether your data still exists.
 
 The list worth having is one read: every volume in the namespace with **no owner reference**. That is
 everything no machine deletion will ever clean up.
@@ -105,6 +120,32 @@ PersistentVolumeClaim you can see in the namespace listing. A machine built by a
 `Classic` disk that never appeared as a PVC at all; a catalog-built machine's was `Managed` and did. Both
 went with their machine, so the rule above holds either way, but a volume audit that reads only PVCs will not
 see every disk an estate is paying for.
+
+## Day-2 actions are a state machine, not a list
+
+`--probe-pathways` reads each action's `valid` flag with the machine running and again with it stopped. They
+are not the same set:
+
+| | valid |
+|---|---|
+| machine **running** | Add.Disk, both consoles, Remove.Disk, snapshots, PowerOff, Suspend |
+| machine **stopped** | **Resize**, snapshots, PowerOn |
+
+Resize is refused while the machine runs and becomes available when it stops; disks and consoles are the
+reverse. So an action total is the size of the surface, never a count of what you can do right now, and a
+runbook that assumes otherwise has an ordering bug in it.
+
+Two practical notes from driving these:
+
+- The request path is **per resource**: `POST /deployment/api/deployments/{id}/resources/{resourceId}/requests`
+  with `{actionId, inputs, reason}`. Posting a resource action to the deployment-level `/requests` answers 404.
+- Each action carries its own schema with patterns and enums. `Add.Disk` declares `diskSize` as
+  `^[0-9]+Gi$`, so `"1"` is refused with 400 and `"1Gi"` succeeds. Read the schema rather than guessing.
+
+**A Day-2 action that reports FAILED may still have changed things.** On one run `Add.Disk` ended
+SUCCESSFUL, on the next with identical inputs it ended FAILED, and in both it created the requested volume
+*and* converted the boot disk from a `Classic` disk into a PVC. Read the estate after a failed action rather
+than assuming it rolled back.
 
 ## Scope, stated plainly
 

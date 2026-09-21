@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T13:47:58Z",
+ "captured_utc": "2026-09-21T17:21:14Z",
  "project": "{{project-1}}",
  "watchedFields": [
   "powerState",
@@ -183,7 +183,7 @@
   "afterDeletingTheMachine": {
    "volumeICreatedSurvives": true,
    "anyVolumeNamedForTheMachineSurvives": [],
-   "quotaReleasedBytes": 26843548160,
+   "quotaReleasedBytes": 26844148224,
    "bootDiskBytes": 26843545600
   },
   "theOrphan": {
@@ -195,6 +195,83 @@
    "quotaReleasedBytes": 2147483648
   }
  },
+ "contract": {
+  "Deployment.status": {
+   "documented": [
+    "CREATE_SUCCESSFUL",
+    "CREATE_INPROGRESS",
+    "CREATE_FAILED",
+    "UPDATE_SUCCESSFUL",
+    "UPDATE_INPROGRESS",
+    "UPDATE_FAILED",
+    "DELETE_SUCCESSFUL",
+    "DELETE_INPROGRESS",
+    "DELETE_FAILED"
+   ],
+   "seen": {
+    "DELETE_SUCCESSFUL": 6,
+    "CREATE_SUCCESSFUL": 5
+   },
+   "neverSeen": [
+    "CREATE_INPROGRESS",
+    "CREATE_FAILED",
+    "UPDATE_SUCCESSFUL",
+    "UPDATE_INPROGRESS",
+    "UPDATE_FAILED",
+    "DELETE_INPROGRESS",
+    "DELETE_FAILED"
+   ]
+  },
+  "resource.syncStatus": {
+   "documented": [
+    "SUCCESS",
+    "MISSING",
+    "STALE"
+   ],
+   "seen": {
+    "MISSING": 6,
+    "SUCCESS": 11,
+    "null": 1
+   },
+   "neverSeen": [
+    "STALE"
+   ]
+  },
+  "resource.state": {
+   "documented": [
+    "PARTIAL",
+    "TAINTED",
+    "OK"
+   ],
+   "seen": {
+    "OK": 18
+   },
+   "neverSeen": [
+    "PARTIAL",
+    "TAINTED"
+   ]
+  },
+  "resource.origin": {
+   "documented": [
+    "DISCOVERED",
+    "DEPLOYED",
+    "ONBOARDED",
+    "MIGRATED",
+    "SIMULATED",
+    "CCS"
+   ],
+   "seen": {
+    "DEPLOYED": 18
+   },
+   "neverSeen": [
+    "DISCOVERED",
+    "ONBOARDED",
+    "MIGRATED",
+    "SIMULATED",
+    "CCS"
+   ]
+  }
+ },
  "auditTotals": {
   "claimed": 8,
   "agree": 3,
@@ -204,15 +281,15 @@
  },
  "probe": {
   "vcfa": {
-   "requestStatus": "CHECKING_APPROVAL",
-   "secondsToSupervisorSpecChanged": null,
-   "secondsToMachineConverged": null,
-   "secondsToRequestSuccessful": 11,
+   "requestStatus": "SUCCESSFUL",
+   "secondsToSupervisorSpecChanged": 22,
+   "secondsToMachineConverged": 323,
+   "secondsToRequestSuccessful": 324,
    "recordAfter": {
-    "syncStatus": "SUCCESS",
+    "syncStatus": null,
     "state": "OK",
-    "declared": "PoweredOn",
-    "observed": "PoweredOn"
+    "declared": "PoweredOff",
+    "observed": "PoweredOff"
    }
   },
   "supervisor": {
@@ -221,20 +298,67 @@
    "recordAfter": {
     "syncStatus": "SUCCESS",
     "state": "OK",
-    "declared": "PoweredOn",
-    "observed": "PoweredOff"
+    "declared": "PoweredOff",
+    "observed": "PoweredOn"
    },
-   "recordStillDeclares": "PoweredOn",
+   "recordStillDeclares": "PoweredOff",
    "machineActuallyIs": "PoweredOn",
    "syncStatusSaysProblem": false
   },
   "teardown": {
-   "secondsToRecordRemoved": null,
-   "recordRetired": false,
+   "secondsToRecordRemoved": 42,
+   "recordRetired": true,
    "note": "the probe never removes the machine first; see the docstring"
   },
-  "residue": [
-   "{{deployment-1}}"
-  ]
+  "actionsWhileRunning": {
+   "Add.Disk": true,
+   "RemoteConsole": true,
+   "WebConsole": true,
+   "Remove.Disk": true,
+   "Resize": false,
+   "Create.Snapshot": true,
+   "Delete.Snapshot": true,
+   "Get.Password": false,
+   "PowerOff": true,
+   "PowerOn": false,
+   "Revert.Snapshot": true,
+   "Suspend": true
+  },
+  "actionsWhileStopped": {
+   "Add.Disk": false,
+   "RemoteConsole": false,
+   "WebConsole": false,
+   "Remove.Disk": false,
+   "Resize": true,
+   "Create.Snapshot": true,
+   "Delete.Snapshot": true,
+   "Get.Password": false,
+   "PowerOff": false,
+   "PowerOn": true,
+   "Revert.Snapshot": true,
+   "Suspend": false
+  },
+  "addDisk": {
+   "attempted": true,
+   "requestStatus": "FAILED",
+   "requestAccepted": 200,
+   "newVolumes": {
+    "handbook-pathways-d2-171307-638afcb5": [
+     "VirtualMachine"
+    ],
+    "handbook-pathways-disk-d7aa1570b2": []
+   },
+   "anyWithoutAnOwner": [
+    "handbook-pathways-disk-d7aa1570b2"
+   ]
+  },
+  "residue": [],
+  "volumesAfterDeploymentTeardown": {
+   "unownedVolumesTheActionMade": [
+    "handbook-pathways-disk-d7aa1570b2"
+   ],
+   "survivingAfterwards": [],
+   "recordRemovedAnUnownedVolume": true
+  }
  }
 }

@@ -44,6 +44,7 @@ Run:
   export TLS_VERIFY=false                                  # only on a self-signed lab CA
   python3 pathways.py [--probe-pathways]
 """
+import collections
 import http.client
 import json
 import os
@@ -66,6 +67,20 @@ PREFIX = "handbook-pathways"
 # The spec fields worth comparing. A manifest may legitimately omit a field the platform then defaults, so
 # comparing every key would report defaulting as drift. These are the ones an operator sets on purpose.
 WATCHED = ("powerState", "className", "imageName", "storageClass", "bootDiskCapacity")
+# The contract, from the Deployment Controller OpenAPI definition rather than from observation. Printed
+# beside what the estate actually shows, because a value that EXISTS in the contract and never appears is a
+# different and more useful fact than a value nobody thought of. Deployment.status is documented as
+# "the status of deployment with respect to its life cycle operations - create/update/delete", which is
+# worth reading twice: DELETE_SUCCESSFUL describes the operation, and says nothing about whether the record
+# is still here.
+CONTRACT = {
+    "Deployment.status": ["CREATE_SUCCESSFUL", "CREATE_INPROGRESS", "CREATE_FAILED",
+                          "UPDATE_SUCCESSFUL", "UPDATE_INPROGRESS", "UPDATE_FAILED",
+                          "DELETE_SUCCESSFUL", "DELETE_INPROGRESS", "DELETE_FAILED"],
+    "resource.syncStatus": ["SUCCESS", "MISSING", "STALE"],
+    "resource.state": ["PARTIAL", "TAINTED", "OK"],
+    "resource.origin": ["DISCOVERED", "DEPLOYED", "ONBOARDED", "MIGRATED", "SIMULATED", "CCS"],
+}
 
 
 def ctx():
@@ -165,8 +180,10 @@ def audit(e, L, endpoints):
     matters, because the record goes on being cited as the description of a machine it no longer describes.
     """
     rows, tombstones = [], []
+    seen = {k: collections.Counter() for k in CONTRACT}
     st, dep = e.api("/deployment/api/deployments?size=200")
     for d in ((dep or {}).get("content") or []):
+        seen["Deployment.status"][d.get("status")] += 1
         st, rs = e.api(f"/deployment/api/deployments/{d['id']}/resources?size=200")
         res = (rs or {}).get("content") or []
         if str(d.get("status")) == "DELETE_SUCCESSFUL" and res:
@@ -174,6 +191,9 @@ def audit(e, L, endpoints):
                                "resourcesStillListed": len(res),
                                "syncStatuses": sorted({r.get("syncStatus") for r in res if r.get("syncStatus")})})
         for r in res:
+            seen["resource.syncStatus"][r.get("syncStatus")] += 1
+            seen["resource.state"][r.get("state")] += 1
+            seen["resource.origin"][r.get("origin")] += 1
             p = r.get("properties") or {}
             man, obj = p.get("manifest") or {}, p.get("object") or {}
             if str(man.get("kind")) != "VirtualMachine":
@@ -215,7 +235,65 @@ def audit(e, L, endpoints):
                 "agrees": bool(live) and not drift_obs and not drift_live,
                 "objectGone": r.get("syncStatus") == "MISSING",
             })
-    return rows, tombstones
+    observed = {k: {"documented": v, "seen": dict(seen[k]),
+                     "neverSeen": [x for x in v if not seen[k].get(x)]} for k, v in CONTRACT.items()}
+    return rows, tombstones, observed
+
+
+def action_validity(e, dep, res):
+    """Which of the machine's Day-2 actions are valid RIGHT NOW.
+
+    `valid` is not decoration. It tracks the machine's state: Resize is refused while the machine runs and
+    becomes available when it stops, and the disk and console actions are the other way round. So an action
+    catalogue is a list of what exists, and the usable subset is never that number.
+    """
+    st, acts = e.api(f"/deployment/api/deployments/{dep}/resources/{res}/actions")
+    if not isinstance(acts, list):
+        return {}
+    return {a["name"].replace("VirtualMachine.", ""): a.get("valid") for a in acts}
+
+
+def add_a_disk(e, dep, res, url, ns, storage):
+    """Add a disk through the platform's own Day-2 action, and read who ends up owning it.
+
+    The answer matters for teardown: a PVC with no ownerReferences cannot be collected by Kubernetes when
+    the machine goes, so whether anything removes it depends entirely on whether something else is tracking
+    it.
+    """
+    pvcs = f"/api/v1/namespaces/{ns}/persistentvolumeclaims"
+
+    def owners():
+        st, p = e.ns(url, pvcs)
+        return {x["metadata"]["name"]: [o["kind"] for o in (x["metadata"].get("ownerReferences") or [])]
+                for x in ((p.get("items") or []) if st == 200 else [])}
+
+    before = set(owners())
+    st, acts = e.api(f"/deployment/api/deployments/{dep}/resources/{res}/actions")
+    if not isinstance(acts, list):
+        return {"attempted": False, "why": f"the action list answered HTTP {st}"}
+    add = next((a for a in acts if a["name"] == "VirtualMachine.Add.Disk"), None)
+    if not add or not add.get("valid"):
+        return {"attempted": False, "why": "Add.Disk is not valid in the machine's current state"}
+    # the action's own schema carries the patterns: diskSize must match ^[0-9]+Gi$, so "1" is refused
+    st, r = e.api(f"/deployment/api/deployments/{dep}/resources/{res}/requests", "POST",
+                  {"actionId": add["id"], "reason": "handbook pathways probe",
+                   "inputs": {"diskName": f"{PREFIX}-disk", "diskSize": "1Gi",
+                              "storageClassName": storage, "accessMode": "ReadWriteOnce"}})
+    rid = (r or {}).get("id")
+    running = {"PENDING", "INPROGRESS", "CHECKING_APPROVAL", "APPROVAL_PENDING", "INITIALIZATION",
+               "CREATED", "COMPLETION", None}
+    final = None
+    for _ in range(36):
+        time.sleep(10)
+        st, rr = e.api(f"/deployment/api/requests/{rid}")
+        final = (rr or {}).get("status")
+        if final not in running:
+            break
+    after = owners()
+    new = [k for k in after if k not in before]
+    return {"attempted": True, "requestStatus": final, "requestAccepted": st,
+            "newVolumes": {k: (after[k] or []) for k in new},
+            "anyWithoutAnOwner": [k for k in new if not after[k]]}
 
 
 # --------------------------------------------------------------------------- what a delete takes
@@ -325,8 +403,11 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
     Supervisor reconciles it away, which is a fact about where authority lives rather than a Day-2 option,
     and proving it needs a vCenter credential this script deliberately does not ask for.
     """
-    name = f"{PREFIX}-d2"
-    bpname = f"{PREFIX}-probe"
+    # A stranded record keeps its NAME. Requesting a deployment whose name one already holds does not
+    # produce a clearer error, it produces a deployment that never builds, so every run gets its own suffix.
+    stamp = time.strftime("%H%M%S", time.gmtime())
+    name = f"{PREFIX}-d2-{stamp}"
+    bpname = f"{PREFIX}-probe-{stamp}"
     out = {"vcfa": {}, "supervisor": {}, "teardown": {}}
     vms = f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachines"
 
@@ -366,10 +447,28 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
         if (d or {}).get("status") not in ("CREATE_INPROGRESS", None):
             break
     print(f"  built through the catalog: {(d or {}).get('status')}")
+    st, rs0 = e.api(f"/deployment/api/deployments/{dep}/resources?size=50")
+    vmres = next((x["id"] for x in ((rs0 or {}).get("content") or [])
+                  if x.get("type") == "CCI.Supervisor.Resource"), None)
+    out["actionsWhileRunning"] = action_validity(e, dep, vmres) if vmres else {}
+    print(f"  Day-2 while the machine runs: "
+          f"{sum(1 for v in out['actionsWhileRunning'].values() if v)} of "
+          f"{len(out['actionsWhileRunning'])} actions valid")
 
     # ---- pathway 1: the deployment's own Day-2 action
+    #
+    # This endpoint answers a LIST when it is happy and an object when it is not, so treat a non-list as the
+    # error it is rather than iterating it and getting a confusing AttributeError three lines later.
     st, acts = e.api(f"/deployment/api/deployments/{dep}/actions")
-    po = next((a for a in (acts or []) if a.get("name") == "PowerOff"), None)
+    if not isinstance(acts, list):
+        raise SystemExit(f"\nSTOPPING: the deployment action list answered HTTP {st} with "
+                         f"{json.dumps(acts)[:200]}. The probe has built a deployment it is now abandoning; "
+                         f"delete deployment {dep} through VCF Automation, not the machine.")
+    po = next((a for a in acts if a.get("name") == "PowerOff" and a.get("valid")), None)
+    if po is None:
+        raise SystemExit(f"\nSTOPPING: PowerOff is not valid on deployment {dep} right now "
+                         f"({[(a.get('name'), a.get('valid')) for a in acts]}). Delete that deployment "
+                         f"through VCF Automation, not the machine.")
     t0 = time.time()
     st, rq = e.api(f"/deployment/api/deployments/{dep}/requests", "POST",
                    {"actionId": po.get("id"), "inputs": {}})
@@ -390,6 +489,12 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
                    "secondsToMachineConverged": status_at,
                    "secondsToRequestSuccessful": round(time.time() - t0),
                    "recordAfter": record_view(e, dep, name)}
+    out["actionsWhileStopped"] = action_validity(e, dep, vmres) if vmres else {}
+    print(f"  Day-2 once it is stopped: "
+          f"{sum(1 for v in out['actionsWhileStopped'].values() if v)} of "
+          f"{len(out['actionsWhileStopped'])} actions valid; Resize is "
+          f"{out['actionsWhileStopped'].get('Resize')} now and was "
+          f"{out['actionsWhileRunning'].get('Resize')} while it ran")
     print(f"  VCFA PowerOff: it wrote the Supervisor's own spec at ~{spec_at}s, the machine converged at "
           f"~{status_at}s, and only then did the request report {(rr or {}).get('status')} at "
           f"~{out['vcfa']['secondsToRequestSuccessful']}s")
@@ -415,6 +520,13 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
           f"{rv.get('declared')} for a machine that is {out['supervisor']['machineActuallyIs']}, "
           f"with syncStatus reading {rv.get('syncStatus')}")
 
+    # ---- now the disk, and only now: Add.Disk rewrites the stored manifest, so running it earlier would
+    # have destroyed the clean before-and-after reading the drift measurement above depends on.
+    out["addDisk"] = add_a_disk(e, dep, vmres, url, ns, storage) if vmres else {}
+    if out["addDisk"].get("attempted"):
+        print(f"  Add.Disk through the platform's own action: {out['addDisk'].get('requestStatus')}; "
+              f"volumes it created with NO owner reference: {out['addDisk'].get('anyWithoutAnOwner')}")
+
     # ---- teardown, deliberately while the machine still exists
     print("  tearing down with the machine STILL PRESENT, which is what lets the record retire")
     t0 = time.time()
@@ -438,6 +550,17 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
     st, left = e.ns(url, vms)
     out["residue"] = [v["metadata"]["name"] for v in ((left.get("items") or []) if st == 200 else [])
                       if v["metadata"]["name"].startswith(PREFIX)]
+    # The half of the delete story that ownership cannot explain: a PVC with no ownerReferences is
+    # invisible to Kubernetes garbage collection, so whether it survives depends on whether the RECORD
+    # was tracking it.
+    st, pv = e.ns(url, f"/api/v1/namespaces/{ns}/persistentvolumeclaims")
+    surviving = [x["metadata"]["name"] for x in ((pv.get("items") or []) if st == 200 else [])
+                 if x["metadata"]["name"].startswith(PREFIX)]
+    out["volumesAfterDeploymentTeardown"] = {
+        "unownedVolumesTheActionMade": out.get("addDisk", {}).get("anyWithoutAnOwner") or [],
+        "survivingAfterwards": surviving,
+        "recordRemovedAnUnownedVolume": bool(out.get("addDisk", {}).get("anyWithoutAnOwner")) and not surviving}
+    print(f"  after the DEPLOYMENT teardown, volumes still present: {surviving or 'none'}")
     print(f"  record retired at ~{gone}s; residue: {out['residue'] or 'none'}")
     if out["residue"] or gone is None:
         # Do not exit quietly on residue. And do not "tidy up" by deleting the machine: that is the exact
@@ -475,7 +598,7 @@ def main():
                 L.get("namespace", n["metadata"]["name"])
                 endpoints.append((p, n["metadata"]["name"], u))
 
-    rows, tombstones = audit(e, L, endpoints)
+    rows, tombstones, observed = audit(e, L, endpoints)
     agree = sum(1 for r in rows if r["agrees"])
     missing = sum(1 for r in rows if r["syncStatus"] == "MISSING")
     # Drift that syncStatus does not report. Count BOTH comparisons, because the first needs only an
@@ -495,6 +618,11 @@ def main():
                                                    if r["declaredVsLive"] else "cached object differs"
                                                    if r["declaredVsObserved"] else "not on a reachable namespace"))
         print(f"       {r['machine']:<16} sync={str(r['syncStatus']):<8} {flag}")
+    print(f"\n  THE CONTRACT against what this estate shows:")
+    for k, v in observed.items():
+        never = ", ".join(v["neverSeen"]) or "none"
+        print(f"     {k:<22} seen {dict(v['seen'])}")
+        print(f"     {'':<22} documented but never seen here: {never}")
     if tombstones:
         print(f"\n  TOMBSTONES: {len(tombstones)} deployment(s) report DELETE_SUCCESSFUL and still hold a resource")
         for t in tombstones:
@@ -556,6 +684,7 @@ def main():
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "project": L.get("project", project), "watchedFields": list(WATCHED),
                "audit": rows, "tombstones": tombstones, "deleteStory": deleted,
+               "contract": observed,
                "auditTotals": {"claimed": len(rows), "agree": agree, "objectGone": missing,
                                "driftedSilently": len(silent),
                                "driftProvableFromTheRecordAlone": len(from_record_alone)},

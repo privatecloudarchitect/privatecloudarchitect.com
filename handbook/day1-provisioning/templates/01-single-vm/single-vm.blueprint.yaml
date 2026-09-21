@@ -126,14 +126,18 @@ inputs:
     type: string
     title: Boot disk capacity
     description: >-
-      Intended to right-size the boot disk, because a VM otherwise inherits the
-      image's full virtual disk and burns storage quota you did not intend to spend.
-      VERIFY IT APPLIES ON YOUR BUILD BEFORE RELYING ON IT. On the VCF 9.1 estate
-      these templates were checked against on 2026-09-21 the field was accepted and
-      then discarded: asked for 20Gi (smaller than the image) and 40Gi (larger), by
-      a direct create and through this blueprint, the stored spec read back null
-      every time and the machine got the image's own 25Gi. Read the disk your first
-      machine actually gets, and size your quota to that rather than to this value.
+      Right-sizes the boot disk. The VM Operator API documents this field as "the
+      capacity of the VM's boot disk", and documents exactly one case where it does
+      not apply: it is "ignored when deploying from an ISO with CD-ROM devices".
+
+      VERIFY IT APPLIES ON YOUR BUILD. On the VCF 9.1 estate these templates were
+      checked against on 2026-09-21 it was accepted and then discarded, and that
+      documented exception did not apply: the image was type OVF, not ISO. Asked
+      for 20Gi (smaller than the image) and 40Gi (larger), by a direct create and
+      through this blueprint, the stored spec read back null all three times and
+      the machine got the image's own 25Gi. That is a divergence from the documented
+      behaviour rather than a setting used wrongly, so check the disk your first
+      machine actually gets and size quota to that rather than to this value.
     default: 20Gi
 
 # -----------------------------------------------------------------------------

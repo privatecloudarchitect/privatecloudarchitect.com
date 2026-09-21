@@ -104,6 +104,13 @@ together and do nothing at all about the fourth.
 A 200 here means the door answered this **identity**. What it then permits is the project role tier and the
 four dials, which the access-control chapter covers.
 
+## The action count is the surface, not the menu
+
+This script reports 17 Day-2 actions on a claimed machine, 5 on the deployment and 12 on the machine. That
+is how many **exist**. Each carries a `valid` flag that tracks the machine's live state, and the usable set
+is never all of them: on a running machine 9 of the 12 are valid and Resize is not; once it stops, Resize is
+and the disk and console actions are not. The day2-pathways companion measures that state machine.
+
 ## Scope, stated plainly
 
 - Read-only without `--probe-doors`. With it, every write is to an object this run created and deletes.
