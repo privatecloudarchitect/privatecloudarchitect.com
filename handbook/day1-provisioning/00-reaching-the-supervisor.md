@@ -127,10 +127,25 @@ use them:
 
 ```bash
 vcf context use <context-name>:<namespace>:<project>
-kubectl get clustervirtualmachineimages   # VM images; pick an Ubuntu 24.04 vmi-... id (vm_image)
+kubectl get virtualmachineimages -n <your-namespace>   # VM images bound to YOUR namespace; look here first
+kubectl get clustervirtualmachineimages               # images shared cluster-wide; see the warning below
 kubectl get virtualmachineclasses         # VM sizes (vm_class)
 kubectl get kubernetesreleases            # Kubernetes releases for VKS, templates 4 and 5 (kr for short)
 ```
+
+**The image list has two scopes, and the bigger one is mostly the wrong images.** A VM image is either
+bound to your namespace (`virtualmachineimages`) or shared across the cluster
+(`clustervirtualmachineimages`), and the two lists can have nothing in common. On the estate these
+templates were verified against they overlap in zero entries: three general-purpose images are bound to
+the namespace, and 138 are cluster-scoped. The trap is that the cluster-scoped list is where a VKS estate
+keeps its **Kubernetes node images**, so a search for Ubuntu returns 103 results and not one of them is a
+general-purpose Ubuntu you want under a VM. Read your namespace's list first, and treat a `vmi-` id whose
+display name carries a Kubernetes version as a node image rather than a candidate.
+
+Two consequences worth knowing before you pick a namespace to build in. An image bound to one namespace is
+not usable from another, so the same manifest can work in one and be refused in the next with *no VM image
+exists ... in namespace or cluster scope*. And storage quota is per namespace too: if the boot disk does not
+fit, the refusal arrives from an admission webhook at apply time and names the reason.
 
 To re-authenticate at any time (safe to run at the start of a script; it is a no-op
 if your token is still valid):

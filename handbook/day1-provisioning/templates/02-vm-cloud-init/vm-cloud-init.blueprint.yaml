@@ -65,7 +65,7 @@ inputs:
     title: VM image (immutable ID)
     description: >-
       The immutable cluster-image ID (vmi-...) to boot from, not a friendly alias,
-      so a deploy is reproducible.  kubectl get clustervirtualmachineimages | grep -i ubuntu
+      so a deploy is reproducible.  kubectl get virtualmachineimages -n <ns>
 
   storage_class:
     type: string

@@ -63,7 +63,7 @@ inputs:
   db_vm_image:
     type: string
     title: Database VM image (immutable ID)
-    description: 'kubectl get clustervirtualmachineimages | grep -i ubuntu'
+    description: 'kubectl get virtualmachineimages -n <ns>'
 
   db_vm_class:
     type: string

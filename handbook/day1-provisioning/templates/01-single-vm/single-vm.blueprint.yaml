@@ -98,7 +98,7 @@ inputs:
       (looks like vmi-0a1b2c3d...), never a friendly alias like "ubuntu-latest".
       Pinning the ID makes a deploy reproducible: it cannot drift when someone
       re-tags the alias next month. Find a current Ubuntu 24.04 image with:
-        kubectl get clustervirtualmachineimages | grep -i ubuntu
+        kubectl get virtualmachineimages -n <ns>
 
   storage_class:
     type: string
