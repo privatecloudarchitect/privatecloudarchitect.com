@@ -243,12 +243,136 @@ def claims(e, L):
             continue
         st, da = e.api(f"/deployment/api/deployments/{d['id']}/actions")
         st, ra = e.api(f"/deployment/api/deployments/{d['id']}/resources/{vm['id']}/actions")
+        # Register the machine named by the claim before scrubbing it. Do not rely on the survey having seen
+        # it: the survey lists LIVE machines, and a deployment can still claim one that no longer exists, so
+        # the name a retired record carries would otherwise reach the file unreplaced.
+        _link = str((vm.get("properties") or {}).get("resourceLink") or "")
+        _m = re.match(r"^cci:([^:]+):([^:]+):[^:]+:VirtualMachine:(.+)$", _link)
+        if _m:
+            L.get("machine", _m.group(3))
         found = {"deploymentActions": sorted(a.get("name") for a in (da or []) if a.get("name")),
                  "resourceActions": sorted(a.get("name") for a in (ra or []) if a.get("name")),
-                 "linkShape": L.scrub(str((vm.get("properties") or {}).get("resourceLink") or "")),
+                 "linkShape": L.scrub(_link),
                  "recordFields": fields}
         break
     return found or {"deploymentActions": [], "resourceActions": [], "linkShape": None, "recordFields": fields}
+
+
+def _endpoints(e, project):
+    """Every namespace in the project that publishes its own Kubernetes endpoint."""
+    out = []
+    st, nss = e.gw(f"/apis/{A3}/namespaces/{project}/supervisornamespaces")
+    for n in ((nss.get("items") or []) if st == 200 else []):
+        u = (n.get("status") or {}).get("namespaceEndpointURL")
+        if u:
+            out.append((project, n["metadata"]["name"], u))
+    return out
+
+
+# --------------------------------------------------------------------------- the fourth door
+
+def probe_vcenter(e, L, vc_host, session, namespaces):
+    """The door this chapter does not count as one of the three, because it does not reach the same machine.
+
+    A virtual machine created straight in vCenter is not a VirtualMachine object. Nothing above vCenter
+    declares it, counts it, or claims it, which is not a governance failure but a statement about where the
+    tenancy model begins. This measures each of those absences rather than asserting them, and deletes what
+    it made.
+
+    Needs a vCenter session credential, which is a DIFFERENT identity from the one the rest of this script
+    uses; that difference is the finding on the access side.
+    """
+    name = f"{PREFIX}-vcenter-native"
+
+    def vc(path, method="GET", payload=None):
+        """vCenter's own caller. The bearer the rest of this script holds answers 401 here, which is the
+        point: these are two identity domains, not two tiers of one."""
+        data = json.dumps(payload).encode() if payload is not None else None
+        h = {"vmware-api-session-id": session, "Accept": "application/json"}
+        if data:
+            h["Content-Type"] = "application/json"
+        try:
+            with urllib.request.urlopen(urllib.request.Request(f"https://{vc_host}{path}", data=data,
+                                                               method=method, headers=h),
+                                        context=ctx(), timeout=180) as r:
+                raw = r.read()
+                return r.status, (json.loads(raw) if raw else None)
+        except urllib.error.HTTPError as ex:
+            try:
+                return ex.code, json.loads(ex.read())
+            except ValueError:
+                return ex.code, {}
+        except (urllib.error.URLError, OSError):
+            return None, {}
+    out = {"created": None, "declaredByANamespace": None, "claimedByADeployment": None,
+           "tenantQuotaDeltaBytes": None, "deleted": None}
+
+    def quota():
+        total = 0
+        for _p, ns, url in namespaces:
+            st, q = e.ns(url, f"/apis/cns.vmware.com/v1alpha1/namespaces/{ns}/storagepolicyquotas")
+            for item in ((q.get("items") or []) if st == 200 else []):
+                conv = json.loads((item.get("metadata") or {}).get("annotations", {})
+                                  .get("cns.vmware.com/conversion", "{}") or "{}")
+                for t in ((conv.get("status") or {}).get("total") or []):
+                    used = str(t.get("scQuotaUsage", {}).get("used", ""))
+                    if used.isdigit():
+                        total += int(used)
+        return total
+
+    before = quota()
+    # Not just any VM folder. The Supervisor owns some of them, and vCenter refuses a hand-made machine
+    # there with HTTP 403: the folder named "Namespaces" and the per-service folders are the Supervisor's,
+    # which is a small piece of good news and the only place the two planes visibly defend a boundary.
+    st, folders = vc("/api/vcenter/folder")
+    OWNED = ("Namespaces", "vSpherePods")
+    cand = [f for f in (folders or []) if f.get("type") == "VIRTUAL_MACHINE"
+            and f.get("name") not in OWNED and not str(f.get("name", "")).startswith("svc-")]
+    folder = next((f["folder"] for f in cand if f.get("name") == "Discovered virtual machine"),
+                  cand[0]["folder"] if cand else None)
+    st, pools = vc("/api/vcenter/resource-pool")
+    pool = next((r["resource_pool"] for r in (pools or []) if r.get("name") == "Resources"), None)
+    st, stores = vc("/api/vcenter/datastore")
+    store = max((d for d in (stores or [])), key=lambda d: d.get("free_space", 0), default={}).get("datastore")
+    if not (folder and pool and store):
+        print("  fourth door: could not resolve a folder, pool and datastore to place a machine; skipped")
+        return None
+
+    spec = {"name": name, "guest_OS": "UBUNTU_64",
+            "placement": {"folder": folder, "resource_pool": pool, "datastore": store},
+            "cpu": {"count": 1}, "memory": {"size_MiB": 512},
+            "disks": [{"new_vmdk": {"capacity": 1073741824}}]}
+    st, r = vc("/api/vcenter/vm", "POST", spec)
+    out["created"] = st
+    if st not in (200, 201):
+        print(f"  fourth door: vCenter refused the create (HTTP {st}); skipped")
+        return out
+    moid = r if isinstance(r, str) else (r or {}).get("value")
+
+    asked = []
+    for _p, ns, url in namespaces:
+        stn, _ = e.ns(url, f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachines/{name}")
+        asked.append(stn)
+    out["declaredByANamespace"] = any(a == 200 for a in asked)
+    out["namespacesAsked"] = len(asked)
+
+    claimed = False
+    st, dep = e.api("/deployment/api/deployments?size=200")
+    for d in ((dep or {}).get("content") or []):
+        st, rs = e.api(f"/deployment/api/deployments/{d['id']}/resources?size=50")
+        for res in ((rs or {}).get("content") or []):
+            if name in json.dumps(res.get("properties") or {}):
+                claimed = True
+    out["claimedByADeployment"] = claimed
+    out["tenantQuotaDeltaBytes"] = quota() - before
+
+    st, _ = vc(f"/api/vcenter/vm/{moid}", "DELETE")
+    stg, _ = vc(f"/api/vcenter/vm/{moid}")
+    out["deleted"] = (st, stg == 404)
+    print(f"  fourth door: created straight in vCenter, declared by {sum(1 for a in asked if a == 200)} of "
+          f"{len(asked)} namespace(s), claimed by {'a' if claimed else 'no'} deployment, and it moved the "
+          f"tenant storage quota by {out['tenantQuotaDeltaBytes']} bytes. Deleted, and gone: {stg == 404}")
+    return out
 
 
 # --------------------------------------------------------------------------- the probe
@@ -478,6 +602,17 @@ def main():
         print(f"     {', '.join(buys['resourceActions'][:6])}{' ...' if len(buys['resourceActions']) > 6 else ''}")
     print(f"     the record carries {len(buys['recordFields'])} field(s), including who asked and what they typed")
 
+    fourth = None
+    want_vc = "--probe-vcenter" in sys.argv[1:]
+    vc_host, vc_sess = os.environ.get("VC_HOST"), os.environ.get("VC_SESSION_FILE")
+    if want_vc and vc_host and vc_sess and os.path.exists(vc_sess):
+        print(f"\n  the fourth door: a machine made straight in vCenter, which is not one of the three")
+        fourth = probe_vcenter(e, L, vc_host, open(vc_sess, encoding="utf-8").read().strip(),
+                               [(p, n, u) for (p, n, u) in
+                                [(x[0], x[1], x[2]) for x in _endpoints(e, project)]])
+    elif want_vc:
+        print("\n  the fourth door: not probed (needs VC_HOST and VC_SESSION_FILE)")
+
     probed = None
     if want_probe:
         ns = os.environ.get("DOORS_NAMESPACE")
@@ -516,7 +651,18 @@ def main():
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "project": L.get("project", project), "needs": needs, "namespaces": per_ns,
-               "claimBuys": buys, "probe": probed}
+               "claimBuys": buys, "probe": probed, "fourthDoor": fourth}
+    _pp = os.path.join(out_dir, "doors.json")
+    if os.path.exists(_pp):
+        try:
+            _prior = json.load(open(_pp, encoding="utf-8")) or {}
+        except ValueError:
+            _prior = {}
+        for _k in ("probe", "fourthDoor"):
+            if payload.get(_k) is None and _prior.get(_k):
+                payload[_k] = _prior[_k]
+                print(f"  carrying forward {_k!r} captured by an earlier run with the flag; this run did "
+                      f"not re-probe it and has not erased it")
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
     for secret in (e.bearer, refresh, host, org, os.environ.get("DOORS_NAMESPACE")):
         assert not secret or secret not in text, "an estate value reached the record"

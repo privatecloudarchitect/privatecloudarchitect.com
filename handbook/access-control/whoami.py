@@ -178,6 +178,41 @@ def main():
         rec["rules_review"] = {"status": st, "resource_rules": n_rules}
         print(f"  SelfSubjectRulesReview: {n_rules} resource rules in that one namespace")
 
+    # 5b. the third surface, which is not a tier of the first two
+    #
+    # The four dials govern the deployment plane and the project role tier governs the workload plane. There
+    # is a third plane underneath both, and no dial reaches it, because it does not authenticate the same
+    # principals: vCenter answers to vSphere SSO, and the bearer this whole script holds is not one of those.
+    # Proving that needs NO vCenter credential, which is the point: the probe presents the credential it
+    # already has and records the refusal.
+    vc = os.environ.get("VC_HOST")
+    if vc:
+        answers = {}
+        for label, hdrs in (("as a bearer token", {"Authorization": f"Bearer {api.bearer}"}),
+                            ("as a vCenter session id", {"vmware-api-session-id": api.bearer}),
+                            ("with no credential", {})):
+            try:
+                req = urllib.request.Request(f"https://{vc}/api/vcenter/vm", headers=hdrs)
+                with urllib.request.urlopen(req, context=ctx(), timeout=45) as r:
+                    answers[label] = r.status
+            except urllib.error.HTTPError as e:
+                answers[label] = e.code
+            except Exception:
+                answers[label] = None
+        rec["third_surface"] = {
+            "plane": "vCenter",
+            "governedBy": "vSphere SSO principals and permissions on inventory objects",
+            "reachedByAnyProjectRole": False,
+            "tenantBearerAnswers": answers,
+            "note": "the same bearer reads its own plane in this run; these codes are the platform declining "
+                    "a credential from a different identity domain, not a role that is too narrow"}
+        codes = ", ".join(f"{k}: {v}" for k, v in answers.items())
+        print(f"  third surface (vCenter): the bearer that works above answers {codes} here")
+    else:
+        rec["third_surface"] = {"plane": "vCenter", "probed": False,
+                                "note": "set VC_HOST to record what this identity answers there"}
+        print("  third surface (vCenter): not probed (set VC_HOST)")
+
     # 6. write, refusing anything estate-shaped
     text = json.dumps(rec, indent=1, ensure_ascii=False)
     for secret in (api.bearer, refresh, host, org, proj):

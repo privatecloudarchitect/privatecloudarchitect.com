@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T07:04:42Z",
+ "captured_utc": "2026-09-21T12:57:20Z",
  "organization_gateway": {
   "status": 201,
   "groups": 63,
@@ -177,5 +177,16 @@
  "rules_review": {
   "status": 201,
   "resource_rules": 186
+ },
+ "third_surface": {
+  "plane": "vCenter",
+  "governedBy": "vSphere SSO principals and permissions on inventory objects",
+  "reachedByAnyProjectRole": false,
+  "tenantBearerAnswers": {
+   "as a bearer token": 401,
+   "as a vCenter session id": 401,
+   "with no credential": 401
+  },
+  "note": "the same bearer reads its own plane in this run; these codes are the platform declining a credential from a different identity domain, not a role that is too narrow"
  }
 }

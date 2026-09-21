@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T09:17:30Z",
+ "captured_utc": "2026-09-21T12:55:41Z",
  "project": "{{project-1}}",
  "needs": {
   "direct": [
@@ -114,12 +114,15 @@
    "VirtualMachine.Suspend",
    "VirtualMachine.WebConsole"
   ],
-  "linkShape": "cci:{{project-1}}:{{namespace-1}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:{{machine-1}}",
+  "linkShape": "cci:{{project-1}}:{{namespace-1}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:{{machine-16}}",
   "recordFields": [
    "blueprintId",
+   "blueprintVersion",
+   "catalogItemId",
+   "catalogItemVersion",
    "createdAt",
    "createdBy",
-   "description",
+   "iconId",
    "id",
    "inputs",
    "lastUpdatedAt",
@@ -181,8 +184,8 @@
    "blueprintStatus": 200,
    "releaseStatus": 200,
    "requestStatus": 200,
-   "secondsToCreateSuccessful": 40,
-   "secondsToPoweredOn": 10,
+   "secondsToCreateSuccessful": 30,
+   "secondsToPoweredOn": 20,
    "machine": {
     "labelKeys": [
      "app.kubernetes.io/name",
@@ -233,13 +236,24 @@
    "markerOnEither": []
   },
   "teardown": {
-   "catalogSecondsToVmGone": 22,
-   "catalogSecondsToDeploymentGone": 32,
+   "catalogSecondsToVmGone": 378,
+   "catalogSecondsToDeploymentGone": 388,
    "directSecondsToVmGone": 20
   },
   "residue": {
    "machinesNamedByThisRun": [],
    "catalogItemsNamedByThisRun": []
   }
+ },
+ "fourthDoor": {
+  "created": 201,
+  "declaredByANamespace": false,
+  "claimedByADeployment": false,
+  "tenantQuotaDeltaBytes": 0,
+  "deleted": [
+   204,
+   true
+  ],
+  "namespacesAsked": 3
  }
 }

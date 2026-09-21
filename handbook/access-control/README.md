@@ -43,3 +43,17 @@ catalog. `authority` counts the bindings by role and lists the subject kinds; `p
 membership arrays exist beside it. `access_reviews` is the same question asked `without_scope` and `with_scope`,
 with the reason shape when allowed; `real_reads` is the status of the matching real call; `rules_review` counts
 the resource rules the plane reports for you in one namespace.
+
+## The third surface
+
+Set `VC_HOST` and the script also presents **the bearer it already holds** to vCenter and records the answer.
+It needs no vCenter credential, because the finding is the refusal.
+
+On the estate this was verified against it answered `401` as a bearer token, `401` as a session id, and `401`
+with no credential at all. Identical. The token that reads the organization gateway in the same run is not a
+weak credential at vCenter; it is not a credential there. vCenter authenticates vSphere SSO principals, so no
+project role grants or revokes it, and no dial in this chapter reaches it.
+
+That is a boundary of the model rather than a gap in it, and it means the platform cannot close that door for
+you. vCenter accounts are a separate grant needing a separate review, and they will not appear in any access
+review this chapter describes.

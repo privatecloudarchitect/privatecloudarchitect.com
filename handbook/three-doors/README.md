@@ -68,6 +68,23 @@ with *no VM image exists ... in namespace or cluster scope*.
 **Storage quota is per namespace,** and the refusal arrives from an admission webhook at the create call. One
 namespace here had 15 GiB left against a 293 GiB limit, which is not enough for a 20 GiB boot disk.
 
+## The fourth door, which does not reach the same machine
+
+`--probe-vcenter` (with `VC_HOST` and `VC_SESSION_FILE`) creates a virtual machine **straight in vCenter**,
+asks every Supervisor namespace for it by name, asks every deployment on the estate whether it claims it,
+weighs it against the tenant storage quota, and deletes it.
+
+On the estate this was verified against: created (HTTP 201), declared by **none** of the namespaces, claimed
+by **no** deployment, and it moved the tenant storage quota by **0 bytes** while holding a real disk on a
+datastore that also backs those namespaces.
+
+That is the honest form of "I will just use vCenter". It works. The machine is not a worse machine, it is a
+different kind of object: not a `VirtualMachine`, so no namespace scopes it, no quota counts it, no
+reconciler maintains it and no record can claim it. What it costs is not governance, it is accounting.
+
+One boundary the platform does defend: vCenter refuses a hand-made machine in the folder the Supervisor owns,
+answering HTTP 403. The probe places its machine elsewhere for that reason.
+
 ## Scope, stated plainly
 
 - Read-only without `--probe-doors`. With it, every write is to an object this run created and deletes.
