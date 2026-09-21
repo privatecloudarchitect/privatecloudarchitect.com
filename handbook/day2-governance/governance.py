@@ -302,6 +302,22 @@ def main():
     elif pols:
         print("\n  rehearsal: not asked (pass --rehearse to run the platform's own dry run; see the README)")
 
+    # A run without --rehearse must not blank a rehearsal a previous run captured. This is G-166 arriving
+    # in a second script: an optional probe writes a section of a record, and it does not get to delete
+    # one. Without this, a plain re-read erases the dry-run result and the chapter renders it empty.
+    if rehearsal is None:
+        prior = os.path.join(out_dir, "decisions.json")
+        if os.path.exists(prior):
+            try:
+                kept = (json.load(open(prior, encoding="utf-8")) or {}).get("rehearsal")
+            except ValueError:
+                kept = None
+            if kept:
+                rehearsal = dict(kept)
+                rehearsal.setdefault("capturedBy", "an earlier run with --rehearse")
+                print("     carrying forward the rehearsal captured earlier; this run did not re-run it "
+                      "and has not erased it")
+
     # ---- 5. write, sanitized
     stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     os.makedirs(out_dir, exist_ok=True)

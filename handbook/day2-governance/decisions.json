@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-17T17:29:01Z",
+ "captured_utc": "2026-09-21T07:06:15Z",
  "decisions": 200,
  "decisionsHeld": 229,
  "targets": 38,
@@ -92,7 +92,7 @@
     },
     {
      "authorities": [
-      "USER:{{authority-4}}"
+      "USER:admin"
      ],
      "actions": [
       "*"
@@ -100,12 +100,12 @@
     },
     {
      "authorities": [
-      "USER:{{authority-5}}"
+      "USER:{{authority-4}}"
      ],
      "actions": []
     }
    ],
-   "description": "Update deployment access list from [{{authority-1}}: [*]] to [{{authority-2}}: [*]], [{{authority-4}}: [*]], [{{authority-5}}: []]."
+   "description": "Update deployment access list from [{{authority-1}}: [*]] to [{{authority-2}}: [*]], [admin: [*]], [{{authority-4}}: []]."
   },
   "3": {
    "policiesApplied": [
@@ -192,6 +192,7 @@
      }
     ]
    }
-  ]
+  ],
+  "capturedBy": "an earlier run with --rehearse"
  }
 }
