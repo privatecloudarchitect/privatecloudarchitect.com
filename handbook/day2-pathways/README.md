@@ -75,7 +75,31 @@ it manages is exactly what it did. The difference is whether there was anything 
 
 A retired record keeps listing its missing resource and keeps publishing its full action set; the platform
 reports the `Delete` action as `valid: true`, and asking for one answers `400 Action is not supported based
-on the current state`.
+on the current state`. It also **keeps its name**: requesting a deployment with that name answers
+`400 Deployment name ... already in use`, so a name your automation derives from a ticket or workload id is
+one it can never reuse.
+
+### Why it cannot be retired
+
+The Deployment Controller definition describes every delete route as one that "effectively triggers a Delete
+Day2 operation". A Day-2 operation acts on an object. Once the object is gone there is nothing to act on, so
+the deployment-level call completes having done what it could, and the resource-level call answers
+`404 No value present` even with the correct resource id. Nothing in the documented surface removes a
+*record*; the routes remove *resources*, and a record with no resources left to remove is just a record.
+
+**The force-delete route you will find is for a different organization type.**
+`DELETE /iaas/api/deployments/{id}?forceDelete=true` comes from a guide titled for **VM Apps**
+organizations. An All Apps org keeps no cloud accounts, zones or profiles for that service to manage, so it
+answers 403 there, and the identity is not the variable: the token used here holds Organization
+Administrator. Watch for a name collision while reading, too: All Apps has an "IaaS Services console", which
+is not the `/iaas/api` REST service.
+
+The All Apps native equivalent, the CCI `instances` kind, declares `delete` in API discovery and answers 404
+at the namespace where its siblings answer 200.
+
+**So the remedy is prevention.** Delete through the record while its resources still exist. Nothing in the
+9.1 known issues, the Deployment Controller spec, the All Apps documentation or the knowledge base offers a
+way to retire one afterwards.
 
 **A deliberate omission.** The probe always tears down while the machine still exists. It will not perform
 the third order, because a teaching script must not litter the estate it teaches on. If you want to see a
