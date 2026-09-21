@@ -1,0 +1,193 @@
+{
+ "captured_utc": "2026-09-21T10:53:48Z",
+ "project": "{{project-1}}",
+ "watchedFields": [
+  "powerState",
+  "className",
+  "imageName",
+  "storageClass",
+  "bootDiskCapacity"
+ ],
+ "audit": [
+  {
+   "deployment": "{{deployment-1}}",
+   "machine": "{{machine-1}}",
+   "deploymentStatus": "DELETE_SUCCESSFUL",
+   "syncStatus": "MISSING",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": true,
+   "foundLive": false,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": false,
+   "objectGone": true
+  },
+  {
+   "deployment": "{{deployment-2}}",
+   "machine": "{{machine-2}}",
+   "deploymentStatus": "DELETE_SUCCESSFUL",
+   "syncStatus": "MISSING",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": true,
+   "foundLive": false,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": false,
+   "objectGone": true
+  },
+  {
+   "deployment": "{{deployment-3}}",
+   "machine": "{{machine-3}}",
+   "deploymentStatus": "CREATE_SUCCESSFUL",
+   "syncStatus": "SUCCESS",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": true,
+   "foundLive": true,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": true,
+   "objectGone": false
+  },
+  {
+   "deployment": "{{deployment-4}}",
+   "machine": "{{machine-4}}",
+   "deploymentStatus": "CREATE_SUCCESSFUL",
+   "syncStatus": "SUCCESS",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": true,
+   "foundLive": true,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": true,
+   "objectGone": false
+  },
+  {
+   "deployment": "{{deployment-5}}",
+   "machine": "{{machine-5}}",
+   "deploymentStatus": "CREATE_SUCCESSFUL",
+   "syncStatus": "SUCCESS",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": true,
+   "foundLive": true,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": true,
+   "objectGone": false
+  },
+  {
+   "deployment": "{{deployment-6}}",
+   "machine": "{{machine-4}}",
+   "deploymentStatus": "DELETE_SUCCESSFUL",
+   "syncStatus": "MISSING",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": false,
+   "foundLive": false,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": false,
+   "objectGone": true
+  },
+  {
+   "deployment": "{{deployment-7}}",
+   "machine": "{{machine-5}}",
+   "deploymentStatus": "DELETE_SUCCESSFUL",
+   "syncStatus": "MISSING",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": false,
+   "foundLive": false,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": false,
+   "objectGone": true
+  }
+ ],
+ "tombstones": [
+  {
+   "name": "{{deployment-1}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
+  },
+  {
+   "name": "{{deployment-2}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
+  },
+  {
+   "name": "{{deployment-6}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
+  },
+  {
+   "name": "{{deployment-7}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
+  },
+  {
+   "name": "{{deployment-8}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
+  }
+ ],
+ "auditTotals": {
+  "claimed": 7,
+  "agree": 3,
+  "objectGone": 4,
+  "driftedSilently": 0,
+  "driftProvableFromTheRecordAlone": 0
+ },
+ "probe": {
+  "vcfa": {
+   "requestStatus": "SUCCESSFUL",
+   "secondsToSupervisorSpecChanged": 22,
+   "secondsToMachineConverged": 323,
+   "secondsToRequestSuccessful": 323,
+   "recordAfter": {
+    "syncStatus": null,
+    "state": "OK",
+    "declared": "PoweredOff",
+    "observed": "PoweredOff"
+   }
+  },
+  "supervisor": {
+   "patchStatus": 200,
+   "secondsToMachineConverged": 11,
+   "recordAfter": {
+    "syncStatus": "SUCCESS",
+    "state": "OK",
+    "declared": "PoweredOff",
+    "observed": "PoweredOn"
+   },
+   "recordStillDeclares": "PoweredOff",
+   "machineActuallyIs": "PoweredOn",
+   "syncStatusSaysProblem": false
+  },
+  "teardown": {
+   "secondsToRecordRemoved": 42,
+   "recordRetired": true,
+   "note": "the probe never removes the machine first; see the docstring"
+  },
+  "residue": []
+ }
+}
