@@ -71,6 +71,13 @@ Two ratios come out of the same pass and neither is a target:
 - **Entries quoting an HTTP status against entries mentioning a log** is which evidence plane your practice
   actually runs on. Four to one here, in favour of the API reads.
 
+
+**Running it again without `--corpus` does not erase what the flag captured.** A run that audited no corpus has
+nothing to say about that section of the record, which is not the same as having found it empty. So when the
+record on disk holds a block this run did not produce, the block is carried forward and the script prints
+that it carried it. Writing the section as empty instead would publish a narrower record as though it were a
+newer one.
+
 ## Scope, stated plainly
 
 - Read-only. The alert half issues `GET`s; the record half reads a file.

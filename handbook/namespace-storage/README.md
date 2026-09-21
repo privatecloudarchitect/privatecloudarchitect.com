@@ -44,6 +44,11 @@ Two disciplines the script enforces on itself:
 
 - Read-only. Every call is a `GET`.
 - All four figures are **one day's reading**. They are a comparison of planes, not a trend.
+- **A run that reaches fewer ledgers than the record on disk refuses to write, and names the credentials
+  that would have completed it.** Reaching all four needs three different credentials, so a run with fewer
+  is the normal accident rather than an exotic one. Carrying the missing ledgers forward from an earlier run
+  would be worse than refusing: they would sit under a fresh timestamp and quietly make the one-day claim
+  above false, which is the claim that makes the spread a fact about the planes rather than about the clock.
 - Units are mebibytes throughout, carried in the field names and stated in `unitNote`.
 - Every organization and namespace name in the record is a placeholder.
 
@@ -53,5 +58,6 @@ Two disciplines the script enforces on itself:
 and `spread` is the ratio between the extremes. `quotas` is the per-class region ledger, `namespaceLimitsMiB`
 the sum used to work out what the granted figure counts, and `quotaLedgerCounts` states the answer in words.
 `provider` is the provider plane per class with `providerClassesReportingIdenticalFigures` flagging the rows
-that must not be added. `physical` is the datastore read. A plane you could not reach appears as a named
+that must not be added. `physical` is the datastore read, and `ledgersRead` counts how many of the four
+this run reached, which is what the refusal above compares. A plane you could not reach appears as a named
 absence rather than a missing key.

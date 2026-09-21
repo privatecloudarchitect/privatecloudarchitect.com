@@ -1,40 +1,40 @@
 {
- "captured_utc": "2026-09-19T18:14:36Z",
+ "captured_utc": "2026-09-21T07:27:13Z",
  "owner": "PCA",
  "queue": {
-  "instances": 1167,
+  "instances": 1125,
   "active": 259,
-  "closed": 908,
+  "closed": 866,
   "activeFromOwnedDefinitions": 6,
   "ageDays": {
    "min": 0,
-   "median": 67,
-   "max": 438,
+   "median": 68,
+   "max": 440,
    "startedInTheLastWeek": 2,
    "standingOverAMonth": 153,
    "standingOverAYear": 4
   },
   "closedDurationHours": {
    "median": 1.17,
-   "underAnHour": 202,
-   "overADay": 181,
-   "counted": 900
+   "underAnHour": 193,
+   "overADay": 172,
+   "counted": 858
   },
   "byImpact": {
    "EFFICIENCY": {
     "active": 1,
-    "medianAgeDays": 11,
-    "oldestDays": 11
+    "medianAgeDays": 13,
+    "oldestDays": 13
    },
    "HEALTH": {
     "active": 69,
-    "medianAgeDays": 12,
-    "oldestDays": 438
+    "medianAgeDays": 14,
+    "oldestDays": 440
    },
    "RISK": {
     "active": 189,
-    "medianAgeDays": 67,
-    "oldestDays": 203
+    "medianAgeDays": 68,
+    "oldestDays": 204
    }
   },
   "byLevel": {
@@ -74,6 +74,7 @@
    "platform configuration": 2,
    "architectural": 2
   },
-  "layerTagged": 88
+  "layerTagged": 88,
+  "capturedBy": "an earlier run with --corpus"
  }
 }

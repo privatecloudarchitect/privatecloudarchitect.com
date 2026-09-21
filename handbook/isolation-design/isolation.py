@@ -362,6 +362,22 @@ def main():
     # Scrub the WHOLE serialized record, not field by field. A name registered anywhere can surface in a
     # message written by the platform (an authorization refusal quotes the calling user), and a per-field
     # scrub only reaches the fields you remembered to pass through it.
+
+    # G-166, generically: an optional probe writes a section of a record, and it does not get to delete
+    # one. A run without the probe flag leaves those keys None, and writing them would erase what a
+    # flagged run captured. Carry forward any key this run has nothing to say about.
+    _prior_path = os.path.join(out_dir, "isolation.json")
+    if os.path.exists(_prior_path):
+        try:
+            _prior = json.load(open(_prior_path, encoding="utf-8")) or {}
+        except ValueError:
+            _prior = {}
+        for _k, _v in list(payload.items()):
+            if _v is None and _prior.get(_k) is not None:
+                payload[_k] = _prior[_k]
+                print(f"  carrying forward {_k!r} from an earlier run with the probe flag; "
+                      f"this run did not re-probe it and has not erased it")
+
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
     for secret in (c.bearer, refresh, host, org):
         assert secret not in text, "an estate value reached the record"

@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-18T23:35:37Z",
+ "captured_utc": "2026-09-21T07:30:29Z",
  "policyTypes": [
   {
    "id": "com.vmware.policy.supervisor.iaas",
@@ -73,6 +73,7 @@
    }
   ],
   "restored": true,
-  "inPlaceMutable": true
+  "inPlaceMutable": true,
+  "capturedBy": "an earlier run with the probe flag"
  }
 }

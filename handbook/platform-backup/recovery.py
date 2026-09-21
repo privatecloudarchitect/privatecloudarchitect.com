@@ -351,10 +351,29 @@ def main():
         else:
             print(f"     {p['plane']:<26} no task of that type among {p.get('tasksRead')} read")
 
+    # A run that reached fewer planes than a previous one must not overwrite the richer record. This is
+    # the sibling of G-166: there the loss came from an optional probe, here from partial credentials,
+    # and neither is a reason to publish less than was known. The record says how many planes it read,
+    # so the comparison is one integer.
+    _prior_path = os.path.join(out_dir, "recovery.json")
+    _prior = {}
+    if os.path.exists(_prior_path):
+        try:
+            _prior = json.load(open(_prior_path, encoding="utf-8")) or {}
+        except ValueError:
+            _prior = {}
+
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "planes": planes,
                "distinctTargets": len(targets),
                "planesRead": len(reached)}
+
+    if _prior and _prior.get("planesRead", 0) > payload["planesRead"]:
+        raise SystemExit(
+            f"REFUSING to write: this run reached {payload['planesRead']} plane(s) and the record on disk "
+            f"was written from {_prior['planesRead']}. Supply the missing credentials, or move the old "
+            f"record aside deliberately. A thinner read is not a newer truth.")
+
     text = L.scrub(json.dumps(payload, indent=1, ensure_ascii=False))
     for key in SECRET_KEYS:
         assert f'"{key}"' not in text, f"a {key} field reached the record"

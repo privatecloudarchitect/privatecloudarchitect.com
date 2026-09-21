@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-18T20:00:20Z",
+ "captured_utc": "2026-09-21T07:58:26Z",
  "quotas": [
   {
    "storageClass": "{{storageclass-1}}",
@@ -29,30 +29,30 @@
  "provider": [
   {
    "storageClass": "{{storageclass-4}}",
-   "capacityMiB": 6830546,
-   "consumedMiB": 13178960,
-   "ratio": 1.929,
+   "capacityMiB": 6489481,
+   "consumedMiB": 12837895,
+   "ratio": 1.978,
    "zones": 3
   },
   {
    "storageClass": "{{storageclass-2}}",
-   "capacityMiB": 19055407,
-   "consumedMiB": 37885896,
-   "ratio": 1.988,
+   "capacityMiB": 18030494,
+   "consumedMiB": 36860983,
+   "ratio": 2.044,
    "zones": 3
   },
   {
    "storageClass": "{{storageclass-3}}",
-   "capacityMiB": 19055407,
-   "consumedMiB": 37885896,
-   "ratio": 1.988,
+   "capacityMiB": 18030494,
+   "consumedMiB": 36860983,
+   "ratio": 2.044,
    "zones": 3
   }
  ],
  "physical": {
   "datastores": 4,
-  "capacityMiB": 25885952,
-  "usedMiB": 746240,
+  "capacityMiB": 24519974,
+  "usedMiB": 747688,
   "types": [
    "NFS"
   ]
@@ -61,9 +61,10 @@
  "figures": {
   "tenantClaimed": 512000,
   "tenantGranted": 900000,
-  "providerAllocation": 37885896,
-  "physicalUsed": 746240
+  "providerAllocation": 36860983,
+  "physicalUsed": 747688
  },
- "spread": 74.0,
+ "spread": 72.0,
+ "ledgersRead": 4,
  "unitNote": "every figure is mebibytes; 1 TiB is 1048576 MiB, not a million"
 }

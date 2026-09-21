@@ -160,6 +160,7 @@ def main():
 
     # ---- 3. provider allocation
     provider = None
+    pb = None
     pf = os.environ.get("VCFA_PROVIDER_BEARER_FILE")
     if pf and os.path.exists(pf):
         pb = open(pf, encoding="utf-8").read().strip()
@@ -193,6 +194,7 @@ def main():
 
     # ---- 4. physical
     physical = None
+    sid = None
     vh, vsf = os.environ.get("VCENTER_HOST"), os.environ.get("VCENTER_SESSION_FILE")
     if vh and vsf and os.path.exists(vsf):
         sid = open(vsf, encoding="utf-8").read().strip()
@@ -210,6 +212,32 @@ def main():
     else:
         print("  PHYSICAL         not read: set VCENTER_HOST and VCENTER_SESSION_FILE to include it")
 
+    # A run that reached fewer ledgers than the record on disk does not get to overwrite it. This is the
+    # G-166 problem, but the answer that fits G-166 elsewhere, carrying the missing block forward, is wrong
+    # HERE: the whole argument of this record is that four ledgers were read on one estate in ONE RUN, which
+    # is what makes their disagreement a fact about the planes rather than about the clock. A carried block
+    # would sit under a fresh captured_utc and quietly make that claim false. So this one refuses, the way
+    # recovery.py does, and says which credentials would have made the run complete.
+    _reached = 2 + (1 if provider else 0) + (1 if physical else 0)
+    _prior_path = os.path.join(out_dir, "ledgers.json")
+    if os.path.exists(_prior_path):
+        try:
+            _prior = json.load(open(_prior_path, encoding="utf-8")) or {}
+        except ValueError:
+            _prior = {}
+        _was = _prior.get("ledgersRead") or (2 + (1 if _prior.get("provider") else 0)
+                                             + (1 if _prior.get("physical") else 0))
+        if _was > _reached:
+            _missing = [n for n, v in (("VCFA_PROVIDER_BEARER_FILE", provider),
+                                       ("VCENTER_HOST + VCENTER_SESSION_FILE", physical)) if not v]
+            raise SystemExit(
+                f"\nREFUSING to write: this run reached {_reached} of the four ledgers and the record on "
+                f"disk was written from {_was}. Every figure in that record was read in one run, which is "
+                f"what makes the spread a fact about the planes and not about the clock; replacing it with "
+                f"a narrower read would keep the claim and lose the evidence for it. Set "
+                + " and ".join(_missing) + ", or leave the existing record alone. A thinner read is not a "
+                "newer truth.")
+
     figures = {"tenantClaimed": claimed, "tenantGranted": granted}
     if provider:
         figures["providerAllocation"] = max(x["consumedMiB"] for x in provider)
@@ -226,10 +254,12 @@ def main():
                "providerClassesReportingIdenticalFigures":
                    (len(provider) - len({(x["capacityMiB"], x["consumedMiB"]) for x in provider})) if provider else None,
                "figures": figures, "spread": round(hi / lo, 1) if lo else None,
+               "ledgersRead": _reached,
                "unitNote": "every figure is mebibytes; 1 TiB is 1048576 MiB, not a million"}
+
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
-    for secret in (bearer, refresh, host, org):
-        assert secret not in text, "an estate value reached the record"
+    for secret in (bearer, refresh, host, org, pb, vh, sid):
+        assert not secret or secret not in text, "an estate value reached the record"
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():
         for nm in m:

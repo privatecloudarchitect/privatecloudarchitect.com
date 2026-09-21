@@ -200,6 +200,23 @@ def main():
             if corpus["layerTagged"]:
                 print(f"     layer tags among the {corpus['layerTagged']} that carry one: {corpus['layerTags']}")
 
+    # A run without --corpus must not blank the corpus block a previous run captured. This is G-166 a
+    # third time: an optional probe writes a section of a record, and it does not get to delete one. Here
+    # it was worse than an empty render, because the chapter's builder reads corpus["carrying"] directly
+    # and stopped with a TypeError. Loud is better than silent, and neither is acceptable.
+    if corpus is None:
+        prior = os.path.join(out_dir, "triage.json")
+        if os.path.exists(prior):
+            try:
+                kept = (json.load(open(prior, encoding="utf-8")) or {}).get("corpus")
+            except ValueError:
+                kept = None
+            if kept:
+                corpus = dict(kept)
+                corpus.setdefault("capturedBy", "an earlier run with --corpus")
+                print("\n  THE RECORD: carrying forward the corpus audit captured earlier; this run did "
+                      "not re-audit it and has not erased it")
+
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "owner": owner, "queue": queue, "corpus": corpus}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))

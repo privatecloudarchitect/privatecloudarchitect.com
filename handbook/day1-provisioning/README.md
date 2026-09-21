@@ -87,10 +87,12 @@ behind them, live in the handbook at
 ## What is in this folder
 
 ```
-day1-app-templates/
+day1-provisioning/
   README.md                     # you are here: the learning path
   00-reaching-the-supervisor.md # get the vcf CLI, authenticate, run your first kubectl
   01-before-you-start.md        # orientation (All Apps vs CCI), prerequisites, deploy
+  day1.py                       # the harness: reads this plane through BOTH of its faces
+  day1.json                     # the record it writes, which the chapter renders
   templates/
     01-single-vm/               # crawl:  one VM that boots and runs
       single-vm.blueprint.yaml
@@ -104,6 +106,23 @@ day1-app-templates/
 Each stage folder holds the template file(s) and its own `README.md` that says
 what it teaches, what changed from the previous stage, how to deploy it, and what
 "working" looks like.
+
+## The harness: `day1.py`
+
+The templates teach you to use the plane. `day1.py` reads the plane itself, through both of the interfaces
+that sit over the same objects, and reports where they disagree: the Day-1 kinds each face declares with the
+verbs it permits, the same deployments read field by field through each face, the blueprint and version tree,
+the ingredients a blueprint may draw on, and, with `--probe-release`, what each face actually does when told
+to delete a released version. That last one creates a throwaway blueprint, releases a version, asks both
+faces to remove it, reads back what changed, and deletes the blueprint again; it never touches content it did
+not create. Without the flag nothing here writes. It needs `VCFA_HOST`, `VCFA_ORG` and a refresh token, and
+writes `day1.json`.
+
+**Running it again without the flag does not erase what the flag captured.** A run that did not probe has
+nothing to say about that section of the record, which is not the same as having found it empty. So when the
+record on disk holds a block this run did not produce, the block is carried forward and the script prints
+that it carried it. Writing the section as empty instead would publish a narrower record as though it were a
+newer one.
 
 ## How to use it
 

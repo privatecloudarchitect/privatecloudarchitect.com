@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-19T02:14:28Z",
+ "captured_utc": "2026-09-21T07:35:31Z",
  "planes": [
   {
    "plane": "the lifecycle manager",
@@ -37,21 +37,21 @@
     "fingerprintPinned": true
    },
    "runs": {
-    "total": 314,
+    "total": 317,
     "byStatus": {
-     "Successful": 314
+     "Successful": 317
     },
     "carryingAnError": 0,
     "hourOfDay": {
      "14": 1,
-     "4": 313
+     "4": 316
     }
    },
    "coverage": {
     "firstDay": "2025-09-18",
-    "lastDay": "2026-09-18",
-    "windowDays": 366,
-    "daysCovered": 314,
+    "lastDay": "2026-09-21",
+    "windowDays": 369,
+    "daysCovered": 317,
     "daysUncovered": 52,
     "gaps": 6,
     "longestGapDays": 19,
@@ -102,8 +102,8 @@
     "DeleteOldSddcManagerBackups",
     "UnquiesceSystem"
    ],
-   "aRunTakesSeconds": 30,
-   "tasksRead": 1304
+   "aRunTakesSeconds": 31,
+   "tasksRead": 1307
   },
   {
    "plane": "the management vCenter",
@@ -156,7 +156,7 @@
     ]
    },
    "runs": {
-    "total": 364,
+    "total": 366,
     "mostRecent": {
      "state": "SUCCEEDED",
      "progress": 100,
@@ -165,9 +165,9 @@
    },
    "coverage": {
     "firstDay": "2025-08-29",
-    "lastDay": "2026-09-18",
-    "windowDays": 386,
-    "daysCovered": 358,
+    "lastDay": "2026-09-20",
+    "windowDays": 388,
+    "daysCovered": 360,
     "daysUncovered": 28,
     "gaps": 4,
     "longestGapDays": 20,
@@ -236,7 +236,7 @@
     "overall": "SUCCESS",
     "clusterBackupsReported": 1,
     "inventoryBackupsReported": 1,
-    "mostRecentClusterBackupUtc": "2026-09-18T07:00:00Z",
+    "mostRecentClusterBackupUtc": "2026-09-21T07:00:00Z",
     "historyDepth": "only the most recent is reported"
    },
    "coverage": null,

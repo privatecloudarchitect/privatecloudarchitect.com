@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-19T19:39:06Z",
+ "captured_utc": "2026-09-21T07:25:28Z",
  "owner": "PCA",
  "content": {
   "checks": {
@@ -31,19 +31,19 @@
  "computed": {
   "sli": {
    "value": 58.33333206176758,
-   "ageMinutes": 12.9
+   "ageMinutes": 13.9
   },
   "reachable": {
    "value": 7.0,
-   "ageMinutes": 12.9
+   "ageMinutes": 13.9
   },
   "checks": {
    "value": 12.0,
-   "ageMinutes": 12.9
+   "ageMinutes": 13.9
   },
   "unreachable": {
    "value": 5.0,
-   "ageMinutes": 12.9
+   "ageMinutes": 13.9
   }
  },
  "tree": {
@@ -83,9 +83,9 @@
  "guest": {
   "machines": 103,
   "reporting": 103,
-  "kpiHundred": 77,
-  "kpiZero": 26,
-  "kpiZeroButUptimeClimbing": 9,
+  "kpiHundred": 76,
+  "kpiZero": 27,
+  "kpiZeroButUptimeClimbing": 10,
   "kpiZeroAndUptimeZero": 0,
   "kpiZeroAndNoUptimeAtAll": 17
  },

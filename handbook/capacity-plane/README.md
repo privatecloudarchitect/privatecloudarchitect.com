@@ -37,6 +37,12 @@ that depart from a config in a chosen direction, records what the platform did w
 them. Every object it creates is one it made itself, and it verifies removal afterwards. Without the flag
 nothing here writes.
 
+**Running it again without the flag does not erase what the flag captured.** A run that did not probe has
+nothing to say about that section of the record, which is different from having found it empty. So when the
+record on disk holds a block this run did not produce, the block is carried forward and the script prints
+that it carried it. The alternative, writing the section as empty, would have published a narrower record as
+though it were a newer one.
+
 ## Scope, stated plainly
 
 - Read-only by default. The probe flag is the only writer and it states what it sends.
@@ -54,5 +60,5 @@ nothing here writes.
 they match. `configs` is what each class promises and `contract` is how often a namespace holds it (`agree` of
 `total`, `byField`, and `widest` for the largest single divergence). `storage` is the per-class ledger with a
 TiB conversion beside the raw figure; **do not add those rows up**, two of them are byte-identical views of one
-pool. `vmClasses` carries the catalog count and how many require a reservation. `overrides` is present only
-when the probe ran.
+pool. `vmClasses` carries the catalog count and how many require a reservation. `overrides` is present when the probe
+ran, or when an earlier run's probe wrote it and this run carried it forward.

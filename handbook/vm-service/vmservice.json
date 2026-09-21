@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-18T19:25:29Z",
+ "captured_utc": "2026-09-21T07:31:18Z",
  "vocabulary": [
   "clustervirtualmachineimages",
   "virtualmachineclasses",
@@ -562,9 +562,9 @@
  "wrappedKinds": {
   "Cluster": 4,
   "Secret": 1,
+  "SubnetSet": 5,
   "VirtualMachineImage": 5,
   "VirtualMachineClass": 5,
-  "SubnetSet": 5,
   "VirtualMachine": 5,
   "KubeadmControlPlane": 3,
   "VSphereCluster": 3

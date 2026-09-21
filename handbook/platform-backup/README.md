@@ -57,6 +57,9 @@ comparison, and it is the only signal that separates a healthy estate from a sil
   never return. The script reports what the response contains and does not infer from what it omits.
 - Where a plane reports only its most recent backup, no coverage figure is computed for it and the record says
   why rather than leaving the column out.
+- **A run that reached fewer planes than the record on disk refuses to write.** Each plane needs its own
+  credentials, so a partial run is ordinary. The record counts its own coverage in `planesRead`, and the
+  script compares that number before writing rather than replacing a fuller reading with a thinner one.
 - Every address, directory path, fingerprint and account name in the record is a placeholder, and the script
   refuses to write a record in which one survived.
 

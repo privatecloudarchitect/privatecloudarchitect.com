@@ -22,8 +22,24 @@ manifests/20-namespace.yaml      the workload namespace (values copied from your
 blueprint/isolation-proof.blueprint.yaml      ConfigMap-only workload (owned, no VM capacity)
 blueprint/isolation-proof-vm.blueprint.yaml   real-VM variant (adds resource-level Day-2 actions)
 verify.py                        login / deploy / matrix / flip-on / flip-off
+isolation.py                     the harness: reads the design back off a running estate
+isolation.json                   the record it writes, which the chapter renders
 expected-output.md               what a passing run looks like
 ```
+
+`verify.py` is the runbook below, executed. `isolation.py` is the separate question of whether the design
+still holds on an estate that already has it: the project roles the platform publishes, every role binding
+that exists and the naming rule derived from them, which access-review questions actually answer, what this
+identity may do in a project as the platform itself computes it, and how many deployments it sees against how
+many it owns. With `--probe-writes` it also proves the naming rule by creating bindings against a principal
+that exists in no identity provider, so the platform judges the name and nothing is granted. Without that
+flag the only write is a membership-array no-op, restored either way.
+
+**Running it again without the flag does not erase what the flag captured.** A run that did not probe has
+nothing to say about that section of the record, which is not the same as having found it empty. So when the
+record on disk holds a block this run did not produce, the block is carried forward and the script prints
+that it carried it. Writing the section as empty instead would publish a narrower record as though it were a
+newer one.
 
 ## Prerequisites
 
