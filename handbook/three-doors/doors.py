@@ -258,6 +258,51 @@ def claims(e, L):
     return found or {"deploymentActions": [], "resourceActions": [], "linkShape": None, "recordFields": fields}
 
 
+def credentials(e, L, project, vc_host=None):
+    """One credential, presented to every door, with what each one answers.
+
+    The question "what identity do I need for this" is usually answered from documentation. It does not have
+    to be: this holds a single tenant bearer and presents it to each door in turn. Three of the four take it.
+    The fourth does not, and the shape of that refusal is the whole point, so it is recorded rather than
+    described.
+    """
+    rows = []
+    st, _ = e.api("/deployment/api/deployments?size=1")
+    rows.append({"door": "VCF Automation, API", "surface": "/deployment/api",
+                 "answeredTheTenantBearer": st, "identityDomain": "the organization's identity provider"})
+    st, _ = e.api("/catalog/api/items?size=1")
+    rows.append({"door": "VCF Automation, catalog", "surface": "/catalog/api",
+                 "answeredTheTenantBearer": st, "identityDomain": "the organization's identity provider"})
+    eps = _endpoints(e, project)
+    st = None
+    if eps:
+        _p, ns, url = eps[0]
+        st, _ = e.ns(url, f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachines")
+    rows.append({"door": "Supervisor, direct", "surface": "the namespace's own Kubernetes endpoint",
+                 "answeredTheTenantBearer": st, "identityDomain": "the organization's identity provider"})
+    if vc_host:
+        code = None
+        try:
+            req = urllib.request.Request(f"https://{vc_host}/api/vcenter/vm",
+                                         headers={"Authorization": f"Bearer {e.bearer}"})
+            with urllib.request.urlopen(req, context=ctx(), timeout=45) as r:
+                code = r.status
+        except urllib.error.HTTPError as ex:
+            code = ex.code
+        except Exception:
+            code = None
+        rows.append({"door": "vCenter", "surface": "/api/vcenter", "answeredTheTenantBearer": code,
+                     "identityDomain": "vSphere SSO, a different directory",
+                     "takesInstead": "a session id from POST /api/session, or Basic, as an SSO principal"})
+    same = sum(1 for r in rows if r["answeredTheTenantBearer"] == 200)
+    print(f"  one credential, {len(rows)} door(s): {same} answered it, "
+          + ", ".join(f"{r['door']} {r['answeredTheTenantBearer']}" for r in rows))
+    return {"credentialHeld": "a tenant bearer, minted from a refresh token at /oauth/tenant/<org>/token",
+            "doors": rows, "doorsThatTakeIt": same,
+            "note": "a door answering 200 here is answering this identity; what it then PERMITS is the "
+                    "project role tier and the four dials, which the access-control chapter covers"}
+
+
 def _endpoints(e, project):
     """Every namespace in the project that publishes its own Kubernetes endpoint."""
     out = []
@@ -594,6 +639,7 @@ def main():
               f"{'can build' if x['couldBuildAVm'] else 'cannot build here'}")
 
     buys = claims(e, L)
+    creds = credentials(e, L, project, os.environ.get("VC_HOST"))
     print(f"\n  what a deployment record CLAIMS and what the claim BUYS")
     print(f"     the claim is one string: {buys['linkShape'] or 'no claimed machine on this estate to read'}")
     print(f"     {len(buys['deploymentActions'])} deployment-level and {len(buys['resourceActions'])} "
@@ -651,7 +697,7 @@ def main():
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "project": L.get("project", project), "needs": needs, "namespaces": per_ns,
-               "claimBuys": buys, "probe": probed, "fourthDoor": fourth}
+               "claimBuys": buys, "credentials": creds, "probe": probed, "fourthDoor": fourth}
     _pp = os.path.join(out_dir, "doors.json")
     if os.path.exists(_pp):
         try:

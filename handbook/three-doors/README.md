@@ -85,6 +85,25 @@ reconciler maintains it and no record can claim it. What it costs is not governa
 One boundary the platform does defend: vCenter refuses a hand-made machine in the folder the Supervisor owns,
 answering HTTP 403. The probe places its machine elsewhere for that reason.
 
+## What each door asks you to be
+
+Every run holds a single tenant bearer, minted from a refresh token, and presents it to each door in turn.
+The table is measured rather than documented:
+
+| door | surface | answered one tenant bearer | identity domain |
+|---|---|---|---|
+| VCF Automation, API | `/deployment/api` | 200 | the organization's identity provider |
+| VCF Automation, catalog | `/catalog/api` | 200 | the organization's identity provider |
+| Supervisor, direct | the namespace's own Kubernetes endpoint | 200 | the organization's identity provider |
+| vCenter | `/api/vcenter` | **401** | vSphere SSO, a different directory |
+
+Three of the four doors are one identity question. That is why choosing the catalog over `kubectl` changes
+what claims the machine and not who you have to be, and why a project role can open or close those three
+together and do nothing at all about the fourth.
+
+A 200 here means the door answered this **identity**. What it then permits is the project role tier and the
+four dials, which the access-control chapter covers.
+
 ## Scope, stated plainly
 
 - Read-only without `--probe-doors`. With it, every write is to an object this run created and deletes.

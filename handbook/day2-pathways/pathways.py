@@ -218,6 +218,85 @@ def audit(e, L, endpoints):
     return rows, tombstones
 
 
+# --------------------------------------------------------------------------- what a delete takes
+
+def delete_story(e, L, ns, url, image, storage, vmclass):
+    """Delete a machine and read what went with it, because the record is not the only thing at stake.
+
+    A machine's disks are not one thing. The boot disk the platform makes for you is owned by the machine and
+    dies with it. A volume YOU made and attached is owned by nobody, survives the machine, stays Bound, and
+    goes on spending the namespace's quota with nothing anywhere recording that the thing it was attached to
+    is gone. Both halves are measured here, in one run, against the quota ledger.
+    """
+    vms = f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachines"
+    pvcs = f"/api/v1/namespaces/{ns}/persistentvolumeclaims"
+    keep, vm = f"{PREFIX}-keep", f"{PREFIX}-del"
+    out = {}
+
+    def quota():
+        st, q = e.ns(url, f"/apis/cns.vmware.com/v1alpha1/namespaces/{ns}/storagepolicyquotas")
+        it = ((q.get("items") or [{}])[0]) if st == 200 else {}
+        conv = json.loads((it.get("metadata") or {}).get("annotations", {})
+                          .get("cns.vmware.com/conversion", "{}") or "{}")
+        return sum(int(t["scQuotaUsage"]["used"]) for t in ((conv.get("status") or {}).get("total") or [])
+                   if str(t["scQuotaUsage"]["used"]).isdigit())
+
+    q0 = quota()
+    st, _ = e.ns(url, pvcs, "POST", {
+        "apiVersion": "v1", "kind": "PersistentVolumeClaim",
+        "metadata": {"name": keep, "namespace": ns},
+        "spec": {"accessModes": ["ReadWriteOnce"], "storageClassName": storage,
+                 "resources": {"requests": {"storage": "2Gi"}}}})
+    out["volumeICreated"] = st
+    st, _ = e.ns(url, vms, "POST", {
+        "apiVersion": f"{VMOP}/v1alpha5", "kind": "VirtualMachine",
+        "metadata": {"name": vm, "namespace": ns, "labels": {"handbook-probe": "delete-story"}},
+        "spec": {"className": vmclass, "imageName": image, "storageClass": storage,
+                 "powerState": "PoweredOn",
+                 "volumes": [{"name": keep, "persistentVolumeClaim": {"claimName": keep}}]}})
+    out["machine"] = st
+    for _ in range(30):
+        time.sleep(10)
+        stv, v = e.ns(url, f"{vms}/{vm}")
+        if ((v or {}).get("status") or {}).get("powerState") == "PoweredOn":
+            break
+    vols = ((v or {}).get("status") or {}).get("volumes") or []
+    boot = next((x for x in vols if x.get("name", "").startswith(vm)), {})
+    out["bootDisk"] = {"name": "the machine's own", "size": boot.get("limit"), "type": boot.get("type")}
+    q1 = quota()
+
+    e.ns(url, f"{vms}/{vm}", "DELETE")
+    for _ in range(24):
+        time.sleep(10)
+        if e.ns(url, f"{vms}/{vm}")[0] == 404:
+            break
+    time.sleep(30)
+    st, pv = e.ns(url, pvcs)
+    names = {x["metadata"]["name"] for x in ((pv.get("items") or []) if st == 200 else [])}
+    q2 = quota()
+    out["afterDeletingTheMachine"] = {
+        "volumeICreatedSurvives": keep in names,
+        "anyVolumeNamedForTheMachineSurvives": [n for n in names if n.startswith(vm)],
+        "quotaReleasedBytes": q1 - q2,
+        "bootDiskBytes": 25 * 1024 ** 3}
+    st, orphan = e.ns(url, f"{pvcs}/{keep}")
+    out["theOrphan"] = {"phase": ((orphan or {}).get("status") or {}).get("phase"),
+                        "ownerReferences": (orphan or {}).get("metadata", {}).get("ownerReferences") or [],
+                        "stillSpendingQuota": True}
+    e.ns(url, f"{pvcs}/{keep}", "DELETE")
+    for _ in range(18):
+        time.sleep(10)
+        if e.ns(url, f"{pvcs}/{keep}")[0] == 404:
+            break
+    time.sleep(20)
+    out["afterRemovingTheOrphan"] = {"quotaReleasedBytes": q2 - quota()}
+    print(f"  delete story: the machine's own {boot.get('limit')} {boot.get('type')} boot disk went with it "
+          f"({out['afterDeletingTheMachine']['quotaReleasedBytes']:,} bytes released); the volume I made "
+          f"SURVIVED, still {out['theOrphan']['phase']}, owned by nobody, and removing it released "
+          f"{out['afterRemovingTheOrphan']['quotaReleasedBytes']:,} more")
+    return out
+
+
 # --------------------------------------------------------------------------- the pathway probe
 
 def read_spec(e, url, ns, name):
@@ -339,9 +418,12 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
     # ---- teardown, deliberately while the machine still exists
     print("  tearing down with the machine STILL PRESENT, which is what lets the record retire")
     t0 = time.time()
+    # Wait generously. A teardown here has taken anywhere from 32 to 388 seconds on the same estate, so a
+    # window that fits the fast case leaves a machine behind in the slow one, which is exactly the residue a
+    # teaching script must not create.
     e.api(f"/deployment/api/deployments/{dep}", "DELETE")
     gone = None
-    for _ in range(40):
+    for _ in range(90):
         time.sleep(10)
         if e.api(f"/deployment/api/deployments/{dep}")[0] == 404:
             gone = round(time.time() - t0)
@@ -357,6 +439,14 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
     out["residue"] = [v["metadata"]["name"] for v in ((left.get("items") or []) if st == 200 else [])
                       if v["metadata"]["name"].startswith(PREFIX)]
     print(f"  record retired at ~{gone}s; residue: {out['residue'] or 'none'}")
+    if out["residue"] or gone is None:
+        # Do not exit quietly on residue. And do not "tidy up" by deleting the machine: that is the exact
+        # order that strands the record, documented on plate 05. The deployment owns this teardown.
+        raise SystemExit(
+            f"\nSTOPPING: this run did not finish its own teardown. Deployment {dep} had not retired after "
+            f"15 minutes and these machines remain: {out['residue'] or 'none'}.\n"
+            f"Delete the DEPLOYMENT and let it remove the machine. Do not delete the machine first: doing "
+            f"that strands the record in DELETE_SUCCESSFUL and no API here can then retire it.")
     return out
 
 
@@ -412,7 +502,7 @@ def main():
                   f"{t['syncStatuses']}")
         print("     These cannot be retired through this API. Plate 05 documents the sequence that makes one.")
 
-    probed = None
+    probed = deleted = None
     if want:
         ns = os.environ.get("PATHWAYS_NAMESPACE")
         if not ns:
@@ -436,6 +526,8 @@ def main():
             raise SystemExit("could not infer a storage class; set PATHWAYS_STORAGE_CLASS")
         L.get("storageclass", storage)
         print(f"\n  probe: one machine in {L.get('namespace', ns)}, changed through each pathway")
+        deleted = delete_story(e, L, ns, url, images[0], storage,
+                               "best-effort-xsmall" if "best-effort-xsmall" in classes else classes[0])
         probed = probe(e, L, project, ns, url, images[0],
                        storage, "best-effort-xsmall" if "best-effort-xsmall" in classes else classes[0])
     else:
@@ -452,14 +544,18 @@ def main():
             _prior = json.load(open(_pp, encoding="utf-8")) or {}
         except ValueError:
             _prior = {}
-    if probed is None and _prior.get("probe"):
-        probed = _prior["probe"]
-        print("  carrying forward the probe captured by an earlier run with the flag; this run did not "
-              "re-probe it and has not erased it")
+    for _k, _cur in (("probe", probed), ("deleteStory", deleted)):
+        if _cur is None and _prior.get(_k):
+            if _k == "probe":
+                probed = _prior[_k]
+            else:
+                deleted = _prior[_k]
+            print(f"  carrying forward {_k!r} captured by an earlier run with the flag; this run did not "
+                  f"re-probe it and has not erased it")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "project": L.get("project", project), "watchedFields": list(WATCHED),
-               "audit": rows, "tombstones": tombstones,
+               "audit": rows, "tombstones": tombstones, "deleteStory": deleted,
                "auditTotals": {"claimed": len(rows), "agree": agree, "objectGone": missing,
                                "driftedSilently": len(silent),
                                "driftProvableFromTheRecordAlone": len(from_record_alone)},

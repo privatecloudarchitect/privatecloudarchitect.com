@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T10:53:48Z",
+ "captured_utc": "2026-09-21T13:47:58Z",
  "project": "{{project-1}}",
  "watchedFields": [
   "powerState",
@@ -15,7 +15,7 @@
    "deploymentStatus": "DELETE_SUCCESSFUL",
    "syncStatus": "MISSING",
    "state": "OK",
-   "declaredFields": 5,
+   "declaredFields": 4,
    "claimNamespaceReachable": true,
    "foundLive": false,
    "declaredVsObserved": [],
@@ -40,16 +40,16 @@
   {
    "deployment": "{{deployment-3}}",
    "machine": "{{machine-3}}",
-   "deploymentStatus": "CREATE_SUCCESSFUL",
-   "syncStatus": "SUCCESS",
+   "deploymentStatus": "DELETE_SUCCESSFUL",
+   "syncStatus": "MISSING",
    "state": "OK",
    "declaredFields": 5,
    "claimNamespaceReachable": true,
-   "foundLive": true,
+   "foundLive": false,
    "declaredVsObserved": [],
    "declaredVsLive": [],
-   "agrees": true,
-   "objectGone": false
+   "agrees": false,
+   "objectGone": true
   },
   {
    "deployment": "{{deployment-4}}",
@@ -81,7 +81,21 @@
   },
   {
    "deployment": "{{deployment-6}}",
-   "machine": "{{machine-4}}",
+   "machine": "{{machine-6}}",
+   "deploymentStatus": "CREATE_SUCCESSFUL",
+   "syncStatus": "SUCCESS",
+   "state": "OK",
+   "declaredFields": 5,
+   "claimNamespaceReachable": true,
+   "foundLive": true,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": true,
+   "objectGone": false
+  },
+  {
+   "deployment": "{{deployment-7}}",
+   "machine": "{{machine-5}}",
    "deploymentStatus": "DELETE_SUCCESSFUL",
    "syncStatus": "MISSING",
    "state": "OK",
@@ -94,8 +108,8 @@
    "objectGone": true
   },
   {
-   "deployment": "{{deployment-7}}",
-   "machine": "{{machine-5}}",
+   "deployment": "{{deployment-8}}",
+   "machine": "{{machine-6}}",
    "deploymentStatus": "DELETE_SUCCESSFUL",
    "syncStatus": "MISSING",
    "state": "OK",
@@ -126,7 +140,7 @@
    ]
   },
   {
-   "name": "{{deployment-6}}",
+   "name": "{{deployment-3}}",
    "status": "DELETE_SUCCESSFUL",
    "resourcesStillListed": 1,
    "syncStatuses": [
@@ -148,26 +162,57 @@
    "syncStatuses": [
     "MISSING"
    ]
+  },
+  {
+   "name": "{{deployment-9}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
   }
  ],
+ "deleteStory": {
+  "volumeICreated": 201,
+  "machine": 201,
+  "bootDisk": {
+   "name": "the machine's own",
+   "size": "25Gi",
+   "type": "Classic"
+  },
+  "afterDeletingTheMachine": {
+   "volumeICreatedSurvives": true,
+   "anyVolumeNamedForTheMachineSurvives": [],
+   "quotaReleasedBytes": 26843548160,
+   "bootDiskBytes": 26843545600
+  },
+  "theOrphan": {
+   "phase": "Bound",
+   "ownerReferences": [],
+   "stillSpendingQuota": true
+  },
+  "afterRemovingTheOrphan": {
+   "quotaReleasedBytes": 2147483648
+  }
+ },
  "auditTotals": {
-  "claimed": 7,
+  "claimed": 8,
   "agree": 3,
-  "objectGone": 4,
+  "objectGone": 5,
   "driftedSilently": 0,
   "driftProvableFromTheRecordAlone": 0
  },
  "probe": {
   "vcfa": {
-   "requestStatus": "SUCCESSFUL",
-   "secondsToSupervisorSpecChanged": 22,
-   "secondsToMachineConverged": 323,
-   "secondsToRequestSuccessful": 323,
+   "requestStatus": "CHECKING_APPROVAL",
+   "secondsToSupervisorSpecChanged": null,
+   "secondsToMachineConverged": null,
+   "secondsToRequestSuccessful": 11,
    "recordAfter": {
-    "syncStatus": null,
+    "syncStatus": "SUCCESS",
     "state": "OK",
-    "declared": "PoweredOff",
-    "observed": "PoweredOff"
+    "declared": "PoweredOn",
+    "observed": "PoweredOn"
    }
   },
   "supervisor": {
@@ -176,18 +221,20 @@
    "recordAfter": {
     "syncStatus": "SUCCESS",
     "state": "OK",
-    "declared": "PoweredOff",
-    "observed": "PoweredOn"
+    "declared": "PoweredOn",
+    "observed": "PoweredOff"
    },
-   "recordStillDeclares": "PoweredOff",
+   "recordStillDeclares": "PoweredOn",
    "machineActuallyIs": "PoweredOn",
    "syncStatusSaysProblem": false
   },
   "teardown": {
-   "secondsToRecordRemoved": 42,
-   "recordRetired": true,
+   "secondsToRecordRemoved": null,
+   "recordRetired": false,
    "note": "the probe never removes the machine first; see the docstring"
   },
-  "residue": []
+  "residue": [
+   "{{deployment-1}}"
+  ]
  }
 }

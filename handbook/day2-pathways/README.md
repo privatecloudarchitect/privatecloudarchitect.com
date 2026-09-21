@@ -81,6 +81,31 @@ on the current state`.
 the third order, because a teaching script must not litter the estate it teaches on. If you want to see a
 tombstone, the audit above will show you any your estate already has.
 
+## What a delete takes, and what it leaves
+
+`--probe-pathways` also gives one machine two disks and deletes it once, reading the namespace storage quota
+before and after each step.
+
+| the disk | `ownerReferences` | when the machine is deleted | quota |
+|---|---|---|---|
+| the boot disk the platform made | names the machine | deleted with it | released, matching its size |
+| a volume you made and attached | none | **survives, still Bound** | held until you delete it yourself |
+
+Ownership is the whole mechanism, and it is readable before you delete anything. The platform's boot disk
+carries an owner reference back to the `VirtualMachine`, so Kubernetes garbage collection takes it. A volume
+you created carries none, which is correct because it is yours and may be meant to outlive several machines.
+The consequence is that nothing reports the difference: no event, no status change, and the orphan looks
+exactly like a volume in active use.
+
+The list worth having is one read: every volume in the namespace with **no owner reference**. That is
+everything no machine deletion will ever clean up.
+
+One caution about boot disks. They come in two shapes here, `Classic` and `Managed`, and only the second is a
+PersistentVolumeClaim you can see in the namespace listing. A machine built by a direct create got a
+`Classic` disk that never appeared as a PVC at all; a catalog-built machine's was `Managed` and did. Both
+went with their machine, so the rule above holds either way, but a volume audit that reads only PVCs will not
+see every disk an estate is paying for.
+
 ## Scope, stated plainly
 
 - Read-only without `--probe-pathways`. With it, every write is to an object this run created and deletes.

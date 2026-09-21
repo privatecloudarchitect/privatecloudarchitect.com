@@ -82,8 +82,10 @@ inputs:
     type: string
     title: Boot disk capacity
     description: >-
-      Right-size the boot disk so the deploy does not spend quota it did not mean
-      to. Ubuntu cloud images grow the root partition to fit on first boot.
+      Intended to right-size the boot disk so a deploy does not spend quota it did
+      not mean to. Verify it applies on your build: on the VCF 9.1 estate these
+      templates were checked against the field was accepted and then discarded, and
+      the machine got the image's own size. Template 1 records the measurement.
     default: 20Gi
 
   # --- New in template 2 -----------------------------------------------------

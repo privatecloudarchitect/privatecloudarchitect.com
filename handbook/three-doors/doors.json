@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T12:55:41Z",
+ "captured_utc": "2026-09-21T13:46:04Z",
  "project": "{{project-1}}",
  "needs": {
   "direct": [
@@ -135,6 +135,38 @@
    "projectId",
    "status"
   ]
+ },
+ "credentials": {
+  "credentialHeld": "a tenant bearer, minted from a refresh token at /oauth/tenant/<org>/token",
+  "doors": [
+   {
+    "door": "VCF Automation, API",
+    "surface": "/deployment/api",
+    "answeredTheTenantBearer": 200,
+    "identityDomain": "the organization's identity provider"
+   },
+   {
+    "door": "VCF Automation, catalog",
+    "surface": "/catalog/api",
+    "answeredTheTenantBearer": 200,
+    "identityDomain": "the organization's identity provider"
+   },
+   {
+    "door": "Supervisor, direct",
+    "surface": "the namespace's own Kubernetes endpoint",
+    "answeredTheTenantBearer": 200,
+    "identityDomain": "the organization's identity provider"
+   },
+   {
+    "door": "vCenter",
+    "surface": "/api/vcenter",
+    "answeredTheTenantBearer": 401,
+    "identityDomain": "vSphere SSO, a different directory",
+    "takesInstead": "a session id from POST /api/session, or Basic, as an SSO principal"
+   }
+  ],
+  "doorsThatTakeIt": 3,
+  "note": "a door answering 200 here is answering this identity; what it then PERMITS is the project role tier and the four dials, which the access-control chapter covers"
  },
  "probe": {
   "direct": {

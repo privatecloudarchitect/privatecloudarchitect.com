@@ -76,6 +76,11 @@ inputs:
   boot_disk_capacity:
     type: string
     title: Boot disk capacity
+    description: >-
+      Intended to right-size the boot disk. Verify it applies on your build: on the
+      VCF 9.1 estate these templates were checked against the field was accepted and
+      then discarded, and the machine got the image's own size. Template 1 records
+      the measurement.
     default: 20Gi
 
   admin_username:

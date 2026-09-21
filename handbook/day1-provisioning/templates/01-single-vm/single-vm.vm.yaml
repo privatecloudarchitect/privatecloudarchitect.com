@@ -22,7 +22,7 @@
 # manifest. That is the crawl. There is no login yet; creating a user is
 # cloud-init's job, which is template 2.
 # =============================================================================
-apiVersion: vmoperator.vmware.com/v1alpha5    # the version that honors spec.bootDiskCapacity
+apiVersion: vmoperator.vmware.com/v1alpha5    # the current version the VM Service serves
 kind: VirtualMachine
 metadata:
   name: hello-vm-01                           # named for its function, with the -01 ordinal habit
@@ -36,5 +36,5 @@ spec:
   className: best-effort-small                # size; kubectl get virtualmachineclasses
   imageName: <REPLACE_ME-vm-image>            # immutable image id (vmi-...); kubectl get virtualmachineimages -n <ns>
   storageClass: <REPLACE_ME-storage-class>    # kubectl get regionstorageclassquotas
-  bootDiskCapacity: 20Gi                      # right-size the boot disk (image default is often 40-80Gi)
+  bootDiskCapacity: 20Gi                      # declared from v1alpha3 on; VERIFY IT APPLIES (see below)
   powerState: PoweredOn

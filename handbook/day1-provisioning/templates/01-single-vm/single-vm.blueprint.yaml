@@ -126,10 +126,14 @@ inputs:
     type: string
     title: Boot disk capacity
     description: >-
-      Right-size the boot disk. Without this, the VM inherits the image's full
-      virtual disk - often 40-80 GB - and burns storage quota you did not intend
-      to spend. Ubuntu cloud images grow their root partition to fit on first boot,
-      so a smaller number here is enough. 20Gi is comfortable for a base VM.
+      Intended to right-size the boot disk, because a VM otherwise inherits the
+      image's full virtual disk and burns storage quota you did not intend to spend.
+      VERIFY IT APPLIES ON YOUR BUILD BEFORE RELYING ON IT. On the VCF 9.1 estate
+      these templates were checked against on 2026-09-21 the field was accepted and
+      then discarded: asked for 20Gi (smaller than the image) and 40Gi (larger), by
+      a direct create and through this blueprint, the stored spec read back null
+      every time and the machine got the image's own 25Gi. Read the disk your first
+      machine actually gets, and size your quota to that rather than to this value.
     default: 20Gi
 
 # -----------------------------------------------------------------------------
@@ -153,8 +157,9 @@ resources:
   # Kubernetes object that VCF Automation applies into the namespace for you. Here
   # that object is a VirtualMachine from the vm-operator API.
   #
-  # apiVersion v1alpha5 is chosen deliberately: it is the version that supports
-  # spec.bootDiskCapacity (the right-sizing above). Older versions ignore it.
+  # apiVersion v1alpha5 is the current version the VM Service serves. Note that
+  # spec.bootDiskCapacity is declared in the published schema at v1alpha3, v1alpha4
+  # and v1alpha5 alike, so the version is not what decides whether it applies.
   VM:
     type: CCI.Supervisor.Resource
     properties:
