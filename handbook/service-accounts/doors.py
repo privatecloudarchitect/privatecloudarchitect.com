@@ -14,7 +14,10 @@ Surfaces are chosen by which environment variables are set; unset ones are skipp
       Real-Time Metrics RTM_HOST   GET /data-query-service/api/v1/metadata   broker bearer      expect refused
                                                                              service JWT        expect accepted
       Fleet lifecycle   FLEET_HOST GET /fleet-lcm/v1/components              its own JWT        expect accepted
-                                                                             the metrics JWT    expect refused (audience per service;
+                                                                             the metrics JWT    expect refused (audience checked HERE;
+                                                                             the reverse pair is accepted: the metrics
+                                                                             service does not check, so mint one per
+                                                                             service because at least one of them does;
                                                                              the /health probe answers any JWT and is shown for contrast)
       Log management    LOGS_HOST  GET /api/v2/agent/groups (X-JWT-Token)    its own JWT        expect accepted
                         (host:port, the API port is 9543 on the build this was proven on)
@@ -181,7 +184,12 @@ def main():
             row("Fleet lifecycle, health probe", "the metrics service's JWT", st, None, "the health probe does not check the audience")
         if fjwt and os.environ.get("RTM_HOST"):
             st, _, _ = req("GET", f"https://{os.environ['RTM_HOST']}/data-query-service/api/v1/metadata", {"Authorization": f"Bearer {fjwt}", "Accept": "application/json"})
-            row("Real-Time Metrics", "the fleet service's JWT", st, "refused", "audience is per service")
+            # The chapter records the asymmetry rather than a symmetric rule: Fleet lifecycle refuses a JWT
+            # minted for another service and the metrics service's metadata read does not. Expecting
+            # "refused" here made this harness disagree with the page it exists to check, which is a
+            # drift-detector reporting drift against itself.
+            row("Real-Time Metrics", "the fleet service's JWT", st, "accepted",
+                "this one does not check the audience; Fleet lifecycle does")
     else:
         print("  Fleet lifecycle                    skipped: FLEET_HOST not set")
     if os.environ.get("LOGS_HOST"):
