@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-17T00:28:44Z",
+  "captured": "2026-09-21T06:31:46Z",
   "calls": [
     {
       "id": "A1",
@@ -15,7 +15,7 @@
       },
       "response": {
         "status": 200,
-        "elapsed_ms": 629,
+        "elapsed_ms": 606,
         "headers": {
           "x-vmware-vcloud-request-id": "{{id-1}}",
           "x-frame-options": "SAMEORIGIN",
@@ -67,14 +67,14 @@
       },
       "response": {
         "status": 200,
-        "elapsed_ms": 417,
+        "elapsed_ms": 363,
         "headers": {
           "x-vmware-vcloud-request-id": "{{id-2}}",
           "x-frame-options": "SAMEORIGIN",
           "strict-transport-security": "max-age=63072000; includeSubDomains; preload",
           "content-type": "application/json;version=9.1.0",
           "cache-control": "no-store, must-revalidate",
-          "link": "<https://{{host}}/cloudapi/1.0.0/orgs/urn%3Avcloud%3Aorg%3A{{id-5}}>;rel=\"down\";title=\"urn:vcloud:org:{{id-5}}\";type=\"application/json\";model=\"Org\""
+          "link": "<https://{{host}}/cloudapi/1.0.0/sessions/urn%3Avcloud%3Asession%3A{{id-3}}>;rel=\"remove\";title=\"urn:vcloud:session:{{id-3}}\""
         },
         "body": {
           "id": "urn:vcloud:session:{{id-3}}",
@@ -123,7 +123,7 @@
       },
       "response": {
         "status": 200,
-        "elapsed_ms": 365,
+        "elapsed_ms": 363,
         "headers": {
           "x-vmware-vcloud-request-id": "{{id-8}}",
           "x-frame-options": "SAMEORIGIN",
@@ -169,7 +169,7 @@
       },
       "response": {
         "status": 200,
-        "elapsed_ms": 362,
+        "elapsed_ms": 370,
         "headers": {
           "content-type": "application/json",
           "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
@@ -244,7 +244,7 @@
       },
       "response": {
         "status": 200,
-        "elapsed_ms": 570,
+        "elapsed_ms": 598,
         "headers": {
           "x-vmware-vcloud-request-id": "{{id-11}}",
           "x-frame-options": "SAMEORIGIN",
@@ -323,7 +323,7 @@
       },
       "response": {
         "status": 200,
-        "elapsed_ms": 366,
+        "elapsed_ms": 362,
         "headers": {
           "x-vmware-vcloud-request-id": "{{id-13}}",
           "x-frame-options": "SAMEORIGIN",
