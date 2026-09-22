@@ -1,0 +1,493 @@
+{
+ "captured_utc": "2026-09-22T01:46:10Z",
+ "planes": [
+  {
+   "plane": "vCenter tagging service",
+   "credential": "vCenter session (Basic to /api/session)",
+   "reached": true
+  },
+  {
+   "plane": "NSX inventory + groups",
+   "credential": "NSX local credential (Basic)",
+   "reached": true
+  },
+  {
+   "plane": "VCF Operations groups + tag management",
+   "credential": "Ops API token",
+   "reached": true
+  }
+ ],
+ "vsphere": {
+  "categoriesDefined": 17,
+  "tagsDefined": 42,
+  "distinctCategoryValuePairs": 42,
+  "tagNamesReusedAcrossCategories": 3,
+  "vms": 30,
+  "vmsCarryingAtLeastOneTag": 1,
+  "categories": [
+   {
+    "name": "dsm.vmware.com/dsm-resource",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "tier",
+    "cardinality": "SINGLE",
+    "associableTypes": 3
+   },
+   {
+    "name": "NVME",
+    "cardinality": "MULTIPLE",
+    "associableTypes": 18
+   },
+   {
+    "name": "sla",
+    "cardinality": "SINGLE",
+    "associableTypes": 3
+   },
+   {
+    "name": "lifecycle.env",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "AVICLUSTER_UUID",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "dsm.vmware.com/data-service-type",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "dsm.vmware.com/infra-policy",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "identity.function",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "OpsCluster",
+    "cardinality": "SINGLE",
+    "associableTypes": 17
+   },
+   {
+    "name": "capacity.tier",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "dsm.vmware.com/data-service-namespace",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "workload",
+    "cardinality": "SINGLE",
+    "associableTypes": 3
+   },
+   {
+    "name": "env",
+    "cardinality": "SINGLE",
+    "associableTypes": 3
+   },
+   {
+    "name": "dsm.vmware.com/data-service-name",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "supervisor",
+    "cardinality": "MULTIPLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "policy.sla",
+    "cardinality": "SINGLE",
+    "associableTypes": 1
+   }
+  ],
+  "carriers": [
+   {
+    "vm": "{{machine-1}}",
+    "categories": [
+     "dsm.vmware.com/data-service-name",
+     "dsm.vmware.com/data-service-namespace",
+     "dsm.vmware.com/data-service-type",
+     "dsm.vmware.com/dsm-resource",
+     "dsm.vmware.com/infra-policy"
+    ]
+   }
+  ],
+  "customAttributeRestProbe": [
+   {
+    "path": "/api/vcenter/custom-attributes",
+    "status": 404
+   },
+   {
+    "path": "/api/vcenter/custom-attribute",
+    "status": 404
+   },
+   {
+    "path": "/rest/vcenter/custom-attributes",
+    "status": 404
+   },
+   {
+    "path": "/api/vcenter/vm/custom-attributes",
+    "status": 404
+   }
+  ]
+ },
+ "nsx": {
+  "groups": 404,
+  "expressionKinds": {
+   "Condition": 9,
+   "ConjunctionOperator": 3,
+   "GeoLocationExpression": 249,
+   "NestedExpression": 3,
+   "GroupScopeExpression": 1,
+   "IPAddressExpression": 143
+  },
+  "conditionKeys": {
+   "IPAddress.ALL": 1,
+   "TransportNode.NodeType": 4,
+   "VirtualMachine.Tag": 1,
+   "SegmentPort.Tag": 3
+  },
+  "groupsMatchingVmTag": [
+   {
+    "group": "Edge_NSGroup",
+    "operator": "EQUALS",
+    "value": "Edge_NSGroup",
+    "members": 2
+   }
+  ],
+  "fabricVms": 30,
+  "fabricVmsTagged": 6,
+  "tagScopes": {
+   "{{scope-1}}": 4,
+   "(empty scope)": 2
+  },
+  "discoveredTagsPresent": 0
+ },
+ "ops": {
+  "customGroups": 63,
+  "populatedRuleKinds": {
+   "propertyConditionRules": 5,
+   "resourceTagConditionRules": 24,
+   "resourceNameConditionRules": 7,
+   "statConditionRules": 2,
+   "relationshipConditionRules": 2
+  },
+  "groupsDefinedByTag": 15,
+  "groupsDefinedByTagResolvingToZero": 10,
+  "tagGroups": [
+   {
+    "group": "{{opsgroup-1}}",
+    "conditions": [
+     {
+      "category": "vcfapp",
+      "op": "EQ",
+      "value": "auto"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-2}}",
+    "conditions": [
+     {
+      "category": "ODYSSEY",
+      "op": "EXISTS",
+      "value": ""
+     }
+    ],
+    "members": 1
+   },
+   {
+    "group": "{{opsgroup-3}}",
+    "conditions": [
+     {
+      "category": "vcfapp",
+      "op": "CONTAINS",
+      "value": "ops"
+     }
+    ],
+    "members": 1
+   },
+   {
+    "group": "{{opsgroup-4}}",
+    "conditions": [
+     {
+      "category": "capacity.tier",
+      "op": "EQ",
+      "value": "density"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-5}}",
+    "conditions": [
+     {
+      "category": "lifecycle.env",
+      "op": "EQ",
+      "value": "dev"
+     },
+     {
+      "category": "policy.sla",
+      "op": "EQ",
+      "value": "sla-4"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-6}}",
+    "conditions": [
+     {
+      "category": "lifecycle.env",
+      "op": "EQ",
+      "value": "prod"
+     },
+     {
+      "category": "identity.function",
+      "op": "EQ",
+      "value": "db"
+     },
+     {
+      "category": "policy.sla",
+      "op": "EQ",
+      "value": "sla-1"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-7}}",
+    "conditions": [
+     {
+      "category": "lifecycle.env",
+      "op": "EQ",
+      "value": "prod"
+     },
+     {
+      "category": "identity.function",
+      "op": "EQ",
+      "value": "db"
+     },
+     {
+      "category": "policy.sla",
+      "op": "EQ",
+      "value": "sla-1"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-8}}",
+    "conditions": [
+     {
+      "category": "capacity.tier",
+      "op": "EQ",
+      "value": "standard"
+     }
+    ],
+    "members": 2
+   },
+   {
+    "group": "{{opsgroup-9}}",
+    "conditions": [
+     {
+      "category": "capacity.tier",
+      "op": "EQ",
+      "value": "performance"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-10}}",
+    "conditions": [
+     {
+      "category": "lifecycle.env",
+      "op": "EQ",
+      "value": "prod"
+     },
+     {
+      "category": "identity.function",
+      "op": "EQ",
+      "value": "db"
+     },
+     {
+      "category": "policy.sla",
+      "op": "EQ",
+      "value": "sla-1"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-11}}",
+    "conditions": [
+     {
+      "category": "vcfapp",
+      "op": "CONTAINS",
+      "value": "ops"
+     },
+     {
+      "category": "vcfapp",
+      "op": "CONTAINS",
+      "value": "logs"
+     },
+     {
+      "category": "vcfapp",
+      "op": "CONTAINS",
+      "value": "auto"
+     }
+    ],
+    "members": 1
+   },
+   {
+    "group": "{{opsgroup-12}}",
+    "conditions": [
+     {
+      "category": "BusinessUnit",
+      "op": "EQ",
+      "value": "{{opsgroup-12}}"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-13}}",
+    "conditions": [
+     {
+      "category": "capacity.tier",
+      "op": "EQ",
+      "value": "dedicated"
+     }
+    ],
+    "members": 1
+   },
+   {
+    "group": "{{opsgroup-14}}",
+    "conditions": [
+     {
+      "category": "BusinessUnit",
+      "op": "EQ",
+      "value": "QualityEngineering"
+     }
+    ],
+    "members": 0
+   },
+   {
+    "group": "{{opsgroup-15}}",
+    "conditions": [
+     {
+      "category": "vcfapp",
+      "op": "CONTAINS",
+      "value": "logs"
+     }
+    ],
+    "members": 0
+   }
+  ],
+  "tagManagementSurface": [
+   {
+    "path": "/internal/tagmanagement/categories",
+    "unsupportedHeader": "with",
+    "status": 404,
+    "categories": null
+   },
+   {
+    "path": "/internal/tagmanagement/categories",
+    "unsupportedHeader": "without",
+    "status": 404,
+    "categories": null
+   },
+   {
+    "path": "/suite-api/internal/tagmanagement/categories",
+    "unsupportedHeader": "with",
+    "status": 200,
+    "categories": 16
+   },
+   {
+    "path": "/suite-api/internal/tagmanagement/categories",
+    "unsupportedHeader": "without",
+    "status": 403,
+    "categories": null
+   }
+  ]
+ },
+ "propagation": {
+  "subjects": [
+   {
+    "vm": "{{machine-2}}",
+    "found": true,
+    "attach": 204,
+    "readBackFromVCenter": true,
+    "managedBy": "VM Service (vm-operator)"
+   },
+   {
+    "vm": "{{machine-1}}",
+    "found": true,
+    "attach": 204,
+    "readBackFromVCenter": true,
+    "managedBy": "traditional (not a vm-operator object)"
+   }
+  ],
+  "positiveControl": {
+   "group": "Edge_NSGroup",
+   "operator": "EQUALS",
+   "value": "Edge_NSGroup",
+   "members": 2
+  },
+  "nsxInventoryAfterAttach": [
+   {
+    "vm": "{{machine-2}}",
+    "inNsxInventory": true,
+    "nsxTags": []
+   },
+   {
+    "vm": "{{machine-1}}",
+    "inNsxInventory": true,
+    "nsxTags": []
+   }
+  ],
+  "groupMembersOverTime": [
+   {
+    "afterSeconds": 10,
+    "members": 0
+   },
+   {
+    "afterSeconds": 30,
+    "members": 0
+   },
+   {
+    "afterSeconds": 60,
+    "members": 0
+   },
+   {
+    "afterSeconds": 120,
+    "members": 0
+   }
+  ],
+  "teardown": {
+   "nsxGroupGoneImmediately": true,
+   "nsxGroupGoneAfter30s": true,
+   "nsxGroupGone": true,
+   "stillAttachedAfterDetach": 0,
+   "deleteTag": 204,
+   "deleteCategory": 204,
+   "categoryResidue": false
+  },
+  "createCategory": 201,
+  "createTag": 201,
+  "createGroup": 200
+ }
+}
