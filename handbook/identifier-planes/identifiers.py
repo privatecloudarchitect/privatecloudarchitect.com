@@ -39,6 +39,7 @@ Run:
   export IDENT_PROBE_VMS="name-a,name-b"        # required for --probe-propagation
   export TLS_VERIFY=false                       # only on a self-signed lab CA
   python3 identifiers.py [--probe-propagation]
+  python3 identifiers.py --where <machine-name>   # the thirty-second question, two calls
 """
 import base64
 import json
@@ -262,6 +263,30 @@ class Ops:
                     n = (body.get("pageInfo") or {}).get("totalCount")
                 out.append({"path": p, "unsupportedHeader": lbl, "status": st, "categories": n})
         return out
+
+
+# ─────────────────────────────────────────────── the thirty-second question
+
+
+def where_is_the_tag(vc, nsx, machine):
+    """Which plane is this machine's tag actually on? Both lists, side by side, in one call each.
+
+    This is the whole diagnosis for an empty NSX group. A group criterion of member type VirtualMachine
+    and key Tag reads NSX's OWN inventory; a vSphere tag lives in vCenter's tagging service. They are
+    different stores, so a tag can be plainly visible in the vSphere client and absent from the list the
+    group is matching against. Printing both is faster than reasoning about either.
+    """
+    moref = next((v["vm"] for v in vc.vms() if v["name"] == machine), None)
+    if not moref:
+        return {"machine": machine, "found": False}
+    tags, cats = vc.tags(), {c["id"]: c["name"] for c in vc.categories()}
+    vsphere = sorted(f"{cats.get(tags[t]['categoryId'], '?')}={tags[t]['name']}"
+                     for t in vc.attached([moref]).get(moref, []) if t in tags)
+    seen = next((v for v in nsx.fabric_vms() if v.get("display_name") == machine), None)
+    return {"machine": machine, "found": True, "inNsxInventory": seen is not None,
+            "vSphereTags": vsphere,
+            "nsxTags": sorted(f"{t.get('scope') or '(no scope)'}={t.get('tag')}"
+                              for t in (seen.get("tags") or [])) if seen else None}
 
 
 # ───────────────────────────────────────────────────────── what each plane holds
@@ -493,6 +518,7 @@ def propagation_probe(vc, nsx, names, L):
 
 def main():
     probe = "--probe-propagation" in sys.argv
+    where = next((a for i, a in enumerate(sys.argv) if i and sys.argv[i - 1] == "--where"), None)
     out_dir = os.path.dirname(os.path.abspath(__file__))
     L = Labels()
 
@@ -516,6 +542,16 @@ def main():
         print(f"  {p['plane']:42s} {'yes' if p['reached'] else 'NO':4s}  ({p['credential']})")
     if not any(p["reached"] for p in planes):
         raise SystemExit("no plane answered; set at least VC_HOST / VC_USER / VC_PASSWORD_FILE")
+
+    if where:
+        if not (vc and vc.ok and nsx and nsx.ok):
+            raise SystemExit("--where needs BOTH vCenter and NSX reachable: it is a comparison between them.")
+        answer = where_is_the_tag(vc, nsx, where)
+        print(json.dumps(answer, indent=1))
+        if answer.get("found") and answer["vSphereTags"] and not answer["nsxTags"]:
+            print("\nThis machine carries vSphere tags and no NSX tag. An NSX group matching on VM Tag "
+                  "reads the second list, so it will not match this machine whatever the first one says.")
+        return
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "planes": planes, "vsphere": None, "nsx": None, "ops": None, "propagation": None}
