@@ -28,6 +28,7 @@ Run:
   export OPS_OWNER="PCA"                          # the owner prefix your content carries
   export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
   python3 triage.py
+  python3 triage.py --standing       # the thirty-second read: what has been standing, oldest first
   python3 triage.py --corpus /path/to/your/failure-record.md      # adds the second half
   python3 triage.py --corpus record.md --entry '^### (F-\\d+):'    # your own heading shape
 """
@@ -60,6 +61,27 @@ TRACES = [
 
 def days_since(ms, now):
     return (now - dt.datetime.fromtimestamp(ms / 1000, dt.timezone.utc)).days
+
+
+def standing_alerts(tok, top=10):
+    """The thirty-second question: how much of what is paging you has been standing for weeks?
+
+    An alert that opened forty days ago and that nobody has acknowledged is not an incident, whatever its
+    criticality says; it is a monitoring decision somebody made once and never revisited. Age and control
+    state answer that before any diagnosis starts, and they are one call. Sorting oldest first puts the
+    alerts that are NOT incidents at the top, which is the opposite of what a console does.
+    """
+    _st, body = ops("GET", "/api/alerts", tok, params={"pageSize": 2000, "_no_links": "true"})
+    now = dt.datetime.now(dt.timezone.utc)
+    active = [a for a in ((body.get("alerts") or []) if isinstance(body, dict) else [])
+              if a.get("status") == "ACTIVE" and a.get("startTimeUTC")]
+    rows = sorted(({"ageDays": days_since(a["startTimeUTC"], now),
+                    "controlState": a.get("controlState"),
+                    "criticality": a.get("alertLevel")} for a in active),
+                  key=lambda r: -r["ageDays"])
+    return {"active": len(active),
+            "untouched": sum(1 for r in rows if r["controlState"] == "OPEN"),
+            "oldest": rows[:top]}
 
 
 def profile_queue(tok, owner):
@@ -158,12 +180,23 @@ def audit_corpus(path, entry_pattern):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--standing", action="store_true",
+                    help="print the active queue oldest-first and stop: the thirty-second read")
     ap.add_argument("--corpus", help="a markdown file of recorded failures to audit")
     ap.add_argument("--entry", default=r"^### ([A-Z]-\d+):",
                     help="the heading pattern that starts one entry (default: '### G-123:')")
     args = ap.parse_args()
     owner = os.environ.get("OPS_OWNER", "PCA")
     out_dir = os.environ.get("OUT_DIR", ".")
+    if args.standing:
+        r = standing_alerts(bearer())
+        print(f"{r['active']} active alert(s), {r['untouched']} of them never acknowledged. Oldest first:\n")
+        for row in r["oldest"]:
+            print(f"  {row['ageDays']:>5} days  {str(row['controlState'] or '-'):<12} {row['criticality'] or ''}")
+        print("\nAnything at the top of that list has been standing, not happening. It is a monitoring "
+              "decision somebody made once, and it is not the thing to diagnose.")
+        return
+
     print("triage.py: what is in the queue, and what the record kept\n")
 
     queue = profile_queue(bearer(), owner)
