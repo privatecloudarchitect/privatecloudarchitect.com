@@ -122,8 +122,7 @@ itself, so you read them from a per-namespace context, which the next section co
 
 The top-level context lists namespaces and the estate-wide inputs above. The per-VM
 inputs and the workload objects live in the Supervisor, so switch to a namespace's
-per-namespace context (the CLI created one for each when you logged in) to read and
-use them:
+per-namespace context to read and use them:
 
 ```bash
 vcf context use <context-name>:<namespace>:<project>
@@ -132,6 +131,28 @@ kubectl get clustervirtualmachineimages               # images shared cluster-wi
 kubectl get virtualmachineclasses         # VM sizes (vm_class)
 kubectl get kubernetesreleases            # Kubernetes releases for VKS, templates 4 and 5 (kr for short)
 ```
+
+**`vcf context use` only selects a context that already exists, and the namespace contexts are a
+snapshot.** `vcf context create --type cci` vends one per namespace *at the moment you create the CCI
+context*, and it never adds more. A namespace created afterwards, which includes every namespace a
+template you deploy today produces, has no context, and the command fails with `context ... not found`.
+`vcf context create` also refuses to overwrite an existing context, so the way to pick up the new
+namespaces is to re-vend the whole set:
+
+```bash
+vcf context delete <context-name> --yes
+vcf context create <context-name> \
+    --endpoint https://<automation-fqdn> \
+    --type cci \
+    --api-token "$TOKEN" \
+    --tenant-name <Tenant> \
+    --insecure-skip-tls-verify
+vcf context use <context-name>:<namespace>:<project>       # now resolves
+```
+
+Re-vending costs nothing but the round trip; it re-reads the namespace list and rebuilds the set. Do it
+after creating a namespace, and treat `context ... not found` as "my snapshot is old", not as "my
+namespace is missing".
 
 **The image list has two scopes, and the bigger one is mostly the wrong images.** A VM image is either
 bound to your namespace (`virtualmachineimages`) or shared across the cluster
@@ -157,25 +178,52 @@ vcf context refresh <context-name>
 ## For templates 4 and 5: a VKS guest-cluster kubeconfig
 
 Templates 4 and 5 provision a VKS Kubernetes cluster, and you apply their
-application manifests *into* that cluster, which needs its own kubeconfig. Fetch it
-with the cluster plugin:
+application manifests *into* that cluster, which needs its own kubeconfig.
+
+**There are two kubeconfigs here and they are not interchangeable.** The CLI writes one; the namespace
+holds another as a secret. Which you want depends on whether a human is present.
+
+*The secret, for anything unattended.* The Supervisor keeps a certificate-based kubeconfig for the
+cluster as a secret in the namespace. It carries `client-certificate-data`, so it needs no login and no
+refresh, which is what a script, a pipeline or a GitOps controller requires:
 
 ```bash
-vcf plugin install cluster                          # the cluster plugin (9.x may auto-install it on context use)
 vcf context use <context-name>:<namespace>:<project>
-vcf cluster kubeconfig get <cluster> --namespace <namespace> \
-    --output ~/.kube/<cluster>.kubeconfig
+kubectl get secret <cluster>-kubeconfig -n <namespace> \
+    -o go-template='{{.data.value|base64decode}}' > ~/.kube/<cluster>.kubeconfig
 export KUBECONFIG=~/.kube/<cluster>.kubeconfig
 kubectl get nodes                                   # now talking to the VKS cluster
 ```
 
-This kubeconfig uses client certificates with a multi-year life, so it needs no
-refresh. Run `unset KUBECONFIG` to return to your Supervisor context.
+Read the secret through the **namespace** context, not the top-level one: the org-level context is
+refused (`403`) for secrets.
+
+*The CLI, for interactive use.* The cluster plugin fetches one too:
+
+```bash
+vcf plugin install cluster                          # 9.x may auto-install it on context use
+vcf context use <context-name>:<namespace>:<project>
+vcf cluster kubeconfig get <cluster> --namespace <namespace> \
+    --export-file ~/.kube/<cluster>.kubeconfig      # omit --export-file and it MERGES into ~/.kube/config
+```
+
+Two things to know about it. The file it writes authenticates through an **exec plugin** that shells out
+to `vcf vcfa-auth login`, so it prompts: fine at a terminal, a hang in a script. And `--namespace` must
+*agree with* the context you selected; it does not switch it, and a mismatch is the first error most
+people hit here:
+
+```
+Error: the namespace: <ns-in-your-context> in the current context is not
+       the same as the input namespace: <ns-you-passed>
+```
+
+Run `unset KUBECONFIG` to return to your Supervisor context.
 
 ## vcf or kubectl: which does what
 
-- **`vcf`** manages the context lifecycle (`create`, `use`, `refresh`) and fetches
-  a VKS kubeconfig. Think of it as the thing that logs you in and points kubectl.
+- **`vcf`** manages the context lifecycle (`create`, `use`, `refresh`) and can fetch
+  an interactive VKS kubeconfig. Think of it as the thing that logs you in and points
+  kubectl. For an unattended VKS kubeconfig, read the namespace secret instead.
 - **`kubectl`** does everything once a context is active: list namespaces, create
   VMs, apply manifests, deploy the templates. You will spend most of your time here.
 

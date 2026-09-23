@@ -122,24 +122,6 @@ inputs:
         kubectl get virtualmachineclasses
     default: best-effort-small
 
-  boot_disk_capacity:
-    type: string
-    title: Boot disk capacity
-    description: >-
-      Right-sizes the boot disk. The VM Operator API documents this field as "the
-      capacity of the VM's boot disk", and documents exactly one case where it does
-      not apply: it is "ignored when deploying from an ISO with CD-ROM devices".
-
-      VERIFY IT APPLIES ON YOUR BUILD. On the VCF 9.1 estate these templates were
-      checked against on 2026-09-21 it was accepted and then discarded, and that
-      documented exception did not apply: the image was type OVF, not ISO. Asked
-      for 20Gi (smaller than the image) and 40Gi (larger), by a direct create and
-      through this blueprint, the stored spec read back null all three times and
-      the machine got the image's own 25Gi. That is a divergence from the documented
-      behaviour rather than a setting used wrongly, so check the disk your first
-      machine actually gets and size quota to that rather than to this value.
-    default: 20Gi
-
 # -----------------------------------------------------------------------------
 # RESOURCES - what actually gets built
 # -----------------------------------------------------------------------------
@@ -161,9 +143,13 @@ resources:
   # Kubernetes object that VCF Automation applies into the namespace for you. Here
   # that object is a VirtualMachine from the vm-operator API.
   #
-  # apiVersion v1alpha5 is the current version the VM Service serves. Note that
-  # spec.bootDiskCapacity is declared in the published schema at v1alpha3, v1alpha4
-  # and v1alpha5 alike, so the version is not what decides whether it applies.
+  # apiVersion v1alpha5 is the current version the VM Service serves.
+  #
+  # Notice there is no boot-disk size here. That is deliberate: the boot disk is
+  # whatever the image carries. `spec.bootDiskCapacity` reads like the field for it
+  # and is not one on any served version, and the real `spec.advanced.bootDiskCapacity`
+  # left the machine unable to power on when it was measured. Size your namespace
+  # quota to the image. G-228 has the measurements.
   VM:
     type: CCI.Supervisor.Resource
     properties:
@@ -194,7 +180,6 @@ resources:
           className: ${input.vm_class}
           imageName: ${input.vm_image}
           storageClass: ${input.storage_class}
-          bootDiskCapacity: ${input.boot_disk_capacity}
           # Power it on at create. This is the one imperative field here;
           # everything else is declarative desired-state.
           powerState: PoweredOn

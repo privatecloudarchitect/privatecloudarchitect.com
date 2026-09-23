@@ -36,5 +36,4 @@ spec:
   className: best-effort-small                # size; kubectl get virtualmachineclasses
   imageName: <REPLACE_ME-vm-image>            # immutable image id (vmi-...); kubectl get virtualmachineimages -n <ns>
   storageClass: <REPLACE_ME-storage-class>    # kubectl get regionstorageclassquotas
-  bootDiskCapacity: 20Gi                      # declared from v1alpha3 on; VERIFY IT APPLIES (see below)
   powerState: PoweredOn

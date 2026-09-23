@@ -78,11 +78,18 @@ real nodes).
 **Part 2, the application (kubectl).** Once the cluster is ready:
 
 ```
-# 1. Get a kubeconfig for the VKS cluster (your platform documents the exact command;
-#    it is typically a kubectl vsphere / vcf login against the cluster, or a
-#    generated secret). Point kubectl at the VKS cluster, not the Supervisor.
+# 1. Get a kubeconfig for the VKS cluster. Read the namespace's secret: it is
+#    certificate-based, so it works without a login prompt. (The cluster plugin's
+#    `vcf cluster kubeconfig get` also works, but writes an exec-plugin file that
+#    prompts. See 00-reaching-the-supervisor for both paths and when each fits.)
+kubectl get secret <app_name>-<env>-vks-kubeconfig -n <namespace> \
+  -o go-template='{{.data.value|base64decode}}' > ~/.kube/vks.kubeconfig
+export KUBECONFIG=~/.kube/vks.kubeconfig
+kubectl get nodes                  # confirm you are on the VKS cluster, not the Supervisor
 
-# 2. Read the database VM's namespace IP:
+# 2. Read the database VM's namespace IP. This one is a SUPERVISOR object, so run it
+#    against the namespace context, not the VKS kubeconfig you just exported
+#    (`unset KUBECONFIG` first, or the answer is "resource not found"):
 kubectl get vm <app_name>-db-01 -n <namespace> \
   -o jsonpath='{.status.network.primaryIP4}'
 

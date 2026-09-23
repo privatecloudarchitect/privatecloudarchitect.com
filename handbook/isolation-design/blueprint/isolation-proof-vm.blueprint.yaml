@@ -31,4 +31,3 @@ resources:
           imageName: <your-image-id>
           storageClass: <your-storage-class>
           powerState: PoweredOn
-          bootDiskCapacity: 20Gi

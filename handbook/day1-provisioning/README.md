@@ -15,6 +15,7 @@ and the hard ideas arrive one at a time.
 
 ```mermaid
 flowchart LR
+    T0["by hand<br/>one kubectl apply"]
     subgraph Crawl
         T1["01 single VM<br/>boots and runs"]
         T2["02 + cloud-init<br/>configures itself"]
@@ -25,14 +26,17 @@ flowchart LR
     end
     subgraph Run
         T5["05 microservices<br/>Kubernetes on VKS"]
+        T6["06 GitOps<br/>a controller applies it"]
     end
-    T1 --> T2 --> T3 --> T4 --> T5
+    T0 --> T1 --> T2 --> T3 --> T4 --> T5 --> T6
     classDef crawl fill:#eef6ee,stroke:#7fae57,color:#1f2d1f
     classDef walk fill:#fbf3e0,stroke:#d8ab3a,color:#3a2f14
     classDef run fill:#eaf0f7,stroke:#4f86c6,color:#16283f
+    classDef pre fill:#f4f2ef,stroke:#9c8f7d,color:#302a22
+    class T0 pre
     class T1,T2 crawl
     class T3,T4 walk
-    class T5 run
+    class T5,T6 run
 ```
 
 **Coming from vSphere or vRA?** The template shape is familiar (`formatVersion`,
@@ -57,6 +61,10 @@ lands in a Supervisor namespace your platform vends you. The
 2. **New to VCF Automation?** Read
    [`01-before-you-start.md`](./01-before-you-start.md): the orientation (what "All
    Apps" and "CCI" actually are), the prerequisites, and how to deploy a template.
+3. **Never applied a VM manifest by hand?** Do
+   [`02-your-first-vm-by-hand.md`](./02-your-first-vm-by-hand.md) once: build one VM
+   with `kubectl`, reach it, delete it. Template 1 wraps exactly that object, so
+   doing it first means template 1 introduces one new idea instead of two.
 
 ## The learning path
 
@@ -67,11 +75,14 @@ lands in a Supervisor namespace your platform vends you. The
 | **Walk** | [`03-web-pair`](./templates/03-web-pair/) | More than one VM, behind a load-balancer front door | Two web servers reachable from outside |
 | **Walk to run** | [`04-hybrid-3tier`](./templates/04-hybrid-3tier/) | A VM and containers as one app, in one namespace | A database VM with a containerized web/app tier |
 | **Run** | [`05-microservices`](./templates/05-microservices/) | A full Kubernetes app on a VKS guest cluster | A multi-service application on Kubernetes |
+| **Run** | [`06-gitops`](./templates/06-gitops/) | A controller applies the manifests, continuously, from a repository | The same application, reconciled from git and self-healing |
 
 The through-line is deliberate: every template is the **CCI/Supervisor dialect**,
 so you are not switching mental models as the applications get more ambitious. By
-the last stage you are running Kubernetes, having started from a single VM, and
-each step in between followed because it was one idea larger than the last.
+stage 05 you are running Kubernetes, having started from a single VM, and each step
+in between followed because it was one idea larger than the last. Stage 06 changes
+none of the applications and only one thing about you: you stop being the one who
+applies them.
 
 ## Companion reading on the site
 
@@ -91,6 +102,8 @@ day1-provisioning/
   README.md                     # you are here: the learning path
   00-reaching-the-supervisor.md # get the vcf CLI, authenticate, run your first kubectl
   01-before-you-start.md        # orientation (All Apps vs CCI), prerequisites, deploy
+  02-your-first-vm-by-hand.md   # build, reach and delete one VM with kubectl: the object
+                                #   template 01 wraps
   day1.py                       # the harness: reads this plane through BOTH of its faces
   day1.json                     # the record it writes, which the chapter renders
   templates/
@@ -101,6 +114,7 @@ day1-provisioning/
     03-web-pair/                # walk:   + a second VM and a load balancer
     04-hybrid-3tier/            # walk->run: + a VM database and a container tier
     05-microservices/           # run:    + a Kubernetes microservices app
+    06-gitops/                  # run:    + a controller that applies it from git
 ```
 
 Each stage folder holds the template file(s) and its own `README.md` that says

@@ -1,364 +1,363 @@
 {
- "captured_utc": "2026-09-21T17:21:14Z",
- "project": "{{project-1}}",
- "watchedFields": [
-  "powerState",
-  "className",
-  "imageName",
-  "storageClass",
-  "bootDiskCapacity"
- ],
- "audit": [
-  {
-   "deployment": "{{deployment-1}}",
-   "machine": "{{machine-1}}",
-   "deploymentStatus": "DELETE_SUCCESSFUL",
-   "syncStatus": "MISSING",
-   "state": "OK",
-   "declaredFields": 4,
-   "claimNamespaceReachable": true,
-   "foundLive": false,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": false,
-   "objectGone": true
+  "captured_utc": "2026-09-21T17:21:14Z",
+  "project": "{{project-1}}",
+  "watchedFields": [
+    "powerState",
+    "className",
+    "imageName",
+    "storageClass"
+  ],
+  "audit": [
+    {
+      "deployment": "{{deployment-1}}",
+      "machine": "{{machine-1}}",
+      "deploymentStatus": "DELETE_SUCCESSFUL",
+      "syncStatus": "MISSING",
+      "state": "OK",
+      "declaredFields": 4,
+      "claimNamespaceReachable": true,
+      "foundLive": false,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": false,
+      "objectGone": true
+    },
+    {
+      "deployment": "{{deployment-2}}",
+      "machine": "{{machine-2}}",
+      "deploymentStatus": "DELETE_SUCCESSFUL",
+      "syncStatus": "MISSING",
+      "state": "OK",
+      "declaredFields": 5,
+      "claimNamespaceReachable": true,
+      "foundLive": false,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": false,
+      "objectGone": true
+    },
+    {
+      "deployment": "{{deployment-3}}",
+      "machine": "{{machine-3}}",
+      "deploymentStatus": "DELETE_SUCCESSFUL",
+      "syncStatus": "MISSING",
+      "state": "OK",
+      "declaredFields": 5,
+      "claimNamespaceReachable": true,
+      "foundLive": false,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": false,
+      "objectGone": true
+    },
+    {
+      "deployment": "{{deployment-4}}",
+      "machine": "{{machine-4}}",
+      "deploymentStatus": "CREATE_SUCCESSFUL",
+      "syncStatus": "SUCCESS",
+      "state": "OK",
+      "declaredFields": 5,
+      "claimNamespaceReachable": true,
+      "foundLive": true,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": true,
+      "objectGone": false
+    },
+    {
+      "deployment": "{{deployment-5}}",
+      "machine": "{{machine-5}}",
+      "deploymentStatus": "CREATE_SUCCESSFUL",
+      "syncStatus": "SUCCESS",
+      "state": "OK",
+      "declaredFields": 5,
+      "claimNamespaceReachable": true,
+      "foundLive": true,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": true,
+      "objectGone": false
+    },
+    {
+      "deployment": "{{deployment-6}}",
+      "machine": "{{machine-6}}",
+      "deploymentStatus": "CREATE_SUCCESSFUL",
+      "syncStatus": "SUCCESS",
+      "state": "OK",
+      "declaredFields": 5,
+      "claimNamespaceReachable": true,
+      "foundLive": true,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": true,
+      "objectGone": false
+    },
+    {
+      "deployment": "{{deployment-7}}",
+      "machine": "{{machine-5}}",
+      "deploymentStatus": "DELETE_SUCCESSFUL",
+      "syncStatus": "MISSING",
+      "state": "OK",
+      "declaredFields": 5,
+      "claimNamespaceReachable": false,
+      "foundLive": false,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": false,
+      "objectGone": true
+    },
+    {
+      "deployment": "{{deployment-8}}",
+      "machine": "{{machine-6}}",
+      "deploymentStatus": "DELETE_SUCCESSFUL",
+      "syncStatus": "MISSING",
+      "state": "OK",
+      "declaredFields": 5,
+      "claimNamespaceReachable": false,
+      "foundLive": false,
+      "declaredVsObserved": [],
+      "declaredVsLive": [],
+      "agrees": false,
+      "objectGone": true
+    }
+  ],
+  "tombstones": [
+    {
+      "name": "{{deployment-1}}",
+      "status": "DELETE_SUCCESSFUL",
+      "resourcesStillListed": 1,
+      "syncStatuses": [
+        "MISSING"
+      ]
+    },
+    {
+      "name": "{{deployment-2}}",
+      "status": "DELETE_SUCCESSFUL",
+      "resourcesStillListed": 1,
+      "syncStatuses": [
+        "MISSING"
+      ]
+    },
+    {
+      "name": "{{deployment-3}}",
+      "status": "DELETE_SUCCESSFUL",
+      "resourcesStillListed": 1,
+      "syncStatuses": [
+        "MISSING"
+      ]
+    },
+    {
+      "name": "{{deployment-7}}",
+      "status": "DELETE_SUCCESSFUL",
+      "resourcesStillListed": 1,
+      "syncStatuses": [
+        "MISSING"
+      ]
+    },
+    {
+      "name": "{{deployment-8}}",
+      "status": "DELETE_SUCCESSFUL",
+      "resourcesStillListed": 1,
+      "syncStatuses": [
+        "MISSING"
+      ]
+    },
+    {
+      "name": "{{deployment-9}}",
+      "status": "DELETE_SUCCESSFUL",
+      "resourcesStillListed": 1,
+      "syncStatuses": [
+        "MISSING"
+      ]
+    }
+  ],
+  "deleteStory": {
+    "volumeICreated": 201,
+    "machine": 201,
+    "bootDisk": {
+      "name": "the machine's own",
+      "size": "25Gi",
+      "type": "Classic"
+    },
+    "afterDeletingTheMachine": {
+      "volumeICreatedSurvives": true,
+      "anyVolumeNamedForTheMachineSurvives": [],
+      "quotaReleasedBytes": 26844148224,
+      "bootDiskBytes": 26843545600
+    },
+    "theOrphan": {
+      "phase": "Bound",
+      "ownerReferences": [],
+      "stillSpendingQuota": true
+    },
+    "afterRemovingTheOrphan": {
+      "quotaReleasedBytes": 2147483648
+    }
   },
-  {
-   "deployment": "{{deployment-2}}",
-   "machine": "{{machine-2}}",
-   "deploymentStatus": "DELETE_SUCCESSFUL",
-   "syncStatus": "MISSING",
-   "state": "OK",
-   "declaredFields": 5,
-   "claimNamespaceReachable": true,
-   "foundLive": false,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": false,
-   "objectGone": true
+  "contract": {
+    "Deployment.status": {
+      "documented": [
+        "CREATE_SUCCESSFUL",
+        "CREATE_INPROGRESS",
+        "CREATE_FAILED",
+        "UPDATE_SUCCESSFUL",
+        "UPDATE_INPROGRESS",
+        "UPDATE_FAILED",
+        "DELETE_SUCCESSFUL",
+        "DELETE_INPROGRESS",
+        "DELETE_FAILED"
+      ],
+      "seen": {
+        "DELETE_SUCCESSFUL": 6,
+        "CREATE_SUCCESSFUL": 5
+      },
+      "neverSeen": [
+        "CREATE_INPROGRESS",
+        "CREATE_FAILED",
+        "UPDATE_SUCCESSFUL",
+        "UPDATE_INPROGRESS",
+        "UPDATE_FAILED",
+        "DELETE_INPROGRESS",
+        "DELETE_FAILED"
+      ]
+    },
+    "resource.syncStatus": {
+      "documented": [
+        "SUCCESS",
+        "MISSING",
+        "STALE"
+      ],
+      "seen": {
+        "MISSING": 6,
+        "SUCCESS": 11,
+        "null": 1
+      },
+      "neverSeen": [
+        "STALE"
+      ]
+    },
+    "resource.state": {
+      "documented": [
+        "PARTIAL",
+        "TAINTED",
+        "OK"
+      ],
+      "seen": {
+        "OK": 18
+      },
+      "neverSeen": [
+        "PARTIAL",
+        "TAINTED"
+      ]
+    },
+    "resource.origin": {
+      "documented": [
+        "DISCOVERED",
+        "DEPLOYED",
+        "ONBOARDED",
+        "MIGRATED",
+        "SIMULATED",
+        "CCS"
+      ],
+      "seen": {
+        "DEPLOYED": 18
+      },
+      "neverSeen": [
+        "DISCOVERED",
+        "ONBOARDED",
+        "MIGRATED",
+        "SIMULATED",
+        "CCS"
+      ]
+    }
   },
-  {
-   "deployment": "{{deployment-3}}",
-   "machine": "{{machine-3}}",
-   "deploymentStatus": "DELETE_SUCCESSFUL",
-   "syncStatus": "MISSING",
-   "state": "OK",
-   "declaredFields": 5,
-   "claimNamespaceReachable": true,
-   "foundLive": false,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": false,
-   "objectGone": true
+  "auditTotals": {
+    "claimed": 8,
+    "agree": 3,
+    "objectGone": 5,
+    "driftedSilently": 0,
+    "driftProvableFromTheRecordAlone": 0
   },
-  {
-   "deployment": "{{deployment-4}}",
-   "machine": "{{machine-4}}",
-   "deploymentStatus": "CREATE_SUCCESSFUL",
-   "syncStatus": "SUCCESS",
-   "state": "OK",
-   "declaredFields": 5,
-   "claimNamespaceReachable": true,
-   "foundLive": true,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": true,
-   "objectGone": false
-  },
-  {
-   "deployment": "{{deployment-5}}",
-   "machine": "{{machine-5}}",
-   "deploymentStatus": "CREATE_SUCCESSFUL",
-   "syncStatus": "SUCCESS",
-   "state": "OK",
-   "declaredFields": 5,
-   "claimNamespaceReachable": true,
-   "foundLive": true,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": true,
-   "objectGone": false
-  },
-  {
-   "deployment": "{{deployment-6}}",
-   "machine": "{{machine-6}}",
-   "deploymentStatus": "CREATE_SUCCESSFUL",
-   "syncStatus": "SUCCESS",
-   "state": "OK",
-   "declaredFields": 5,
-   "claimNamespaceReachable": true,
-   "foundLive": true,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": true,
-   "objectGone": false
-  },
-  {
-   "deployment": "{{deployment-7}}",
-   "machine": "{{machine-5}}",
-   "deploymentStatus": "DELETE_SUCCESSFUL",
-   "syncStatus": "MISSING",
-   "state": "OK",
-   "declaredFields": 5,
-   "claimNamespaceReachable": false,
-   "foundLive": false,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": false,
-   "objectGone": true
-  },
-  {
-   "deployment": "{{deployment-8}}",
-   "machine": "{{machine-6}}",
-   "deploymentStatus": "DELETE_SUCCESSFUL",
-   "syncStatus": "MISSING",
-   "state": "OK",
-   "declaredFields": 5,
-   "claimNamespaceReachable": false,
-   "foundLive": false,
-   "declaredVsObserved": [],
-   "declaredVsLive": [],
-   "agrees": false,
-   "objectGone": true
+  "probe": {
+    "vcfa": {
+      "requestStatus": "SUCCESSFUL",
+      "secondsToSupervisorSpecChanged": 22,
+      "secondsToMachineConverged": 323,
+      "secondsToRequestSuccessful": 324,
+      "recordAfter": {
+        "syncStatus": null,
+        "state": "OK",
+        "declared": "PoweredOff",
+        "observed": "PoweredOff"
+      }
+    },
+    "supervisor": {
+      "patchStatus": 200,
+      "secondsToMachineConverged": 11,
+      "recordAfter": {
+        "syncStatus": "SUCCESS",
+        "state": "OK",
+        "declared": "PoweredOff",
+        "observed": "PoweredOn"
+      },
+      "recordStillDeclares": "PoweredOff",
+      "machineActuallyIs": "PoweredOn",
+      "syncStatusSaysProblem": false
+    },
+    "teardown": {
+      "secondsToRecordRemoved": 42,
+      "recordRetired": true,
+      "note": "the probe never removes the machine first; see the docstring"
+    },
+    "actionsWhileRunning": {
+      "Add.Disk": true,
+      "RemoteConsole": true,
+      "WebConsole": true,
+      "Remove.Disk": true,
+      "Resize": false,
+      "Create.Snapshot": true,
+      "Delete.Snapshot": true,
+      "Get.Password": false,
+      "PowerOff": true,
+      "PowerOn": false,
+      "Revert.Snapshot": true,
+      "Suspend": true
+    },
+    "actionsWhileStopped": {
+      "Add.Disk": false,
+      "RemoteConsole": false,
+      "WebConsole": false,
+      "Remove.Disk": false,
+      "Resize": true,
+      "Create.Snapshot": true,
+      "Delete.Snapshot": true,
+      "Get.Password": false,
+      "PowerOff": false,
+      "PowerOn": true,
+      "Revert.Snapshot": true,
+      "Suspend": false
+    },
+    "addDisk": {
+      "attempted": true,
+      "requestStatus": "FAILED",
+      "requestAccepted": 200,
+      "newVolumes": {
+        "handbook-pathways-d2-171307-638afcb5": [
+          "VirtualMachine"
+        ],
+        "handbook-pathways-disk-d7aa1570b2": []
+      },
+      "anyWithoutAnOwner": [
+        "handbook-pathways-disk-d7aa1570b2"
+      ]
+    },
+    "residue": [],
+    "volumesAfterDeploymentTeardown": {
+      "unownedVolumesTheActionMade": [
+        "handbook-pathways-disk-d7aa1570b2"
+      ],
+      "survivingAfterwards": [],
+      "recordRemovedAnUnownedVolume": true
+    }
   }
- ],
- "tombstones": [
-  {
-   "name": "{{deployment-1}}",
-   "status": "DELETE_SUCCESSFUL",
-   "resourcesStillListed": 1,
-   "syncStatuses": [
-    "MISSING"
-   ]
-  },
-  {
-   "name": "{{deployment-2}}",
-   "status": "DELETE_SUCCESSFUL",
-   "resourcesStillListed": 1,
-   "syncStatuses": [
-    "MISSING"
-   ]
-  },
-  {
-   "name": "{{deployment-3}}",
-   "status": "DELETE_SUCCESSFUL",
-   "resourcesStillListed": 1,
-   "syncStatuses": [
-    "MISSING"
-   ]
-  },
-  {
-   "name": "{{deployment-7}}",
-   "status": "DELETE_SUCCESSFUL",
-   "resourcesStillListed": 1,
-   "syncStatuses": [
-    "MISSING"
-   ]
-  },
-  {
-   "name": "{{deployment-8}}",
-   "status": "DELETE_SUCCESSFUL",
-   "resourcesStillListed": 1,
-   "syncStatuses": [
-    "MISSING"
-   ]
-  },
-  {
-   "name": "{{deployment-9}}",
-   "status": "DELETE_SUCCESSFUL",
-   "resourcesStillListed": 1,
-   "syncStatuses": [
-    "MISSING"
-   ]
-  }
- ],
- "deleteStory": {
-  "volumeICreated": 201,
-  "machine": 201,
-  "bootDisk": {
-   "name": "the machine's own",
-   "size": "25Gi",
-   "type": "Classic"
-  },
-  "afterDeletingTheMachine": {
-   "volumeICreatedSurvives": true,
-   "anyVolumeNamedForTheMachineSurvives": [],
-   "quotaReleasedBytes": 26844148224,
-   "bootDiskBytes": 26843545600
-  },
-  "theOrphan": {
-   "phase": "Bound",
-   "ownerReferences": [],
-   "stillSpendingQuota": true
-  },
-  "afterRemovingTheOrphan": {
-   "quotaReleasedBytes": 2147483648
-  }
- },
- "contract": {
-  "Deployment.status": {
-   "documented": [
-    "CREATE_SUCCESSFUL",
-    "CREATE_INPROGRESS",
-    "CREATE_FAILED",
-    "UPDATE_SUCCESSFUL",
-    "UPDATE_INPROGRESS",
-    "UPDATE_FAILED",
-    "DELETE_SUCCESSFUL",
-    "DELETE_INPROGRESS",
-    "DELETE_FAILED"
-   ],
-   "seen": {
-    "DELETE_SUCCESSFUL": 6,
-    "CREATE_SUCCESSFUL": 5
-   },
-   "neverSeen": [
-    "CREATE_INPROGRESS",
-    "CREATE_FAILED",
-    "UPDATE_SUCCESSFUL",
-    "UPDATE_INPROGRESS",
-    "UPDATE_FAILED",
-    "DELETE_INPROGRESS",
-    "DELETE_FAILED"
-   ]
-  },
-  "resource.syncStatus": {
-   "documented": [
-    "SUCCESS",
-    "MISSING",
-    "STALE"
-   ],
-   "seen": {
-    "MISSING": 6,
-    "SUCCESS": 11,
-    "null": 1
-   },
-   "neverSeen": [
-    "STALE"
-   ]
-  },
-  "resource.state": {
-   "documented": [
-    "PARTIAL",
-    "TAINTED",
-    "OK"
-   ],
-   "seen": {
-    "OK": 18
-   },
-   "neverSeen": [
-    "PARTIAL",
-    "TAINTED"
-   ]
-  },
-  "resource.origin": {
-   "documented": [
-    "DISCOVERED",
-    "DEPLOYED",
-    "ONBOARDED",
-    "MIGRATED",
-    "SIMULATED",
-    "CCS"
-   ],
-   "seen": {
-    "DEPLOYED": 18
-   },
-   "neverSeen": [
-    "DISCOVERED",
-    "ONBOARDED",
-    "MIGRATED",
-    "SIMULATED",
-    "CCS"
-   ]
-  }
- },
- "auditTotals": {
-  "claimed": 8,
-  "agree": 3,
-  "objectGone": 5,
-  "driftedSilently": 0,
-  "driftProvableFromTheRecordAlone": 0
- },
- "probe": {
-  "vcfa": {
-   "requestStatus": "SUCCESSFUL",
-   "secondsToSupervisorSpecChanged": 22,
-   "secondsToMachineConverged": 323,
-   "secondsToRequestSuccessful": 324,
-   "recordAfter": {
-    "syncStatus": null,
-    "state": "OK",
-    "declared": "PoweredOff",
-    "observed": "PoweredOff"
-   }
-  },
-  "supervisor": {
-   "patchStatus": 200,
-   "secondsToMachineConverged": 11,
-   "recordAfter": {
-    "syncStatus": "SUCCESS",
-    "state": "OK",
-    "declared": "PoweredOff",
-    "observed": "PoweredOn"
-   },
-   "recordStillDeclares": "PoweredOff",
-   "machineActuallyIs": "PoweredOn",
-   "syncStatusSaysProblem": false
-  },
-  "teardown": {
-   "secondsToRecordRemoved": 42,
-   "recordRetired": true,
-   "note": "the probe never removes the machine first; see the docstring"
-  },
-  "actionsWhileRunning": {
-   "Add.Disk": true,
-   "RemoteConsole": true,
-   "WebConsole": true,
-   "Remove.Disk": true,
-   "Resize": false,
-   "Create.Snapshot": true,
-   "Delete.Snapshot": true,
-   "Get.Password": false,
-   "PowerOff": true,
-   "PowerOn": false,
-   "Revert.Snapshot": true,
-   "Suspend": true
-  },
-  "actionsWhileStopped": {
-   "Add.Disk": false,
-   "RemoteConsole": false,
-   "WebConsole": false,
-   "Remove.Disk": false,
-   "Resize": true,
-   "Create.Snapshot": true,
-   "Delete.Snapshot": true,
-   "Get.Password": false,
-   "PowerOff": false,
-   "PowerOn": true,
-   "Revert.Snapshot": true,
-   "Suspend": false
-  },
-  "addDisk": {
-   "attempted": true,
-   "requestStatus": "FAILED",
-   "requestAccepted": 200,
-   "newVolumes": {
-    "handbook-pathways-d2-171307-638afcb5": [
-     "VirtualMachine"
-    ],
-    "handbook-pathways-disk-d7aa1570b2": []
-   },
-   "anyWithoutAnOwner": [
-    "handbook-pathways-disk-d7aa1570b2"
-   ]
-  },
-  "residue": [],
-  "volumesAfterDeploymentTeardown": {
-   "unownedVolumesTheActionMade": [
-    "handbook-pathways-disk-d7aa1570b2"
-   ],
-   "survivingAfterwards": [],
-   "recordRemovedAnUnownedVolume": true
-  }
- }
 }

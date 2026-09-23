@@ -1,0 +1,44 @@
+# An Argo CD Application: "keep this cluster matching this folder in this repository".
+#
+# Apply this to the cluster the CONTROLLER runs in, not to the workload cluster:
+#     kubectl apply -f application.yaml -n argocd
+#
+# Everything in angle brackets is yours to fill. The three that matter are repoURL,
+# path, and destination.name (the cluster you registered with `argocd cluster add`).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: onlineboutique
+  namespace: argocd                 # where the CONTROLLER lives
+spec:
+  # A project is the controller's blast-radius boundary: which repositories it may
+  # read and which clusters and namespaces it may write. `default` permits
+  # everything, which is convenient once and wrong thereafter.
+  project: default
+
+  source:
+    repoURL: <https://your-git-host/your/repo.git>
+    targetRevision: main            # a branch, tag, or commit. A tag is the honest
+                                    # choice for prod: "main" moves under you.
+    path: <path/to/manifests>       # e.g. the folder holding the stage 05 manifest
+
+  destination:
+    name: <registered-cluster-name> # from `argocd cluster add`
+    namespace: onlineboutique       # where the app lands INSIDE that cluster
+
+  syncPolicy:
+    automated:
+      # Apply changes as they land in the repository, without a human pressing sync.
+      prune: true                   # delete objects removed from the repository.
+                                    # Off by default because it is the setting that
+                                    # can delete things; on is what makes the
+                                    # repository the actual source of truth.
+      selfHeal: true                # revert hand edits made directly on the cluster.
+                                    # This is what makes a deleted Deployment come
+                                    # back. Estates often run this off in prod so a
+                                    # human can hold a change during an incident.
+    syncOptions:
+      # The namespace named above is not created by the manifests in stage 05, so
+      # let the controller create it rather than hand-creating it once and forgetting
+      # that the repository does not describe it.
+      - CreateNamespace=true

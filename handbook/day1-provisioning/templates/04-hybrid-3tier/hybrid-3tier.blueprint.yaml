@@ -78,16 +78,6 @@ inputs:
     title: Database storage class
     description: 'kubectl get regionstorageclassquotas'
 
-  db_boot_disk_capacity:
-    type: string
-    title: Database boot disk capacity
-    description: >-
-      Intended to right-size the boot disk. Verify it applies on your build: on the
-      VCF 9.1 estate these templates were checked against the field was accepted and
-      then discarded, and the machine got the image's own size. Template 1 records
-      the measurement.
-    default: 20Gi
-
   db_password:
     type: string
     title: Database password
@@ -207,7 +197,6 @@ resources:
           className: ${input.db_vm_class}
           imageName: ${input.db_vm_image}
           storageClass: ${input.db_storage_class}
-          bootDiskCapacity: ${input.db_boot_disk_capacity}
           powerState: PoweredOn
           bootstrap:
             cloudInit:

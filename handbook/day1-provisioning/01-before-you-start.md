@@ -90,4 +90,12 @@ in lowercase kebab-case, derived from the app** - never a person, a mascot, or a
 date. The templates hold to it, so the habit is built in rather than something to
 remember.
 
-Ready. Start with [`templates/01-single-vm/`](./templates/01-single-vm/).
+## One step before the templates
+
+If you have never applied a VM manifest by hand, do
+[02-your-first-vm-by-hand](./02-your-first-vm-by-hand.md) first. It is one `kubectl
+apply`, a machine you can curl, and a clean delete, and it takes about five minutes of
+waiting. Template 1 wraps precisely that object in a cloud template, so meeting the
+object on its own means template 1 teaches you one new thing rather than two.
+
+If you have, go straight to [`templates/01-single-vm/`](./templates/01-single-vm/).

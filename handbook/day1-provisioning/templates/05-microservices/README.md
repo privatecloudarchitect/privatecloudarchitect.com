@@ -68,10 +68,16 @@ cannot yet run `kubectl get supervisornamespaces`, start there.
 
 Either way it takes a few minutes to become ready.
 
-**Part 2, the services (kubectl).** Point kubectl at the VKS cluster (your platform
-documents the login), then:
+**Part 2, the services (kubectl).** Point kubectl at the VKS cluster. Read the namespace's
+certificate-based kubeconfig secret, which needs no login prompt
+([both paths](../../00-reaching-the-supervisor.md#for-templates-4-and-5-a-vks-guest-cluster-kubeconfig)):
 
 ```
+kubectl get secret <app_name>-<env>-vks-kubeconfig -n <namespace> \
+  -o go-template='{{.data.value|base64decode}}' > ~/.kube/vks.kubeconfig
+export KUBECONFIG=~/.kube/vks.kubeconfig
+kubectl get nodes                       # confirm you are on the VKS cluster
+
 kubectl apply -f microservices.k8s.yaml
 ```
 

@@ -71,7 +71,6 @@ spec:
   className: best-effort-small              # kubectl get virtualmachineclasses
   imageName: <REPLACE_ME-vm-image>          # vmi-...; kubectl get virtualmachineimages -n <ns>
   storageClass: <REPLACE_ME-storage-class>  # kubectl get regionstorageclassquotas
-  bootDiskCapacity: 20Gi
   powerState: PoweredOn
   bootstrap:
     cloudInit:
@@ -94,7 +93,6 @@ spec:
   className: best-effort-small
   imageName: <REPLACE_ME-vm-image>
   storageClass: <REPLACE_ME-storage-class>
-  bootDiskCapacity: 20Gi
   powerState: PoweredOn
   bootstrap:
     cloudInit:

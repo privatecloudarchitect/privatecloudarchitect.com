@@ -66,7 +66,10 @@ BP = "blueprint.cci.vmware.com/v1alpha1"
 PREFIX = "handbook-pathways"
 # The spec fields worth comparing. A manifest may legitimately omit a field the platform then defaults, so
 # comparing every key would report defaulting as drift. These are the ones an operator sets on purpose.
-WATCHED = ("powerState", "className", "imageName", "storageClass", "bootDiskCapacity")
+# bootDiskCapacity was watched until 2026-09-23 and is dropped: the running VM Service does not
+# accept that field at any served version, so it was absent from both sides of every comparison
+# and could never report drift.
+WATCHED = ("powerState", "className", "imageName", "storageClass")
 # The contract, from the Deployment Controller OpenAPI definition rather than from observation. Printed
 # beside what the estate actually shows, because a value that EXISTS in the contract and never appears is a
 # different and more useful fact than a value nobody thought of. Deployment.status is documented as
@@ -421,7 +424,7 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
                "      manifest:\n        apiVersion: %s/v1alpha5\n        kind: VirtualMachine\n"
                "        metadata:\n          name: ${input.vm_name}\n"
                "        spec:\n          className: %s\n          imageName: %s\n"
-               "          storageClass: %s\n          bootDiskCapacity: 20Gi\n"
+               "          storageClass: %s\n"
                "          powerState: PoweredOn\n") % (bpname, ns, VMOP, vmclass, image, storage)
 
     e.gw(f"/apis/{BP}/namespaces/{project}/blueprints", "POST",

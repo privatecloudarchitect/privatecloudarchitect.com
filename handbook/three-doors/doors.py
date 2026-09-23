@@ -493,7 +493,7 @@ def probe(e, L, project, ns, url, image, storage, vmclass):
     out = {"direct": {}, "catalog": {}, "identical": None, "teardown": {}}
 
     manifest_spec = {"className": vmclass, "imageName": image, "storageClass": storage,
-                     "bootDiskCapacity": "20Gi", "powerState": "PoweredOn"}
+                     "powerState": "PoweredOn"}
 
     # ---- door 1: straight at the namespace endpoint, which is what kubectl apply does
     st, r = e.ns(url, vms, "POST", {
