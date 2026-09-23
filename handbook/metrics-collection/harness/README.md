@@ -22,6 +22,16 @@ instance, read-only:
 4. **The identity key** (`identity_keys.py`): the identifiers one VM carries, which of them the
    platform marks as part of uniqueness, and the composite key the sheet recommends,
    `(vcenter_instance_uuid, moid)`.
+
+5. **Identity continuity** (`identity_continuity.py`): which entities your estate has split across more
+   than one resource. The composite key names where a sample was taken, and both halves change when an
+   object moves between vCenters, so Operations mints a new resource and stops collecting on the old
+   one. The surviving identifier, `VMEntityInstanceUUID`, is carried but is not part of uniqueness, so
+   Operations does not reconcile the two for you. This groups every VirtualMachine by that identifier
+   and reports the splits, the `_vmotion_discarded_N` tombstone Operations leaves as a closing event,
+   the overlapping samples that would be double counted, and any resource with no surviving identifier
+   at all. Exit 1 means the pipeline needs a continuity ledger; charter section 6.5 has the model.
+
 5. **The real-time path** (`rtm_query.py`): mints the service-scoped JWT the VCF services runtime
    requires, reads which hosts of the vCenter have the 2-second ESX Top set switched on, counts
    the metric names collected for one vCenter, runs one PromQL instant query and
@@ -43,6 +53,7 @@ python3 collection_planes.py
 python3 rollup_check.py                      # or --vm <name>; default: the busiest VM by CPU MHz
 python3 extract_measure.py --vms 50          # --vms is optional; calls run one at a time
 python3 identity_keys.py --vm <name>
+python3 identity_continuity.py                              # estate-wide; exit 1 if any entity is split
 
 export RTM_HOST=<your-vcf-instance-services-fqdn>   # fronts /data-query-service
 python3 rtm_query.py --source-id <vcenter-instance-uuid>   # VMEntityVCID from identity_keys.py

@@ -1,0 +1,1222 @@
+{
+ "runs": [
+  {
+   "source": "exec3.log",
+   "steps": [
+    {
+     "step": "1/8",
+     "title": "Pre-flight",
+     "purpose": "Verify the large class is registered + vcf CLI authenticated to CCI",
+     "file": "scripts/live-validation/lib/refresh_token.py",
+     "action": "kubectl get supervisornamespaceclass large + python3 refresh_token.py --org {{org}}",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "large class is registered"
+      },
+      {
+       "mark": "✓",
+       "text": "Reservation pool: VDC cpuReservation (6000 MHz) ≥ recommended (2000 MHz)"
+      },
+      {
+       "mark": "✓",
+       "text": "CPU limit pool: {{zone}} has 40000 MHz; this bundle requests 8000 MHz"
+      },
+      {
+       "mark": "✓",
+       "text": "Memory limit pool: {{zone}} has 91072 MiB; this bundle requests 16384 MiB"
+      },
+      {
+       "mark": "✓",
+       "text": "Fresh access token (length {{n}})"
+      },
+      {
+       "mark": "✓",
+       "text": "Catalog item resolved: {{id}}"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "2/8",
+     "title": "Pre-create SupervisorNamespace ({{app}}-dev-{{project}})",
+     "purpose": "Create the namespace via kubectl with generateName so the supervisor admission webhook accepts it (G-020). Use the large class for the storage budget the VKS + app PVCs need.",
+     "file": "(inline manifest)",
+     "action": "kubectl create -f - <<<'apiVersion: infrastructure.cci.vmware.com/v1alpha3/SupervisorNamespace ...'",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "Namespace created: {{namespace}}"
+      },
+      {
+       "mark": "⚠",
+       "text": "deploy gate: could not locate SupervisorNamespace '{{namespace}}' under any project via context '{{kube-context}}', skipping pre-flight (proceeding). Set PCA_PROJECT to override."
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "2b/8",
+     "title": "Submit {{app}}-db-01 Service out-of-band (G-053 Workaround B)",
+     "purpose": "kubectl-apply the ClusterIP VirtualMachineService directly into the namespace. vRA never tracks it and so cannot hang on its success-criteria handler. VKS pods will resolve {{app}}-db-01.<ns>.svc.cluster.local once postgres VM gets its primaryIP4.",
+     "file": "(inline kubectl manifest)",
+     "action": "kubectl --context=\"$PCA_DEPLOY_CCI_CONTEXT\" apply -f -",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "{{app}}-db-01 ClusterIP VirtualMachineService applied out-of-band"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "3/8",
+     "title": "Submit vRA catalog deploy",
+     "purpose": "Hand the published hybrid-3tier-tiny blueprint to vRA. vRA orchestrates: DB VM bootstrap secret → DB VM → DB service → VKS Cluster CR (CAPI v1beta2 per G-023).",
+     "file": "deploy/vra-blueprints/hybrid-3tier-tiny/blueprint.yaml (catalog item {{id}})",
+     "action": "POST /catalog/api/items/{{id}}/request",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "vRA deployment submitted: {{id}}"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "4/8",
+     "title": "Wait for VKS Cluster: Provisioned + control plane Ready (the slow step, ~20-30 min)",
+     "purpose": "VKS provisioning brings up the control plane VM, configures Kubernetes, joins the worker VMs, installs Antrea CNI.",
+     "file": "(VKS Service in the supervisor reconciles the Cluster CR)",
+     "action": "kubectl get cluster.cluster.x-k8s.io {{app}}-dev-vks -n {{namespace}} -o jsonpath='{.status.phase}'",
+     "results": [
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 1800s for VKS cluster '{{app}}-dev-vks' to reach Provisioned + control plane Available..."
+      },
+      {
+       "mark": "ℹ",
+       "text": "(polling https://{{automation-host}}/proxy/k8s/namespaces/urn:vcloud:namespace:{{id}}/apis/cluster.x-k8s.io/v1beta2/.../clusters/{{app}}-dev-vks)"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "5/8",
+     "title": "Fetch VKS kubeconfig (D-023 canonical: vcf cluster kubeconfig get)",
+     "purpose": "Retrieve the VKS guest cluster's cert-based kubeconfig, years-long lifetime, GitOps-friendly.",
+     "file": "vcf cluster + kubectl secret-extraction fallback",
+     "action": "vcf cluster kubeconfig get {{app}}-dev-vks --namespace {{namespace}} --export-file /tmp/vks-h3t-{{operator}}.kubeconfig",
+     "results": [
+      {
+       "mark": "ℹ",
+       "text": "Fetching VKS kubeconfig for {{app}}-dev-vks in {{namespace}}"
+      },
+      {
+       "mark": "✓",
+       "text": "fetch_vks_kubeconfig: pulled from per-namespace API (5670 bytes)"
+      },
+      {
+       "mark": "✓",
+       "text": "VKS kubeconfig: /tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig (3 nodes Ready)"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "6/8",
+     "title": "Apply app + web tier manifests INTO the VKS guest cluster",
+     "purpose": "The blueprint provisioned only Supervisor-layer resources (DB VM + VKS CR). Now apply the in-VKS workloads (namespace + ConfigMap + Deployments + LoadBalancer Service).",
+     "file": "deploy/vra-blueprints/hybrid-3tier-tiny/gitops/base/{namespace-app,db-discovery-config,app-tier,web-tier}.yaml",
+     "action": "kubectl --kubeconfig=/tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig apply -f gitops/base/",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "pca-supervisor-api-creds Secret applied (init container will use it for DB discovery)"
+      },
+      {
+       "mark": "✓",
+       "text": "App + web tier applied to VKS"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "7/8",
+     "title": "Post-deploy verification + audience-facing URL",
+     "purpose": "Wait for app + web pods to be Ready; surface the LoadBalancer external IP.",
+     "file": "scripts/post-deploy.sh",
+     "action": "kubectl --kubeconfig=/tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig -n {{app}} wait --for=condition=Ready pod",
+     "results": [
+      {
+       "mark": "ℹ",
+       "text": "Verifying database VM is powered on..."
+      },
+      {
+       "mark": "⚠",
+       "text": "Database VM phase: ? (expected: poweredOn)"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Verifying VKS nodes Ready..."
+      },
+      {
+       "mark": "✓",
+       "text": "VKS nodes: 3/3 Ready"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 120s for app + web tier Pods to be Ready..."
+      },
+      {
+       "mark": "⚠",
+       "text": "Some pods not Ready, check 'kubectl get pods -n {{app}}'"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 60s for web-tier LoadBalancer external IP..."
+      },
+      {
+       "mark": "✓",
+       "text": "Web-tier LoadBalancer IP: {{ip}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Audience-facing demo URL:  http://{{ip}}/"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "8/8",
+     "title": "Persist state for sibling demo phases + capture lab/state actualization (D-022)",
+     "purpose": "Save deployment_id + namespace + identity + env so 02-day2-tour.sh / 03-cleanup.sh auto-discover. Capture lab/state/<bundle>/<env>/namespace.yaml so ArgoCD's root ApplicationSet picks up the actualized namespace.",
+     "file": "/tmp/hybrid-3tier-tiny-current-*.txt + lab/state/hybrid-3tier-tiny/dev/namespace.yaml",
+     "action": "echo > /tmp/... + scripts/live-validation/lib/lab_state.sh :: pca_lab_state_capture",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "/tmp state persisted"
+      },
+      {
+       "mark": "✓",
+       "text": "lab/state captured: lab/state/hybrid-3tier-tiny/dev/namespace.yaml"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Commit when ready:"
+      },
+      {
+       "mark": "ℹ",
+       "text": "git add lab/state/hybrid-3tier-tiny/dev/ && git commit -m 'lab(state): capture hybrid-3tier-tiny/dev {{namespace}}'"
+      },
+      {
+       "mark": "✓",
+       "text": "App identity:       {{app}}-dev-{{project}}"
+      },
+      {
+       "mark": "✓",
+       "text": "Namespace:          {{namespace}}"
+      },
+      {
+       "mark": "✓",
+       "text": "VKS cluster:        {{app}}-dev-vks"
+      },
+      {
+       "mark": "✓",
+       "text": "VKS kubeconfig:     /tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig"
+      },
+      {
+       "mark": "✓",
+       "text": "vRA deployment ID:  {{id}}"
+      },
+      {
+       "mark": "✓",
+       "text": "K8s ground-truth:   GREEN (VKS Provisioned + app/web Ready, authoritative)"
+      },
+      {
+       "mark": "⚠",
+       "text": "vRA status:         CREATE_FAILED  (cosmetic, see G-055)"
+      },
+      {
+       "mark": "ℹ",
+       "text": "G-055: vRA marks the deployment CREATE_FAILED at the 2-hour internal"
+      },
+      {
+       "mark": "ℹ",
+       "text": "timeout because the VksCluster resource never reaches state=OK in"
+      },
+      {
+       "mark": "ℹ",
+       "text": "vRA's snapshot, even though K8s shows phase=Provisioned with all"
+      },
+      {
+       "mark": "ℹ",
+       "text": "critical conditions True. This is a vRA-side defect; the deployed"
+      },
+      {
+       "mark": "ℹ",
+       "text": "workload is healthy."
+      },
+      {
+       "mark": "ℹ",
+       "text": "Next steps:"
+      },
+      {
+       "mark": "ℹ",
+       "text": "• Day-2 tour:  ./demo/02-day2-tour.sh {{operator}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "• Cleanup:     ./demo/03-cleanup.sh   {{operator}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Namespace:     {{namespace}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Env:           dev"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Deployment ID: {{id}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Mode:          LIVE"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "1/4",
+     "title": "Delete vRA deployment record (force-delete)",
+     "purpose": "Tell vRA to release tracking on this deployment with forceDelete=true so vRA bypasses its child-resource readiness checks. Without force, vRA's per-resource cascade-delete races kubectl's namespace teardown in step 2 and typically loses, producing a DELETE_FAILED record with 'Supervisor namespace is not ready'. With force, vRA records the delete cleanly regardless of namespace state (G-038).",
+     "file": "(API endpoint, not a file)",
+     "action": "DELETE /deployment/api/deployments/$DEPLOYMENT_ID?forceDelete=true",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "vRA deployment deletion submitted (HTTP 200)"
+      }
+     ],
+     "phase": "retire"
+    },
+    {
+     "step": "2/4",
+     "title": "Delete SupervisorNamespace + poll for full termination",
+     "purpose": "Cascade-deletes everything: DB VM (+ snapshots), VKS Cluster (+ control plane VM + worker VMs + all in-VKS workloads). VKS teardown is the long pole (~10-20 min).",
+     "file": "(direct kubectl call against the supervisor)",
+     "action": "kubectl delete supervisornamespace {{namespace}} -n {{project}}",
+     "results": [],
+     "phase": "retire"
+    },
+    {
+     "step": "3/4",
+     "title": "Remove lab/state actualization (D-022)",
+     "purpose": "Delete lab/state/hybrid-3tier-tiny/dev/. ArgoCD's root ApplicationSet deregisters the corresponding Application on next sync.",
+     "file": "lab/state/hybrid-3tier-tiny/dev/",
+     "action": "scripts/live-validation/lib/lab_state.sh :: pca_lab_state_remove",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "lab/state removed: lab/state/hybrid-3tier-tiny/dev"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Commit when ready:"
+      },
+      {
+       "mark": "ℹ",
+       "text": "git add lab/state/ && git commit -m 'lab(state): remove hybrid-3tier-tiny/dev'"
+      }
+     ],
+     "phase": "retire"
+    },
+    {
+     "step": "4/4",
+     "title": "Verify leave-no-trace",
+     "purpose": "List remaining namespaces, only baseline should remain.",
+     "file": "(read-only kubectl query)",
+     "action": "kubectl get supervisornamespaces -n {{project}}",
+     "results": [],
+     "phase": "retire"
+    }
+   ],
+   "stages": [
+    {
+     "n": 0,
+     "title": "The image already exists, because a pipeline made it",
+     "rows": {
+      "lifecycle": "BUILD, weeks before anyone asks",
+      "the user": "never sees it, and should not",
+      "owned by": "the image / platform engineering team"
+     }
+    },
+    {
+     "n": 1,
+     "title": "A user asks an API for an application",
+     "rows": {
+      "lifecycle": "REQUEST, the only stage with a human in it",
+      "the user": "one call, or one form. Seconds",
+      "owned by": "the consumer: an app team, or their pipeline"
+     }
+    },
+    {
+     "n": 2,
+     "title": "Where it lands, and what fences it in",
+     "rows": {
+      "lifecycle": "PROVISION, seconds to minutes",
+      "the user": "invisible, and that is the success condition",
+      "owned by": "the platform team, once, at namespace design"
+     }
+    },
+    {
+     "n": 3,
+     "title": "Naming and metadata: what every downstream system reads",
+     "rows": {
+      "lifecycle": "RECORD, at create, and never again if it is wrong",
+      "the user": "invisible until something needs to find it",
+      "owned by": "shared: the standard is the platform's, the values are the app's"
+     }
+    },
+    {
+     "n": 4,
+     "title": "The machine is not the application",
+     "rows": {
+      "lifecycle": "CONFIGURE, minutes after the VM exists",
+      "the user": "'is it ready yet?'",
+      "owned by": "the app team, through whatever config plane they run"
+     }
+    },
+    {
+     "n": 5,
+     "title": "The YAML assumes a container image exists",
+     "rows": {
+      "lifecycle": "BUILD, a second, separate pipeline",
+      "the user": "never sees it, until a pull fails",
+      "owned by": "the app team's CI, and whoever owns the registry"
+     }
+    },
+    {
+     "n": 6,
+     "title": "Measured against the envelope its tier deserves",
+     "rows": {
+      "lifecycle": "OPERATE, from the first collection cycle onward",
+      "the user": "someone else's dashboard, until it pages them",
+      "owned by": "the operations team, on a posture the platform team defined"
+     }
+    },
+    {
+     "n": 7,
+     "title": "The user changes it themselves",
+     "rows": {
+      "lifecycle": "OPERATE, the longest stage, by years",
+      "the user": "the action set somebody granted them",
+      "owned by": "the consumer, inside limits the platform set"
+     }
+    },
+    {
+     "n": 8,
+     "title": "Decommission: delete the record, not the machine",
+     "rows": {
+      "lifecycle": "RETIRE, and the order is load-bearing",
+      "the user": "one call, and it should take everything with it",
+      "owned by": "the consumer, with the platform holding the receipts"
+     }
+    }
+   ]
+  },
+  {
+   "source": "verify-create.log",
+   "steps": [
+    {
+     "step": "1/8",
+     "title": "Pre-flight",
+     "purpose": "Verify the large class is registered + vcf CLI authenticated to CCI",
+     "file": "scripts/live-validation/lib/refresh_token.py",
+     "action": "kubectl get supervisornamespaceclass large + python3 refresh_token.py --org {{org}}",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "large class is registered"
+      },
+      {
+       "mark": "✓",
+       "text": "Reservation pool: VDC cpuReservation (6000 MHz) ≥ recommended (2000 MHz)"
+      },
+      {
+       "mark": "✓",
+       "text": "CPU limit pool: {{zone}} has 40000 MHz; this bundle requests 8000 MHz"
+      },
+      {
+       "mark": "✓",
+       "text": "Memory limit pool: {{zone}} has 91072 MiB; this bundle requests 16384 MiB"
+      },
+      {
+       "mark": "✓",
+       "text": "Fresh access token (length {{n}})"
+      },
+      {
+       "mark": "✓",
+       "text": "Catalog item resolved: {{id}}"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "2/8",
+     "title": "Pre-create SupervisorNamespace ({{app}}-dev-{{project}})",
+     "purpose": "Create the namespace via kubectl with generateName so the supervisor admission webhook accepts it (G-020). Use the large class for the storage budget the VKS + app PVCs need.",
+     "file": "(inline manifest)",
+     "action": "kubectl create -f - <<<'apiVersion: infrastructure.cci.vmware.com/v1alpha3/SupervisorNamespace ...'",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "Namespace created: {{namespace}}"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "2a/8",
+     "title": "Attach VM Service content library to {{namespace}} (G-134)",
+     "purpose": "A fresh namespace has no OS images in VM Service scope; without this the DB VM cannot be created and only the VKS half of this hybrid app comes up.",
+     "file": "scripts/live-validation/setup/attach-vmservice-content-library.py",
+     "action": "PATCH /api/vcenter/namespaces/instances/{{namespace}}  {vm_service_spec:{content_libraries:[...]}}",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "VM Service content library attached"
+      },
+      {
+       "mark": "✓",
+       "text": "deploy gate: SupervisorNamespace '{{namespace}}' is realized (phase=Created, Ready=True), deploy precondition met."
+      },
+      {
+       "mark": "⚠",
+       "text": "(info) tenant in-namespace secrets/create is DENIED, expected on VCF 9.1; NOT a deploy blocker (the deploy runs under a different, server-side identity). See audit F-017 + docs/reference/vcf-auto/vra-blueprint-rbac.md."
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "2b/8",
+     "title": "Submit {{app}}-db-01 Service out-of-band (G-053 Workaround B)",
+     "purpose": "kubectl-apply the ClusterIP VirtualMachineService directly into the namespace. vRA never tracks it and so cannot hang on its success-criteria handler. VKS pods will resolve {{app}}-db-01.<ns>.svc.cluster.local once postgres VM gets its primaryIP4.",
+     "file": "(inline kubectl manifest)",
+     "action": "kubectl --context=\"$PCA_DEPLOY_CCI_CONTEXT\" apply -f -",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "{{app}}-db-01 ClusterIP VirtualMachineService applied out-of-band"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "3/8",
+     "title": "Submit vRA catalog deploy",
+     "purpose": "Hand the published hybrid-3tier-tiny blueprint to vRA. vRA orchestrates: DB VM bootstrap secret → DB VM → DB service → VKS Cluster CR (CAPI v1beta2 per G-023).",
+     "file": "deploy/vra-blueprints/hybrid-3tier-tiny/blueprint.yaml (catalog item {{id}})",
+     "action": "POST /catalog/api/items/{{id}}/request",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "vRA deployment submitted: {{id}}"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "4/8",
+     "title": "Wait for VKS Cluster: Provisioned + control plane Ready (the slow step, ~20-30 min)",
+     "purpose": "VKS provisioning brings up the control plane VM, configures Kubernetes, joins the worker VMs, installs Antrea CNI.",
+     "file": "(VKS Service in the supervisor reconciles the Cluster CR)",
+     "action": "kubectl get cluster.cluster.x-k8s.io {{app}}-dev-vks -n {{namespace}} -o jsonpath='{.status.phase}'",
+     "results": [
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 1800s for VKS cluster '{{app}}-dev-vks' to reach Provisioned + control plane Available..."
+      },
+      {
+       "mark": "ℹ",
+       "text": "(polling https://{{automation-host}}/proxy/k8s/namespaces/urn:vcloud:namespace:{{id}}/apis/cluster.x-k8s.io/v1beta2/.../clusters/{{app}}-dev-vks)"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "5/8",
+     "title": "Fetch VKS kubeconfig (D-023 canonical: vcf cluster kubeconfig get)",
+     "purpose": "Retrieve the VKS guest cluster's cert-based kubeconfig, years-long lifetime, GitOps-friendly.",
+     "file": "vcf cluster + kubectl secret-extraction fallback",
+     "action": "vcf cluster kubeconfig get {{app}}-dev-vks --namespace {{namespace}} --export-file /tmp/vks-h3t-{{operator}}.kubeconfig",
+     "results": [
+      {
+       "mark": "ℹ",
+       "text": "Fetching VKS kubeconfig for {{app}}-dev-vks in {{namespace}}"
+      },
+      {
+       "mark": "✓",
+       "text": "fetch_vks_kubeconfig: pulled from per-namespace API (5670 bytes)"
+      },
+      {
+       "mark": "✓",
+       "text": "VKS kubeconfig: /tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig (3 nodes Ready)"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "6/8",
+     "title": "Apply app + web tier manifests INTO the VKS guest cluster",
+     "purpose": "The blueprint provisioned only Supervisor-layer resources (DB VM + VKS CR). Now apply the in-VKS workloads (namespace + ConfigMap + Deployments + LoadBalancer Service).",
+     "file": "deploy/vra-blueprints/hybrid-3tier-tiny/gitops/base/{namespace-app,db-discovery-config,app-tier,web-tier}.yaml",
+     "action": "kubectl --kubeconfig=/tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig apply -f gitops/base/",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "pca-supervisor-api-creds Secret applied (init container will use it for DB discovery)"
+      },
+      {
+       "mark": "✓",
+       "text": "App + web tier applied to VKS"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "7/8",
+     "title": "Post-deploy verification + audience-facing URL",
+     "purpose": "Wait for app + web pods to be Ready; surface the LoadBalancer external IP.",
+     "file": "scripts/post-deploy.sh",
+     "action": "kubectl --kubeconfig=/tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig -n {{app}} wait --for=condition=Ready pod",
+     "results": [
+      {
+       "mark": "ℹ",
+       "text": "Verifying database VM is powered on..."
+      },
+      {
+       "mark": "⚠",
+       "text": "Could not query VirtualMachines in {{namespace}} (context '{{kube-context}}')."
+      },
+      {
+       "mark": "⚠",
+       "text": "This is 'could not ask', not 'the answer is no'. The DB VM state is UNKNOWN."
+      },
+      {
+       "mark": "ℹ",
+       "text": "Verifying VKS nodes Ready..."
+      },
+      {
+       "mark": "⚠",
+       "text": "VKS nodes: only 0/3 Ready (expected ≥3)"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 120s for app + web tier Pods to be Ready..."
+      },
+      {
+       "mark": "✓",
+       "text": "All {{app}} pods Ready"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 60s for web-tier LoadBalancer external IP..."
+      },
+      {
+       "mark": "✓",
+       "text": "Web-tier LoadBalancer IP: {{ip}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Audience-facing demo URL:  http://{{ip}}/"
+      },
+      {
+       "mark": "⚠",
+       "text": "Ground truth: DEGRADED (DB VM state unknown)"
+      }
+     ],
+     "phase": "create"
+    },
+    {
+     "step": "8/8",
+     "title": "Persist state for sibling demo phases + capture lab/state actualization (D-022)",
+     "purpose": "Save deployment_id + namespace + identity + env so 02-day2-tour.sh / 03-cleanup.sh auto-discover. Capture lab/state/<bundle>/<env>/namespace.yaml so ArgoCD's root ApplicationSet picks up the actualized namespace.",
+     "file": "/tmp/hybrid-3tier-tiny-current-*.txt + lab/state/hybrid-3tier-tiny/dev/namespace.yaml",
+     "action": "echo > /tmp/... + scripts/live-validation/lib/lab_state.sh :: pca_lab_state_capture",
+     "results": [
+      {
+       "mark": "✓",
+       "text": "/tmp state persisted"
+      },
+      {
+       "mark": "✓",
+       "text": "lab/state captured: lab/state/hybrid-3tier-tiny/dev/namespace.yaml"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Commit when ready:"
+      },
+      {
+       "mark": "ℹ",
+       "text": "git add lab/state/hybrid-3tier-tiny/dev/ && git commit -m 'lab(state): capture hybrid-3tier-tiny/dev {{namespace}}'"
+      },
+      {
+       "mark": "✓",
+       "text": "App identity:       {{app}}-dev-{{project}}"
+      },
+      {
+       "mark": "✓",
+       "text": "Namespace:          {{namespace}}"
+      },
+      {
+       "mark": "✓",
+       "text": "VKS cluster:        {{app}}-dev-vks"
+      },
+      {
+       "mark": "✓",
+       "text": "VKS kubeconfig:     /tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig"
+      },
+      {
+       "mark": "✓",
+       "text": "vRA deployment ID:  {{id}}"
+      },
+      {
+       "mark": "✗",
+       "text": "K8s ground-truth:   DEGRADED, DB VM state unknown"
+      },
+      {
+       "mark": "⚠",
+       "text": "This deploy is NOT ready to demo. Do not read the vRA status below as the whole story;"
+      },
+      {
+       "mark": "⚠",
+       "text": "K8s is authoritative in both directions, not only when it agrees."
+      },
+      {
+       "mark": "✓",
+       "text": "vRA status:         CREATE_SUCCESSFUL"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Next steps:"
+      },
+      {
+       "mark": "ℹ",
+       "text": "• Day-2 tour:  ./demo/02-day2-tour.sh {{operator}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "• Cleanup:     ./demo/03-cleanup.sh   {{operator}}"
+      }
+     ],
+     "phase": "create"
+    }
+   ],
+   "stages": []
+  },
+  {
+   "source": "postdeploy-current.log",
+   "steps": [
+    {
+     "step": "7/8",
+     "title": "Post-deploy verification + audience-facing URL",
+     "purpose": "Wait for app + web pods to be Ready; confirm the DB VM exists and is powered on; surface the LoadBalancer address.",
+     "file": "scripts/post-deploy.sh",
+     "action": "kubectl --kubeconfig=<vks> -n {{app}} wait --for=condition=Ready pod",
+     "results": [
+      {
+       "mark": "ℹ",
+       "text": "Verifying database VM is powered on..."
+      },
+      {
+       "mark": "✓",
+       "text": "Database VM '{{app}}-db-01' powered on"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Verifying VKS nodes Ready..."
+      },
+      {
+       "mark": "✓",
+       "text": "VKS nodes: 3/3 Ready"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 120s for app + web tier Pods to be Ready..."
+      },
+      {
+       "mark": "✓",
+       "text": "All {{app}} pods Ready"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Waiting up to 60s for web-tier LoadBalancer external IP..."
+      },
+      {
+       "mark": "✓",
+       "text": "Web-tier LoadBalancer IP: {{ip}}"
+      },
+      {
+       "mark": "ℹ",
+       "text": "Audience-facing demo URL:  http://{{ip}}/"
+      }
+     ],
+     "phase": "create"
+    }
+   ],
+   "stages": []
+  }
+ ],
+ "estateCoordinatesReplaced": [
+  "app",
+  "automation-host",
+  "deployment-name",
+  "kube-context",
+  "namespace",
+  "operator",
+  "org",
+  "project",
+  "region",
+  "service-engine-group",
+  "tenant",
+  "vdc",
+  "vpc",
+  "workload-vcenter",
+  "zone",
+  "zone-2",
+  "zone-3"
+ ],
+ "chronology": [
+  {
+   "step": "1/8",
+   "title": "Pre-flight",
+   "purpose": "Verify the large class is registered + vcf CLI authenticated to CCI",
+   "file": "scripts/live-validation/lib/refresh_token.py",
+   "action": "kubectl get supervisornamespaceclass large + python3 refresh_token.py --org {{org}}",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "large class is registered"
+    },
+    {
+     "mark": "✓",
+     "text": "Reservation pool: VDC cpuReservation (6000 MHz) ≥ recommended (2000 MHz)"
+    },
+    {
+     "mark": "✓",
+     "text": "CPU limit pool: {{zone}} has 40000 MHz; this bundle requests 8000 MHz"
+    },
+    {
+     "mark": "✓",
+     "text": "Memory limit pool: {{zone}} has 91072 MiB; this bundle requests 16384 MiB"
+    },
+    {
+     "mark": "✓",
+     "text": "Fresh access token (length {{n}})"
+    },
+    {
+     "mark": "✓",
+     "text": "Catalog item resolved: {{id}}"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "2/8",
+   "title": "Pre-create SupervisorNamespace ({{app}}-dev-{{project}})",
+   "purpose": "Create the namespace via kubectl with generateName so the supervisor admission webhook accepts it (G-020). Use the large class for the storage budget the VKS + app PVCs need.",
+   "file": "(inline manifest)",
+   "action": "kubectl create -f - <<<'apiVersion: infrastructure.cci.vmware.com/v1alpha3/SupervisorNamespace ...'",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "Namespace created: {{namespace}}"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "2b/8",
+   "title": "Submit {{app}}-db-01 Service out-of-band (G-053 Workaround B)",
+   "purpose": "kubectl-apply the ClusterIP VirtualMachineService directly into the namespace. vRA never tracks it and so cannot hang on its success-criteria handler. VKS pods will resolve {{app}}-db-01.<ns>.svc.cluster.local once postgres VM gets its primaryIP4.",
+   "file": "(inline kubectl manifest)",
+   "action": "kubectl --context=\"$PCA_DEPLOY_CCI_CONTEXT\" apply -f -",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "{{app}}-db-01 ClusterIP VirtualMachineService applied out-of-band"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "3/8",
+   "title": "Submit vRA catalog deploy",
+   "purpose": "Hand the published hybrid-3tier-tiny blueprint to vRA. vRA orchestrates: DB VM bootstrap secret → DB VM → DB service → VKS Cluster CR (CAPI v1beta2 per G-023).",
+   "file": "deploy/vra-blueprints/hybrid-3tier-tiny/blueprint.yaml (catalog item {{id}})",
+   "action": "POST /catalog/api/items/{{id}}/request",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "vRA deployment submitted: {{id}}"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "4/8",
+   "title": "Wait for VKS Cluster: Provisioned + control plane Ready (the slow step, ~20-30 min)",
+   "purpose": "VKS provisioning brings up the control plane VM, configures Kubernetes, joins the worker VMs, installs Antrea CNI.",
+   "file": "(VKS Service in the supervisor reconciles the Cluster CR)",
+   "action": "kubectl get cluster.cluster.x-k8s.io {{app}}-dev-vks -n {{namespace}} -o jsonpath='{.status.phase}'",
+   "results": [
+    {
+     "mark": "ℹ",
+     "text": "Waiting up to 1800s for VKS cluster '{{app}}-dev-vks' to reach Provisioned + control plane Available..."
+    },
+    {
+     "mark": "ℹ",
+     "text": "(polling https://{{automation-host}}/proxy/k8s/namespaces/urn:vcloud:namespace:{{id}}/apis/cluster.x-k8s.io/v1beta2/.../clusters/{{app}}-dev-vks)"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "5/8",
+   "title": "Fetch VKS kubeconfig (D-023 canonical: vcf cluster kubeconfig get)",
+   "purpose": "Retrieve the VKS guest cluster's cert-based kubeconfig, years-long lifetime, GitOps-friendly.",
+   "file": "vcf cluster + kubectl secret-extraction fallback",
+   "action": "vcf cluster kubeconfig get {{app}}-dev-vks --namespace {{namespace}} --export-file /tmp/vks-h3t-{{operator}}.kubeconfig",
+   "results": [
+    {
+     "mark": "ℹ",
+     "text": "Fetching VKS kubeconfig for {{app}}-dev-vks in {{namespace}}"
+    },
+    {
+     "mark": "✓",
+     "text": "fetch_vks_kubeconfig: pulled from per-namespace API (5670 bytes)"
+    },
+    {
+     "mark": "✓",
+     "text": "VKS kubeconfig: /tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig (3 nodes Ready)"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "6/8",
+   "title": "Apply app + web tier manifests INTO the VKS guest cluster",
+   "purpose": "The blueprint provisioned only Supervisor-layer resources (DB VM + VKS CR). Now apply the in-VKS workloads (namespace + ConfigMap + Deployments + LoadBalancer Service).",
+   "file": "deploy/vra-blueprints/hybrid-3tier-tiny/gitops/base/{namespace-app,db-discovery-config,app-tier,web-tier}.yaml",
+   "action": "kubectl --kubeconfig=/tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig apply -f gitops/base/",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "pca-supervisor-api-creds Secret applied (init container will use it for DB discovery)"
+    },
+    {
+     "mark": "✓",
+     "text": "App + web tier applied to VKS"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "7/8",
+   "title": "Post-deploy verification + audience-facing URL",
+   "purpose": "Wait for app + web pods to be Ready; confirm the DB VM exists and is powered on; surface the LoadBalancer address.",
+   "file": "scripts/post-deploy.sh",
+   "action": "kubectl --kubeconfig=<vks> -n {{app}} wait --for=condition=Ready pod",
+   "results": [
+    {
+     "mark": "ℹ",
+     "text": "Verifying database VM is powered on..."
+    },
+    {
+     "mark": "✓",
+     "text": "Database VM '{{app}}-db-01' powered on"
+    },
+    {
+     "mark": "ℹ",
+     "text": "Verifying VKS nodes Ready..."
+    },
+    {
+     "mark": "✓",
+     "text": "VKS nodes: 3/3 Ready"
+    },
+    {
+     "mark": "ℹ",
+     "text": "Waiting up to 120s for app + web tier Pods to be Ready..."
+    },
+    {
+     "mark": "✓",
+     "text": "All {{app}} pods Ready"
+    },
+    {
+     "mark": "ℹ",
+     "text": "Waiting up to 60s for web-tier LoadBalancer external IP..."
+    },
+    {
+     "mark": "✓",
+     "text": "Web-tier LoadBalancer IP: {{ip}}"
+    },
+    {
+     "mark": "ℹ",
+     "text": "Audience-facing demo URL:  http://{{ip}}/"
+    }
+   ],
+   "phase": "create",
+   "source": "postdeploy-current.log"
+  },
+  {
+   "step": "8/8",
+   "title": "Persist state for sibling demo phases + capture lab/state actualization (D-022)",
+   "purpose": "Save deployment_id + namespace + identity + env so 02-day2-tour.sh / 03-cleanup.sh auto-discover. Capture lab/state/<bundle>/<env>/namespace.yaml so ArgoCD's root ApplicationSet picks up the actualized namespace.",
+   "file": "/tmp/hybrid-3tier-tiny-current-*.txt + lab/state/hybrid-3tier-tiny/dev/namespace.yaml",
+   "action": "echo > /tmp/... + scripts/live-validation/lib/lab_state.sh :: pca_lab_state_capture",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "/tmp state persisted"
+    },
+    {
+     "mark": "✓",
+     "text": "lab/state captured: lab/state/hybrid-3tier-tiny/dev/namespace.yaml"
+    },
+    {
+     "mark": "ℹ",
+     "text": "Commit when ready:"
+    },
+    {
+     "mark": "ℹ",
+     "text": "git add lab/state/hybrid-3tier-tiny/dev/ && git commit -m 'lab(state): capture hybrid-3tier-tiny/dev {{namespace}}'"
+    },
+    {
+     "mark": "✓",
+     "text": "App identity:       {{app}}-dev-{{project}}"
+    },
+    {
+     "mark": "✓",
+     "text": "Namespace:          {{namespace}}"
+    },
+    {
+     "mark": "✓",
+     "text": "VKS cluster:        {{app}}-dev-vks"
+    },
+    {
+     "mark": "✓",
+     "text": "VKS kubeconfig:     /tmp/vks-hybrid-3tier-tiny-{{operator}}.kubeconfig"
+    },
+    {
+     "mark": "✓",
+     "text": "vRA deployment ID:  {{id}}"
+    },
+    {
+     "mark": "✗",
+     "text": "K8s ground-truth:   DEGRADED, DB VM state unknown"
+    },
+    {
+     "mark": "⚠",
+     "text": "This deploy is NOT ready to demo. Do not read the vRA status below as the whole story;"
+    },
+    {
+     "mark": "⚠",
+     "text": "K8s is authoritative in both directions, not only when it agrees."
+    },
+    {
+     "mark": "✓",
+     "text": "vRA status:         CREATE_SUCCESSFUL"
+    },
+    {
+     "mark": "ℹ",
+     "text": "Next steps:"
+    },
+    {
+     "mark": "ℹ",
+     "text": "• Day-2 tour:  ./demo/02-day2-tour.sh {{operator}}"
+    },
+    {
+     "mark": "ℹ",
+     "text": "• Cleanup:     ./demo/03-cleanup.sh   {{operator}}"
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  },
+  {
+   "step": "1/4",
+   "title": "Delete vRA deployment record (force-delete)",
+   "purpose": "Tell vRA to release tracking on this deployment with forceDelete=true so vRA bypasses its child-resource readiness checks. Without force, vRA's per-resource cascade-delete races kubectl's namespace teardown in step 2 and typically loses, producing a DELETE_FAILED record with 'Supervisor namespace is not ready'. With force, vRA records the delete cleanly regardless of namespace state (G-038).",
+   "file": "(API endpoint, not a file)",
+   "action": "DELETE /deployment/api/deployments/$DEPLOYMENT_ID?forceDelete=true",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "vRA deployment deletion submitted (HTTP 200)"
+    }
+   ],
+   "phase": "retire",
+   "source": "exec3.log"
+  },
+  {
+   "step": "2/4",
+   "title": "Delete SupervisorNamespace + poll for full termination",
+   "purpose": "Cascade-deletes everything: DB VM (+ snapshots), VKS Cluster (+ control plane VM + worker VMs + all in-VKS workloads). VKS teardown is the long pole (~10-20 min).",
+   "file": "(direct kubectl call against the supervisor)",
+   "action": "kubectl delete supervisornamespace {{namespace}} -n {{project}}",
+   "results": [],
+   "phase": "retire",
+   "source": "exec3.log"
+  },
+  {
+   "step": "3/4",
+   "title": "Remove lab/state actualization (D-022)",
+   "purpose": "Delete lab/state/hybrid-3tier-tiny/dev/. ArgoCD's root ApplicationSet deregisters the corresponding Application on next sync.",
+   "file": "lab/state/hybrid-3tier-tiny/dev/",
+   "action": "scripts/live-validation/lib/lab_state.sh :: pca_lab_state_remove",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "lab/state removed: lab/state/hybrid-3tier-tiny/dev"
+    },
+    {
+     "mark": "ℹ",
+     "text": "Commit when ready:"
+    },
+    {
+     "mark": "ℹ",
+     "text": "git add lab/state/ && git commit -m 'lab(state): remove hybrid-3tier-tiny/dev'"
+    }
+   ],
+   "phase": "retire",
+   "source": "exec3.log"
+  },
+  {
+   "step": "4/4",
+   "title": "Verify leave-no-trace",
+   "purpose": "List remaining namespaces, only baseline should remain.",
+   "file": "(read-only kubectl query)",
+   "action": "kubectl get supervisornamespaces -n {{project}}",
+   "results": [],
+   "phase": "retire",
+   "source": "exec3.log"
+  },
+  {
+   "step": "2a/8",
+   "title": "Attach VM Service content library to {{namespace}} (G-134)",
+   "purpose": "A fresh namespace has no OS images in VM Service scope; without this the DB VM cannot be created and only the VKS half of this hybrid app comes up.",
+   "file": "scripts/live-validation/setup/attach-vmservice-content-library.py",
+   "action": "PATCH /api/vcenter/namespaces/instances/{{namespace}}  {vm_service_spec:{content_libraries:[...]}}",
+   "results": [
+    {
+     "mark": "✓",
+     "text": "VM Service content library attached"
+    },
+    {
+     "mark": "✓",
+     "text": "deploy gate: SupervisorNamespace '{{namespace}}' is realized (phase=Created, Ready=True), deploy precondition met."
+    },
+    {
+     "mark": "⚠",
+     "text": "(info) tenant in-namespace secrets/create is DENIED, expected on VCF 9.1; NOT a deploy blocker (the deploy runs under a different, server-side identity). See audit F-017 + docs/reference/vcf-auto/vra-blueprint-rbac.md."
+    }
+   ],
+   "phase": "create",
+   "source": "verify-create.log"
+  }
+ ],
+ "stages": [
+  {
+   "n": 0,
+   "title": "The image already exists, because a pipeline made it",
+   "rows": {
+    "lifecycle": "BUILD, weeks before anyone asks",
+    "the user": "never sees it, and should not",
+    "owned by": "the image / platform engineering team"
+   }
+  },
+  {
+   "n": 1,
+   "title": "A user asks an API for an application",
+   "rows": {
+    "lifecycle": "REQUEST, the only stage with a human in it",
+    "the user": "one call, or one form. Seconds",
+    "owned by": "the consumer: an app team, or their pipeline"
+   }
+  },
+  {
+   "n": 2,
+   "title": "Where it lands, and what fences it in",
+   "rows": {
+    "lifecycle": "PROVISION, seconds to minutes",
+    "the user": "invisible, and that is the success condition",
+    "owned by": "the platform team, once, at namespace design"
+   }
+  },
+  {
+   "n": 3,
+   "title": "Naming and metadata: what every downstream system reads",
+   "rows": {
+    "lifecycle": "RECORD, at create, and never again if it is wrong",
+    "the user": "invisible until something needs to find it",
+    "owned by": "shared: the standard is the platform's, the values are the app's"
+   }
+  },
+  {
+   "n": 4,
+   "title": "The machine is not the application",
+   "rows": {
+    "lifecycle": "CONFIGURE, minutes after the VM exists",
+    "the user": "'is it ready yet?'",
+    "owned by": "the app team, through whatever config plane they run"
+   }
+  },
+  {
+   "n": 5,
+   "title": "The YAML assumes a container image exists",
+   "rows": {
+    "lifecycle": "BUILD, a second, separate pipeline",
+    "the user": "never sees it, until a pull fails",
+    "owned by": "the app team's CI, and whoever owns the registry"
+   }
+  },
+  {
+   "n": 6,
+   "title": "Measured against the envelope its tier deserves",
+   "rows": {
+    "lifecycle": "OPERATE, from the first collection cycle onward",
+    "the user": "someone else's dashboard, until it pages them",
+    "owned by": "the operations team, on a posture the platform team defined"
+   }
+  },
+  {
+   "n": 7,
+   "title": "The user changes it themselves",
+   "rows": {
+    "lifecycle": "OPERATE, the longest stage, by years",
+    "the user": "the action set somebody granted them",
+    "owned by": "the consumer, inside limits the platform set"
+   }
+  },
+  {
+   "n": 8,
+   "title": "Decommission: delete the record, not the machine",
+   "rows": {
+    "lifecycle": "RETIRE, and the order is load-bearing",
+    "the user": "one call, and it should take everything with it",
+    "owned by": "the consumer, with the platform holding the receipts"
+   }
+  }
+ ]
+}
