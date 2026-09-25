@@ -1,0 +1,51 @@
+{
+ "objects": {
+  "packages": 749,
+  "actions": 724,
+  "workflows": 736,
+  "categories": 401,
+  "configurationElements": 15,
+  "actionEnvironments": 4
+ },
+ "packageNaming": {
+  "total": 749,
+  "humanNamed": 34,
+  "generatedName": 715
+ },
+ "categoryTypes": {
+  "WorkflowCategory": 244,
+  "ScriptModuleCategory": 110,
+  "ResourceElementCategory": 35,
+  "ConfigurationElementCategory": 9,
+  "PolicyTemplateCategory": 3
+ },
+ "actionCategoryAgreement": {
+  "scriptModuleCategories": 110,
+  "distinctActionPrefixes": 110,
+  "agree": true
+ },
+ "runtimes": {
+  "total": 4,
+  "runtimes": [
+   "powercli:13-powershell-7.4",
+   "python:3.11"
+  ],
+  "unresolved": 1,
+  "withUnpinnedDependencies": 2,
+  "fullyPinned": 1,
+  "noDependencies": 1
+ },
+ "sweep": {
+  "workflowsRead": 736,
+  "unreadable": 0,
+  "withConfigBinding": 50,
+  "withActionCall": 318,
+  "inlineOnly": 405,
+  "empty": 13,
+  "items": 3739,
+  "itemsCallingAction": 627,
+  "itemsInlineScript": 1592,
+  "attributes": 2145,
+  "attributesBoundToConfig": 149
+ }
+}
