@@ -11,7 +11,7 @@ never reached the Supervisor from a terminal, start here, then read
 
 ```mermaid
 flowchart LR
-    A["VCF Automation UI<br/>API token (90 days)"] --> B["vcf context create<br/>--type cci"]
+    A["VCF Automation UI<br/>API token (90 days)<br/>trades for a 1-hour access token"] --> B["vcf context create<br/>--type cci"]
     B --> C["a kubectl context<br/>in ~/.kube/config"]
     C --> D["kubectl get<br/>supervisornamespaces"]
     D --> E["CCI gateway<br/>your Supervisor"]
@@ -168,11 +168,42 @@ not usable from another, so the same manifest can work in one and be refused in 
 exists ... in namespace or cluster scope*. And storage quota is per namespace too: if the boot disk does not
 fit, the refusal arrives from an admission webhook at apply time and names the reason.
 
-To re-authenticate at any time (safe to run at the start of a script; it is a no-op
-if your token is still valid):
+### Re-authenticating, and the one command that is not script-safe
+
+The credential written into your kubeconfig is a **static access token with a one-hour life**, and
+there is no exec plugin, so `kubectl` cannot renew it. It does not warn you and it does not retry: it
+works, and then an hour later every command fails at once. This is the single most common way the
+`kubectl` steps below stop working, and it has nothing to do with the 90-day API token.
 
 ```bash
 vcf context refresh <context-name>
+```
+
+`refresh` re-authenticates, and it has **no `--api-token` flag**, so it prompts. That makes it fine
+at a terminal and a hang in a script. For anything unattended, delete and re-create with the token
+supplied:
+
+```bash
+vcf context delete <context-name>
+vcf context create <context-name> \
+    --endpoint https://<your-automation-host>/cci/kubernetes \
+    --type cci \
+    --api-token "$VCF_API_TOKEN"
+```
+
+Before you debug anything else, ask what your kubeconfig's credential actually says about itself.
+It is an offline question and the answer takes no network:
+
+```bash
+kubectl config view --raw -o json \
+  | python3 -c 'import sys,json,base64,datetime as dt
+raw=json.load(sys.stdin); now=dt.datetime.now(dt.timezone.utc)
+for u in raw.get("users",[]):
+    t=(u.get("user") or {}).get("token")
+    if not t or t.count(".")!=2: continue
+    b=t.split(".")[1]; b+="="*(-len(b)%4)
+    c=json.loads(base64.urlsafe_b64decode(b)); e=dt.datetime.fromtimestamp(c["exp"],dt.timezone.utc)
+    print(u["name"], "EXPIRED" if e<now else "valid until", e.isoformat())'
 ```
 
 ## For templates 4 and 5: a VKS guest-cluster kubeconfig
@@ -236,10 +267,14 @@ You do not need `kubectl-vsphere`; the vcf CLI replaced it.
   namespace context. The tell is the context name: a Supervisor context reads
   `<org>:<namespace>:<project>`, a VKS guest reads `<cluster>-admin@<cluster>`.
   Switch back with `vcf context use <context-name>:<namespace>:<project>`.
-- **Commands begin returning 401 after weeks of working fine.** Your API token
-  reached its 90-day expiry. Mint a fresh one in the VCF Automation UI and re-run
-  `vcf context create`. Between expiries, `vcf context refresh` handles the
-  shorter-lived access token for you.
+- **Every command fails at once, often after lunch.** This is the common one, and the error does
+  not say so. The access token in your kubeconfig lasts **one hour**, `kubectl` cannot renew it, and
+  the failure text is `the server has asked for the client to provide credentials`, usually repeated
+  four times, or `You must be logged in to the server (Unauthorized)`. Neither names a token. Re-mint
+  with the commands above. The 90-day API token is a different clock and is almost never the cause.
+- **Commands return 401 and re-creating the context does not help.** Now it is the API token, which
+  has reached its 90-day expiry. Mint a fresh one in the VCF Automation UI and re-run
+  `vcf context create` with it.
 
 ## Next
 
