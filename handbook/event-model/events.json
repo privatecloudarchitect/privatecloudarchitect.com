@@ -1,0 +1,163 @@
+{
+ "capturedOn": "2026-09-25",
+ "method": "Two subscriptions on an All Apps organization bound to the Orchestrator's stock payload-dumping workflow, then one create and one delete of a three-machine template, with every payload read out of the workflow run logs. No host name, identifier or credential is recorded here.",
+ "topics": {
+  "total": 19,
+  "blockable": [
+   "approval.events",
+   "custom.resource.provision.post",
+   "custom.resource.provision.pre",
+   "deployment.action.post",
+   "deployment.action.pre",
+   "deployment.request.post",
+   "deployment.request.pre",
+   "deployment.resource.action.post",
+   "deployment.resource.action.pre",
+   "deployment.resource.request.post",
+   "deployment.resource.request.pre"
+  ],
+  "notBlockable": [
+   "blueprint.configuration",
+   "blueprint.version.configuration",
+   "iaas.resource.event",
+   "project-service.project.lifecycle",
+   "provider.resource.action.cud",
+   "vcf.ops.alert",
+   "vcf.ops.bill",
+   "vcf.ops.report"
+  ],
+  "computeFamilyPresent": false
+ },
+ "lifecycle": {
+  "create": {
+   "deploymentScoped": 1,
+   "resourceScoped": 8,
+   "eventType": {
+    "deployment": "CREATE_DEPLOYMENT",
+    "resource": "CREATE_RESOURCE"
+   }
+  },
+  "delete": {
+   "deploymentScoped": 1,
+   "resourceScoped": 8,
+   "eventType": {
+    "deployment": "DESTROY_DEPLOYMENT",
+    "resource": "DELETE_RESOURCE"
+   }
+  },
+  "symmetric": true,
+  "actionTopicsFired": 0,
+  "orchestratorRuns": {
+   "total": 18,
+   "resourceScoped": 16,
+   "deploymentScoped": 2
+  }
+ },
+ "deleteOrder": [
+  "Web02VM",
+  "Web01VM",
+  "WebLoadBalancer",
+  "HAProxyVM",
+  "HAProxyBootstrap",
+  "Web02Bootstrap",
+  "Web01Bootstrap",
+  "Namespace"
+ ],
+ "payloadFields": [
+  "blueprintId",
+  "blueprintVersion",
+  "catalogItemId",
+  "catalogItemVersion",
+  "contextId",
+  "deploymentId",
+  "description",
+  "eventType",
+  "failureMessage",
+  "id",
+  "orgId",
+  "projectId",
+  "projectName",
+  "requestId",
+  "requestInputs",
+  "requestType",
+  "resourceCountIndex",
+  "resourceName",
+  "resourceType",
+  "status",
+  "userId",
+  "userName"
+ ],
+ "metadataAttributes": [
+  "__metadata_eventTopicId",
+  "__metadata_correlationId",
+  "__metadata_hdr_blocking",
+  "__metadata_hdr_runnableType",
+  "__metadata_hdr_runnableId",
+  "__metadata_hdr_traceparent",
+  "__metadata_userName",
+  "__metadata_orgId"
+ ],
+ "machineVsSecret": {
+  "differ": [
+   "contextId",
+   "id",
+   "resourceName"
+  ],
+  "identical": [
+   "blueprintId",
+   "blueprintVersion",
+   "catalogItemId",
+   "catalogItemVersion",
+   "deploymentId",
+   "description",
+   "eventType",
+   "failureMessage",
+   "orgId",
+   "projectId",
+   "projectName",
+   "requestId",
+   "requestInputs",
+   "requestType",
+   "resourceCountIndex",
+   "resourceType",
+   "status",
+   "userId",
+   "userName"
+  ],
+  "resourceTypeOfBoth": "CCI.Supervisor.Resource"
+ },
+ "resourceKinds": {
+  "a machine": "VirtualMachine",
+  "a bootstrap secret": "Secret",
+  "a guest cluster": "Cluster",
+  "a namespace reference": null
+ },
+ "kindLookup": {
+  "call": "GET /deployment/api/deployments/{deploymentId}/resources/{id}",
+  "declared": "properties.manifest.kind",
+  "live": "properties.object.kind"
+ },
+ "bindingForms": [
+  {
+   "form": "runnableType + runnableId alone",
+   "result": "201, both fields silently dropped, dispatches nothing"
+  },
+  {
+   "form": "type RUNNABLE without a subscriber",
+   "result": "500"
+  },
+  {
+   "form": "subscriberId as extensibility.vro:<workflowId>",
+   "result": "201, stored, dispatches nothing"
+  },
+  {
+   "form": "type RUNNABLE + runnableType + runnableId + subscriberId naming the service identity",
+   "result": "the working record, as made by the console"
+  }
+ ],
+ "workflowContract": {
+  "input": "inputProperties (Properties)",
+  "customPropertiesPresent": false,
+  "blockingExercised": false
+ }
+}
