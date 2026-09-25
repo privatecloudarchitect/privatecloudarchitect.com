@@ -158,6 +158,34 @@
  "workflowContract": {
   "input": "inputProperties (Properties)",
   "customPropertiesPresent": false,
-  "blockingExercised": false
+  "blockingExercised": true
+ },
+ "blockingGate": {
+  "exercised": true,
+  "scopedBy": "a criteria expression on the template id, so nothing else in the organization was gated",
+  "allow": {
+   "workflow": "completes",
+   "runs": 8,
+   "runsPerResource": true,
+   "deployment": "CREATE_SUCCESSFUL",
+   "note": "one run per resource, every one completed, and the deployment proceeded"
+  },
+  "block": {
+   "workflow": "raises",
+   "runs": 3,
+   "deployment": "DELETE_FAILED",
+   "resourcesRemoved": 0,
+   "resourcesRemaining": 8,
+   "note": "the delete stopped at the first refused resource rather than attempting all eight, and every resource was left in place"
+  },
+  "recover": {
+   "workflow": "completes",
+   "runs": 8,
+   "deployment": "GONE",
+   "secondsToDelete": 105,
+   "note": "the identical delete succeeded once the gate could complete; no other change"
+  },
+  "operatorMessage": "the failed request names the subscriber, the runnable, the subscription and the workflow run id, then quotes the workflow's own error",
+  "timeoutExercised": false
  }
 }
