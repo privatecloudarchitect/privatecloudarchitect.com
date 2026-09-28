@@ -68,12 +68,18 @@ one survived.
 
 ## What it does not cover
 
-- **It does not read NSX.** NSX dynamic security groups read NSX tags, which are a third plane.
-  Whether a projection should fan out to NSX as well is an open question here, not an answered one.
+- **It does not read NSX.** NSX dynamic security groups read NSX tags, which are a third plane. A
+  projection does have to fan out there, because an NSX group criterion cannot read a vSphere tag;
+  measuring that plane needs an NSX credential this record does not ask for.
 - **It does not read the Supervisor directly.** Declarations come from the deployment record, which
   is reachable with the same tenant credential as everything else; the per-namespace proxy needs a
   namespace-scoped credential on a one-hour clock. A machine created in a namespace by hand, outside
   any deployment, is therefore not counted.
+- **Its population is the machines a deployment record names.** A cluster's node machines are
+  created by the cluster controller, so no deployment record describes one and none appear here.
+  They are not ungoverned by nature: they inherit their cluster's declaration, and the cluster is an
+  ordinary template resource carrying ordinary labels. Read the record as coverage of the
+  machines a template declared, not of everything the estate is running.
 - **It does not judge whether a declared value is correct**, only whether it arrived. A machine
   labelled with the wrong application is projected faithfully.
 - **It writes nothing.** Converging the estate is a separate tool, and it is deliberately not in
