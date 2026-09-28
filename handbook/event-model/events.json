@@ -186,6 +186,13 @@
    "note": "the identical delete succeeded once the gate could complete; no other change"
   },
   "operatorMessage": "the failed request names the subscriber, the runnable, the subscription and the workflow run id, then quotes the workflow's own error",
-  "timeoutExercised": false
+  "timeoutExercised": false,
+  "timeoutAttempt": {
+   "on": "2026-09-26",
+   "built": "a workflow taking one inputProperties input whose only task sleeps 600 seconds",
+   "outcome": "the gate never fired: zero workflow executions, the deployment proceeded past it",
+   "cause": "runnableId is resolved by the Orchestrator Gateway API on the Automation node, not by the appliance holding the workflow. The workflow answered 200 on the appliance and 404 on the gateway, so the subscription pointed at an identifier the dispatch plane could not resolve",
+   "lesson": "verify a workflow through the Automation host's gateway before binding a subscription to it; reading it back from the Orchestrator proves it exists and proves nothing about whether an event can reach it"
+  }
  }
 }

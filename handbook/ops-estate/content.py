@@ -76,6 +76,11 @@ CLASSES = [
 ]
 
 # Paths that would plausibly serve a dashboard or a view. An absence claim needs its list.
+# A key known to populate wherever this kind collects at all. Read beside every population
+# probe, because a query that answers zero for everything is a broken query and looks identical
+# to a finding.
+CONTROL_KEY = "cpu|readyPct"
+
 ABSENT_CANDIDATES = [
     "/api/dashboards", "/api/views", "/api/dashboard", "/api/view", "/api/viewdefinitions",
     "/api/content", "/api/content/dashboards", "/api/content/views", "/api/content/operations",
@@ -138,6 +143,80 @@ def export_alert_entries(policy_id, tok):
     entries = [(a.get("id"), a.get("enabled")) for a in root.iter("Alert") if a.get("id")]
     on = sum(1 for _, e in entries if str(e).lower() == "true")
     return {"explicitlySet": len(entries), "explicitlyEnabled": on, "explicitlyDisabled": len(entries) - on}
+
+
+def presence_versus_population(tok, kind="VirtualMachine", sample_size=25):
+    """How much of the catalog a kind advertises actually returns a value here.
+
+    The statkey describe is a CATALOG, not an inventory of what collects. A key can sit in it and
+    return nothing on every object, and nothing in the describe says so. Separately, the properties
+    API carries names the describe never lists, so a reader who treats the describe as the whole
+    vocabulary misses a surface entirely.
+
+    Two counts, both computed rather than asserted:
+      served   keys from the describe that returned a value on at least one sampled object
+      silent   keys from the describe that returned nothing on any of them
+    plus the number of property names present on the sample that the describe does not carry.
+    """
+    st, body = ops("GET", f"/api/adapterkinds/VMWARE/resourcekinds/{kind}/statkeys", tok,
+                   params={"pageSize": 5000, "_no_links": "true"})
+    keys = sorted({k.get("key") for k in (body or {}).get("resourceTypeAttributes", []) if k.get("key")})
+    if not keys:
+        return {"error": f"no statkey describe for {kind} (HTTP {st})"}
+
+    _, rb = ops("GET", "/api/resources", tok,
+                params={"resourceKind": kind, "pageSize": 200, "_no_links": "true"})
+    ids = [r["identifier"] for r in (rb or {}).get("resourceList", []) if r.get("identifier")]
+    # Sample objects that actually collect, so tombstones do not become the denominator.
+    live = []
+    _, probe_body = ops("POST", "/api/resources/stats/latest/query", tok,
+                        body={"resourceId": ids, "statKey": [CONTROL_KEY]}, params={"_no_links": "true"})
+    for e in (probe_body or {}).get("values", []):
+        for s in e.get("stat-list", {}).get("stat", []):
+            if s.get("data"):
+                live.append(e.get("resourceId"))
+                break
+    sample = live[:sample_size]
+    if not sample:
+        return {"error": f"no {kind} object returned {CONTROL_KEY}; the read, not the estate"}
+
+    served = set()
+    for i in range(0, len(keys), 50):
+        chunk = keys[i:i + 50]
+        asked = set(chunk)
+        _, rr = ops("POST", "/api/resources/stats/latest/query", tok,
+                    body={"resourceId": sample, "statKey": chunk}, params={"_no_links": "true"})
+        for e in (rr or {}).get("values", []):
+            for s in e.get("stat-list", {}).get("stat", []):
+                k = s.get("statKey")
+                k = k.get("key") if isinstance(k, dict) else k
+                # The response is NOT limited to the keys asked for. Counting everything it returns
+                # makes the tally exceed the size of the describe, which is how that was caught.
+                if s.get("data") and k in asked:
+                    served.add(k)
+
+    propnames = set()
+    for rid in sample[:10]:
+        _, pb = ops("GET", f"/api/resources/{rid}/properties", tok, params={"_no_links": "true"})
+        propnames |= {pr.get("name") for pr in (pb or {}).get("property", [])}
+
+    # INVARIANTS. The first draft of this probe counted every key the response returned rather than
+    # only the keys it asked for, and reported "1085 of 983 returned a value". That is impossible,
+    # and it was caught by reading the arithmetic rather than by anything in the code. A number that
+    # cannot be true should not need a human to notice, so it is asserted here: a published count
+    # that is wrong in this direction reads as a MORE complete catalog than the instance has, which
+    # is the opposite of what this section exists to teach.
+    assert len(served) <= len(keys), (
+        f"{len(served)} keys returned a value out of {len(keys)} offered, which cannot be true: "
+        "the response carries keys that were not asked for, so intersect before counting"
+    )
+    assert set(served) <= set(keys), "a key was counted that is not in the describe"
+
+    return {"kind": kind, "objectsSampled": len(sample), "objectsCollecting": len(live),
+            "keysInTheDescribe": len(keys), "keysThatReturnedAValue": len(served),
+            "keysThatReturnedNothing": len(keys) - len(served),
+            "propertyNamesNotInTheDescribe": len(propnames - set(keys)),
+            "namedPair": {"metric": "config|hardware|num_Cpu", "property": "config|hardware|numCpu"}}
 
 
 def main():
@@ -225,6 +304,18 @@ def main():
     print(f"\n  NO READ SURFACE: {len(absent)} candidate path(s) probed for dashboards and views; "
           f"{len(served)} answered 200")
 
+    # ---- 5: presence is not population
+    pvp = presence_versus_population(tok)
+    if "error" in pvp:
+        print(f"\n  PRESENCE VERSUS POPULATION: not determined ({pvp['error']})")
+    else:
+        print(f"\n  PRESENCE IS NOT POPULATION: the {pvp['kind']} describe offers "
+              f"{pvp['keysInTheDescribe']} key(s); {pvp['keysThatReturnedAValue']} returned a value on "
+              f"{pvp['objectsSampled']} collecting object(s), {pvp['keysThatReturnedNothing']} returned "
+              f"nothing")
+        print(f"     and {pvp['propertyNamesNotInTheDescribe']} property name(s) on those objects are "
+              f"absent from the describe entirely, so the catalog is not the whole vocabulary")
+
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "owner": owner,
                "census": census,
@@ -238,7 +329,8 @@ def main():
                              "negatedSymptomReferences": negated,
                              "groupsCarryingAPolicy": len(bound), "groupsTotal": len(gl)},
                "definedVersusSet": gap,
-               "noReadSurface": absent}
+               "noReadSurface": absent,
+               "presenceVersusPopulation": pvp}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
     for var in ("OPS_HOST", "OPS_BROKER_HOST"):
         v = os.environ.get(var)

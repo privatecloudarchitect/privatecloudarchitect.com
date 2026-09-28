@@ -28,7 +28,7 @@ metadata:
   name: hello-vm-01                           # named for its function, with the -01 ordinal habit
   labels:
     app.kubernetes.io/name: hello-vm-01
-    app.kubernetes.io/component: server
+    app.kubernetes.io/component: web
     app.kubernetes.io/part-of: hello-vm
     environment: demo
     region: <REPLACE_ME-region>               # kubectl get regions

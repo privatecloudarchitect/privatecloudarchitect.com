@@ -193,6 +193,7 @@ resources:
             app.kubernetes.io/name: ${input.app_name}-db-01
             app.kubernetes.io/component: database
             app.kubernetes.io/part-of: ${input.app_name}
+            environment: ${input.environment}
         spec:
           className: ${input.db_vm_class}
           imageName: ${input.db_vm_image}
@@ -227,6 +228,7 @@ resources:
           labels:
             run.tanzu.vmware.com/tkr: ${input.kubernetes_release}
             app.kubernetes.io/part-of: ${input.app_name}
+            environment: ${input.environment}
             app.kubernetes.io/component: vks-host
         spec:
           # The cluster's internal address ranges. These are cluster-private; keep

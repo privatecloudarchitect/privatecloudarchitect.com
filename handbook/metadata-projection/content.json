@@ -1,0 +1,84 @@
+{
+  "corpus": {
+    "declaringEveryConcept": 11,
+    "manifests": 11
+  },
+  "engineLabels": {
+    "app": "app.kubernetes.io/part-of",
+    "env": "environment",
+    "function": "app.kubernetes.io/component"
+  },
+  "grammar": {
+    "declaringClassName": 10,
+    "declaringFlavorOrImage": 0,
+    "declaringLabels": 9,
+    "declaringTags": 0,
+    "templates": 14
+  },
+  "operations": {
+    "collectingWithMetadata": 2,
+    "collectingWithout": 8,
+    "propertiesCarryingAKubernetesLabel": [],
+    "propertiesCarryingATag": [
+      "summary|tag",
+      "summary|tagJson"
+    ],
+    "propertyNamesOnAVmObject": 151,
+    "retainedWithMetadata": 6,
+    "retainedWithout": 5
+  },
+  "perWorkload": [
+    {
+      "carries": {
+        "identity.app": "<estate-08>",
+        "identity.function": "db"
+      },
+      "declares": {
+        "app": "<estate-08>",
+        "function": "database"
+      },
+      "foreignCategories": 0,
+      "name": "<estate-05>",
+      "namespace": "<estate-00>"
+    },
+    {
+      "carries": {
+        "identity.app": "<estate-08>",
+        "identity.function": "db"
+      },
+      "declares": {
+        "app": "<estate-08>",
+        "function": "database"
+      },
+      "foreignCategories": 0,
+      "name": "<estate-05>",
+      "namespace": "<estate-01>"
+    },
+    {
+      "carries": {},
+      "declares": {},
+      "foreignCategories": 0,
+      "name": "<estate-12>",
+      "namespace": "<estate-06>"
+    },
+    {
+      "carries": {},
+      "declares": {},
+      "foreignCategories": 0,
+      "name": "<estate-11>",
+      "namespace": "<estate-06>"
+    }
+  ],
+  "reached": {
+    "automation": "read",
+    "operations": "read",
+    "vcenter": "read"
+  },
+  "workloads": {
+    "carryingNone": 2,
+    "carryingOwnedMetadata": 2,
+    "declaredByAutomation": 4,
+    "declaringButUnprojected": 0,
+    "joinedToAMachine": 4
+  }
+}

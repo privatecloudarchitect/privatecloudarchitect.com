@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T07:26:02Z",
+ "captured_utc": "2026-09-27T23:30:21Z",
  "owner": "PCA",
  "census": [
   {
@@ -13,7 +13,7 @@
   },
   {
    "class": "super metrics",
-   "total": 177,
+   "total": 186,
    "owned": 100,
    "conformingToSchema": 100,
    "fieldCounts": {
@@ -73,7 +73,7 @@
   }
  ],
  "totals": {
-  "objects": 5172,
+  "objects": 5181,
   "owned": 158,
   "conformingToSchema": 131
  },
@@ -318,5 +318,18 @@
    "path": "/suite-api/api/supermetrics/dashboards",
    "status": 400
   }
- ]
+ ],
+ "presenceVersusPopulation": {
+  "kind": "VirtualMachine",
+  "objectsSampled": 25,
+  "objectsCollecting": 107,
+  "keysInTheDescribe": 983,
+  "keysThatReturnedAValue": 247,
+  "keysThatReturnedNothing": 736,
+  "propertyNamesNotInTheDescribe": 408,
+  "namedPair": {
+   "metric": "config|hardware|num_Cpu",
+   "property": "config|hardware|numCpu"
+  }
+ }
 }

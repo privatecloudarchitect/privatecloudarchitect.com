@@ -92,6 +92,27 @@ about the policy), and the archive carries the policy's whole ancestor chain. Al
 origins**, not two states: LOCAL, INHERITED and UNSET, and UNSET must be reported as null rather than as
 enabled. `content.py` counts explicit entries; the full contract is the field guide the chapter cites.
 
+### Present is not populated
+
+The statkey describe for a resource kind is a **catalog**, not an inventory. `content.py` reads it,
+then probes every key it lists against objects that are known to collect, and reports the two counts
+separately. On the reference estate the `VirtualMachine` describe offers 983 keys and **247 returned
+a value**; the other 736 are present and empty, and nothing in the describe distinguishes them. A
+metric built on one of those validates, saves, activates, and renders an empty panel with nothing to
+diagnose.
+
+The describe is not the whole vocabulary either. **408 property names** on those same objects appear
+in no describe at all: configuration and state largely live on the properties API
+(`GET /api/resources/{id}/properties`), which the statkey catalog never lists. Ask the wrong surface
+and you get an empty result with HTTP 200, which reads exactly like absence.
+
+The prefix does not tell you which surface to ask. `config|hardware|num_Cpu` is a **metric** and
+`config|hardware|numCpu` is a **property** - one underscore apart, same object type, same prefix,
+and each silent on the other's surface. So the probe asks both and records which one answered.
+
+A key known to populate is read beside every probe, because a query that answers zero for everything
+is a broken query and looks exactly like a discovery.
+
 ### Scope, stated plainly
 
 - `content.py` is read-only. Every call is a `GET`. It creates, converges and deletes nothing.

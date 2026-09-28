@@ -170,6 +170,7 @@ resources:
             app.kubernetes.io/name: ${input.app_name}-web-01
             app.kubernetes.io/component: web
             app.kubernetes.io/part-of: ${input.app_name}
+            environment: ${input.environment}
         spec:
           className: ${input.vm_class}
           imageName: ${input.vm_image}
@@ -197,6 +198,7 @@ resources:
             app.kubernetes.io/name: ${input.app_name}-web-02
             app.kubernetes.io/component: web
             app.kubernetes.io/part-of: ${input.app_name}
+            environment: ${input.environment}
         spec:
           className: ${input.vm_class}
           imageName: ${input.vm_image}

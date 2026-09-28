@@ -114,7 +114,14 @@ kind: VirtualMachine
 metadata:
   name: hello-vm
   labels:
+    # WHO this machine is, for everything downstream. In an All Apps organization a template
+    # cannot declare a vSphere tag, so these labels ARE the declaration, and the platform
+    # projects them onto the tag plane that VCF Operations groups, policies and views read.
+    # A machine with no labels is invisible to every one of them, forever, and nothing warns you.
     app.kubernetes.io/name: hello-vm
+    app.kubernetes.io/component: web          # what it does: web | db | app | k8s | infra | vdi
+    app.kubernetes.io/part-of: hello-vm       # which application it belongs to
+    environment: lab                          # prod | stage | dev | test | dr | lab
 spec:
   # WHAT to build from. A vmi- id rather than a friendly name: the id is immutable, so
   # this file produces the same machine next month. A display name is not a contract.

@@ -167,7 +167,7 @@ resources:
           # `component` says what ROLE this plays; `part-of` ties it to the app.
           labels:
             app.kubernetes.io/name: ${input.app_name}-01
-            app.kubernetes.io/component: server
+            app.kubernetes.io/component: web
             app.kubernetes.io/part-of: ${input.app_name}
             environment: ${input.environment}
             region: ${input.region}
