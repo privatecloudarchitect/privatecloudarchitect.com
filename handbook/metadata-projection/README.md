@@ -10,6 +10,41 @@ a projection of it, and something has to perform that projection repeatedly.
 
 `content.py` measures whether yours does. It is read-only and writes nothing to any plane.
 
+## Before the numbers: why there are several stores at all
+
+The honest first impression of this subject is that the platform has sprawled. Labels do not become
+tags. Tags are the wrong shape for a configuration database. A firewall group cannot read either of
+them. It looks like an accident somebody should clean up.
+
+It is not an accident, and the cleanup is not coming. **Metadata does not live anywhere.** It is
+said once, in the artifact that declares the workload, and rendered into every store a consumer can
+read, the way a document is not "in" its PDF. Each consumer here is a different product with its own
+membership engine, and a shared lookup between them has never existed:
+
+| consumer | the only store it reads | why it cannot read another |
+|---|---|---|
+| VCF Operations groups, policies, views, dashboards | vSphere tag | the only metadata properties a group rule can filter on are the two tag ones; no property carries a Kubernetes label |
+| a CMDB, through the ServiceNow management pack | vCenter custom attribute | a column maps one Operations property to one CMDB column, and the type enum has no tag type. From the tag plane a column receives every tag at once as an unqueryable string |
+| the distributed firewall | NSX tag | a group criterion matches `scope` and `tag` on the fabric machine, and nothing else |
+| Kubernetes-native policy and Antrea | the label itself | pod-level intent has its own homes and its own precedence ladder |
+| the template | label, or `tags:` on a classic organization | the organization type decides which construct exists, not the author |
+
+So an estate that standardizes on one store has standardized on one consumer and given up the rest.
+**The thing to standardize on is the taxonomy**: the concepts, their vocabulary, their cardinality,
+and which axes you actually govern on. Every store is then a rendering of that one vocabulary, and
+an existing tag standard becomes the binding for one plane rather than something to discard.
+
+Two things follow that are worth saying to anyone who suspects their tagging practice was wasted:
+
+- **Tagging is not legacy.** It is the rendering the vSphere-native half of governance reads, which
+  is most of it. What is legacy is applying tags *by hand* as the authoring act, because the workload
+  lifecycle erases that work silently and every tool reports success while it happens.
+- **The complexity is bounded, and the bound is the point.** A new consumer adds an actuator, never a
+  template edit. A new axis is one taxonomy change, one definition, one line of source configuration,
+  and every template already declaring it starts projecting. New vocabulary touches the binding alone.
+
+This record measures whether that rendering is true on your estate right now.
+
 ## What it answers
 
 | question | plane | what it reports |
