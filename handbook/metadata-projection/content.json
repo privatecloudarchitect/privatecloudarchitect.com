@@ -16,63 +16,76 @@
     "templates": 14
   },
   "operations": {
-    "collectingWithMetadata": 2,
-    "collectingWithout": 8,
+    "collectingWithMetadata": 8,
+    "collectingWithout": 2,
     "propertiesCarryingAKubernetesLabel": [],
     "propertiesCarryingATag": [
       "summary|tag",
       "summary|tagJson"
     ],
-    "propertyNamesOnAVmObject": 151,
+    "propertyNamesOnAVmObject": 153,
     "retainedWithMetadata": 6,
     "retainedWithout": 5
   },
   "perWorkload": [
     {
       "carries": {
-        "identity.app": "<estate-08>",
+        "identity.app": "<estate-11>",
         "identity.function": "db"
       },
       "declares": {
-        "app": "<estate-08>",
+        "app": "<estate-11>",
         "function": "database"
       },
       "foreignCategories": 0,
-      "name": "<estate-05>",
-      "namespace": "<estate-00>"
-    },
-    {
-      "carries": {
-        "identity.app": "<estate-08>",
-        "identity.function": "db"
-      },
-      "declares": {
-        "app": "<estate-08>",
-        "function": "database"
-      },
-      "foreignCategories": 0,
-      "name": "<estate-05>",
+      "name": "<estate-08>",
       "namespace": "<estate-01>"
     },
     {
-      "carries": {},
-      "declares": {},
+      "carries": {
+        "identity.app": "<estate-11>",
+        "identity.function": "db"
+      },
+      "declares": {
+        "app": "<estate-11>",
+        "function": "database"
+      },
       "foreignCategories": 0,
-      "name": "<estate-12>",
-      "namespace": "<estate-06>"
+      "name": "<estate-08>",
+      "namespace": "<estate-00>"
     },
     {
       "carries": {},
       "declares": {},
       "foreignCategories": 0,
-      "name": "<estate-11>",
-      "namespace": "<estate-06>"
+      "name": "<estate-15>",
+      "namespace": "<estate-10>"
+    },
+    {
+      "carries": {},
+      "declares": {},
+      "foreignCategories": 0,
+      "name": "<estate-14>",
+      "namespace": "<estate-10>"
     }
   ],
+  "population": {
+    "clusterNodes": 11,
+    "clusters": 4,
+    "clustersWithADeclaration": 3,
+    "machinesDeclaringForThemselves": 5,
+    "machinesNoDeploymentRecordNames": 1,
+    "namespaces": 11,
+    "namespacesHoldingMachines": 4,
+    "nodesThatCanInherit": 9,
+    "nodesWithNothingToInherit": 2,
+    "vspherePods": 5
+  },
   "reached": {
     "automation": "read",
     "operations": "read",
-    "vcenter": "read"
+    "vcenter": "read",
+    "vcenter-namespaces": "read"
   },
   "workloads": {
     "carryingNone": 2,

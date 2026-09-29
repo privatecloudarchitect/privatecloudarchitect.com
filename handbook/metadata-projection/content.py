@@ -5,7 +5,7 @@ A workload on an All Apps organization declares itself in Kubernetes labels, bec
 has no field for a tag. Every consumer that governs on metadata reads tags. This asks whether the
 first reaches the second, on your estate, and writes a record the chapter renders.
 
-Five questions, each on a plane that can be credentialed separately, so the script runs with
+Six questions, each on a plane that can be credentialed separately, so the script runs with
 whatever you have and records which planes it could reach:
 
   1. the GRAMMAR SPLIT (Automation): per organization, how many templates declare resource `tags:`
@@ -24,16 +24,26 @@ whatever you have and records which planes it could reach:
   5. the DECAY SPLIT (Operations): objects still collecting against objects retained after
      deletion, each with whether it carries metadata. Operations keeps deleted resources and they
      keep their last properties, so a coverage number that does not separate the two reports an
-     estate healthier than it is.
+     estate healthier than it is;
+  6. the POPULATION (vCenter): every machine the Supervisor namespaces hold, and how each one can
+     declare at all. A machine sitting in its namespace's own folder declares for itself. A machine
+     one level below that is a node of the cluster whose name that folder carries, created by the
+     cluster controller rather than by a template, and the only declaration it will ever have is
+     the one on the Cluster object. Both facts come from vCenter's folder tree rather than from a
+     naming convention.
 
-Three ways this answers wrongly, each of which it did first:
+Four ways this answers wrongly, each of which it did first:
 
   * joining declaration to machine by NAME. Two live machines here share one name in different
     namespaces, and the join silently picks one;
   * counting a retained Operations object as evidence of coverage. The tagged objects on the
     reference estate were every one of them deleted machines;
   * reading a template's `${input.environment}` as a literal value. It is a placeholder whose value
-    is chosen at deploy time, so the thing to check is the input's declared enum, not the string.
+    is chosen at deploy time, so the thing to check is the input's declared enum, not the string;
+  * counting only the machines a deployment record names. A cluster's nodes are the majority of a
+    real estate and no deployment record describes one, so a coverage ratio taken over the named
+    machines alone is a true number about a fraction of the estate, reported as if it were about
+    the estate.
 
 Read-only throughout. Nothing here creates, attaches or deletes a tag.
 
@@ -45,8 +55,8 @@ Run:
   export VCFA_ORG=<organization>
   export VCFA_USER=<username>                 # the bare account, not the UPN
   export VCFA_PASSWORD_FILE=/path/to/pw       # mode 0600
-  export VC_HOST=<vcenter-fqdn>               # question 3
-  export VC_USER=<username@domain>
+  export VC_HOST=<vcenter-fqdn>               # question 3 and 6
+  export VC_USER=<username@domain>            # needs tag read AND namespace read for question 6
   export VC_PASSWORD_FILE=/path/to/pw
   export OPS_HOST=<operations-fqdn>           # question 4 and 5
   export OPS_TOKEN_FILE=/path/to/bearer          # the exchanged bearer, not the api token
@@ -63,6 +73,7 @@ import re
 import ssl
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -78,6 +89,10 @@ ENGINE_LABELS = {
     "app": "app.kubernetes.io/part-of",
     "env": "environment",
 }
+# The folder the Supervisor puts vSphere Pod VMs in, below the namespace's own folder. A pod is
+# neither a machine that declares for itself nor a cluster node, and counting it as either would
+# inflate one of the two populations this record exists to keep apart.
+POD_FOLDER = "vSpherePods"
 
 
 def _ctx():
@@ -119,7 +134,7 @@ def automation(reached):
     user, pw = os.environ.get("VCFA_USER"), _secret("VCFA_PASSWORD_FILE")
     if not all((host, org, user, pw)):
         reached["automation"] = "not credentialed"
-        return None, [], []
+        return None, [], [], {}
 
     cred = base64.b64encode(f"{user}@{org}:{pw}".encode()).decode()
     st, _, hdrs = _req(
@@ -130,7 +145,7 @@ def automation(reached):
     tok = hdrs.get("x-vmware-vcloud-access-token")
     if st != 200 or not tok:
         reached["automation"] = f"session login HTTP {st}"
-        return None, [], []
+        return None, [], [], {}
     reached["automation"] = "read"
     h = {"Authorization": f"Bearer {tok}", "Accept": "application/json"}
 
@@ -158,8 +173,11 @@ def automation(reached):
                 1 if re.search(r"^\s+(flavor|image):", body, re.M) else 0
             )
 
-    # (2) what each provisioned machine declares, and the UUID to find it by
-    declared, orgs_seen = [], []
+    # (2) what each provisioned machine declares, and the UUID to find it by. Cluster objects are
+    # collected in the same pass: a cluster's node machines are created by its controller and can
+    # never carry a template label, so the cluster's own declaration is the only one they will
+    # ever have, and question 6 needs it to say which nodes have something to inherit.
+    declared, orgs_seen, clusters = [], [], {}
     st, raw, _ = _req("GET", f"https://{host}/deployment/api/deployments", h)
     if st == 200:
         for dep in json.loads(raw).get("content", []):
@@ -170,6 +188,11 @@ def automation(reached):
                 continue
             for res in json.loads(raw2).get("content", []):
                 obj = (res.get("properties") or {}).get("object") or {}
+                if obj.get("kind") == "Cluster":
+                    md = obj.get("metadata") or {}
+                    if md.get("namespace") and md.get("name"):
+                        clusters[(md["namespace"], md["name"])] = md.get("labels") or {}
+                    continue
                 if obj.get("kind") != "VirtualMachine":
                     continue
                 meta, spec = obj.get("metadata") or {}, obj.get("spec") or {}
@@ -185,13 +208,19 @@ def automation(reached):
                     }
                 )
                 orgs_seen.append(meta.get("namespace", ""))
-    return grammar, declared, orgs_seen
+    return grammar, declared, orgs_seen, clusters
 
 
 # ─── plane 3: vCenter ───────────────────────────────────────────────────────────────────────────
 
 
-def vcenter(reached, wanted_names):
+def vc_session(reached):
+    """One vCenter session, shared by the tag read and the population read.
+
+    Shared on purpose. The vAPI endpoint opens a backing session per call for the acting principal
+    and no client can close those, so a script that logs in twice costs the estate twice for
+    nothing. Returns ``(host, headers)``, or ``(None, None)`` with the reason recorded.
+    """
     host, user, pw = (
         os.environ.get("VC_HOST"),
         os.environ.get("VC_USER"),
@@ -199,14 +228,18 @@ def vcenter(reached, wanted_names):
     )
     if not all((host, user, pw)):
         reached["vcenter"] = "not credentialed"
-        return {}, {}
+        return None, None
     cred = base64.b64encode(f"{user}:{pw}".encode()).decode()
     st, raw, _ = _req("POST", f"https://{host}/api/session", {"Authorization": f"Basic {cred}"})
     if st not in (200, 201):
         reached["vcenter"] = f"session HTTP {st}"
+        return None, None
+    return host, {"vmware-api-session-id": json.loads(raw), "Accept": "application/json"}
+
+
+def vcenter(reached, wanted_names, host, h):
+    if not host:
         return {}, {}
-    sid = json.loads(raw)
-    h = {"vmware-api-session-id": sid, "Accept": "application/json"}
 
     st, raw, _ = _req("GET", f"https://{host}/api/cis/tagging/category", h)
     if st != 200:
@@ -251,6 +284,90 @@ def vcenter(reached, wanted_names):
                 carried[cv[0]] = cv[1]
         held[uuid] = carried
     return by_uuid, held
+
+
+# ─── question 6: the population, on the same vCenter session ────────────────────────────────────
+
+
+def _folders(host, h, **params):
+    q = urllib.parse.urlencode({"type": "VIRTUAL_MACHINE", **params}, doseq=True)
+    st, raw, _ = _req("GET", f"https://{host}/api/vcenter/folder?{q}", h)
+    return json.loads(raw) if st == 200 else []
+
+
+def _vms_in(host, h, folder):
+    q = urllib.parse.urlencode({"folders": folder})
+    st, raw, _ = _req("GET", f"https://{host}/api/vcenter/vm?{q}", h)
+    return json.loads(raw) if st == 200 else []
+
+
+def population(reached, host, h, declared_uuids, declared_clusters, declared_known):
+    """Every machine the Supervisor namespaces hold, split by how it can declare at all.
+
+    The split is made of two facts vCenter states, not of a naming convention: a Supervisor
+    namespace has a VM folder carrying its own name, and the cluster controller puts a cluster's
+    node machines in a folder carrying the cluster's name, one level below it. So a machine in the
+    namespace folder declares for itself, and a machine one level down is a node of the cluster
+    that folder names. Matching node to cluster by parsing the machine's name would agree with this
+    on the estate it was written against and disagree on the next one.
+
+    Counts only. Every name involved is an estate value and the record publishes none of them.
+    """
+    if not host:
+        return None
+    st, raw, _ = _req("GET", f"https://{host}/api/vcenter/namespaces/instances", h)
+    if st != 200:
+        reached["vcenter-namespaces"] = (
+            f"HTTP {st}; the identity reads tags but not namespaces, so the population is unmeasured"
+        )
+        return None
+    ns_names = {n["namespace"] for n in json.loads(raw) if n.get("namespace")}
+
+    ns_folders = {f["folder"]: f["name"] for f in _folders(host, h) if f["name"] in ns_names}
+    out = {
+        "namespaces": len(ns_names),
+        "namespacesHoldingMachines": 0,
+        "machinesDeclaringForThemselves": 0,
+        "clusters": 0,
+        "clusterNodes": 0,
+        "vspherePods": 0,
+    }
+    joinable = {"machinesNoDeploymentRecordNames": 0, "clustersWithADeclaration": 0,
+                "nodesThatCanInherit": 0, "nodesWithNothingToInherit": 0}
+
+    for fid, ns in ns_folders.items():
+        direct = _vms_in(host, h, fid)
+        out["machinesDeclaringForThemselves"] += len(direct)
+        for vm in direct:
+            st2, raw2, _ = _req("GET", f"https://{host}/api/vcenter/vm/{vm['vm']}", h)
+            uuid = (json.loads(raw2).get("identity") or {}).get("instance_uuid") if st2 == 200 else None
+            # The UUID decides this, not the name: a machine created by hand in a namespace can
+            # carry the same name as one a deployment describes.
+            if uuid and uuid not in declared_uuids:
+                joinable["machinesNoDeploymentRecordNames"] += 1
+        holds = bool(direct)
+        for kid in _folders(host, h, parent_folders=fid):
+            vms = _vms_in(host, h, kid["folder"])
+            if kid["name"] == POD_FOLDER:
+                out["vspherePods"] += len(vms)
+                continue
+            holds = True
+            out["clusters"] += 1
+            out["clusterNodes"] += len(vms)
+            # The pair, not the folder name: two clusters in different namespaces can carry one
+            # name, and a key that ignores the namespace would merge them.
+            if (ns, kid["name"]) in declared_clusters:
+                joinable["clustersWithADeclaration"] += 1
+                joinable["nodesThatCanInherit"] += len(vms)
+            else:
+                joinable["nodesWithNothingToInherit"] += len(vms)
+        out["namespacesHoldingMachines"] += 1 if holds else 0
+
+    reached["vcenter-namespaces"] = "read"
+    # The four join counts exist only if the declaration side was read. Reporting them as zero when
+    # Automation was never asked would say every cluster is undeclared, which is a different claim
+    # from not knowing.
+    return {**out, **joinable} if declared_known else out
 
 
 # ─── planes 4 and 5: Operations ─────────────────────────────────────────────────────────────────
@@ -400,9 +517,14 @@ def scrub(record, secrets):
 
 def main() -> int:
     reached = {}
-    grammar, declared, namespaces = automation(reached)
+    grammar, declared, namespaces, clusters = automation(reached)
     names = {d["name"] for d in declared}
-    by_uuid, held = vcenter(reached, names)
+    vc_host, vc_h = vc_session(reached)
+    by_uuid, held = vcenter(reached, names, vc_host, vc_h)
+    pop = population(
+        reached, vc_host, vc_h, {d["uuid"] for d in declared}, clusters,
+        reached.get("automation") == "read",
+    )
     ops = operations(reached, names, set(namespaces))
 
     joined, bare, carrying, unreadable = 0, 0, 0, 0
@@ -441,6 +563,7 @@ def main() -> int:
             "declaringButUnprojected": unreadable,
         },
         "perWorkload": per_workload,
+        "population": pop or {},
         "operations": ops or {},
         "corpus": corpus(),
         "engineLabels": ENGINE_LABELS,
@@ -452,6 +575,8 @@ def main() -> int:
     secrets = (
         set(names)
         | set(namespaces)
+        | {ns for ns, _ in clusters}
+        | {name for _, name in clusters}
         | {v for v in app_values if v}
         | {
             os.environ.get("VCFA_HOST"),

@@ -19,6 +19,7 @@ a projection of it, and something has to perform that projection repeatedly.
 | what does the machine carry | vCenter | the tags on those same machines, joined on that UUID |
 | can the consumer see any of it | Operations | how many properties on a machine object carry a tag, and how many carry a Kubernetes label |
 | is the metadata still alive | Operations | objects still collecting against objects retained after deletion, each split by whether it carries metadata |
+| how many machines are there really | vCenter | every machine your Supervisor namespaces hold, split by whether it can declare for itself or can only inherit from its cluster |
 | do your own examples comply | this repository | example manifests declaring every concept the engine reads |
 
 ## Run it
@@ -32,7 +33,7 @@ export VCFA_ORG=<organization>
 export VCFA_USER=<username>                 # the bare account, not the UPN
 export VCFA_PASSWORD_FILE=/path/to/pw       # mode 0600
 export VC_HOST=<vcenter-fqdn>
-export VC_USER=<username@domain>
+export VC_USER=<username@domain>            # tag read, plus namespace read for the population
 export VC_PASSWORD_FILE=/path/to/pw
 export OPS_HOST=<operations-fqdn>
 export OPS_TOKEN_FILE=/path/to/bearer
@@ -63,6 +64,13 @@ one survived.
 - **`operations.propertiesCarryingAKubernetesLabel`** an empty list means there is no property for a
   group rule to filter a label on, which is what makes the projection necessary rather than
   traditional.
+- **`population`** the machines your namespaces actually hold.
+  `machinesDeclaringForThemselves` sit in their namespace's own folder; `clusterNodes` sit one
+  level below, in a folder named for their cluster, and were created by that cluster's controller.
+  `nodesThatCanInherit` have a cluster the deployment records describe; `nodesWithNothingToInherit`
+  do not, and are reported rather than guessed at. Read `declaredByAutomation` against
+  `machinesDeclaringForThemselves + clusterNodes` before reading any coverage ratio: that is the
+  difference between the machines something declared and the machines you are running.
 - **`corpus`** your own published examples, checked at rest. A template nobody has deployed appears
   in no estate reading, and it is the one somebody copies.
 
@@ -75,17 +83,18 @@ one survived.
   is reachable with the same tenant credential as everything else; the per-namespace proxy needs a
   namespace-scoped credential on a one-hour clock. A machine created in a namespace by hand, outside
   any deployment, is therefore not counted.
-- **Its population is the machines a deployment record names.** A cluster's node machines are
-  created by the cluster controller, so no deployment record describes one and none appear here.
-  They are not ungoverned by nature: they inherit their cluster's declaration, and the cluster is an
-  ordinary template resource carrying ordinary labels. Read the record as coverage of the
-  machines a template declared, not of everything the estate is running.
+- **It sees only machines inside a Supervisor namespace.** The population is read from the
+  namespace folder tree, so an ordinary vSphere VM elsewhere in the estate is outside this
+  question, by design: nothing declares metadata for it on this path.
+- **It does not read the cluster objects' labels.** It reports which clusters a deployment record
+  describes, which is what decides whether a node has anything to inherit; whether the inherited
+  values then landed is the projection question, and the loop answers it per machine.
 - **It does not judge whether a declared value is correct**, only whether it arrived. A machine
   labelled with the wrong application is projected faithfully.
 - **It writes nothing.** Converging the estate is a separate tool, and it is deliberately not in
   this folder: a script that reports and a script that changes things should not be the same script.
 
-## Three ways this answers wrongly
+## Four ways this answers wrongly
 
 Each of these was a defect in this script before it was a warning here.
 
@@ -97,3 +106,7 @@ Each of these was a defect in this script before it was a warning here.
 3. **Reading `${input.environment}` as a literal.** It is a placeholder resolved at deploy time. The
    thing to check is the input's declared enum, because that is the complete set of values a
    deployer can choose.
+4. **Counting only the machines a deployment record names.** A cluster's nodes are the majority of
+   a real estate and no deployment record describes one. A ratio taken over the named machines
+   alone is a true number about a fraction of the estate, reported as though it were about the
+   estate.
