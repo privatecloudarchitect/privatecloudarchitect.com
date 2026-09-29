@@ -1,0 +1,260 @@
+{
+  "captured": "2026-09-29T04:19:50Z",
+  "layers": {
+    "L1 workload domains": {
+      "domains": [
+        {
+          "name": "{{domain-1}}",
+          "type": "MANAGEMENT",
+          "status": "ACTIVE",
+          "clusters": 1,
+          "nsx": "{{nsx-1}}",
+          "sharesManagementSso": true
+        },
+        {
+          "name": "{{domain-2}}",
+          "type": "VI",
+          "status": "ACTIVE",
+          "clusters": 3,
+          "nsx": "{{nsx-2}}",
+          "sharesManagementSso": false
+        }
+      ],
+      "gates": [
+        {
+          "gate": "every domain ACTIVE",
+          "status": "PASS",
+          "detail": "2 of 2 domains ACTIVE"
+        }
+      ]
+    },
+    "L3 Supervisors": {
+      "supervisors": [
+        {
+          "vcenter": "{{vcenter-1}}",
+          "supervisor": "{{supervisor-1}}",
+          "config_status": "RUNNING",
+          "kubernetes_status": "READY",
+          "zones": [
+            {
+              "zone": "{{zone-1}}",
+              "type": "MANAGEMENT",
+              "status": "READY",
+              "markedForRemoval": false,
+              "tenantNamespaces": 2,
+              "serviceNamespaces": 7
+            },
+            {
+              "zone": "{{zone-2}}",
+              "type": "MANAGEMENT",
+              "status": "READY",
+              "markedForRemoval": false,
+              "tenantNamespaces": 1,
+              "serviceNamespaces": 7
+            },
+            {
+              "zone": "{{zone-3}}",
+              "type": "MANAGEMENT",
+              "status": "READY",
+              "markedForRemoval": false,
+              "tenantNamespaces": 1,
+              "serviceNamespaces": 7
+            }
+          ],
+          "identityProviders": 1,
+          "identityHeldByAutomation": 1,
+          "serviceNamespaces": 7,
+          "tenantNamespaces": 4
+        }
+      ],
+      "gates": [
+        {
+          "gate": "{{supervisor-1}} RUNNING and READY",
+          "status": "PASS",
+          "detail": "RUNNING / READY, 3 zone(s) bound (3 management)"
+        },
+        {
+          "gate": "{{supervisor-1}} no zone left half-drained",
+          "status": "PASS",
+          "detail": "0 zone(s) marked for removal, 0 tenant namespace(s) still on them"
+        },
+        {
+          "gate": "{{supervisor-1}} identity slot held by Automation or empty",
+          "status": "PASS",
+          "detail": "1 external provider(s), 1 of them this Automation"
+        }
+      ]
+    },
+    "L4 provider plane": {
+      "sddcManagers": 2,
+      "vcenters": [
+        {
+          "name": "{{vcenter-2}}",
+          "linkedToSddcManager": false,
+          "classicOnly": true,
+          "connected": true,
+          "licenseStatus": "LICENSED"
+        },
+        {
+          "name": "{{vcenter-3}}",
+          "linkedToSddcManager": true,
+          "classicOnly": true,
+          "connected": true,
+          "licenseStatus": "LICENSED"
+        },
+        {
+          "name": "{{vcenter-1}}",
+          "linkedToSddcManager": true,
+          "classicOnly": false,
+          "connected": true,
+          "licenseStatus": "LICENSED"
+        }
+      ],
+      "nsxManagers": 3,
+      "regions": [
+        {
+          "name": "{{region-1}}",
+          "status": "READY",
+          "nsx": "{{nsx-2}}",
+          "supervisors": 1,
+          "storagePolicies": 3
+        }
+      ],
+      "zones": 3,
+      "providerGateways": 1,
+      "ipBlocks": 5,
+      "gates": [
+        {
+          "gate": "every region READY",
+          "status": "PASS",
+          "detail": "1 of 1 region(s) READY"
+        }
+      ]
+    },
+    "L5 tenancy": {
+      "organizations": [
+        {
+          "name": "{{org-1}}",
+          "enabled": false,
+          "holds": {
+            "quotas": 1,
+            "regionalNetworking": 1,
+            "vpcs": 1,
+            "namespaces": 0
+          }
+        },
+        {
+          "name": "{{org-2}}",
+          "enabled": true,
+          "holds": {
+            "quotas": 0,
+            "regionalNetworking": 0,
+            "vpcs": 0,
+            "namespaces": 0
+          }
+        },
+        {
+          "name": "{{org-3}}",
+          "enabled": true,
+          "holds": {
+            "quotas": 1,
+            "regionalNetworking": 1,
+            "vpcs": 1,
+            "namespaces": 4
+          }
+        },
+        {
+          "name": "{{org-4}}",
+          "enabled": true,
+          "holds": {
+            "quotas": 0,
+            "regionalNetworking": 1,
+            "vpcs": 1,
+            "namespaces": 0
+          }
+        },
+        {
+          "name": "{{org-5}}",
+          "enabled": true,
+          "holds": {
+            "quotas": 0,
+            "regionalNetworking": 0,
+            "vpcs": 0,
+            "namespaces": 0
+          }
+        }
+      ],
+      "residue": [
+        "{{org-1}}"
+      ],
+      "gates": [
+        {
+          "gate": "no disabled organization still holding capacity or networking",
+          "status": "FAIL",
+          "detail": "1 disabled organization(s) still hold quota, networking, VPCs or namespaces"
+        }
+      ]
+    },
+    "L6 unmanaged VM lists": {
+      "lists": [
+        {
+          "vcenter": "{{vcenter-2}}",
+          "records": 9,
+          "platformByName": {
+            "Supervisor control plane": 0,
+            "load balancer service engine": 0,
+            "NSX Edge": 2
+          },
+          "fieldsPerRecord": [
+            "cpuCount",
+            "memory",
+            "moRef",
+            "name",
+            "path",
+            "state",
+            "storage",
+            "virtualHardwareVersion"
+          ]
+        },
+        {
+          "vcenter": "{{vcenter-3}}",
+          "records": 54,
+          "platformByName": {
+            "Supervisor control plane": 0,
+            "load balancer service engine": 0,
+            "NSX Edge": 2
+          },
+          "fieldsPerRecord": [
+            "cpuCount",
+            "memory",
+            "moRef",
+            "name",
+            "path",
+            "state",
+            "storage",
+            "virtualHardwareVersion"
+          ]
+        },
+        {
+          "vcenter": "{{vcenter-1}}",
+          "records": 31,
+          "platformByName": {
+            "Supervisor control plane": 3,
+            "load balancer service engine": 4,
+            "NSX Edge": 2
+          },
+          "fieldsPerRecord": [
+            "cpuCount",
+            "memory",
+            "moRef",
+            "name",
+            "path",
+            "state",
+            "storage",
+            "virtualHardwareVersion"
+          ]
+        }
+      ]
+    }
+  }
+}
