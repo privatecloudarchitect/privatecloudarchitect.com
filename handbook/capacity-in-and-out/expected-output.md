@@ -4,7 +4,7 @@ The printed ladder from the reference estate, 2026-09-29, with three vCenters na
 your counts will differ. Exit code 2, because one gate did not pass.
 
 ```
-capacity ladder, read 2026-09-29T04:19:50Z
+capacity ladder, read 2026-09-29T05:47:10Z
 
 L1 workload domains
   [PASS] every domain ACTIVE: 2 of 2 domains ACTIVE

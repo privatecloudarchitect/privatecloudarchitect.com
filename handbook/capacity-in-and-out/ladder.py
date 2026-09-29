@@ -6,10 +6,11 @@ This reads the four layers a platform team owns directly, prints each one's gate
 landed, and the same read run in reverse before a leave), and reports the residue that blocks the next step:
 
   L1  WORKLOAD DOMAINS on SDDC Manager: type, status, clusters, the NSX Manager behind each, and whether each
-      domain shares the management domain's SSO domain (a domain that does not can change owner more cleanly);
+      domain shares the management domain's SSO domain (one that does not has one fewer shared dependency
+      to untangle if it ever changes owner);
   L3  SUPERVISORS on vCenter: status, zones bound, service namespaces against tenant namespaces, and who holds
-      the Supervisor's external identity provider slot. A Supervisor takes one, and when a region is built
-      over it, Automation takes it;
+      the Supervisor's external identity provider slot. A Supervisor takes one and refuses a second, and on
+      the reference estate Automation holds it;
   L4  the AUTOMATION PROVIDER plane: registered SDDC Managers, vCenters and NSX Managers, regions with their
       one NSX Manager, zones, provider gateways and IP blocks;
   L5  TENANCY: organizations, each one's quota per region (a virtual datacenter), regional networking, default

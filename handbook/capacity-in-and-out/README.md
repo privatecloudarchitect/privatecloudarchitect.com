@@ -39,8 +39,8 @@ administrator, which is why this takes a provider bearer rather than a tenant on
 | L1 workload domains | every domain `ACTIVE` | nothing joins on top of a domain mid-operation |
 | L3 Supervisors | `RUNNING` and `READY` | the region and every namespace sit on it |
 | L3 Supervisors | no zone left half-drained | a zone marked for removal refuses new and restarting workloads and deletes itself only once empty; tenant namespaces still on it are the drain in progress |
-| L3 Supervisors | identity slot held by Automation or empty | a Supervisor takes one external identity provider, Automation registers itself into that slot when it consumes the Supervisor, and a second provider is refused |
-| L4 provider plane | every region `READY` | a region is one NSX Manager and its Supervisors, fixed for life |
+| L3 Supervisors | identity slot held by Automation or empty | a Supervisor takes one external identity provider and refuses a second; on the reference estate Automation holds that slot. At which step of region onboarding it registers was not observed |
+| L4 provider plane | every region `READY` | a region is one NSX Manager and its Supervisors; the vendor documentation says its name and NSX Manager cannot be edited |
 | L5 tenancy | no disabled organization still holding capacity or networking | disabling an organization releases nothing: its quota keeps the Supervisor pinned in the region, and its networking and VPC stay realized |
 
 The unmanaged VM lists are reported rather than gated: the count per vCenter, how many of the records are the
