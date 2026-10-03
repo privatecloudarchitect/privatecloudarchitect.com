@@ -286,6 +286,16 @@ success the agent mints a per-service availability object (`System Attributes|av
 the 0-to-1 scale) that is a child of the guest OS object, so it renders through the same vSphere
 World traversal the layer-4 OS views use; the dashboard's agent-service view binds it.
 
+**Watch point for 4e on VCF Operations 9.1.1.0.** The VCF Operations 9.1.1.0 release notes list a
+known issue for this step: "Avoid adding new service instances on a product-managed Telegraf agent
+in VCF Operations 9.1.1.0, because they cannot be reliably edited or deleted afterward." Data
+collection for existing and newly added service instances continues normally. The only documented
+remediation is to reinstall the Telegraf agent without keeping its existing configuration and re-add
+every service instance; editing the agent's `.conf` file by hand does not work. On a 9.1.1.0
+instance, do not add a service instance until a later release lists the issue as resolved, and
+treat any instance you must add before then as fixed in place. Step 4e was proven on 9.1.0 and has
+not been run on 9.1.1.
+
 ## 5 · The computed layer: super metrics and policy enablement
 
 Only the fleet reachability row and the per-check delivery column are computed content; import
