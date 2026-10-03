@@ -67,7 +67,7 @@ figcaption b{color:var(--ink)}
 .trade{margin-top:18px;border-left:3px solid var(--amber);background:var(--amber-bg);padding:12px 16px;border-radius:0 6px 6px 0}
 .trade h3{margin-bottom:6px}
 .trade p{margin:0 0 .5em;font-size:.97rem}
-.trap{border-left-color:var(--rose);background:var(--rose-bg)}
+.watch{border-left-color:var(--rose);background:var(--rose-bg)}
 .rule-strip{margin-top:18px;border-left:3px solid var(--teal);background:var(--teal-bg);padding:12px 16px;border-radius:0 6px 6px 0}
 .rule-strip p{margin:0;font-size:.97rem}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -154,9 +154,9 @@ figure .strip svg{width:100%}
     <span><i class="sw amber"></i>Real-Time Metrics</span>
     <span><i class="sw plum"></i>Agents, collectors, and network hardware</span>
     <span><i class="sw olive"></i>The CMDB</span>
-    <span><i class="sw rose"></i>Loss, limits, traps</span>
+    <span><i class="sw rose"></i>Loss, limits, watch points</span>
   </div>
-  <div class="who"><span>Grounding: VCF 9.1, one reference estate, live reads 2026-09-14 to 2026-09-16, re-verified 2026-09-21</span><span>VMware guidance labeled doc, measured facts labeled live</span></div>
+  <div class="who"><span>Grounding: VCF 9.1, one reference estate, live reads 2026-09-14 to 2026-09-22</span><span>VMware guidance labeled doc, measured facts labeled live</span></div>
   <ol class="index" aria-label="Plates in reading order">
     <li><span class="no">01</span><a href="#p1">Three planes read one host</a></li>
     <li><span class="no">02</span><a href="#p2">What each store keeps and loses</a></li>
@@ -167,7 +167,7 @@ figure .strip svg{width:100%}
     <li><span class="no">07</span><a href="#p7">Decide in region, ship the thin layer</a></li>
     <li><span class="no">08</span><a href="#p8">Collection domains beyond vSphere</a></li>
     <li><span class="no">09</span><a href="#p9">One key across every system</a></li>
-    <li><span class="no">10</span><a href="#p10">Reading Real-Time Metrics without getting burned</a></li>
+    <li><span class="no">10</span><a href="#p10">The seven rules for reading Real-Time Metrics</a></li>
     <li><span class="no">11</span><a href="#p11">Two planes, one set of samples: the proof, and the calls</a></li>
     <li><span class="no">12</span><a href="#p12">Tradeoffs at a glance</a></li>
   </ol>
@@ -316,7 +316,7 @@ figure .strip svg{width:100%}
     </ul></div>
     <div><h3>What this settles for the raw-versus-real-time argument</h3><ul>
       <li>Utilization, rightsizing, and capacity read means and long windows; the 5-minute grain serves them without loss that matters.</li>
-      <li>Contention bursts are the one thing the mean hides badly; they belong to the peak keys or to the real-time plane, for a scoped set, in region.</li>
+      <li>The mean hides contention bursts badly; they belong to the peak keys or to the real-time plane, for a scoped set, in region.</li>
       <li>Live troubleshooting is not a BI decision; it rides the real-time plane and stays there.</li>
     </ul></div>
   </div>
@@ -446,7 +446,7 @@ figure .strip svg{width:100%}
       <li>Instanced families (virtual-disk latency, IOPS, outstanding IO; network packets and drops) carry the VM value under the Aggregate of all instances instance; the plain key returns nothing <span class="num">live</span>.</li>
     </ul></div>
   </div>
-  <div class="trade trap"><h3>Trap</h3><p>A catalog lists more keys than a resource collects. On the reference VM, <span class="num">273</span> statkeys are collected out of <span class="num">983</span> in the adapter's VirtualMachine catalog, and seven of the nineteen catalog peak keys are not among them. Read a resource's own statkey list once and bind those names; a view, a super metric, or an extract bound to a catalog name renders a dash and teaches nothing.</p></div>
+  <div class="trade watch"><h3>Watch point</h3><p>A catalog lists more keys than a resource collects. On the reference VM, <span class="num">273</span> statkeys are collected out of <span class="num">983</span> in the adapter's VirtualMachine catalog, and seven of the nineteen catalog peak keys are not among them. Read a resource's own statkey list once and bind those names; a view, a super metric, or an extract bound to a catalog name renders a dash and teaches nothing.</p></div>
 </section>
 
 <section class="plate" id="p6">
@@ -466,7 +466,7 @@ figure .strip svg{width:100%}
       <tr><td>10,000 VMs x 20 statkeys, one day</td><td><span class="num">5-minute 57.6 M points, 1.7 GB, about 20 min · hourly 4.8 M points, 144 MB, about 100 s</span></td><td>extrapolation from the coefficients</td></tr>
       <tr><td>30-day backfill</td><td><span class="num">52 GB at 5-minute · 4.3 GB hourly</span></td><td>extrapolation</td></tr>
     </tbody></table></div>
-  <div class="trade trap"><h3>The outage lesson</h3><p>On the reference estate no metrics were stored for any vCenter adapter for nineteen days during a 9.1.0 upgrade with snapshot reverts. An extract without a reconciliation step would have landed zero demand for every object. A fleet-wide plateau in the age of the newest point is the signature of a collection outage, not of a quiet estate.</p></div>
+  <div class="trade watch"><h3>The outage lesson</h3><p>On the reference estate no metrics were stored for any vCenter adapter for nineteen days during a 9.1.0 upgrade with snapshot reverts. An extract without a reconciliation step would have landed zero demand for every object. A fleet-wide plateau in the age of the newest point is the signature of a collection outage, not of a quiet estate.</p></div>
 </section>
 
 <section class="plate" id="p7">
@@ -545,11 +545,11 @@ figure .strip svg{width:100%}
       <li>The Operations management pack maps <span class="num">object_id</span> from <span class="num">VMEntityObjectID</span> and <span class="num">vcenter_uuid</span> from <span class="num">VMEntityVCID</span>, the same pair.</li>
     </ul></div>
   </div>
-  <div class="trade trap"><h3>Trap</h3><p>Keying on the MOID alone works until the second vCenter, keying on the name works until the first rename, and keying on the pair works until the machine moves. All three fail silently: rows join to the wrong object, or to no object, and every decision downstream inherits it. Measured on one estate: a relocated VM left two Operations resources sharing an instance UUID, one holding 123 hourly samples and the other holding 1.</p></div>
+  <div class="trade watch"><h3>Watch point</h3><p>Keying on the MOID alone works until the second vCenter, keying on the name works until the first rename, and keying on the pair works until the machine moves. All three fail silently: rows join to the wrong object, or to no object, and every decision downstream inherits it. Measured on one estate: a relocated VM left two Operations resources sharing an instance UUID, one holding 123 hourly samples and the other holding 1.</p></div>
 </section>
 
 <section class="plate" id="p10">
-  <div class="plate-hd"><span class="no">Plate 10</span><div><h2>Reading Real-Time Metrics without getting burned</h2><div class="cap">seven behaviors of the PromQL API that an extractor must encode, all measured</div></div></div>
+  <div class="plate-hd"><span class="no">Plate 10</span><div><h2>The seven rules for reading Real-Time Metrics</h2><div class="cap">seven behaviors of the PromQL API that an extractor must encode, all measured</div></div></div>
   <figure>
   <div class="panel"><h4>1 · The selector decides what you see, not the store</h4><svg viewBox="0 0 1200 168" role="img" aria-label="The same 2-second series read two ways: a range vector returns ten samples twenty seconds apart; a two-second-step range query returns ninety-one points changing every two seconds.">
     <text x="40.0" y="26.0" class="t-mono" data-max="420">cpu.utilization.PCORE{profile=&quot;ESX_TOP_...&quot;}[3m]</text>
@@ -681,7 +681,7 @@ figure .strip svg{width:100%}
     <line x1="573.8" y1="92.0" x2="573.8" y2="100.0" class="axis"/>
     <text x="573.8" y="116.0" class="t-mono" text-anchor="middle" data-max="30">15d</text>
   </svg><p>ESX Top is 24 hours by setting, yet about 80 hours were served on one source until the store cut it back in a single 24-hour step, while the other source kept its old cut; a 16.6-hour test at a one-hour setting changed neither horizon. Extract 2-second data within hours, and never plan on the setting.</p></div></div><div class="panel"><h4>5 · Identity and tokens</h4><p>sourceId is required and not validated: a wrong id, or a name outside that source's catalog, returns a successful empty answer. A vCenter is addressed by its instance UUID, an NSX manager by its cluster UUID.</p><p>The service JWT lasts 35 minutes from the bearer session it was exchanged from, not from the exchange; re-mint the bearer and the JWT together on one schedule, and never let a cleanup path depend on an exchange.</p></div><div class="panel"><h4>6 · The dialect, read against VMware guidance's own page</h4><div class="tbl"><table aria-label="PromQL dialect facts verified on the build"><thead><tr><th>Fact</th><th>As the engine answered it</th></tr></thead><tbody><tr><td>Labels are lowercase</td><td>VMware guidance's <span class="num">HOST='host-17'</span> returns 0 series with status success; <span class="num">host</span> matches</td></tr><tr><td>offset parses and does nothing</td><td>61 of 61 points identical to the unshifted series; VMware guidance lists it unsupported</td></tr><tr><td>Subqueries run on instant queries only</td><td>a subquery or a bare range vector as the outermost expression of a range query is a parse error, and the widget always runs a range query</td></tr><tr><td>rate() applies counter semantics to a gauge</td><td>on a gauge with 96 decreases in 181 samples, no negative value; VMware guidance's rate-on-CPU example overstates change</td></tr><tr><td>topn_sum(n, x) is a VCF extension</td><td>the n series with the highest sum over the query range, raw values, stable legend; by is accepted and ignored; topk is per step</td></tr><tr><td>absent() returns 1 for an unmatched selector</td><td>the reconcile-absence guard as a query; an unknown name or an unmatched label returns one series valued 1</td></tr></tbody></table></div></div>
-  <figcaption><b>How to read it.</b> Panel 1 is the mistake this atlas itself made once: a range vector returns a 20-second grid for every profile, and reading that as the store's grid produces a confident wrong claim. The other panels are the rules an extractor writes into code, not into a runbook; panel 6 is the dialect itself, read against VMware guidance's own page.</figcaption>
+  <figcaption><b>How to read it.</b> Panel 1 is the misreading to avoid: a range vector returns a 20-second grid for every profile, and reading that as the store's grid produces a confident wrong claim. The other panels are the rules an extractor writes into code, not into a runbook; panel 6 is the dialect itself, read against VMware guidance's own page.</figcaption>
   </figure>
   <div class="rule-strip"><p><b>The extractor's seven lines.</b> Pin the profile with a label matcher. Read cardinality with <span class="num">count by (profile)</span> and partition by host so no call nears 101. Measure cadence as value-change spacing at a fine step. Stamp rows with sourceId and profile. Treat the truncation warning and an empty answer as errors to investigate, never as zeros. Write labels lowercase and take the names from the metadata endpoint, never from a picker. Never rate a gauge.</p></div>
 </section>
@@ -746,7 +746,7 @@ figure .strip svg{width:100%}
       <tr><td>Retention on the platform</td><td>raise every retention key to be safe</td><td>storage on the node, and no change to what the warehouse must keep</td><td>defaults; extract each grain once, inside its horizon <span class="num">live</span></td></tr>
       <tr><td>Agents on a guest</td><td>one agent per monitoring tool, several per host</td><td>duplicate load and two truths per guest, the same failure as a second vCenter pull</td><td>one collector per domain, one agent per host; open-source Telegraf posting to Operations, or a neutral collector, never both on one guest <span class="num">doc</span></td></tr>
       <tr><td>Domains beyond vSphere</td><td>route every domain through VCF Operations to have one platform</td><td>ties the agent and network domains to the VCF stack and its node limits; devices that run no agent gain nothing from it</td><td>one collector per domain, raw in region, a thin tier per domain to the warehouse; Operations owns the vSphere lane and whatever enters through a door: open-source Telegraf, the builder, a stable pack, the API push <span class="num">doc</span></td></tr>
-      <tr><td>Getting data into Operations</td><td>install every marketplace pack, and a managed agent on every guest</td><td>paths whose direction is not stable, and a node ceiling spent on packs nobody reads</td><td>the Management Pack Builder for any API or Prometheus source, open-source Telegraf for guests, the packs whose direction is stable, the API push for your own numbers <span class="num">doc</span></td></tr>
+      <tr><td>Getting data into Operations</td><td>install every marketplace pack, and a managed agent on every guest</td><td>paths whose direction is not stable, and a node ceiling spent on packs whose data no decision uses</td><td>the Management Pack Builder for any API or Prometheus source, open-source Telegraf for guests, the packs whose direction is stable, the API push for your own numbers <span class="num">doc</span></td></tr>
       <tr><td>Keys from a picker</td><td>copy a metric key from the PromQL Viewer's Metrics tab, or a statkey from the adapter catalog</td><td>the tab lists 1,345 names, the engine 437, a source 171 to 175, and four tab keys differ from the served name by letter case; the adapter catalog lists 983 VM keys where a VM collects 273</td><td>read the metadata endpoint per source and a resource's own statkey list, and bind what they say <span class="num">live</span></td></tr>
       <tr><td>Joining the two planes</td><td>land real-time and store values for one key in one column</td><td>the guest run queue is per vCPU in the store and raw on the plane, the disk queue divided by 100; the rest agree within a few percent</td><td>compare one object per key first and scale; the guest family is exact, network usage within 5 percent <span class="num">live</span></td></tr>
       <tr><td>Absence in an extract</td><td>land a missing resource as zero</td><td>a nineteen-day outage would have read as zero demand across the estate</td><td>reconcile against inventory and collector health first <span class="num">live</span></td></tr>
@@ -762,7 +762,7 @@ figure .strip svg{width:100%}
 
 <footer class="foot">
   <p>Source of record: the Collect Once, Decide at Source charter and its lab records. VMware guidance pages read for this atlas, by title on Broadcom TechDocs for VCF 9.1: Real-Time Metrics Details (the policy workspace), Real-time Data in the Workbench, List of Global Settings, Deploy Real-Time Metrics, the VCF Operations cloud proxy and topology pages, and the 9.0 sizing knowledge base article; Zabbix 7.0 LTS documentation for history, trends, proxies, export, and SNMP items, the current LTS line, re-read on the 7.4 pages; ServiceNow documentation for the vCenter CMDB model. For the collection domains beyond vSphere: the OpenTelemetry Collector pages (Collector, Agent deployment pattern, Gateway deployment pattern) and the Host Metrics and SNMP receiver READMEs; the Telegraf plugin directory and the BasicStats and SNMP input READMEs; the Prometheus node_exporter, windows_exporter, and snmp_exporter READMEs, Prometheus Agent Mode, and Defining recording rules; and, on Broadcom TechDocs for VCF 9.1, Monitoring Applications Using Open Source Telegraf, What Are The Different Types of Telegraf Agents in VCF Operations, Management Pack Builder, List of Management Packs, Management Pack for Network Devices, Key Features of the vSphere Supervisor Management Pack, the VCF Operations what's new for 9.1, Virtual Machine Metrics, the PromQL Widget and PromQL Queries pages, the per-provider Real-Time Metrics list linked from the Real-Time Metrics policy page, and, for VCF Operations for Networks, Enabling IPFIX Configuration; the vSphere Web Services API for PerformanceManager counters and PerfMetricIntSeries; the VCF blog of 2026-09-03 on the AI Assistant for VCF; the DX NetOps and AppNeta product pages on Broadcom's network observability site; the suite API push routes from the 9.1 public OpenAPI document.</p>
-  <p>Measured facts come from live reads of one VCF 9.1 estate between 2026-09-14 and 2026-09-16 and generalize as mechanisms; sizes and coefficients are inputs to your own estimate. The ten queries, the function table, and the catalog's key checks are regenerated from the companion's reference files.</p>
+  <p>Measured facts come from live reads of one VCF 9.1 estate between 2026-09-14 and 2026-09-22 and generalize as mechanisms; sizes and coefficients are inputs to your own estimate. The ten queries, the function table, and the catalog's key checks are regenerated from the companion's reference files.</p>
 </footer>
 <script id="atlas-runtime">
 (function(){

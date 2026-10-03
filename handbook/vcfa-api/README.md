@@ -10,7 +10,7 @@ look on your estate, not a sample someone typed from memory.
 | File | What it is |
 |---|---|
 | `capture.py` | Performs the chapter's calls against your own VCF Automation and writes the record: flow A (the stored refresh token traded for a bearer, then one read on each API surface), flow B (the Basic session login whose bearer arrives in a response header), the count of effective rights under each bearer, and the rights present under one and absent under the other, by name. Read-only; stdlib Python; no token value is printed or written, and the script refuses to write a record in which any secret, host, or organization survived. |
-| `calls.json` | The record from the reference estate, 2026-09-16: eight exchanges with their request lines, headers, bodies, status codes, elapsed times, and each bearer's own expiry claim. |
+| `calls.json` | The record from the reference estate, 2026-09-21: eight exchanges with their request lines, headers, bodies, status codes, elapsed times, and each bearer's own expiry claim. |
 | `expected-output.md` | The transcript of that run. |
 
 ## Run it
@@ -29,7 +29,7 @@ python3 capture.py
 
 ## Scope, stated plainly
 
-- Recorded on one VCF Automation 9.1 organization on 2026-09-16. Your status codes and shapes should match;
+- Recorded on one VCF Automation 9.1 organization on 2026-09-21. Your status codes and shapes should match;
   your counts, elapsed times, and the rights delta may differ with your roles.
 - Read-only: nothing is created or changed. The record replaces the host, the organization, the user, the
   DNS domain, every token, and every identifier, and the script refuses to write it if any of them survived.

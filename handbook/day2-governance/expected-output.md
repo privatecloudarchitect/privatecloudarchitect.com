@@ -65,7 +65,7 @@ the change would touch along with what each one's effective definition would bec
 
 ## Authorities, as the plane writes them
 
-Read off the decision log rather than from documentation. Three prefixes appear, and the plane lowercases every
+Read off the decision log. Three prefixes appear, and the plane lowercases every
 authority it stores:
 
 | Prefix | As you write it | What it names | Trailing `@` |

@@ -50,7 +50,7 @@ only evidence once you have watched long enough for it to have appeared.
 
 Both entries carry one. `python3 discover_flows.py --self-test` runs Phases 4-5 on a twenty-two-flow
 synthetic fixture; `python3 discover_arbitration.py --self-test` runs the whole Phase 4-7 pipeline on a
-fixture that exercises every path (the identity anchor typing an ESXi host, a flow-only shared service,
+seven-VM fixture covering five cases (the identity anchor typing an ESXi host, a flow-only shared service,
 a four-lens high-confidence application, a data-tier-in-dmz conflict, and a low-information VM). Each
 compares against a golden report, no vRNI, deterministic. Run them to confirm the analysis before you
 point anything at an estate; the pure cores carry no I/O, which is what makes them offline-checkable.

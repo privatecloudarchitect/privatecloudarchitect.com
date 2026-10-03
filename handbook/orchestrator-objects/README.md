@@ -44,8 +44,9 @@ three different keys, and nothing in the console shows you which mechanism is in
 - a **workflow** points at an **action** by name path, with no identifier at all.
 
 The first two are appliance-specific, so content that works in one place imports cleanly somewhere
-else and fails at run time. The third is portable. `--bindings` prints all three for a workflow you
-name, which is the fastest way to see the asymmetry on your own content.
+else and fails at run time. The third is portable. `--bindings` prints the configuration binding and
+the action binding for a workflow you name, which is the fastest way to see the asymmetry on your own
+content; the runtime binding lives inside a packaged action, so it is not on that output.
 
 ## Reading the record
 

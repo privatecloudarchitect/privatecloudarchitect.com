@@ -17,8 +17,8 @@ The chain has five links and they fail in a fixed order, because each one is the
   3. THE GROUPS. Present, and resolving to how many members. A tag-rule group with zero members is link 2
      reported one layer up;
   4. THE DERIVE. Whether the host and cluster groups can be derived from where the tagged machines run. The
-     estate refuses this when the VMs group is empty, on purpose, so an empty workload half cannot blank a
-     populated hardware half;
+     estate refuses this when the VMs group is empty, on purpose, so an empty VMs group cannot blank the
+     derived host and cluster groups;
   5. THE PARITY. Whether anything ends up governed, which `audit_deployment.py` reports in full.
 
 Reports the first link that is not complete, because everything downstream of it is a consequence rather
@@ -219,7 +219,7 @@ def main():
         verdict = "WOULD REFUSE" if v["wouldRefuse"] else "has members to derive from"
         print(f"     {posture:<28} VMs group {v['vmsGroupMembers']} member(s): {verdict}")
     print(f"     the guard is `not vm_ids` in reconcile_infra_groups.py, read per posture, so an empty "
-          f"workload half cannot blank a populated hardware half")
+          f"VMs group cannot blank the derived host and cluster groups")
 
     # ---- the verdict: the first incomplete link
     stops_at = None

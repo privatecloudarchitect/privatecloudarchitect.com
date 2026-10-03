@@ -2,12 +2,13 @@
 
 One run of `inventory.py` against a VCF Automation 9.1 organization on 2026-09-18, with `naming-standard.json`
 beside it so the naming audit runs. Every estate name is a placeholder the script assigned in the order it met
-the object; the audit prints conformance counts and never a name.
+the object; the audit prints conformance counts and never a name. The kind counts are distinct kinds:
+SupervisorNamespace is served in two API versions and counts once, so `taxonomy.json` holds 100 entries and 99 kinds.
 
 ```text
 inventory.py: the construct model read through the Cloud Consumption Interface, read-only
 
-  taxonomy: 13 VMware API groups, 99 kinds; 60 published at the top level, 40 under a project
+  taxonomy: 13 VMware API groups, 99 kinds; 60 published at the top level, 39 under a project
   published: 1 region(s), 3 zone(s), 3 namespace class(es), 1 VPC(s), 3 subnet(s), 3 storage-class quota(s), 16 VM class summaries
   {{project-1}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 4, 'roles': ['admin', 'edit', 'edit_adv'], 'fields': ['roleRef', 'subjects']}; images 3;
      {{namespace-1}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-3}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True}; workloads {'virtualMachines': 7, 'vk
@@ -27,7 +28,7 @@ inventory.py: the construct model read through the Cloud Consumption Interface, 
      virtualmachine           1 of 15  refine  <app>-<role>-<ordinal>  e.g. checkout-web-01
      vks-cluster              2 of 4   refine  <app>-<env>-vks  e.g. checkout-prod-vks
 
-wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only); every estate name replaced by a stable label
+wrote taxonomy.json (99 kinds) and estate.json (2 project(s)) and naming.json (counts only); every estate name replaced by a stable label
 ```
 
 Read the `bound` map as the namespace's four create-time bindings. `zone` is not a `zoneName` field on the
@@ -71,7 +72,7 @@ crossroads put to the platform rather than asserted:
        POST  an import naming a namespace that exists nowhere           HTTP 400
              Namespace import is not supported for a supervisor associated with NSX Manager.
 
-wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only) and bindings.json (5 refused attempts plus 3 on the Tenant Manager); every estate name replaced by a stable label
+wrote taxonomy.json (99 kinds) and estate.json (2 project(s)) and naming.json (counts only) and bindings.json (5 refused attempts plus 3 on the Tenant Manager); every estate name replaced by a stable label
 ```
 
 Read the five rows as two answers.

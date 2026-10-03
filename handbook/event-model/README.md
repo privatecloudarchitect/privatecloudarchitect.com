@@ -31,8 +31,11 @@ which list you are working against before you write anything.
 
 ## What the record holds
 
-`events.json` is one create and one delete of a three-machine template, with every payload read out of
-the Orchestrator run logs. It carries the topic catalogue, the per-phase event counts, the field names
+`events.json` comes from two runs of one create and one delete of a three-machine template: a first run
+with eight subscriptions on the eight deployment lifecycle topics, whose events were read from the broker's
+event log (the per-phase counts and the action topics' zero come from it), and a second run with two
+console-made subscriptions, whose payloads were read out of the Orchestrator run logs. Its `method` string
+describes the second run only. It carries the topic catalog, the per-phase event counts, the field names
 a payload carries, the three fields that differ between a machine and a bootstrap secret, the kinds a
 resource lookup returns, and the four subscription binding forms with what each one does. No host
 name, identifier or credential is in it.

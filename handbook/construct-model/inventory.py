@@ -357,9 +357,12 @@ def main():
                     st2, items = c.items(f"/apis/{v['groupVersion']}/{res['name']}")
                     entry["count"] = len(items) if st2 == 200 else f"HTTP {st2}"
                 taxonomy.append(entry)
+    # Count distinct kinds, not entries: a kind served in two API versions is listed once per version.
     kinds = sorted({(e["group"], e["kind"]) for e in taxonomy})
+    top = {(e["group"], e["kind"]) for e in taxonomy if not e["namespaced"]}
+    under = {(e["group"], e["kind"]) for e in taxonomy if e["namespaced"]}
     print(f"  taxonomy: {len({e['group'] for e in taxonomy})} VMware API groups, {len(kinds)} kinds; "
-          f"{sum(1 for e in taxonomy if not e['namespaced'])} published at the top level, {sum(1 for e in taxonomy if e['namespaced'])} under a project")
+          f"{len(top)} published at the top level, {len(under)} under a project")
     # ---- 2. the estate: published objects
     def count(entry_resource):
         for e in taxonomy:
@@ -511,7 +514,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     open(os.path.join(out_dir, "taxonomy.json"), "w", encoding="utf-8").write(text + "\n")
     open(os.path.join(out_dir, "estate.json"), "w", encoding="utf-8").write(text2 + "\n")
-    wrote = "taxonomy.json (%d kinds) and estate.json (%d project(s))" % (len(taxonomy), len(projects))
+    wrote = "taxonomy.json (%d kinds) and estate.json (%d project(s))" % (len({(e["group"], e["kind"]) for e in taxonomy}), len(projects))
     if naming is not None:
         # The naming record may only carry values that came from the published standard, plus counts. Checking that
         # by whitelist rather than by scanning for estate names is strictly stronger, and it does not misfire when an

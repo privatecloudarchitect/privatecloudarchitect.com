@@ -10,7 +10,7 @@ plates are rendered from the records in this folder; run the script and you have
 |---|---|
 | `naming-standard.json` | The object naming standard: for each of nineteen constructs, the grammar its name must follow, a name that satisfies it, and the anchored pattern that enforces it. Published from the same machine-readable module the estate's own linter runs, with a neutral region token, and every example re-checked against the pattern it illustrates. `inventory.py` reads this file to audit your names; the chapter's plates render it. |
 | `inventory.py` | Read-only. Discovers every VMware API group the interface declares and records each kind with its scope (published at the top level, or under a project), its verbs, and how many of each top-level kind the organization can see; then walks the tree: projects, the binding kinds each carries (regions, classes, VPCs, subnets, service engine groups, infra policies), role bindings and their roles, images and catalog items, namespaces with the fields each bound at create (region, zone, class, VPC, storage classes, VM classes, overrides) and their phase, and behind each namespace's endpoint the virtual machines and VKS clusters. Then it audits every name it met against `naming-standard.json` and writes the counts. Refuses to write a record in which any estate name survived, and the naming record may carry only values that came from the standard itself. Stdlib Python; no token printed or written. |
-| `taxonomy.json` | The interface as declared on the reference estate, 2026-09-16: 13 VMware API groups, one line per kind. |
+| `taxonomy.json` | The interface as declared on the reference estate, 2026-09-21: 13 VMware API groups, one entry per kind and API version (99 kinds in 100 entries). |
 | `estate.json` | The tree as it stood: one organization, two projects, three namespaces, and what each bound. |
 | `naming.json` | The conformance audit of that estate: per construct, how many names conform, the grammar they should follow, and a verdict of keep, refine, or rename. Counts only, never a name. |
 | `bindings.json` | What each surface answered when the script asked whether a namespace's class, region, VPC, and parent project can be changed after create. Five attempts on this interface, and three more on the tenant manager when you supply a bearer that may write there. Each carries the question, what was sent, and the server's own sentence. Written only when you pass `--probe-bindings`. |
@@ -89,7 +89,7 @@ surface was not asked, rather than guessing.
   networking answers is not something this run can tell you. Note also that an empty or malformed import body
   answers "This operation is denied", which reads like a rights problem and is not; the script sends a
   well-formed one.
-- Recorded on one 9.1 organization on 2026-09-16, and the bindings asked on 2026-09-17; your counts will differ,
+- Recorded on one 9.1 organization on 2026-09-21, and the bindings asked on 2026-09-17; your counts will differ,
   the shapes should not.
 - The naming audit is a format check, not a judgement of meaning: a name can satisfy its pattern and still say
   nothing about what the object isolates. Read the verdict as a work list and assign the last word yourself.
