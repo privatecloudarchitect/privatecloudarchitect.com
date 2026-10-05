@@ -7,17 +7,19 @@ Read-only. Every call is a GET, plus Operations for Networks' token request, a f
   1. Operations for Networks (`/api/ni`): its node list (collector type, version, health), every vCenter and NSX
      data source with its IPFIX state (allow-listed fields only; a data source record also carries
      credentials, which are never read), the number of flows seen in the last hour, and those flows counted by
-     the host they were observed on (`POST /search` for the hour's flows, then `POST /entities/fetch` in batches
-     of 100 for each flow's source and destination host; a flow counts once for each host it touches).
+     the host each endpoint runs on (`POST /search` for the hour's flows, then `POST /entities/fetch` in batches
+     of 100 for each flow's source and destination host; a flow counts once for each host it names). A flow
+     names where its endpoints run, never the host that exported it.
   2. NSX (`/policy/api/v1/infra/ipfix-*`), when NSX_HOSTS is set: the IPFIX collector and switch profiles.
   3. vSphere (pyVmomi, when installed and VC_HOSTS is set): each distributed switch's own IPFIX settings
      (collector address and port, sampling rate, timeouts, internal flows only), how many of its port
-     groups export, and its member hosts, each with the flows observed on it in the last hour. A host on a
-     switch with no flows is unobserved, whatever the switch or its data source reports.
+     groups export, and its member hosts, each with the hour's flows that name an endpoint on it. A host at zero
+     has no named workloads: it may export nothing, or Operations for Networks may be unable to name its VMs.
+     The collector's own exporter list tells the two apart.
 
 Writes `flow-paths.record.json` with every estate value replaced by a placeholder (and refuses to write if one
-survived), and prints a summary. Not covered: the collector's on-disk buffer use, which needs a shell on the
-collector VM.
+survived), and prints a summary. Not covered: which hosts export (the collector's exporter list) and the
+collector's on-disk buffer use, both of which need a root shell on the collector VM.
 
 Environment:
   NI_HOST, NI_USER, NI_PASSWORD   Operations for Networks; NI_DOMAIN_TYPE LOCAL (default) or LDAP, NI_DOMAIN for LDAP
@@ -175,7 +177,7 @@ FLOW_PAGE = 10000
 
 
 def flows_by_host(base: str, auth: dict, window: dict, scrub: Scrubber) -> tuple[dict, int, int]:
-    """The hour's flows counted by the host they were observed on, each flow once per host it touches."""
+    """The hour's flows counted by the host each endpoint runs on, each flow once per host it names."""
     st, found = http(
         "POST",
         f"{base}/search",
@@ -365,8 +367,8 @@ def main(argv: list[str] | None = None) -> int:
         say(f"    {s.get('entity_type'):<22} IPFIX: {state}")
     say(f"  flows in the last hour: {ni['flows_last_hour']}")
     say(
-        f"  flows read for the host tally: {ni['flows_read']}, observed on {len(ni['flows_by_host'])} host(s), "
-        f"{ni['flows_without_host']} with no host"
+        f"  flows read for the host tally: {ni['flows_read']}, naming an endpoint on {len(ni['flows_by_host'])} "
+        f"host(s), {ni['flows_without_host']} naming no host"
     )
     for entry in record["nsx"]:
         counts = {k: len(v["profiles"]) for k, v in entry.items() if k != "nsx"}
@@ -383,8 +385,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             if sw["hosts"]:
                 say(
-                    "    hosts: "
-                    + ", ".join(f"{h['host']} {h['flows_last_hour']} flows" for h in sw["hosts"])
+                    "    hosts, by flows naming an endpoint there: "
+                    + ", ".join(f"{h['host']} {h['flows_last_hour']}" for h in sw["hosts"])
                 )
     say(f"  record: {args.out / 'flow-paths.record.json'}")
     return 0

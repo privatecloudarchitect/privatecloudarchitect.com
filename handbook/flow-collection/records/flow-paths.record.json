@@ -54,17 +54,17 @@
  ],
  "operations_for_networks": {
   "flows_by_host": {
-   "{{esx-1}}": 275,
-   "{{esx-2}}": 588,
-   "{{esx-3}}": 249,
+   "{{esx-1}}": 588,
+   "{{esx-2}}": 281,
+   "{{esx-3}}": 252,
    "{{esx-4}}": 101,
    "{{esx-5}}": 101,
    "{{esx-6}}": 2,
    "{{esx-7}}": 2
   },
-  "flows_last_hour": 1459,
-  "flows_read": 1459,
-  "flows_without_host": 342,
+  "flows_last_hour": 1476,
+  "flows_read": 1476,
+  "flows_without_host": 353,
   "nodes": [
    {
     "health": "HEALTHY",
@@ -128,7 +128,7 @@
    }
   ]
  },
- "read_at": "2026-10-05T01:25:09Z",
+ "read_at": "2026-10-05T02:18:53Z",
  "switches": [
   {
    "active_flow_timeout": 60,
@@ -136,16 +136,16 @@
    "collector_port": 2055,
    "hosts": [
     {
-     "flows_last_hour": 249,
+     "flows_last_hour": 252,
      "host": "{{esx-3}}"
     },
     {
      "flows_last_hour": 588,
-     "host": "{{esx-2}}"
+     "host": "{{esx-1}}"
     },
     {
-     "flows_last_hour": 275,
-     "host": "{{esx-1}}"
+     "flows_last_hour": 281,
+     "host": "{{esx-2}}"
     }
    ],
    "idle_flow_timeout": 15,

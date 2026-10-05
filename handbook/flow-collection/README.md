@@ -4,8 +4,8 @@ The chapter ([privatecloudarchitect.com/handbook/flow-collection](https://privat
 teaches flow collection on VCF 9.1 from the IPFIX record up: a flow is recorded at the port a packet leaves by, so
 coverage is set switch by switch and port group by port group, by an owner who may not be the product you are looking
 at. This folder is its checkpoint. One read-only script reports what Operations for Networks collects from, which
-distributed switches carry its collector and how many of their port groups export, what NSX exports, and how many
-flows arrived in the last hour.
+distributed switches carry its collector and how many of their port groups export, what NSX exports, how many
+flows arrived in the last hour, and which hosts those flows name.
 
 Proven on VCF 9.1.1 (VCF Operations for Networks collector 9.1.1.0, NSX and vCenter at 9.1) on 2026-10-05, with the
 exact files in this folder.
@@ -17,13 +17,14 @@ Every call is a read, plus the session token request each product requires, whic
 1. **Operations for Networks** (`/api/ni`): its node list (each node's type, version and health); every vCenter and NSX
    data source with its IPFIX state (`ipfix_response.ipfix_enabled_for` names the switch a vCenter source enabled;
    NSX sources say whether IPFIX is on) and the Antrea IPFIX state; the flows counted in the last hour
-   (`POST /api/ni/search`, entity type `Flow`); and those flows counted by the host they were observed on
-   (`POST /api/ni/entities/fetch` in batches of 100, each flow once for every host it touches).
+   (`POST /api/ni/search`, entity type `Flow`); and those flows counted by the host each endpoint runs on
+   (`POST /api/ni/entities/fetch` in batches of 100, each flow once for every host it names). A flow's
+   `source_host` and `destination_host` are where its endpoints run; no flow field names the host that exported it.
 2. **NSX** (`/policy/api/v1/infra/ipfix-*`), when `NSX_HOSTS` is set: the IPFIX collector and switch profiles.
 3. **vSphere**, when `VC_HOSTS` is set and pyVmomi is installed: every distributed switch's own IPFIX settings
    (collector address and port, sampling rate, active and idle timeouts), how many of its port groups export,
-   uplink groups counted apart, and its member hosts, each with the flows observed on it in the last hour. This is
-   the level the chapter's Plate 02 calls the switch and its port groups, joined to the proof of its Plate 04.
+   uplink groups counted apart, and its member hosts, each with the hour's flows that name an endpoint on it. This
+   is the level the chapter's Plate 02 calls the switch and its port groups, joined to the proof of its Plate 04.
 
 ## Run it
 
@@ -41,9 +42,12 @@ clone.
 
 ## Reading the result
 
-- **Coverage passes** when every distributed switch that carries workloads has the collector set, its port groups
-  export, and every one of its hosts shows flows in the hour; a host at zero is unobserved, not idle. A switch without the collector, or with
-  silent port groups, is a blind spot for everything built on flows, including a dependency graph.
+- **Coverage passes** when every port group that carries workloads exports, through its distributed switch or an
+  NSX profile, when the collector's exporter list names every host that runs workloads, and when every such host
+  shows flows in the tally. A host at zero in the tally has no named workloads: it exports nothing, or Operations
+  for Networks cannot name its VMs (a host missing from its inventory, or addresses it binds to several VMs). The
+  exporter list tells the two apart. A switch without the collector, or with silent port groups, is a blind spot
+  for everything built on flows, including a dependency graph.
 - **Who changes it.** A vCenter source that VCF added is changed from its account in VCF Operations, not through the
   Operations for Networks API, which refuses such a source; read the source in Operations for Networks first
   (Plate 03).
@@ -51,7 +55,8 @@ clone.
   `proxy_id` names the collector, `ipfix_enabled_for` the switch Operations for Networks enabled, `ipfix_enabled` for
   NSX), `.flows_last_hour`; `nsx` (each manager's IPFIX profile lists); `switches` (one row per distributed switch:
   collector address and port, sampling rate, timeouts, port groups and how many export, and `hosts` with each
-  host's `flows_last_hour`); `operations_for_networks.flows_by_host`, `.flows_read` and `.flows_without_host`.
+  host's `flows_last_hour`, the hour's flows naming an endpoint on it); `operations_for_networks.flows_by_host`,
+  `.flows_read` and `.flows_without_host`.
 
 One scrubber serves a whole run, so a value keeps its placeholder across products: a switch Operations for Networks
 names in `ipfix_enabled_for` is the same placeholder as that switch's row under `switches`. The script refuses to
@@ -59,6 +64,11 @@ write a record in which an estate value survived (`scrub.py`).
 
 ## What it does not cover
 
+- Which hosts export: the collector's own exporter list. A root shell on the collector VM reads it, through vSphere
+  Guest Operations or the VM console (the appliance refuses root over SSH). On the newest file the receiver wrote:
+  `. /home/ubuntu/build-target/nfdump/nfcapd_env.sh; /home/ubuntu/build-target/nfdump/nfdump -E <file>` with the
+  file from `ls /var/flows/vds/nfcapd/nfcapd.2* | tail -1`. Each exporter appears with its address and its
+  observation domain, the distributed switch's or the NSX profile's; a host absent from the list sends nothing.
 - The collector's on-disk buffer use: a root shell on the collector VM reads it, and the appliance refuses root over
   SSH by design, so it goes through vSphere Guest Operations.
 - Antrea's own flow exporter settings inside each VKS cluster.
