@@ -1,0 +1,258 @@
+{
+ "harness": "flow_paths.py",
+ "nsx": [
+  {
+   "ipfix-dfw-collector-profiles": {
+    "profiles": [],
+    "status": 200
+   },
+   "ipfix-dfw-profiles": {
+    "profiles": [],
+    "status": 200
+   },
+   "ipfix-l2-collector-profiles": {
+    "profiles": [],
+    "status": 200
+   },
+   "ipfix-l2-profiles": {
+    "profiles": [],
+    "status": 200
+   },
+   "nsx": "{{source-4}}"
+  },
+  {
+   "ipfix-dfw-collector-profiles": {
+    "profiles": [],
+    "status": 200
+   },
+   "ipfix-dfw-profiles": {
+    "profiles": [],
+    "status": 200
+   },
+   "ipfix-l2-collector-profiles": {
+    "profiles": [
+     {
+      "_create_user": "{{service-account-1}}",
+      "display_name": "vrni-ipfix-collector-profile"
+     }
+    ],
+    "status": 200
+   },
+   "ipfix-l2-profiles": {
+    "profiles": [
+     {
+      "_create_user": "{{service-account-1}}",
+      "display_name": "global",
+      "export_overlay_flow": false,
+      "packet_sample_probability": 100.0
+     }
+    ],
+    "status": 200
+   },
+   "nsx": "{{source-5}}"
+  }
+ ],
+ "operations_for_networks": {
+  "flows_by_host": {
+   "{{esx-1}}": 275,
+   "{{esx-2}}": 588,
+   "{{esx-3}}": 249,
+   "{{esx-4}}": 101,
+   "{{esx-5}}": 101,
+   "{{esx-6}}": 2,
+   "{{esx-7}}": 2
+  },
+  "flows_last_hour": 1459,
+  "flows_read": 1459,
+  "flows_without_host": 342,
+  "nodes": [
+   {
+    "health": "HEALTHY",
+    "name": "{{ni-node-1}}",
+    "node_type": "PROXY_VM",
+    "physical_flow_collector": false,
+    "version": "9.1.1.0.25682214"
+   }
+  ],
+  "sources": [
+   {
+    "antrea_ipfix": false,
+    "enabled": true,
+    "entity_id": "{{source-id-1}}",
+    "entity_type": "VCenterDataSource",
+    "fqdn": "{{source-1}}",
+    "ipfix_enabled_for": "{{switch-moid-1}}",
+    "is_vmc": false,
+    "nickname": "{{source-1}}",
+    "proxy_id": "{{collector-id-1}}"
+   },
+   {
+    "antrea_ipfix": false,
+    "enabled": true,
+    "entity_id": "{{source-id-2}}",
+    "entity_type": "VCenterDataSource",
+    "fqdn": "{{source-2}}",
+    "ipfix_enabled_for": "{{switch-moid-2}}",
+    "is_vmc": false,
+    "nickname": "{{source-2}}",
+    "proxy_id": "{{collector-id-1}}"
+   },
+   {
+    "antrea_ipfix": false,
+    "enabled": true,
+    "entity_id": "{{source-id-3}}",
+    "entity_type": "VCenterDataSource",
+    "fqdn": "{{source-3}}",
+    "ipfix_enabled_for": "{{switch-moid-3}}",
+    "is_vmc": false,
+    "nickname": "{{source-3}}",
+    "proxy_id": "{{collector-id-1}}"
+   },
+   {
+    "enabled": true,
+    "entity_id": "{{source-id-4}}",
+    "entity_type": "NSXTManagerDataSource",
+    "fqdn": "{{source-4}}",
+    "ipfix_enabled": false,
+    "nickname": "{{source-4}}",
+    "proxy_id": "{{collector-id-1}}"
+   },
+   {
+    "enabled": true,
+    "entity_id": "{{source-id-5}}",
+    "entity_type": "NSXTManagerDataSource",
+    "fqdn": "{{source-5}}",
+    "ipfix_enabled": true,
+    "nickname": "{{source-5}}",
+    "proxy_id": "{{collector-id-1}}"
+   }
+  ]
+ },
+ "read_at": "2026-10-05T01:25:09Z",
+ "switches": [
+  {
+   "active_flow_timeout": 60,
+   "collector_address": "{{address-1}}",
+   "collector_port": 2055,
+   "hosts": [
+    {
+     "flows_last_hour": 249,
+     "host": "{{esx-3}}"
+    },
+    {
+     "flows_last_hour": 588,
+     "host": "{{esx-2}}"
+    },
+    {
+     "flows_last_hour": 275,
+     "host": "{{esx-1}}"
+    }
+   ],
+   "idle_flow_timeout": 15,
+   "internal_flows_only": false,
+   "moid": "{{switch-moid-2}}",
+   "port_groups": 31,
+   "port_groups_exporting": 6,
+   "sampling_rate": 0,
+   "switch": "{{switch-1}}",
+   "uplink_groups_exporting": 0,
+   "vcenter": "{{source-2}}"
+  },
+  {
+   "active_flow_timeout": 60,
+   "collector_address": "{{address-1}}",
+   "collector_port": 2055,
+   "hosts": [
+    {
+     "flows_last_hour": 101,
+     "host": "{{esx-4}}"
+    },
+    {
+     "flows_last_hour": 101,
+     "host": "{{esx-5}}"
+    }
+   ],
+   "idle_flow_timeout": 15,
+   "internal_flows_only": false,
+   "moid": "{{switch-moid-1}}",
+   "port_groups": 29,
+   "port_groups_exporting": 3,
+   "sampling_rate": 0,
+   "switch": "{{switch-2}}",
+   "uplink_groups_exporting": 0,
+   "vcenter": "{{source-1}}"
+  },
+  {
+   "active_flow_timeout": 60,
+   "collector_address": null,
+   "collector_port": 0,
+   "hosts": [
+    {
+     "flows_last_hour": 0,
+     "host": "{{esx-8}}"
+    },
+    {
+     "flows_last_hour": 0,
+     "host": "{{esx-9}}"
+    }
+   ],
+   "idle_flow_timeout": 15,
+   "internal_flows_only": false,
+   "moid": "{{switch-moid-4}}",
+   "port_groups": 26,
+   "port_groups_exporting": 0,
+   "sampling_rate": 4096,
+   "switch": "{{switch-3}}",
+   "uplink_groups_exporting": 0,
+   "vcenter": "{{source-1}}"
+  },
+  {
+   "active_flow_timeout": 60,
+   "collector_address": null,
+   "collector_port": 0,
+   "hosts": [
+    {
+     "flows_last_hour": 0,
+     "host": "{{esx-10}}"
+    },
+    {
+     "flows_last_hour": 0,
+     "host": "{{esx-11}}"
+    }
+   ],
+   "idle_flow_timeout": 15,
+   "internal_flows_only": false,
+   "moid": "{{switch-moid-5}}",
+   "port_groups": 26,
+   "port_groups_exporting": 0,
+   "sampling_rate": 4096,
+   "switch": "{{switch-4}}",
+   "uplink_groups_exporting": 0,
+   "vcenter": "{{source-1}}"
+  },
+  {
+   "active_flow_timeout": 60,
+   "collector_address": "{{address-1}}",
+   "collector_port": 2055,
+   "hosts": [
+    {
+     "flows_last_hour": 0,
+     "host": "{{esx-12}}"
+    },
+    {
+     "flows_last_hour": 0,
+     "host": "{{esx-13}}"
+    }
+   ],
+   "idle_flow_timeout": 15,
+   "internal_flows_only": false,
+   "moid": "{{switch-moid-3}}",
+   "port_groups": 13,
+   "port_groups_exporting": 4,
+   "sampling_rate": 0,
+   "switch": "{{switch-5}}",
+   "uplink_groups_exporting": 0,
+   "vcenter": "{{source-3}}"
+  }
+ ]
+}

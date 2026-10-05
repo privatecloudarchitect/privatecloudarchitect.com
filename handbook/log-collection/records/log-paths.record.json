@@ -1,0 +1,154 @@
+{
+ "adapter_instances": 59,
+ "collectors": [
+  {
+   "data_persistence": true,
+   "name": "{{collector-1}}",
+   "state": "UP",
+   "type": "UNIFIED_CLOUD_PROXY"
+  },
+  {
+   "data_persistence": true,
+   "name": "{{collector-2}}",
+   "state": "UP",
+   "type": "UNIFIED_CLOUD_PROXY"
+  },
+  {
+   "data_persistence": false,
+   "name": "{{collector-3}}",
+   "state": "UP",
+   "type": "INTERNAL"
+  }
+ ],
+ "components": [
+  {
+   "deployment": "OVA",
+   "fqdn": "{{component-1}}",
+   "nodes": 3,
+   "scope": "FLEET",
+   "size": "medium",
+   "type": "OPS",
+   "version": "9.1.1.0.25679751"
+  },
+  {
+   "deployment": "VSP",
+   "fqdn": "{{component-2}}",
+   "nodes": 0,
+   "scope": "FLEET",
+   "size": "small",
+   "type": "OPS_LOGS",
+   "version": "9.1.1.0.25679624"
+  }
+ ],
+ "harness": "log_paths.py",
+ "log_collection": [
+  {
+   "adapter_kind": "NSXTAdapter",
+   "instances": 3,
+   "path": "CLOUD_PROXY"
+  },
+  {
+   "adapter_kind": "SupervisorAdapter",
+   "instances": 1,
+   "path": "CLOUD_PROXY"
+  },
+  {
+   "adapter_kind": "VMWARE",
+   "instances": 3,
+   "path": "CLOUD_PROXY"
+  },
+  {
+   "adapter_kind": "VcfAdapter",
+   "instances": 2,
+   "path": "DIRECT"
+  }
+ ],
+ "read_at": "2026-10-05T01:24:40Z",
+ "source_proof": {
+  "applications": [
+   "Hostd",
+   "Vpxa",
+   "vmkernel",
+   "vobd",
+   "Fdm"
+  ],
+  "hosts": [
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-1}}",
+    "own_events": 15972
+   },
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-2}}",
+    "own_events": 22152
+   },
+   {
+    "forwarders": [],
+    "host": "{{esx-3}}",
+    "own_events": 0
+   },
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-4}}",
+    "own_events": 14886
+   },
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-5}}",
+    "own_events": 14603
+   },
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-6}}",
+    "own_events": 11641
+   },
+   {
+    "forwarders": [
+     "{{collector-host-2}}"
+    ],
+    "host": "{{esx-7}}",
+    "own_events": 6536
+   },
+   {
+    "forwarders": [
+     "{{collector-host-2}}"
+    ],
+    "host": "{{esx-8}}",
+    "own_events": 8186
+   },
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-9}}",
+    "own_events": 13226
+   },
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-10}}",
+    "own_events": 21217
+   },
+   {
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
+    "host": "{{esx-11}}",
+    "own_events": 13778
+   }
+  ],
+  "window_minutes": 60
+ }
+}
