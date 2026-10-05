@@ -5,7 +5,7 @@ Read-only. Every call is a GET, plus Operations for Networks' token request, a f
 (POSTs that read), and a vSphere login that this script closes before it exits.
 
   1. Operations for Networks (`/api/ni`): its node list (collector type, version, health), every vCenter and NSX
-     data source with its IPFIX state (allow-listed fields only; a data source record also carries
+     data source with its IPFIX state, each switch list split into its switches (allow-listed fields only; a data source record also carries
      credentials, which are never read), the number of flows seen in the last hour, and those flows counted by
      the host each endpoint runs on (`POST /search` for the hour's flows, then `POST /entities/fetch` in batches
      of 100 for each flow's source and destination host; a flow counts once for each host it names). A flow
@@ -117,6 +117,14 @@ def ni_session() -> tuple[str, dict]:
     return f"https://{host}/api/ni", {"Authorization": f"NetworkInsight {body['token']}"}
 
 
+IPFIX_LISTS = (
+    "ipfix_enabled_for",
+    "ipfix_enabling_failed",
+    "ipfix_disabled_for",
+    "ipfix_disabling_failed",
+)
+
+
 def read_ni(scrub: Scrubber) -> dict:
     base, auth = ni_session()
     scrub.add_host(os.environ["NI_HOST"], "ni-platform")
@@ -146,9 +154,14 @@ def read_ni(scrub: Scrubber) -> dict:
             scrub.add(src.get("proxy_id"), "collector-id")
             safe = {k: v for k, v in src.items() if k in NI_SAFE}
             ipfix = src.get("ipfix_response") or {}
-            if ipfix:
-                scrub.add(ipfix.get("ipfix_enabled_for"), "switch-moid")
-                safe["ipfix_enabled_for"] = ipfix.get("ipfix_enabled_for")
+            # Each field is a comma-separated list of switch ids (one per switch the source enabled, failed to
+            # enable, disabled or failed to disable); keep each switch's own placeholder so it joins its row.
+            for key in IPFIX_LISTS if ipfix else ():
+                ids = [s.strip() for s in str(ipfix.get(key) or "").split(",") if s.strip()]
+                for moid in ids:
+                    scrub.add(moid, "switch-moid")
+                if ids or key == "ipfix_enabled_for":
+                    safe[key] = ids
             if "antrea_ipfix_response" in src:
                 safe["antrea_ipfix"] = (src.get("antrea_ipfix_response") or {}).get(
                     "ipfix_enabled_status"
@@ -363,7 +376,9 @@ def main(argv: list[str] | None = None) -> int:
     collectors = {s.get("proxy_id") for s in ni["sources"]}
     say(f"  {len(ni['sources'])} data sources over {len(collectors)} collector(s)")
     for s in ni["sources"]:
-        state = s.get("ipfix_enabled_for") or s.get("ipfix_enabled")
+        state = ", ".join(s.get("ipfix_enabled_for") or []) or s.get("ipfix_enabled")
+        if s.get("ipfix_enabling_failed"):
+            state = f"{state}; enabling failed for {', '.join(s['ipfix_enabling_failed'])}"
         say(f"    {s.get('entity_type'):<22} IPFIX: {state}")
     say(f"  flows in the last hour: {ni['flows_last_hour']}")
     say(

@@ -54,17 +54,17 @@
  ],
  "operations_for_networks": {
   "flows_by_host": {
-   "{{esx-1}}": 588,
-   "{{esx-2}}": 281,
-   "{{esx-3}}": 252,
-   "{{esx-4}}": 101,
-   "{{esx-5}}": 101,
+   "{{esx-1}}": 326,
+   "{{esx-2}}": 614,
+   "{{esx-3}}": 273,
+   "{{esx-4}}": 129,
+   "{{esx-5}}": 155,
    "{{esx-6}}": 2,
    "{{esx-7}}": 2
   },
-  "flows_last_hour": 1476,
-  "flows_read": 1476,
-  "flows_without_host": 353,
+  "flows_last_hour": 1675,
+  "flows_read": 1675,
+  "flows_without_host": 409,
   "nodes": [
    {
     "health": "HEALTHY",
@@ -81,7 +81,11 @@
     "entity_id": "{{source-id-1}}",
     "entity_type": "VCenterDataSource",
     "fqdn": "{{source-1}}",
-    "ipfix_enabled_for": "{{switch-moid-1}}",
+    "ipfix_enabled_for": [
+     "{{switch-moid-1}}",
+     "{{switch-moid-2}}",
+     "{{switch-moid-3}}"
+    ],
     "is_vmc": false,
     "nickname": "{{source-1}}",
     "proxy_id": "{{collector-id-1}}"
@@ -92,7 +96,9 @@
     "entity_id": "{{source-id-2}}",
     "entity_type": "VCenterDataSource",
     "fqdn": "{{source-2}}",
-    "ipfix_enabled_for": "{{switch-moid-2}}",
+    "ipfix_enabled_for": [
+     "{{switch-moid-4}}"
+    ],
     "is_vmc": false,
     "nickname": "{{source-2}}",
     "proxy_id": "{{collector-id-1}}"
@@ -103,7 +109,9 @@
     "entity_id": "{{source-id-3}}",
     "entity_type": "VCenterDataSource",
     "fqdn": "{{source-3}}",
-    "ipfix_enabled_for": "{{switch-moid-3}}",
+    "ipfix_enabled_for": [
+     "{{switch-moid-5}}"
+    ],
     "is_vmc": false,
     "nickname": "{{source-3}}",
     "proxy_id": "{{collector-id-1}}"
@@ -128,7 +136,7 @@
    }
   ]
  },
- "read_at": "2026-10-05T02:18:53Z",
+ "read_at": "2026-10-05T07:12:27Z",
  "switches": [
   {
    "active_flow_timeout": 60,
@@ -136,21 +144,21 @@
    "collector_port": 2055,
    "hosts": [
     {
-     "flows_last_hour": 252,
+     "flows_last_hour": 273,
      "host": "{{esx-3}}"
     },
     {
-     "flows_last_hour": 588,
-     "host": "{{esx-1}}"
+     "flows_last_hour": 614,
+     "host": "{{esx-2}}"
     },
     {
-     "flows_last_hour": 281,
-     "host": "{{esx-2}}"
+     "flows_last_hour": 326,
+     "host": "{{esx-1}}"
     }
    ],
    "idle_flow_timeout": 15,
    "internal_flows_only": false,
-   "moid": "{{switch-moid-2}}",
+   "moid": "{{switch-moid-4}}",
    "port_groups": 31,
    "port_groups_exporting": 6,
    "sampling_rate": 0,
@@ -164,17 +172,17 @@
    "collector_port": 2055,
    "hosts": [
     {
-     "flows_last_hour": 101,
+     "flows_last_hour": 129,
      "host": "{{esx-4}}"
     },
     {
-     "flows_last_hour": 101,
+     "flows_last_hour": 155,
      "host": "{{esx-5}}"
     }
    ],
    "idle_flow_timeout": 15,
    "internal_flows_only": false,
-   "moid": "{{switch-moid-1}}",
+   "moid": "{{switch-moid-2}}",
    "port_groups": 29,
    "port_groups_exporting": 3,
    "sampling_rate": 0,
@@ -184,8 +192,8 @@
   },
   {
    "active_flow_timeout": 60,
-   "collector_address": null,
-   "collector_port": 0,
+   "collector_address": "{{address-1}}",
+   "collector_port": 2055,
    "hosts": [
     {
      "flows_last_hour": 0,
@@ -198,18 +206,18 @@
    ],
    "idle_flow_timeout": 15,
    "internal_flows_only": false,
-   "moid": "{{switch-moid-4}}",
+   "moid": "{{switch-moid-3}}",
    "port_groups": 26,
-   "port_groups_exporting": 0,
-   "sampling_rate": 4096,
+   "port_groups_exporting": 3,
+   "sampling_rate": 0,
    "switch": "{{switch-3}}",
    "uplink_groups_exporting": 0,
    "vcenter": "{{source-1}}"
   },
   {
    "active_flow_timeout": 60,
-   "collector_address": null,
-   "collector_port": 0,
+   "collector_address": "{{address-1}}",
+   "collector_port": 2055,
    "hosts": [
     {
      "flows_last_hour": 0,
@@ -222,10 +230,10 @@
    ],
    "idle_flow_timeout": 15,
    "internal_flows_only": false,
-   "moid": "{{switch-moid-5}}",
+   "moid": "{{switch-moid-1}}",
    "port_groups": 26,
-   "port_groups_exporting": 0,
-   "sampling_rate": 4096,
+   "port_groups_exporting": 3,
+   "sampling_rate": 0,
    "switch": "{{switch-4}}",
    "uplink_groups_exporting": 0,
    "vcenter": "{{source-1}}"
@@ -246,7 +254,7 @@
    ],
    "idle_flow_timeout": 15,
    "internal_flows_only": false,
-   "moid": "{{switch-moid-3}}",
+   "moid": "{{switch-moid-5}}",
    "port_groups": 13,
    "port_groups_exporting": 4,
    "sampling_rate": 0,

@@ -15,7 +15,8 @@ exact files in this folder.
 Every call is a read, plus the session token request each product requires, which changes nothing.
 
 1. **Operations for Networks** (`/api/ni`): its node list (each node's type, version and health); every vCenter and NSX
-   data source with its IPFIX state (`ipfix_response.ipfix_enabled_for` names the switch a vCenter source enabled;
+   data source with its IPFIX state (`ipfix_response.ipfix_enabled_for` lists the switches a vCenter source enabled,
+   and `ipfix_enabling_failed` any it could not;
    NSX sources say whether IPFIX is on) and the Antrea IPFIX state; the flows counted in the last hour
    (`POST /api/ni/search`, entity type `Flow`); and those flows counted by the host each endpoint runs on
    (`POST /api/ni/entities/fetch` in batches of 100, each flow once for every host it names). A flow's
@@ -52,14 +53,15 @@ clone.
   Operations for Networks API, which refuses such a source; read the source in Operations for Networks first
   (Plate 03).
 - **The record** (`flow-paths.record.json`): `operations_for_networks.nodes` and `.sources` (one per data source;
-  `proxy_id` names the collector, `ipfix_enabled_for` the switch Operations for Networks enabled, `ipfix_enabled` for
+  `proxy_id` names the collector, `ipfix_enabled_for` the list of switches Operations for Networks enabled (and
+  `ipfix_enabling_failed` those it could not, when any), `ipfix_enabled` for
   NSX), `.flows_last_hour`; `nsx` (each manager's IPFIX profile lists); `switches` (one row per distributed switch:
   collector address and port, sampling rate, timeouts, port groups and how many export, and `hosts` with each
   host's `flows_last_hour`, the hour's flows naming an endpoint on it); `operations_for_networks.flows_by_host`,
   `.flows_read` and `.flows_without_host`.
 
 One scrubber serves a whole run, so a value keeps its placeholder across products: a switch Operations for Networks
-names in `ipfix_enabled_for` is the same placeholder as that switch's row under `switches`. The script refuses to
+lists in `ipfix_enabled_for` is the same placeholder as that switch's row under `switches`. The script refuses to
 write a record in which an estate value survived (`scrub.py`).
 
 ## What it does not cover
