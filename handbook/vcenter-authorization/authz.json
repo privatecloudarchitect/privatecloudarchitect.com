@@ -1,0 +1,450 @@
+{
+ "captured_utc": "2026-10-06T08:02:42Z",
+ "vcenters": {
+  "{{vcenter-1}}": {
+   "permissions": 70,
+   "global": 64,
+   "byClass": {
+    "directory, global": 1,
+    "directory, object": 1,
+    "local, global": 47,
+    "local, object": 5,
+    "reserved group, global": 16
+   },
+   "directoryGrants": {
+    "group, global": 1,
+    "group, object": 1
+   },
+   "reservedGroupGrants": {
+    "Admin, global": 1,
+    "NoCryptoAdmin, global": 1,
+    "NoTrustedAdmin, global": 1,
+    "ReadOnly, global": 1,
+    "TrustedAdmin, global": 1,
+    "a custom role, global": 11
+   },
+   "roles": 77,
+   "customRoles": 69,
+   "version": "9.1.0 build 25573614",
+   "sessions": {
+    "byClass": {
+     "directory": 1,
+     "local": 324
+    },
+    "localAdministratorByAgent": {
+     "VMware vim-java 1.0": 4,
+     "XML-WS Runtime 4.0.4 git-revision#50dbfd": 2,
+     "pyvmomi 8.0.3.0.1 OSS Python": 1,
+     "vapi-endpoint": 8
+    }
+   }
+  },
+  "{{vcenter-2}}": {
+   "permissions": 144,
+   "global": 102,
+   "byClass": {
+    "directory, global": 1,
+    "directory, object": 1,
+    "local, global": 81,
+    "local, object": 41,
+    "reserved group, global": 20
+   },
+   "directoryGrants": {
+    "group, global": 1,
+    "group, object": 1
+   },
+   "reservedGroupGrants": {
+    "NoCryptoAdmin, global": 1,
+    "NoTrustedAdmin, global": 1,
+    "ReadOnly, global": 1,
+    "TrustedAdmin, global": 1,
+    "a custom role, global": 16
+   },
+   "roles": 116,
+   "customRoles": 108,
+   "version": "9.1.1 build 25712839",
+   "sessions": {
+    "byClass": {
+     "directory": 1,
+     "local": 442
+    },
+    "localAdministratorByAgent": {
+     "XML-WS Runtime 4.0.4 git-revision#50dbfd": 2,
+     "vAPI": 1
+    }
+   }
+  },
+  "{{vcenter-3}}": {
+   "permissions": 249,
+   "global": 75,
+   "byClass": {
+    "another provider, object": 8,
+    "directory, global": 2,
+    "directory, object": 3,
+    "local, global": 55,
+    "local, object": 140,
+    "reserved group, global": 18,
+    "reserved group, object": 23
+   },
+   "directoryGrants": {
+    "group, global": 1,
+    "group, object": 1,
+    "user, global": 1,
+    "user, object": 2
+   },
+   "reservedGroupGrants": {
+    "NamespacesEdit, object": 11,
+    "NamespacesView, object": 12,
+    "NoCryptoAdmin, global": 1,
+    "NoTrustedAdmin, global": 1,
+    "ReadOnly, global": 1,
+    "TrustedAdmin, global": 1,
+    "a custom role, global": 14
+   },
+   "roles": 84,
+   "customRoles": 76,
+   "version": "9.1.1 build 25712839",
+   "sessions": {
+    "byClass": {
+     "directory": 2,
+     "local": 268
+    },
+    "localAdministratorByAgent": {}
+   }
+  }
+ },
+ "roleDrift": [
+  {
+   "role": "ObservabilityOperator",
+   "copies": {
+    "{{vcenter-1}}": [
+     "Global.LogEvent"
+    ],
+    "{{vcenter-2}}": [
+     "Datastore.Browse",
+     "Datastore.FileManagement",
+     "Sessions.GlobalMessage",
+     "Sessions.TerminateSession",
+     "Sessions.ValidateSession",
+     "VcDr.Backup.com.vmware.vcDr.Manage",
+     "VcDr.Internal.com.vmware.vcDr.InternalAccess"
+    ],
+    "{{vcenter-3}}": [
+     "Global.LogEvent"
+    ]
+   }
+  },
+  {
+   "role": "SupervisorAdministrator",
+   "copies": {
+    "{{vcenter-1}}": [],
+    "{{vcenter-2}}": [
+     "Resource.AssignVMToPool",
+     "Resource.com.vmware.vcDr.RecoveryUse",
+     "VirtualMachine.Inventory.Register"
+    ],
+    "{{vcenter-3}}": []
+   }
+  },
+  {
+   "role": "VM-Service-VM-Management",
+   "copies": {
+    "{{vcenter-1}}": [],
+    "{{vcenter-2}}": [
+     "Cryptographer.AddDisk",
+     "Cryptographer.Decrypt",
+     "Cryptographer.Encrypt",
+     "Cryptographer.Recrypt",
+     "Datastore.AllocateSpace",
+     "Datastore.Browse",
+     "Datastore.Config",
+     "Datastore.FileManagement",
+     "Datastore.Replication.com.vmware.vcDr.Protect",
+     "Datastore.Replication.com.vmware.vcDr.Unprotect",
+     "Global.LogEvent",
+     "Global.SetCustomField",
+     "HmsDatastoreMapper.com.vmware.vcHms.Mappings.Manage",
+     "HmsDatastoreMapper.com.vmware.vcHms.Mappings.View",
+     "HmsDiagnostics.com.vmware.vcHms.Diagnostics.Manage",
+     "HmsDpx.com.vmware.vcHms.Subscription.Manage",
+     "HmsRemote.com.vmware.vcHms.Hbr.Manage",
+     "HmsRemote.com.vmware.vcHms.Hbr.View",
+     "HmsRemote.com.vmware.vcHms.Hms.Manage",
+     "HmsRemote.com.vmware.vcHms.Hms.View",
+     "HmsReplication.com.vmware.vcHms.Replication.View",
+     "HmsSession.com.vmware.vcHms.Session.Terminate",
+     "HmsTarget.com.vmware.vcHms.Replication.Manage",
+     "Host.Hbr.HbrManagement",
+     "Network.Assign",
+     "Resource.com.vmware.vcDr.RecoveryUse",
+     "Sessions.TerminateSession",
+     "StorageProfile.View",
+     "Task.Update",
+     "VcDr.Autoprotect.com.vmware.vcDr.Edit",
+     "VcDr.Backup.com.vmware.vcDr.Manage",
+     "VcDr.Diagnostics.com.vmware.vcDr.SystemLogs",
+     "VcDr.DpxAgent.com.vmware.vcDr.ConvertLicense",
+     "VcDr.Internal.com.vmware.vcDr.InternalAccess",
+     "VcDr.InventoryMapper.com.vmware.vcDr.Edit",
+     "VcDr.OptionManager.com.vmware.vcDr.Edit",
+     "VcDr.PlaceholderDatastoreManager.com.vmware.vcDr.Edit",
+     "VcDr.ProtectionProfile.com.vmware.vcDr.AssignToRecoveryPlan",
+     "VcDr.ProtectionProfile.com.vmware.vcDr.Create",
+     "VcDr.ProtectionProfile.com.vmware.vcDr.Delete",
+     "VcDr.ProtectionProfile.com.vmware.vcDr.Edit",
+     "VcDr.ProtectionProfile.com.vmware.vcDr.RemoveFromRecoveryPlan",
+     "VcDr.RecoveryHistoryManager.com.vmware.vcDr.Delete",
+     "VcDr.RecoveryHistoryManager.com.vmware.vcDr.ViewDeleted",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.ConfigureServerCommands",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Create",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Delete",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Edit",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Failover",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Reprotect",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Restore",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Run",
+     "VcDr.RecoveryProfile.com.vmware.vcDr.Stage",
+     "VcDr.RemoteSite.com.vmware.vcDr.Edit",
+     "VcDr.Storage.com.vmware.vcDr.Configure",
+     "VirtualMachine.Config.AddExistingDisk",
+     "VirtualMachine.Config.AddRemoveDevice",
+     "VirtualMachine.Config.Annotation",
+     "VirtualMachine.Config.CPUCount",
+     "VirtualMachine.Config.DiskExtend",
+     "VirtualMachine.Config.EditDevice",
+     "VirtualMachine.Config.HostUSBDevice",
+     "VirtualMachine.Config.ManagedBy",
+     "VirtualMachine.Config.Memory",
+     "VirtualMachine.Config.RawDevice",
+     "VirtualMachine.Config.ReloadFromPath",
+     "VirtualMachine.Config.Rename",
+     "VirtualMachine.Config.SwapPlacement",
+     "VirtualMachine.GuestOperations.Modify",
+     "VirtualMachine.GuestOperations.ModifyAliases",
+     "VirtualMachine.GuestOperations.Query",
+     "VirtualMachine.GuestOperations.QueryAliases",
+     "VirtualMachine.Hbr.ConfigureReplication",
+     "VirtualMachine.Hbr.MonitorReplication",
+     "VirtualMachine.Hbr.ReplicaManagement",
+     "VirtualMachine.Interact.AnswerQuestion",
+     "VirtualMachine.Interact.SetCDMedia",
+     "VirtualMachine.Interact.SetFloppyMedia",
+     "VirtualMachine.Interact.Suspend",
+     "VirtualMachine.Interact.TurnOffFaultTolerance",
+     "VirtualMachine.Inventory.Unregister",
+     "VirtualMachine.Provisioning.FileRandomAccess",
+     "VirtualMachine.Provisioning.MarkAsTemplate",
+     "VirtualMachine.Provisioning.MarkAsVM",
+     "VirtualMachine.Provisioning.PutVmFiles",
+     "VirtualMachine.Replication.com.vmware.vcDr.Protect",
+     "VirtualMachine.Replication.com.vmware.vcDr.Unprotect",
+     "vSphereDataProtection.Protection"
+    ],
+    "{{vcenter-3}}": []
+   }
+  },
+  {
+   "role": "{{role-1}}",
+   "copies": {
+    "{{vcenter-2}}": [],
+    "{{vcenter-3}}": [
+     "Global.SetCustomField"
+    ]
+   }
+  }
+ ],
+ "grantProbe": {
+  "vcenter": "{{vcenter-1}}",
+  "privilege": "Folder.Create",
+  "cases": [
+   {
+    "case": "group, directory spelling",
+    "check": true,
+    "enforced": true,
+    "restSeesFolder": true
+   },
+   {
+    "case": "user, directory spelling",
+    "check": true,
+    "enforced": true,
+    "restSeesFolder": true
+   },
+   {
+    "case": "user, realm spelling",
+    "signIn": "vim.fault.NoPermission",
+    "restSeesFolder": false
+   },
+   {
+    "case": "group, realm spelling",
+    "signIn": "vim.fault.NoPermission",
+    "restSeesFolder": false
+   }
+  ],
+  "probeRoles": [
+   "created authz-probe-folder-create"
+  ],
+  "baseline": {
+   "signIn": "vim.fault.NoPermission",
+   "restSeesFolder": false
+  },
+  "after": {
+   "signIn": "vim.fault.NoPermission",
+   "restSeesFolder": false
+  },
+  "residue": {
+   "folder": false,
+   "grantsOfProbeRoles": 0
+  }
+ },
+ "tagProbe": {
+  "vcenter": "{{vcenter-1}}",
+  "cases": [
+   {
+    "case": "no grant",
+    "grants": [],
+    "attachStatus": 403,
+    "attached": false
+   },
+   {
+    "case": "both privileges on the folder only",
+    "grants": [
+     "created"
+    ],
+    "attachStatus": 403,
+    "attached": false
+   },
+   {
+    "case": "ObjectAttachable on the folder, AttachTag global, not propagating",
+    "grants": [
+     "created",
+     "created 201"
+    ],
+    "attachStatus": 403,
+    "attached": false
+   },
+   {
+    "case": "ObjectAttachable on the folder, AttachTag global, propagating",
+    "grants": [
+     "created",
+     "created 201"
+    ],
+    "attachStatus": 204,
+    "attached": true,
+    "detached": true
+   },
+   {
+    "case": "ObjectAttachable on the folder, AttachTag global in the realm spelling",
+    "grants": [
+     "created",
+     "created 201"
+    ],
+    "attachStatus": 403,
+    "attached": false
+   },
+   {
+    "case": "both global and propagating",
+    "grants": [
+     "created 201"
+    ],
+    "attachStatus": 204,
+    "attached": true,
+    "detached": true
+   },
+   {
+    "case": "both global and propagating, a no-privilege role on the folder",
+    "grants": [
+     "created 201",
+     "created"
+    ],
+    "attachStatus": 403,
+    "attached": false
+   },
+   {
+    "case": "both global and propagating, Admin on the folder",
+    "grants": [
+     "created 201",
+     "created"
+    ],
+    "attachStatus": 204,
+    "attached": true,
+    "detached": true
+   },
+   {
+    "case": "no grant, after the last removal",
+    "grants": [],
+    "attachStatus": 403,
+    "attached": false
+   }
+  ],
+  "probeRoles": [
+   "created authz-probe-none",
+   "created authz-probe-attach-tag",
+   "created authz-probe-tag-on-object",
+   "created authz-probe-tag-both"
+  ],
+  "globalDeletePath": {
+   "created": true,
+   "deleteStatus": 204,
+   "gone": true
+  },
+  "residue": {
+   "category": false,
+   "grantsOfProbeRoles": 0
+  }
+ },
+ "supervisorProbe": {
+  "vcenter": "{{vcenter-3}}",
+  "identities": {
+   "operator": {
+    "effectiveRoles": [
+     "VM-Service-VM-Management"
+    ],
+    "check": {
+     "AttachTag": false,
+     "ObjectAttachable": false,
+     "ModifyPermissions": true
+    },
+    "attachStatus": 403,
+    "attached": false
+   },
+   "tag identity": {
+    "effectiveRoles": [
+     "{{role-1}}"
+    ],
+    "check": {
+     "AttachTag": true,
+     "ObjectAttachable": true,
+     "ModifyPermissions": false
+    },
+    "attachStatus": 204,
+    "attached": true,
+    "detached": true
+   }
+  },
+  "grantAttempts": [
+   {
+    "attempt": "ObjectAttachable to itself, directory spelling",
+    "result": "refused",
+    "missingPrivilege": "InventoryService.Tagging.ObjectAttachable"
+   },
+   {
+    "attempt": "Admin to itself, directory spelling",
+    "result": "refused",
+    "missingPrivilege": "Authorization.ModifyPrivileges"
+   },
+   {
+    "attempt": "ObjectAttachable to itself, realm spelling",
+    "result": "refused",
+    "missingPrivilege": "InventoryService.Tagging.ObjectAttachable"
+   }
+  ],
+  "managedBy": "com.vmware.vcenter.wcp",
+  "probeRoles": [
+   "created authz-probe-tag-on-object-modify"
+  ],
+  "residue": {
+   "category": false,
+   "grantsOfProbeRoles": 0
+  }
+ }
+}

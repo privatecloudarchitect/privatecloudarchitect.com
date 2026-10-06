@@ -61,7 +61,7 @@ chapters render.
 | `categoryTypes` | the five typed namespaces and how many categories sit in each |
 | `actionCategoryAgreement` | the count of action categories read two ways. They should be equal; a difference means a category holds no actions, or an action has no category |
 | `runtimes` | how many environments cannot be resolved, how many leave dependencies unpinned, and how many pin everything |
-| `sweep` | `inlineOnly` against `withActionCall` is the headline: a workflow that calls no action needs no runtime and no packaging, so chapters 2 and 3 are not yours yet |
+| `sweep` | `inlineOnly` against `withActionCall` is the headline: a workflow that calls no action needs no runtime and no packaging, so the dependency-order and packaging chapters are not yours yet |
 
 The interactive commands are different. `--bindings` deliberately prints your own attribute names,
 configuration keys and action paths to your own terminal, because that is what makes the binding
