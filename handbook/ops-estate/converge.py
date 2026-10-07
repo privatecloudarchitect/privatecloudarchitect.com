@@ -10,11 +10,15 @@ The three behaviors the ops-estate sheet teaches, runnable:
                             drifted one repairs. Same command either way.
   no undeclared writes      only the names in desired-state.json are touched.
 
-Usage:  python3 converge.py [--dry-run]
+Usage:  python3 converge.py [--dry-run] [--state FILE]
+        --state FILE converges a declaration other than desired-state.json, such as the one export.py writes
+        from what you already built. It only creates and updates; nothing here deletes, and teardown.py is
+        deliberately bound to the demonstration declaration so it can never be pointed at your own content.
 Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
 Exit:   0 on success; 1 on any failed write.
 """
 
+import html
 import json
 import pathlib
 import sys
@@ -23,6 +27,8 @@ from opslib import bearer, ops
 
 DRY = "--dry-run" in sys.argv
 HERE = pathlib.Path(__file__).resolve().parent
+STATE = (pathlib.Path(sys.argv[sys.argv.index("--state") + 1]) if "--state" in sys.argv
+         else HERE / "desired-state.json")
 
 
 def live_supermetrics(tok):
@@ -33,8 +39,23 @@ def live_supermetrics(tok):
     return {s["name"]: s for s in body.get("superMetrics", [])}
 
 
+def plan(want, have):
+    """What converging one declared object takes: "create", "unchanged" or "update".
+
+    `have` is the live object found by NAME, or None. The declaration carries no id: when an update needs
+    one it is read from the live object, so a repair keeps the id every reference already points at.
+    The instance returns > and < as &gt; and &lt; in both fields, so the comparison is on the decoded text;
+    compared raw, every formula with a comparison operator would read as drifted on every run."""
+    if have is None:
+        return "create"
+    live = (html.unescape(have.get("formula") or ""), html.unescape(have.get("description") or ""))
+    if live == (want["formula"], want["description"]):
+        return "unchanged"
+    return "update"
+
+
 def main():
-    state = json.loads((HERE / "desired-state.json").read_text())
+    state = json.loads(STATE.read_text())
     tok = bearer()
     live = live_supermetrics(tok)
     created = updated = unchanged = failed = 0
@@ -42,7 +63,8 @@ def main():
     for want in state["supermetrics"]:
         name = want["name"]
         have = live.get(name)
-        if have is None:
+        action = plan(want, have)
+        if action == "create":
             if DRY:
                 print(f"  would create  {name}")
                 created += 1
@@ -58,9 +80,7 @@ def main():
                 failed += 1
             continue
 
-        same = (have.get("formula") == want["formula"]
-                and have.get("description") == want["description"])
-        if same:
+        if action == "unchanged":
             print(f"  unchanged     {name}")
             unchanged += 1
             continue

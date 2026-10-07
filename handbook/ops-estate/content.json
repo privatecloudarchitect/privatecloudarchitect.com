@@ -1,10 +1,11 @@
 {
- "captured_utc": "2026-09-27T23:30:21Z",
+ "captured_utc": "2026-10-07T02:59:11Z",
  "owner": "PCA",
+ "build": "VCF Operations 9.1.1.0",
  "census": [
   {
    "class": "custom groups",
-   "total": 63,
+   "total": 62,
    "owned": 14,
    "conformingToSchema": 14,
    "fieldCounts": {
@@ -23,7 +24,7 @@
   },
   {
    "class": "alert definitions",
-   "total": 1824,
+   "total": 1872,
    "owned": 13,
    "conformingToSchema": 10,
    "fieldCounts": {
@@ -34,7 +35,7 @@
   },
   {
    "class": "symptom definitions",
-   "total": 2926,
+   "total": 2954,
    "owned": 24,
    "conformingToSchema": 0,
    "fieldCounts": {
@@ -43,7 +44,7 @@
   },
   {
    "class": "policies",
-   "total": 41,
+   "total": 40,
    "owned": 7,
    "conformingToSchema": 7,
    "fieldCounts": {
@@ -52,28 +53,28 @@
   },
   {
    "class": "report definitions",
-   "total": 136,
+   "total": 137,
    "owned": 0,
    "conformingToSchema": 0,
    "fieldCounts": {}
   },
   {
    "class": "reports",
-   "total": 0,
+   "total": 1,
    "owned": 0,
    "conformingToSchema": 0,
    "fieldCounts": {}
   },
   {
    "class": "notification rules",
-   "total": 5,
+   "total": 6,
    "owned": 0,
    "conformingToSchema": 0,
    "fieldCounts": {}
   }
  ],
  "totals": {
-  "objects": 5181,
+  "objects": 5258,
   "owned": 158,
   "conformingToSchema": 131
  },
@@ -239,17 +240,17 @@
  ],
  "prefixWithoutSeparatorWouldAlsoClaim": 1,
  "integrity": {
-  "references": 3358,
+  "references": 3385,
   "dangling": 0,
   "byEdge": [
    {
     "edge": "alert definition -> symptom definition",
-    "references": 3337,
+    "references": 3365,
     "dangling": 0
    },
    {
     "edge": "custom group -> policy",
-    "references": 19,
+    "references": 18,
     "dangling": 0
    },
    {
@@ -259,15 +260,15 @@
    }
   ],
   "negatedSymptomReferences": 34,
-  "groupsCarryingAPolicy": 19,
-  "groupsTotal": 63
+  "groupsCarryingAPolicy": 18,
+  "groupsTotal": 62
  },
  "definedVersusSet": {
-  "explicitlySet": 75,
-  "explicitlyEnabled": 63,
+  "explicitlySet": 77,
+  "explicitlyEnabled": 65,
   "explicitlyDisabled": 12,
-  "alertDefinitionsOnTheInstance": 1824,
-  "unsetAndThereforeNull": 1749
+  "alertDefinitionsOnTheInstance": 1872,
+  "unsetAndThereforeNull": 1795
  },
  "noReadSurface": [
   {
@@ -322,14 +323,43 @@
  "presenceVersusPopulation": {
   "kind": "VirtualMachine",
   "objectsSampled": 25,
-  "objectsCollecting": 107,
+  "objectsCollecting": 114,
   "keysInTheDescribe": 983,
-  "keysThatReturnedAValue": 247,
-  "keysThatReturnedNothing": 736,
-  "propertyNamesNotInTheDescribe": 408,
+  "keysThatReturnedAValue": 230,
+  "keysThatReturnedNothing": 753,
+  "propertyNamesNotInTheDescribe": 442,
   "namedPair": {
    "metric": "config|hardware|num_Cpu",
    "property": "config|hardware|numCpu"
   }
- }
+ },
+ "report": [
+  "content.py: auditing an operations content estate owned by 'PCA' on VCF Operations 9.1.1.0",
+  "",
+  "  custom groups             62 total     14 PCA-owned     14 conforming to the four-field schema",
+  "  super metrics            186 total    100 PCA-owned    100 conforming to the four-field schema",
+  "  alert definitions       1872 total     13 PCA-owned     10 conforming to the four-field schema",
+  "  symptom definitions     2954 total     24 PCA-owned      0 conforming to the four-field schema",
+  "  policies                  40 total      7 PCA-owned      7 conforming to the four-field schema",
+  "  report definitions       137 total      0 PCA-owned      0 conforming to the four-field schema",
+  "  reports                    1 total      0 PCA-owned      0 conforming to the four-field schema",
+  "  notification rules         6 total      0 PCA-owned      0 conforming to the four-field schema",
+  "                          5258 objects, of which 158 are yours and 131 match the schema you publish",
+  "",
+  "  a prefix test without the separator would also claim 1 object(s) that are not yours",
+  "",
+  "  REFERENTIAL INTEGRITY: 3385 reference(s) across 3 edge type(s); 0 dangling",
+  "      3365  alert definition -> symptom definition       dangling 0",
+  "        18  custom group -> policy                       dangling 0",
+  "         2  notification rule -> alert definition        dangling 0",
+  "        34  of the symptom references carry a leading '!' that negates them; a check that does not strip it reports every one as broken",
+  "",
+  "  DEFINED IS NOT SET: 1872 alert definition(s) exist; the default policy sets 77 of them (65 on, 12 off)",
+  "     the other 1795 are UNSET, which is null and neither of the two",
+  "",
+  "  NO READ SURFACE: 12 candidate path(s) probed for dashboards and views; 0 answered 200",
+  "",
+  "  PRESENCE IS NOT POPULATION: the VirtualMachine describe offers 983 key(s); 230 returned a value on 25 collecting object(s), 753 returned nothing",
+  "     and 442 property name(s) on those objects are absent from the describe entirely, so the catalog is not the whole vocabulary"
+ ]
 }

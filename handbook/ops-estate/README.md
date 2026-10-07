@@ -2,83 +2,137 @@
 
 Backs the operations-content chapter
 ([privatecloudarchitect.com/handbook/ops-estate](https://privatecloudarchitect.com/handbook/ops-estate)).
-The chapter's doctrine is that operations content is code: objects addressed by stable, parseable names,
-asserted by one level-triggered converge, with teardown a separate and scoped tool. Two harnesses here, both
-stdlib Python, both running against your own VCF Operations instance.
 
-| Harness | What it does |
-|---|---|
-| `converge.py`, `teardown.py` | **Asserts desired state.** Adopt-or-create by name, level-triggered, id-preserving, with a scoped teardown. Writes to your estate, on two deliberately boring demonstration objects. |
-| `content.py` | **Audits the estate.** Read-only. Counts every content class, tests your names against your own schema, resolves every reference between objects, reports what the governing policy actually decides, and probes for the read surfaces that do not exist. |
-| `opslib.py` | Shared plumbing: the broker exchange and the request helper both harnesses use. |
-| `desired-state.json`, `expected-output.md`, `content.json` | The converge declaration, its transcript, and the audit record the chapter's plates render. |
+**What you get.** A declaration file your VCF Operations instance converges to, so a repair keeps every
+reference; a naming standard you can measure; and a weekly read-only check that fails the day a reference
+breaks. Stdlib Python 3, run against your own instance.
 
-## Prereqs, shared by both
+## Start here: audit what you have
 
-An api-token minted in your operations console, and the broker exchange the handbook's Part 0 identity chapter
-teaches. On 9.1 the older username and password token-acquire flow is rejected for federated users.
+Read-only. It changes nothing on the instance and writes one file, `content.json`.
 
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
+export OPS_API_TOKEN=<your-api-token>        # minted in the operations console; OPS_REALM defaults to CUSTOMER
+export OPS_OWNER=<your-owner-prefix>         # the first field of every name you author
 export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
-```
-
-## The converge harness
-
-```bash
-python3 converge.py --dry-run   # reads only; shows what would change
-python3 converge.py             # run 1: created 2
-python3 converge.py             # run 2: unchanged 2 (the level-trigger proof)
-# edit one formula in desired-state.json, then:
-python3 converge.py             # updated 1, unchanged 1, id preserved
-python3 teardown.py             # deleted 2, read-back verified
-```
-
-What it proves:
-
-1. **Adopt-or-create by name.** A declared name that is absent is created; a name that is live is adopted
-   with an id-preserving update. Instance ids are read from the estate, never stored in the declaration.
-2. **Level-triggered convergence.** The second run reports every object unchanged.
-3. **Teardown is scoped and separate.** It deletes only the declared names and verifies each with a
-   read-back; it cannot touch anything else on your estate.
-
-It creates two super metrics named under the `Converge Demo - Ops Estate - ...` schema, computing active and
-consumed guest memory in GiB from stock metric keys. They are enabled in no policy, so they compute nothing
-and page nobody; they exist to be converged and deleted.
-
-This demonstrates the pattern on one object class. The reference estate runs the same doctrine across tags,
-groups, policies, super metrics, views and alerts, generator-sequenced in dependency order; this harness is
-its minimal faithful core, small enough to read in one sitting. See
-[`expected-output.md`](expected-output.md) for the transcript shape.
-
-## The audit harness
-
-```bash
-export OPS_OWNER="PCA"      # the owner prefix your content carries
 python3 content.py
 ```
 
-Four questions, one read-only pass:
+The api-token is exchanged at the identity broker for a short-lived bearer, the flow the handbook's Part 0
+identity chapter teaches. On 9.1 the older username and password token-acquire flow is rejected for federated
+users.
 
-1. **How much is there, and how much of it is yours?** Every class walked to its declared total, never to one
-   page. On the reference estate: 5,172 objects of which 158 were ours. That ratio is the entire argument for
-   a parseable name, because you cannot rename the other 5,014.
-2. **Does your content hold the standard you publish?** Per class, how many names carry the four fields, and
-   how many fields the rest actually use. A class that diverges **consistently** is the standard being wrong
-   about that class; a class that diverges in ones and twos is drift. A total cannot tell those apart.
-3. **Does every reference resolve?** Alert definition to symptom definition, custom group to policy,
-   notification rule to alert definition. This is the check that catches an id re-minted by a rebuild, which
-   is the failure the chapter opens with.
-4. **What does the governing policy actually decide?** The alert definitions present against the ones the
-   policy sets. Everything else is UNSET, a third origin and not a synonym for disabled.
+## The practices, and what makes each one easy
 
-### Three ways the audit answers wrongly, each of which it did first
+| Practice | What does it for you | How you know it is working |
+|---|---|---|
+| Name every object you author `<Owner> - <Initiative> - <Object> - <Purpose>` | `content.py` lists your objects and reports, per class, how many names carry the four fields | every class holds the standard, or the standard is amended for the class that consistently differs |
+| Bring what you built under the converge, then change it only through the file; never fix drift by recreating | `export.py`, then `converge.py --state`; `cycle.py` proves the behavior on two throwaway objects | a converge run reports every object unchanged |
+| Read a metric key on real objects before a formula depends on it | `content.py` probes a kind's catalog keys (`OPS_PROBE_KIND`, `OPS_CONTROL_KEY`); the chapter shows the stats query for one key | the keys your formulas use return a value on the objects they run on |
+| Run the audit weekly and act the day a reference stops resolving | `content.py --check` exits 2 on any dangling reference | the scheduled job passes, week after week |
+| Set every alert you rely on explicitly in the policy, and report the rest as unset | `content.py` counts what the default policy sets against what exists | the alerts you page on are all explicitly set, and your report shows three states |
+| Keep what a dashboard reads in code, and log every dashboard import | `content.py` probes the dashboard and view read paths; `dashboard-imports.csv` is the log's header | every dashboard on every instance has a line in the log |
+
+Two names from the reference estate, to show the shape: `PCA - MemTier - Host - Recoverable Cold DRAM GB`
+carries all four fields; `PCA - Availability - Check Unreachable (FQDN)` carries three, with no object field.
+
+## Bring what you already built under the converge
+
+```bash
+export OPS_OWNER=<your-owner-prefix>
+python3 export.py > mine.json                      # read-only; the super metrics named '<owner> - ...'
+python3 converge.py --state mine.json --dry-run    # expect every object "unchanged"
+```
+
+A dry run that reports every exported object unchanged is the proof that the converge has adopted what you built
+by hand, by name, without touching it. From then on `mine.json` is the source: edit it, run the dry run to see
+the change, then converge. `converge.py` creates and updates; it never deletes, and `teardown.py` is bound to the
+demonstration declaration so it can never be pointed at your own content.
+
+The list read returns `>` and `<` as `&gt;` and `&lt;` in both the formula and the description. `export.py`
+writes the decoded text and `converge.py` compares decoded text; compared raw, every super metric with a
+comparison operator would read as drifted and be rewritten on every run.
+
+This companion converges super metrics. The reference estate runs the same converge across tags, groups,
+policies, super metrics, views and alerts, in dependency order; these files are its smallest complete form.
+
+## Prove the converge on your instance: `cycle.py`
+
+```bash
+python3 cycle.py
+```
+
+One command runs the whole cycle against the two demonstration super metrics in `desired-state.json`, each step
+the command you would type yourself:
+
+1. `converge.py --dry-run` reads only and shows what would change.
+2. `converge.py` creates what is absent.
+3. `converge.py` again reports every object unchanged: a converged estate is a no-op.
+4. After one formula is edited, `converge.py` repairs the drift in place, and the object keeps its id.
+5. After the other object is deleted outside the converge, `converge.py` creates it again, and it comes back
+   with a new id: the failure a rebuild by teardown causes, shown on an object the script made.
+6. `teardown.py` deletes only the declared names and reads back to confirm.
+7. Read-only: `export.py`, then `converge.py --state mine.json --dry-run` on what you already built.
+
+The formula edit is made in a temporary copy of this folder, so `desired-state.json` is never changed. The
+script reads the super metric list itself between steps, so "id kept" and "new id" are checked against the
+instance rather than taken from a script's message, and it reads once more after the teardown for residue. It
+refuses to start if either demonstration name already exists, and if any step fails the teardown still runs.
+It writes `converge-run.json` and exits 0 only when every behavior held.
+
+The two demonstration super metrics compute active and consumed guest memory in GiB from stock metric keys. No
+policy enables them, so they compute nothing and page nobody.
+
+## Run the check on a schedule
+
+```cron
+# Mondays 06:00: audit the estate, and fail the job when any reference is dangling
+0 6 * * 1  cd /path/to/ops-estate && python3 content.py --check
+```
+
+Give the job the environment above. On a healthy estate the check passes every week, which is what makes a
+failure worth acting on. One way it fails is an object recreated rather than repaired, which comes back with a
+new id and leaves whatever referred to it pointing at nothing; step 5 of `cycle.py` shows the new id.
+
+## Log every dashboard import
+
+Dashboards and views have no read path in the suite API (the audit's last probe shows which paths were tried),
+so nothing on the instance can tell you which dashboard is where. Keep the log yourself, one line per import:
+
+```csv
+imported_utc,instance,dashboard,source_file,source_revision,imported_by
+```
+
+`dashboard-imports.csv` is that header. Keep the definitions the dashboard reads (super metrics, groups, views'
+inputs) in files the converge owns, and treat the dashboard itself as a build artifact imported by hand.
+
+## What the audit reports
+
+1. **How much is there, and how much of it is yours.** Every content class the suite API serves, each walked
+   to its declared total, never to one page. Your own content is usually a small share of the instance, and
+   you cannot rename the rest, which is why a parseable name is the only way to find yours.
+2. **Whether your names hold the standard.** Per class, how many names carry the four fields, and how many
+   fields the others actually use. A class that diverges **consistently** is the standard being wrong about
+   that class; a class that diverges in ones and twos is drift. A total cannot tell those apart.
+3. **Whether every reference resolves.** Alert definition to symptom definition, custom group to policy,
+   notification rule to alert definition.
+4. **What the default policy decides.** The alert definitions present against the ones the default policy
+   sets. Everything else is UNSET, a third origin and not a synonym for disabled. A custom policy may set
+   alerts for the groups it governs; those are not in this count.
+5. **What has no read surface.** Every candidate path for a dashboard or a view, with its answer.
+6. **Which catalog keys actually return a value**, for the kind in `OPS_PROBE_KIND` (default `VirtualMachine`),
+   checked against `OPS_CONTROL_KEY`, a key you know returns a value on that kind (default `cpu|readyPct`).
+
+The record names the product build it was read from, and carries the summary the run printed, so a figure can
+be compared across upgrades.
+
+### Three ways the audit answered wrongly at first
 
 - **A negated reference is still a reference.** A symptom id inside an alert definition may carry a leading
   `!`, which negates it. Resolve the id without the marker, or a healthy estate reports every negated
-  reference as broken. There were 34 of them here.
+  reference as broken.
 - **A filter can be an object, not a list.** `rules[].alertDefinitionIdFilters` is an object carrying a
   `values` array. Iterating the object yields its field names and reports those as dangling ids.
 - **Ownership is the prefix AND the separator.** Testing for `PCA` also claims a vendor object called
@@ -94,37 +148,48 @@ enabled. `content.py` counts explicit entries; the full contract is the field gu
 
 ### Present is not populated
 
-The statkey describe for a resource kind is a **catalog**, not an inventory. `content.py` reads it,
-then probes every key it lists against objects that are known to collect, and reports the two counts
-separately. On the reference estate the `VirtualMachine` describe offers 983 keys and **247 returned
-a value**; the other 736 are present and empty, and nothing in the describe distinguishes them. A
-metric built on one of those validates, saves, activates, and renders an empty panel with nothing to
-diagnose.
+The statkey describe for a resource kind is a **catalog**, not an inventory. `content.py` reads it, probes
+every key it lists against objects known to collect, and reports how many returned a value and how many did
+not; nothing in the describe distinguishes the two. A metric built on a key that returns nothing validates,
+saves, activates, and renders an empty panel with nothing to diagnose.
 
-The describe is not the whole vocabulary either. **408 property names** on those same objects appear
-in no describe at all: configuration and state largely live on the properties API
-(`GET /api/resources/{id}/properties`), which the statkey catalog never lists. Ask the wrong surface
-and you get an empty result with HTTP 200, which reads exactly like absence.
+The describe is not the whole vocabulary either. Configuration and state largely live on the properties API
+(`GET /api/resources/{id}/properties`), which the statkey catalog never lists, and the record counts the
+property names that appear in no describe at all. Ask the wrong surface and you get an empty result with
+HTTP 200, which reads exactly like absence.
 
 The prefix does not tell you which surface to ask. `config|hardware|num_Cpu` is a **metric** and
-`config|hardware|numCpu` is a **property** - one underscore apart, same object type, same prefix,
-and each silent on the other's surface. So the probe asks both and records which one answered.
+`config|hardware|numCpu` is a **property**: one underscore apart, same object type, same prefix, and each
+silent on the other's surface. So the probe asks both and records which one answered. A key known to
+populate is read beside every probe, because a query that answers zero for everything is a broken query and
+looks exactly like a discovery.
 
-A key known to populate is read beside every probe, because a query that answers zero for everything
-is a broken query and looks exactly like a discovery.
+## Scope, stated plainly
 
-### Scope, stated plainly
-
-- `content.py` is read-only. Every call is a `GET`. It creates, converges and deletes nothing.
-- The absence claim about dashboards and views is scoped to the paths it probes, and the record carries each
+- `content.py` and `export.py` change nothing. Their calls are GETs, plus POSTs that write nothing: the
+  broker's token exchange and, in `content.py`, the stats query.
+- `cycle.py`, `converge.py` and `teardown.py` write to your instance. `cycle.py` and `teardown.py` touch only
+  the two demonstration super metrics declared in `desired-state.json`; `converge.py --state` creates and
+  updates the super metrics in the file you give it, and deletes nothing.
+- The absence claim about dashboards and views is scoped to the paths probed, and the record carries each
   path with its status so a later build can be rechecked rather than believed.
 - **Only your own object names are published.** Every other object on the instance appears as a count: an
   estate's object names are its own business, and the audit does not need them.
 
-### Reading the record
+## Reading the records
 
-`census` is one row per class with the total, how many are yours, how many conform, and a histogram of how
-many fields your names actually carry. `totals` is the three headline numbers. `ownedNames` is the full list
-of your objects, which is the inventory a parseable name buys you. `integrity` carries the reference count per
-edge type with the dangling count, plus `negatedSymptomReferences` so the trap is visible in the data.
-`definedVersusSet` is the alert gap. `noReadSurface` is the probe, path by path.
+The two records in this folder are the reference estate's runs; each carries its capture time and build.
+
+`content.json`: `census` is one row per class with the total, how many are yours, how many conform, and a
+histogram of how many fields your names actually carry. `totals` is the three headline numbers. `ownedNames`
+is the full list of your objects, which is the inventory a parseable name buys you. `integrity` carries the
+reference count per edge type with the dangling count, plus `negatedSymptomReferences` so the negation marker
+is visible in the data. `definedVersusSet` is the alert gap under the default policy. `noReadSurface` is the
+probe, path by path. `presenceVersusPopulation` is the catalog probe. `report` is the summary the run printed.
+
+`converge-run.json`: `steps` is each command with its exit code and output, `drift` the formula edit,
+`idPreservedAcrossDriftRepair` whether the repaired object kept its id, `recreate` whether the object deleted
+outside the converge came back with a new one, `residueAfterTeardown` how many demonstration objects were left,
+and `adoption` what the dry run reported for the super metrics already on the instance. All of those are read
+from the instance by the script, not taken from the other scripts' messages. `expected-output.md` is the same
+run as a transcript.

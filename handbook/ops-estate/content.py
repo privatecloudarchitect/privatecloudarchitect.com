@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """content.py: audit an operations content estate the way a codebase gets audited.
 
-converge.py in this folder asserts desired state. This is the other half: the four questions you would ask of
-any codebase, asked of a running VCF Operations instance.
+converge.py in this folder asserts desired state. This is the other half: the questions you would ask of any
+codebase, asked of a running VCF Operations instance.
 
   1. the CENSUS: every content class the suite API serves, counted, each collection walked to its declared
      total rather than to one page. The ratio that matters is not the total, it is how small your own content
@@ -13,10 +13,15 @@ any codebase, asked of a running VCF Operations instance.
   3. the REFERENTIAL INTEGRITY check across three edge types: alert definition to symptom definition, custom
      group to policy, and notification rule to alert definition. This is the one that catches the failure the
      chapter is about, a reference left pointing at an id that a rebuild re-minted;
-  4. the DEFINED-versus-SET gap: how many alert definitions exist against how many the governing policy has
+  4. the DEFINED-versus-SET gap: how many alert definitions exist against how many the default policy has
      an opinion about. Everything else is UNSET, which is a third origin and not a synonym for disabled;
-  5. and a probe of the paths that would serve dashboards and views, recorded path by path, because an
-     absence claim needs the set it was tested against.
+  5. a probe of the paths that would serve dashboards and views, recorded path by path, because an absence
+     claim needs the set it was tested against;
+  6. and PRESENCE versus POPULATION: how many of the keys a resource kind's catalog offers actually return a
+     value on objects that collect, and how many property names live on a surface the catalog never lists.
+
+The DEFINED-versus-SET gap is read from the default policy, the one that governs every object no other policy
+claims. A custom policy may set alerts for the groups it governs; those are not in this count.
 
 Three ways this check answers wrongly, each of which it did first:
 
@@ -43,7 +48,13 @@ Run:
   export OPS_API_TOKEN=<api-token>                # minted in the operations console
   export OPS_OWNER="PCA"                          # the owner prefix your content carries
   export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
+  export OPS_PROBE_KIND=VirtualMachine            # the resource kind whose catalog keys are probed (VMWARE adapter)
+  export OPS_CONTROL_KEY="cpu|readyPct"           # a key you know returns a value on that kind
   python3 content.py
+
+  python3 content.py --check     # the same audit, then exit 2 if any reference is dangling, for a scheduler
+
+The record names the product build it was read from, so a figure can be compared across upgrades.
 """
 
 import collections
@@ -51,6 +62,7 @@ import io
 import json
 import os
 import re
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -79,7 +91,7 @@ CLASSES = [
 # A key known to populate wherever this kind collects at all. Read beside every population
 # probe, because a query that answers zero for everything is a broken query and looks identical
 # to a finding.
-CONTROL_KEY = "cpu|readyPct"
+CONTROL_KEY = os.environ.get("OPS_CONTROL_KEY", "cpu|readyPct")
 
 ABSENT_CANDIDATES = [
     "/api/dashboards", "/api/views", "/api/dashboard", "/api/view", "/api/viewdefinitions",
@@ -222,8 +234,19 @@ def presence_versus_population(tok, kind="VirtualMachine", sample_size=25):
 def main():
     owner = os.environ.get("OPS_OWNER", "PCA")
     out_dir = os.environ.get("OUT_DIR", ".")
+    check = "--check" in sys.argv[1:]
+    report = []
+
+    def say(line=""):
+        """Print one line of the summary and keep it, so the record carries exactly what the run printed."""
+        print(line)
+        report.extend(line.split("\n"))
+
     tok = bearer()
-    print(f"content.py: auditing an operations content estate owned by {owner!r}\n")
+    st, ver = ops("GET", "/api/versions/current", tok)
+    build = (ver or {}).get("releaseName") if st == 200 and isinstance(ver, dict) else None
+    say(f"content.py: auditing an operations content estate owned by {owner!r}"
+          + (f" on {build}" if build else "") + "\n")
 
     # ---- 1: the census and the naming audit
     raw, census = {}, []
@@ -235,17 +258,17 @@ def main():
         census.append({"class": label, "total": len(items), "owned": len(mine),
                        "conformingToSchema": len(conforming),
                        "fieldCounts": dict(collections.Counter(fields(name_of(i)) for i in mine))})
-        print(f"  {label:<22} {len(items):>5} total   {len(mine):>4} {owner}-owned   "
+        say(f"  {label:<22} {len(items):>5} total   {len(mine):>4} {owner}-owned   "
               f"{len(conforming):>4} conforming to the four-field schema")
     total = sum(c["total"] for c in census)
     owned = sum(c["owned"] for c in census)
     conf = sum(c["conformingToSchema"] for c in census)
-    print(f"  {'':<22} {total:>5} objects, of which {owned} are yours and {conf} match the schema you publish")
+    say(f"  {'':<22} {total:>5} objects, of which {owned} are yours and {conf} match the schema you publish")
 
     near = sorted({name_of(i) for items in raw.values() for i in items
                    if str(name_of(i)).startswith(owner) and not owned_by(name_of(i), owner)})
     if near:
-        print(f"\n  a prefix test without the separator would also claim {len(near)} object(s) that are "
+        say(f"\n  a prefix test without the separator would also claim {len(near)} object(s) that are "
               f"not yours")
 
     # ---- 2: referential integrity
@@ -272,11 +295,11 @@ def main():
             edges.append(("notification rule -> alert definition", aid in ad_ids))
     by_edge = collections.Counter(k for k, _ in edges)
     dangling = collections.Counter(k for k, ok in edges if not ok)
-    print(f"\n  REFERENTIAL INTEGRITY: {len(edges)} reference(s) across {len(by_edge)} edge type(s); "
+    say(f"\n  REFERENTIAL INTEGRITY: {len(edges)} reference(s) across {len(by_edge)} edge type(s); "
           f"{sum(dangling.values())} dangling")
     for k, n in by_edge.items():
-        print(f"     {n:>5}  {k:<44} dangling {dangling.get(k, 0)}")
-    print(f"     {negated:>5}  of the symptom references carry a leading '!' that negates them; a check that "
+        say(f"     {n:>5}  {k:<44} dangling {dangling.get(k, 0)}")
+    say(f"     {negated:>5}  of the symptom references carry a leading '!' that negates them; a check that "
           f"does not strip it reports every one as broken")
 
     # ---- 3: defined versus set
@@ -287,13 +310,13 @@ def main():
         if "explicitlySet" in gap:
             gap["alertDefinitionsOnTheInstance"] = len(raw["alert definitions"])
             gap["unsetAndThereforeNull"] = len(raw["alert definitions"]) - gap["explicitlySet"]
-            print(f"\n  DEFINED IS NOT SET: {gap['alertDefinitionsOnTheInstance']} alert definition(s) exist; "
-                  f"the governing policy sets {gap['explicitlySet']} of them "
+            say(f"\n  DEFINED IS NOT SET: {gap['alertDefinitionsOnTheInstance']} alert definition(s) exist; "
+                  f"the default policy sets {gap['explicitlySet']} of them "
                   f"({gap['explicitlyEnabled']} on, {gap['explicitlyDisabled']} off)")
-            print(f"     the other {gap['unsetAndThereforeNull']} are UNSET, which is null and neither of "
+            say(f"     the other {gap['unsetAndThereforeNull']} are UNSET, which is null and neither of "
                   f"the two")
         else:
-            print(f"\n  DEFINED IS NOT SET: not determined ({gap['error']})")
+            say(f"\n  DEFINED IS NOT SET: not determined ({gap['error']})")
 
     # ---- 4: what has no read surface
     absent = []
@@ -301,23 +324,24 @@ def main():
         st, _ = ops("GET", p, tok, params={"pageSize": 1})
         absent.append({"path": "/suite-api" + p, "status": st})
     served = [a for a in absent if a["status"] == 200]
-    print(f"\n  NO READ SURFACE: {len(absent)} candidate path(s) probed for dashboards and views; "
+    say(f"\n  NO READ SURFACE: {len(absent)} candidate path(s) probed for dashboards and views; "
           f"{len(served)} answered 200")
 
     # ---- 5: presence is not population
-    pvp = presence_versus_population(tok)
+    pvp = presence_versus_population(tok, kind=os.environ.get("OPS_PROBE_KIND", "VirtualMachine"))
     if "error" in pvp:
-        print(f"\n  PRESENCE VERSUS POPULATION: not determined ({pvp['error']})")
+        say(f"\n  PRESENCE VERSUS POPULATION: not determined ({pvp['error']})")
     else:
-        print(f"\n  PRESENCE IS NOT POPULATION: the {pvp['kind']} describe offers "
+        say(f"\n  PRESENCE IS NOT POPULATION: the {pvp['kind']} describe offers "
               f"{pvp['keysInTheDescribe']} key(s); {pvp['keysThatReturnedAValue']} returned a value on "
               f"{pvp['objectsSampled']} collecting object(s), {pvp['keysThatReturnedNothing']} returned "
               f"nothing")
-        print(f"     and {pvp['propertyNamesNotInTheDescribe']} property name(s) on those objects are "
+        say(f"     and {pvp['propertyNamesNotInTheDescribe']} property name(s) on those objects are "
               f"absent from the describe entirely, so the catalog is not the whole vocabulary")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "owner": owner,
+               "build": build,
                "census": census,
                "totals": {"objects": total, "owned": owned, "conformingToSchema": conf},
                "ownedNames": sorted({name_of(i) for items in raw.values() for i in items
@@ -330,7 +354,8 @@ def main():
                              "groupsCarryingAPolicy": len(bound), "groupsTotal": len(gl)},
                "definedVersusSet": gap,
                "noReadSurface": absent,
-               "presenceVersusPopulation": pvp}
+               "presenceVersusPopulation": pvp,
+               "report": report}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
     for var in ("OPS_HOST", "OPS_BROKER_HOST"):
         v = os.environ.get(var)
@@ -343,7 +368,14 @@ def main():
     open(os.path.join(out_dir, "content.json"), "w", encoding="utf-8").write(text + "\n")
     print(f"\nwrote content.json ({total} objects audited, {owned} of them yours); only your own object "
           f"names are published, everything else is a count")
+    if check:
+        broken = sum(dangling.values())
+        if broken:
+            print(f"\ncheck FAILED: {broken} reference(s) point at an object that does not exist")
+            return 2
+        print("\ncheck passed: every reference resolves")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
