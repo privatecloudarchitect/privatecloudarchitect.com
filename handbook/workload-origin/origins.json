@@ -1,0 +1,364 @@
+{
+  "captured": "2026-10-07T19:26:58Z",
+  "supervisors": 1,
+  "origins": {
+    "automation": 5,
+    "service": 7,
+    "supervisor": 1,
+    "orphan": 0,
+    "record-only": 0
+  },
+  "automationRecordsOnUnreadSupervisors": 0,
+  "checks": [],
+  "namespaces": [
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-1}}",
+      "configStatus": "RUNNING",
+      "metadata": {
+        "project_id": "{{id}}",
+        "organization_id": "{{id}}",
+        "region_id": "{{id}}"
+      },
+      "service": null,
+      "vpcProject": "{{organization's NSX project}}",
+      "vpc": "{{vpc-1}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:edit-{{project-role group}}@{{domain}}",
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local",
+        "VIEW:GROUP:view-{{project-role group}}@{{domain}}"
+      ],
+      "origin": "automation",
+      "organization": "{{organization-1}}",
+      "project": "{{project-1}}",
+      "vpcInOrganizationProject": true
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-2}}",
+      "configStatus": "RUNNING",
+      "metadata": {
+        "project_id": "{{id}}",
+        "organization_id": "{{id}}",
+        "region_id": "{{id}}"
+      },
+      "service": null,
+      "vpcProject": "{{organization's NSX project}}",
+      "vpc": "{{vpc-1}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:edit-{{project-role group}}@{{domain}}",
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local",
+        "VIEW:GROUP:view-{{project-role group}}@{{domain}}"
+      ],
+      "origin": "automation",
+      "organization": "{{organization-1}}",
+      "project": "{{project-1}}",
+      "vpcInOrganizationProject": true
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-3}}",
+      "configStatus": "RUNNING",
+      "metadata": {
+        "project_id": "{{id}}",
+        "organization_id": "{{id}}",
+        "region_id": "{{id}}"
+      },
+      "service": null,
+      "vpcProject": "{{organization's NSX project}}",
+      "vpc": "{{vpc-1}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:edit-{{project-role group}}@{{domain}}",
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local",
+        "VIEW:GROUP:view-{{project-role group}}@{{domain}}"
+      ],
+      "origin": "automation",
+      "organization": "{{organization-1}}",
+      "project": "{{project-1}}",
+      "vpcInOrganizationProject": true
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-4}}",
+      "configStatus": "RUNNING",
+      "metadata": {
+        "project_id": "{{id}}",
+        "organization_id": "{{id}}",
+        "region_id": "{{id}}"
+      },
+      "service": null,
+      "vpcProject": "{{organization's NSX project}}",
+      "vpc": "{{vpc-1}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:edit-{{project-role group}}@{{domain}}",
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local",
+        "VIEW:GROUP:view-{{project-role group}}@{{domain}}"
+      ],
+      "origin": "automation",
+      "organization": "{{organization-1}}",
+      "project": "{{project-1}}",
+      "vpcInOrganizationProject": true
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-5}}",
+      "configStatus": "RUNNING",
+      "metadata": {
+        "project_id": "{{id}}",
+        "organization_id": "{{id}}",
+        "region_id": "{{id}}"
+      },
+      "service": null,
+      "vpcProject": "{{organization's NSX project}}",
+      "vpc": "{{vpc-1}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:edit-{{project-role group}}@{{domain}}",
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local",
+        "VIEW:GROUP:view-{{project-role group}}@{{domain}}"
+      ],
+      "origin": "automation",
+      "organization": "{{organization-1}}",
+      "project": "{{project-1}}",
+      "vpcInOrganizationProject": true
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-6}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": "auto-attach.vksm.broadcom.com",
+      "vpcProject": "default",
+      "vpc": "{{vpc-2}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "service",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-7}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": "cci-ns.vmware.com",
+      "vpcProject": "default",
+      "vpc": "{{vpc-2}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "service",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-8}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": "configuration.vsphere.vmware.com",
+      "vpcProject": "default",
+      "vpc": "{{vpc-2}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "service",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-9}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": "consumption-operator.dsm.vsphere.vmware.com",
+      "vpcProject": "default",
+      "vpc": "{{vpc-2}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "service",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-10}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": "metrics-aggregator.vmware.com",
+      "vpcProject": "default",
+      "vpc": "{{vpc-2}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "service",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-11}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": "tkg.vsphere.vmware.com",
+      "vpcProject": "default",
+      "vpc": "{{vpc-2}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "service",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-12}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": "velero.vsphere.vmware.com",
+      "vpcProject": "default",
+      "vpc": "{{vpc-2}}",
+      "vpcCreatedForIt": false,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "service",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    },
+    {
+      "vcenter": "{{vcenter-1}}",
+      "supervisorId": "{{id}}",
+      "supervisor": "{{supervisor-1}}",
+      "namespace": "{{namespace-13}}",
+      "configStatus": "RUNNING",
+      "metadata": null,
+      "service": null,
+      "vpcProject": "default",
+      "vpc": "{{vpc-3}}",
+      "vpcCreatedForIt": true,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ],
+      "origin": "supervisor",
+      "organization": null,
+      "project": null,
+      "vpcInOrganizationProject": false
+    }
+  ],
+  "probe": {
+    "what": "one namespace created through vCenter's API (POST /api/vcenter/namespaces/instances/v2) with no workloads, listed, checked against an origin record, then deleted",
+    "supervisorGate": {
+      "config_status": "RUNNING",
+      "kubernetes_status": "WARNING",
+      "messages": [
+        "System pod vmware-system-ako-crd-operator-crd-operator-manager-{{pod}} in namespace vmware-system-ako is not running."
+      ],
+      "upgradeInFlight": false
+    },
+    "created": "2026-10-07T19:24:33Z",
+    "runningAfterSeconds": 11,
+    "listedAs": "supervisor",
+    "evidence": {
+      "automationRecord": false,
+      "systemMetadata": null,
+      "creator": null,
+      "vpcProject": "default",
+      "vpcCreatedForIt": true,
+      "accessList": [
+        "EDIT:GROUP:vcf_reserved_-1@vsphere.local",
+        "VIEW:GROUP:vcf_reserved_-2@vsphere.local"
+      ]
+    },
+    "recordCheck": {
+      "withoutARow": 1,
+      "withARowProvisionalAndADecider": 0
+    },
+    "whatTheCreateMade": {
+      "vCenter": {
+        "namespace": 1,
+        "folders": 2,
+        "resourcePools": 1
+      },
+      "nsxUnderTheSupervisorsDefaultProject": {
+        "Group": 1,
+        "IpAddressPool": 1,
+        "IpAddressPoolBlockSubnet": 1,
+        "PolicyNat": 2,
+        "PolicyVpcNatRule": 1,
+        "SecurityProfileAttachment": 1,
+        "Vpc": 1,
+        "VpcAttachment": 1,
+        "VpcIpAddressAllocation": 1,
+        "VpcSubnet": 1
+      },
+      "nsxUnderInfra": {
+        "IpAddressBlock": 1,
+        "Share": 1
+      },
+      "nsxWithNoPolicyPath": {
+        "ContainerProject": 1
+      }
+    },
+    "deleted": "2026-10-07T19:35:42Z",
+    "goneAt": "2026-10-07T19:36:16Z",
+    "residue": "none",
+    "residueRead": "vCenter namespaces, folders and resource pools; every NSX policy object under /orgs/default (295 before, 295 after); NSX objects carrying the name; VCF Automation's namespace records"
+  }
+}

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """test_resilient.py - the write guarantees of resilient.py, checked offline with stubbed reads and writes.
 
-demo.py is read-only, so it cannot show a write being confirmed. This does, without touching an estate: a dry run
-that sends nothing, a write that applies and is confirmed, a second run that sends nothing, a write answered that
-applied nothing (refused), an update that left the object wrong (refused), and a write with no send function.
+demo.py writes only when asked (--write), so these cases hold the write guarantees without touching an estate: a
+dry run that sends nothing, a write that applies and is confirmed, a second run that sends nothing, a write answered
+that applied nothing (refused), an update that left the object wrong (refused), a write with no send function, and a
+delete confirmed gone or refused when the object is still there.
 
 Run:  python3 test_resilient.py      exit 0 when every case holds
 """
@@ -12,7 +13,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from resilient import EffectError, confirm, ensure  # noqa: E402
+from resilient import EffectError, confirm, confirm_gone, ensure  # noqa: E402
 
 state, sent = {}, []
 desired = {"name": "g", "size": 2}
@@ -76,6 +77,11 @@ def main():
                         lambda e: isinstance(e, ValueError)))
     state["g"] = desired
     results.append(case("confirm passes on an object in the desired state", lambda: confirm(find, matches), lambda r: r == desired))
+    state.clear()
+    results.append(case("a delete that applies is confirmed gone", lambda: confirm_gone(find), lambda r: r is None))
+    state["g"] = desired
+    results.append(case("a delete answered that left the object is refused", lambda: confirm_gone(find),
+                        lambda e: isinstance(e, EffectError) and "still finds it" in str(e)))
     print(f"\n{sum(results)} of {len(results)} cases hold")
     sys.exit(0 if all(results) else 1)
 

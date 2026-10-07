@@ -1,0 +1,6 @@
+namespace,provisional,decider,note
+# One row for every namespace created on the Supervisor. provisional is yes or no; a provisional row names who may
+# decide that the namespace has become permanent. Namespaces VCF Automation created, and the ones a Supervisor
+# Service runs in, need no row: origins.py reads their origin from the platform.
+edge-telemetry,yes,platform lead,rebuild under the edge project once the tenancy plane is live
+lab-scratch,no,,

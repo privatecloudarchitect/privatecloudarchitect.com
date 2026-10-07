@@ -11,7 +11,8 @@ Stdlib only. The three guarantees the chapter describes, each in one place:
                            envelope declares
   3. run twice safely      ensure() is find-by-key, update-if-changed, create-if-absent, and its dry run returns the
                            request it would have sent instead of sending it; when it does send, confirm() re-reads
-                           the object by its key and refuses a write whose effect is not there
+                           the object by its key and refuses a write whose effect is not there, and confirm_gone()
+                           does the same for a delete
 
 The TLS seam is configuration: TLS_VERIFY=false turns verification off for a self-signed lab CA and the client
 warns once, on stderr, every time it runs that way. Nothing here prints a token value.
@@ -205,6 +206,13 @@ def confirm(find, matches=None, what="the object"):
     if matches is not None and not matches(found):
         raise EffectError(f"{what}: a re-read by its key finds it, not in the desired state")
     return found
+
+
+def confirm_gone(find, what="the object"):
+    """Assert a delete's effect: a re-read by the stable key finds nothing. A delete answered as a success can
+    leave the object where it was, and only the re-read shows it."""
+    if find() is not None:
+        raise EffectError(f"{what}: the delete was answered, and a re-read by its key still finds it")
 
 
 def ensure(find, create, update=None, matches=None, *, dry_run=True):

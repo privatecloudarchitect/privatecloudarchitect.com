@@ -10,12 +10,15 @@ Read-only. It creates no subscription, deploys nothing, and changes nothing. Fiv
   --workflow ID     whether the dispatch plane resolves one workflow id, before you bind anything to it
   --record          the topics and the correlation count, written as JSON
 
-Why this exists: four different mistakes produce a subscription that is accepted, enabled and silent, and none
+Why this exists: five different mistakes produce a subscription that is accepted, enabled and silent, and none
 of them returns an error. A topic your organization does not publish is accepted and never fires. A binding
 written without its type keeps neither runnable field. A subscriber that names the workflow instead of the
-identity subscribing is stored and dispatches nothing. And a workflow id the Automation host cannot resolve is
-stored too, even though the Orchestrator itself answers for it, because the Automation host is what dispatches.
---subscriptions checks every subscription for all four; --workflow checks the last one before you bind.
+identity subscribing is stored and dispatches nothing. A project constraint written as one string instead of a
+list of project ids is stored as given and matches nothing. And a workflow id the Automation host cannot resolve
+is stored too, even though the Orchestrator itself answers for it, because the Automation host is what
+dispatches: it learns the Orchestrator's workflows by enumerating them on a schedule, so a newly imported one is
+unknown to it until the next pass. --subscriptions checks every subscription for all five; --workflow checks the
+last one before you bind.
 
 Exit codes: 0 when everything checked is sound; 2 when --subscriptions or --workflow finds a subscription or
 workflow an event cannot reach, so a scheduler can raise the alarm.
@@ -117,6 +120,9 @@ def problems(sub: dict, published: dict[str, bool]) -> list[str]:
         st, _name = workflow_resolves(sub["runnableId"])
         if st != 200:
             out.append(f"its workflow does not resolve through the Automation host (HTTP {st}), so no event reaches it")
+    pid = (sub.get("constraints") or {}).get("projectId")
+    if isinstance(pid, str) and pid:
+        out.append("its project constraint is a string, not a list of project ids, so it matches no event and never fires")
     sid = str(sub.get("subscriberId") or "")
     if not sid:
         out.append("it names no subscriber identity")

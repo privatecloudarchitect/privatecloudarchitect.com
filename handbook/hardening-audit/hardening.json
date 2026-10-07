@@ -1,0 +1,136 @@
+{
+ "builds": {
+  "SDDC Manager": "9.1.1.0.25713928",
+  "VCF Automation API": "9.1.1",
+  "VCF Operations": "9.1.1.0"
+ },
+ "captured": "2026-10-07T18:29:25Z",
+ "date": "2026-10-07",
+ "exit": 1,
+ "findings": [
+  "credentials: rotation is opt-in and only 6 of 49 carry an auto-rotate policy; make the split deliberate",
+  "backup: encryption passphrase UNSET; backups carry the credential vault and leave the platform unencrypted",
+  "alert scope: 65 of 77 alert definitions are ENABLED in the default policy; each is a page on every object no other policy claims",
+  "audit trail: the oldest event this session can read is 30 day(s) old, short of the 90 decided; an incident older than that cannot be answered from this trail"
+ ],
+ "planes": {
+  "ops": "set",
+  "sddc": "set",
+  "vcfa": "set"
+ },
+ "reads": {
+  "access": {
+   "bindings": 6,
+   "byRole": {
+    "admin": 2,
+    "edit": 3,
+    "edit_adv": 1
+   },
+   "bySubjectKind": {
+    "Group": 2,
+    "User": 4
+   },
+   "controlFamily": "access review",
+   "findings": 0,
+   "plane": "tenancy",
+   "projects": 2,
+   "status": "read"
+  },
+  "alert-scope": {
+   "alertDefinitions": 77,
+   "controlFamily": "monitoring scope governance",
+   "enabledInDefault": 65,
+   "findings": 1,
+   "plane": "operations",
+   "status": "read"
+  },
+  "audit-trail": {
+   "controlFamily": "audit logging and retention",
+   "events": 5864,
+   "findings": 1,
+   "minDays": 90,
+   "newest": "2026-10-07T18:29:17.464Z",
+   "olderOnRequest": 0,
+   "oldest": "2026-09-06T22:43:18.994Z",
+   "plane": "tenancy",
+   "status": "read",
+   "windowDays": 30
+  },
+  "backup": {
+   "controlFamily": "platform backup and recovery readiness",
+   "encryption": "UNSET",
+   "findings": 1,
+   "isConfigured": true,
+   "locations": 1,
+   "plane": "lifecycle",
+   "schedules": [
+    {
+     "frequency": "WEEKLY",
+     "resourceType": "SDDC_MANAGER"
+    }
+   ],
+   "status": "read"
+  },
+  "certificates": {
+   "certificates": 19,
+   "controlFamily": "PKI and certificate lifecycle",
+   "domains": 2,
+   "expiringWithinHorizon": 0,
+   "findings": 0,
+   "horizonDays": 90,
+   "issuers": 3,
+   "nearestExpiryDays": 224,
+   "notActive": 0,
+   "plane": "lifecycle",
+   "status": "read"
+  },
+  "credentials": {
+   "autoRotate": 6,
+   "byResourceType": {
+    "BACKUP": 1,
+    "ESXI": 18,
+    "NSXT_EDGE": 13,
+    "NSXT_MANAGER": 9,
+    "NSX_ALB": 1,
+    "PSC": 2,
+    "VCENTER": 5
+   },
+   "controlFamily": "credential management and rotation",
+   "findings": 1,
+   "plane": "lifecycle",
+   "status": "read",
+   "total": 49
+  },
+  "firewall-floor": {
+   "controlFamily": "network policy baseline",
+   "defaultEnabled": 0,
+   "defaultRules": 5,
+   "defaultSections": 1,
+   "findings": 0,
+   "plane": "tenancy",
+   "profileAttachments": 1,
+   "sections": 1,
+   "status": "read"
+  }
+ },
+ "skips": [],
+ "tool": "hardening.py",
+ "transcript": [
+  "HARDENING LOOP - 2026-10-07",
+  "",
+  "  read certificates     clean",
+  "  read credentials      1 finding(s)",
+  "  read backup           1 finding(s)",
+  "  read alert-scope      1 finding(s)",
+  "  read firewall-floor   clean",
+  "  read access           clean",
+  "  read audit-trail      1 finding(s)",
+  "  read against        SDDC Manager 9.1.1.0.25713928, VCF Operations 9.1.1.0, VCF Automation API 9.1.1",
+  "",
+  "posture folder: ./posture-2026-10-07  (7 reads, 4 finding(s), 0 skip(s))",
+  "  ! credentials: rotation is opt-in and only 6 of 49 carry an auto-rotate policy; make the split deliberate",
+  "  ! backup: encryption passphrase UNSET; backups carry the credential vault and leave the platform unencrypted",
+  "  ! alert scope: 65 of 77 alert definitions are ENABLED in the default policy; each is a page on every object no other policy claims",
+  "  ! audit trail: the oldest event this session can read is 30 day(s) old, short of the 90 decided; an incident older than that cannot be answered from this trail"
+ ]
+}

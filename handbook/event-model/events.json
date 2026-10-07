@@ -242,5 +242,108 @@
     ]
    }
   }
+ },
+ "deleteGate": {
+  "on": "2026-10-07",
+  "what": "gate.py imported as a workflow by deploy_gate.py, bound by a blocking subscription scoped by criteria to one template resource name, then four throwaway deployments of one ConfigMap created and deleted through it; the subscription, workflow, category and deployments removed and the residue read",
+  "registries": {
+   "refuse": "an address in a documentation range that no host answers",
+   "pass": "a path that answers 404, as a registry holding no record does"
+  },
+  "deadlineSeconds": 20,
+  "import": {
+   "status": 202,
+   "scriptIsGatePy": true,
+   "runtime": "python:3.11"
+  },
+  "dispatch": {
+   "resolvedAfterSeconds": 458,
+   "resolvedAtFirstEnumerationAfterImport": true,
+   "enumerationIntervalsSeconds": [
+    610,
+    600,
+    602
+   ],
+   "reimportResolvedAfterSeconds": 1,
+   "deletedStillResolvedForSeconds": 430
+  },
+  "subscription": {
+   "create": 201,
+   "readBack": "every field as sent",
+   "upsertSameId": 201
+  },
+  "constraintForms": [
+   {
+    "form": "projectId as a string",
+    "stored": "as given",
+    "creates": 2,
+    "runs": 0
+   },
+   {
+    "form": "projectId null",
+    "creates": 1,
+    "runs": 1
+   },
+   {
+    "form": "projectId as a list",
+    "creates": 1,
+    "runs": 1
+   }
+  ],
+  "auditOnStringConstraint": {
+   "exit": 2,
+   "line": "its project constraint is a string, not a list of project ids, so it matches no event and never fires"
+  },
+  "create": {
+   "runs": 2,
+   "state": "completed",
+   "log": "CREATE_RESOURCE on <resource>: not a delete, nothing to do",
+   "deployment": "CREATE_SUCCESSFUL"
+  },
+  "refuse": {
+   "state": "failed",
+   "seconds": 23,
+   "attempts": 2,
+   "requestSeconds": 65,
+   "deployment": "DELETE_FAILED",
+   "resourcesRemaining": 2,
+   "resourcesInDeployment": 2,
+   "raised": "the de-registration did not finish inside 20 s (2 attempt(s), last: URLError: timed out); refusing the delete"
+  },
+  "pass": {
+   "state": "completed",
+   "seconds": 3,
+   "requestSeconds": 33,
+   "deployment": "gone",
+   "deletes": 4,
+   "log": "already absent (HTTP 404), counted as done after 1 attempt(s) in 0.0 s; the delete may continue"
+  },
+  "runs": {
+   "total": 7,
+   "firstRunSeconds": 25,
+   "laterRunSeconds": 3
+  },
+  "removal": {
+   "subscription": [
+    204,
+    404
+   ],
+   "workflow": [
+    200,
+    404
+   ],
+   "category": [
+    204,
+    "absent"
+   ]
+  },
+  "residue": {
+   "subscriptions": 0,
+   "probeDeployments": 0,
+   "probeConfigMaps": 0,
+   "workflowOnOrchestrator": 404,
+   "workflowOnAutomationHostAfterNextEnumeration": 404
+  },
+  "notExercised": "the subscription timeout (the gate ran with timeout 0 and bounded itself), a registry answering 2xx, and the resource kind lookup"
  }
 }
