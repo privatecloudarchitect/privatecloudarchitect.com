@@ -10,7 +10,8 @@ Stdlib only. The three guarantees the chapter describes, each in one place:
                            drifted; paginate() reads a whole collection and refuses to stop short of the total the
                            envelope declares
   3. run twice safely      ensure() is find-by-key, update-if-changed, create-if-absent, and its dry run returns the
-                           request it would have sent instead of sending it
+                           request it would have sent instead of sending it; when it does send, confirm() re-reads
+                           the object by its key and refuses a write whose effect is not there
 
 The TLS seam is configuration: TLS_VERIFY=false turns verification off for a self-signed lab CA and the client
 warns once, on stderr, every time it runs that way. Nothing here prints a token value.
@@ -44,6 +45,10 @@ class ApiError(Exception):
 
 class ShapeError(Exception):
     """The response did not have the shape the program depends on; the message names the field."""
+
+
+class EffectError(Exception):
+    """A write was answered, and a re-read by its stable key does not show what it was meant to do."""
 
 
 def tls_context():
@@ -185,18 +190,47 @@ def paginate(client, path, key, *, size=100, first_page=0, page_param="page", si
 
 
 # ---- the mutation
+def confirm(find, matches=None, what="the object"):
+    """Assert a write's effect: re-read the object by its stable key and compare it with the desired state.
+
+    A status and a count are the platform's account of a write; the re-read is the proof. An import can answer
+    success, report nothing failed and apply nothing, and only reading the object back shows it.
+
+    find():             the object as it stands now, read by its stable key, or None
+    matches(found):     True when it is in the desired state; without it, presence is what is checked
+    """
+    found = find()
+    if found is None:
+        raise EffectError(f"{what}: the write was answered, and a re-read by its key finds nothing")
+    if matches is not None and not matches(found):
+        raise EffectError(f"{what}: a re-read by its key finds it, not in the desired state")
+    return found
+
+
 def ensure(find, create, update=None, matches=None, *, dry_run=True):
     """Find by a stable key, update if changed, create if absent; a re-run is a no-op, and a dry run sends nothing.
 
     find():             the existing object or None
-    create():           the request that would create it: (method, path, body); sent only when dry_run is False
+    create():           the request that would create it: (method, path, body, send); send(method, path, body)
+                        runs only when dry_run is False
     update(existing):   the request that would bring it in line, or None when nothing differs
     matches(existing):  True when the existing object already matches the desired state
+
+    A write that is sent is confirmed: the object is re-read by find() and checked with matches(), so a write
+    answered as a success with no effect raises EffectError instead of returning "created".
     """
+    def send(req):
+        if len(req) < 4:
+            raise ValueError("a write needs its send function as the request's fourth element")
+        req[3](*req[:3])
+
     existing = find()
     if existing is None:
         req = create()
-        return ("create", req) if dry_run else ("created", req[3](*req[:3]) if len(req) > 3 else req)
+        if dry_run:
+            return ("create", req)
+        send(req)
+        return ("created", confirm(find, matches, f"{req[0]} {req[1]}"))
     if matches is not None and matches(existing):
         return ("unchanged", existing)
     if update is None:
@@ -204,4 +238,7 @@ def ensure(find, create, update=None, matches=None, *, dry_run=True):
     req = update(existing)
     if req is None:
         return ("unchanged", existing)
-    return ("update", req) if dry_run else ("updated", req[3](*req[:3]) if len(req) > 3 else req)
+    if dry_run:
+        return ("update", req)
+    send(req)
+    return ("updated", confirm(find, matches, f"{req[0]} {req[1]}"))

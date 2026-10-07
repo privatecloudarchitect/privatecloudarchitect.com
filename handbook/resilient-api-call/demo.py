@@ -9,6 +9,8 @@
      true total; then the same collection read correctly
   5. the boundary refusing a drifted shape, with the message that names the field
   6. an idempotent ensure() in dry-run mode: find by name, and the request it would have sent
+  7. the effect, read back: confirm() re-reads an object by its stable key; on one that exists it passes, and on the
+     group step 6 did not send it refuses, which is what a write answered as a success that applied nothing looks like
 
 Nothing is written to the platform. Nothing prints a token value. The one file touched is the cache file the client
 writes atomically at owner-only permissions (CACHE_FILE, optional) and, if the platform answers a refresh-token grant
@@ -26,7 +28,7 @@ import tempfile
 import urllib.parse
 import urllib.request
 
-from resilient import ApiError, Client, ShapeError, ensure, paginate, require, tls_context, unwrap
+from resilient import ApiError, Client, EffectError, ShapeError, confirm, ensure, paginate, require, tls_context, unwrap
 
 GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
 
@@ -121,6 +123,25 @@ def main():
         print(f"   not found; would send {payload[0]} {payload[1]} with a {len(json.dumps(payload[2]))}-byte body; a second run finds it and sends nothing")
     else:
         print(f"   {verdict}: the group is already there; a re-run changes nothing")
+    # 7. the effect, read back
+    step(7, "the effect, read back by the stable key")
+    rid = first["identifier"]
+    def reread():
+        try:
+            return ops.get(f"/api/resources/{rid}")
+        except ApiError as e:
+            if e.status == 404:
+                return None
+            raise
+    confirm(reread, lambda r: require(r, {"identifier": str}, "resource")["identifier"] == rid, "the first resource")
+    print("   an object that exists: a re-read by its identifier finds it, in the state expected")
+    if verdict == "create":
+        try:
+            confirm(find, what="the demo group")
+            failed += 1; print("   (no error: unexpected)")
+        except EffectError as e:
+            print(f"   the group step 6 did not send: {e}")
+            print("   a write answered as a success that applied nothing reads exactly like this, and this is where it is caught")
     print(f"\ndone: mints {ops.mints}; {'every step ran' if not failed else str(failed) + ' step(s) failed'}")
     sys.exit(1 if failed else 0)
 

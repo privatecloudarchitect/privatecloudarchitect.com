@@ -1,0 +1,240 @@
+{
+ "captured": "2026-10-07T15:04:33Z",
+ "instances": [
+  {
+   "domains": [
+    {
+     "type": "MANAGEMENT",
+     "status": "ACTIVE",
+     "clusters": [
+      3
+     ],
+     "hosts": 3,
+     "vcenters": 1,
+     "nsx": 1
+    },
+    {
+     "type": "VI",
+     "status": "ACTIVE",
+     "clusters": [
+      2,
+      2,
+      2
+     ],
+     "hosts": 6,
+     "vcenters": 1,
+     "nsx": 1
+    }
+   ]
+  },
+  {
+   "domains": [
+    {
+     "type": "MANAGEMENT",
+     "status": "ACTIVE",
+     "clusters": [
+      2
+     ],
+     "hosts": 2,
+     "vcenters": 1,
+     "nsx": 1
+    }
+   ]
+  }
+ ],
+ "fleet": [
+  {
+   "type": "OPS",
+   "what": "VCF Operations",
+   "deployment": "OVA",
+   "scope": "FLEET",
+   "size": "medium",
+   "nodes": {
+    "MASTER": 1,
+    "ONE_WAY_REMOTE_COLLECTOR": 2
+   },
+   "instance": 1
+  },
+  {
+   "type": "OPS_NETWORKS",
+   "what": "VCF Operations for networks",
+   "deployment": "OVA",
+   "scope": "FLEET",
+   "size": "extra_large",
+   "nodes": {
+    "PLATFORM": 1
+   },
+   "instance": 1
+  },
+  {
+   "type": "VCFA",
+   "what": "VCF Automation",
+   "deployment": "VSP",
+   "scope": "FLEET",
+   "size": "small",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "VSP",
+   "what": "VCF services runtime",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "medium",
+   "nodes": {
+    "worker": 4,
+    "control-plane": 3
+   },
+   "instance": 1
+  },
+  {
+   "type": "VSP",
+   "what": "VCF services runtime",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "small",
+   "nodes": {
+    "control-plane": 1,
+    "worker": 2
+   },
+   "instance": 2
+  },
+  {
+   "type": "VCF_FLEET_LCM",
+   "what": "Fleet lifecycle",
+   "deployment": "VSP",
+   "scope": "FLEET",
+   "size": "small",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "VIDB",
+   "what": "Identity broker",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "medium",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "OPS_LOGS",
+   "what": "Log management",
+   "deployment": "VSP",
+   "scope": "FLEET",
+   "size": "small",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "SALT_RAAS",
+   "what": "Salt RaaS",
+   "deployment": "VSP",
+   "scope": "FLEET",
+   "size": "medium",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "VCF_FLEET_DEPOT",
+   "what": "Software depot",
+   "deployment": "VSP",
+   "scope": "FLEET",
+   "size": "medium",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "OPS_DATA_PLATFORM",
+   "what": "Real-time metrics",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "medium",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "VCFMS_METRICS_STORE",
+   "what": "Real-time metrics store",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "medium",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "SALT",
+   "what": "Salt master",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "medium",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "VCF_SDDC_LCM",
+   "what": "SDDC lifecycle",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "small",
+   "nodes": {},
+   "instance": 1
+  },
+  {
+   "type": "VCF_SDDC_LCM",
+   "what": "SDDC lifecycle",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "small",
+   "nodes": {},
+   "instance": 2
+  },
+  {
+   "type": "TELEMETRY_ACCEPTOR",
+   "what": "Telemetry",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "medium",
+   "nodes": {},
+   "instance": 1
+  }
+ ],
+ "checks": [
+  {
+   "ok": true,
+   "check": "instance 1 has one management domain"
+  },
+  {
+   "ok": true,
+   "check": "instance 1 has 1 workload domain(s)"
+  },
+  {
+   "ok": true,
+   "check": "instance 1, MANAGEMENT domain: its own vCenter (1) and an NSX manager (1)"
+  },
+  {
+   "ok": true,
+   "check": "instance 1, VI domain: its own vCenter (1) and an NSX manager (1)"
+  },
+  {
+   "ok": true,
+   "check": "instance 2 has one management domain"
+  },
+  {
+   "ok": true,
+   "check": "instance 2 has 0 workload domain(s): management only"
+  },
+  {
+   "ok": true,
+   "check": "instance 2, MANAGEMENT domain: its own vCenter (1) and an NSX manager (1)"
+  },
+  {
+   "ok": true,
+   "check": "every fleet component matched to an instance"
+  },
+  {
+   "ok": true,
+   "check": "one services runtime per instance (2 for 2)"
+  }
+ ]
+}

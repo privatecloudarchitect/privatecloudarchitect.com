@@ -194,5 +194,53 @@
    "cause": "runnableId is resolved by the Orchestrator Gateway API on the Automation node, not by the appliance holding the workflow. The workflow answered 200 on the appliance and 404 on the gateway, so the subscription pointed at an identifier the dispatch plane could not resolve",
    "lesson": "verify a workflow through the Automation host's gateway before binding a subscription to it; reading it back from the Orchestrator proves it exists and proves nothing about whether an event can reach it"
   }
+ },
+ "reread": {
+  "on": "2026-10-07",
+  "topicsIdentical": true,
+  "topics": {
+   "total": 19,
+   "blockable": 11,
+   "computeFamilyPresent": false
+  },
+  "subscriptionsAudit": {
+   "subscriptions": 0,
+   "exit": 0
+  },
+  "workflowCheck": {
+   "stockPayloadLogger": {
+    "exit": 0
+   },
+   "idThatDoesNotExist": {
+    "exit": 2
+   }
+  },
+  "note": "read-only: the topic catalog, every subscription in the organization, and the dispatch plane's answer for one stock workflow and one id that does not exist",
+  "missingTopicProbe": {
+   "on": "2026-10-07",
+   "what": "one subscription, disabled and non-blocking, on a topic this organization does not publish; read back, audited, deleted",
+   "topic": "compute.removal.pre",
+   "create": 201,
+   "readBack": 200,
+   "storedTopic": "compute.removal.pre",
+   "delete": 204,
+   "residue": {
+    "getById": 404,
+    "subscriptions": 0
+   },
+   "auditWhileItExisted": {
+    "exit": 2,
+    "output": [
+     "1 subscription",
+     "",
+     "  CANNOT DISPATCH pca probe: topic not published           compute.removal.pre                disabled",
+     "        - its topic is not published in this organization, so it never fires",
+     "        - no runnable is bound, so it dispatches nothing",
+     "        - it names no subscriber identity",
+     "",
+     "  1 of 1 cannot dispatch, 0 cannot hold the operation they block; the platform reports none of them as an error"
+    ]
+   }
+  }
  }
 }

@@ -17,15 +17,15 @@ evidence an auditor consumes, not a data dump.
 
 ## The reads, and where each is taught
 
-| read | instrument | sheet |
+| read | instrument | chapter |
 |---|---|---|
-| certificates | `GET /v1/domains/{id}/resource-certificates` per domain | III.2 |
-| credentials | `GET /v1/credentials` (distilled: counts + rotation coverage) | III.2 |
-| backup | `GET /v1/system/backup-configuration` (encryption reads as key absence) | III.3 |
-| alert-scope | default policy via the `defaultPolicy` flag, then `GET /api/policies/export?id=` and count `<Alert enabled="true">` entries | IV.2 |
-| firewall-floor | `firewallpolicies` (single-get carries the rules) + `securityprofileattachments` at the org gateway | VII.1 |
-| access | `projects`, then `projectrolebindings` per project | I |
-| audit-trail | `GET /cloudapi/1.0.0/auditTrail` (versioned Accept), total event count | VII.2 |
+| certificates | `GET /v1/domains/{id}/resource-certificates` per domain | [certs-credentials](https://privatecloudarchitect.com/handbook/certs-credentials) |
+| credentials | `GET /v1/credentials` (distilled: counts + rotation coverage) | [certs-credentials](https://privatecloudarchitect.com/handbook/certs-credentials) |
+| backup | `GET /v1/system/backup-configuration` (encryption reads as key absence) | [platform-backup](https://privatecloudarchitect.com/handbook/platform-backup) |
+| alert-scope | default policy via the `defaultPolicy` flag, then `GET /api/policies/export?id=` and count `<Alert enabled="true">` entries | [alerting-doctrine](https://privatecloudarchitect.com/handbook/alerting-doctrine) |
+| firewall-floor | `firewallpolicies` (single-get carries the rules) + `securityprofileattachments` at the org gateway | [microsegmentation](https://privatecloudarchitect.com/handbook/microsegmentation) |
+| access | `projects`, then `projectrolebindings` per project | [access-control](https://privatecloudarchitect.com/handbook/access-control) |
+| audit-trail | `GET /cloudapi/1.0.0/auditTrail` (versioned Accept), total event count | [hardening-audit](https://privatecloudarchitect.com/handbook/hardening-audit) |
 
 ## What the numbers mean
 
@@ -54,6 +54,14 @@ python3 hardening.py
 
 Exit code 0 when the loop is clean, 1 when findings are present; skips never fail the run.
 Stdlib Python only.
+
+## Fixes with dates
+
+Every finding gets an owner and a fix with a date, and the harness keeps no state between runs, so the fix log is
+a file you keep beside the posture folders: [`fix-log.csv`](fix-log.csv), one row per finding, with the run that
+found it, the read, the owner (one per token plane: lifecycle, operations, tenancy), the fix, the date it was
+fixed and the later run that no longer reports it. A row with no `fixed_on` is a risk somebody chose to keep; a
+row with no `verified_by_run` is a fix nobody has read back.
 
 ## Two shapes the docs will not tell you
 

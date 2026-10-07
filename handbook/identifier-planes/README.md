@@ -32,13 +32,34 @@ different failure mode (it is correct on the day you run it and drift by the fol
 
 ## Run it
 
+### The thirty-second question: which plane is this machine's tag on?
+
+```bash
+export VC_HOST=<vcenter-fqdn>  VC_USER=<user>  VC_PASSWORD_FILE=/path/to/pw    # mode 0600
+export NSX_HOST=<nsx-fqdn>     NSX_USER=<user> NSX_PASSWORD_FILE=/path/to/pw   # mode 0600
+export TLS_VERIFY=false                                                        # self-signed lab CA only
+python3 identifiers.py --where <machine-name>
+```
+
+Two reads, nothing written: the machine's vSphere tags from vCenter's tagging service and its NSX tags from
+NSX's own inventory, printed side by side. It needs both planes, because the answer is the comparison. A list
+of vSphere tags beside `"nsxTags": []` is the whole diagnosis for an empty NSX group, and the script prints a
+note saying so when that is what it found. It writes no record.
+
+### The census, and the check worth scheduling
+
 ```bash
 export VC_HOST=<vcenter-fqdn>  VC_USER=<user>  VC_PASSWORD_FILE=/path/to/pw    # mode 0600
 export NSX_HOST=<nsx-fqdn>     NSX_USER=<user> NSX_PASSWORD_FILE=/path/to/pw   # optional
-export OPS_HOST=<ops-fqdn>     OPS_TOKEN_FILE=/path/to/token                   # optional
+export OPS_HOST=<ops-fqdn>     OPS_API_TOKEN_FILE=/path/to/api-token          # optional, mode 0600
+export OPS_BROKER_HOST=<identity-broker-fqdn>                                  # when the broker is not the Ops node
 export TLS_VERIFY=false                                                        # self-signed lab CA only
 python3 identifiers.py
 ```
+
+VCF Operations 9.1 takes a bearer from its identity broker: the script exchanges the api-token minted in the
+operations console at the broker (`OPS_REALM`, default `CUSTOMER`) and sends the bearer it gets back. The older
+`OpsToken` scheme answers 401 on 9.1.
 
 That is read-only. It reports which planes it could reach and with which credential (reading all five takes
 three), how many identifiers each plane has **defined** against how many objects **carry** one, and every
@@ -69,9 +90,17 @@ Two disciplines are worth copying out of it:
   carrying its original expression. The teardown now reads back twice, 30 seconds apart, reports both
   answers, and refuses to finish if the delayed one is not `404`.
 
+## Writing the plane down
+
+[`placement-record.md`](placement-record.md) is a template for the two written records the chapter asks for:
+which of the six relationships each hop between planes relies on, and which plane is authoritative for each
+consumer, with an owner for every fact held on two planes. A row with no owner is the next empty group.
+
 ## What it does not cover
 
-The Security Services Platform is not exercised by this script. The **write** discipline, meaning who may set a
+It creates no NSX tag. Getting a value into the store an NSX group reads means tagging in NSX, or NSX's
+documented import of vCenter tags, which creates NSX tags once and is not exercised here. The Security Services
+Platform is not exercised by this script. The **write** discipline, meaning who may set a
 tag, how a machine's guess must not overwrite a human's designation, how classification gets written back
 without rotting, is a separate subject with its own chapter; this one is only about which plane holds an
 identifier and who can see it.

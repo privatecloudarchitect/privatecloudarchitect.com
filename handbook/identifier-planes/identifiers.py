@@ -35,7 +35,8 @@ that picks its own subjects on somebody's estate is not a probe, it is a surpris
 Run:
   export VC_HOST=<vcenter-fqdn> VC_USER=<user> VC_PASSWORD_FILE=/path/to/pw    # mode 0600
   export NSX_HOST=<nsx-fqdn>    NSX_USER=<user> NSX_PASSWORD_FILE=/path/to/pw  # optional
-  export OPS_HOST=<ops-fqdn>    OPS_TOKEN_FILE=/path/to/token                  # optional
+  export OPS_HOST=<ops-fqdn>    OPS_API_TOKEN_FILE=/path/to/api-token          # optional
+  export OPS_BROKER_HOST=<identity-broker-fqdn> # with OPS_*, when the broker is not the Ops node
   export IDENT_PROBE_VMS="name-a,name-b"        # required for --probe-propagation
   export TLS_VERIFY=false                       # only on a self-signed lab CA
   python3 identifiers.py [--probe-propagation]
@@ -225,9 +226,26 @@ class Nsx:
 
 
 class Ops:
-    def __init__(self, host, token):
-        self.host = host
-        self.h = {"Authorization": f"OpsToken {token}"}
+    """VCF Operations 9.1 authenticates through its identity broker. The api-token minted in the operations
+    console is exchanged at the broker for a short-lived bearer, and /suite-api takes that bearer as Bearer.
+    The older OpsToken scheme answers 401 on 9.1, so it is not offered here."""
+
+    GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
+
+    def __init__(self, host, api_token, broker=None, realm="CUSTOMER"):
+        self.host, self.ok, self.h = host, False, {}
+        form = urllib.parse.urlencode({"grant_type": self.GRANT, "api_token": api_token}).encode()
+        req = urllib.request.Request(f"https://{broker or host}/acs/t/{realm}/token", data=form, method="POST",
+                                     headers={"Content-Type": "application/x-www-form-urlencoded",
+                                              "Accept": "application/json"})
+        try:
+            with urllib.request.urlopen(req, context=ctx(), timeout=60) as r:
+                tok = json.loads(r.read() or b"null").get("access_token")
+        except (urllib.error.URLError, OSError, ValueError, AttributeError):
+            tok = None
+        if not tok:
+            return
+        self.h = {"Authorization": f"Bearer {tok}"}
         st, _ = call(self.u("/suite-api/api/resources/groups?pageSize=1"), self.h)
         self.ok = st == 200
 
@@ -532,9 +550,11 @@ def main():
         nsx = Nsx(os.environ["NSX_HOST"], os.environ["NSX_USER"], secret("NSX_PASSWORD_FILE"))
         planes.append({"plane": "NSX inventory + groups", "credential": "NSX local credential (Basic)",
                        "reached": nsx.ok})
-    if os.environ.get("OPS_HOST") and secret("OPS_TOKEN_FILE"):
-        ops = Ops(os.environ["OPS_HOST"], secret("OPS_TOKEN_FILE"))
-        planes.append({"plane": "VCF Operations groups + tag management", "credential": "Ops API token",
+    if os.environ.get("OPS_HOST") and secret("OPS_API_TOKEN_FILE"):
+        ops = Ops(os.environ["OPS_HOST"], secret("OPS_API_TOKEN_FILE"), os.environ.get("OPS_BROKER_HOST"),
+                  os.environ.get("OPS_REALM", "CUSTOMER"))
+        planes.append({"plane": "VCF Operations groups + tag management",
+                       "credential": "Ops api-token, exchanged at the broker for a bearer",
                        "reached": ops.ok})
 
     print("planes reachable:")
@@ -553,7 +573,8 @@ def main():
                   "reads the second list, so it will not match this machine whatever the first one says.")
         return
 
-    payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    payload = {"captured_utc": now, "sectionsCapturedUtc": {},
                "planes": planes, "vsphere": None, "nsx": None, "ops": None, "propagation": None}
 
     if vc and vc.ok:
@@ -588,6 +609,10 @@ def main():
         print(f"\npropagation: control group resolved {pr['positiveControl'].get('members')} member(s); "
               f"the probe group resolved {last.get('members')} after {last.get('afterSeconds')}s")
 
+    for k in ("vsphere", "nsx", "ops", "propagation"):
+        if payload[k] is not None:
+            payload["sectionsCapturedUtc"][k] = now
+
     # An optional section that did not run must not erase one that did (G-166, generically).
     prior_path = os.path.join(out_dir, "identifiers.json")
     if os.path.exists(prior_path):
@@ -598,14 +623,19 @@ def main():
         for k, v in list(payload.items()):
             if v is None and prior.get(k) is not None:
                 payload[k] = prior[k]
-                print(f"  carrying forward {k!r} from an earlier run; this run did not re-read it and has "
-                      f"not erased it")
+                # A carried section keeps the date it was read, so a later run never re-dates old evidence.
+                payload["sectionsCapturedUtc"][k] = ((prior.get("sectionsCapturedUtc") or {}).get(k)
+                                                     or prior.get("captured_utc"))
+                print(f"  carrying forward {k!r} from an earlier run ({payload['sectionsCapturedUtc'][k]}); "
+                      f"this run did not re-read it and has not erased it")
 
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
     for s in (os.environ.get("VC_HOST"), os.environ.get("NSX_HOST"), os.environ.get("OPS_HOST"),
               os.environ.get("VC_USER"), os.environ.get("NSX_USER"),
-              secret("VC_PASSWORD_FILE"), secret("NSX_PASSWORD_FILE"), secret("OPS_TOKEN_FILE"),
-              getattr(vc, "h", {}).get("vmware-api-session-id")):
+              os.environ.get("OPS_BROKER_HOST"),
+              secret("VC_PASSWORD_FILE"), secret("NSX_PASSWORD_FILE"), secret("OPS_API_TOKEN_FILE"),
+              getattr(vc, "h", {}).get("vmware-api-session-id"),
+              (getattr(ops, "h", None) or {}).get("Authorization", "").removeprefix("Bearer ") or None):
         assert not s or s not in text, "an estate value or credential reached the record"
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():

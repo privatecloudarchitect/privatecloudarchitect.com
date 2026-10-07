@@ -1,0 +1,67 @@
+{
+ "captured_utc": "2026-10-07T15:02:09Z",
+ "group": "vmoperator.vmware.com",
+ "measuredLine": "v1alpha5",
+ "namespaces": [
+  {
+   "namespace": "{{namespace-1}}",
+   "status": 200,
+   "served": [
+    "v1alpha5",
+    "v1alpha4",
+    "v1alpha3",
+    "v1alpha2",
+    "v1alpha1"
+   ],
+   "preferred": "v1alpha5"
+  },
+  {
+   "namespace": "{{namespace-2}}",
+   "status": 200,
+   "served": [
+    "v1alpha5",
+    "v1alpha4",
+    "v1alpha3",
+    "v1alpha2",
+    "v1alpha1"
+   ],
+   "preferred": "v1alpha5"
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "status": 200,
+   "served": [
+    "v1alpha5",
+    "v1alpha4",
+    "v1alpha3",
+    "v1alpha2",
+    "v1alpha1"
+   ],
+   "preferred": "v1alpha5"
+  },
+  {
+   "namespace": "{{namespace-4}}",
+   "status": 200,
+   "served": [
+    "v1alpha5",
+    "v1alpha4",
+    "v1alpha3",
+    "v1alpha2",
+    "v1alpha1"
+   ],
+   "preferred": "v1alpha5"
+  },
+  {
+   "namespace": "{{namespace-5}}",
+   "status": 200,
+   "served": [
+    "v1alpha5",
+    "v1alpha4",
+    "v1alpha3",
+    "v1alpha2",
+    "v1alpha1"
+   ],
+   "preferred": "v1alpha5"
+  }
+ ]
+}

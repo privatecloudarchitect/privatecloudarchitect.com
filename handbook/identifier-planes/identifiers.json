@@ -1,5 +1,11 @@
 {
- "captured_utc": "2026-09-22T01:46:10Z",
+ "captured_utc": "2026-10-07T14:52:21Z",
+ "sectionsCapturedUtc": {
+  "vsphere": "2026-10-07T14:52:21Z",
+  "nsx": "2026-10-07T14:52:21Z",
+  "ops": "2026-10-07T14:52:21Z",
+  "propagation": "2026-09-22T01:46:10Z"
+ },
  "planes": [
   {
    "plane": "vCenter tagging service",
@@ -13,17 +19,17 @@
   },
   {
    "plane": "VCF Operations groups + tag management",
-   "credential": "Ops API token",
+   "credential": "Ops api-token, exchanged at the broker for a bearer",
    "reached": true
   }
  ],
  "vsphere": {
-  "categoriesDefined": 17,
-  "tagsDefined": 42,
-  "distinctCategoryValuePairs": 42,
+  "categoriesDefined": 18,
+  "tagsDefined": 45,
+  "distinctCategoryValuePairs": 45,
   "tagNamesReusedAcrossCategories": 3,
-  "vms": 30,
-  "vmsCarryingAtLeastOneTag": 1,
+  "vms": 28,
+  "vmsCarryingAtLeastOneTag": 11,
   "categories": [
    {
     "name": "dsm.vmware.com/dsm-resource",
@@ -46,7 +52,12 @@
     "associableTypes": 3
    },
    {
-    "name": "lifecycle.env",
+    "name": "{{scope-1}}",
+    "cardinality": "MULTIPLE",
+    "associableTypes": 1
+   },
+   {
+    "name": "{{scope-3}}",
     "cardinality": "SINGLE",
     "associableTypes": 1
    },
@@ -66,7 +77,7 @@
     "associableTypes": 1
    },
    {
-    "name": "identity.function",
+    "name": "{{scope-2}}",
     "cardinality": "SINGLE",
     "associableTypes": 1
    },
@@ -115,11 +126,83 @@
    {
     "vm": "{{machine-1}}",
     "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}"
+    ]
+   },
+   {
+    "vm": "{{machine-2}}",
+    "categories": [
      "dsm.vmware.com/data-service-name",
      "dsm.vmware.com/data-service-namespace",
      "dsm.vmware.com/data-service-type",
      "dsm.vmware.com/dsm-resource",
      "dsm.vmware.com/infra-policy"
+    ]
+   },
+   {
+    "vm": "{{machine-3}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}"
+    ]
+   },
+   {
+    "vm": "{{machine-4}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}"
+    ]
+   },
+   {
+    "vm": "{{machine-5}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}"
+    ]
+   },
+   {
+    "vm": "{{machine-6}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}",
+     "{{scope-3}}"
+    ]
+   },
+   {
+    "vm": "{{machine-7}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}"
+    ]
+   },
+   {
+    "vm": "{{machine-8}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}"
+    ]
+   },
+   {
+    "vm": "{{machine-9}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}"
+    ]
+   },
+   {
+    "vm": "{{machine-10}}",
+    "categories": [
+     "{{scope-1}}",
+     "{{scope-2}}",
+     "{{scope-3}}"
+    ]
+   },
+   {
+    "vm": "{{machine-11}}",
+    "categories": [
+     "{{scope-3}}",
+     "policy.sla"
     ]
    }
   ],
@@ -143,14 +226,14 @@
   ]
  },
  "nsx": {
-  "groups": 404,
+  "groups": 406,
   "expressionKinds": {
    "Condition": 9,
    "ConjunctionOperator": 3,
    "GeoLocationExpression": 249,
    "NestedExpression": 3,
    "GroupScopeExpression": 1,
-   "IPAddressExpression": 143
+   "IPAddressExpression": 145
   },
   "conditionKeys": {
    "IPAddress.ALL": 1,
@@ -166,16 +249,19 @@
     "members": 2
    }
   ],
-  "fabricVms": 30,
-  "fabricVmsTagged": 6,
+  "fabricVms": 28,
+  "fabricVmsTagged": 16,
   "tagScopes": {
-   "{{scope-1}}": 4,
+   "{{scope-1}}": 9,
+   "{{scope-2}}": 9,
+   "{{scope-3}}": 2,
+   "{{scope-4}}": 5,
    "(empty scope)": 2
   },
   "discoveredTagsPresent": 0
  },
  "ops": {
-  "customGroups": 63,
+  "customGroups": 62,
   "populatedRuleKinds": {
    "propertyConditionRules": 5,
    "resourceTagConditionRules": 24,
@@ -184,7 +270,7 @@
    "relationshipConditionRules": 2
   },
   "groupsDefinedByTag": 15,
-  "groupsDefinedByTagResolvingToZero": 10,
+  "groupsDefinedByTagResolvingToZero": 9,
   "tagGroups": [
    {
     "group": "{{opsgroup-1}}",
@@ -234,7 +320,7 @@
     "group": "{{opsgroup-5}}",
     "conditions": [
      {
-      "category": "lifecycle.env",
+      "category": "{{scope-3}}",
       "op": "EQ",
       "value": "dev"
      },
@@ -244,18 +330,18 @@
       "value": "sla-4"
      }
     ],
-    "members": 0
+    "members": 1
    },
    {
     "group": "{{opsgroup-6}}",
     "conditions": [
      {
-      "category": "lifecycle.env",
+      "category": "{{scope-3}}",
       "op": "EQ",
       "value": "prod"
      },
      {
-      "category": "identity.function",
+      "category": "{{scope-2}}",
       "op": "EQ",
       "value": "db"
      },
@@ -271,12 +357,12 @@
     "group": "{{opsgroup-7}}",
     "conditions": [
      {
-      "category": "lifecycle.env",
+      "category": "{{scope-3}}",
       "op": "EQ",
       "value": "prod"
      },
      {
-      "category": "identity.function",
+      "category": "{{scope-2}}",
       "op": "EQ",
       "value": "db"
      },
@@ -314,12 +400,12 @@
     "group": "{{opsgroup-10}}",
     "conditions": [
      {
-      "category": "lifecycle.env",
+      "category": "{{scope-3}}",
       "op": "EQ",
       "value": "prod"
      },
      {
-      "category": "identity.function",
+      "category": "{{scope-2}}",
       "op": "EQ",
       "value": "db"
      },

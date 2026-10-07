@@ -7,8 +7,9 @@ your own estate. Stdlib Python only; no token value is ever printed.
 
 | File | What it is |
 |---|---|
-| `resilient.py` | The client. A bearer minted through a callable you supply, cached with its expiry and refreshed on a UTC buffer, re-minted exactly once when a call answers 401; `unwrap()` and `require()` as the typed boundary, naming the key or field that drifted; `paginate()` reading a whole collection and refusing to stop short of the total the envelope declares; `ensure()` as find-by-key, update-if-changed, create-if-absent, with a dry run that returns the request instead of sending it. TLS verification is configuration, warned about on stderr whenever it is off. |
-| `demo.py` | Six read-only steps: one read through the boundary; the bearer corrupted and recovered with one re-mint; a whole collection read against its declared total; the answer that lies (a capped page declaring the true total, and an answer with more headers than the standard library accepts by default); the boundary refusing two drifted shapes by name; an idempotent ensure in dry-run mode. Exit 0 when every step ran. |
+| `resilient.py` | The client. A bearer minted through a callable you supply, cached with its expiry and refreshed on a UTC buffer, re-minted exactly once when a call answers 401; `unwrap()` and `require()` as the typed boundary, naming the key or field that drifted; `paginate()` reading a whole collection and refusing to stop short of the total the envelope declares; `ensure()` as find-by-key, update-if-changed, create-if-absent, with a dry run that returns the request instead of sending it; `confirm()` re-reading an object by its stable key after a write, which `ensure()` calls on every write it sends, so a write answered as a success that applied nothing raises `EffectError` instead of returning `created`. TLS verification is configuration, warned about on stderr whenever it is off. |
+| `test_resilient.py` | The write guarantees checked offline with stubbed reads and writes: a dry run sends nothing, a write that applies is confirmed, a second run sends nothing, a write answered that applied nothing and an update that left the object wrong are both refused. No network. |
+| `demo.py` | Seven read-only steps: one read through the boundary; the bearer corrupted and recovered with one re-mint; a whole collection read against its declared total; the answer that lies (a capped page declaring the true total, and an answer with more headers than the standard library accepts by default); the boundary refusing two drifted shapes by name; an idempotent ensure in dry-run mode; the effect read back by its key, on an object that exists and on the one the dry run never sent. Exit 0 when every step ran. |
 
 ## Run it
 
@@ -24,14 +25,18 @@ export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
 export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token   # mode 0600; rewritten only if the answer carries a different value
 
 python3 demo.py
+python3 test_resilient.py      # offline: the write guarantees, no estate needed
 ```
 
 ## Scope, stated plainly
 
-- Proven on one VCF Operations 9.1.0 instance and its VCF Automation on 2026-09-16; every number in
-  `expected-output.md` is from that run. Your totals will differ; the shape of each step should not.
+- Run on one VCF Operations 9.1.1 instance and its VCF Automation on 2026-10-07 (first on 9.1.0, 2026-09-16 and
+  2026-09-21); every number in `expected-output.md` is from the 2026-10-07 run. Your totals will differ; the shape
+  of each step should not.
 - Read-only. The demo sends no mutation: step 6 runs `ensure()` in dry-run mode and prints the request it would
-  have sent. The one file the client writes is the cache file, atomically, at owner-only permissions.
+  have sent, and step 7 shows `confirm()` on reads alone. A write's confirmation is tested offline by
+  `test_resilient.py`, with stubbed reads and writes, rather than by writing to your estate. The one file the
+  client writes is the cache file, atomically, at owner-only permissions.
 - The 401 in step 2 is simulated by corrupting the cached bearer, because a real expiry cannot be scheduled into a
   demo; the client's path is the same one an expired bearer takes.
 - The consumption surface answers a large collection page with more than a hundred response headers (one `link`
@@ -48,6 +53,8 @@ python3 demo.py
 - Step 5 prints two `ShapeError` messages; each names the key or field that drifted and what was present instead.
 - Step 6 prints `would send` with the method, path, and body size when the object is absent, or `exists` when it is
   there, and either way nothing is sent.
+- Step 7 prints that the first resource reads back as expected, then the `EffectError` for the group step 6 did
+  not send. In your own code, `ensure()` raises that error after a write whose effect a re-read cannot find.
 
 ## Expected output
 

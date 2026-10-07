@@ -32,6 +32,20 @@ export PATHWAYS_STORAGE_CLASS=<storage-class>            # optional; inferred fr
 python3 pathways.py --probe-pathways
 ```
 
+Before applying any of this to an estate that is not the one it was measured on, read which API line your
+Supervisor serves:
+
+```bash
+python3 pathways.py --versions                           # read-only; writes versions.json and nothing else
+```
+
+It reads `/apis/vmoperator.vmware.com` through each namespace endpoint you can see, prints the versions each
+one serves and the one it prefers, and says whether the preferred one is the line every read and probe here is
+written against (`MEASURED_LINE`, `v1alpha5`). The delete behaviour in the next sections belongs to that line;
+the upstream project describes it differently for a newer one, so a Supervisor that prefers a newer line needs
+the delete column re-read before anyone relies on it. `versions.json` is the reference estate's answer, read
+2026-10-07: five namespaces, each serving `v1alpha1` to `v1alpha5` and preferring `v1alpha5`.
+
 ## The drift audit, which is why this script exists
 
 For every machine claimed by a deployment it compares three views:
@@ -195,3 +209,8 @@ including `driftProvableFromTheRecordAlone`, which is the count you can reproduc
 states which spec fields are compared. `probe` is present when `--probe-pathways` ran, and is carried
 forward by later read-only runs rather than erased: `vcfa` and `supervisor` each carry their timings and the
 record's state afterwards, and `teardown` records that the record retired.
+
+`versions.json`, written only by `--versions`, is a separate record: `measuredLine` is the API line the script
+is written against, and `namespaces` holds one row per visible namespace with the `served` versions, the
+`preferred` one and the HTTP `status` of the read, so a namespace that did not answer is a row rather than an
+absence.

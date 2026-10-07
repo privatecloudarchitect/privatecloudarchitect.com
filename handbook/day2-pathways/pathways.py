@@ -24,7 +24,12 @@ What this script reports:
   3. with --probe-pathways, the SAME CHANGE through VCFA and through the Supervisor on one machine this run
      builds, each timed, with the record read after each one.
 
-Without --probe-pathways nothing here writes.
+With --versions it does none of that: it reads which VM Operator API versions each namespace you can see
+serves, and which one is preferred, writes versions.json, and stops. The delete behaviour this chapter
+measured belongs to one API line (MEASURED_LINE below), and the upstream project describes it differently for
+a newer one, so this is the read to make before applying the pathway matrix to another estate.
+
+Without --probe-pathways nothing here writes to the estate.
 
 A DELIBERATE OMISSION, which is the most important line in this file. The probe always deletes its
 deployment while the machine still exists. Removing the machine first and then deleting the deployment
@@ -43,6 +48,7 @@ Run:
   export PATHWAYS_NAMESPACE=<namespace>                    # required for --probe-pathways
   export TLS_VERIFY=false                                  # only on a self-signed lab CA
   python3 pathways.py [--probe-pathways]
+  python3 pathways.py --versions                           # read-only; writes versions.json only
 """
 import collections
 import http.client
@@ -63,6 +69,7 @@ A3 = "infrastructure.cci.vmware.com/v1alpha3"
 PROJ = "project.cci.vmware.com/v1alpha2"
 VMOP = "vmoperator.vmware.com"
 BP = "blueprint.cci.vmware.com/v1alpha1"
+MEASURED_LINE = "v1alpha5"   # the VM Operator API line every read and probe below is written against
 PREFIX = "handbook-pathways"
 # The spec fields worth comparing. A manifest may legitimately omit a field the platform then defaults, so
 # comparing every key would report defaulting as drift. These are the ones an operator sets on purpose.
@@ -241,6 +248,31 @@ def audit(e, L, endpoints):
     observed = {k: {"documented": v, "seen": dict(seen[k]),
                      "neverSeen": [x for x in v if not seen[k].get(x)]} for k, v in CONTRACT.items()}
     return rows, tombstones, observed
+
+
+def api_order(version):
+    """Kubernetes API version order: v1alpha1 < v1alpha5 < v1beta1 < v1. An unparseable string sorts first."""
+    m = re.fullmatch(r"v(\d+)(?:(alpha|beta)(\d+))?", str(version))
+    if not m:
+        return (-1, -1, -1)
+    return (int(m.group(1)), {"alpha": 0, "beta": 1, None: 2}[m.group(2)], int(m.group(3) or 0))
+
+
+def served_versions(e, L, endpoints):
+    """Which VM Operator API versions each visible namespace serves, and which one is preferred.
+
+    Group discovery answers it in one read per namespace, through the same tenant path the audit uses. A
+    namespace that does not answer is reported with its status rather than left out, because a missing row
+    would read as a namespace that serves nothing.
+    """
+    rows = []
+    for _proj, ns, url in endpoints:
+        st, g = e.ns(url, f"/apis/{VMOP}")
+        ok = st == 200 and isinstance(g, dict)
+        rows.append({"namespace": L.get("namespace", ns), "status": st,
+                     "served": [v.get("version") for v in (g.get("versions") or [])] if ok else [],
+                     "preferred": ((g.get("preferredVersion") or {}).get("version")) if ok else None})
+    return rows
 
 
 def action_validity(e, dep, res):
@@ -600,6 +632,35 @@ def main():
             if u:
                 L.get("namespace", n["metadata"]["name"])
                 endpoints.append((p, n["metadata"]["name"], u))
+
+    if "--versions" in sys.argv[1:]:
+        vrows = served_versions(e, L, endpoints)
+        if not vrows:
+            raise SystemExit("no namespace endpoint is visible to this identity, so no version can be read")
+        print(f"  VM OPERATOR API: {len(vrows)} namespace(s); the matrix was measured on {MEASURED_LINE}")
+        for r in vrows:
+            note = ("" if r["status"] == 200 else f"  (no answer: HTTP {r['status']})")
+            if r["status"] == 200:
+                newer = [v for v in r["served"] if api_order(v) > api_order(MEASURED_LINE)]
+                note = ("  matches the measured line" if r["preferred"] == MEASURED_LINE else
+                        f"  preferred differs from {MEASURED_LINE}: re-read the delete column before relying on it")
+                if newer:
+                    note += f"; also serves {', '.join(newer)}"
+            print(f"     {r['namespace']:<16} served {', '.join(r['served']) or '-'}  preferred {r['preferred'] or '-'}{note}")
+        payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                   "group": VMOP, "measuredLine": MEASURED_LINE, "namespaces": vrows}
+        text = L.scrub(json.dumps(payload, indent=1, ensure_ascii=False))
+        for secret in (e.bearer, refresh, host, org):
+            assert not secret or secret not in text, "an estate value reached the record"
+        bare = re.sub(r"\{\{[^}]*\}\}", "", text)
+        for fam, m in L.maps.items():
+            for nm in m:
+                if nm and re.search(r"(?<![A-Za-z0-9-])" + re.escape(nm) + r"(?![A-Za-z0-9-])", bare):
+                    raise SystemExit(f"FATAL: a {fam} name reached the record")
+        os.makedirs(out_dir, exist_ok=True)
+        open(os.path.join(out_dir, "versions.json"), "w", encoding="utf-8").write(text + "\n")
+        print(f"\nwrote versions.json ({len(vrows)} namespace(s)); nothing else was read or written")
+        return
 
     rows, tombstones, observed = audit(e, L, endpoints)
     agree = sum(1 for r in rows if r["agrees"])
