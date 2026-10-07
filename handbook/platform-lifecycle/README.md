@@ -7,8 +7,8 @@ is printed or written.
 
 | File | What it is |
 |---|---|
-| `lifecycle.py` | Reads the releases the instance knows about, the bundle depot counted by download status, and the upgradable state, then **joins** the offered upgrades to the bundles behind them and reports how many gigabytes are still to fetch. Name a second instance and it compares your rehearsal instance with the one it rehearses for. It also follows a retired endpoint to the replacement its own `410` names. Writes `lifecycle.json`, and refuses to write a record carrying an instance name. |
-| `lifecycle.json` | That record from the reference estate, 2026-09-18, both instances. The chapter's plates render it. |
+| `lifecycle.py` | Reads the releases the instance knows about, the bundle depot counted by download status, and the upgradable state, then **joins** the offered upgrades to the bundles behind them and reports how much is still to fetch, in the API's own unit (sizeMB). Name a second instance and it compares your rehearsal instance with the one it rehearses for. It also follows a retired endpoint to the replacement its own `410` names. Writes `lifecycle.json`, and refuses to write a record carrying an instance name. |
+| `lifecycle.json` | That record from the reference estate, 2026-09-21, both instances. The chapter's plates render it. |
 
 ## Run it
 
@@ -52,7 +52,10 @@ Two traps the script handles so you do not have to:
 
 `instances` carries one entry per instance read. Inside each: `domains` split into management and workload,
 `releases` known, `bundles` with `byStatus` (`PENDING` means known about and not downloaded), `upgradables`
-offered, `distinctBundlesOffered` and `offeredAndStaged`, and `unstagedGB` as the outstanding download. `join`
+offered, `distinctBundlesOffered` and `offeredAndStaged`, and `unstagedMB` as the outstanding download, summed
+over distinct bundles in the API's own unit. A record written before 2026-10-07 carries `unstagedGB` instead:
+the same sum divided by 1024 and labelled GB, which names a decimal unit for a binary division; read it as MB
+divided by 1024. `join`
 is one row per offer with the bundle behind it and whether it is staged. `workloadDomainRefusal` quotes the
 refusal rather than describing it, and `depot` records which endpoint served the depot configuration on your
 build and what it reported.

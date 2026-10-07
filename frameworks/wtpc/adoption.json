@@ -1,18 +1,32 @@
 {
- "captured_utc": "2026-09-20T19:49:25Z",
+ "captured_utc": "2026-10-07T07:56:25Z",
  "prefix": "PCA - WTPC",
+ "taxonomy": {
+  "ruleCategories": [
+   "identity.function",
+   "lifecycle.env",
+   "policy.sla"
+  ],
+  "declaredCategories": [
+   "identity.function",
+   "lifecycle.env",
+   "policy.sla"
+  ],
+  "undeclaredInRules": [],
+  "matches": true
+ },
  "categories": {
-  "env": {
+  "identity.function": {
    "present": true,
    "cardinalityMatches": true,
    "declaredValues": 6
   },
-  "function": {
-   "present": false,
-   "cardinalityMatches": false,
+  "lifecycle.env": {
+   "present": true,
+   "cardinalityMatches": true,
    "declaredValues": 6
   },
-  "sla": {
+  "policy.sla": {
    "present": true,
    "cardinalityMatches": true,
    "declaredValues": 4
@@ -20,94 +34,195 @@
  },
  "categoriesRead": true,
  "assignments": {
-  "machines": 103,
-  "withAnyTag": 7,
-  "withATaxonomyTag": 0,
-  "byCategory": {}
+  "machines": 134,
+  "withAnyTag": 17,
+  "withATaxonomyTag": 10,
+  "byCategory": {
+   "identity.function": 9,
+   "lifecycle.env": 3,
+   "policy.sla": 1
+  },
+  "carryingTheCombination": {
+   "test-dev-traditional": 1,
+   "prod-latency-critical-db": 0
+  }
  },
  "groups": [
   {
    "group": "Tier - dedicated (Hosts)",
    "mechanism": "static list",
-   "members": 2
+   "members": 2,
+   "conditions": []
   },
   {
    "group": "Tier - density (Clusters)",
    "mechanism": "tag rule",
-   "members": 0
+   "members": 0,
+   "conditions": [
+    {
+     "category": "capacity.tier",
+     "value": "density"
+    }
+   ]
   },
   {
    "group": "Tier - standard (Hosts)",
    "mechanism": "static list",
-   "members": 4
+   "members": 4,
+   "conditions": []
   },
   {
    "group": "Group - test-dev-traditional (VMs)",
    "mechanism": "tag rule",
-   "members": 0
+   "members": 1,
+   "conditions": [
+    {
+     "category": "lifecycle.env",
+     "value": "dev"
+    },
+    {
+     "category": "policy.sla",
+     "value": "sla-4"
+    }
+   ]
   },
   {
    "group": "Group - prod-latency-critical-db (Clusters)",
    "mechanism": "tag rule",
-   "members": 0
+   "members": 0,
+   "conditions": [
+    {
+     "category": "lifecycle.env",
+     "value": "prod"
+    },
+    {
+     "category": "identity.function",
+     "value": "db"
+    },
+    {
+     "category": "policy.sla",
+     "value": "sla-1"
+    }
+   ]
   },
   {
    "group": "Group - estate-governance (Clusters)",
    "mechanism": "static list",
-   "members": 3
+   "members": 3,
+   "conditions": []
   },
   {
    "group": "Group - prod-latency-critical-db (Hosts)",
    "mechanism": "tag rule",
-   "members": 0
+   "members": 0,
+   "conditions": [
+    {
+     "category": "lifecycle.env",
+     "value": "prod"
+    },
+    {
+     "category": "identity.function",
+     "value": "db"
+    },
+    {
+     "category": "policy.sla",
+     "value": "sla-1"
+    }
+   ]
   },
   {
    "group": "Tier - standard (Clusters)",
    "mechanism": "tag rule",
-   "members": 2
+   "members": 2,
+   "conditions": [
+    {
+     "category": "capacity.tier",
+     "value": "standard"
+    }
+   ]
   },
   {
    "group": "Tier - performance (Clusters)",
    "mechanism": "tag rule",
-   "members": 0
+   "members": 0,
+   "conditions": [
+    {
+     "category": "capacity.tier",
+     "value": "performance"
+    }
+   ]
   },
   {
    "group": "Group - prod-latency-critical-db (VMs)",
    "mechanism": "tag rule",
-   "members": 0
+   "members": 0,
+   "conditions": [
+    {
+     "category": "lifecycle.env",
+     "value": "prod"
+    },
+    {
+     "category": "identity.function",
+     "value": "db"
+    },
+    {
+     "category": "policy.sla",
+     "value": "sla-1"
+    }
+   ]
   },
   {
    "group": "Group - test-dev-traditional (Clusters)",
    "mechanism": "static list",
-   "members": 2
+   "members": 2,
+   "conditions": []
   },
   {
    "group": "Tier - dedicated (Clusters)",
    "mechanism": "tag rule",
-   "members": 1
+   "members": 1,
+   "conditions": [
+    {
+     "category": "capacity.tier",
+     "value": "dedicated"
+    }
+   ]
   },
   {
    "group": "Group - test-dev-traditional (Hosts)",
    "mechanism": "static list",
-   "members": 4
+   "members": 4,
+   "conditions": []
   }
  ],
  "tagRuleGroups": 8,
- "tagRuleGroupsEmpty": 6,
+ "tagRuleGroupsEmpty": 5,
  "derive": {
   "guard": "REFUSING to reconcile: the VMs group is empty (likely a transient re-resolution).",
   "postures": {
    "test-dev-traditional": {
-    "vmsGroupMembers": 0,
-    "wouldRefuse": true
+    "vmsGroupMembers": 1,
+    "wouldRefuse": false
    },
    "prod-latency-critical-db": {
     "vmsGroupMembers": 0,
     "wouldRefuse": true
    }
   },
-  "posturesRefusing": 2,
+  "posturesRefusing": 1,
   "posturesTotal": 2
  },
- "stopsAt": "1 · the categories: a declared category is missing, so its rule can never match"
+ "postures": {
+  "prod-latency-critical-db": {
+   "vmsGroupMembers": 0,
+   "carryingTheCombination": 0,
+   "stopsAt": "2 · the assignments: no machine carries every condition its rule names"
+  },
+  "test-dev-traditional": {
+   "vmsGroupMembers": 1,
+   "carryingTheCombination": 1,
+   "stopsAt": null
+  }
+ },
+ "stopsAt": "2 · the assignments: no machine carries every condition its rule names"
 }

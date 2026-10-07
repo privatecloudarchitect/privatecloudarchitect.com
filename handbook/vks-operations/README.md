@@ -8,7 +8,7 @@ Stdlib Python only; no token is printed or written.
 | File | What it is |
 |---|---|
 | `vks.py` | Reads every estate-management kind at the organization gateway with the verbs it **declares** and the verbs you are actually **allowed**, which are different answers; each cluster's capacity and per-component control-plane health from the fleet projection, the triage read that needs no kubeconfig; the declared Cluster API object at each Supervisor namespace endpoint with its class, version, replicas and variables; and every node machine walked back through its controller owner to the declaration that produced it. Writes `vks.json`. |
-| `vks.json` | That record from the reference estate, 2026-09-18. The chapter's plates render it. |
+| `vks.json` | That record from the reference estate, 2026-09-21. The chapter's plates render it. |
 
 ## Run it
 
@@ -27,8 +27,11 @@ without entering any cluster. The Supervisor namespace endpoint carries the decl
 API object whose topology is what day-2 actually edits. Asking the right question at the wrong one produces two
 confusions this script makes visible:
 
-- **A declared verb is not a permitted verb.** The fleet kinds declare a full write set and permit only reads.
-  The record prints both columns, and the count of kinds where they disagree.
+- **A declared verb is not a permitted verb.** Every fleet kind declares a full write set; asked one access
+  review per kind and verb, some permit writes and some only `get`. On the reference estate the data-protection
+  kinds, `clusterpolicies` and `clusterpolicytemplates` permitted writes, while `clusters`, `clusterresources`,
+  `clusterpolicyinsights` and `clusterpolicyschemas` permitted `get` and none of the write verbs. The record
+  prints both columns, and the count of kinds where they disagree.
 - **A refusal can mean "wrong place", not "not allowed".** The same list is refused at cluster scope and served
   under a namespace. The first reading of that refusal is the wrong one, so the script records the message.
 

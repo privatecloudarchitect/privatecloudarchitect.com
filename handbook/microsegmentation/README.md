@@ -6,11 +6,11 @@ Backs the microsegmentation sheet
 Two pieces, and **run them in this order**:
 
 - **`posture.py`** reads what your org's posture actually is and, before that, whether this region
-  can enforce one at all. Read-only.
+  is entitled to enforce one at all. Read-only.
 - **`run.sh`** proves the three write disciplines by round-tripping a rule. It writes (safely, and
   it tears down), and it cannot succeed where the firewall capabilities are not entitled.
 
-## posture.py: what is attached, and what can be enforced
+## posture.py: what is attached, and what the region is entitled to enforce
 
 ```bash
 export VCFA_HOST=<your-org-gateway-fqdn>
@@ -27,7 +27,7 @@ Four reads, in the order that fails fastest:
    cannot tell you a write was never going to be. On the reference estate four capabilities are
    unavailable and all four are firewall capabilities (distributed, VPC gateway, transit-gateway,
    and the security profile itself), while `NetworkSecurityGroup` is entitled: **the vocabulary a
-   rule speaks works, and every surface that could enforce a rule does not.**
+   rule speaks works, and every surface that could enforce a rule reports itself unentitled.**
 
    Shape trap: the capability list sits at the **top level** of the object, beside `metadata`, not
    under `spec` or `status` where a reader of this API looks first. Read the wrong key and the
@@ -57,8 +57,9 @@ your own estate in about a minute, **where the capabilities allow it**:
 
 1. **Ship disabled, enable deliberately.** The section lands with its rule `disabled: true`,
    gets reviewed in place, and the enable is a one-field flip you can diff before applying.
-2. **Realized is the only status that counts.** Every step verifies
-   `status.conditions[type=Realized]` before proceeding.
+2. **Verify Realized before the next step.** Every step reads
+   `status.conditions[type=Realized]` before proceeding. Realized verifies a write that was accepted; it
+   says nothing about entitlement, which `posture.py` reads first, or about traffic.
 3. **Rules speak groups.** The rule's from/to/appliedTo are a named group the harness creates
    and removes; no addresses anywhere.
 
@@ -101,23 +102,27 @@ export VCFA_REGION=<your-region>     # kubectl --context vcfa-cci get regions
 `run.sh` substitutes `<your-region>` into working copies of the manifests; you can equally edit
 the three files under `manifests/` directly and apply them by hand in order.
 
-## Four gateway facts the docs will not tell you
+## Four gateway facts found by writing
 
-All four surfaced by first-party writes on a live estate; the harness is built around them:
+All four surfaced by first-party writes on a live 9.1 estate on 2026-08-14, and the harness is built around
+them. On 2026-09-20 the firewall create was refused for entitlement before most of them could be reached
+again, so each carries the date it was last confirmed:
 
 - **Server-side dry-run is NOT dry on this plane.** `kubectl apply --dry-run=server` against
   `vpc.nsx` kinds at the org gateway **persists the object** when it passes NSX validation (the
-  response still says "server dry run"). Do not use dry-run as a preview here. The review gate
+  response still says "server dry run"; 2026-08-14, not testable on 2026-09-20). Do not use dry-run as a
+  preview here. The review gate
   this plane actually gives you is the one the sheet teaches: land the document with its rule
   `disabled: true`, read it back, then flip the field.
 - **Field managers are not persisted**, so every apply over an existing `vpc.nsx` object reports
   a conflict with `before-first-apply` even when your manager applied it seconds ago.
   `--force-conflicts` is the standard update idiom on this plane, not an override of another
-  owner. (Creates apply cleanly either way.)
+  owner. (Creates apply cleanly either way.) 2026-08-14.
 - **Tenant rules accept `ipProtocol: IPV4` only.** The platform's own default rules carry
-  `IPV4_IPV6`, but that value is rejected on a tenant create.
+  `IPV4_IPV6`, but that value is rejected on a tenant create. Re-confirmed 2026-09-20: validation runs
+  before the entitlement check, so the rejection still arrives first.
 - **Tenant priority must be 0-999999.** The default section sits at max-int priority; that is a
-  system special you cannot use.
+  system special you cannot use. 2026-08-14; on 2026-09-20 the attempt met the entitlement refusal first.
 
 One more read-path detail: the **list** view of `firewallpolicies` trims `rules[]` (you see
 `RULE COUNT` but no rules). Fetch the single object (`-o yaml`) to see the full rule grammar.

@@ -9,7 +9,7 @@ union. This script asks the platform to state that derivation rather than inferr
   2. SelfSubjectReview at a namespace's own endpoint  the groups the workload plane derived for the same bearer
   3. the ProjectRole catalog                          the four tiers, as the platform publishes them
   4. ProjectRoleBinding in a project                  the authority: which role each subject kind holds
-  5. the project-service arrays                       the projection beside it, for contrast
+  5. the project-service arrays                       the projection beside it, compared principal by principal
   6. an access review, asked twice                    once without a namespace or API group, once with both,
                                                       beside a real read, so the difference is visible
   7. SelfSubjectRulesReview at the namespace          everything the plane says you may do there
@@ -124,12 +124,37 @@ def main():
                         "subject_kinds": sorted({s.get("kind") for b in bindings for s in (b.get("subjects") or [])}),
                         "name_shape": "cci:<subject-kind>:<subject>"}
     print(f"  authority: {len(bindings)} ProjectRoleBindings, by role {rec['authority']['by_role']}, subject kinds {rec['authority']['subject_kinds']}")
-    st, pr = api.call("GET", f"https://{host}/project-service/api/projects")
-    first = ((pr.get("content") or pr.get("items") or [{}])[0]) if st == 200 else {}
-    arrays = {k: len(first.get(k) or []) for k in ("administrators", "members", "viewers", "supervisors") if k in first}
-    rec["projection"] = {"surface": "project-service REST arrays", "status": st, "arrays_present": sorted(arrays),
-                         "note": "accepts a write, returns 200, persists nothing; it mirrors the project's admin group"}
-    print(f"  projection: project-service arrays present {sorted(arrays)}")
+    # The projection: the same project as the REST project service holds it. Matched by name to the project the
+    # authority was read in, so the two sides describe one project. Every list of principals on it is read,
+    # whatever it is called, and each is compared, principal by principal, with the subjects of each role's
+    # bindings. (An earlier version looked for arrays named members, viewers and supervisors, which 9.1 does not
+    # use, found only administrators, and recorded one array where there are four.)
+    st, pr = api.call("GET", f"https://{host}/project-service/api/projects?size=200")
+    content = (pr.get("content") or pr.get("items") or []) if st == 200 and isinstance(pr, dict) else []
+    same = next((p for p in content if p.get("name") == proj), None)
+    principals = lambda v: isinstance(v, list) and all(isinstance(x, dict) and ("email" in x or "type" in x) for x in v)
+    arrays = {k: v for k, v in (same or {}).items() if principals(v)}
+    by_role = {}
+    for b in bindings:
+        role = (b.get("roleRef") or {}).get("name")
+        for sub in b.get("subjects") or []:
+            by_role.setdefault(role, set()).add((str(sub.get("kind", "")).lower(), str(sub.get("name", "")).lower()))
+    mirror = {}
+    for name, members in sorted(arrays.items()):
+        held = {(str(x.get("type", "")).lower(), str(x.get("email") or x.get("name") or "").lower()) for x in members}
+        match = [r for r, subs in sorted(by_role.items()) if subs == held]
+        mirror[name] = {"principals": len(held), "sameAsBindingsOfRole": match[0] if len(match) == 1 else None}
+    rec["projection"] = {"surface": "project-service REST arrays", "status": st, "sameProjectAsAuthority": same is not None,
+                         "arrays_present": sorted(arrays), "arrays": mirror,
+                         "everyArrayMirrorsOneRole": bool(mirror) and all(a["sameAsBindingsOfRole"] or a["principals"] == 0
+                                                                          for a in mirror.values()),
+                         "writeBehavior": "not tested here; isolation-design's isolation.py PATCHes the arrays and "
+                                          "reads them back (membershipArrays in isolation.json)"}
+    shown = []
+    for k, v in mirror.items():
+        role = v["sameAsBindingsOfRole"]
+        shown.append("%s (%d, the %s bindings)" % (k, v["principals"], role) if role else "%s (%d)" % (k, v["principals"]))
+    print("  projection: project-service arrays " + ", ".join(shown))
 
     # 4. the workload plane, same bearer
     st, nss = api.call("GET", f"{G}/apis/infrastructure.cci.vmware.com/v1alpha3/namespaces/{proj}/supervisornamespaces")

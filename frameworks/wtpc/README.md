@@ -120,14 +120,20 @@ export VCENTER_SESSION_ID=...      # or VCENTER_USERNAME + VCENTER_PASSWORD
 python3 audit_adoption.py
 ```
 
-Five links, and they fail in a fixed order because each is the input to the next:
+Five links, and they fail in a fixed order because each is the input to the next. Before them, link 0:
 
-1. **The categories.** A posture rule is an AND of exact `category|value` conditions, so every declared
-   category must exist on the vCenter. One missing category makes its rule unmatchable no matter what anybody
+0. **The taxonomy.** The categories the posture rules actually match on, read from the rules, against the
+   taxonomy file the audit was given (`WTPC_TAXONOMY`, or the default). If the rules name a category the file
+   does not declare, the audit stops here and names the mismatch, and reads links 1 and 2 against the rules' own
+   categories. Run against the wrong file, a chain audit reports a "missing" category that no rule uses while
+   the rules' real categories exist; this link exists because that happened.
+1. **The categories.** A posture rule is an AND of exact `category|value` conditions, so every category the
+   rules name must exist on the vCenter. One missing category makes its rule unmatchable no matter what anybody
    tags.
-2. **The assignments.** How many machines carry a taxonomy tag. **This is the link `apply.py` does not own**,
-   by design and by its own docstring: workload tagging rides your estate's change process. It is still a
-   link, and it is the one that silently is not done.
+2. **The assignments.** How many machines carry a taxonomy tag, and, per posture, how many carry **every**
+   condition its rule names: a machine carrying two of three conditions is not a member. **This is the link
+   `apply.py` does not own**, by design and by its own docstring: workload tagging rides your estate's change
+   process. It is still a link, and it is the one that silently is not done.
 3. **The groups**, and how many members each resolves to. An empty tag-rule group is link 2 reported one
    layer up; do not debug it at the group, because a generator wrote the rule.
 4. **The derive**, and whether it would run or refuse. The estate refuses to reconcile host and cluster
@@ -135,15 +141,14 @@ Five links, and they fail in a fixed order because each is the input to the next
    half.
 5. **The parity**, which `audit_deployment.py` reports in full.
 
-It prints **the first incomplete link** and stops attributing, because everything downstream of it is a
-consequence rather than a finding. On the reference estate that was link 1: one of the three declared
-categories did not exist, and the 0 tagged machines and 6 empty groups after it all followed from that.
+It prints **the first incomplete link for each posture** and stops attributing, because everything downstream
+of it is a consequence rather than a finding.
 
 Two notes from building it. Read the tags through `summary|tagJson`, not `summary|tag`: the latter renders a
 display string that does not parse back. And the category read takes a **session id** rather than per-request
 basic auth, because `/api/cis/tagging/*` answered 401 to basic auth on the build this was written against.
 
-It writes `adoption.json`, names no machine, records no tag from outside the declared taxonomy, and changes
+It writes `adoption.json`, names no machine, records no tag from outside the categories the rules name, and changes
 nothing.
 
 ### Is any of it governing anything? `audit_deployment.py`

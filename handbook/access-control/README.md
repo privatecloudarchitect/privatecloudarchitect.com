@@ -8,7 +8,7 @@ inferring it from roles and rights. Stdlib Python only; no token is printed or w
 | File | What it is |
 |---|---|
 | `whoami.py` | Runs a self review at the organization gateway and at a namespace's own endpoint, so you can see the two identities one bearer holds; lists the published project-role catalog; reads the ProjectRoleBinding authority beside the REST projection; asks one access review twice, once without a namespace and API group and once with both, against the matching real reads; and counts what a rules review reports in one namespace. Writes `derivation.json`, and refuses to write a record carrying any estate value or identifier. |
-| `derivation.json` | That record from the reference estate, 2026-09-17. The chapter's plates render it. |
+| `derivation.json` | That record from the reference estate, 2026-10-07. The chapter's plates render it. |
 | `expected-output.md` | The transcript of that run, with what to read in it. |
 
 ## Run it
@@ -39,8 +39,10 @@ python3 whoami.py
 
 `organization_gateway` and `workload_plane` each carry the group count and the groups split into `from_rights`
 (named for a right you hold), `system`, and `plane_scoped` (shape only). `project_roles` is the published
-catalog. `authority` counts the bindings by role and lists the subject kinds; `projection` names which REST
-membership arrays exist beside it. `access_reviews` is the same question asked `without_scope` and `with_scope`,
+catalog. `authority` counts the bindings by role and lists the subject kinds; `projection` reads every REST membership
+array on the same project and records, for each, how many principals it holds and which role's bindings hold
+exactly the same principals (`sameAsBindingsOfRole`), compared principal by principal in the script and never
+written out. `access_reviews` is the same question asked `without_scope` and `with_scope`,
 with the reason shape when allowed; `real_reads` is the status of the matching real call; `rules_review` counts
 the resource rules the plane reports for you in one namespace.
 

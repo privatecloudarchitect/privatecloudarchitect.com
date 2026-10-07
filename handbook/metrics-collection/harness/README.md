@@ -13,8 +13,8 @@ instance, read-only:
 2. **The roll-up** (`rollup_check.py`): the stored 5-minute value is one number per point, so
    asking for MIN or MAX at that grain returns the same values as AVG; server-side hourly AVG and
    MAX buckets are checked against the native points and pass only when exact to three decimals.
-   The VM's peak keys (`20_sec_peak_*`, `peak_*`) are listed: the only within-cycle maxima that
-   survive at 5-minute cadence.
+   The VM's peak keys are listed: `20_sec_peak_*` keep a within-cycle maximum at 5-minute cadence,
+   while `peak_*` are the busiest instance's 5-minute average, by the adapter's own definitions.
 3. **The extraction coefficients** (`extract_measure.py`): points, bytes, latency, bytes per point,
    and points per second for one VM over 7 days at native resolution and as hourly buckets, then an
    optional fan-out of N VMs x 4 statkeys over a day. Resources with no data in a window are
@@ -22,7 +22,6 @@ instance, read-only:
 4. **The identity key** (`identity_keys.py`): the identifiers one VM carries, which of them the
    platform marks as part of uniqueness, and the composite key the sheet recommends,
    `(vcenter_instance_uuid, moid)`.
-
 5. **Identity continuity** (`identity_continuity.py`): which entities your estate has split across more
    than one resource. The composite key names where a sample was taken, and both halves change when an
    object moves between vCenters, so Operations mints a new resource and stops collecting on the old
@@ -32,7 +31,7 @@ instance, read-only:
    the overlapping samples that would be double counted, and any resource with no surviving identifier
    at all. Exit 1 means the pipeline needs a continuity ledger; charter section 6.5 has the model.
 
-5. **The real-time path** (`rtm_query.py`): mints the service-scoped JWT the VCF services runtime
+6. **The real-time path** (`rtm_query.py`): mints the service-scoped JWT the VCF services runtime
    requires, reads which hosts of the vCenter have the 2-second ESX Top set switched on, counts
    the metric names collected for one vCenter, runs one PromQL instant query and
    a `count by (profile)` beside it (one call returns at most 101 series and reports the cut only in a

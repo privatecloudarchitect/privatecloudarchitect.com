@@ -43,9 +43,10 @@ not determined rather than guessing.
 dumb conditions over intelligent metrics shows up as a tiny value vocabulary against keys that are mostly
 super metrics. Arithmetic hiding in conditions shows up as dozens of distinct values.
 
-**The debounce census.** Wait and cancel cycles, yours beside the whole instance's. This is the check where an
-estate usually discovers it has been describing a platform default as a decision: if your distribution is a
-single value on every definition, nobody chose it.
+**The debounce census.** Wait and cancel cycles on every alert definition, yours beside the whole instance's.
+If your distribution is a single value on every definition, those dials were set once for all of them: either
+the hold lives in the symptoms, which carry their own wait and cancel and which this census does not count, or
+nobody set them for any alert in particular. One is the minimum the API accepts, not a default it applies.
 
 **What routing can see.** The complete field list of a notification rule, and the filter counts of each one.
 An enabled rule with no definition filter, no resource filter, no kind filter and no criticality is an any-any

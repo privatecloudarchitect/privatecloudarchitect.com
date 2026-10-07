@@ -65,8 +65,9 @@ substituted when the strategy is attached, and every one but `none` ends in a dr
 whole of what is permitted.
 
 **Egress.** The whole VPC translates to a single external address by a rule the system created, and the
-gateway connection advertises the external block while leaving private space unannounced. Per-workload source
-attribution outside the VPC does not exist, whatever a downstream log appears to show.
+gateway connection advertises the external block while leaving private space unannounced. Under that default
+rule, per-workload source attribution outside the VPC does not exist, whatever a downstream log appears to show;
+a workload that needs an external identity of its own gets a one-to-one rule, which a tenant may create.
 
 ## What this does not tell you
 

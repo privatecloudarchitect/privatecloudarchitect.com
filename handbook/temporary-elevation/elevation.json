@@ -1,43 +1,216 @@
 {
- "captured_utc": "2026-09-21T07:30:29Z",
+ "captured_utc": "2026-10-07T07:32:14Z",
  "policyTypes": [
   {
    "id": "com.vmware.policy.supervisor.iaas",
-   "timeBoundedFields": [],
-   "governs": "what the supervisor plane will accept"
+   "governs": "what the supervisor plane will accept",
+   "says": [
+    "automationPolicy",
+    "automationPolicy.failurePolicy",
+    "automationPolicy.matchConditions",
+    "automationPolicy.matchConditions[].expression",
+    "automationPolicy.matchConditions[].name",
+    "automationPolicy.matchConstraints",
+    "automationPolicy.matchConstraints.excludeResourceRules",
+    "automationPolicy.matchConstraints.excludeResourceRules[].apiGroups",
+    "automationPolicy.matchConstraints.excludeResourceRules[].apiVersions",
+    "automationPolicy.matchConstraints.excludeResourceRules[].operations",
+    "automationPolicy.matchConstraints.excludeResourceRules[].resources",
+    "automationPolicy.matchConstraints.matchPolicy",
+    "automationPolicy.matchConstraints.objectSelector",
+    "automationPolicy.matchConstraints.objectSelector.matchExpressions",
+    "automationPolicy.matchConstraints.objectSelector.matchExpressions[].key",
+    "automationPolicy.matchConstraints.objectSelector.matchExpressions[].operator",
+    "automationPolicy.matchConstraints.objectSelector.matchExpressions[].values",
+    "automationPolicy.matchConstraints.objectSelector.matchLabels",
+    "automationPolicy.matchConstraints.resourceRules",
+    "automationPolicy.matchConstraints.resourceRules[].apiGroups",
+    "automationPolicy.matchConstraints.resourceRules[].apiVersions",
+    "automationPolicy.matchConstraints.resourceRules[].operations",
+    "automationPolicy.matchConstraints.resourceRules[].resources",
+    "automationPolicy.validationActions",
+    "automationPolicy.validations",
+    "automationPolicy.validations[].expression",
+    "automationPolicy.validations[].message",
+    "automationPolicy.validations[].messageExpression",
+    "automationPolicy.validations[].reason"
+   ],
+   "matches": [
+    "name",
+    "object.spec.className",
+    "object.spec.regionName"
+   ],
+   "appliesTo": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "timeBoundedFields": []
   },
   {
    "id": "com.vmware.policy.deployment.action",
-   "timeBoundedFields": [],
-   "governs": "what a principal may do to a deployment"
+   "governs": "what a principal may do to a deployment",
+   "says": [
+    "allowedActions",
+    "allowedActions[].actions",
+    "allowedActions[].authorities"
+   ],
+   "matches": [
+    "blueprintId",
+    "catalogItemId",
+    "createdBy",
+    "id",
+    "name",
+    "ownedBy",
+    "ownerType",
+    "resources",
+    "resources[].properties.manifest.kind",
+    "resources[].type"
+   ],
+   "appliesTo": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "timeBoundedFields": []
   },
   {
    "id": "com.vmware.policy.deployment.lease",
-   "timeBoundedFields": [],
-   "governs": "how long a deployment lives"
+   "governs": "how long a deployment lives",
+   "says": [
+    "leaseGrace",
+    "leaseTermMax",
+    "leaseTotalTermMax"
+   ],
+   "matches": [
+    "blueprintId",
+    "catalogItemId",
+    "createdBy",
+    "id",
+    "name",
+    "ownedBy",
+    "ownerType",
+    "resources",
+    "resources[].properties.manifest.kind",
+    "resources[].type"
+   ],
+   "appliesTo": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "timeBoundedFields": [
+    {
+     "field": "leaseGrace",
+     "schema": "definition",
+     "type": "integer",
+     "says": "The duration in days that an expired object should be held before it is deleted"
+    },
+    {
+     "field": "leaseTermMax",
+     "schema": "definition",
+     "type": "integer",
+     "says": "The maximum duration in days between creation (or renewal) and expiration"
+    },
+    {
+     "field": "leaseTotalTermMax",
+     "schema": "definition",
+     "type": "integer",
+     "says": "The maximum duration in days between creation and expiration. Unaffected by renewal."
+    }
+   ]
   },
   {
    "id": "com.vmware.policy.approval",
-   "timeBoundedFields": [],
-   "governs": "whether a request needs a human"
+   "governs": "whether a request needs a human",
+   "says": [
+    "actions",
+    "approvalMode",
+    "approverType",
+    "approvers",
+    "autoApprovalDecision",
+    "autoApprovalExpiry",
+    "level"
+   ],
+   "matches": [
+    "blueprintId",
+    "catalogItemId",
+    "deploymentId",
+    "deploymentName",
+    "ownedBy",
+    "ownerType",
+    "requestedBy",
+    "resources",
+    "resources[].properties.manifest.kind",
+    "resources[].type"
+   ],
+   "appliesTo": [
+    "project.description",
+    "project.id",
+    "project.name"
+   ],
+   "timeBoundedFields": [
+    {
+     "field": "autoApprovalExpiry",
+     "schema": "definition",
+     "type": "integer",
+     "says": "No of days to keep the approval request"
+    }
+   ]
   }
  ],
  "access": {
+  "projectRoleBindingSchema": [
+   "roleRef",
+   "roleRef.apiGroup",
+   "roleRef.kind",
+   "roleRef.name",
+   "subjects",
+   "subjects[].kind",
+   "subjects[].name"
+  ],
+  "projectRoleSchema": [
+   "spec",
+   "spec.description"
+  ],
+  "anyExpiryField": [],
+  "objectMetadataTimeFields": [
+   {
+    "field": "metadata.creationTimestamp",
+    "says": "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value."
+   },
+   {
+    "field": "metadata.deletionGracePeriodSeconds",
+    "says": "Number of seconds allowed for this object to gracefully terminate before it will be removed from the system. Only set when deletionTimestamp is also set. May only be shortened. Read-only."
+   },
+   {
+    "field": "metadata.deletionTimestamp",
+    "says": "DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This field is set by the server when a graceful deletion is requested by the user, and is not directly settable by a client."
+   },
+   {
+    "field": "metadata.managedFields[].time",
+    "says": "Time is timestamp of when these fields were set. It should always be empty if Operation is 'Apply'"
+   }
+  ],
   "projectRoleBindingFields": [
    "metadata",
    "roleRef",
    "subjects"
   ],
   "projectRoleBindingMetadataFields": [
+   "annotations",
+   "finalizers",
+   "labels",
+   "managedFields",
    "name",
    "namespace",
+   "ownerReferences",
    "uid"
   ],
   "projectRoleFields": [
    "metadata",
    "spec"
   ],
-  "anyExpiryField": [],
   "bindings": 4,
   "roles": [
    "view",

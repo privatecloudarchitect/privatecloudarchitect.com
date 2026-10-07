@@ -1,8 +1,8 @@
 {
- "captured_utc": "2026-09-21T12:57:20Z",
+ "captured_utc": "2026-10-07T07:36:55Z",
  "organization_gateway": {
   "status": 201,
-  "groups": 63,
+  "groups": 67,
   "extra_claims": [
    "org",
    "token"
@@ -23,6 +23,8 @@
    "vcf:Content Library Item: View",
    "vcf:Distributed Firewall: Manage",
    "vcf:Distributed Firewall: View",
+   "vcf:File Store: Manage",
+   "vcf:File Store: View",
    "vcf:IP Blocks: Manage",
    "vcf:IP Blocks: View",
    "vcf:Namespace Class: Manage",
@@ -34,6 +36,8 @@
    "vcf:Network Security Group: Manage",
    "vcf:Network Security Group: View",
    "vcf:Network Service: View",
+   "vcf:Object Store: Manage",
+   "vcf:Object Store: View",
    "vcf:Projects: Manage",
    "vcf:Projects: View",
    "vcf:Projects: View Limited",
@@ -112,10 +116,33 @@
  "projection": {
   "surface": "project-service REST arrays",
   "status": 200,
+  "sameProjectAsAuthority": true,
   "arrays_present": [
-   "administrators"
+   "administrators",
+   "advancedUsers",
+   "auditors",
+   "users"
   ],
-  "note": "accepts a write, returns 200, persists nothing; it mirrors the project's admin group"
+  "arrays": {
+   "administrators": {
+    "principals": 2,
+    "sameAsBindingsOfRole": "admin"
+   },
+   "advancedUsers": {
+    "principals": 1,
+    "sameAsBindingsOfRole": "edit_adv"
+   },
+   "auditors": {
+    "principals": 0,
+    "sameAsBindingsOfRole": null
+   },
+   "users": {
+    "principals": 1,
+    "sameAsBindingsOfRole": "edit"
+   }
+  },
+  "everyArrayMirrorsOneRole": true,
+  "writeBehavior": "not tested here; isolation-design's isolation.py PATCHes the arrays and reads them back (membershipArrays in isolation.json)"
  },
  "workload_plane": {
   "status": 201,

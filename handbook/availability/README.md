@@ -50,8 +50,8 @@ is one routing boundary. A percentage cannot tell those apart.
 Finally it crosses the guest layer against the floor beneath it: every machine's guest availability KPI, which
 rides VMware Tools, against the hypervisor's own uptime, which does not. A KPI of zero with a climbing uptime
 is **blind, not down**; a KPI of zero with no uptime reading at all is **unknown**, which is a third answer and
-a different ticket. On the reference estate 26 machines read a guest KPI of zero and not one of them was
-confirmed stopped by the floor.
+a different ticket. In the record (`promise.json`, 2026-09-21) 27 machines read a guest KPI of zero, and none
+of them was confirmed stopped by the floor.
 
 It writes `promise.json`, names no address, check or machine, and changes nothing.
 

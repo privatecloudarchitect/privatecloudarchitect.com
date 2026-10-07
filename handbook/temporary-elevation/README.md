@@ -7,8 +7,8 @@ only; no token is printed or written.
 
 | File | What it is |
 |---|---|
-| `elevation.py` | Asks your build what it can time-box: every policy type the plane declares with its schema scanned for any field that could hold a deadline, the complete field list of every object that grants access, and the deployment fields that **do** carry a time bound. With `--probe-elevation <binding name>` it also moves one binding you name up a role and puts it back, reading the object directly after every step. Writes `elevation.json`. |
-| `elevation.json` | That record from the reference estate, 2026-09-18. The chapter's plates render it. |
+| `elevation.py` | Asks your build what it can time-box: every policy type the plane declares, with every field its definition, target and scope schemas declare and the ones that could hold a time bound in the schema's own words; the published schema of the two kinds that grant access, checked against the objects; and the deployment fields that **do** carry a time bound. With `--probe-elevation <binding name>` it also moves one binding you name up a role and puts it back, reading the object directly after every step. Writes `elevation.json`. |
+| `elevation.json` | That record from the reference estate: the enumeration read 2026-10-07, the probe block from the 2026-09-18 run with the flag. The chapter's plates render it. |
 
 ## Run it
 
@@ -24,10 +24,18 @@ python3 elevation.py --probe-elevation cci:group:SomeTestGroup
 ## Why an enumeration rather than an assertion
 
 "There is nowhere to put an expiry" is an absence claim, and an absence claim carries the same burden as a
-positive one. So the script lists every field of every object that grants access and every policy type's
-schema, and the emptiness of `anyExpiryField` is then something you can check rather than something you are
-told. A lease **does** exist on this platform: it bounds a deployment's life, not a person's reach, and that
-difference is the chapter.
+positive one. So the script lists every field each policy type's three schemas declare and every field the two
+access kinds' published schema declares, and the emptiness of `anyExpiryField` is then something you can check
+rather than something you are told. The schema is read rather than the objects alone because an object shows
+only the fields that are set: an optional expiry left empty would appear on none of them.
+
+Time bounds **do** exist on this platform, on two policy types: the lease bounds a deployment's life
+(`leaseTermMax`, `leaseTotalTermMax`, `leaseGrace`, in days) and the approval policy bounds how long a request is
+kept (`autoApprovalExpiry`). Neither bounds a person's reach, and that difference is the chapter.
+
+An empty scan is not an absence. If a type's definition schema or an access kind's published schema cannot be
+read, the script stops and writes no record, rather than reporting that it found nothing. The field-name pattern
+only marks candidates; the record lists every field, so you can check the rest by reading it.
 
 ## About `--probe-elevation`
 
@@ -52,8 +60,11 @@ Point it at a binding you created for the purpose. Without the flag nothing here
 
 ## Reading the record
 
-`policyTypes` is one row per declared policy type with `timeBoundedFields` (what its schema could hold) and
-what it governs. `access` is the enumeration: the field lists of a ProjectRoleBinding and a ProjectRole, the
-published roles, the binding count, and `anyExpiryField`, which is the claim made checkable.
+`policyTypes` is one row per declared policy type: what it governs, every field its definition schema declares
+(`says`), its target (`matches`) and scope (`appliesTo`) fields, and `timeBoundedFields`, each with the schema it
+came from and the schema's own description. `access` is the enumeration: the fields the published schema declares
+for a ProjectRoleBinding and a ProjectRole, `anyExpiryField` (the claim made checkable),
+`objectMetadataTimeFields` (the Kubernetes metadata every kind carries, with the schema's words for each, which
+mark them as set by the server), the fields observed on the objects, the published roles and the binding count.
 `deploymentLeaseFields` is the time bound that does exist, on the other kind of object. `elevation` is present
 only when the probe ran, and carries each step with the read-back that followed it.

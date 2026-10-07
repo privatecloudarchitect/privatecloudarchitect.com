@@ -59,7 +59,7 @@ ROLL-UP CHECK - vm-busy-01, cpu|usagemhz_average, last 3 hours, read 2026-09-15 
   2026-09-15 00:59:59      16747.472    16747.472 18109.268   18109.268   exact
   ------------------------------------------------------------------------------
 
-  peak keys on this VM (13): the only within-cycle maxima kept at 5-minute cadence
+  peak keys on this VM (13): 20_sec_peak_* keep a within-cycle maximum; peak_* are the busiest instance's 5-minute average
     cpu|20_sec_peak_costopPct
     cpu|20_sec_peak_iowaitPct
     cpu|20_sec_peak_overlap

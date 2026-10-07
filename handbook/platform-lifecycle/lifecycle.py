@@ -11,7 +11,7 @@ joins them, and reports the gap:
      workload domain by its own id is refused, and the message says the management domain was not found, which
      reads like a missing object rather than a wrong argument;
   4. the JOIN, which is the point of the script: for every upgradable, whether the bundle behind it has
-     actually been staged, and how many gigabytes are still to fetch if it has not. An upgrade offered with
+     actually been staged, and how much is still to fetch if it has not, in the API's own unit (sizeMB). An upgrade offered with
      nothing downloaded is the failure this chapter exists to prevent, and it is two reads away from visible;
   5. the DEPOT CONFIGURATION, read through whichever endpoint this build still serves. On 9.1 the old one is
      retired and answers 410 with the name of its replacement, which is worth following rather than guessing.
@@ -117,7 +117,7 @@ def read_instance(host, token, L, label):
 
     # ---- the join
     # Size is summed over DISTINCT bundles. Several upgradables can reference one bundle, and adding a size
-    # per upgradable counts that bundle's gigabytes more than once. The first version of this script did
+    # per upgradable counts that bundle's size more than once. The first version of this script did
     # exactly that and overstated the download by the size of the shared bundle.
     joined, seen_bundles = [], {}
     for e in ups:
@@ -138,10 +138,12 @@ def read_instance(host, token, L, label):
     print(f"\n  THE JOIN: {len(ups)} upgradable(s) reference {distinct} distinct bundle(s); "
           f"{staged_n} of those bundles are staged")
     if joined and staged_n == 0:
-        print(f"     none of the content is downloaded. {round(unstaged_mb / 1024, 1)} GB still to fetch before "
+        # The API names the unit sizeMB and does not say whether a megabyte is 10^6 or 2^20 bytes, so the figure
+        # is reported in that unit, never divided by 1024 and relabelled.
+        print(f"     none of the content is downloaded. {unstaged_mb:,.0f} MB (the API's sizeMB) still to fetch before "
               f"any of this is actually available, whatever the registry says.")
     elif joined and staged_n < distinct:
-        print(f"     partially staged; {round(unstaged_mb / 1024, 1)} GB still to fetch.")
+        print(f"     partially staged; {unstaged_mb:,.0f} MB (the API's sizeMB) still to fetch.")
     elif joined:
         print("     every offered upgrade has its content staged.")
     else:
@@ -171,7 +173,7 @@ def read_instance(host, token, L, label):
                "domains": {"total": len(domains), "management": len(mgmt), "workload": len(workload)},
                "releases": len(releases), "bundles": {"total": len(bundles), "byStatus": dict(by_status)},
                "upgradables": len(ups), "distinctBundlesOffered": distinct,
-               "offeredAndStaged": staged_n, "unstagedGB": round(unstaged_mb / 1024, 1),
+               "offeredAndStaged": staged_n, "unstagedMB": round(unstaged_mb, 1),
                "join": joined, "workloadDomainRefusal": refusal, "depot": depot}
 
 
@@ -184,7 +186,7 @@ def main():
                             open(os.environ["SDDC_TOKEN_FILE"], encoding="utf-8").read().strip(),
                             L, "the instance asked about")
     instances = [primary]
-    # The chapter's discipline is a rehearsal instance held behind production. Comparing the two is the
+    # The chapter's discipline is a rehearsal instance kept a cycle ahead of production. Comparing the two is the
     # read that shows whether the stagger still exists, so the script takes a second host when you have one.
     rh, rt = os.environ.get("SDDC_REHEARSAL_HOST"), os.environ.get("SDDC_REHEARSAL_TOKEN_FILE")
     if rh and rt and os.path.exists(rt):

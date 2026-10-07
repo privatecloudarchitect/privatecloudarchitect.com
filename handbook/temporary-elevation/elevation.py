@@ -4,12 +4,13 @@
 Temporary elevation is a design built on top of a platform that has no primitive for it. That claim is the
 whole reason the design exists, so this checks it instead of repeating it:
 
-  1. the TIME-BOX INVENTORY: every policy type the plane declares, with whether its schema carries any
-     time-bounded field at all, and the complete field list of the objects that grant access. A lease does
-     exist on this platform. It bounds a deployment's life, not a person's reach, and the difference is the
-     chapter;
-  2. the ACCESS OBJECTS: what a ProjectRoleBinding and a ProjectRole actually carry, field by field, so
-     "there is nowhere to put an expiry" is an enumeration rather than an impression;
+  1. the TIME-BOX INVENTORY: every policy type the plane declares, with every field its definition, target and
+     scope schemas declare, and which of them could hold a time bound, in the product's own description. Two
+     types carry one: the lease bounds a deployment's life and the approval bounds how long a request waits.
+     Neither bounds a person's reach, and the difference is the chapter;
+  2. the ACCESS OBJECTS: what a ProjectRoleBinding and a ProjectRole can carry, read from the kinds' published
+     schema and checked against the objects themselves, so "there is nowhere to put an expiry" is an
+     enumeration rather than an impression;
   3. the SCOPE-AXIS MECHANISM (with --probe-elevation NAME): whether a binding's role can be changed in
      place and changed back, which decides whether a guaranteed revert is possible at all. This ELEVATES A
      REAL BINDING for a few seconds and puts it back. It refuses to run without a binding named explicitly,
@@ -44,7 +45,48 @@ UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 CCI = "/cci/kubernetes"
 AUTHZ = "authorization.cci.vmware.com/v1alpha1"
 PROJ = "project.cci.vmware.com/v1alpha2"
-TIMEISH = re.compile(r"(?i)expir|ttl|lease|until|duration|deadline|grace|valid")
+# A field name that could hold a time bound. The record lists every field each schema declares, so this only
+# marks the candidates; a reader checks the rest by reading the list, not by trusting the pattern.
+TIMEISH = re.compile(r"(?i)expir|ttl|lease|until|duration|deadline|grace|validity|valid(?:to|from)\b|days|hours|"
+                     r"minutes|seconds|timeout|window|period")
+# Kubernetes object metadata is the same on every persisted kind. Its time fields record when the server created
+# the object or is deleting it; a client cannot set any of them to schedule anything, so none can carry a grant's
+# window. They are listed in the record, with the schema's own words, and kept out of the count.
+OBJECT_META = "metadata."
+
+
+def sentences(text, limit=240):
+    """The schema's own description, whole sentences only, as many as fit in limit characters."""
+    out = ""
+    for sent in re.split(r"(?<=[.!?])\s+", " ".join(str(text or "").split())):
+        if out and len(out) + 1 + len(sent) > limit:
+            break
+        out = f"{out} {sent}".strip()
+    return out
+
+
+def fields_of(schema, comps=None, prefix="", depth=0):
+    """Every property path a JSON schema declares, with its type and description; nested objects and array items
+    included, and $ref resolved against comps (an OpenAPI document's components.schemas)."""
+    def resolve(x):
+        for _ in range(10):
+            if isinstance(x, dict) and "$ref" in x and comps:
+                x = comps.get(x["$ref"].rsplit("/", 1)[-1], {})
+            elif isinstance(x, dict) and len(x.get("allOf") or []) == 1:
+                x = x["allOf"][0]
+            else:
+                break
+        return x if isinstance(x, dict) else {}
+    out = {}
+    if depth > 6:
+        return out
+    for name, sub in (resolve(schema).get("properties") or {}).items():
+        path, r = prefix + name, resolve(sub)
+        out[path] = {"type": r.get("type"), "says": sentences(r.get("description"))}
+        out.update(fields_of(r, comps, path + ".", depth + 1))
+        if r.get("items"):
+            out.update(fields_of(r["items"], comps, path + "[].", depth + 1))
+    return out
 
 
 def ctx():
@@ -216,12 +258,26 @@ def main():
     # ---- 1. the time-box inventory
     st, pt = c.api("GET", "/policy/api/policyTypes?size=100")
     ptypes = (pt.get("content") or []) if isinstance(pt, dict) else []
+    if not ptypes:
+        raise SystemExit(f"the policy type list answered HTTP {st} with no types; nothing to enumerate")
     types = []
     for t in ptypes:
         tid = t.get("id")
         st2, full = c.api("GET", f"/policy/api/policyTypes/{tid}")
-        blob = json.dumps((full or {}).get("schema") or {})
-        fields = sorted(set(re.findall(r'"([A-Za-z][A-Za-z0-9_]*)"\s*:\s*\{', blob)))
+        st3, scope = c.api("GET", f"/policy/api/policyTypes/{tid}/scopeSchema")
+        full = full if isinstance(full, dict) else {}
+        # A type publishes three schemas: what a policy of it says (definitionSchema), what it matches
+        # (targetSchema) and where it applies (the scopeSchema call). The first version of this script scanned a
+        # key named "schema", which the plane does not return, found no fields, and reported that absence as a
+        # finding. So an empty definition is now a refusal, never a result.
+        schemas = {"definition": full.get("definitionSchema"), "target": full.get("targetSchema"),
+                   "scope": scope if st3 == 200 else None}
+        fields = {name: fields_of(sch) for name, sch in schemas.items()}
+        if not fields["definition"]:
+            raise SystemExit(f"policy type {tid}: no definition schema could be read (HTTP {st2}); an empty scan "
+                             f"is not an absence, so no record is written")
+        timed = [{"field": f, "schema": name, "type": v["type"], "says": v["says"]}
+                 for name, fs in fields.items() for f, v in fs.items() if TIMEISH.search(f)]
         # Name what each type governs from its own id rather than bucketing the ones we did not anticipate
         # into "other": a published table that says "other" twice is a table that stopped reading.
         tail = str(tid).replace("com.vmware.policy.", "")
@@ -229,11 +285,14 @@ def main():
                    "deployment.lease": "how long a deployment lives",
                    "approval": "whether a request needs a human",
                    "supervisor.iaas": "what the supervisor plane will accept"}.get(tail, tail)
-        types.append({"id": tid, "timeBoundedFields": [f for f in fields if TIMEISH.search(f)],
-                      "governs": governs})
-    print(f"  policy types: {len(types)} declared")
+        types.append({"id": tid, "governs": governs, "says": sorted(fields["definition"]),
+                      "matches": sorted(fields["target"]), "appliesTo": sorted(fields["scope"]),
+                      "timeBoundedFields": timed})
+    print(f"  policy types: {len(types)} declared, each with its definition, target and scope schemas read")
     for t in types:
-        print(f"     {str(t['id']):<46} time-bounded fields: {t['timeBoundedFields'] or 'none'}")
+        print(f"     {str(t['id']):<38} says {', '.join(t['says'])}")
+        for f in t["timeBoundedFields"]:
+            print(f"        time-bounded: {f['field']} ({f['schema']} schema): \"{f['says']}\"")
 
     # ---- 2. the access objects, field by field
     st, rb = c.items(AUTHZ, "projectrolebindings", home)
@@ -242,13 +301,33 @@ def main():
     binding_fields = sorted({k for b in rb for k in b if k not in ("apiVersion", "kind")})
     meta_fields = sorted({k for b in rb for k in (b.get("metadata") or {})})
     role_fields = sorted({k for r in roles for k in r if k not in ("apiVersion", "kind")})
-    access = {"projectRoleBindingFields": binding_fields, "projectRoleBindingMetadataFields": meta_fields,
-              "projectRoleFields": role_fields,
-              "anyExpiryField": sorted(f for f in binding_fields + meta_fields + role_fields if TIMEISH.search(f)),
-              "bindings": len(rb), "roles": [r["metadata"]["name"] for r in roles]}
-    print(f"\n  a ProjectRoleBinding carries {binding_fields}, whose metadata carries {meta_fields}")
-    print(f"  a ProjectRole carries {role_fields}")
-    print(f"  fields on any of them that could hold a time bound: {access['anyExpiryField'] or 'NONE'}")
+    # The objects show only the fields that are set. An optional expiry field left empty would not appear on any
+    # of them, so the claim is read from the kinds' published schema, and the objects are the cross-check.
+    st_o, doc = c.k8s("GET", f"/openapi/v3/apis/{AUTHZ}")
+    comps = ((doc or {}).get("components") or {}).get("schemas") or {} if st_o == 200 and isinstance(doc, dict) else {}
+    schema = {}
+    for kind in ("ProjectRoleBinding", "ProjectRole"):
+        sch = next((v for v in comps.values() if any(g.get("kind") == kind and AUTHZ.startswith(g.get("group", "?"))
+                    for g in (v.get("x-kubernetes-group-version-kind") or []))), None)
+        if sch is None:
+            raise SystemExit(f"the published schema for {kind} could not be read (HTTP {st_o}); without it the "
+                             f"absence would rest on the objects alone, so no record is written")
+        schema[kind] = fields_of(sch, comps)
+    own = {k: sorted(f for f in fs if not f.startswith(OBJECT_META) and f not in ("apiVersion", "kind", "metadata"))
+           for k, fs in schema.items()}
+    meta_timed = sorted({f for fs in schema.values() for f in fs if f.startswith(OBJECT_META) and
+                         (TIMEISH.search(f) or "time" in f.lower())})
+    access = {"projectRoleBindingSchema": own["ProjectRoleBinding"], "projectRoleSchema": own["ProjectRole"],
+              "anyExpiryField": sorted({f"{k}.{f}" for k, fs in own.items() for f in fs if TIMEISH.search(f)}),
+              "objectMetadataTimeFields": [{"field": f, "says": schema["ProjectRoleBinding"].get(f, {}).get("says", "")}
+                                           for f in meta_timed],
+              "projectRoleBindingFields": binding_fields, "projectRoleBindingMetadataFields": meta_fields,
+              "projectRoleFields": role_fields, "bindings": len(rb), "roles": [r["metadata"]["name"] for r in roles]}
+    print(f"\n  a ProjectRoleBinding's schema declares {own['ProjectRoleBinding']}")
+    print(f"  a ProjectRole's schema declares {own['ProjectRole']}")
+    print(f"  the {len(rb)} bindings visible carry {binding_fields}, whose metadata carries {meta_fields}")
+    print(f"  fields of either kind that could hold a time bound: {access['anyExpiryField'] or 'NONE'}")
+    print(f"  (object metadata, the same on every kind and set by the server: {', '.join(meta_timed)})")
 
     # ---- 3. where a lease does exist
     st, dep = c.api("GET", "/deployment/api/deployments?size=5")
@@ -305,8 +384,10 @@ def main():
                 raise SystemExit(f"FATAL: a {fam} name ({len(nm)} characters, shape {shape}) reached the record")
     os.makedirs(out_dir, exist_ok=True)
     open(os.path.join(out_dir, "elevation.json"), "w", encoding="utf-8").write(text + "\n")
-    print(f"\nwrote elevation.json ({len(types)} policy types, {len(access['anyExpiryField'])} expiry field(s) "
-          f"anywhere on the access objects); every organization name replaced by a placeholder")
+    timed = sum(1 for t in types if t["timeBoundedFields"])
+    print(f"\nwrote elevation.json ({len(types)} policy types, {timed} with a time-bounded field; "
+          f"{len(access['anyExpiryField'])} expiry field(s) on the access kinds); every organization name replaced "
+          f"by a placeholder")
 
 
 if __name__ == "__main__":

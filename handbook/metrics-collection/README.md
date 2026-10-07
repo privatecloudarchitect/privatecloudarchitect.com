@@ -47,9 +47,10 @@ The dashboard is one tab of twenty-four widgets, laid out top to bottom as a cou
 
 ## 3. Prove it on your instance
 
-[`harness/README.md`](harness/README.md) runs five stdlib-Python scripts, read-only, against your own
-instance: the planes and their retention beside the product defaults, the roll-up exactness check, the
-extraction coefficients, the identity key, and the real-time path. Each prints beside an expected transcript.
+[`harness/README.md`](harness/README.md) runs six stdlib-Python scripts, read-only, against your own
+instance, on three shared modules (`opslib.py`, `pick.py`, `rtmlib.py`): the planes and their retention beside
+the product defaults, the roll-up exactness check, the extraction coefficients, the identity key, identity
+continuity, and the real-time path. Each prints beside an expected transcript.
 
 ## 4. The atlas
 

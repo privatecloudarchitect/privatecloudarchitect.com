@@ -7,8 +7,9 @@ Supervisor namespace endpoint carries the declared cluster itself, a Cluster API
 day-2 actually edits. This reads both and reports where they differ:
 
   1. the FLEET SURFACE: the estate-management kinds at the org gateway, the verbs each DECLARES, and the verbs
-     this identity is actually ALLOWED. Those are different answers and the gap is the point: the fleet kinds
-     declare a full write set and permit only reads;
+     this identity is actually ALLOWED, asked one access review per kind and verb in one project. Those are
+     different answers and the gap is the point: every fleet kind declares a full write set, and only some
+     permit a write;
   2. the FLEET CONTENT: what one cluster object carries, which is allocatable against requested, per-component
      control-plane health, and a phase. This is the triage read, and it needs no kubeconfig;
   3. the DECLARED CLUSTER at the namespace endpoint: its cluster class, its Kubernetes version, the replica

@@ -7,8 +7,9 @@ For one VM over the last three hours:
      whether MIN and MAX differ from AVG (they do not: one value per point survives);
   3. asks for hourly AVG and MAX and checks each full bucket against the mean and the maximum
      of the native points inside it (exact to three decimals is the pass);
-  4. lists the peak keys the VM carries (statkeys containing "peak" or "20_sec"), the only
-     place a within-cycle maximum survives at 5-minute cadence.
+  4. lists the peak keys the VM carries (statkeys containing "peak" or "20_sec"). Only the
+     20_sec_peak_* keys keep a within-cycle maximum at 5-minute cadence; the peak_* keys are the
+     busiest instance's 5-minute average, by the adapter's own definitions.
 
 Usage:  python3 rollup_check.py [--vm <name>]      (default: the busiest VM by latest CPU MHz)
 Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
@@ -89,7 +90,8 @@ def main():
             key = k.get("key") if isinstance(k, dict) else k
             if key and ("peak" in key.lower() or "20_sec" in key):
                 peaks.append(key)
-    print(f"\n  peak keys on this VM ({len(peaks)}): the only within-cycle maxima kept at 5-minute cadence")
+    print(f"\n  peak keys on this VM ({len(peaks)}): 20_sec_peak_* keep a within-cycle maximum; "
+          f"peak_* are the busiest instance's 5-minute average")
     for k in sorted(peaks):
         print(f"    {k}")
 

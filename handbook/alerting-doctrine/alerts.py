@@ -13,8 +13,9 @@ Alerting doctrine is easy to state and rarely checked. This checks it, on a runn
   3. WHERE THE THRESHOLD LIVES. Every symptom definition's condition type, operator, value and metric key.
      A doctrine of dumb conditions over intelligent metrics shows up as a tiny value vocabulary against keys
      that are mostly super metrics, and the opposite shows up as arithmetic buried in conditions;
-  4. THE DEBOUNCE CENSUS. Wait and cancel cycles across every definition, yours beside the vendor's. This is
-     the one where an estate usually discovers it has been describing a platform default as a decision;
+  4. THE DEBOUNCE CENSUS. Wait and cancel cycles across every definition, yours beside the vendor's. If yours
+     are one value on every definition, those dials were set once for all of them; a symptom's own wait and
+     cancel are not counted here;
   5. WHERE ROUTING CAN AND CANNOT SEE. A notification rule's complete field list, and how many of the live
      rules are scoped by anything at all. If the rule object has no policy field, routing cannot read the
      thing that scopes the alert, and the definition's NAME is the only bridge.
@@ -217,7 +218,8 @@ def main():
                                                          for a in ads for s in (a.get("states") or []))),
                 "withoutADescription": sum(1 for a in ads if not a.get("description")),
                 "longestWait": max((a.get("waitCycles") or 0) for a in ads),
-                "longestWaitIsVendorContent": True}
+                "longestWaitIsVendorContent": not any((a.get("waitCycles") or 0) == max((x.get("waitCycles") or 0)
+                                                      for x in ads) for a in mine)}
     print(f"\n  4. DEBOUNCE: your definitions use wait {sorted(debounce['ownedWait'])} and cancel "
           f"{sorted(debounce['ownedCancel'])}")
     print(f"     the estate uses wait {debounce['estateWait'].get(1, 0)} of {len(ads)} at 1, and the longest "

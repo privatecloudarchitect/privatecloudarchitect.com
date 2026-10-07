@@ -31,9 +31,11 @@ Most of what this prints is orientation. One line is not:
      ATTACHED: the VPC runs the <name> strategy
 ```
 
-The platform ships five named isolation strategies and arrives with none of them attached, and it marks the
-empty position as its own default. So a VPC that nobody has thought about has no strategy, and an estate that
-deliberately runs an open posture looks identical to one that never decided. That line tells you which you are.
+The platform ships five named isolation strategies, one of them `none`, and marks the security profile that
+carries `none` as its default. A VPC arrives with that default profile attached: on the reference estate the one
+attachment was created in the same second as the VPC. So a VPC that nobody has thought about runs the `none`
+strategy, and an estate that deliberately runs an open posture looks identical to one that never decided. That
+line tells you which strategy is attached; only a recorded decision tells you whether anyone chose it.
 
 If it reports `none`, that is not a fault. It is the answer to a question worth having asked, and attaching the
 named strategy that matches your actual intent is what lets the estate answer it next time without running this
