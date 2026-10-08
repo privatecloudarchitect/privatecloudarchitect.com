@@ -7,6 +7,13 @@ map name → id for the WTPC namespace. Consumers here: the posture deploy (depl
 """
 from __future__ import annotations
 
+import io
+import urllib.error
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+import zipfile
+
 
 def find_existing(c, endpoint: str, list_key: str, prefix: str = "PCA - WTPC") -> dict[str, str]:
     """Paginate the full definition list and map name → id for our namespace (idempotency). A single page
@@ -20,3 +27,48 @@ def find_existing(c, endpoint: str, list_key: str, prefix: str = "PCA - WTPC") -
             from lib._names import with_aliases   # a renamed definition answers to both names
             return with_aliases(out)
         page += 1
+
+
+def switch_states(ops, policy_ids: list[str], alerts: list[tuple[str, str, str]]) -> dict:
+    """{(policy id, alert id): (origin, enabled)} for each alert under each policy, read from the policy export,
+    the only read path for alert state. Origin is LOCAL, INHERITED or UNSET (enabled None when UNSET); `alerts`
+    holds (alert id, adapter kind, resource kind), because an entry counts only under the definition's own kinds,
+    and an alert a policy does not set comes from the first ancestor that does.
+
+    The export is the one request the shared session cannot carry (it answers 500 to any Accept other than
+    application/zip), so it is built inline with the session's bearer. A failed export stops the caller: alert
+    state is never guessed.
+    """
+    from lib._client import _ctx
+    url = f"{ops.base}/api/policies/export?" + urllib.parse.urlencode({"id": list(policy_ids)}, doseq=True)
+    for attempt in (1, 2):
+        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {ops._token}", "Accept": "application/zip"})
+        try:
+            with urllib.request.urlopen(req, context=_ctx(ops.insecure), timeout=300) as r:
+                archive = zipfile.ZipFile(io.BytesIO(r.read()))
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 401 and attempt == 1 and ops._on_auth_failure():
+                continue
+            raise SystemExit(f"cannot read alert state: the policy export answered {e.code}") from None
+    root = ET.fromstring(archive.read(archive.namelist()[0]))
+    parent, entries = {}, {}
+    for policy in root.iter("Policy"):
+        key = policy.get("key")
+        parent[key] = policy.get("parentPolicy") or None
+        for group in policy.iter("Alerts"):
+            for alert in group.findall("Alert"):
+                entries[(key, alert.get("id"), group.get("adapterKind"), group.get("resourceKind"))] = \
+                    str(alert.get("enabled")).lower() == "true"
+    out = {}
+    for pid in policy_ids:
+        for aid, adapter_kind, resource_kind in alerts:
+            key, depth, seen, got = pid, 0, set(), ("UNSET", None)
+            while key and key not in seen:
+                seen.add(key)
+                if (key, aid, adapter_kind, resource_kind) in entries:
+                    got = ("LOCAL" if depth == 0 else "INHERITED", entries[(key, aid, adapter_kind, resource_kind)])
+                    break
+                key, depth = parent.get(key), depth + 1
+            out[(pid, aid)] = got
+    return out

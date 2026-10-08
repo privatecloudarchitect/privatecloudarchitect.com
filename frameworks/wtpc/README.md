@@ -83,8 +83,12 @@ The order it drives, and what each step is:
 7. `apply_policy_capacity.py` - each policy's capacity allocation, PATCHed from the envelope.
 8. `build_alerts.py` + `deploy_alerts.py` - the alert bundle, built offline from `alerts.yaml`
    and the exemplar's SM record, then enabled in the posture policy ONLY and disabled in
-   Default: per-policy enablement is the scoping, and an alert left enabled in Default pages on
-   every object in the fleet.
+   Default: per-policy enablement is the scoping, and an alert left enabled in Default is on for
+   every object no other policy claims and for every object a policy cloned from Default claims.
+   `deploy_alerts.py` writes a definition only where it differs from the live one and reads every
+   write back; it reads each switch from the policy export, enables in the posture policy before
+   disabling in Default, and re-sends a switch until the export shows it held, because a switch
+   can answer 200 and not be recorded. `--self-test` exercises those branches offline.
 
 Views and dashboards are offline generators, run after a posture's SMs exist, then imported
 through the UI (`Views / Dashboards > Manage > Import`) - views before dashboards, because a
