@@ -45,6 +45,9 @@ def subst(text: str, ids: dict[str, str]) -> str:
 
 
 def main() -> int:
+    # only --dry-run is understood; anything else stops here rather than adopting
+    if [a for a in sys.argv[1:] if a != "--dry-run"]:
+        sys.exit("usage: python adopt_shared.py [--dry-run]")
     dry = "--dry-run" in sys.argv
     defs = yaml.safe_load(open(SOURCE, encoding="utf-8"))["supermetrics"]
     with ops_client() as c:

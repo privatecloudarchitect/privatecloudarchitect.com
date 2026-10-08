@@ -26,7 +26,7 @@
     "adapterKindKey": "VMWARE"
    }
   ],
-  "name": "PCA - MemTier - Host - Recoverable Cold DRAM GB",
+  "name": "PCA - MemTier - Host - Recoverable Cold DRAM (GB)",
   "formula": "((${this, metric=mem|consumed_average} - ${this, metric=mem|active_average}) / 1048576)",
   "description": "UPPER BOUND on the DRAM currently holding COLD pages (consumed but not active) - i.e. the memory tiering would relocate to NVMe, freeing DRAM. The ACTIONABLE ranking metric: sort candidates by this. It is an UPPER BOUND because feature-pinned memory (latency-sensitive VMs, DirectPath/passthrough, vGPU, SR-IOV, FT, tiering-disabled VMs) is counted as cold here yet cannot tier; cross-check against the VM-type exclusion list before trusting the figure on a given host. Reserved memory is NOT such a pin - reservations tier normally, so they do not discount this figure.",
   "unitId": "gb"
@@ -55,7 +55,7 @@
    }
   ],
   "modificationTime": 1783796484930,
-  "name": "PCA - MemTier - Host - NVMe Tier Used GB",
+  "name": "PCA - MemTier - Host - NVMe Tier Used (GB)",
   "formula": "(${this, metric=mem:NVMe|tier.usage} / 1024)",
   "description": "HOST metric (HostSystem). Post-activation engagement signal: memory currently served from the NVMe tier (mem:NVMe|tier.usage, MB, shown as GB). Over 0 = tiering is actively offloading cold pages to NVMe; 0 = enabled-but-dormant or not configured. Pair with Consumed pct of DRAM (the ~80 pct trigger). Requires vSphere 8.0U3+/9.x with NVMe tiering configured. UNIT: GB.",
   "unitId": "",
@@ -69,7 +69,7 @@
    }
   ],
   "modificationTime": 1784818000544,
-  "name": "PCA - MemTier - Host - Actual Tiering Uplift GB",
+  "name": "PCA - MemTier - Host - Actual Tiering Uplift (GB)",
   "formula": "(${this, metric=mem:NVMe|memory_tier_size} / 1048576)",
   "description": "OBJECT: HostSystem. UNIT: GB. Memory a host has ACTUALLY gained from its configured NVMe tier (mem:NVMe|memory_tier_size), reflecting that host's real Mem.TierNVMePct ratio. The deployed-reality counterpart to Tiering Uplift GB (which projects the gain at a uniform planning ratio); a mixed-ratio fleet reports accurately here. Blank on a host with no NVMe tier configured.",
   "unitId": "",
@@ -83,7 +83,7 @@
    }
   ],
   "modificationTime": 1784820679145,
-  "name": "PCA - MemTier - Host - Reserved Memory GB",
+  "name": "PCA - MemTier - Host - Reserved Memory (GB)",
   "formula": "(${this, metric=mem|reservedCapacity_average} / 1048576)",
   "description": "OBJECT: HostSystem. UNIT: GB. Reservation footprint on the host. A reservation guarantees the capacity against reclamation (ballooning or swapping); it does NOT pin the pages to DRAM, so reserved memory tiers to NVMe like any other cold memory. Read it as overcommit context, not as a discount on Recoverable Cold: a heavily reserved host has less overcommit room, but its reserved cold pages still tier. The memory that actually cannot tier is the feature-pinned exclusion list (latency-sensitive, DirectPath, vGPU, SR-IOV, FT, tiering-disabled), not reservations. mem|reservedCapacity_average / 1048576.",
   "unitId": "",

@@ -23,7 +23,7 @@
 posture: prod-latency-critical-db
 resource_kind: ClusterComputeResource      # DEFAULT (hardware alerts: capacity/floor). The Performance
                                             # alert overrides to VirtualMachine (per-VM workload health).
-scoping: policy-enablement                  # enable in "PCA - WTPC - Policy - prod-latency-critical-db" ONLY
+scoping: policy-enablement                  # enable in "PCA - WTPC - prod-latency-critical-db" ONLY
 notifications: out-of-scope                 # Ops-only; no outbound rules created
 
 # vROps alert-taxonomy note: type/subType are the Alert Type / Subtype codes (16 = Virtualization, a
@@ -31,7 +31,7 @@ notifications: out-of-scope                 # Ops-only; no outbound rules create
 # efficiency). Precise subType is confirmable/adjustable in the UI at import.
 
 alerts:
-  - name: "PCA - WTPC - Floor Breach - Failover Headroom - prod-latency-critical-db"
+  - name: "PCA - WTPC - Cluster - Failover Headroom Floor Breach [prod-latency-critical-db]"
     impact: risk
     severity: CRITICAL
     wait_cycles: 1
@@ -41,7 +41,7 @@ alerts:
       - {label: "Consumed % of HA DRAM over 100", sm: "Shared:SH_CONSUMED_HA_DRAM", operator: GT, value: 100}
     rationale: "Consumed memory exceeds HA-usable DRAM; a host failure would no longer fit. Restore failover headroom before trusting the scores below."
 
-  - name: "PCA - WTPC - Floor Breach - HA/DRS Config - prod-latency-critical-db"
+  - name: "PCA - WTPC - Cluster - HA/DRS Config Floor Breach [prod-latency-critical-db]"
     impact: risk
     severity: CRITICAL
     wait_cycles: 1
@@ -55,7 +55,7 @@ alerts:
       - {label: "HA config issues present", property_numeric: "configuration|dasConfig|ha_number_config_issues", operator: GT, value: 0}
     rationale: "Redundancy configuration drifted from the floor: admission control, failover level, DRS automation, or HA config. Restore it before trusting the scores below."
 
-  - name: "PCA - WTPC - Floor Breach - VM Swapping - prod-latency-critical-db"
+  - name: "PCA - WTPC - Cluster - VM Swapping Floor Breach [prod-latency-critical-db]"
     impact: health
     severity: CRITICAL
     wait_cycles: 1
@@ -65,7 +65,7 @@ alerts:
       - {label: "Member VMs swapping", sm: "G11", operator: GT, value: 0}
     rationale: "A member VM is swapping. At this posture any swap is a breach: the VM is past the memory cliff. Relieve memory pressure now."
 
-  - name: "PCA - WTPC - Performance Envelope Breach - prod-latency-critical-db"
+  - name: "PCA - WTPC - VM - Performance Envelope Breach [prod-latency-critical-db]"
     resource_kind: VirtualMachine           # PER-VM (was the cluster R3/R4 count). Two-unit model: the
                                             # WORKLOAD alert fires on the VM under its POSTURE policy, so it
                                             # works regardless of the cluster's TIER policy — the cluster
@@ -76,11 +76,11 @@ alerts:
     routing: incident
     symptom_operator: OR
     symptoms:                               # the VM's OWN envelope position past the breach edge (>1)
-      - {label: "VM over CPU Ready envelope", sm: "X3", operator: GT, value: 1}
-      - {label: "VM over Memory Contention envelope", sm: "X4", operator: GT, value: 1}
+      - {label: "CPU Ready over envelope", sm: "X3", operator: GT, value: 1}
+      - {label: "Memory Contention over envelope", sm: "X4", operator: GT, value: 1}
     rationale: "This VM has sustained a performance breach past its envelope (CPU ready or memory contention). Investigate contention or re-place the VM."
 
-  - name: "PCA - WTPC - Capacity Envelope Breach - prod-latency-critical-db"
+  - name: "PCA - WTPC - Cluster - Capacity Envelope Breach [prod-latency-critical-db]"
     impact: risk
     severity: CRITICAL
     wait_cycles: 3
@@ -91,7 +91,7 @@ alerts:
       - {label: "Member hosts over CPU envelope", sm: "R2", operator: GT, value: 0}
     rationale: "A member host is past the capacity envelope. Rebalance or de-densify before it reaches the VMs."
 
-  - name: "PCA - WTPC - Cost Envelope Breach - prod-latency-critical-db"
+  - name: "PCA - WTPC - Cluster - Cost Envelope Breach [prod-latency-critical-db]"
     impact: efficiency
     severity: WARNING
     wait_cycles: 12                         # ~1 h — a weekly-review finding, not a page

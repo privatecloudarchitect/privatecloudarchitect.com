@@ -21,6 +21,7 @@ import os
 import sys
 
 from lib._client import ops_client
+from lib._names import posture_group, with_aliases
 from lib._evidence import latest_stat
 from lib._groups import group_members, list_groups
 from lib._sm import load_sm_ids, sm_stat_key
@@ -38,7 +39,7 @@ def _num(v):
 
 
 def _rollup(c, name, doc, groups):
-    gid = groups.get(f"PCA - WTPC - Group - {name} (Clusters)")
+    gid = groups.get(posture_group(name, "Clusters"))
     if not gid:
         return None
     ids = load_sm_ids(os.path.join(HERE, f"supermetrics.{name}.yaml"))
@@ -49,7 +50,7 @@ def _rollup(c, name, doc, groups):
     members = group_members(c, gid)
     # the posture's MEMBER VM count (its VMs group) - the honest per-posture scale, not cluster VMs (G13),
     # which double-counts a shared cluster across the postures resident on it.
-    vgid = groups.get(f"PCA - WTPC - Group - {name} (VMs)")
+    vgid = groups.get(posture_group(name, "VMs"))
     member_vms = len(group_members(c, vgid)) if vgid else None
     a = {"clusters": 0, "hosts": 0.0, "vms": member_vms, "out": 0.0, "wmem": 0.0, "wcpu": 0.0, "floor_ok": True, "unverif": False}
     for m in members:
@@ -77,7 +78,7 @@ def _rollup(c, name, doc, groups):
 def main() -> int:
     postures = governance.load_postures()
     with ops_client() as c:
-        groups = {g.get("resourceKey", {}).get("name"): g["id"] for g in list_groups(c, include_policy=False)}
+        groups = with_aliases({g.get("resourceKey", {}).get("name"): g["id"] for g in list_groups(c, include_policy=False)})
         rows = [(name, doc, _rollup(c, name, doc, groups)) for name, doc in postures.items()]
         rows.sort(key=lambda t: governance.strictness_key(t[1]), reverse=True)
 

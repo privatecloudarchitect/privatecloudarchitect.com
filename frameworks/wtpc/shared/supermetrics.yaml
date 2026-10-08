@@ -71,7 +71,7 @@ supermetrics:
       target the reclaim evidence resizes toward.
 
   - key: RS_WORKLOAD
-    name: "PCA - Rightsizing - VM - Memory Workload %"
+    name: "PCA - Rightsizing - VM - Memory Workload (%)"
     applies_to: [VirtualMachine]
     unit: percent
     formula: "(100 * (${this, metric=mem|active_average} / ${this, metric=mem|guest_provisioned}))"

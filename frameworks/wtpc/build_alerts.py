@@ -24,6 +24,7 @@ import os
 import re
 
 from lib._sm import SM_STAT_KEY_RE, load_sm_ids, sm_stat_key
+from lib._names import kinded
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONTENT = os.path.join(HERE, "content")
@@ -108,7 +109,7 @@ def build(doc, sm, shared):
             else:
                 raise SystemExit(f"symptom {s.get('label')!r} has neither 'sm' nor 'property_numeric'")
             # persistence lives at the symptom layer; the alert set fires on 1 cycle of the symptom
-            symptoms.append(build_symptom(sid, f"PCA - WTPC - {s['label']}", a_kind, severity, wait, cond))
+            symptoms.append(build_symptom(sid, kinded("PCA - WTPC", a_kind, s["label"]), a_kind, severity, wait, cond))
             sym_ids.append(sid)
         alert = {
             "id": f"AlertDefinition-{aslug}", "name": a["name"], "description": a["rationale"],

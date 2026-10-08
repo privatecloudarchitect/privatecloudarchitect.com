@@ -41,10 +41,13 @@ from lib._client import ops_client
 from lib._groups import list_groups
 
 from lib._alerts import find_existing   # paginated name->id for our namespace (paginates past the page-size cap)
+from lib._names import is_posture_group, is_posture_policy, posture_policy, same, scope_of
 
 HERE = Path(__file__).resolve().parent
-MARK_POLICY = "PCA - WTPC - Policy - "
-MARK_GROUP = "PCA - WTPC - Group - "
+# Which policies and groups are in scope is decided by lib._names, which recognizes the earlier and the
+# current names: a posture policy or posture group, never a tier one.
+MARK = "PCA - WTPC - "
+GOVERNANCE_BASES = ("PCA - WTPC - Cluster - Member VMs (count)",)
 MARK_SM = "PCA - WTPC -"
 MARK_ALERT = "PCA - WTPC"
 
@@ -62,23 +65,26 @@ def collect(c: VcfOpsClient, posture: str | None) -> dict[str, list[tuple[str, s
     # policies
     pols = c.get("/api/policies", params={"_no_links": "true", "pageSize": 500}).json()["policySummaries"]
     if posture:
-        plan["policies"] = [(p["name"], p["id"]) for p in pols if p["name"] == f"{MARK_POLICY}{posture}"]
+        plan["policies"] = [(p["name"], p["id"]) for p in pols if same(p["name"], posture_policy(posture))]
     else:
-        plan["policies"] = [(p["name"], p["id"]) for p in pols if p["name"].startswith(MARK_POLICY)]
+        plan["policies"] = [(p["name"], p["id"]) for p in pols if is_posture_policy(p["name"])]
 
     # super metrics — full id (SuperMetric-<uuid>) for the DELETE
     sms = c.get("/api/supermetrics", params={"pageSize": 2000}).json()["superMetrics"]
     if posture:
         plan["super_metrics"] = [(s["name"], s["id"]) for s in sms
-                                 if s["name"].startswith(MARK_SM) and s["name"].rstrip().endswith(f"({posture})")]
+                                 if s["name"].startswith(MARK_SM)
+                                 and (s["name"].rstrip().endswith(f"({posture})")
+                                      or (s["name"].rstrip().endswith(f"[{posture}]")
+                                          and not s["name"].startswith(GOVERNANCE_BASES)))]
     else:
         plan["super_metrics"] = [(s["name"], s["id"]) for s in sms if s["name"].startswith(MARK_SM)]
 
     # custom groups
     groups = list_groups(c)
-    gpref = f"{MARK_GROUP}{posture} " if posture else MARK_GROUP
     plan["groups"] = [(g["resourceKey"]["name"], g["id"]) for g in groups
-                      if g.get("resourceKey", {}).get("name", "").startswith(gpref)]
+                      if is_posture_group(g.get("resourceKey", {}).get("name", ""))
+                      and (not posture or scope_of(g["resourceKey"]["name"]) == posture)]
 
     # alerts + symptoms — only in a FULL teardown (shared/exemplar-scoped; not per-posture)
     if not posture:
@@ -151,9 +157,9 @@ def main() -> int:
 
         order = [("alerts", "/api/alertdefinitions", MARK_ALERT),
                  ("symptoms", "/api/symptomdefinitions", MARK_ALERT),
-                 ("policies", "/api/policies", MARK_POLICY),
+                 ("policies", "/api/policies", MARK),
                  ("super_metrics", None, MARK_SM),
-                 ("groups", "/api/resources/groups", MARK_GROUP)]
+                 ("groups", "/api/resources/groups", MARK)]
 
         total = sum(len(plan[k]) for k, _, _ in order)
         print(f"\nteardown plan ({total} WTPC-marked object(s), reverse dependency order):")

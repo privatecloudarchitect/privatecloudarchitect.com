@@ -1,4 +1,4 @@
-# Import the PCA - Collection Strategy Guide into VCF Operations
+# Import the PCA - Collect Once - Collection Strategy Guide into VCF Operations
 
 Two files, imported in this order, and one binding step afterwards. Nothing here writes through the API:
 both imports take the product's own Manage > Import screens, the same path any content pack takes.
@@ -26,7 +26,7 @@ appear in the list. Views update in place by id, so a later copy of the same fil
 
 `dashboards/collection-strategy-guide.import.zip`, one file, do not unzip. The dashboard binds the six
 views by id, which is why the views go first: without them the six list widgets have nothing to show. You know
-it worked when **PCA - Collection Strategy Guide** appears under Dashboards and its six lists fill with your own
+it worked when **PCA - Collect Once - Collection Strategy Guide** appears under Dashboards and its six lists fill with your own
 VMs (the lists ride the vSphere World provider, so they show every VM the instance manages). The dashboard, its
 tab, and its widgets carry ids of their own (`...000002`, `...00ab`, widgets 101 and up), so it imports beside
 any earlier copy instead of replacing it. Re-importing a changed dashboard is delete, then import; dashboards

@@ -16,6 +16,7 @@ export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
 export OPS_API_TOKEN=<your-api-token>        # minted in the operations console; OPS_REALM defaults to CUSTOMER
 export OPS_OWNER=<your-owner-prefix>         # the first field of every name you author
+export OPS_NAMING=naming.example.json        # your bundles, kinds and scope values; copy it and edit
 export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
 python3 content.py
 ```
@@ -28,15 +29,49 @@ users.
 
 | Practice | What does it for you | How you know it is working |
 |---|---|---|
-| Name every object you author `<Owner> - <Initiative> - <Object> - <Purpose>` | `content.py` lists your objects and reports, per class, how many names carry the four fields | every class holds the standard, or the standard is amended for the class that consistently differs |
+| Name every object you author `<Owner> - <Bundle> - ...` in the grammar of its class, and rename it in place, never by a delete and a create | `naming.py` tests one name against its class's grammar; `content.py` counts, per class, the names that hold it | every class holds its grammar, read by meaning |
 | Bring what you built under the converge, then change it only through the file; never fix drift by recreating | `export.py`, then `converge.py --state`; `cycle.py` proves the behavior on two throwaway objects | a converge run reports every object unchanged |
 | Read a metric key on real objects before a formula depends on it | `content.py` probes a kind's catalog keys (`OPS_PROBE_KIND`, `OPS_CONTROL_KEY`); the chapter shows the stats query for one key | the keys your formulas use return a value on the objects they run on |
 | Run the audit weekly and act the day a reference stops resolving | `content.py --check` exits 2 on any dangling reference | the scheduled job passes, week after week |
 | Set every alert you rely on explicitly in the policy, and report the rest as unset | `content.py` counts what the default policy sets against what exists | the alerts you page on are all explicitly set, and your report shows three states |
 | Keep what a dashboard reads in code, and log every dashboard import | `content.py` probes the dashboard and view read paths; `dashboard-imports.csv` is the log's header | every dashboard on every instance has a line in the log |
 
-Two names from the reference estate, to show the shape: `PCA - MemTier - Host - Recoverable Cold DRAM GB`
-carries all four fields; `PCA - Availability - Check Unreachable (FQDN)` carries three, with no object field.
+## One grammar per class
+
+Every name starts with your owner prefix and the separator, then the registered bundle the object ships in.
+What follows depends on the class, because each class carries different facts on the object itself:
+
+| Class | Grammar | Example |
+|---|---|---|
+| super metric | `<Owner> - <Bundle> - <Kind> - <Measure> (<unit>)` | `PCA - Availability - Ping Instance - Reachability SLI (%)` |
+| symptom or alert definition | `<Owner> - <Bundle> - <Kind> - <Condition>` | `PCA - Availability - FQDN Check - Unreachable` |
+| custom group | `<Owner> - <Bundle> - <Scope> (<member kinds>)` | `PCA - WTPC - dedicated tier (Hosts)` |
+| policy | `<Owner> - <Bundle> - <Scope>` | `PCA - WTPC - dedicated tier` |
+| view or report definition | `<Owner> - <Bundle> - <Subject>` | `PCA - Rightsizing - Oversized Candidates` |
+| dashboard | `<Owner> - <Bundle> - <Question or audience>` | `PCA - Rightsizing - Readiness` |
+| notification rule | `<Owner> - <Bundle> - <Route>` | |
+
+The separator ` - ` appears in no field. Parentheses carry a unit or a group's member kinds. A per-scope copy of
+a definition, view or dashboard ends in one `[<scope>]` qualifier, as in
+`PCA - WTPC - Host - CPU Overcommit Position [dedicated tier]`; a scope value (a posture, a tier) appears only
+there or as a group's or policy's own scope field, never inside a measure or a condition.
+
+```bash
+python3 naming.py --vocabulary naming.example.json "PCA - Example - VM - CPU Ready (%)" "super metric"
+python3 test_naming.py                             # the checker's own cases
+```
+
+`naming.example.json` is the vocabulary the checker reads: your owner prefix, your registered bundles, your
+kinds with the resource kind keys each one names, and your scope values. Copy it, edit it, and point
+`OPS_NAMING` at your copy so the audit checks kinds and scope values as well as shape.
+
+**Rename in place.** Change the name on the object, never by a delete and a create, which gives it a new id and
+leaves whatever referred to it pointing at nothing. A super metric, a custom group, a symptom definition and an
+alert definition each take a `PUT` of the whole object, read by id, with the new name, and keep their id. Read a
+custom group with `includePolicy=true` and send its `policy` back: the `PUT` replaces the whole group, and a body
+without it unbinds the policy. Rename a policy in the console, which keeps its id. A view or a dashboard has no
+update call: re-import it under its new name (a view carries its id and updates in place; after a dashboard
+import, delete the old copy if both remain).
 
 ## Bring what you already built under the converge
 
@@ -113,9 +148,12 @@ inputs) in files the converge owns, and treat the dashboard itself as a build ar
 1. **How much is there, and how much of it is yours.** Every content class the suite API serves, each walked
    to its declared total, never to one page. Your own content is usually a small share of the instance, and
    you cannot rename the rest, which is why a parseable name is the only way to find yours.
-2. **Whether your names hold the standard.** Per class, how many names carry the four fields, and how many
-   fields the others actually use. A class that diverges **consistently** is the standard being wrong about
-   that class; a class that diverges in ones and twos is drift. A total cannot tell those apart.
+2. **Whether your names hold their grammar.** Per class, how many names hold the grammar of their class by
+   meaning (`naming.py`: the field count for the class, the kind against your vocabulary, the qualifier's form,
+   and no scope value outside a scope field or qualifier), with every failing name and its reasons. Beside it,
+   how many have four or more fields, the number a separator count alone would publish. A class that diverges
+   **consistently** is the standard being wrong about that class; a class that diverges in ones and twos is
+   drift. A total cannot tell those apart.
 3. **Whether every reference resolves.** Alert definition to symptom definition, custom group to policy,
    notification rule to alert definition.
 4. **What the default policy decides.** The alert definitions present against the ones the default policy
@@ -166,7 +204,7 @@ looks exactly like a discovery.
 
 ## Scope, stated plainly
 
-- `content.py` and `export.py` change nothing. Their calls are GETs, plus POSTs that write nothing: the
+- `content.py`, `export.py` and `naming.py` change nothing; `naming.py` makes no network call at all. Their calls are GETs, plus POSTs that write nothing: the
   broker's token exchange and, in `content.py`, the stats query.
 - `cycle.py`, `converge.py` and `teardown.py` write to your instance. `cycle.py` and `teardown.py` touch only
   the two demonstration super metrics declared in `desired-state.json`; `converge.py --state` creates and
@@ -180,8 +218,9 @@ looks exactly like a discovery.
 
 The two records in this folder are the reference estate's runs; each carries its capture time and build.
 
-`content.json`: `census` is one row per class with the total, how many are yours, how many conform, and a
-histogram of how many fields your names actually carry. `totals` is the three headline numbers. `ownedNames`
+`content.json`: `census` is one row per class with the total, how many are yours, how many hold their grammar
+by meaning (`conformingByMeaning`, with each failing name and its reasons) and how many have four or more fields
+(`conformingToSchema`), and a histogram of how many fields your names actually carry. `totals` is the three headline numbers. `ownedNames`
 is the full list of your objects, which is the inventory a parseable name buys you. `integrity` carries the
 reference count per edge type with the dangling count, plus `negatedSymptomReferences` so the negation marker
 is visible in the data. `definedVersusSet` is the alert gap under the default policy. `noReadSurface` is the

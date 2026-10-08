@@ -31,8 +31,9 @@ def sm_stat_key(sm_id: str) -> str:
 def existing_supermetrics(c) -> dict[str, str]:
     """{super-metric name: id} for every live SM, the `SuperMetric-` id prefix stripped (the form the upsert
     and activation want). One page of 2000 covers the lab estate."""
-    return {s["name"]: s["id"].replace("SuperMetric-", "")
-            for s in c.get("/api/supermetrics", params={"pageSize": "2000"}).json()["superMetrics"]}
+    from lib._names import with_aliases   # a renamed SM answers to both names, so adopt never duplicates
+    return with_aliases({s["name"]: s["id"].replace("SuperMetric-", "")
+                         for s in c.get("/api/supermetrics", params={"pageSize": "2000"}).json()["superMetrics"]})
 
 
 def upsert_supermetric(c, *, name, formula, description, existing, dry, dry_id):

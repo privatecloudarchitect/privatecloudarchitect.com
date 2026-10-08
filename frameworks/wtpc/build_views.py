@@ -45,6 +45,7 @@ CONTENT_DIR = os.path.join(HERE, "content")
 #     axis a posture's envelope omits simply renders unbanded, and a density-led posture leads its
 #     cluster views with the density-position signal. ---
 from lib._postures import content_ids  # noqa: E402  (script, sibling module)
+from lib._names import qualified  # noqa: E402  (a per-posture view carries [posture])
 
 _cids = content_ids(POSTURE)
 _S = {"prefix": _cids["view_prefix"], "id": _cids["view"]}
@@ -199,7 +200,7 @@ def build_views(posture, ids):
             "then peak Memory Contention %.")
     views["V1"] = {
         "id": VIEW_IDS["V1"], "file": FILES["V1"], "resource_kind": "VirtualMachine",
-        "title": f"PCA - WTPC - VM Contention vs Envelope ({pname})",
+        "title": qualified("PCA - WTPC - VM Contention vs Envelope", pname),
         "description": v1_desc,
         "columns": [
             column("cpu|readyPct", "CPU Ready % (95th)", unit="percent", transform="PERCENTILE",
@@ -256,7 +257,7 @@ def build_views(posture, ids):
             "from the posture envelope. Sorted by Memory Overcommit, then CPU Overcommit.")
     views["V2"] = {
         "id": VIEW_IDS["V2"], "file": FILES["V2"], "resource_kind": "HostSystem",
-        "title": f"PCA - WTPC - Capacity Envelope - Hosts ({pname})",
+        "title": qualified("PCA - WTPC - Host Capacity Envelope", pname),
         "description": v2_desc,
         "columns": [
             column(sm("G2"), "Memory Overcommit (x DRAM)", sort=True, bands=band(cap_mem)),
@@ -322,7 +323,7 @@ def build_views(posture, ids):
         ]
     views["V3"] = {
         "id": VIEW_IDS["V3"], "file": FILES["V3"], "resource_kind": "ClusterComputeResource",
-        "title": f"PCA - WTPC - Capacity Envelope - Clusters ({pname})",
+        "title": qualified("PCA - WTPC - Cluster Capacity Envelope", pname),
         "description": v3_desc, "columns": v3_cols,
     }
 
@@ -331,7 +332,7 @@ def build_views(posture, ids):
     views["V4"] = {
         "id": VIEW_IDS["V4"],
         "file": FILES["V4"],
-        "title": f"PCA - WTPC - Cost Scorecard ({pname})",
+        "title": qualified("PCA - WTPC - Cost Scorecard", pname),
         "resource_kind": "ClusterComputeResource",
         "description": (
             "Blank dollars mean the cost engine has not yet attributed a value; other blanks mean "
@@ -425,7 +426,7 @@ def build_views(posture, ids):
         ]
     views["V5"] = {
         "id": VIEW_IDS["V5"], "file": FILES["V5"], "resource_kind": "ClusterComputeResource",
-        "title": f"PCA - WTPC - Availability Floor ({pname})",
+        "title": qualified("PCA - WTPC - Availability Floor", pname),
         "description": v5_desc, "columns": v5_cols,
     }
 

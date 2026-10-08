@@ -8,7 +8,7 @@ restating it. Stdlib Python only; no token is printed or written.
 | File | What it is |
 |---|---|
 | `alerts.py` | Reads the complete field list of every alert definition, reviews the default policy's enablement list for the definitions you own, measures what that policy actually governs, reads every symptom condition's type and operator and value and key, counts the wait and cancel cycles yours beside the vendor's, and checks the outbound rules for the absence of filters. Writes `alerts.json`. |
-| `alerts.json` | That record from the reference estate, 2026-09-19. The chapter's plates render it. |
+| `alerts.json` | That record from the reference estate, 2026-10-08. The chapter's plates render it. |
 | `opslib.py` | The broker exchange and request helper, shared with the ops-estate harness. |
 
 ## Run it

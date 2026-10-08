@@ -29,9 +29,10 @@ import glob
 import os
 import sys
 
+
+from lib._names import is_posture_policy, posture_policy, scope_of
 HERE = os.path.dirname(os.path.abspath(__file__))
 POSTURES_DIR = os.path.join(HERE, "postures")
-POLICY_PREFIX = "PCA - WTPC - Policy - "
 
 # Axis precedence (Cost deliberately excluded from the GOVERNING rank — see the governance doctrine).
 AXIS_PRECEDENCE = ("availability", "performance", "capacity")
@@ -148,8 +149,8 @@ def priority_parity(postures: dict) -> int:
     other_ranked = []   # (priority, name) non-posture, non-Default with a priority
     for p in summaries:
         nm, prio = p.get("name", ""), p.get("priority")
-        if nm.startswith(POLICY_PREFIX):
-            posture_live.append((prio, nm[len(POLICY_PREFIX):]))
+        if is_posture_policy(nm):
+            posture_live.append((prio, scope_of(nm)))
         elif prio is not None and not p.get("defaultPolicy"):
             other_ranked.append((prio, nm))
 
@@ -210,7 +211,7 @@ def config_parity(postures: dict) -> int:
             ref_path = os.path.join(HERE, f"policy-capacity-allocation.{name}.json")
             if not os.path.exists(ref_path):
                 continue
-            pid = live.get(POLICY_PREFIX + name)
+            pid = live.get(posture_policy(name))
             if not pid:
                 print(f"  {name}: policy not live yet - skipped")
                 continue

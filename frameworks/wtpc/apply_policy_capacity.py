@@ -24,9 +24,9 @@ import os
 import sys
 
 from lib._client import ops_client, policy_index
+from lib._names import posture_policy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-POLICY_PREFIX = "PCA - WTPC - Policy - "
 _KEYS = ("cpu", "memory", "diskspace", "poweredOffVmsConsidered")
 # CAPACITY_ALLOCATION_MODEL is resource-kind-scoped; this exact param set is the live-verified GET/PATCH shape.
 _PARAMS = {"type": "CAPACITY_ALLOCATION_MODEL", "resourceKind": "ClusterComputeResource", "adapterKind": "VMWARE"}
@@ -54,7 +54,7 @@ def main() -> int:
         print(f"capacity-allocation apply · {'EXECUTE' if args.execute else 'DRY-RUN'}")
         for path in sorted(glob.glob(os.path.join(HERE, "policy-capacity-allocation.*.json"))):
             posture = os.path.basename(path)[len("policy-capacity-allocation."):-len(".json")]
-            pid = live.get(POLICY_PREFIX + posture)
+            pid = live.get(posture_policy(posture))
             if not pid:
                 print(f"  {posture}: policy not live - skipped")
                 continue

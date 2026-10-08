@@ -44,6 +44,10 @@ import time
 
 from opslib import bearer, ops
 
+# The cycle takes no arguments; refuse any rather than run the whole cycle on a stray flag such as --help.
+if sys.argv[1:]:
+    sys.exit(f"unknown argument(s) {sys.argv[1:]}: cycle.py takes none (see the docstring)")
+
 HERE = pathlib.Path(__file__).resolve().parent
 FILES = ("converge.py", "teardown.py", "export.py", "opslib.py", "desired-state.json")
 

@@ -17,6 +17,7 @@ tool is the from-source rebuild. Every statkey binding was verified live before 
 """
 import sys, os, re, yaml
 from lib._client import ops_client, policy_index
+from lib._names import posture_policy, qualified
 from lib._sm import activate_in_policy, existing_supermetrics, upsert_supermetric
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -123,19 +124,19 @@ def build_defs(posture):
         axis = (e.get(pillar) or {}).get(metric)
         if not axis or axis.get("breach") is None:
             continue   # axis not in this posture's envelope -> its C/X/R do not exist
-        c_defs.append((ck, f"PCA - WTPC - {cn} ({P})", co, "",
+        c_defs.append((ck, qualified(f"PCA - WTPC - {cn}", P), co, "",
                        f"(${{this, metric={ca}}} * 0 + {axis['breach']})"))
-        x_defs.append((xk, f"PCA - WTPC - {xn} ({P})", xo, "",
+        x_defs.append((xk, qualified(f"PCA - WTPC - {xn}", P), xo, "",
                        f"(${{this, metric={xnum}}} / ${{this, metric=Super Metric|sm_{{{ck}}}}})"))
         if rspec:
             rn, rot, rd = rspec   # rot = the objecttype counted; the roll-up SM itself applies to the cluster
-            r_defs.append((rk, f"PCA - WTPC - {rn} ({P})", "ClusterComputeResource", "7004",
+            r_defs.append((rk, qualified(f"PCA - WTPC - {rn}", P), "ClusterComputeResource", "7004",
                            "count(" + A(f"objecttype={rot}, metric=Super Metric|sm_{{{xk}}}, depth={rd}, where=($value > 1)") + ")"))
     # density-position signal (the under-packing carrier for density-led postures): target / observed,
     # so >1 = below the overcommit target = the cost/density failure a best-effort posture polices.
     if posture.get("density_signal"):
         tgt = e["capacity"]["mem_overcommit"]["target"]
-        x_defs.append(("X8", f"PCA - WTPC - Cluster - Density Position vs Target ({P})", "ClusterComputeResource", "",
+        x_defs.append(("X8", qualified("PCA - WTPC - Cluster - Density Position vs Target", P), "ClusterComputeResource", "",
                        f"({tgt} / ${{this, metric=Super Metric|sm_{{G5}}}})"))
     return sms + c_defs + x_defs + r_defs
 
@@ -145,6 +146,9 @@ def subst(f, ids):
 
 def main():
     args=[a for a in sys.argv[1:] if not a.startswith("--")]
+    # flags other than --dry-run stop here; the posture file is positional
+    if [a for a in sys.argv[1:] if a.startswith("--") and a != "--dry-run"]:
+        sys.exit("usage: python build.py postures/<posture>.yaml [--dry-run]")
     dry="--dry-run" in sys.argv
     posture=yaml.safe_load(open(args[0] if args else os.path.join(HERE,"postures/prod-latency-critical-db.yaml")))
     P=posture["posture"]; defs=build_defs(posture)
@@ -172,7 +176,7 @@ def main():
             # create -> activate, so it no longer depends on a separate validate_live.py --assign run.
             # (The 4 PCA - Shared refs + lens SMs the scorecard also reads are activated by their owners.)
             pols=policy_index(c)
-            pid=pols.get(f"PCA - WTPC - Policy - {P}")
+            pid=pols.get(posture_policy(P))
             if pid:
                 for _k,_n,obj,_u,sid,_f in rows:
                     activate_in_policy(c, sid, pid, obj)
@@ -185,9 +189,9 @@ def main():
                         activate_in_policy(c, sid, pid, kind)
                         shared_acts += 1
                 print(f"activated: {len(rows)} posture SMs + {shared_acts} shared/lens assignments "
-                      f"enabled in PCA - WTPC - Policy - {P} (programmatic; no manual UI enablement)")
+                      f"enabled in {posture_policy(P)} (programmatic; no manual UI enablement)")
             else:
-                print(f"NOTE: policy 'PCA - WTPC - Policy - {P}' not live - SMs POSTed but not enabled; "
+                print(f"NOTE: policy '{posture_policy(P)}' not live - SMs POSTed but not enabled; "
                       "instantiate the posture policy first, then re-run to activate")
             emit_yaml(rows, P)
             emit_policy_payload(posture)

@@ -43,6 +43,7 @@ POSTURE = _args[0] if _args else "prod-latency-critical-db"
 from lib._postures import content_ids, load_posture  # noqa: E402  (script, sibling module)
 from lib._sm import load_sm_ids, sm_stat_key  # noqa: E402  (script, sibling module)
 from lib._groups import list_groups  # noqa: E402  (script, sibling module)
+from lib._names import posture_group, qualified, with_aliases  # noqa: E402  (naming standard)
 
 _PDOC = load_posture(POSTURE)                      # loaded once; reused for identity, envelope, density
 _cids = content_ids(_PDOC)
@@ -65,8 +66,8 @@ def wid(n):   # widget id for widget index n (1..17)
 # --- view ids (step-6 views + the reused Rightsizing Oversized lens view, which never forks per posture) ---
 VIEWS = {
     "V1": f"{_VP}0001-1111-4a00-b000-000000000001",  # VM Contention vs Envelope
-    "V2": f"{_VP}0002-2222-4a00-b000-000000000002",  # Capacity Envelope - Hosts
-    "V3": f"{_VP}0003-3333-4a00-b000-000000000003",  # Capacity Envelope - Clusters
+    "V2": f"{_VP}0002-2222-4a00-b000-000000000002",  # Host Capacity Envelope
+    "V3": f"{_VP}0003-3333-4a00-b000-000000000003",  # Cluster Capacity Envelope
     "V4": f"{_VP}0004-4444-4a00-b000-000000000004",  # Cost Scorecard
     "V5": f"{_VP}0005-5555-4a00-b000-000000000005",  # Availability Floor
     "OVERSIZED": "c0570001-1111-4a00-b000-000000000001",  # Rightsizing lens (reuse, never fork)
@@ -137,11 +138,7 @@ def view(n, title, coords, view_id, provider=None):
 
 
 # --- group-as-provider: scope each list to its posture group so only members list (audit fix) ---
-GROUP_NAMES = {
-    "VMs": f"PCA - WTPC - Group - {POSTURE} (VMs)",
-    "Hosts": f"PCA - WTPC - Group - {POSTURE} (Hosts)",
-    "Clusters": f"PCA - WTPC - Group - {POSTURE} (Clusters)",
-}
+GROUP_NAMES = {label: posture_group(POSTURE, label) for label in ("VMs", "Hosts", "Clusters")}
 VIEW_GROUP = {"V1": "VMs", "V2": "Hosts", "V3": "Clusters", "V4": "Clusters", "V5": "Clusters", "OVERSIZED": "VMs"}
 
 
@@ -162,7 +159,7 @@ def resolve_group_ids():
     from lib._client import ops_client
     with ops_client() as c:
         groups = list_groups(c, include_policy=False)
-    byname = {g.get("resourceKey", {}).get("name"): g["id"] for g in groups}
+    byname = with_aliases({g.get("resourceKey", {}).get("name"): g["id"] for g in groups})
     out = {}
     for label, name in GROUP_NAMES.items():
         if name not in byname:
@@ -315,7 +312,7 @@ def build(sm, groups=None):
                         "them tuned. Gate first, then score."),
         "widgets": widgets, "states": [], "editAllowed": True, "homeTab": False, "rank": 0,
         "disabled": False, "id": DASH_ID, "adapterName": "VMware vSphere", "locked": False,
-        "dashboardNavigations": {}, "columnCount": 12, "name": f"PCA - WTPC - Posture Scorecard - {P}",
+        "dashboardNavigations": {}, "columnCount": 12, "name": qualified("PCA - WTPC - Posture Scorecard", P),
         "gridsterMaxColumns": 12, "widgetInteractions": interactions, "namePath": "Custom Dashboards",
         "userId": "", "lastUpdateUserId": "",
     }

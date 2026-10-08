@@ -1,0 +1,16 @@
+{
+  "owner": "PCA",
+  "bundles": {
+    "Shared": "_shared",
+    "Example": "example"
+  },
+  "kinds": {
+    "VM": {"plural": "VMs", "keys": ["VirtualMachine"]},
+    "Host": {"plural": "Hosts", "keys": ["HostSystem"]},
+    "Cluster": {"plural": "Clusters", "keys": ["ClusterComputeResource"]},
+    "Datastore": {"plural": "Datastores", "keys": ["Datastore"]},
+    "Group": {"plural": "Groups", "keys": ["Environment"]}
+  },
+  "scopes": ["gold", "silver", "gold tier", "silver tier"],
+  "environmentValues": ["gold", "silver"]
+}

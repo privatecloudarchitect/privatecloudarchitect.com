@@ -49,13 +49,13 @@ membership:
 # (reconcile_infra_groups.py) walks VM --PARENT--> Host --PARENT--> Cluster and writes the result as
 # each infra group's includedResources (rules dropped). Idempotent; dry-run by default.
 groups:
-  - name: "PCA - WTPC - Group - prod-latency-critical-db (VMs)"
+  - name: "PCA - WTPC - prod-latency-critical-db (VMs)"
     resource_kind: VirtualMachine
     membership: [{category: env, value: prod}, {category: function, value: db}, {category: sla, value: sla-1}]
-  - name: "PCA - WTPC - Group - prod-latency-critical-db (Clusters)"
+  - name: "PCA - WTPC - prod-latency-critical-db (Clusters)"
     resource_kind: ClusterComputeResource
     derived: ancestor-clusters-of-vms-group          # reconcile_infra_groups.py (includedResources)
-  - name: "PCA - WTPC - Group - prod-latency-critical-db (Hosts)"
+  - name: "PCA - WTPC - prod-latency-critical-db (Hosts)"
     resource_kind: HostSystem
     derived: parent-hosts-of-vms-group               # reconcile_infra_groups.py (includedResources)
 
@@ -70,10 +70,11 @@ availability_floor:
   anti_affinity: db-replica-pairs          # UNVERIFIED — no observable; manual monthly check
 
 # --- Step 4: the enforcement copy (policy capacityDefinition — CLUSTER-scoped, per preflight the catalog) ---
-# One policy cloned from Default, applied to all three groups, top of the custom priority list at
-# exemplar time. capacityDefinition compiled from the envelope; PATCHed per resource kind (204).
+# One policy cloned from Default. It governs the posture's VMs group, and its Hosts and Clusters groups only
+# on an estate with no tier policies (hardware takes its tier); ranked strict-first among the posture policies
+# inside the positions they hold. capacityDefinition compiled from the envelope; PATCHed per resource kind (204).
 policy:
-  name: "PCA - WTPC - Policy - prod-latency-critical-db"
+  name: "PCA - WTPC - prod-latency-critical-db"
   clone_from: Default                      # portable: every Ops has a Default; the id is discovered at instantiation
   capacity_allocation:                     # type=CAPACITY_ALLOCATION_MODEL, resourceKind=ClusterComputeResource
     cpu: 1.5                               # = cpu_overcommit.target

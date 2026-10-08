@@ -1,8 +1,10 @@
 # Metrics collection harness
 
-Step 3 of the folder above: the read-only scripts. Backs the metrics-collection sheet
-([privatecloudarchitect.com/handbook/metrics-collection](https://privatecloudarchitect.com/handbook/metrics-collection)).
-The sheet's claims about what VCF Operations collects, keeps, and serves, runnable against your own
+Step 3 of the folder above: the read-only scripts. Backs the two collection chapters: the planes, the roll-up and
+retention in [privatecloudarchitect.com/handbook/metrics-collection](https://privatecloudarchitect.com/handbook/metrics-collection),
+then the extraction coefficients, the identity key and the real-time path in
+[privatecloudarchitect.com/handbook/metrics-extraction](https://privatecloudarchitect.com/handbook/metrics-extraction).
+The chapters' claims about what VCF Operations collects, keeps, and serves, runnable against your own
 instance, read-only:
 
 1. **The three planes** (`collection_planes.py`): the vCenter adapters collect through vStats at a

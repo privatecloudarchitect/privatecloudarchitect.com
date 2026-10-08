@@ -55,7 +55,9 @@ from lib._client import OpsSession, _ctx
 from lib._taxonomy import categories as declared_categories
 
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-VMS_GROUP = re.compile(r"^Group - (?P<posture>.+) \(VMs\)$")
+# A posture's VM group, after the prefix: "<posture> (VMs)", or "Group - <posture> (VMs)" as estates named it before
+# 2026-10-07. A posture is one token, so a tier group ("<tier> tier (VMs)") never matches.
+VMS_GROUP = re.compile(r"^(?:Group - )?(?P<posture>[\w.-]+) \(VMs\)$")
 
 # The guard's own words, from the reconciler this framework ships. Quoted rather than paraphrased, because a
 # chapter that reports a refusal should report the sentence the operator will actually see in the terminal.

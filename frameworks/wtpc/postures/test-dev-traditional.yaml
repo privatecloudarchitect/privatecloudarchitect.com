@@ -32,13 +32,13 @@ membership:
 #   Hosts    = derived: hosts running a VMs-group member (reconcile_infra_groups.py).
 #   Clusters = derived: clusters hosting a VMs-group member.
 groups:
-  - name: "PCA - WTPC - Group - test-dev-traditional (VMs)"
+  - name: "PCA - WTPC - test-dev-traditional (VMs)"
     resource_kind: VirtualMachine
     membership: [{category: env, value: dev}, {category: sla, value: sla-4}]
-  - name: "PCA - WTPC - Group - test-dev-traditional (Clusters)"
+  - name: "PCA - WTPC - test-dev-traditional (Clusters)"
     resource_kind: ClusterComputeResource
     derived: ancestor-clusters-of-vms-group
-  - name: "PCA - WTPC - Group - test-dev-traditional (Hosts)"
+  - name: "PCA - WTPC - test-dev-traditional (Hosts)"
     resource_kind: HostSystem
     derived: parent-hosts-of-vms-group
 
@@ -52,7 +52,7 @@ availability_floor:
 
 # --- Step 4: the enforcement copy (policy - LAX; density is the point) ---
 policy:
-  name: "PCA - WTPC - Policy - test-dev-traditional"
+  name: "PCA - WTPC - test-dev-traditional"
   clone_from: Default
   capacity_allocation:                 # type=CAPACITY_ALLOCATION_MODEL, resourceKind=ClusterComputeResource
     cpu: 4.0                           # high packing

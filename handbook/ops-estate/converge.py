@@ -25,6 +25,14 @@ import sys
 
 from opslib import bearer, ops
 
+# Only --dry-run and --state FILE are understood; anything else stops here rather than converging.
+_rest = sys.argv[1:]
+while _rest:
+    _a = _rest.pop(0)
+    if _a == "--state" and _rest:
+        _rest.pop(0)
+    elif _a != "--dry-run":
+        sys.exit("usage: python3 converge.py [--dry-run] [--state FILE]")
 DRY = "--dry-run" in sys.argv
 HERE = pathlib.Path(__file__).resolve().parent
 STATE = (pathlib.Path(sys.argv[sys.argv.index("--state") + 1]) if "--state" in sys.argv

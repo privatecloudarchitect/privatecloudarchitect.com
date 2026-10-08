@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the PCA - Collection Strategy Guide dashboard (deterministic) + its Manage > Import zip.
+"""Build the PCA - Collect Once - Collection Strategy Guide dashboard (deterministic) + its Manage > Import zip.
 
 One dashboard whose layout is the story, top-down: start here, the metric list mapped, then one row per
 family of the client's list (a teaching note beside the live VM list: configuration, CPU, memory; virtual
@@ -27,7 +27,7 @@ try:
     from _shared._copy import assert_current_voice  # noqa: E402  (the estate-wide copy-voice gate, private corpus)
 except ImportError:  # the public companion ships without the estate gate; the copy was gated before it was published
     def assert_current_voice(texts): return None
-NAME = "PCA - Collection Strategy Guide"
+NAME = "PCA - Collect Once - Collection Strategy Guide"
 OUT = os.path.join(CONTENT, "collection-strategy-guide.dashboard.json")
 ZIP = os.path.join(IMPORT, "dashboards", "collection-strategy-guide.import.zip")
 # ids: the 2026-09-16 universal build carries new dashboard, tab, and widget ids so it can sit beside the earlier, estate-specific import

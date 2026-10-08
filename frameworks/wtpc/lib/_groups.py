@@ -22,12 +22,14 @@ def list_groups(c, include_policy=None) -> list[dict]:
 
 def group_ids(c) -> dict[str, str]:
     """{group name: id} for every custom group."""
-    return {g.get("resourceKey", {}).get("name"): g["id"] for g in list_groups(c)}
+    from lib._names import with_aliases   # a renamed group answers to both names
+    return with_aliases({g.get("resourceKey", {}).get("name"): g["id"] for g in list_groups(c)})
 
 
 def group_names(c) -> set:
     """The set of live custom-group names."""
-    return {g.get("resourceKey", {}).get("name") for g in list_groups(c)}
+    from lib._names import AliasSet
+    return AliasSet(group_ids(c))
 
 
 def group_members(c, group_id: str) -> list[dict]:

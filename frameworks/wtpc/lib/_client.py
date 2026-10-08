@@ -29,7 +29,7 @@ Environment:
   VCENTER_TLS_VERIFY (optional)  defaults to OPS_TLS_VERIFY
 
 `policy_index(c)` is the near-universal first read (policy name -> id); it lives here because
-almost every mutating script needs it to resolve `PCA - WTPC - Policy - <posture>` to an id.
+almost every mutating script needs it to resolve a posture policy (lib._names.posture_policy) to an id.
 """
 from __future__ import annotations
 
@@ -208,6 +208,7 @@ def vcenter_client():
 
 def policy_index(c) -> dict[str, str]:
     """{policy name: id} for every policy - the standard first read a mutating script does to resolve a
-    named WTPC policy (`PCA - WTPC - Policy - <posture>`) to its id."""
-    return {p["name"]: p["id"] for p in
-            c.get("/api/policies", params={"pageSize": 500, "_no_links": "true"}).json()["policySummaries"]}
+    named WTPC policy (`posture_policy(p)` in lib._names) to its id. A renamed policy answers to both names."""
+    from lib._names import with_aliases   # a renamed policy answers to both names
+    return with_aliases({p["name"]: p["id"] for p in
+                         c.get("/api/policies", params={"pageSize": 500, "_no_links": "true"}).json()["policySummaries"]})

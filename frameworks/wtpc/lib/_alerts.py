@@ -17,5 +17,6 @@ def find_existing(c, endpoint: str, list_key: str, prefix: str = "PCA - WTPC") -
         items = c.get(endpoint, params={"page": page, "pageSize": 1000, "_no_links": "true"}).json().get(list_key, [])
         out.update({x["name"]: x["id"] for x in items if x["name"].startswith(prefix)})
         if len(items) < 1000:
-            return out
+            from lib._names import with_aliases   # a renamed definition answers to both names
+            return with_aliases(out)
         page += 1

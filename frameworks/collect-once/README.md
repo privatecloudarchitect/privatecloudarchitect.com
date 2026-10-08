@@ -1,4 +1,4 @@
-# Collect Once: the PCA - Collection Strategy Guide dashboard
+# The PCA - Collect Once - Collection Strategy Guide dashboard
 
 An educational VCF Operations dashboard for any BI or platform team that plans to collect VM utilization again
 (vCenter PerformanceManager counters plus guest-OS items). It shows, live on the importing instance, that the
@@ -11,7 +11,7 @@ that feeds an ELT warehouse. Source of record: the Collect Once, Decide at Sourc
 |---|---|---|
 | Six VM list views (configuration, CPU, memory, virtual disk, network, storage and guest filesystem) | `content/collect-once-vm-*.view.xml` | `build_views.py` (also emits `import/views/collect-once-views.import.zip`) |
 | Thirteen teaching Text widgets, universal by construction: the catalog names every Operations key against `reference/vm-statkeys.reference.json` and every vCenter counter against `reference/vcenter-perfcounters.reference.json`, both read live, and the build fails on a key that is not there | `content/widget-*.html` | `build_copy.py` (the copy source; emits the HTML the dashboard syncs verbatim) |
-| The dashboard **PCA - Collection Strategy Guide**, 24 widgets: two per-VM charts driven by the CPU and memory lists, three PromQL Viewers (type `VODAP`) charting verified strategy queries on the Real-Time Metrics plane | `content/collection-strategy-guide.dashboard.json` | `build_dashboard.py` (also emits `import/dashboards/collection-strategy-guide.import.zip`; `--source-id` rebinds the PromQL source) |
+| The dashboard **PCA - Collect Once - Collection Strategy Guide**, 24 widgets: two per-VM charts driven by the CPU and memory lists, three PromQL Viewers (type `VODAP`) charting verified strategy queries on the Real-Time Metrics plane | `content/collection-strategy-guide.dashboard.json` | `build_dashboard.py` (also emits `import/dashboards/collection-strategy-guide.import.zip`; `--source-id` rebinds the PromQL source) |
 
 The 2026-09-16 universal pass replaced one customer's metric list with the VM utilization catalog any warehouse asks for
 (a vCenter counter column with statistics levels, a guest-OS-through-Tools family, the decision keys only Operations carries)

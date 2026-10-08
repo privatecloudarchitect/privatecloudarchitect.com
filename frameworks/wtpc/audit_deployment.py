@@ -56,14 +56,17 @@ KINDS = ("VirtualMachine", "HostSystem", "ClusterComputeResource")
 WORKLOAD_KINDS = ("VirtualMachine",)
 
 
-def family(name: str) -> str:
-    """Which half of the framework a policy belongs to, by the name it carries."""
+def family(name: str, prefix: str = "PCA - WTPC") -> str:
+    """Which half of the framework a policy belongs to, by the name it carries. Both namings are read: the
+    current one ('<prefix> - <posture>', '<prefix> - <tier> tier') and the earlier one ('<prefix> - Policy -
+    <posture>', '<prefix> - Tier - <tier>'), so an estate built under either is audited the same way."""
     n = str(name or "")
-    if " - Policy - " in n:
-        return "posture"
-    if " - Tier - " in n:
+    if not n.startswith(prefix + " - "):
+        return "outside the framework"
+    rest = n[len(prefix) + 3:]
+    if rest.startswith("Tier - ") or rest.endswith(" tier"):
         return "tier"
-    return "outside the framework"
+    return "posture"
 
 
 def page(ops, path, key, **params):
@@ -177,7 +180,7 @@ def main():
         rl = page(ops, "/api/resources", "resourceList", resourceKind=kind)
         ids = [x["identifier"] for x in rl if x.get("identifier")]
         eff = effective(ops, ids)
-        fams = collections.Counter(family(policies.get(p)) for p in eff.values())
+        fams = collections.Counter(family(policies.get(p), prefix) for p in eff.values())
         names = collections.Counter(policies.get(p) for p in eff.values()
                                     if str(policies.get(p)).startswith(prefix))
         want = "posture" if kind in WORKLOAD_KINDS else "tier"

@@ -7,9 +7,12 @@ codebase, asked of a running VCF Operations instance.
   1. the CENSUS: every content class the suite API serves, counted, each collection walked to its declared
      total rather than to one page. The ratio that matters is not the total, it is how small your own content
      is inside it, because you cannot rename the rest;
-  2. the NAMING AUDIT: how many of your objects match the schema you publish, per class, with the field count
-     of every name recorded. A class that diverges CONSISTENTLY is the standard being wrong about that class;
-     a class that diverges in ones and twos is drift. A total cannot tell those apart;
+  2. the NAMING AUDIT: how many of your objects hold the grammar of their class BY MEANING (naming.py: the
+     field count for the class, the kind against your vocabulary, the scope qualifier's form, no environment
+     value outside a scope field or qualifier), with every failing name and its reasons recorded. The
+     separator count is kept beside it, because it is the number a field count alone would have published. A
+     class that diverges CONSISTENTLY is the standard being wrong about that class; a class that diverges in
+     ones and twos is drift. A total cannot tell those apart;
   3. the REFERENTIAL INTEGRITY check across three edge types: alert definition to symptom definition, custom
      group to policy, and notification rule to alert definition. This is the one that catches the failure the
      chapter is about, a reference left pointing at an id that a rebuild re-minted;
@@ -47,6 +50,8 @@ Run:
   export OPS_REALM=CUSTOMER                       # the broker realm, usually this
   export OPS_API_TOKEN=<api-token>                # minted in the operations console
   export OPS_OWNER="PCA"                          # the owner prefix your content carries
+  export OPS_NAMING=naming.example.json           # your bundles, kinds and scope values (see that file);
+                                                  # without it only the grammar's shape is checked
   export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
   export OPS_PROBE_KIND=VirtualMachine            # the resource kind whose catalog keys are probed (VMWARE adapter)
   export OPS_CONTROL_KEY="cpu|readyPct"           # a key you know returns a value on that kind
@@ -70,6 +75,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
 
+import naming
 from opslib import _ctx, bearer, ops
 
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -234,6 +240,9 @@ def presence_versus_population(tok, kind="VirtualMachine", sample_size=25):
 def main():
     owner = os.environ.get("OPS_OWNER", "PCA")
     out_dir = os.environ.get("OUT_DIR", ".")
+    vocab_path = os.environ.get("OPS_NAMING")
+    vocab = naming.load_vocabulary(vocab_path) if vocab_path else {}
+    vocab["owner"] = owner
     check = "--check" in sys.argv[1:]
     report = []
 
@@ -255,15 +264,26 @@ def main():
         raw[label] = items
         mine = [i for i in items if owned_by(name_of(i), owner)]
         conforming = [i for i in mine if fields(name_of(i)) >= 4]
+        failing = []
+        for i in mine:
+            kind = i.get("resourceKindKey") if label in ("symptom definitions", "alert definitions") else None
+            reasons = naming.check(name_of(i), label, vocab, kind)
+            if reasons:
+                failing.append({"name": name_of(i), "reasons": reasons})
         census.append({"class": label, "total": len(items), "owned": len(mine),
                        "conformingToSchema": len(conforming),
-                       "fieldCounts": dict(collections.Counter(fields(name_of(i)) for i in mine))})
+                       "conformingByMeaning": len(mine) - len(failing),
+                       "fieldCounts": dict(collections.Counter(fields(name_of(i)) for i in mine)),
+                       "failing": failing})
         say(f"  {label:<22} {len(items):>5} total   {len(mine):>4} {owner}-owned   "
-              f"{len(conforming):>4} conforming to the four-field schema")
+              f"{len(mine) - len(failing):>4} hold their grammar   ({len(conforming)} have four or more fields)")
     total = sum(c["total"] for c in census)
     owned = sum(c["owned"] for c in census)
     conf = sum(c["conformingToSchema"] for c in census)
-    say(f"  {'':<22} {total:>5} objects, of which {owned} are yours and {conf} match the schema you publish")
+    meaning = sum(c["conformingByMeaning"] for c in census)
+    say(f"  {'':<22} {total:>5} objects, of which {owned} are yours and {meaning} hold their class's grammar "
+          f"by meaning ({conf} by separator count alone)"
+          + ("" if vocab_path else "; no OPS_NAMING vocabulary, so kinds and scope values were not checked"))
 
     near = sorted({name_of(i) for items in raw.values() for i in items
                    if str(name_of(i)).startswith(owner) and not owned_by(name_of(i), owner)})
@@ -343,7 +363,8 @@ def main():
                "owner": owner,
                "build": build,
                "census": census,
-               "totals": {"objects": total, "owned": owned, "conformingToSchema": conf},
+               "totals": {"objects": total, "owned": owned, "conformingToSchema": conf, "conformingByMeaning": meaning},
+               "namingVocabulary": bool(vocab_path),
                "ownedNames": sorted({name_of(i) for items in raw.values() for i in items
                                      if owned_by(name_of(i), owner)}),
                "prefixWithoutSeparatorWouldAlsoClaim": len(near),

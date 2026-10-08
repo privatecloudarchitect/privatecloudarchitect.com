@@ -1,8 +1,8 @@
 {
- "captured_utc": "2026-09-21T07:25:16Z",
+ "captured_utc": "2026-10-08T00:16:44Z",
  "owner": "PCA",
  "definitions": {
-  "total": 1824,
+  "total": 1872,
   "owned": 13,
   "universalFields": [
    "adapterKindKey",
@@ -30,20 +30,20 @@
    "WARNING": 2
   },
   "estateSeverity": {
-   "AUTO": 718,
-   "CRITICAL": 545,
-   "WARNING": 380,
-   "IMMEDIATE": 121,
+   "AUTO": 728,
+   "CRITICAL": 567,
+   "WARNING": 381,
+   "IMMEDIATE": 136,
    "INFORMATION": 60
   }
  },
  "defaultPolicyReview": {
-  "explicitEntries": 75,
-  "enabledEntries": 63,
+  "explicitEntries": 77,
+  "enabledEntries": 65,
   "ownedEntries": 13,
   "ownedEnabled": 1,
   "ownedEnabledNames": [
-   "PCA - WTPC - Performance Envelope Breach - prod-latency-critical-db"
+   "PCA - WTPC - VM - Performance Envelope Breach [prod-latency-critical-db]"
   ],
   "ownedEnabledKinds": [
    "VirtualMachine"
@@ -51,18 +51,18 @@
  },
  "blastRadius": {
   "kind": "VirtualMachine",
-  "resources": 103,
-  "queried": 103,
-  "resolved": 103,
-  "underTheDefaultPolicy": 2
+  "resources": 139,
+  "queried": 139,
+  "resolved": 139,
+  "underTheDefaultPolicy": 119
  },
  "thresholds": {
   "estateConditionTypes": {
-   "CONDITION_HT": 676,
-   "CONDITION_MESSAGE_EVENT": 543,
+   "CONDITION_HT": 678,
+   "CONDITION_MESSAGE_EVENT": 567,
    "CONDITION_PROPERTY_STRING": 703,
    "CONDITION_FAULT": 795,
-   "CONDITION_PROPERTY_NUMERIC": 173,
+   "CONDITION_PROPERTY_NUMERIC": 175,
    "CONDITION_DT": 33,
    "CONDITION_LOG": 3
   },
@@ -86,14 +86,14 @@
  },
  "debounce": {
   "estateWait": {
-   "1": 1771,
+   "1": 1819,
    "3": 42,
    "2": 9,
    "6": 1,
    "865": 1
   },
   "estateCancel": {
-   "1": 1768,
+   "1": 1816,
    "9": 7,
    "12": 16,
    "6": 1,
@@ -107,20 +107,20 @@
    "1": 13
   },
   "statesPerDefinition": {
-   "1": 1824
+   "1": 1872
   },
   "impactDetail": {
-   "health": 1580,
-   "risk": 213,
+   "health": 1626,
+   "risk": 215,
    "efficiency": 31
   },
-  "withoutADescription": 528,
+  "withoutADescription": 526,
   "longestWait": 865,
   "longestWaitIsVendorContent": true
  },
  "routing": {
-  "rules": 5,
-  "enabled": 1,
+  "rules": 6,
+  "enabled": 2,
   "withNoFilterAtAll": 3,
   "fields": [
    "actionStatuses",
@@ -134,6 +134,7 @@
    "name",
    "pluginId",
    "properties",
+   "resourceFilter",
    "resourceFilters",
    "resourceKindFilters",
    "ruleType",
@@ -167,6 +168,13 @@
     "enabled": false,
     "alertDefinitionFilters": 0,
     "resourceFilters": 0,
+    "resourceKindFilters": 0,
+    "criticalities": 0
+   },
+   {
+    "enabled": true,
+    "alertDefinitionFilters": 0,
+    "resourceFilters": 1,
     "resourceKindFilters": 0,
     "criticalities": 0
    },

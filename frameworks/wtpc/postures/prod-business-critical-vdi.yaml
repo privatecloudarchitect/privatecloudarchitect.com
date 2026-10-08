@@ -32,13 +32,13 @@ membership:
 
 # --- Step 3: custom groups (follows-the-workload; Hosts carry the density / boot-storm scope, the catalog) ---
 groups:
-  - name: "PCA - WTPC - Group - prod-business-critical-vdi (VMs)"
+  - name: "PCA - WTPC - prod-business-critical-vdi (VMs)"
     resource_kind: VirtualMachine
     membership: [{category: env, value: prod}, {category: function, value: vdi}]
-  - name: "PCA - WTPC - Group - prod-business-critical-vdi (Clusters)"
+  - name: "PCA - WTPC - prod-business-critical-vdi (Clusters)"
     resource_kind: ClusterComputeResource
     derived: ancestor-clusters-of-vms-group
-  - name: "PCA - WTPC - Group - prod-business-critical-vdi (Hosts)"
+  - name: "PCA - WTPC - prod-business-critical-vdi (Hosts)"
     resource_kind: HostSystem
     derived: parent-hosts-of-vms-group
 
@@ -53,7 +53,7 @@ availability_floor:
 
 # --- Step 4: the enforcement copy (policy) ---
 policy:
-  name: "PCA - WTPC - Policy - prod-business-critical-vdi"
+  name: "PCA - WTPC - prod-business-critical-vdi"
   clone_from: Default
   capacity_allocation:
     cpu: 6.0                           # = cpu_overcommit target; high vCPU:pCPU is the VDI design point

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""WTPC effective-policy PARITY check (read-only) — every posture-group member's effective policy must BE
-the WTPC posture policy. This is the gate apply.py runs per posture.
+"""WTPC effective-policy PARITY check (read-only) — every posture-group member must be governed by the policy
+that should govern it: the posture policy for its VMs and, on a tiered estate, each host's and cluster's tier
+policy. This is the gate apply.py runs per posture.
 
 RETIRED (Model-A migration): this file used to ALSO define tag categories + assign posture tags via the
 VCF Ops centralized Tag Management plane (`/internal/tagmanagement/*`). Both moved to purpose-built tools
@@ -23,6 +24,7 @@ import argparse
 import sys
 
 from lib._client import ops_client
+from lib._names import is_tier_group, is_tier_policy, posture_group, posture_policy, same
 from lib._groups import list_groups
 
 
@@ -31,7 +33,7 @@ class Posture:
 
     def __init__(self, name: str) -> None:
         self.name = name
-        self.policy = f"PCA - WTPC - Policy - {name}"
+        self.policy = posture_policy(name)
 
 
 class Ctx:
@@ -53,7 +55,7 @@ class Ctx:
 
 def resolve_group_id(c, name: str) -> str:
     for g in list_groups(c, include_policy=False):
-        if g.get("resourceKey", {}).get("name") == name:
+        if same(g.get("resourceKey", {}).get("name") or "", name):
             return g["id"]
     raise SystemExit(f"group {name!r} not found — run the step-3 group instantiation first")
 
@@ -69,39 +71,61 @@ def effective_policy(c, resource_id: str) -> str:
 
 
 def run_parity(ctx: Ctx, extra_vms: list[str]) -> int:
-    """Effective-policy parity: every posture-group MEMBER's effective policy must BE the WTPC policy.
+    """Effective-policy parity: every member of the posture's groups is governed by the policy that should.
 
-    Pure priority ordering is fragile (operators re-order; the priorities PUT has no GET to read current
-    order safely), so THIS read-only check is the durable guarantee: it names the shadowing policy so the
-    order can be corrected deliberately.
+    That is the posture policy for its VMs. For its hosts and clusters it is the posture policy too on an
+    estate with no tier policies, and otherwise each object's tier policy: hardware takes its tier, so
+    a host or cluster under its tier is correct, not shadowed, and one that no tier group holds is reported
+    as untiered (it falls to the next policy that claims it; placement fit is reconcile_infra_groups.py
+    --fit). Pure priority ordering is fragile (operators re-order), so THIS read-only check is the durable
+    guarantee: it names any policy that wins where another should, so the order can be corrected deliberately.
     """
     names = {p["id"]: p["name"] for p in
              ctx.c.get("/api/policies", params={"_no_links": "true", "pageSize": 500}).json()["policySummaries"]}
-    wtpc = next((pid for pid, nm in names.items() if nm == ctx.p.policy), None)
+    wtpc = next((pid for pid, nm in names.items() if same(nm, ctx.p.policy)), None)
     if not wtpc:
         raise SystemExit(f"{ctx.p.policy!r} not found")
-    members = set(extra_vms)
+    tier_model = any(is_tier_policy(nm) for nm in names.values())
+    kind_of = {rid: "VM" for rid in extra_vms}
     for kind in ("VMs", "Hosts", "Clusters"):
         try:
-            members |= group_member_ids(ctx.c, resolve_group_id(ctx.c, f"PCA - WTPC - Group - {ctx.p.name} ({kind})"))
+            for rid in group_member_ids(ctx.c, resolve_group_id(ctx.c, posture_group(ctx.p.name, kind))):
+                kind_of.setdefault(rid, kind[:-1])
         except SystemExit:
             pass
-    print(f"\nWTPC effective-policy parity · expected = {ctx.p.policy}")
-    if not members:
+    tier_of: dict[str, str] = {}
+    if tier_model:
+        for g in list_groups(ctx.c, include_policy=True):
+            if is_tier_group((g.get("resourceKey") or {}).get("name") or "") and g.get("policy"):
+                for rid in group_member_ids(ctx.c, g["id"]):
+                    tier_of.setdefault(rid, names.get(g["policy"], g["policy"]))
+    expected = {rid: ctx.p.policy if (k == "VM" or not tier_model) else tier_of.get(rid) for rid, k in kind_of.items()}
+    print(f"\nWTPC effective-policy parity · expected: {ctx.p.policy} for the posture's VMs"
+          + ("; each host and cluster its tier's policy (hardware takes its tier)" if tier_model else " and its hardware"))
+    if not kind_of:
         print("  no posture members resolved yet (untagged, or membership still re-resolving) — pass --representative to spot-check")
         return 0
-    shadowed = [(rid, names.get(effective_policy(ctx.c, rid), "?")) for rid in sorted(members)]
-    bad = [(rid, pol) for rid, pol in shadowed if pol != ctx.p.policy]
-    for rid, pol in shadowed:
-        ok = pol == ctx.p.policy
-        print(f"  {rid[:8]}: effective = {pol}  {'✅' if ok else '❌ SHADOWED'}")
+    bad, untiered = [], []
+    for rid in sorted(kind_of, key=lambda r: (kind_of[r], r)):
+        pol, want = names.get(effective_policy(ctx.c, rid), "?"), expected[rid]
+        if want is None:
+            untiered.append(rid)
+            mark = "⚠ UNTIERED (no tier group holds it)"
+        elif same(pol, want):
+            mark = "✅"
+        else:
+            bad.append((rid, pol, want))
+            mark = f"❌ SHADOWED (expected {want})"
+        print(f"  {kind_of[rid]:>7} {rid[:8]}: effective = {pol}  {mark}")
+    if untiered:
+        print(f"\n⚠ {len(untiered)} host or cluster member(s) sit in no tier group; run reconcile_infra_groups.py --fit")
     if bad:
-        offenders = sorted({pol for _, pol in bad})
-        print(f"\n❌ {len(bad)}/{len(shadowed)} member(s) shadowed by: {offenders}")
-        print("   FIX: raise the WTPC policy above these in Administration ▸ Policies (priority order) — "
-              "the posture policy must outrank broad operator policies for its members.")
+        offenders = sorted({pol for _, pol, _ in bad})
+        print(f"\n❌ {len(bad)}/{len(kind_of)} member(s) shadowed by: {offenders}")
+        print("   FIX: in Administration ▸ Policies, rank the expected policy above the offender (priority order); "
+              "the policy that should govern a member must outrank broad operator policies for it.")
         return 2
-    print(f"\n✅ all {len(shadowed)} member(s) resolve to the WTPC policy — no precedence shadowing.")
+    print(f"\n✅ all {len(kind_of) - len(untiered)} governed member(s) resolve to the policy that should govern them — no precedence shadowing.")
     return 0
 
 

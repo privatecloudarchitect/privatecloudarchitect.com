@@ -25,11 +25,12 @@ import sys
 
 from lib._alerts import find_existing
 from lib._client import ops_client
+from lib._names import same
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SYMPTOMS = os.path.join(HERE, "content", "wtpc-alerts.symptoms.json")
 ALERTS = os.path.join(HERE, "content", "wtpc-alerts.alerts.json")
-WTPC_POLICY = "PCA - WTPC - Policy - prod-latency-critical-db"
+WTPC_POLICY = "PCA - WTPC - prod-latency-critical-db"
 
 
 def load(path, key):
@@ -38,7 +39,7 @@ def load(path, key):
 
 def resolve_policies(c):
     pols = c.get("/api/policies", params={"_no_links": "true", "pageSize": 500}).json()["policySummaries"]
-    wtpc = next((p["id"] for p in pols if p["name"] == WTPC_POLICY), None)
+    wtpc = next((p["id"] for p in pols if same(p["name"], WTPC_POLICY)), None)
     default = next((p["id"] for p in pols if p.get("defaultPolicy")), None)
     if not wtpc:
         raise SystemExit(f"policy {WTPC_POLICY!r} not found — run the step-4 policy instantiation first")

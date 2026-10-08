@@ -16,6 +16,9 @@ import sys
 
 from opslib import bearer, ops
 
+# Only --dry-run is understood. Anything else (a mistyped flag, --help) stops here, never falls through to the delete.
+if [a for a in sys.argv[1:] if a != "--dry-run"]:
+    sys.exit("usage: python3 teardown.py [--dry-run]")
 DRY = "--dry-run" in sys.argv
 HERE = pathlib.Path(__file__).resolve().parent
 

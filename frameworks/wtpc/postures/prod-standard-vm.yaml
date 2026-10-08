@@ -27,13 +27,13 @@ membership:
 
 # --- Step 3: custom groups (follows-the-workload; the catalog lists all three kinds explicitly) ---
 groups:
-  - name: "PCA - WTPC - Group - prod-standard-vm (VMs)"
+  - name: "PCA - WTPC - prod-standard-vm (VMs)"
     resource_kind: VirtualMachine
     membership: [{category: env, value: prod}, {category: sla, value: sla-3}]
-  - name: "PCA - WTPC - Group - prod-standard-vm (Clusters)"
+  - name: "PCA - WTPC - prod-standard-vm (Clusters)"
     resource_kind: ClusterComputeResource
     derived: ancestor-clusters-of-vms-group
-  - name: "PCA - WTPC - Group - prod-standard-vm (Hosts)"
+  - name: "PCA - WTPC - prod-standard-vm (Hosts)"
     resource_kind: HostSystem
     derived: parent-hosts-of-vms-group
 
@@ -48,7 +48,7 @@ availability_floor:
 
 # --- Step 4: the enforcement copy (policy) ---
 policy:
-  name: "PCA - WTPC - Policy - prod-standard-vm"
+  name: "PCA - WTPC - prod-standard-vm"
   clone_from: Default
   capacity_allocation:
     cpu: 4.0                           # = cpu_overcommit target

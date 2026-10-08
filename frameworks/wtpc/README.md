@@ -69,7 +69,10 @@ The order it drives, and what each step is:
 3. `instantiate_posture.py postures/<P>.yaml` - the posture's three groups (VMs by tag rule;
    Hosts and Clusters born empty, derived next).
 4. `reconcile_policy.py --posture <P> [--create <P>]` - adopt-or-create the posture policy (a
-   clone of your Default), global priority strict-first, group bindings.
+   clone of your Default) and bind it: to the posture's three groups, or to its VMs group alone once
+   tier policies exist (hardware then takes its tier). The posture policies are ranked strict-first
+   inside the positions they already hold, so no other team's policy moves; `--rank-above-foreign`
+   places them first, for when `validate_live.py --parity` shows a foreign policy taking a member.
 5. `build.py postures/<P>.yaml` - the posture's super-metric DAG, created and activated in the
    posture policy programmatically.
 6. `reconcile_infra_groups.py --posture <P>` - Host and Cluster membership derived from where the
@@ -175,7 +178,8 @@ Four reads, in the order a deployment fails:
    posture can have the right dials and compute none of the metrics its scorecard renders. Note that the
    settings endpoint does **not** serve the overcommit dials; it serves time-remaining criticality thresholds.
 4. **The ratio worth publishing**: how many framework policies govern at least one object, over how many
-   exist. On the reference estate that was **2 of 6**, while every other count in the inventory read healthy.
+   exist. On the reference estate it read **3 of 6** on 2026-10-08 (`deployment.json`), while every other count in
+   the inventory read healthy.
 
 It writes `deployment.json`, names no machine, host or cluster, and changes nothing.
 

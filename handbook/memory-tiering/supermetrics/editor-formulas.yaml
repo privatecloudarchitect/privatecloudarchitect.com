@@ -19,7 +19,7 @@ supermetrics:
       50 percent, and typical workloads run 10 to 30. Lower means a better candidate, because
       more of the DRAM footprint is cold and can tier to NVMe.
 
-  - name: "PCA - MemTier - Host - Recoverable Cold DRAM GB"
+  - name: "PCA - MemTier - Host - Recoverable Cold DRAM (GB)"
     applies_to: [HostSystem, ClusterComputeResource]
     unit: GB
     formula: "((${this, metric=mem|consumed_average} - ${this, metric=mem|active_average}) / 1048576)"

@@ -33,13 +33,13 @@ membership:
 # --- Step 3: custom groups (follows-the-workload model): VMs = tag rule; Hosts/Clusters are
 #     derived by reconcile_infra_groups.py from the VMs the group resolves. ---
 groups:
-  - name: "PCA - WTPC - Group - prod-business-critical-vm (VMs)"
+  - name: "PCA - WTPC - prod-business-critical-vm (VMs)"
     resource_kind: VirtualMachine
     membership: [{category: env, value: prod}, {category: sla, value: sla-2}]
-  - name: "PCA - WTPC - Group - prod-business-critical-vm (Clusters)"
+  - name: "PCA - WTPC - prod-business-critical-vm (Clusters)"
     resource_kind: ClusterComputeResource
     derived: ancestor-clusters-of-vms-group
-  - name: "PCA - WTPC - Group - prod-business-critical-vm (Hosts)"
+  - name: "PCA - WTPC - prod-business-critical-vm (Hosts)"
     resource_kind: HostSystem
     derived: parent-hosts-of-vms-group
 
@@ -53,7 +53,7 @@ availability_floor:
 
 # --- Step 4: the enforcement copy (policy) ---
 policy:
-  name: "PCA - WTPC - Policy - prod-business-critical-vm"
+  name: "PCA - WTPC - prod-business-critical-vm"
   clone_from: Default
   capacity_allocation:                 # type=CAPACITY_ALLOCATION_MODEL, resourceKind=ClusterComputeResource
     cpu: 3.0                           # = cpu_overcommit target

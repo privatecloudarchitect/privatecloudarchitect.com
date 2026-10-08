@@ -48,6 +48,7 @@ from datetime import datetime, timedelta, timezone
 import governance  # sibling module (same dir on sys.path): strictness + feasibility
 from lib import _taxonomy  # concept -> runtime category-name resolver (posture membership rule)
 from lib._client import ops_client
+from lib._names import is_tier_policy, posture_group, posture_policy, same, with_aliases
 from lib._groups import GROUPS_ENDPOINT, list_groups
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -57,13 +58,13 @@ DEFAULT_DWELL_HOURS = 24.0                                  # doctrine L5: no ti
 
 
 def group_name(posture: str, tier: str) -> str:
-    return f"PCA - WTPC - Group - {posture} ({tier})"
+    return posture_group(posture, tier)
 
 
 def resolve_groups(c: VcfOpsClient, posture: str) -> dict:
     """Map tier -> full custom-group payload for the three posture groups (by name). includePolicy so
     the payload carries any assigned policy - a group PUT that omits it WIPES the assignment."""
-    want = {group_name(posture, t): t for t in ("VMs", "Hosts", "Clusters")}
+    want = with_aliases({group_name(posture, t): t for t in ("VMs", "Hosts", "Clusters")})
     found = {}
     for g in list_groups(c, include_policy=True):
         name = g.get("resourceKey", {}).get("name")
@@ -76,10 +77,10 @@ def resolve_groups(c: VcfOpsClient, posture: str) -> dict:
 
 
 def resolve_posture_policy_id(c: VcfOpsClient, posture: str) -> str | None:
-    """Id of the posture's WTPC policy (PCA - WTPC - Policy - <posture>), or None if not instantiated."""
-    want = f"PCA - WTPC - Policy - {posture}"
+    """Id of the posture's WTPC policy (posture_policy(posture), either spelling), or None if not instantiated."""
+    want = posture_policy(posture)
     for p in c.get("/api/policies", params={"_no_links": "true", "pageSize": 500}).json().get("policySummaries", []):
-        if p.get("name") == want:
+        if same(p.get("name") or "", want):
             return p["id"]
     return None
 
@@ -246,7 +247,7 @@ def analyze(c: VcfOpsClient) -> int:
     dilution ('one VM poisons the cluster') signal, and the reservation audit. Read-only."""
     postures = governance.load_postures()
     all_groups = list_groups(c)
-    gname_to_id = {g.get("resourceKey", {}).get("name"): g["id"] for g in all_groups}
+    gname_to_id = with_aliases({g.get("resourceKey", {}).get("name"): g["id"] for g in all_groups})
     live = {}   # posture -> [(vmid, vmname)]
     for pname in postures:
         gid = gname_to_id.get(group_name(pname, "VMs"))
@@ -364,13 +365,13 @@ def main() -> int:
         now = datetime.now(timezone.utc)
         policy_id = resolve_posture_policy_id(c, args.posture)
         if policy_id is None:
-            print(f"⚠ posture policy 'PCA - WTPC - Policy - {args.posture}' not found — infra groups keep "
+            print(f"⚠ posture policy '{posture_policy(args.posture)}' not found: infra groups keep "
                   "their current policy (run step-5 policy instantiation first)")
         posture_doc = governance.load_postures().get(args.posture, {})   # for the empty-blank rule-restore
         # Hardware = TIER by default : if tier policies are live, DON'T bind the posture policy to the
         # infra groups — the hardware is governed by its tier. Only a pre-tier estate (no tier policies) or an
         # explicit --posture-governs-hardware keeps the legacy binding (else hardware would strand on Default).
-        tier_model_active = any(p.get("name", "").startswith("PCA - WTPC - Tier - ")
+        tier_model_active = any(is_tier_policy(p.get("name", ""))
                                 for p in c.get("/api/policies", params={"pageSize": 500, "_no_links": "true"}).json()["policySummaries"])
         retire_hardware = tier_model_active and not args.posture_governs_hardware
         print("hardware governance: " + ("TIER (posture policy not bound to infra groups; untiered hardware "

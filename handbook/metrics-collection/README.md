@@ -1,16 +1,18 @@
 # Metrics collection: the guide first, then the proof
 
-The chapter ([privatecloudarchitect.com/handbook/metrics-collection](https://privatecloudarchitect.com/handbook/metrics-collection))
-makes one claim in three planes: the hypervisor half of any VM utilization list is already collected once by
-VCF Operations, kept at a cadence you can name, and served through APIs you can size. This folder is the
-hands-on side of that claim, in the order a first visit should take it.
+Two consecutive chapters make one claim in three planes: the hypervisor half of any VM utilization list is
+already collected once by VCF Operations, kept at a cadence you can name, and served through APIs you can size.
+The first ([privatecloudarchitect.com/handbook/metrics-collection](https://privatecloudarchitect.com/handbook/metrics-collection))
+decides where each grain comes from and which grain each decision reads; the second
+([privatecloudarchitect.com/handbook/metrics-extraction](https://privatecloudarchitect.com/handbook/metrics-extraction))
+takes each grain out once. This folder is the hands-on side of both, in the order a first visit should take it.
 
 | Step | Where | What you do | Time |
 |---|---|---|---|
-| 1 | [`import/`](import/) | Import two files into your VCF Operations and bind three widgets. You now have the **PCA - Collection Strategy Guide** running on your own VMs. | about ten minutes |
+| 1 | [`import/`](import/) | Import two files into your VCF Operations and bind three widgets. You now have the **PCA - Collect Once - Collection Strategy Guide** running on your own VMs. | about ten minutes |
 | 2 | the dashboard | Read it top to bottom. The order of its widgets is the lesson; the list below says what each one teaches. | an hour, once |
-| 3 | [`harness/`](harness/) | Run the read-only scripts that reproduce the chapter's measurements against your instance: the planes and their retention, the roll-up check, the extraction coefficients, the identity key, the real-time path. | an afternoon |
-| 4 | [`collection-planes-atlas.html`](collection-planes-atlas.html) | The twelve plates the chapter draws, as one page you can open in a browser or hand to someone. | as needed |
+| 3 | [`harness/`](harness/) | Run the read-only scripts that reproduce the two chapters' measurements against your instance: the planes and their retention, the roll-up check, the extraction coefficients, the identity key, the real-time path. | an afternoon |
+| 4 | [`collection-planes-atlas.html`](collection-planes-atlas.html) | The twelve plates the two chapters draw, as one page you can open in a browser or hand to someone. | as needed |
 
 ## 1. Import the guide
 
