@@ -37,12 +37,12 @@ each layer references the previous one by id):
   already exists: `force=false` skips it (safe, non-destructive), `force=true` overwrites it (only
   to push an update). The API defaults the flag to `true`/overwrite, so pass `force=false` for a
   non-destructive import. Built by filtering the reference instance's own export, so what ships is
-  the export format verbatim. A no-force test-import on the reference instance recognized the first
-  six with zero failures and zero changes; the other thirteen were added on 2026-10-08 from the same
-  export, after the views were found to reference them, and have not been test-imported.
+  the export format verbatim. A no-force test-import on the reference instance (2026-10-08) reported
+  all 19 skipped and none failed, and a read of every field of all 19 before and after showed no change,
+  with the instance's super metric count the same.
 - `views/memory-tiering-views.contentpkg.zip`: the lens's three views (host candidates, capex
-  avoidance, cluster readiness) as the same kind of id-preserving package; no-force test-import
-  recognized all three, zero failures. The views reference the metrics by id, which is why the
+  avoidance, cluster readiness) as the same kind of id-preserving package; a no-force test-import
+  (2026-10-08) reported all three skipped and none failed. The views reference the metrics by id, which is why the
   package pair imports in order.
 - `dashboard/memory-tiering-readiness.import.zip`: the readiness dashboard in the Dashboards,
   Manage, Import shape (dashboard import is UI-only on this build; import the zip directly, do

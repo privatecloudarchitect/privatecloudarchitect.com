@@ -7,9 +7,11 @@ Alerting doctrine is easy to state and rarely checked. This checks it, on a runn
      If none of those fields names an object or a group, scope cannot live on the definition and must live in
      policy enablement, which makes the default policy's enablement list the audit surface;
   2. THE ANY-ANY REVIEW. Which of your own definitions are enabled in the default policy, which is the policy
-     that governs everything no other policy claims. Plus the measured blast radius: how many objects of the
-     relevant kind that policy actually governs today, because "every object in the fleet" is the worst case
-     and the real number is readable;
+     that governs everything no other policy claims. Plus the measured blast radius, read two ways: the objects
+     of the relevant kind that policy governs, and the objects governed by a policy that inherits from it. A
+     policy takes every alert setting it does not set itself from its parent, so an alert switched on in the
+     default policy is on in each descendant that leaves it alone. "Every object in the fleet" is the worst
+     case, and the real number is readable;
   3. WHERE THE THRESHOLD LIVES. Every symptom definition's condition type, operator, value and metric key.
      A doctrine of dumb conditions over intelligent metrics shows up as a tiny value vocabulary against keys
      that are mostly super metrics, and the opposite shows up as arithmetic buried in conditions;
@@ -72,12 +74,12 @@ def page(path, key, tok, size=1000):
     return out
 
 
-def policy_alert_entries(policy_id, tok):
-    """Every explicit <Alert> entry a policy carries, with the kinds it sits under.
+def export_policy(policy_id, tok):
+    """One policy's export, parsed: the policy and its whole ancestor chain, or None when it cannot be read.
 
     Built inline rather than through opslib because the export answers 500 to any Accept other than
     application/zip and its id parameter is an array. A 500 here means "cannot determine", never a fact
-    about the policy.
+    about the policy (the built-in Base Settings policy always answers 500).
     """
     host = os.environ["OPS_HOST"]
     url = (f"https://{host}/suite-api/api/policies/export?"
@@ -90,8 +92,15 @@ def policy_alert_entries(policy_id, tok):
         return None
     try:
         archive = zipfile.ZipFile(io.BytesIO(blob))
-        root = ET.fromstring(archive.read(archive.namelist()[0]))
+        return ET.fromstring(archive.read(archive.namelist()[0]))
     except (zipfile.BadZipFile, ET.ParseError, IndexError):
+        return None
+
+
+def policy_alert_entries(policy_id, tok, root=None):
+    """Every explicit <Alert> entry in a policy's export (the policy and its ancestors), with its kinds."""
+    root = export_policy(policy_id, tok) if root is None else root
+    if root is None:
         return None
     out = []
     for policy in root.iter("Policy"):
@@ -104,6 +113,26 @@ def policy_alert_entries(policy_id, tok):
                                 "resourceKind": group.get("resourceKind")})
     return out
 
+
+def chain(policy_id, root):
+    """The policy's keys from itself to its root, walking parentPolicy (document order is not stable)."""
+    parent = {p.get("key"): p.get("parentPolicy") or None for p in root.iter("Policy")}
+    out, key = [], policy_id
+    while key and key in parent and key not in out:
+        out.append(key)
+        key = parent[key]
+    return out
+
+
+def resolves_enabled(alert, keys, entries):
+    """Whether an alert is on under the first policy in the chain that sets it, under its own kinds only."""
+    for key in keys:
+        for e in entries:
+            if (e["policyKey"] == key and e["alertId"] == alert["id"]
+                    and e["adapterKind"] == alert.get("adapterKindKey")
+                    and e["resourceKind"] == alert.get("resourceKindKey")):
+                return e["enabled"]
+    return None
 
 
 def effective_policies(resource_ids, tok):
@@ -164,8 +193,9 @@ def main():
                   "ownedEnabledKinds": sorted({e["resourceKind"] for e in on})}
         print(f"\n  2. THE DEFAULT POLICY carries {len(entries)} explicit entries, {review['enabledEntries']} "
               f"of them enabled")
-        print(f"     {len(ours)} are yours, and {len(on)} of those are ENABLED there, which scopes them to "
-              f"everything no other policy claims")
+        print(f"     {len(ours)} are yours, and " + (f"{len(on)} of those are ENABLED there, which scopes them to "
+              f"everything no other policy claims and every policy that inherits from it" if on else
+              "none of those is enabled there"))
         for n in review["ownedEnabledNames"]:
             print(f"        {n}")
 
@@ -186,9 +216,37 @@ def main():
                     "resolved": len(mapping),
                     "underTheDefaultPolicy": counts.get(default["id"], 0) if mapping else None}
         if mapping:
+            # Each governing policy is exported one at a time (the export carries its ancestors; a batch of
+            # every policy at once can outlast the read timeout), and its chain is walked to see whether the
+            # default policy is an ancestor, so an alert switched on there is on here unless this chain sets it.
+            mine_on = [by_id[e["alertId"]] for e in on if e["alertId"] in by_id]
+            inheriting, undetermined = [], 0
+            reach = collections.Counter()
+            for pid, n in counts.items():
+                root = export_policy(pid, tok)
+                if root is None:
+                    undetermined += n
+                    continue
+                keys = chain(pid, root)
+                if pid != default["id"] and default["id"] in keys:
+                    inheriting.append(pid)
+                entries = policy_alert_entries(pid, tok, root) or []
+                for a in mine_on:
+                    if resolves_enabled(a, keys, entries):
+                        reach[a["name"]] += n
+            below = sum(counts[p] for p in inheriting)
+            governed.update({"governingPolicies": len(counts), "underAPolicyInheritingFromIt": below,
+                             "policiesInheritingFromIt": len(inheriting),
+                             "reachableFromTheDefaultPolicy": governed["underTheDefaultPolicy"] + below,
+                             "undetermined": undetermined,
+                             "ownedEnabledReach": {a["name"]: reach.get(a["name"], 0) for a in mine_on}})
             print(f"\n     BLAST RADIUS: of {governed['queried']} {kind} object(s) asked about, "
-                  f"{governed['underTheDefaultPolicy']} are governed by the default policy, so that is what "
-                  f"an alert enabled there can reach today")
+                  f"{governed['underTheDefaultPolicy']} are governed by the default policy and {below} more by "
+                  f"{len(inheriting)} {'policy that inherits' if len(inheriting) == 1 else 'policies that inherit'} from it, so an alert switched on there reaches up to "
+                  f"{governed['reachableFromTheDefaultPolicy']} today"
+                  + (f"; {undetermined} not determined (their policy would not export)" if undetermined else ""))
+            for name, n in governed["ownedEnabledReach"].items():
+                print(f"        {name}: on for {n} of them")
         else:
             print(f"\n     BLAST RADIUS: not determined; the effective-policy query did not answer")
 

@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-08T00:16:44Z",
+ "captured_utc": "2026-10-08T04:16:29Z",
  "owner": "PCA",
  "definitions": {
   "total": 1872,
@@ -39,22 +39,24 @@
  },
  "defaultPolicyReview": {
   "explicitEntries": 77,
-  "enabledEntries": 65,
+  "enabledEntries": 64,
   "ownedEntries": 13,
-  "ownedEnabled": 1,
-  "ownedEnabledNames": [
-   "PCA - WTPC - VM - Performance Envelope Breach [prod-latency-critical-db]"
-  ],
-  "ownedEnabledKinds": [
-   "VirtualMachine"
-  ]
+  "ownedEnabled": 0,
+  "ownedEnabledNames": [],
+  "ownedEnabledKinds": []
  },
  "blastRadius": {
   "kind": "VirtualMachine",
   "resources": 139,
   "queried": 139,
   "resolved": 139,
-  "underTheDefaultPolicy": 119
+  "underTheDefaultPolicy": 119,
+  "governingPolicies": 5,
+  "underAPolicyInheritingFromIt": 20,
+  "policiesInheritingFromIt": 4,
+  "reachableFromTheDefaultPolicy": 139,
+  "undetermined": 0,
+  "ownedEnabledReach": {}
  },
  "thresholds": {
   "estateConditionTypes": {

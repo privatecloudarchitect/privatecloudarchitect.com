@@ -7,7 +7,7 @@ restating it. Stdlib Python only; no token is printed or written.
 
 | File | What it is |
 |---|---|
-| `alerts.py` | Reads the complete field list of every alert definition, reviews the default policy's enablement list for the definitions you own, measures what that policy actually governs, reads every symptom condition's type and operator and value and key, counts the wait and cancel cycles yours beside the vendor's, and checks the outbound rules for the absence of filters. Writes `alerts.json`. |
+| `alerts.py` | Reads the complete field list of every alert definition, reviews the default policy's enablement list for the definitions you own, measures what that policy governs and what it reaches through the policies that inherit from it, reads every symptom condition's type and operator and value and key, counts the wait and cancel cycles yours beside the vendor's, and checks the outbound rules for the absence of filters. Writes `alerts.json`. |
 | `alerts.json` | That record from the reference estate, 2026-10-08. The chapter's plates render it. |
 | `opslib.py` | The broker exchange and request helper, shared with the ops-estate harness. |
 
@@ -33,11 +33,16 @@ enablement. That is an enumeration rather than an impression, which matters beca
 on it.
 
 **The any-any review, in two halves.** Which of your definitions the default policy enables, *and* how many
-objects that policy actually governs. Neither is the blast radius on its own: a short enablement list on a
-policy that governs the whole estate is worse than a long one on a policy that governs nothing. The second
-half needs the effective-policy query, which lives on the unsupported `/internal` surface and takes **exactly
-one** acknowledgment header (missing is 403, doubled is 400). When it refuses, the script reports the reach as
-not determined rather than guessing.
+objects it reaches. Neither is the blast radius on its own: a short enablement list on a policy that reaches
+the whole estate is worse than a long one on a policy that reaches nothing. The reach is larger than what the
+default policy governs. A policy takes every alert setting it does not make itself from its parent, so an alert
+switched on in the default policy is on in every policy cloned from it that leaves the alert alone. The script
+therefore counts two things: the objects the default policy governs, and the objects governed by a policy whose
+`parentPolicy` chain reaches it. The first needs the effective-policy query, which lives on the unsupported
+`/internal` surface and takes **exactly one** acknowledgment header (missing is 403, doubled is 400). The second
+exports each governing policy in turn, one at a time, because the export carries the policy's ancestors and a
+single export of every policy can outlast the read timeout. When either refuses, the script reports what it
+could not determine rather than guessing.
 
 **Where the threshold lives.** Every symptom condition's type, operator, value and metric key. A doctrine of
 dumb conditions over intelligent metrics shows up as a tiny value vocabulary against keys that are mostly
@@ -65,7 +70,8 @@ The policy export is the only read path for alert enablement. It must be request
 `Accept: application/zip` (any other accept type answers a 500 that means "cannot determine", never anything
 about the policy), and the archive carries the policy's whole ancestor chain. Alert state has three origins,
 not two states: LOCAL, INHERITED and UNSET, and UNSET is null rather than enabled. This script reads explicit
-entries only; the full contract is the field guide the chapter cites.
+entries and walks each policy's ancestor chain to the first one that sets an alert; the full contract is the
+field guide the chapter cites.
 
 ## Scope, stated plainly
 
@@ -78,7 +84,9 @@ entries only; the full contract is the field guide the chapter cites.
 
 `definitions` carries the totals, the universal field list and the severity and kind breakdowns.
 `defaultPolicyReview` is the any-any review: explicit entries, how many are enabled, how many are yours, and
-the names of any of yours that are enabled there. `blastRadius` is what that policy actually governs.
+the names of any of yours that are enabled there. `blastRadius` is what that policy reaches: the objects it
+governs, the objects governed by the policies that inherit from it and how many of those policies there are, the
+sum, anything not determined, and for each of yours enabled there, how many objects it is on for.
 `thresholds` carries the condition-type census for the instance and for you, with your value and operator
 vocabulary and how many conditions read a super metric. `debounce` carries the cycle distributions, the states
 per definition, the impact badges and how many definitions have no description. `routing` carries the rule
