@@ -534,7 +534,20 @@ def propagation_probe(vc, nsx, names, L):
 # ──────────────────────────────────────────────────────────────────── main
 
 
+def refuse_unknown_args(known, takes_value=()):
+    """Refuse any argument this script does not recognise, before a client opens: a stray flag such as --check
+    must never reach a write. --help prints the usage above."""
+    args = sys.argv[1:]
+    if "-h" in args or "--help" in args:
+        print(__doc__)
+        sys.exit(0)
+    unknown = [a for i, a in enumerate(args) if a not in known and not (i and args[i - 1] in takes_value)]
+    if unknown:
+        sys.exit(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)")
+
+
 def main():
+    refuse_unknown_args({"--probe-propagation", "--where"}, {"--where"})
     probe = "--probe-propagation" in sys.argv
     where = next((a for i, a in enumerate(sys.argv) if i and sys.argv[i - 1] == "--where"), None)
     out_dir = os.path.dirname(os.path.abspath(__file__))

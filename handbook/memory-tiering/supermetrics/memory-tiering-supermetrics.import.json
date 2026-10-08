@@ -52,14 +52,16 @@
    {
     "resourceKindKey": "HostSystem",
     "adapterKindKey": "VMWARE"
+   },
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
    }
   ],
-  "modificationTime": 1783796484930,
   "name": "PCA - MemTier - Host - NVMe Tier Used (GB)",
   "formula": "(${this, metric=mem:NVMe|tier.usage} / 1024)",
   "description": "HOST metric (HostSystem). Post-activation engagement signal: memory currently served from the NVMe tier (mem:NVMe|tier.usage, MB, shown as GB). Over 0 = tiering is actively offloading cold pages to NVMe; 0 = enabled-but-dormant or not configured. Pair with Consumed pct of DRAM (the ~80 pct trigger). Requires vSphere 8.0U3+/9.x with NVMe tiering configured. UNIT: GB.",
-  "unitId": "",
-  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+  "unitId": "gb"
  },
  "dd92fb78-1076-44e5-bedc-5123a26b72fb": {
   "resourceKinds": [
@@ -68,12 +70,10 @@
     "adapterKindKey": "VMWARE"
    }
   ],
-  "modificationTime": 1784818000544,
   "name": "PCA - MemTier - Host - Actual Tiering Uplift (GB)",
   "formula": "(${this, metric=mem:NVMe|memory_tier_size} / 1048576)",
-  "description": "OBJECT: HostSystem. UNIT: GB. Memory a host has ACTUALLY gained from its configured NVMe tier (mem:NVMe|memory_tier_size), reflecting that host's real Mem.TierNVMePct ratio. The deployed-reality counterpart to Tiering Uplift GB (which projects the gain at a uniform planning ratio); a mixed-ratio fleet reports accurately here. Blank on a host with no NVMe tier configured.",
-  "unitId": "",
-  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+  "description": "OBJECT: HostSystem. UNIT: GB. Memory a host has ACTUALLY gained from its configured NVMe tier (mem:NVMe|memory_tier_size), reflecting that host's real Mem.TierNVMePct ratio. The deployed-reality counterpart to Tiering Uplift (GB) (which projects the gain at a uniform planning ratio); a mixed-ratio fleet reports accurately here. Blank on a host with no NVMe tier configured.",
+  "unitId": "gb"
  },
  "5de20df1-4648-42cd-9d16-7c1359d43c18": {
   "resourceKinds": [
@@ -82,11 +82,165 @@
     "adapterKindKey": "VMWARE"
    }
   ],
-  "modificationTime": 1784820679145,
   "name": "PCA - MemTier - Host - Reserved Memory (GB)",
   "formula": "(${this, metric=mem|reservedCapacity_average} / 1048576)",
   "description": "OBJECT: HostSystem. UNIT: GB. Reservation footprint on the host. A reservation guarantees the capacity against reclamation (ballooning or swapping); it does NOT pin the pages to DRAM, so reserved memory tiers to NVMe like any other cold memory. Read it as overcommit context, not as a discount on Recoverable Cold: a heavily reserved host has less overcommit room, but its reserved cold pages still tier. The memory that actually cannot tier is the feature-pinned exclusion list (latency-sensitive, DirectPath, vGPU, SR-IOV, FT, tiering-disabled), not reservations. mem|reservedCapacity_average / 1048576.",
-  "unitId": "",
-  "modifiedBy": "52a84aa1-2371-3c3a-a6cd-ae5d5f7bf4a3"
+  "unitId": "gb"
+ },
+ "0c9873d9-6936-4911-95a1-1fb52e05646a": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Fleet Actual Uplift (GB)",
+  "formula": "sum(${adaptertype=VMWARE, objecttype=HostSystem, metric=Super Metric|sm_dd92fb78-1076-44e5-bedc-5123a26b72fb, depth=1})",
+  "description": "OBJECT: ClusterComputeResource. UNIT: GB. Memory the cluster has actually gained from tiering = sum of member hosts' configured NVMe tiers. The deployed-reality counterpart to Fleet Uplift (GB) (the planning projection).",
+  "unitId": "gb"
+ },
+ "38b67ab4-91da-4359-a8ed-8c356b0a844b": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Fleet Capex Avoided (USD)",
+  "formula": "sum(${adaptertype=VMWARE, objecttype=HostSystem, metric=Super Metric|sm_7f81fca0-ad9d-4957-b3f6-c5aff3a6f8de, depth=1})",
+  "description": "CLUSTER cost metric. Sum of member-host Capex Avoided (USD) = cluster-wide dollars avoided by meeting that capacity with NVMe instead of DRAM (at the org-set price delta). PROACTIVE fleet view. UNIT: USD.",
+  "unitId": ""
+ },
+ "7c1a6fa7-b058-4de0-9e45-97758ce4c6ee": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Fleet DRAM Avoided (USD)",
+  "formula": "sum(${adaptertype=VMWARE, objecttype=HostSystem, metric=Super Metric|sm_879f4c51-7265-4a10-957c-1b6b5be90896, depth=1})",
+  "description": "CLUSTER cost metric (ClusterComputeResource). Sum of member-host DRAM Avoided (USD) = REACTIVE fleet view: the cost of the DRAM the cluster is currently spending on cold pages that NVMe could serve. Grounded in current load (unlike Fleet Capex Avoided, which is a load-independent growth ceiling). UNIT: USD.",
+  "unitId": ""
+ },
+ "74c4db6e-7408-40e7-a6ea-4903e3ebac6e": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Hosts Actively Tiering",
+  "formula": "count(${adaptertype=VMWARE, objecttype=HostSystem, metric=mem:NVMe|tier.usage, depth=1, where=($value > 0)})",
+  "description": "CLUSTER metric (ClusterComputeResource). Count of member hosts actively offloading to NVMe (tier.usage &gt; 0). Rollout engagement / progress. UNIT: count.",
+  "unitId": ""
+ },
+ "e102281b-eb55-4a14-9d80-fa013d80c9d7": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Hosts Over Gate",
+  "formula": "count(${adaptertype=VMWARE, objecttype=HostSystem, metric=Super Metric|sm_860ddab7-816c-452f-ad99-c5bd61ec604e, depth=1, where=($value > 50)})",
+  "description": "CLUSTER metric (ClusterComputeResource). Count of member hosts with Active % of DRAM over the 50% gate. 0 = safe to blanket-enable; &gt;0 = hosts to handle (DRS) or exclude first. UNIT: count.",
+  "unitId": ""
+ },
+ "09f748b5-9841-4747-9ade-6150ff27ce7b": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Recoverable Cold DRAM (GB)",
+  "formula": "sum(${adaptertype=VMWARE, objecttype=HostSystem, metric=Super Metric|sm_e937675a-3a17-4305-9298-2382a906d5b9, depth=1})",
+  "description": "CLUSTER metric (ClusterComputeResource). Total DRAM reclaimable to NVMe across member hosts (sum of host Recoverable Cold). Cluster-wide opportunity; upper bound. UNIT: GB.",
+  "unitId": "gb"
+ },
+ "d6d29c77-95f7-4b8e-88c7-1359032fcf86": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Untiered Hosts",
+  "formula": "(count(${adaptertype=VMWARE, objecttype=HostSystem, metric=mem|active_average, depth=1}) - count(${adaptertype=VMWARE, objecttype=HostSystem, metric=mem:NVMe|memory_tier_size, depth=1, where=($value > 0)}))",
+  "description": "CLUSTER metric (ClusterComputeResource). Count of member hosts with NO NVMe tier configured = (all member hosts) - (hosts with an NVMe tier). Computed as a subtraction because an un-tiered host has mem:NVMe|memory_tier_size ABSENT (null), which a count-where cannot see directly. &gt;0 = cluster NOT uniformly configured; standardize via Config Profiles before treating as one rollout unit. UNIT: count.",
+  "unitId": ""
+ },
+ "15e76c90-72a9-47a0-98f0-e00a909a3640": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Cluster - Worst Host Active pct of DRAM",
+  "formula": "max(${adaptertype=VMWARE, objecttype=HostSystem, metric=Super Metric|sm_860ddab7-816c-452f-ad99-c5bd61ec604e, depth=1})",
+  "description": "CLUSTER metric (ClusterComputeResource). Worst (max) member-host Active % of DRAM - the safety gate for a cluster-wide tiering rollout (Config Profiles apply uniformly). Blanket-enable-safe only when &lt;= 50. UNIT: percent.",
+  "unitId": "percent"
+ },
+ "7f81fca0-ad9d-4957-b3f6-c5aff3a6f8de": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "HostSystem",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Host - Capex Avoided (USD)",
+  "formula": "(${this, metric=Super Metric|sm_feb51ef0-543b-4ed6-addf-73e98c5ec9f5} * ${this, metric=Super Metric|sm_f389bda2-f2af-4ef7-8eae-09e94aa2e5d0})",
+  "description": "HOST cost metric. Tiering Uplift (GB) x price delta (DRAM $5.0/GB - NVMe $0.3/GB = $4.7/GB, org-editable constants). PROACTIVE: capex avoided by meeting that capacity with NVMe instead of DRAM. UNIT: USD.",
+  "unitId": ""
+ },
+ "879f4c51-7265-4a10-957c-1b6b5be90896": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "HostSystem",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Host - DRAM Avoided (USD)",
+  "formula": "(${this, metric=Super Metric|sm_e937675a-3a17-4305-9298-2382a906d5b9} * ${this, metric=Super Metric|sm_f389bda2-f2af-4ef7-8eae-09e94aa2e5d0})",
+  "description": "HOST cost metric. Recoverable Cold DRAM (GB) x $4.7/GB price delta. REACTIVE: the DRAM you would otherwise buy to relieve a full-but-cold host, served from NVMe instead. UNIT: USD.",
+  "unitId": ""
+ },
+ "f389bda2-f2af-4ef7-8eae-09e94aa2e5d0": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "HostSystem",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Host - Price Delta (USD/GB)",
+  "formula": "(${this, metric=mem|totalCapacity_average} * 0 + 4.7)",
+  "description": "THE cost knob for the whole tiering cost model. Net hardware price difference: DRAM $/GB minus NVMe $/GB (default 5.00 - 0.30 = 4.70). Edit the trailing number to match your environment and every Capex Avoided and DRAM Avoided figure (host and cluster) follows - this is the single place prices live. The '* 0' term only anchors the constant to each host so it computes per object; do not change it. Unit: USD per GB.",
+  "unitId": ""
+ },
+ "feb51ef0-543b-4ed6-addf-73e98c5ec9f5": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "HostSystem",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - MemTier - Host - Tiering Uplift (GB)",
+  "formula": "((${this, metric=mem:DRAM|memory_tier_total_capacity} * 1.0) / 1048576)",
+  "description": "HOST cost/capacity metric. Extra addressable memory tiering provides at the planned 1:1 ratio = installed DRAM x 1.0 (RATIO_FACTOR, org-editable). PROACTIVE: memory you gain WITHOUT buying DRAM. Usable only for cold-heavy workloads whose hot set still fits DRAM; not for contended (high-active) hosts. UNIT: GB.",
+  "unitId": "gb"
+ },
+ "77a81ec6-549e-4c61-a310-396c2bdf662b": {
+  "resourceKinds": [
+   {
+    "resourceKindKey": "ClusterComputeResource",
+    "adapterKindKey": "VMWARE"
+   }
+  ],
+  "name": "PCA - Shared - Cluster - Consumed pct of HA DRAM",
+  "formula": "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem|haTotalCapacity_average}))",
+  "description": "OBJECT: Cluster Compute Resource. UNIT: percent. Consumed memory as a percent of HA-usable DRAM (after the failover reservation; mem|haTotalCapacity_average rolls up). High = densifying risks HA admission control. Used by MemTier (HA headroom) and by WTPC as the availability-floor live-truth check and the capacity floor-coupling gate.",
+  "unitId": "percent"
  }
 }

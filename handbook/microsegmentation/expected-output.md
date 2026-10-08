@@ -1,6 +1,6 @@
 # Expected output
 
-A healthy `./run.sh` produces this shape (object ages and your region name will differ):
+A healthy `./run.sh round-trip` produces this shape (object ages and your region name will differ):
 
 ```
 == 1. Create the group the rule will speak

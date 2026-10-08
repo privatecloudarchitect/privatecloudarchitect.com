@@ -230,6 +230,31 @@ def plan_group(group: dict, desired_ids: set[str], policy_id: str | None = None,
     return payload
 
 
+def confirm_group(c, payload: dict) -> None:
+    """Read the group back by id the way it was read before the write (includePolicy=true) and compare what the
+    PUT carried: a group PUT replaces the whole group, so the write is confirmed by what the platform now
+    holds. Checked: the name, the included members, the rules (empty fields on either side set aside), and the
+    policy binding, which must be absent when the payload retired it."""
+    back = c.get(f"{GROUPS_ENDPOINT}/{payload['id']}", params={"includePolicy": "true", "_no_links": "true"}).json()
+    want_md, back_md = payload["membershipDefinition"], back.get("membershipDefinition") or {}
+
+    def bare(rules):
+        return [{k: v for k, v in r.items() if v not in (None, [], {}, "")} for r in (rules or [])]
+
+    wrong = []
+    if (back.get("resourceKey") or {}).get("name") != payload["resourceKey"]["name"]:
+        wrong.append("name")
+    if set(back_md.get("includedResources") or []) != set(want_md.get("includedResources") or []):
+        wrong.append("includedResources")
+    if bare(back_md.get("rules")) != bare(want_md.get("rules")):
+        wrong.append("rules")
+    if (back.get("policy") or None) != (payload.get("policy") or None):
+        wrong.append("policy")
+    if wrong:
+        raise SystemExit(f"  READ-BACK MISMATCH on {payload['resourceKey']['name']}: {', '.join(wrong)} "
+                         f"not as written; stop and inspect before re-running")
+
+
 def _posture_tag_rule(posture_doc: dict, resource_kind: str) -> list:
     """The posture's membership tag rule (env ∧ workload ∧ sla) as a custom-group `rules` payload, targeting
     `resource_kind` — a valid rule that resolves to ZERO hosts/clusters (nothing infra carries these tags),
@@ -420,6 +445,7 @@ def main() -> int:
 
         for tier, payload in planned:
             c.put(GROUPS_ENDPOINT, json=payload)
+            confirm_group(c, payload)
             md = payload["membershipDefinition"]
             n = len(md["includedResources"])
             note = "rule restored (valid empty)" if md.get("rules") else "rules dropped"

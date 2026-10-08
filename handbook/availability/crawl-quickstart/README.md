@@ -85,13 +85,13 @@ and point the adapter's `conf_file_name` at it. Use one path or the other, not b
 **Import it.** Views > Manage > Import, and choose `import/reachability-checks.import.zip`.
 
 **Confirm it landed.** The success message does not name what it wrote, so confirm the import directly:
-return to **Views > Manage** and search the list for **Reachability - Ping Checks**. Finding it there is
+return to **Views > Manage** and search the list for **PCA - Availability - Ping Check Reachability**. Finding it there is
 the proof it imported. The view is global, so anyone on the instance can use it.
 
 **See the data.** A view is a table definition, not a dashboard: it renders only when pointed at a
 subject. This view's subject is the ping checks, so point it at the object that owns them, the Ping
 Adapter instance this crawl configured. The reliable path is a dashboard **View** widget: add one, assign
-it **Reachability - Ping Checks**, and set its input object to that Ping Adapter instance. The widget then
+it **PCA - Availability - Ping Check Reachability**, and set its input object to that Ping Adapter instance. The widget then
 lists every check beneath it, one row each, with its worst-in-cycle packet loss and latency, gear
 included, colored so a red row (an endpoint the collector could not reach) reads at a glance. The same
 view is offered anywhere you can browse an object's own views.

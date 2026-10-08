@@ -40,7 +40,8 @@ def group_members(c, group_id: str) -> list[dict]:
 def make_tag_rule_group(name: str, resource_kind: str, tag_conditions: list[tuple[str, str]]) -> dict:
     """A custom group (Container/Environment) whose membership is an AND of resourceTagConditionRules — the
     shape a posture's VMs group and its Host/Cluster seeds are born with (instantiate_posture), and the
-    tier=<name> cluster groups (reconcile_tiers). The Host/Cluster seeds are later converted to derived
+    tier model's tier=<name> cluster groups, which this folder does not build (it ships the workload half).
+    The Host/Cluster seeds are later converted to derived
     `includedResources` by reconcile_infra_groups (the follows-the-workload model)."""
     return {
         "resourceKey": {"name": name, "adapterKindKey": "Container", "resourceKindKey": "Environment",

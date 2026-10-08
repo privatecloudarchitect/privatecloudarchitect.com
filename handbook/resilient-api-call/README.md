@@ -36,7 +36,7 @@ python3 test_resilient.py      # offline: the write guarantees, no estate needed
   of each step should not.
 - Read-only unless you pass `--write`. Steps 1 to 7 send no mutation: step 6 runs `ensure()` in dry-run mode and
   prints the request it would have sent, and step 7 shows `confirm()` on reads alone. Step 8, only with `--write`,
-  sends that request: it refuses to start if a custom group named `PCA - Resilient call demo - throwaway` already
+  sends that request: it refuses to start if a custom group named `PCA - Example - resilient call throwaway (VMs)` already
   exists, creates one whose only membership rule matches a machine name nobody uses, and deletes the group it
   created even when a check in between fails. It needs a credential that may create and delete custom groups. The
   one file the client writes is the cache file, atomically, at owner-only permissions.

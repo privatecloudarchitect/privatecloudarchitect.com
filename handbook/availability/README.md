@@ -35,7 +35,7 @@ python3 promise.py
 ```
 
 1. **The content is still there.** The five reachability metrics, found by the *role* each plays rather than
-   by an exact name, so an estate that renamed the initiative does not read as a missing promise.
+   by an exact name, so an estate that names the bundle differently does not read as a missing promise.
 2. **It is still computing.** The current value of each roll-up on the ping adapter instance, each with the
    **age** of the reading. A value without its timestamp is not evidence that anything is computing, and a
    set of readings that all stopped at the same age is one dead collector rather than a failing fleet.

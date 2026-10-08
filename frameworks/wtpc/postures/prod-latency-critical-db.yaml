@@ -12,7 +12,7 @@ sla: latency-critical          # ~99.99 — a contention event is an outage
 tier: production
 archetype: data                # memory-primary; tiering WITHHELD (pinned memory; never tier+overcommit)
 min_tier: dedicated            # infra-tier REQUIREMENT (≠ env `tier` above): the least-premium hardware class in
-                               # tiers/ that satisfies this posture; verified `== fit` by `python _tiers.py --self-test`.
+                               # tier model that satisfies this posture (the tier model is not shipped in this folder).
 
 # --- Stable content identity (the elevator seam; read by build_views / build_dashboard / bundles /
 #     governance via _postures.py). ordinal = catalog P-number (fixes estate ordering). view/dashboard/

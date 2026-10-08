@@ -7,7 +7,8 @@ RETIRED (Model-A migration): this file used to ALSO define tag categories + assi
 VCF Ops centralized Tag Management plane (`/internal/tagmanagement/*`). Both moved to purpose-built tools
 because the Ops-to-vCenter projection of new categories proved unreliable:
   • category DEFINITION -> ensure_tag_definitions.py  (native, fleet-wide)
-  • tag ASSIGNMENT       -> reconcile_posture_membership.py  (the vCenter tag-association plane)
+  • tag ASSIGNMENT       -> your estate's own change process, applying vCenter tags (not a step this folder
+                           ships; apply.py explains why)
 Only the read-only parity gate remains here (plus the shared `Ctx` dry-run/execute helper the reconcilers
 import). The F-TAGLOGIC + the catalog SM-scoping proofs it once ran are subsumed by the working Model-A estate.
 

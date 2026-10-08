@@ -15,12 +15,14 @@ readable, and most of them are checkable, so this asks:
   5. the VISIBILITY FLOOR: how many deployments this identity sees and how many of them it owns. Isolation is a
      property of principals below the organization-administrator role, and this is what that looks like from
      above it;
-  6. the SILENT NO-OP: the REST project membership arrays accept a write, answer 200, and persist nothing. This
-     sends one and reads it back, restoring anything that did persist;
+  6. with --probe-membership, the SILENT NO-OP: the REST project membership arrays accept a write, answer 200,
+     and persist nothing. This sends one and reads it back, restoring anything that did persist;
   7. with --probe-writes, the NAMING RULE proved: bindings created under each candidate name shape against a
      principal that exists in no identity provider, so the platform answers on format alone, and deleted again.
 
-Without --probe-writes the only write is the membership-array no-op in step 6, which is restored either way.
+Without a probe flag the script writes nothing: steps 1 to 5 are reads, and it refuses any argument it does not
+recognise, so a stray flag can never reach a write. A run without a probe flag keeps the sections an earlier
+probed run recorded rather than erasing them.
 Organization-specific names are replaced by stable placeholders and the script refuses to write a record in
 which one survived. Field names, verbs, HTTP statuses and the platform's own error strings are kept.
 
@@ -28,9 +30,11 @@ Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
   export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
   export TLS_VERIFY=false                                  # only on a self-signed lab CA
-  python3 isolation.py
-  python3 isolation.py --probe-writes
+  python3 isolation.py                       # reads only
+  python3 isolation.py --probe-membership    # also step 6: one membership-array write, read back, restored
+  python3 isolation.py --probe-writes        # also step 7: name-shape bindings against nobody, then deleted
 """
+import argparse
 import collections
 import http.client
 import json
@@ -204,6 +208,14 @@ def probe_writes(c, L, project):
 
 
 def main():
+    # Both writes are opt-in, and an argument this script does not know is refused before any client opens.
+    ap = argparse.ArgumentParser(description="The assembled isolation design, checked against the platform.")
+    ap.add_argument("--probe-membership", action="store_true",
+                    help="step 6: send one membership-array write, read it back, restore anything that persisted")
+    ap.add_argument("--probe-writes", action="store_true",
+                    help="step 7: create bindings under each candidate name shape against a principal that exists "
+                         "nowhere, then delete them")
+    args = ap.parse_args()
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
     refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
     out_dir = os.environ.get("OUT_DIR", ".")
@@ -326,7 +338,7 @@ def main():
     noop = None
     st, rp = c.api("GET", "/project-service/api/projects?size=50")
     content = (rp.get("content") or []) if st == 200 and isinstance(rp, dict) else []
-    if content:
+    if content and args.probe_membership:
         p0 = content[0]
         before = {k: list(p0.get(k) or []) for k in ARRAYS}
         probe = "probe-isolation-nonexistent@example.invalid"
@@ -347,9 +359,12 @@ def main():
             print(f"     it persisted, so it was restored: {noop['restored']}")
         else:
             print("     a write that answers success and changes nothing is the read-only projection to avoid")
+    elif content:
+        print("\n  the membership arrays: not probed; pass --probe-membership to send one write, read it back "
+              "and restore anything that persisted")
 
     # ---- 7. the naming rule, proved
-    naming = probe_writes(c, L, home) if "--probe-writes" in sys.argv else None
+    naming = probe_writes(c, L, home) if args.probe_writes else None
     if naming is None:
         print("\n  naming rule: not probed; pass --probe-writes to have the platform judge each name shape "
               "(it binds a principal that exists nowhere, then deletes)")

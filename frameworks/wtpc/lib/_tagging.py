@@ -3,9 +3,10 @@
 Cluster TIER tags and per-VM POSTURE tags are both applied through vCenter's tag-association API, not Ops:
 the Ops tag-assignment PATCH silently 202-no-ops when the identity lacks the vCenter attach privilege,
 while vCenter fails LOUD (403). An Ops tag uuid doubles as vCenter's universal-tag URN. These
-three primitives — URN, and list/attach/detach parameterised by object type — are what the two callers
-share: the tier cluster tagger (reconcile_tiers) and the per-VM VcActuator (reconcile_posture_membership),
-each of which keeps its own name→moref and uuid→(category,value) maps.
+three primitives (URN, and list/attach/detach parameterised by object type) are what a tagging step needs:
+a tier cluster tagger or a per-VM posture tagger, each keeping its own name→moref and uuid→(category,value)
+maps. No script in this folder calls them: tag assignment rides your estate's change process (apply.py), and
+these are the primitives that process can use.
 """
 from __future__ import annotations
 

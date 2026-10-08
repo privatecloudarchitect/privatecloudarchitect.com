@@ -96,8 +96,11 @@ with a self-signed CA add `--insecure-skip-tls-verify=true` to `set-cluster`. Th
 
 ```bash
 export VCFA_REGION=<your-region>     # kubectl --context vcfa-cci get regions
-./run.sh
+./run.sh round-trip
 ```
+
+The verb is required: run without one (or with `--help`), the script prints its usage and changes nothing.
+`./run.sh teardown` removes the two objects if a `KEEP=1` run left them in place.
 
 `run.sh` substitutes `<your-region>` into working copies of the manifests; you can equally edit
 the three files under `manifests/` directly and apply them by hand in order.

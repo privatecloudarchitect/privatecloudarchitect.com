@@ -52,10 +52,17 @@ def main():
         "(namespace classes, regions, storage classes). Grants no org-wide "
         "visibility and no project CRUD. Pair with a CCI project role.",
         RIGHTS)
+    # Read the role back and compare it with what was asked for: a converge is confirmed by what the platform
+    # now holds, not by its status code. Every requested right must be there; any extra is the implied-rights
+    # closure the platform adds, shown as such.
     got = v.cloudapi_list(f"roles/{role_id}/rights")
-    print(f"role {args.name!r} converged: {len(got)} rights")
-    for r in sorted(x["name"] for x in got):
-        print(f"  - {r}")
+    names = {x["name"] for x in got}
+    missing = sorted(set(RIGHTS) - names)
+    if missing:
+        sys.exit(f"ERROR: role {args.name!r} read back without {missing}; the role exists but lacks them, so inspect it and re-run")
+    print(f"role {args.name!r} converged: {len(got)} rights, every requested one read back")
+    for r in sorted(names):
+        print(f"  - {r}" + ("" if r in RIGHTS else "   (implied by the platform)"))
     print(f"\nid: {role_id}")
     print("assign it to a user in the console, or keep it as a dedicated AD group's role.")
     return 0

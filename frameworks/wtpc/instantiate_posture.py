@@ -3,7 +3,8 @@
 
 Group-creation ONLY. The two sibling steps moved to purpose-built tools as the Model-A taxonomy landed:
   • tag CATEGORIES/values  -> ensure_tag_definitions.py  (native, fleet-wide — the Ops-projection workaround)
-  • tag ASSIGNMENT on VMs  -> reconcile_posture_membership.py  (the vCenter tag-association plane)
+  • tag ASSIGNMENT on VMs  -> your estate's own change process, applying vCenter tags (not a step this
+                             folder ships; apply.py explains why, and lib/_tagging.py is the plane it uses)
 So this tool now does one thing: materialize the VMs tag-rule group + the Host/Cluster placeholder groups
 (born with the same rule, then converted to derived `includedResources` by reconcile_infra_groups.py). The rule references the LIVE category names resolved from the taxonomy manifest (concept ->
 runtime, e.g. workload -> identity.function), so flipping naming_mode never edits this tool or the postures.
@@ -42,7 +43,7 @@ def main() -> int:
         mode = "EXECUTE" if args.execute else "DRY-RUN"
         print(f"instantiate posture {doc['posture']!r} — groups only  ({mode})")
         print(f"  membership rule (concept -> runtime): {tag_conditions}")
-        print("  (categories: ensure_tag_definitions.py · tagging: reconcile_posture_membership.py)")
+        print("  (categories: ensure_tag_definitions.py · tag assignment: your change process, applying vCenter tags)")
 
         have = group_names(c)
         for g in doc["groups"]:

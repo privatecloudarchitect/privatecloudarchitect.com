@@ -2,8 +2,8 @@
 
 `find_existing` is the paginated adopt-by-name lookup every alert tool needs: the instance carries thousands
 of built-in symptom/alert definitions, so a single-page list can't be trusted — paginate the full list and
-map name → id for the WTPC namespace. Consumers: the posture deploy (deploy_alerts), the tier re-home
-(rehome_tier_alerts), the tier alert generator (build_tier_alerts), and teardown (destroy).
+map name → id for the WTPC namespace. Consumers here: the posture deploy (deploy_alerts) and teardown
+(destroy). The tier model's alert tools use it the same way; this folder ships the workload half, not those.
 """
 from __future__ import annotations
 

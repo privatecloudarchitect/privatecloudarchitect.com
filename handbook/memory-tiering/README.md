@@ -2,7 +2,8 @@
 
 The runnable companion to
 [Memory tiering candidacy is an active-memory question](https://privatecloudarchitect.com/handbook/memory-tiering).
-The three super metrics that produce the lens's verdicts, in the exact formulas proven live.
+The three super metrics that produce the lens's verdicts, in the exact formulas proven live, and a package of
+every super metric the lens's views and dashboard use.
 
 **Provenance:** formulas derived and validated against a live VCF Operations instance (11 hosts,
 5 clusters, ESXi 9.1), 2026-07-02 through 2026-07-08, including the denominator correction the
@@ -14,7 +15,7 @@ best-practices documentation.
 | Metric | Question it answers | Unit |
 |---|---|---|
 | Active pct of DRAM | Candidacy: is the hot working set inside the 0 to 50 gate? | percent |
-| Recoverable Cold DRAM GB | Payoff: how much DRAM is backing cold pages tiering can relocate? | GB |
+| Recoverable Cold DRAM (GB) | Payoff: how much DRAM is backing cold pages tiering can relocate? | GB |
 | Consumed pct of DRAM | Activation readiness: how close is consumption to the 80 trigger? | percent |
 
 The artifacts, and the order they import in (metrics before views before the dashboard, because
@@ -22,18 +23,23 @@ each layer references the previous one by id):
 
 - `supermetrics/editor-formulas.yaml`: the three verdict metrics' exact formulas in super-metric
   editor syntax, object types, and units, for building them by hand.
-- `supermetrics/memory-tiering-supermetrics.import.json`: the readable form of the full six-metric
-  set the lens's views reference: the three verdict metrics plus three qualifiers (reserved memory,
-  NVMe tier size, NVMe tier used). Id-keyed; the ids are what the views bind to.
-- `supermetrics/memory-tiering-supermetrics.contentpkg.zip`: the same six metrics as an
+- `supermetrics/memory-tiering-supermetrics.import.json`: the readable form of all 19 super metrics
+  the lens's views and dashboard reference: the three verdict metrics; three host qualifiers (reserved
+  memory, NVMe tier size as Actual Tiering Uplift, NVMe tier used); the cluster readiness roll-ups
+  (worst host active, hosts over the gate, untiered hosts, hosts actively tiering, cluster recoverable
+  cold DRAM); the cost chain (price delta, tiering uplift, capex and DRAM avoided, per host and per
+  fleet); and the cluster's HA headroom. Id-keyed; the ids are what the views bind to. A unit rides as
+  `unitId` where one is declared, because an import is how a unit gets set.
+- `supermetrics/memory-tiering-supermetrics.contentpkg.zip`: the same 19 metrics as an
   **id-preserving content package**, importable via the content-import UI or
   `POST /suite-api/api/content/operations/import` (multipart field `contentFile`). The import
   creates any absent metric with its shipped id; the `force` flag affects only a metric that
   already exists: `force=false` skips it (safe, non-destructive), `force=true` overwrites it (only
   to push an update). The API defaults the flag to `true`/overwrite, so pass `force=false` for a
   non-destructive import. Built by filtering the reference instance's own export, so what ships is
-  the export format verbatim; a no-force test-import on the reference instance recognized all six
-  with zero failures and zero changes.
+  the export format verbatim. A no-force test-import on the reference instance recognized the first
+  six with zero failures and zero changes; the other thirteen were added on 2026-10-08 from the same
+  export, after the views were found to reference them, and have not been test-imported.
 - `views/memory-tiering-views.contentpkg.zip`: the lens's three views (host candidates, capex
   avoidance, cluster readiness) as the same kind of id-preserving package; no-force test-import
   recognized all three, zero failures. The views reference the metrics by id, which is why the
@@ -45,6 +51,13 @@ each layer references the previous one by id):
   references the views and metrics by id, so import it last, after both packages. Blank rows
   right after import mean the super metrics are not yet activated in the collecting policy,
   which is the activation step above.
+
+## The one input you set
+
+The cost chain reads a single constant, **Price Delta (USD/GB)**: your DRAM price per GB minus your
+NVMe price per GB, 4.70 by default (5.00 minus 0.30). After import, edit the trailing number in that
+super metric's formula to your own prices; every capex-avoided and DRAM-avoided figure, per host and per
+fleet, follows from it. The `* 0` term only anchors the constant to each host so it computes per object.
 
 ## The rules the formulas encode
 

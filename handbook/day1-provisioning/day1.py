@@ -227,7 +227,20 @@ def probe_release(c, L, project, model_content):
     return {"cases": results, "residue": residue}
 
 
+def refuse_unknown_args(known, takes_value=()):
+    """Refuse any argument this script does not recognise, before a client opens: a stray flag such as --check
+    must never reach a write. --help prints the usage above."""
+    args = sys.argv[1:]
+    if "-h" in args or "--help" in args:
+        print(__doc__)
+        sys.exit(0)
+    unknown = [a for i, a in enumerate(args) if a not in known and not (i and args[i - 1] in takes_value)]
+    if unknown:
+        sys.exit(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)")
+
+
 def main():
+    refuse_unknown_args({"--probe-release"})
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
     refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
     out_dir = os.environ.get("OUT_DIR", ".")

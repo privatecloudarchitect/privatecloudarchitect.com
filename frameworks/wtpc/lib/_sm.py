@@ -36,6 +36,20 @@ def existing_supermetrics(c) -> dict[str, str]:
                          for s in c.get("/api/supermetrics", params={"pageSize": "2000"}).json()["superMetrics"]})
 
 
+def read_back(c, sid: str, name: str, formula: str, description: str) -> None:
+    """Read the super metric back by id and compare every field the write carried: a PUT replaces the
+    whole object, so a write is confirmed by what the platform now holds, not by its status code. The platform
+    returns a formula with its characters escaped, so formulas and descriptions compare unescaped and with
+    whitespace collapsed; the name compares exactly."""
+    import html
+    back = c.get(f"/api/supermetrics/{sid}").json()
+    norm = lambda s: " ".join(html.unescape(s or "").split())  # noqa: E731
+    wrong = [f for f, want in (("name", name), ("formula", formula), ("description", description))
+             if (back.get(f) != want if f == "name" else norm(back.get(f)) != norm(want))]
+    if str(back.get("id", "")).replace("SuperMetric-", "") != sid or wrong:
+        raise RuntimeError(f"super metric {name!r} read back with {wrong or ['id']} not as written")
+
+
 def upsert_supermetric(c, *, name, formula, description, existing, dry, dry_id):
     """Adopt-or-create a super-metric by its stable NAME. If the name is already live, PUT
     id-preservingly (syncs the formula + rationale onto it); otherwise POST (the server assigns the
@@ -47,12 +61,15 @@ def upsert_supermetric(c, *, name, formula, description, existing, dry, dry_id):
         if not dry:
             c.put("/api/supermetrics",
                   json={"id": sid, "name": name, "formula": formula, "description": description})
+            read_back(c, sid, name, formula, description)
         return sid, "reused"
     if dry:
         return dry_id, "dry-new"
     r = c.post("/api/supermetrics", json={"name": name, "formula": formula, "description": description})
     r.raise_for_status()
-    return r.json()["id"].replace("SuperMetric-", ""), "posted"
+    sid = r.json()["id"].replace("SuperMetric-", "")
+    read_back(c, sid, name, formula, description)
+    return sid, "posted"
 
 
 def activate_in_policy(c, sm_id: str, policy_id: str, object_type: str) -> None:

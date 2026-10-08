@@ -8,8 +8,12 @@
 #     with an org-admin SESSION token (see README for the 3-line recipe).
 #   - VCFA_REGION set to your region name (kubectl get regions shows it).
 #
+# Usage (a verb is required; anything else, --help included, changes nothing):
+#   ./run.sh round-trip   land disabled -> Realized -> enable -> Realized -> tear down
+#   ./run.sh teardown     remove seg-proof-section and seg-proof-app, e.g. after a KEEP=1 run
+#
 # Environment:
-#   VCFA_REGION    (required)  region name substituted into the manifests
+#   VCFA_REGION    (required for round-trip)  region name substituted into the manifests
 #   VCFA_CONTEXT   (optional)  kubectl context name, default vcfa-cci
 #   KEEP=1         (optional)  skip teardown, leave the objects for inspection
 #
@@ -28,11 +32,35 @@
 
 set -euo pipefail
 
+usage() {
+  cat <<'USAGE'
+usage: ./run.sh round-trip   land the rule disabled, verify, enable it, verify, tear down (KEEP=1 skips teardown)
+       ./run.sh teardown     remove seg-proof-section and seg-proof-app, e.g. after a KEEP=1 run
+No other argument is accepted, and nothing is written without one of these verbs.
+USAGE
+}
+case "${1:-}" in
+  round-trip|teardown) ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage >&2; exit 2 ;;
+esac
+[ "$#" -eq 1 ] || { usage >&2; exit 2; }
+VERB="$1"
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CTX="${VCFA_CONTEXT:-vcfa-cci}"
-REGION="${VCFA_REGION:?set VCFA_REGION to your region name (kubectl get regions)}"
 
 k() { kubectl --context "$CTX" "$@"; }
+
+if [ "$VERB" = "teardown" ]; then
+  printf "\n== Teardown (policy first, then the group it references)\n"
+  k delete firewallpolicy seg-proof-section --ignore-not-found
+  k delete networksecuritygroup seg-proof-app --ignore-not-found
+  printf "   OK: estate as it began\n"
+  exit 0
+fi
+
+REGION="${VCFA_REGION:?set VCFA_REGION to your region name (kubectl get regions)}"
 
 step()  { printf "\n== %s\n" "$*"; }
 ok()    { printf "   OK: %s\n" "$*"; }

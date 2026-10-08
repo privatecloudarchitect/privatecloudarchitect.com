@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-07T07:56:25Z",
+ "captured_utc": "2026-10-08T03:32:04Z",
  "prefix": "PCA - WTPC",
  "taxonomy": {
   "ruleCategories": [
@@ -34,7 +34,7 @@
  },
  "categoriesRead": true,
  "assignments": {
-  "machines": 134,
+  "machines": 139,
   "withAnyTag": 17,
   "withATaxonomyTag": 10,
   "byCategory": {
@@ -49,13 +49,13 @@
  },
  "groups": [
   {
-   "group": "Tier - dedicated (Hosts)",
+   "group": "dedicated tier (Hosts)",
    "mechanism": "static list",
    "members": 2,
    "conditions": []
   },
   {
-   "group": "Tier - density (Clusters)",
+   "group": "density tier (Clusters)",
    "mechanism": "tag rule",
    "members": 0,
    "conditions": [
@@ -66,13 +66,13 @@
    ]
   },
   {
-   "group": "Tier - standard (Hosts)",
+   "group": "standard tier (Hosts)",
    "mechanism": "static list",
    "members": 4,
    "conditions": []
   },
   {
-   "group": "Group - test-dev-traditional (VMs)",
+   "group": "test-dev-traditional (VMs)",
    "mechanism": "tag rule",
    "members": 1,
    "conditions": [
@@ -87,7 +87,7 @@
    ]
   },
   {
-   "group": "Group - prod-latency-critical-db (Clusters)",
+   "group": "prod-latency-critical-db (Clusters)",
    "mechanism": "tag rule",
    "members": 0,
    "conditions": [
@@ -106,13 +106,13 @@
    ]
   },
   {
-   "group": "Group - estate-governance (Clusters)",
+   "group": "estate-governance (Clusters)",
    "mechanism": "static list",
    "members": 3,
    "conditions": []
   },
   {
-   "group": "Group - prod-latency-critical-db (Hosts)",
+   "group": "prod-latency-critical-db (Hosts)",
    "mechanism": "tag rule",
    "members": 0,
    "conditions": [
@@ -131,7 +131,7 @@
    ]
   },
   {
-   "group": "Tier - standard (Clusters)",
+   "group": "standard tier (Clusters)",
    "mechanism": "tag rule",
    "members": 2,
    "conditions": [
@@ -142,7 +142,7 @@
    ]
   },
   {
-   "group": "Tier - performance (Clusters)",
+   "group": "performance tier (Clusters)",
    "mechanism": "tag rule",
    "members": 0,
    "conditions": [
@@ -153,7 +153,7 @@
    ]
   },
   {
-   "group": "Group - prod-latency-critical-db (VMs)",
+   "group": "prod-latency-critical-db (VMs)",
    "mechanism": "tag rule",
    "members": 0,
    "conditions": [
@@ -172,13 +172,13 @@
    ]
   },
   {
-   "group": "Group - test-dev-traditional (Clusters)",
+   "group": "test-dev-traditional (Clusters)",
    "mechanism": "static list",
    "members": 2,
    "conditions": []
   },
   {
-   "group": "Tier - dedicated (Clusters)",
+   "group": "dedicated tier (Clusters)",
    "mechanism": "tag rule",
    "members": 1,
    "conditions": [
@@ -189,7 +189,7 @@
    ]
   },
   {
-   "group": "Group - test-dev-traditional (Hosts)",
+   "group": "test-dev-traditional (Hosts)",
    "mechanism": "static list",
    "members": 4,
    "conditions": []

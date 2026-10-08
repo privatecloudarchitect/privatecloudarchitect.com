@@ -7,8 +7,11 @@ converges desired state you intend to keep: the posture catalog, the tag taxonom
 generators and reconcilers that build the groups, policies, super metrics, views, dashboards, and
 alerts of the framework on your own VCF Operations instance.
 
-Proven by a full converge, verify, scoped-teardown, re-converge round trip on a live VCF
-Operations 9.1 estate on 2026-08-15, on exactly these bytes.
+The converge mechanics (adopt-or-create by name, verify, scoped teardown, re-converge) were proven by a full round
+trip on a live VCF Operations 9.1 estate on 2026-08-15. The files have changed since (the D-038 names, the tier
+model's binding rule, read-back after every write), and the current tree was last run as a dry run against the
+estate it was published from on 2026-10-08 (`dryrun.json`, written by `record_dryrun.py`): every parity gate green,
+with the pending steps and the refusals it reports listed in that record.
 
 ## What adopting means
 
@@ -153,6 +156,17 @@ basic auth, because `/api/cis/tagging/*` answered 401 to basic auth on the build
 
 It writes `adoption.json`, names no machine, records no tag from outside the categories the rules name, and changes
 nothing.
+
+### What would the converge do now? `record_dryrun.py`
+
+A converge is level-triggered, so its dry run reports the distance between these files and your estate, and that
+distance moves. This runs `apply.py` in its default dry-run mode (it never passes `--execute`) and writes
+`dryrun.json`: each step and parity gate with its command, its exit code and the lines that summarize it, with
+object listings dropped and ids, host names and paths masked. Archive it and diff it against last week's.
+
+```bash
+python3 record_dryrun.py                  # same environment as apply.py; read-only on the estate
+```
 
 ### Is any of it governing anything? `audit_deployment.py`
 

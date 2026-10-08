@@ -51,7 +51,7 @@ UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
 IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 
 # The reachability arm, by the role each metric plays rather than by its full published name, so the script
-# finds them on an estate that renamed the initiative.
+# finds them on an estate that names the bundle (the name's second field) differently.
 ROLES = [("checks", "Checks (count)"), ("reachable", "Checks Reachable"), ("unreachable", "Checks Unreachable"),
          ("sli", "Reachability SLI"), ("delivery", "Packet Delivery")]
 

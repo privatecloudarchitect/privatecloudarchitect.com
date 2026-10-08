@@ -34,6 +34,10 @@ WTPC_POLICY = "PCA - WTPC - prod-latency-critical-db"
 
 
 def load(path, key):
+    if not os.path.exists(path):
+        # build_alerts.py writes these; it cannot until an executed build.py has written the super metric record
+        sys.exit(f"skipped: {os.path.basename(path)} does not exist yet. build_alerts.py writes it once an executed "
+                 f"build.py has recorded the super metric ids (a dry run records none).")
     return json.load(open(path, encoding="utf-8"))[key]
 
 

@@ -1,0 +1,193 @@
+{
+ "captured_utc": "2026-10-08T03:31:09Z",
+ "command": "python3 apply.py",
+ "exit": 0,
+ "steps": [
+  {
+   "kind": "step",
+   "label": "tag taxonomy (native define)",
+   "command": "ensure_tag_definitions.py",
+   "exit": 0,
+   "summary": [
+    "ENSURE WTPC taxonomy on <host> · DRY-RUN  (taxonomy: <path>)",
+    "summary: 3 categor(y/ies) - 0 to create, 0 value(s) to create, 0 conflict(s).",
+    "DRY-RUN - re-run with --execute to apply."
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "shared + lens super metrics",
+   "command": "adopt_shared.py --dry-run",
+   "exit": 0,
+   "summary": [
+    "shared/lens SMs: posted=0 reused=8 total=8  [DRY-RUN]"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "tags+groups [prod-latency-critical-db]",
+   "command": "instantiate_posture.py postures/prod-latency-critical-db.yaml",
+   "exit": 0,
+   "summary": [
+    "instantiate posture 'prod-latency-critical-db' — groups only  (DRY-RUN)",
+    "exists: PCA - WTPC - prod-latency-critical-db (VMs)",
+    "exists: PCA - WTPC - prod-latency-critical-db (Clusters)",
+    "exists: PCA - WTPC - prod-latency-critical-db (Hosts)"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "policy [prod-latency-critical-db]",
+   "command": "reconcile_policy.py --posture prod-latency-critical-db",
+   "exit": 0,
+   "summary": [
+    "reconcile_policy · DRY-RUN  (converge-by-default; create only for [])",
+    "[prod-latency-critical-db] policy ADOPTED (exists)  id={{id}}  prio=6",
+    "[prod-latency-critical-db] group Clusters ({{id}}) ✓ not the posture's (hardware takes its tier)",
+    "[prod-latency-critical-db] group    Hosts ({{id}}) ✓ not the posture's (hardware takes its tier)",
+    "[prod-latency-critical-db] group      VMs ({{id}}) ✓ bound",
+    "priority: posture policies already strict-first in the positions they hold; no other policy moves — no reorder"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "super-metrics [prod-latency-critical-db]",
+   "command": "build.py postures/prod-latency-critical-db.yaml --dry-run",
+   "exit": 0,
+   "summary": [
+    "posted=0 reused=35 total=35  [DRY-RUN]"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "infra-groups [prod-latency-critical-db]",
+   "command": "reconcile_infra_groups.py --posture prod-latency-critical-db",
+   "exit": 2,
+   "summary": [
+    "VMs group: 0 member(s) (tag-declarative)",
+    "derived from ancestry: 0 host(s), 0 cluster(s)",
+    "REFUSING to reconcile: the VMs group is empty (likely a transient re-resolution).",
+    "Re-run once the group repopulates, or pass --force to blank the infra groups deliberately."
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "tags+groups [test-dev-traditional]",
+   "command": "instantiate_posture.py postures/test-dev-traditional.yaml",
+   "exit": 0,
+   "summary": [
+    "instantiate posture 'test-dev-traditional' — groups only  (DRY-RUN)",
+    "exists: PCA - WTPC - test-dev-traditional (VMs)",
+    "exists: PCA - WTPC - test-dev-traditional (Clusters)",
+    "exists: PCA - WTPC - test-dev-traditional (Hosts)"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "policy [test-dev-traditional]",
+   "command": "reconcile_policy.py --posture test-dev-traditional",
+   "exit": 0,
+   "summary": [
+    "reconcile_policy · DRY-RUN  (converge-by-default; create only for [])",
+    "[test-dev-traditional] policy ADOPTED (exists)  id={{id}}  prio=7",
+    "[test-dev-traditional] group      VMs ({{id}}) ✓ bound",
+    "[test-dev-traditional] group Clusters ({{id}}) ✓ not the posture's (hardware takes its tier)",
+    "[test-dev-traditional] group    Hosts ({{id}}) ✓ not the posture's (hardware takes its tier)",
+    "priority: posture policies already strict-first in the positions they hold; no other policy moves — no reorder"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "super-metrics [test-dev-traditional]",
+   "command": "build.py postures/test-dev-traditional.yaml --dry-run",
+   "exit": 0,
+   "summary": [
+    "posted=0 reused=32 total=32  [DRY-RUN]"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "infra-groups [test-dev-traditional]",
+   "command": "reconcile_infra_groups.py --posture test-dev-traditional",
+   "exit": 0,
+   "summary": [
+    "VMs group: 1 member(s) (tag-declarative)",
+    "derived from ancestry: 1 host(s), 1 cluster(s)",
+    "hardware governance: TIER (posture policy not bound to infra groups; untiered hardware falls to Default)",
+    "Hosts group  [{{id}}]  keep=4 add=1 drop=0 held=4",
+    "Clusters group  [{{id}}]  keep=2 add=1 drop=0 held=2",
+    "DRY-RUN: 2 group(s) would be updated. Re-run with --execute to apply."
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "capacity (all postures)",
+   "command": "apply_policy_capacity.py",
+   "exit": 0,
+   "summary": [
+    "capacity-allocation apply · DRY-RUN"
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "alert definitions (offline build)",
+   "command": "build_alerts.py",
+   "exit": 1,
+   "summary": [
+    "skipped: supermetrics.prod-latency-critical-db.yaml does not exist yet. It is the record an executed build.py writes (a dry run writes none), and the alert definitions bind to the ids in it."
+   ]
+  },
+  {
+   "kind": "step",
+   "label": "posture alerts",
+   "command": "deploy_alerts.py",
+   "exit": 1,
+   "summary": [
+    "skipped: wtpc-alerts.symptoms.json does not exist yet. build_alerts.py writes it once an executed build.py has recorded the super metric ids (a dry run records none)."
+   ]
+  },
+  {
+   "kind": "verify",
+   "label": "priority-parity",
+   "command": "governance.py --priority-parity",
+   "exit": 0,
+   "summary": [
+    "✅ posture policies are ranked strict-first (deterministic; resolves the untiered fallback).",
+    "⚠️  non-posture policies ranked above a posture policy (potential shadow — confirm with validate_live.py --parity):"
+   ]
+  },
+  {
+   "kind": "verify",
+   "label": "config-parity",
+   "command": "governance.py --config-parity",
+   "exit": 0,
+   "summary": [
+    "no posture policy with an applied capacity payload is live - nothing to check"
+   ]
+  },
+  {
+   "kind": "verify",
+   "label": "effective-policy parity [prod-latency-critical-db]",
+   "command": "validate_live.py --posture prod-latency-critical-db --parity",
+   "exit": 0,
+   "summary": []
+  },
+  {
+   "kind": "verify",
+   "label": "effective-policy parity [test-dev-traditional]",
+   "command": "validate_live.py --posture test-dev-traditional --parity",
+   "exit": 0,
+   "summary": [
+    "Cluster {{id}}: effective = PCA - WTPC - standard tier  ✅",
+    "Cluster {{id}}: effective = PCA - WTPC - standard tier  ✅",
+    "Host {{id}}: effective = PCA - WTPC - standard tier  ✅",
+    "Host {{id}}: effective = PCA - WTPC - standard tier  ✅",
+    "Host {{id}}: effective = PCA - WTPC - standard tier  ✅",
+    "Host {{id}}: effective = PCA - WTPC - standard tier  ✅",
+    "VM {{id}}: effective = PCA - WTPC - test-dev-traditional  ✅",
+    "✅ all 7 governed member(s) resolve to the policy that should govern them — no precedence shadowing."
+   ]
+  }
+ ],
+ "verdict": "OK WTPC apply · DRY-RUN complete - estate converged, all parity gates green."
+}

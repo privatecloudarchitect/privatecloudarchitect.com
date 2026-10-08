@@ -37,6 +37,6 @@ supermetrics:
       DRAM tier. Tiering behavior begins when host consumption reaches roughly 80 percent of
       DRAM, so a candidate at low consumption gains headroom immediately and exercises the
       tier only as it fills. Proven live: this metric does not compute at cluster scope,
-      because the DRAM-tier denominator does not roll up; read it per host. The "Shared" name
-      field records its home namespace: it is consumed by more than one initiative, and the
-      naming schema promotes such primitives out of any single initiative's namespace.
+      because the DRAM-tier denominator does not roll up; read it per host. The "Shared" field is its bundle:
+      it is consumed by more than one bundle, and the naming standard promotes such primitives to the
+      Shared bundle.

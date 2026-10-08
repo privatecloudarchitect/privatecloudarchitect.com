@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-08T00:08:24Z",
+ "captured_utc": "2026-10-08T03:23:35Z",
  "build": "VCF Operations 9.1.1.0",
  "steps": [
   {
@@ -37,14 +37,14 @@
    ]
   },
   {
-   "label": "after editing one formula: drift repaired in place",
+   "label": "after editing one formula and one description: drift repaired in place",
    "command": "python3 converge.py",
    "exit": 0,
    "output": [
-    "  updated       Converge Demo - Ops Estate - VM - Active Memory (GiB)  (id preserved: 2b585aa2...)",
-    "  unchanged     Converge Demo - Ops Estate - VM - Consumed Memory (GiB)",
+    "  updated       Converge Demo - Ops Estate - VM - Active Memory (GiB)  (id preserved: 6b671c74...)",
+    "  updated       Converge Demo - Ops Estate - VM - Consumed Memory (GiB)  (id preserved: 08a64bdb...)",
     "",
-    "converge: 0 created, 1 updated, 1 unchanged",
+    "converge: 0 created, 2 updated, 0 unchanged",
     "run it again: a converged estate reports every object unchanged."
    ]
   },
@@ -84,7 +84,12 @@
  "drift": {
   "name": "Converge Demo - Ops Estate - VM - Active Memory (GiB)",
   "from": "(${this, metric=mem|active_average} / 1048576)",
-  "to": "(${this, metric=mem|active_average} / 1024 / 1024)"
+  "to": "(${this, metric=mem|active_average} / 1024 / 1024)",
+  "description": {
+   "name": "Converge Demo - Ops Estate - VM - Consumed Memory (GiB)",
+   "from": "Converge-demo metric: consumed guest memory in GiB. Safe to delete; owned by the ops-estate companion harness.",
+   "to": "Converge-demo metric: consumed guest memory in GiB. Safe to delete; owned by the ops-estate companion harness. Edited in the file to show a description repair."
+  }
  },
  "idPreservedAcrossDriftRepair": true,
  "recreate": {

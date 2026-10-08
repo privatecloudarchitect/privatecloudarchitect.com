@@ -252,6 +252,17 @@ def main():
             req("PUT", "/api/adapters", tok,
                 body={"id": aid, "resourceKey": rk, "collectorGroupId": live.get("collectorGroupId"),
                       "description": live.get("description")})
+            # the PUT replaces the instance's whole identifier list, so read it back and compare all of it:
+            # every declared identifier as written, every other identifier kept, the collector group unchanged
+            back = find_instance(tok, name) or {}
+            back_map = {ri.get("identifierType", {}).get("name"): str(ri.get("value"))
+                        for ri in back.get("resourceKey", {}).get("resourceIdentifiers", [])}
+            wrong = sorted(k for k, v in desired_map.items() if back_map.get(k) != str(v))
+            dropped = sorted(k for k in live_map if k not in desired_map and k not in back_map)
+            moved = back.get("collectorGroupId") != live.get("collectorGroupId")
+            if wrong or dropped or moved:
+                raise SystemExit(f"read-back after the update failed: not as written {wrong}, dropped {dropped}, "
+                                 f"collector group changed: {moved}")
             req("PUT", f"/api/adapters/{aid}/monitoringstate/start", tok)
             print(f"  updated {len(drift)} identifier(s) + (re)started monitoring")
 

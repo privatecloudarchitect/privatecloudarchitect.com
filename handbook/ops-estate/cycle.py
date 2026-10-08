@@ -7,8 +7,8 @@ metrics, each step the command you would type yourself:
   1. converge.py --dry-run     reads only; shows what would change
   2. converge.py               creates what is absent
   3. converge.py               a converged estate is a no-op
-  4. edit one formula, then converge.py
-                               drift is repaired in place, and the object keeps its id
+  4. edit one formula and the other object's description, then converge.py
+                               both drifts are repaired in place, and each object keeps its id
   5. delete the other object outside the converge, then converge.py
                                it is created again, and it comes back with a NEW id: the failure a rebuild by
                                teardown causes, shown on an object this script made
@@ -27,7 +27,8 @@ exists, because the demonstration would then adopt an object it did not create.
 
 Usage:  python3 cycle.py
 Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...); OUT_DIR for the record (default: this folder)
-Writes: converge-run.json, each step's command and output, plus the checks. The adoption step keeps only its
+Writes: converge-run.json, each step's command and output, plus the checks; and expected-output.md, the same
+        run rendered as a transcript. The adoption step keeps only its
         summary line, so the record does not list your super metrics a second time.
 Exit:   0 when every behavior held; 1 otherwise.
 """
@@ -58,6 +59,40 @@ def declared_ids(names):
     if st != 200:
         sys.exit(f"FATAL: list supermetrics -> HTTP {st}: {body}")
     return {s["name"]: s["id"] for s in body.get("superMetrics", []) if s["name"] in names}
+
+
+def expected_output(record, exported):
+    """expected-output.md, rendered from the record this run wrote, so the transcript can never disagree with it."""
+    steps = {s["label"].split(":")[0]: s for s in record["steps"]}
+    block = lambda s: "```\n$ " + s["command"] + "\n" + "\n".join(s["output"]) + "\n```\n"
+    d = record["drift"]
+    other = record["recreate"]["name"]
+    a = record["adoption"]
+    return "\n".join([
+        "# Expected output", "",
+        f"The full cycle as `cycle.py` ran it on the reference estate ({record['build']}, {record['captured_utc'][:10]}). "
+        "Rendered by cycle.py from", "`converge-run.json`, the record the same run wrote; your object ids will differ.", "",
+        block(steps["dry run"]), block(steps["first run"]), block(steps["second run"]),
+        "Then one formula and one description are edited in a temporary copy of `desired-state.json`:", "",
+        "```diff", f"- {d['from']}", f"+ {d['to']}", "```", "",
+        "```diff", f"- {d['description']['from']}", f"+ {d['description']['to']}", "```", "",
+        block(steps["after editing one formula and one description"]),
+        f"Then `{other}` is deleted directly, outside the converge, the way a rebuild by teardown would, and the "
+        "converge runs again:", "",
+        block(steps["after deleting one object outside the converge"]), block(steps["teardown"]),
+        "Then, read-only, the super metrics already on the instance under the owner prefix are exported and",
+        "dry-run against the converge. Only the summary line is kept in the record:", "",
+        "```\n$ python3 export.py > mine.json\n" + f"export.py: {exported} super metric(s) named under the owner prefix\n"
+        + "$ " + steps["adoption"]["command"] + "\n" + "\n".join(steps["adoption"]["output"]) + "\n```\n",
+        "What the script checked with its own reads, rather than taking from the scripts' messages:", "",
+        f"- both repaired objects kept the ids the first run created (`idPreservedAcrossDriftRepair: "
+        f"{str(record['idPreservedAcrossDriftRepair']).lower()}`), the formula and the description alike;",
+        f"- the object deleted outside the converge came back with a different id (`recreate.idChanged: "
+        f"{str(record['recreate']['idChanged']).lower()}`), which is",
+        "  what leaves anything that referred to it pointing at nothing;",
+        f"- after the teardown, {record['residueAfterTeardown']} demonstration objects were left;",
+        f"- every exported super metric was reported unchanged ({a.get('unchanged')} of {a.get('exported')}): the "
+        "converge adopted what was built by hand.", ""])
 
 
 def main():
@@ -104,11 +139,17 @@ def main():
         target["formula"] = before.replace("/ 1048576)", "/ 1024 / 1024)")
         if target["formula"] == before:
             raise RuntimeError("the drift edit did not change the formula")
+        # and the other object's description: the text the console shows is desired state too
+        second = state["supermetrics"][1]
+        described = second["description"]
+        second["description"] = described.rstrip(".") + ". Edited in the file to show a description repair."
         state_file.write_text(json.dumps(state, indent=2) + "\n")
-        record["drift"] = {"name": target["name"], "from": before, "to": target["formula"]}
-        print(f"# edited the formula of {target['name']} in a temporary copy of desired-state.json\n")
+        record["drift"] = {"name": target["name"], "from": before, "to": target["formula"],
+                           "description": {"name": second["name"], "from": described, "to": second["description"]}}
+        print(f"# edited the formula of {target['name']} and the description of {second['name']} "
+              f"in a temporary copy of desired-state.json\n")
 
-        step("after editing one formula: drift repaired in place", ["converge.py"])
+        step("after editing one formula and one description: drift repaired in place", ["converge.py"])
         after_drift = declared_ids(names)
         record["idPreservedAcrossDriftRepair"] = bool(after_drift) and after_create == after_drift
 
@@ -151,6 +192,8 @@ def main():
     out_dir = pathlib.Path(os.environ.get("OUT_DIR", HERE))
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "converge-run.json").write_text(text + "\n", encoding="utf-8")
+    if ok:
+        (out_dir / "expected-output.md").write_text(expected_output(record, exported), encoding="utf-8")
 
     adoption = record.get("adoption") or {}
     held = (ok and record.get("idPreservedAcrossDriftRepair") and (record.get("recreate") or {}).get("idChanged")

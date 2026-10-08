@@ -21,10 +21,11 @@ Usage:  python build_alerts.py        (from deploy/vcf-ops-content/wtpc/; no liv
 """
 import json
 import os
+import sys
 import re
 
 from lib._sm import SM_STAT_KEY_RE, load_sm_ids, sm_stat_key
-from lib._names import kinded
+from lib._names import kinded, qualified
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONTENT = os.path.join(HERE, "content")
@@ -109,7 +110,11 @@ def build(doc, sm, shared):
             else:
                 raise SystemExit(f"symptom {s.get('label')!r} has neither 'sm' nor 'property_numeric'")
             # persistence lives at the symptom layer; the alert set fires on 1 cycle of the symptom
-            symptoms.append(build_symptom(sid, kinded("PCA - WTPC", a_kind, s["label"]), a_kind, severity, wait, cond))
+            # a symptom is its posture's copy (its condition reads the posture's super metrics or thresholds), so it
+            # carries the posture as its qualifier, as the alert does; unqualified, a second posture's build would
+            # overwrite the first posture's symptoms by name (D-038: a per-scope copy ends in [<scope>])
+            symptoms.append(build_symptom(sid, qualified(kinded("PCA - WTPC", a_kind, s["label"]), doc["posture"]),
+                                          a_kind, severity, wait, cond))
             sym_ids.append(sid)
         alert = {
             "id": f"AlertDefinition-{aslug}", "name": a["name"], "description": a["rationale"],
@@ -163,6 +168,10 @@ def main():
     doc = load_yaml(ALERTS_YAML)
     # the posture's SM record (renamed from the old flat supermetrics.yaml in the multi-posture refactor)
     sm_yaml = os.path.join(HERE, f"supermetrics.{doc['posture']}.yaml")
+    if not os.path.exists(sm_yaml):
+        # the record an executed build.py writes; a dry run writes none, so there are no ids to bind yet
+        sys.exit(f"skipped: {os.path.basename(sm_yaml)} does not exist yet. It is the record an executed build.py "
+                 f"writes (a dry run writes none), and the alert definitions bind to the ids in it.")
     sm = load_sm_ids(sm_yaml)
     shared = shared_ids()
     symptoms, alerts = build(doc, sm, shared)

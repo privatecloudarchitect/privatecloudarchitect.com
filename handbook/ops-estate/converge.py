@@ -62,6 +62,18 @@ def plan(want, have):
     return "update"
 
 
+def read_back(tok, sm_id, want):
+    """The fields a write carried that the instance does not now hold, read back by id (empty when it holds them).
+
+    A PUT replaces the whole object, so a write is confirmed by what the instance holds afterwards, never by its
+    status code; the comparison is on decoded text, the same rule plan() uses."""
+    st, back = ops("GET", f"/api/supermetrics/{sm_id}", tok)
+    if st != 200:
+        return [f"read HTTP {st}"]
+    return [f for f in ("name", "formula", "description")
+            if (back.get(f) if f == "name" else html.unescape(back.get(f) or "")) != want[f]]
+
+
 def main():
     state = json.loads(STATE.read_text())
     tok = bearer()
@@ -80,9 +92,13 @@ def main():
             st, body = ops("POST", "/api/supermetrics", tok, body={
                 "name": name, "formula": want["formula"],
                 "description": want["description"]})
-            if st in (200, 201):
+            wrong = read_back(tok, str(body.get("id", "")).replace("SuperMetric-", ""), want) if st in (200, 201) else None
+            if st in (200, 201) and not wrong:
                 print(f"  created       {name}")
                 created += 1
+            elif st in (200, 201):
+                print(f"  FAILED read-back {name}: {', '.join(wrong)} not as written")
+                failed += 1
             else:
                 print(f"  FAILED create {name} -> HTTP {st}: {body}")
                 failed += 1
@@ -100,9 +116,13 @@ def main():
         st, body = ops("PUT", "/api/supermetrics", tok, body={
             "id": sm_id, "name": name, "formula": want["formula"],
             "description": want["description"]})
-        if st in (200, 201):
+        wrong = read_back(tok, sm_id, want) if st in (200, 201) else None
+        if st in (200, 201) and not wrong:
             print(f"  updated       {name}  (id preserved: {sm_id[:8]}...)")
             updated += 1
+        elif st in (200, 201):
+            print(f"  FAILED read-back {name}: {', '.join(wrong)} not as written")
+            failed += 1
         else:
             print(f"  FAILED update {name} -> HTTP {st}: {body}")
             failed += 1

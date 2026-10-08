@@ -105,7 +105,8 @@ the command you would type yourself:
 1. `converge.py --dry-run` reads only and shows what would change.
 2. `converge.py` creates what is absent.
 3. `converge.py` again reports every object unchanged: a converged estate is a no-op.
-4. After one formula is edited, `converge.py` repairs the drift in place, and the object keeps its id.
+4. After one formula and another object's description are edited, `converge.py` repairs both in place, reads each
+   back, and each object keeps its id.
 5. After the other object is deleted outside the converge, `converge.py` creates it again, and it comes back
    with a new id: the failure a rebuild by teardown causes, shown on an object the script made.
 6. `teardown.py` deletes only the declared names and reads back to confirm.

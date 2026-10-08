@@ -5,7 +5,7 @@
 # `supermetrics.shared.yaml` (the instance RECORD build.py and the view generators read). Ids are
 # minted per instance; this file carries none.
 #
-# Two families, named per their owning initiative (one home per object; reuse is not co-ownership):
+# Two families, named per their owning bundle (one home per object; reuse is not co-ownership):
 #   PCA - Shared - *       cross-initiative primitives (HA-aware consumption, reclaim, reclaim cost)
 #   PCA - Rightsizing - *  the rightsizing lens quartet the scorecard's reclaim-evidence panel renders
 #
@@ -19,9 +19,10 @@ supermetrics:
     unit: percent
     formula: "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem|haTotalCapacity_average}))"
     description: >-
-      OBJECT: Cluster Compute Resource. UNIT: percent. Consumed memory as a percent of HA-usable
-      DRAM (after the failover reservation). High = densifying risks HA admission control. WTPC
-      reads it as the availability-floor live-truth check and the capacity floor-coupling gate.
+      OBJECT: Cluster Compute Resource. UNIT: percent. Consumed memory as a percent of HA-usable DRAM
+      (after the failover reservation; mem|haTotalCapacity_average rolls up). High = densifying risks
+      HA admission control. Used by MemTier (HA headroom) and by WTPC as the availability-floor
+      live-truth check and the capacity floor-coupling gate.
 
   - key: SH_CONSUMED_DRAM
     name: "PCA - Shared - Host - Consumed pct of DRAM"
@@ -29,8 +30,11 @@ supermetrics:
     unit: percent
     formula: "(100 * (${this, metric=mem|consumed_average} / ${this, metric=mem:DRAM|memory_tier_total_capacity}))"
     description: >-
-      OBJECT: Host System / Cluster Compute Resource. UNIT: percent. Consumed memory as a percent
-      of DRAM tier capacity - the density signal the capacity views band against the envelope.
+      OBJECT: Host. UNIT: percent. Total DRAM footprint (hot + cold) as a percent of installed DRAM
+      (the DRAM tier). Does NOT compute at Cluster scope - the DRAM-tier denominator does not roll up
+      (verified live; cluster reads require child-aggregation). Activation-readiness for tiering (cold
+      pages offload ~80% consumed) AND, for WTPC, the capacity utilization corridor read as a
+      saturation ceiling at high-SLA postures.
 
   - key: SH_FLEET_RECLAIM_COST
     name: "PCA - Shared - Cluster - Fleet Reclaimable Cost (USD/mo)"
@@ -38,8 +42,10 @@ supermetrics:
     unit: USD/month
     formula: "sum(${adaptertype=VMWARE, objecttype=VirtualMachine, metric=cost|reclaimableCost, depth=2})"
     description: >-
-      OBJECT: Cluster Compute Resource. UNIT: USD/month. The cluster's summed per-VM reclaimable
-      cost - the money the cost views attach to the reclaim evidence.
+      OBJECT: Cluster Compute Resource. UNIT: USD per month. Sum of member VMs' reclaimable cost
+      (cost|reclaimableCost, depth=2). The whole-cluster savings opportunity; the cost scorecard's $
+      column in WTPC. Carries the coverage caveat: a blank/low $ is "no cost attributed," not "no
+      opportunity"; pair it with the GB reclaimable ratio.
 
   - key: SH_RECLAIM
     name: "PCA - Shared - VM - Memory Reclaimable (GB)"
@@ -47,9 +53,9 @@ supermetrics:
     unit: GB
     formula: "((${this, metric=mem|guest_provisioned} - ${this, metric=OnlineCapacityAnalytics|mem|recommendedSize}) / 1048576)"
     description: >-
-      OBJECT: Virtual Machine. UNIT: GB. Provisioned minus the capacity engine's recommended size -
-      the per-VM reclaim the cluster reclaimable-percent super metric and the oversized-candidates
-      view both roll up.
+      OBJECT: Virtual Machine. UNIT: GB. Allocated RAM minus VCF Operations' recommended size - the
+      absolute memory reclaimable by rightsizing this VM. The per-VM reclaim signal; WTPC aggregates
+      it (clamped at 0 for undersized VMs) into the group Reclaimable Memory (%) envelope metric.
 
   - key: RS_OVERSIZED
     name: "PCA - Rightsizing - VM - Memory Oversized (%)"
@@ -57,9 +63,12 @@ supermetrics:
     unit: percent
     formula: "(100 * ((${this, metric=mem|guest_provisioned} - ${this, metric=OnlineCapacityAnalytics|mem|recommendedSize}) / ${this, metric=mem|guest_provisioned}))"
     description: >-
-      OBJECT: Virtual Machine. UNIT: percent. How far provisioned memory exceeds the capacity
-      engine's recommendation, as a percent of provisioned - the ranking signal of the
-      oversized-candidates view.
+      OBJECT: Virtual Machine. UNIT: percent. Share of a VM's allocated RAM that VCF Operations judges
+      reclaimable from its own demand analysis: (allocated - recommended) / allocated, where allocated
+      = mem|guest_provisioned and recommended = OnlineCapacityAnalytics|mem| recommendedSize. Higher =
+      more oversized; the primary reclaim signal. Read it next to Active and Consumed and the guest's
+      memory model before acting - a database buffer pool or a JVM heap can legitimately hold memory
+      that Active does not show.
 
   - key: RS_RECOMMENDED
     name: "PCA - Rightsizing - VM - Recommended Memory (GB)"
@@ -67,8 +76,9 @@ supermetrics:
     unit: GB
     formula: "(${this, metric=OnlineCapacityAnalytics|mem|recommendedSize} / 1048576)"
     description: >-
-      OBJECT: Virtual Machine. UNIT: GB. The capacity engine's recommended memory size - the
-      target the reclaim evidence resizes toward.
+      OBJECT: Virtual Machine. UNIT: GB. The memory size VCF Operations recommends for this VM
+      (OnlineCapacityAnalytics|mem|recommendedSize, converted KB -> GB). The target size when you
+      rightsize; compare against allocated RAM (mem|guest_provisioned / 1048576).
 
   - key: RS_WORKLOAD
     name: "PCA - Rightsizing - VM - Memory Workload (%)"
@@ -76,8 +86,11 @@ supermetrics:
     unit: percent
     formula: "(100 * (${this, metric=mem|active_average} / ${this, metric=mem|guest_provisioned}))"
     description: >-
-      OBJECT: Virtual Machine. UNIT: percent. Active over provisioned memory - the sanity column
-      that separates a truly cold candidate from a burst-quiet one before acting on a resize.
+      OBJECT: Virtual Machine. UNIT: percent. Active working set as a percent of allocated RAM - the
+      peak-utilization signal. Shown at the 95th percentile in the view (the peak over the window): a
+      LOW peak confirms an oversized VM is safe to shrink; a HIGH peak means the VM genuinely uses its
+      memory even if the demand-based recommendation looks generous. A raw peak-usage cross-check on
+      Memory Oversized (%), which comes from VCF Operations' own demand analysis.
 
   - key: RS_OVERSIZED_COUNT
     name: "PCA - Rightsizing - Cluster - Oversized VM Count (VMs)"
@@ -85,5 +98,6 @@ supermetrics:
     unit: count
     formula: "count(${adaptertype=VMWARE, objecttype=VirtualMachine, metric=Super Metric|sm_{SM:RS_OVERSIZED}, depth=2, where=($value > 25)})"
     description: >-
-      OBJECT: Cluster Compute Resource. UNIT: count. VMs in the cluster more than 25 percent
-      memory-oversized - the cluster roll-up of the lens.
+      OBJECT: Cluster Compute Resource. UNIT: count (VMs). Number of member VMs more than 25%
+      oversized on memory (PCA - Rightsizing - VM - Memory Oversized over 25 percent - a meaningful,
+      not marginal, candidate threshold). How many VMs in the cluster are worth rightsizing.

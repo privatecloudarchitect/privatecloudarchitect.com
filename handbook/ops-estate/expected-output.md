@@ -1,7 +1,7 @@
 # Expected output
 
-The full cycle as `cycle.py` ran it on the reference estate (VCF Operations 9.1.1.0, 2026-10-08). Rendered from
-`converge-run.json`, the record the run wrote; your object ids will differ.
+The full cycle as `cycle.py` ran it on the reference estate (VCF Operations 9.1.1.0, 2026-10-08). Rendered by cycle.py from
+`converge-run.json`, the record the same run wrote; your object ids will differ.
 
 ```
 $ python3 converge.py --dry-run
@@ -28,24 +28,28 @@ $ python3 converge.py
 converge: 0 created, 0 updated, 2 unchanged
 ```
 
-Then one formula is edited in a temporary copy of `desired-state.json`:
+Then one formula and one description are edited in a temporary copy of `desired-state.json`:
 
 ```diff
 - (${this, metric=mem|active_average} / 1048576)
 + (${this, metric=mem|active_average} / 1024 / 1024)
 ```
 
+```diff
+- Converge-demo metric: consumed guest memory in GiB. Safe to delete; owned by the ops-estate companion harness.
++ Converge-demo metric: consumed guest memory in GiB. Safe to delete; owned by the ops-estate companion harness. Edited in the file to show a description repair.
+```
+
 ```
 $ python3 converge.py
-  updated       Converge Demo - Ops Estate - VM - Active Memory (GiB)  (id preserved: 2b585aa2...)
-  unchanged     Converge Demo - Ops Estate - VM - Consumed Memory (GiB)
+  updated       Converge Demo - Ops Estate - VM - Active Memory (GiB)  (id preserved: 6b671c74...)
+  updated       Converge Demo - Ops Estate - VM - Consumed Memory (GiB)  (id preserved: 08a64bdb...)
 
-converge: 0 created, 1 updated, 1 unchanged
+converge: 0 created, 2 updated, 0 unchanged
 run it again: a converged estate reports every object unchanged.
 ```
 
-Then `Converge Demo - Ops Estate - VM - Consumed Memory (GiB)` is deleted directly, outside the converge, the way a rebuild by
-teardown would, and the converge runs again:
+Then `Converge Demo - Ops Estate - VM - Consumed Memory (GiB)` is deleted directly, outside the converge, the way a rebuild by teardown would, and the converge runs again:
 
 ```
 $ python3 converge.py
@@ -70,14 +74,14 @@ dry-run against the converge. Only the summary line is kept in the record:
 
 ```
 $ python3 export.py > mine.json
-export.py: 100 super metric(s) named 'PCA - ...'
+export.py: 100 super metric(s) named under the owner prefix
 $ python3 converge.py --state mine.json --dry-run
 dry-run: 0 created, 0 updated, 100 unchanged
 ```
 
 What the script checked with its own reads, rather than taking from the scripts' messages:
 
-- the repaired object kept the id the first run created (`idPreservedAcrossDriftRepair: true`);
+- both repaired objects kept the ids the first run created (`idPreservedAcrossDriftRepair: true`), the formula and the description alike;
 - the object deleted outside the converge came back with a different id (`recreate.idChanged: true`), which is
   what leaves anything that referred to it pointing at nothing;
 - after the teardown, 0 demonstration objects were left;

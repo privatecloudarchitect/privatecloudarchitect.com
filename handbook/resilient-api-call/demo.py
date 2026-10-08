@@ -119,7 +119,7 @@ def main():
         print(f"   field missing:     {e}")
     # 6. idempotent ensure, dry run
     step(6, "an idempotent ensure(), dry run: nothing is sent")
-    name = "PCA - Resilient call demo - throwaway"
+    name = "PCA - Example - resilient call throwaway (VMs)"   # D-038: <owner> - <bundle> - <scope> (<member kinds>)
     # a custom group's resourceKindKey is its group type (Environment is the one the spec's examples use), never the
     # words "Custom Group"; the kinds it gathers go in a membership rule. The platform refuses a group with neither a
     # rule nor a member, so this one carries a rule that matches no machine: it touches nothing it did not create
