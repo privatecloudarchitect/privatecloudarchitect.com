@@ -10,6 +10,31 @@ every super metric the lens's views and dashboard use.
 sheet teaches. Thresholds (the 50 gate, the 80 trigger) are from the vSphere 9.1 memory-tiering
 best-practices documentation.
 
+## Get started in the VCF Operations UI
+
+Three files, imported in this order, then one setting. No CLI or API is needed. The screens, with what each option
+does, are in [IMPORTING.md](../../IMPORTING.md) at the top of this repository. Download the files and import each zip as
+it is, without unzipping it.
+
+1. **The super metrics.** **Operate**, **Administration**, **Control Panel**, **Content Management**, the **Import**
+   tab: choose `supermetrics/memory-tiering-supermetrics.contentpkg.zip`, select **Skip item(s)**, and click
+   **IMPORT**. The results read **Super Metrics**, total **19**, **Failed 0**. (Or on the **Super Metrics** screen,
+   **⋯**, **Import**, with `supermetrics/memory-tiering-supermetrics.import.json`.)
+2. **The views.** The same **Import** tab, with `views/memory-tiering-views.contentpkg.zip` and **Skip item(s)**:
+   total **3**, the views **PCA - MemTier - Host Candidates**, **Capex Avoidance** and **Cluster Readiness**.
+3. **The dashboard.** **Operate**, **Dashboards**, **Manage**, **⋯**, **Import**, with
+   `dashboard/memory-tiering-readiness.import.zip`. It arrives as **PCA - MemTier - Readiness**, owned by you.
+4. **Switch the 19 super metrics on** in the policy that governs your hosts and clusters (the **Default Policy** if
+   you have not made your own). On the **Super Metrics** screen, filter on `PCA - MemTier` and `PCA - Shared`, then
+   for each one **EDIT**, **4 - Policies**, tick that policy in every column shown (Host System, Cluster Compute
+   Resource, or both), and **UPDATE**. Or activate them together in the policy's **Metrics and Properties**. Until
+   this step the dashboard's rows stay blank.
+5. **Set your price** in **PCA - MemTier - Host - Price Delta (USD/GB)** (the section below), then give it two
+   collection cycles and open the dashboard.
+
+The Content Management import tab defaults to **Overwrite existing content**. Keep **Skip item(s)** when you import
+again, or the shipped Price Delta replaces yours.
+
 ## The three metrics
 
 | Metric | Question it answers | Unit |
@@ -31,12 +56,13 @@ each layer references the previous one by id):
   fleet); and the cluster's HA headroom. Id-keyed; the ids are what the views bind to. A unit rides as
   `unitId` where one is declared, because an import is how a unit gets set.
 - `supermetrics/memory-tiering-supermetrics.contentpkg.zip`: the same 19 metrics as an
-  **id-preserving content package**, importable via the content-import UI or
-  `POST /suite-api/api/content/operations/import` (multipart field `contentFile`). The import
+  **id-preserving content package**, importable in the UI through **Content Management**, **Import** (the steps
+  above) or through `POST /suite-api/api/content/operations/import` (multipart field `contentFile`). The import
   creates any absent metric with its shipped id; the `force` flag affects only a metric that
   already exists: `force=false` skips it (safe, non-destructive), `force=true` overwrites it (only
   to push an update). The API defaults the flag to `true`/overwrite, so pass `force=false` for a
-  non-destructive import. Built by filtering the reference instance's own export, so what ships is
+  non-destructive import; the UI's import tab likewise defaults to **Overwrite existing content**, and its
+  **Skip item(s)** is the same non-destructive choice. Built by filtering the reference instance's own export, so what ships is
   the export format verbatim. A no-force test-import on the reference instance (2026-10-08) reported
   all 19 skipped and none failed, and a read of every field of all 19 before and after showed no change,
   with the instance's super metric count the same.
@@ -70,10 +96,12 @@ fleet, follows from it. The `* 0` term only anchors the constant to each host so
 - **The consumed-percent metric does not compute at cluster scope.** The DRAM-tier denominator
   does not roll up; proven live. Read it per host, or aggregate host values deliberately.
 
-## Importing, and the step that is easy to miss
+## Building the verdict metrics by hand instead, and checking one host
 
-1. Import each super metric (or create it in the editor from `editor-formulas.yaml`, binding it
-   to the object types listed there: hosts, rolling to clusters where the metric supports it).
+1. Create each of the three verdict metrics in the editor from `editor-formulas.yaml`, binding it to the object
+   types listed there: hosts, rolling to clusters where the metric supports it. The views and the dashboard look
+   for the shipped ids, so a hand-built metric serves your own views, not the shipped ones; import the package for
+   those.
 2. **Activate each super metric in the policy that collects for its object types.** A super
    metric that exists but is not activated in the collecting policy collects nothing and raises
    no error; it simply stays empty. This is the single most common reason a freshly built lens

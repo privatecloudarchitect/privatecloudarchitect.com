@@ -7,6 +7,10 @@
 > **[privatecloudarchitect.com/find-your-path](https://privatecloudarchitect.com/find-your-path)**,
 > which sequences the whole curriculum and sends you back here to run each proof. Either way, this
 > repository is where the examples live, and the site is where the reasoning is written down.
+>
+> **Bringing super metrics, views or dashboards into VCF Operations?** Each is its own file, and they import in
+> order: super metrics, views, the dashboard, then switching the super metrics on in a policy.
+> [IMPORTING.md](IMPORTING.md) walks the VCF Operations UI screens for each, with no CLI or API.
 
 Runnable reference artifacts behind the sheets at [privatecloudarchitect.com](https://privatecloudarchitect.com).
 Artifacts arrive in two classes. A **harness** (`handbook/<sheet>/`) backs one published sheet:
