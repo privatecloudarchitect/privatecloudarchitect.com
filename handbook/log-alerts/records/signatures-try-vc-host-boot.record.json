@@ -1,10 +1,10 @@
 {
  "after_boot": {
-  "after_boot": 0,
+  "after_boot": 10,
   "boots": 37,
-  "matched": 23,
+  "matched": 10,
   "minutes": 10,
-  "records": 23
+  "records": 10
  },
  "body": {
   "query": {
@@ -13,8 +13,8 @@
      {
       "range": {
        "timestamp": {
-        "gte": 1790964977316,
-        "lte": 1791569777316
+        "gte": 1790964948195,
+        "lte": 1791569748195
        }
       }
      }
@@ -22,7 +22,7 @@
     "must": [
      {
       "term": {
-       "vc_event_type": "com.vmware.vc.ha.VmRestartedByHAEvent"
+       "vc_event_type": "esx.audit.host.boot"
       }
      }
     ],
@@ -40,46 +40,66 @@
  "by_application": [
   {
    "appname": "vcenter-server",
-   "events": 23
+   "events": 10
   }
  ],
  "by_host": [
   {
    "appname": "vcenter-server",
-   "events": 8,
+   "events": 2,
    "host": "{{host-2}}"
   },
   {
    "appname": "vcenter-server",
-   "events": 7,
+   "events": 1,
    "host": "{{host-3}}"
   },
   {
    "appname": "vcenter-server",
-   "events": 5,
-   "host": "{{host-1}}"
-  },
-  {
-   "appname": "vcenter-server",
-   "events": 2,
+   "events": 1,
    "host": "{{host-4}}"
   },
   {
    "appname": "vcenter-server",
    "events": 1,
    "host": "{{host-5}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 1,
+   "host": "{{host-6}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 1,
+   "host": "{{host-7}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 1,
+   "host": "{{host-8}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 1,
+   "host": "{{host-1}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 1,
+   "host": "{{host-9}}"
   }
  ],
- "events": 23,
+ "events": 10,
  "object_kinds": {
   "HostSystem": 1
  },
- "read_at": "2026-10-09T18:16:17Z",
+ "read_at": "2026-10-09T18:15:48Z",
  "samples": [
   {
    "appname": "vcenter-server",
-   "text": "2026-10-05 11:27:55.966 {{host-1}} vcenter-server: <the catalog text of com.vmware.vc.ha.VmRestartedByHAEvent>",
-   "vc_event_type": "com.vmware.vc.ha.VmRestartedByHAEvent"
+   "text": "2026-10-06 14:57:47.048 {{host-1}} vcenter-server: <the catalog text of esx.audit.host.boot>",
+   "vc_event_type": "esx.audit.host.boot"
   }
  ],
  "window_days": 7.0

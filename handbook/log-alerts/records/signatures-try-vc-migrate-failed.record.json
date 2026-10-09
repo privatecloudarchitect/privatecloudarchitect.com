@@ -1,4 +1,11 @@
 {
+ "after_boot": {
+  "after_boot": 0,
+  "boots": 37,
+  "matched": 5,
+  "minutes": 10,
+  "records": 5
+ },
  "body": {
   "query": {
    "bool": {
@@ -6,8 +13,8 @@
      {
       "range": {
        "timestamp": {
-        "gte": 1790920843622,
-        "lte": 1791525643622
+        "gte": 1790964971778,
+        "lte": 1791569771778
        }
       }
      }
@@ -47,7 +54,7 @@
  "object_kinds": {
   "VirtualMachine": 1
  },
- "read_at": "2026-10-09T06:00:43Z",
+ "read_at": "2026-10-09T18:16:11Z",
  "samples": [
   {
    "appname": "vcenter-server",

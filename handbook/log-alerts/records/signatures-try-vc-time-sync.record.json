@@ -2,9 +2,9 @@
  "after_boot": {
   "after_boot": 0,
   "boots": 37,
-  "matched": 2,
+  "matched": 1,
   "minutes": 10,
-  "records": 2
+  "records": 1
  },
  "body": {
   "query": {
@@ -13,8 +13,8 @@
      {
       "range": {
        "timestamp": {
-        "gte": 1790965306606,
-        "lte": 1791570106606
+        "gte": 1790964892477,
+        "lte": 1791569692477
        }
       }
      }
@@ -22,7 +22,7 @@
     "must": [
      {
       "term": {
-       "vc_event_type": "esx.problem.storage.apd.start"
+       "vc_event_type": "esx.problem.clock.correction.adjtime.lostsync"
       }
      }
     ],
@@ -40,26 +40,26 @@
  "by_application": [
   {
    "appname": "vcenter-server",
-   "events": 2
+   "events": 1
   }
  ],
  "by_host": [
   {
    "appname": "vcenter-server",
-   "events": 2,
+   "events": 1,
    "host": "{{host-1}}"
   }
  ],
- "events": 2,
+ "events": 1,
  "object_kinds": {
   "HostSystem": 1
  },
- "read_at": "2026-10-09T18:21:46Z",
+ "read_at": "2026-10-09T18:14:52Z",
  "samples": [
   {
    "appname": "vcenter-server",
-   "text": "2026-10-06 14:11:10.175 {{host-1}} vcenter-server: <the catalog text of esx.problem.storage.apd.start>",
-   "vc_event_type": "esx.problem.storage.apd.start"
+   "text": "2026-10-08 04:48:37.814 {{host-1}} vcenter-server: <the catalog text of esx.problem.clock.correction.adjtime.lostsync>",
+   "vc_event_type": "esx.problem.clock.correction.adjtime.lostsync"
   }
  ],
  "window_days": 7.0

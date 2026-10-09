@@ -1,0 +1,121 @@
+{
+ "after_boot": {
+  "after_boot": 18,
+  "boots": 37,
+  "matched": 54,
+  "minutes": 10,
+  "records": 54
+ },
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1790964862316,
+        "lte": 1791569662316
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "term": {
+       "appname": "vobd"
+      }
+     },
+     {
+      "match_phrase": {
+       "text": "esx.problem.net.vmnic.linkstate.down"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [
+  {
+   "appname": "vobd",
+   "events": 54
+  }
+ ],
+ "by_host": [
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-2}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-3}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-4}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-5}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-6}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-7}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-8}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-1}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 6,
+   "host": "{{host-9}}"
+  }
+ ],
+ "events": 54,
+ "object_kinds": {
+  "HostSystem": 3
+ },
+ "read_at": "2026-10-09T18:14:22Z",
+ "samples": [
+  {
+   "appname": "vobd",
+   "text": "2026-10-06T14:57:48.004Z {{host-1}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.problem.net.vmnic.linkstate.down] Physical NIC vmnic1 linkstate is down). ",
+   "vc_event_type": null
+  },
+  {
+   "appname": "vobd",
+   "text": "2026-10-06T14:57:48.004Z {{host-1}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.problem.net.vmnic.linkstate.down] Physical NIC vmnic0 linkstate is down). ",
+   "vc_event_type": null
+  },
+  {
+   "appname": "vobd",
+   "text": "2026-10-06T14:56:55.002Z {{host-1}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 30150533us: [esx.problem.net.vmnic.linkstate.down] Physical NIC vmnic1 linkstate is down ",
+   "vc_event_type": null
+  }
+ ],
+ "window_days": 7.0
+}

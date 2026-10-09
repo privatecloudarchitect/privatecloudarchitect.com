@@ -1,0 +1,76 @@
+{
+ "after_boot": {
+  "after_boot": 0,
+  "boots": 37,
+  "matched": 2,
+  "minutes": 10,
+  "records": 2
+ },
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1790964886780,
+        "lte": 1791569686780
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "term": {
+       "appname": "vobd"
+      }
+     },
+     {
+      "match_phrase": {
+       "text": "esx.problem.clock.correction.adjtime.lostsync"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [
+  {
+   "appname": "vobd",
+   "events": 2
+  }
+ ],
+ "by_host": [
+  {
+   "appname": "vobd",
+   "events": 2,
+   "host": "{{host-1}}"
+  }
+ ],
+ "events": 2,
+ "object_kinds": {
+  "HostSystem": 2
+ },
+ "read_at": "2026-10-09T18:14:46Z",
+ "samples": [
+  {
+   "appname": "vobd",
+   "text": "2026-10-08T04:48:38.008Z {{host-1}} vobd 2097451 - [esx@4413 threadName=\"ClockCorrelator\"] 143937425480us: [esx.problem.clock.correction.adjtime.lostsync] system clock apparently no longer synchronized to upstream time servers ",
+   "vc_event_type": null
+  },
+  {
+   "appname": "vobd",
+   "text": "2026-10-08T04:48:38.008Z {{host-1}} vobd 2097451 - [esx@4413 threadName=\"ClockCorrelator\"] The event ([esx.problem.clock.correction.adjtime.lostsync] system clock apparently no longer synchronized to upstream time servers) was sent immediately to hostd; ",
+   "vc_event_type": null
+  }
+ ],
+ "window_days": 7.0
+}

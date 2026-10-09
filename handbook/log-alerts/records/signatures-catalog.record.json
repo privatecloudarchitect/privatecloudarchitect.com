@@ -10,13 +10,23 @@
   "esx.clear.vmfs",
   "esx.problem.vmsyslogd",
   "com.vmware.vc.HA.Vmcp",
+  "esx.problem.net",
+  "esx.clear.net",
+  "esx.problem.clock",
+  "esx.problem.vm.kill",
+  "esx.audit.ssh",
+  "esx.audit.shell",
+  "esx.audit.net.firewall",
+  "esx.audit.host",
+  "com.vmware.vc.HA.DasHostFailedEvent",
+  "com.vmware.vc.ha.VmRestartedByHAEvent",
   "HostConnectionLostEvent",
   "HostDisconnectedEvent",
   "VmFailedMigrateEvent",
   "BadUsernameSessionEvent"
  ],
  "grep": null,
- "read_at": "2026-10-09T05:34:37Z",
+ "read_at": "2026-10-09T18:16:40Z",
  "same_on_every_vcenter": true,
  "vcenters": {
   "{{vcenter-1}}": {
@@ -38,6 +48,10 @@
      "category": "error",
      "text": "Cannot migrate {vm.name} from {host.name}, {ds.name} in {datacenter.name} to {destHost.name}, {destDatastore.name} in {destDatacenter.name}"
     },
+    "com.vmware.vc.HA.DasHostFailedEvent": {
+     "category": "error",
+     "text": "vSphere HA detected a possible host failure of host {host.name} in cluster {computeResource.name} in datacenter {datacenter.name}"
+    },
     "com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore": {
      "category": "warning",
      "text": "vSphere HA did not terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name}: {reason.@enum.com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore}"
@@ -57,6 +71,202 @@
     "com.vmware.vc.HA.VmcpTerminatingVm": {
      "category": "warning",
      "text": "vSphere HA attempted to terminate VM {vm.name} on host{host.name} in cluster {computeResource.name} in {datacenter.name} because the VM was affected by an inaccessible datastore"
+    },
+    "com.vmware.vc.ha.VmRestartedByHAEvent": {
+     "category": "warning",
+     "text": "vSphere HA restarted virtual machine {vm.name} on host {host.name} in cluster {computeResource.name}"
+    },
+    "esx.audit.host.boot": {
+     "category": "info",
+     "text": "Host has booted."
+    },
+    "esx.audit.host.crash.reason": {
+     "category": "info",
+     "text": "The crash at {1} occurred due to: {2}. More details will be available in the generated vmkernel-zdump."
+    },
+    "esx.audit.host.crash.reason.available": {
+     "category": "info",
+     "text": "The host experienced a crash. Reason: {1}."
+    },
+    "esx.audit.host.crash.reason.unavailable": {
+     "category": "info",
+     "text": "Host experienced a crash. More details will be available in the generated vmkernel-zdump."
+    },
+    "esx.audit.host.maxRegisteredVMsExceeded": {
+     "category": "warning",
+     "text": "The number of virtual machines registered on host {host.name} in cluster {computeResource.name} in {datacenter.name} exceeded limit: {current} registered, {limit} is the maximum supported."
+    },
+    "esx.audit.host.poweroff.reason.available": {
+     "category": "info",
+     "text": "The host has been powered off. Reason for powering off: {1}."
+    },
+    "esx.audit.host.poweroff.reason.management": {
+     "category": "info",
+     "text": "The power off at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.poweroff.reason.subsystem": {
+     "category": "info",
+     "text": "The power off at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.poweroff.reason.timestamp": {
+     "category": "info",
+     "text": "The power off at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.poweroff.reason.unavailable": {
+     "category": "info",
+     "text": "Host had been powered off. The poweroff was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.poweroff.reason.user": {
+     "category": "info",
+     "text": "The power off at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.quickboot.reason.available": {
+     "category": "info",
+     "text": "The host experienced Quick Boot. Reason for reboot: {1}."
+    },
+    "esx.audit.host.quickboot.reason.management": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.quickboot.reason.subsystem": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.quickboot.reason.timestamp": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.quickboot.reason.unavailable": {
+     "category": "info",
+     "text": "Host experienced Quick Boot. The Quick Boot was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.quickboot.reason.user": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.reboot.reason.available": {
+     "category": "info",
+     "text": "The host has been rebooted. Reason for reboot: {1}."
+    },
+    "esx.audit.host.reboot.reason.management": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.reboot.reason.subsystem": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.reboot.reason.timestamp": {
+     "category": "info",
+     "text": "The reboot at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.reboot.reason.unavailable": {
+     "category": "info",
+     "text": "Host had been rebooted. The reboot was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.reboot.reason.user": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.stop.reboot": {
+     "category": "info",
+     "text": "Host is rebooting."
+    },
+    "esx.audit.host.stop.shutdown": {
+     "category": "info",
+     "text": "Host is shutting down."
+    },
+    "esx.audit.hostd.host.poweroff.reason": {
+     "category": "warning",
+     "text": "The host is being powered off through hostd. Reason for powering off: {1}, User: {2}."
+    },
+    "esx.audit.hostd.host.reboot.reason": {
+     "category": "warning",
+     "text": "The host is being rebooted through hostd. Reason for reboot: {1}, User: {2}."
+    },
+    "esx.audit.hostd.host.restart.reason": {
+     "category": "warning",
+     "text": "The host is being rebooted through hostd. Reason for reboot: {1}, User: {2}."
+    },
+    "esx.audit.net.firewall.config.changed": {
+     "category": "info",
+     "text": "Firewall configuration has changed. Operation '{1}' for rule set {2} succeeded."
+    },
+    "esx.audit.net.firewall.disabled": {
+     "category": "warning",
+     "text": "Firewall has been disabled."
+    },
+    "esx.audit.net.firewall.enabled": {
+     "category": "info",
+     "text": "Firewall has been enabled for port {1}."
+    },
+    "esx.audit.net.firewall.port.hooked": {
+     "category": "info",
+     "text": "Port {1} is now protected by Firewall."
+    },
+    "esx.audit.net.firewall.port.removed": {
+     "category": "warning",
+     "text": "Port {1} is no longer protected with Firewall."
+    },
+    "esx.audit.shell.disabled": {
+     "category": "info",
+     "text": "The ESXi command line shell has been disabled."
+    },
+    "esx.audit.shell.enabled": {
+     "category": "info",
+     "text": "The ESXi command line shell has been enabled."
+    },
+    "esx.audit.ssh.disabled": {
+     "category": "info",
+     "text": "SSH access has been disabled."
+    },
+    "esx.audit.ssh.enabled": {
+     "category": "info",
+     "text": "SSH access has been enabled."
+    },
+    "esx.audit.ssh.session.closed": {
+     "category": "info",
+     "text": "SSH session was closed for '{1}@{2}'."
+    },
+    "esx.audit.ssh.session.failed": {
+     "category": "info",
+     "text": "SSH login has failed for '{1}@{2}'."
+    },
+    "esx.audit.ssh.session.opened": {
+     "category": "info",
+     "text": "SSH session was opened for '{1}@{2}'."
+    },
+    "esx.clear.net.connectivity.restored": {
+     "category": "info",
+     "text": "Network connectivity restored on virtual switch {1}, portgroups: {2}. Physical NIC {3} is up."
+    },
+    "esx.clear.net.dvport.connectivity.restored": {
+     "category": "info",
+     "text": "Network connectivity restored on DVPorts: {1}. Physical NIC {2} is up."
+    },
+    "esx.clear.net.dvport.redundancy.restored": {
+     "category": "info",
+     "text": "Uplink redundancy restored on DVPorts: {1}. Physical NIC {2} is up recently."
+    },
+    "esx.clear.net.lacp.lag.transition.up": {
+     "category": "info",
+     "text": "LACP info: LAG {1} on VDS {2} is up."
+    },
+    "esx.clear.net.lacp.uplink.transition.up": {
+     "category": "info",
+     "text": "LACP info: uplink {1} on VDS {2} is moved into link aggregation group."
+    },
+    "esx.clear.net.lacp.uplink.unblocked": {
+     "category": "info",
+     "text": "LACP info: uplink {1} on VDS {2} is unblocked."
+    },
+    "esx.clear.net.redundancy.restored": {
+     "category": "info",
+     "text": "Uplink redundancy restored on virtual switch {1}, portgroups: {2}. Physical NIC {3} is up."
+    },
+    "esx.clear.net.vmnic.linkstate.up": {
+     "category": "info",
+     "text": "Physical NIC {1} linkstate is up."
     },
     "esx.clear.psastor.device.io.latency.improved": {
      "category": "info",
@@ -101,6 +311,214 @@
     "esx.clear.vmfs.nfs.volume.io.latency.improved": {
      "category": "info",
      "text": "NFS volume {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.clock.correction.adjtime.lostsync": {
+     "category": "warning",
+     "text": "system clock no longer synchronized to upstream time servers"
+    },
+    "esx.problem.clock.correction.adjtime.sync": {
+     "category": "warning",
+     "text": "system clock synchronized to upstream time servers"
+    },
+    "esx.problem.clock.correction.adjtime.unsync": {
+     "category": "warning",
+     "text": "system clock lost synchronization to upstream time servers"
+    },
+    "esx.problem.clock.correction.changed": {
+     "category": "warning",
+     "text": "{1} stepped system clock to {2}.{3}, synchronization lost"
+    },
+    "esx.problem.clock.correction.delta.allowed": {
+     "category": "warning",
+     "text": "Clock stepped to {1}.{2}, but delta {3} > {4} seconds"
+    },
+    "esx.problem.clock.correction.delta.failed": {
+     "category": "error",
+     "text": "Clock step to {1}.{2} failed, delta {3} > {4} seconds, number of large corrections > {5}"
+    },
+    "esx.problem.clock.correction.delta.warning": {
+     "category": "warning",
+     "text": "Clock stepped to {1}.{2}, but delta {3} > {4} seconds, {5}/{6} large corrections"
+    },
+    "esx.problem.clock.correction.step.unsync": {
+     "category": "warning",
+     "text": "system clock stepped to {1}.{2}, lost synchronization"
+    },
+    "esx.problem.clock.parameter.set.maxLargeCorrections": {
+     "category": "warning",
+     "text": "system clock max number of correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.maxNegPhaseCorrection": {
+     "category": "warning",
+     "text": "system clock max negative phase correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.maxPosPhaseCorrection": {
+     "category": "warning",
+     "text": "system clock max positive phase correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.numLargeCorrections": {
+     "category": "warning",
+     "text": "system clock number of large correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.vobReportInterval": {
+     "category": "warning",
+     "text": "system clock max number of correction set to {1}"
+    },
+    "esx.problem.clock.state.reset": {
+     "category": "warning",
+     "text": "system clock state has been reset"
+    },
+    "esx.problem.net.connectivity.lost": {
+     "category": "error",
+     "text": "Lost network connectivity on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.dvport.connectivity.lost": {
+     "category": "error",
+     "text": "Lost network connectivity on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.dvport.redundancy.degraded": {
+     "category": "warning",
+     "text": "Uplink redundancy degraded on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.dvport.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost uplink redundancy on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.e1000.tso6.notsupported": {
+     "category": "error",
+     "text": "Guest-initiated IPv6 TCP Segmentation Offload (TSO) packets ignored. Manually disable TSO inside the guest operating system in virtual machine {1}, or use a different virtual adapter."
+    },
+    "esx.problem.net.fence.port.badfenceid": {
+     "category": "error",
+     "text": "VMkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: invalid fenceId."
+    },
+    "esx.problem.net.fence.resource.limited": {
+     "category": "error",
+     "text": "Vmkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: maximum number of fence networks or ports have been reached."
+    },
+    "esx.problem.net.fence.switch.unavailable": {
+     "category": "error",
+     "text": "Vmkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: dvSwitch fence property is not set."
+    },
+    "esx.problem.net.firewall.config.failed": {
+     "category": "error",
+     "text": "Firewall configuration operation '{1}' failed. The changes were not applied to rule set {2}."
+    },
+    "esx.problem.net.firewall.port.hookfailed": {
+     "category": "error",
+     "text": "Adding port {1} to Firewall failed."
+    },
+    "esx.problem.net.gateway.set.failed": {
+     "category": "error",
+     "text": "Cannot connect to the specified gateway {1}. Failed to set it."
+    },
+    "esx.problem.net.heap.belowthreshold": {
+     "category": "warning",
+     "text": "{1} free size dropped below {2} percent."
+    },
+    "esx.problem.net.lacp.lag.transition.down": {
+     "category": "warning",
+     "text": "LACP warning: LAG {1} on VDS {2} is down."
+    },
+    "esx.problem.net.lacp.peer.noresponse": {
+     "category": "error",
+     "text": "LACP error: No peer response on uplink {1} for VDS {2}."
+    },
+    "esx.problem.net.lacp.peer.noresponse.2": {
+     "category": "error",
+     "text": "LACP error: No peer response on VDS {1}."
+    },
+    "esx.problem.net.lacp.policy.incompatible": {
+     "category": "error",
+     "text": "LACP error: Current teaming policy on VDS {1} is incompatible, supported is IP hash only."
+    },
+    "esx.problem.net.lacp.policy.linkstatus": {
+     "category": "error",
+     "text": "LACP error: Current teaming policy on VDS {1} is incompatible, supported link failover detection is link status only."
+    },
+    "esx.problem.net.lacp.uplink.blocked": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} is blocked."
+    },
+    "esx.problem.net.lacp.uplink.disconnected": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} got disconnected."
+    },
+    "esx.problem.net.lacp.uplink.fail.duplex": {
+     "category": "error",
+     "text": "LACP error: Duplex mode across all uplink ports must be full, VDS {1} uplink {2} has different mode."
+    },
+    "esx.problem.net.lacp.uplink.fail.speed": {
+     "category": "error",
+     "text": "LACP error: Speed across all uplink ports must be same, VDS {1} uplink {2} has different speed."
+    },
+    "esx.problem.net.lacp.uplink.inactive": {
+     "category": "error",
+     "text": "LACP error: All uplinks on VDS {1} must be active."
+    },
+    "esx.problem.net.lacp.uplink.transition.down": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} is moved out of link aggregation group."
+    },
+    "esx.problem.net.migrate.bindtovmk": {
+     "category": "warning",
+     "text": "The ESX advanced configuration option /Migrate/Vmknic is set to an invalid vmknic: {1}.  /Migrate/Vmknic specifies a vmknic that vMotion binds to for improved performance. Update the configuration option with a valid vmknic. Alternatively, if you do not want vMotion to bind to a specific vmknic, remove the invalid vmknic and leave the option blank."
+    },
+    "esx.problem.net.migrate.unsupported.latency": {
+     "category": "warning",
+     "text": "ESXi has detected {1}ms round-trip vMotion network latency between host {2} and {3}.  High latency vMotion networks are supported only if both ESXi hosts have been configured for vMotion latency tolerance."
+    },
+    "esx.problem.net.portset.port.full": {
+     "category": "error",
+     "text": "Portset {1} has reached the maximum number of ports ({2}). Cannot apply for any more free ports."
+    },
+    "esx.problem.net.portset.port.vlan.invalidid": {
+     "category": "error",
+     "text": "{1} VLANID {2} is invalid. VLAN ID must be between 0 and 4095."
+    },
+    "esx.problem.net.portset.unsupported.psclass": {
+     "category": "warning",
+     "text": "{1} is not a VMware supported portset class, the relevant module must be unloaded."
+    },
+    "esx.problem.net.proxyswitch.port.unavailable": {
+     "category": "warning",
+     "text": "Virtual NIC with hardware address {1} failed to connect to distributed virtual port {2} on switch {3}. There are no more ports available on the host proxy switch."
+    },
+    "esx.problem.net.redundancy.degraded": {
+     "category": "warning",
+     "text": "Uplink redundancy degraded on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost uplink redundancy on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.rspan.teaming.uplink.io.conflict": {
+     "category": "error",
+     "text": "Failed to set RSPAN src session {1} on portset {2} due to it disallows uplink I/O which conflicts with {3} teaming policy {4}."
+    },
+    "esx.problem.net.teaming.policy.invalid.uplink": {
+     "category": "error",
+     "text": "Failed to update teaming policy {1} on portset {2} due to an invalid uplink {3} which disallows normal I/O."
+    },
+    "esx.problem.net.uplink.mtu.failed": {
+     "category": "warning",
+     "text": "VMkernel failed to set the MTU value {1} on the uplink {2}."
+    },
+    "esx.problem.net.vmknic.ip.duplicate": {
+     "category": "warning",
+     "text": "A duplicate IP address was detected for {1} on the interface {2}. The current owner is {3}."
+    },
+    "esx.problem.net.vmnic.linkstate.down": {
+     "category": "warning",
+     "text": "Physical NIC {1} linkstate is down."
+    },
+    "esx.problem.net.vmnic.linkstate.flapping": {
+     "category": "warning",
+     "text": "Taking down physical NIC {1} because the link is unstable."
+    },
+    "esx.problem.net.vmnic.watchdog.reset": {
+     "category": "warning",
+     "text": "Uplink {1} has recovered from a transient failure due to watchdog timeout"
     },
     "esx.problem.psastor.apd.event.descriptor.alloc.failed": {
      "category": "warning",
@@ -345,6 +763,46 @@
     "esx.problem.storage.redundancy.lost": {
      "category": "warning",
      "text": "Lost path redundancy to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.vm.kill.unexpected.fault.failure": {
+     "category": "error",
+     "text": "The VM using the config file {1} could not fault in a guest physical page from the hypervisor level swap file at {2}. The VM is terminated as further progress is impossible."
+    },
+    "esx.problem.vm.kill.unexpected.fault.failure.2": {
+     "category": "error",
+     "text": "{1} could not fault in a guest physical page from the hypervisor level swap file on {2}. The VM is terminated as further progress is impossible"
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire": {
+     "category": "error",
+     "text": "The VM using the config file {1} contains the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the VM is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire.64": {
+     "category": "error",
+     "text": "The VM using the config file {1} contains the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the VM is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire.64.2": {
+     "category": "error",
+     "text": "{1} contained the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the virtual machine is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.noSwapResponse": {
+     "category": "error",
+     "text": "The VM using the config file {1} did not respond to {2} swap actions in {3} seconds and is forcefully powered off to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.noSwapResponse.2": {
+     "category": "error",
+     "text": "{1} did not respond to {2} swap actions in {3} seconds and is forcefully powered off to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmtrack": {
+     "category": "error",
+     "text": "The VM using the config file {1} is allocating too many pages while system is critically low in free memory. It is forcefully terminated to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmtrack.2": {
+     "category": "error",
+     "text": "{1} is allocating too many pages while system is critically low in free memory. It is forcefully terminated to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmx.fault.failure.2": {
+     "category": "error",
+     "text": "The user world daemon of {1} could not fault in a page. The virtual machine is terminated as further progress is impossible."
     },
     "esx.problem.vmfs.ats.incompatibility.detected": {
      "category": "error",
@@ -488,6 +946,10 @@
      "category": "error",
      "text": "Cannot migrate {vm.name} from {host.name}, {ds.name} in {datacenter.name} to {destHost.name}, {destDatastore.name} in {destDatacenter.name}"
     },
+    "com.vmware.vc.HA.DasHostFailedEvent": {
+     "category": "error",
+     "text": "vSphere HA detected a possible host failure of host {host.name} in cluster {computeResource.name} in datacenter {datacenter.name}"
+    },
     "com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore": {
      "category": "warning",
      "text": "vSphere HA did not terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name}: {reason.@enum.com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore}"
@@ -507,6 +969,202 @@
     "com.vmware.vc.HA.VmcpTerminatingVm": {
      "category": "warning",
      "text": "vSphere HA attempted to terminate VM {vm.name} on host{host.name} in cluster {computeResource.name} in {datacenter.name} because the VM was affected by an inaccessible datastore"
+    },
+    "com.vmware.vc.ha.VmRestartedByHAEvent": {
+     "category": "warning",
+     "text": "vSphere HA restarted virtual machine {vm.name} on host {host.name} in cluster {computeResource.name}"
+    },
+    "esx.audit.host.boot": {
+     "category": "info",
+     "text": "Host has booted."
+    },
+    "esx.audit.host.crash.reason": {
+     "category": "info",
+     "text": "The crash at {1} occurred due to: {2}. More details will be available in the generated vmkernel-zdump."
+    },
+    "esx.audit.host.crash.reason.available": {
+     "category": "info",
+     "text": "The host experienced a crash. Reason: {1}."
+    },
+    "esx.audit.host.crash.reason.unavailable": {
+     "category": "info",
+     "text": "Host experienced a crash. More details will be available in the generated vmkernel-zdump."
+    },
+    "esx.audit.host.maxRegisteredVMsExceeded": {
+     "category": "warning",
+     "text": "The number of virtual machines registered on host {host.name} in cluster {computeResource.name} in {datacenter.name} exceeded limit: {current} registered, {limit} is the maximum supported."
+    },
+    "esx.audit.host.poweroff.reason.available": {
+     "category": "info",
+     "text": "The host has been powered off. Reason for powering off: {1}."
+    },
+    "esx.audit.host.poweroff.reason.management": {
+     "category": "info",
+     "text": "The power off at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.poweroff.reason.subsystem": {
+     "category": "info",
+     "text": "The power off at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.poweroff.reason.timestamp": {
+     "category": "info",
+     "text": "The power off at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.poweroff.reason.unavailable": {
+     "category": "info",
+     "text": "Host had been powered off. The poweroff was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.poweroff.reason.user": {
+     "category": "info",
+     "text": "The power off at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.quickboot.reason.available": {
+     "category": "info",
+     "text": "The host experienced Quick Boot. Reason for reboot: {1}."
+    },
+    "esx.audit.host.quickboot.reason.management": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.quickboot.reason.subsystem": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.quickboot.reason.timestamp": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.quickboot.reason.unavailable": {
+     "category": "info",
+     "text": "Host experienced Quick Boot. The Quick Boot was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.quickboot.reason.user": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.reboot.reason.available": {
+     "category": "info",
+     "text": "The host has been rebooted. Reason for reboot: {1}."
+    },
+    "esx.audit.host.reboot.reason.management": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.reboot.reason.subsystem": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.reboot.reason.timestamp": {
+     "category": "info",
+     "text": "The reboot at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.reboot.reason.unavailable": {
+     "category": "info",
+     "text": "Host had been rebooted. The reboot was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.reboot.reason.user": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.stop.reboot": {
+     "category": "info",
+     "text": "Host is rebooting."
+    },
+    "esx.audit.host.stop.shutdown": {
+     "category": "info",
+     "text": "Host is shutting down."
+    },
+    "esx.audit.hostd.host.poweroff.reason": {
+     "category": "warning",
+     "text": "The host is being powered off through hostd. Reason for powering off: {1}, User: {2}."
+    },
+    "esx.audit.hostd.host.reboot.reason": {
+     "category": "warning",
+     "text": "The host is being rebooted through hostd. Reason for reboot: {1}, User: {2}."
+    },
+    "esx.audit.hostd.host.restart.reason": {
+     "category": "warning",
+     "text": "The host is being rebooted through hostd. Reason for reboot: {1}, User: {2}."
+    },
+    "esx.audit.net.firewall.config.changed": {
+     "category": "info",
+     "text": "Firewall configuration has changed. Operation '{1}' for rule set {2} succeeded."
+    },
+    "esx.audit.net.firewall.disabled": {
+     "category": "warning",
+     "text": "Firewall has been disabled."
+    },
+    "esx.audit.net.firewall.enabled": {
+     "category": "info",
+     "text": "Firewall has been enabled for port {1}."
+    },
+    "esx.audit.net.firewall.port.hooked": {
+     "category": "info",
+     "text": "Port {1} is now protected by Firewall."
+    },
+    "esx.audit.net.firewall.port.removed": {
+     "category": "warning",
+     "text": "Port {1} is no longer protected with Firewall."
+    },
+    "esx.audit.shell.disabled": {
+     "category": "info",
+     "text": "The ESXi command line shell has been disabled."
+    },
+    "esx.audit.shell.enabled": {
+     "category": "info",
+     "text": "The ESXi command line shell has been enabled."
+    },
+    "esx.audit.ssh.disabled": {
+     "category": "info",
+     "text": "SSH access has been disabled."
+    },
+    "esx.audit.ssh.enabled": {
+     "category": "info",
+     "text": "SSH access has been enabled."
+    },
+    "esx.audit.ssh.session.closed": {
+     "category": "info",
+     "text": "SSH session was closed for '{1}@{2}'."
+    },
+    "esx.audit.ssh.session.failed": {
+     "category": "info",
+     "text": "SSH login has failed for '{1}@{2}'."
+    },
+    "esx.audit.ssh.session.opened": {
+     "category": "info",
+     "text": "SSH session was opened for '{1}@{2}'."
+    },
+    "esx.clear.net.connectivity.restored": {
+     "category": "info",
+     "text": "Network connectivity restored on virtual switch {1}, portgroups: {2}. Physical NIC {3} is up."
+    },
+    "esx.clear.net.dvport.connectivity.restored": {
+     "category": "info",
+     "text": "Network connectivity restored on DVPorts: {1}. Physical NIC {2} is up."
+    },
+    "esx.clear.net.dvport.redundancy.restored": {
+     "category": "info",
+     "text": "Uplink redundancy restored on DVPorts: {1}. Physical NIC {2} is up recently."
+    },
+    "esx.clear.net.lacp.lag.transition.up": {
+     "category": "info",
+     "text": "LACP info: LAG {1} on VDS {2} is up."
+    },
+    "esx.clear.net.lacp.uplink.transition.up": {
+     "category": "info",
+     "text": "LACP info: uplink {1} on VDS {2} is moved into link aggregation group."
+    },
+    "esx.clear.net.lacp.uplink.unblocked": {
+     "category": "info",
+     "text": "LACP info: uplink {1} on VDS {2} is unblocked."
+    },
+    "esx.clear.net.redundancy.restored": {
+     "category": "info",
+     "text": "Uplink redundancy restored on virtual switch {1}, portgroups: {2}. Physical NIC {3} is up."
+    },
+    "esx.clear.net.vmnic.linkstate.up": {
+     "category": "info",
+     "text": "Physical NIC {1} linkstate is up."
     },
     "esx.clear.psastor.device.io.latency.improved": {
      "category": "info",
@@ -551,6 +1209,214 @@
     "esx.clear.vmfs.nfs.volume.io.latency.improved": {
      "category": "info",
      "text": "NFS volume {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.clock.correction.adjtime.lostsync": {
+     "category": "warning",
+     "text": "system clock no longer synchronized to upstream time servers"
+    },
+    "esx.problem.clock.correction.adjtime.sync": {
+     "category": "warning",
+     "text": "system clock synchronized to upstream time servers"
+    },
+    "esx.problem.clock.correction.adjtime.unsync": {
+     "category": "warning",
+     "text": "system clock lost synchronization to upstream time servers"
+    },
+    "esx.problem.clock.correction.changed": {
+     "category": "warning",
+     "text": "{1} stepped system clock to {2}.{3}, synchronization lost"
+    },
+    "esx.problem.clock.correction.delta.allowed": {
+     "category": "warning",
+     "text": "Clock stepped to {1}.{2}, but delta {3} > {4} seconds"
+    },
+    "esx.problem.clock.correction.delta.failed": {
+     "category": "error",
+     "text": "Clock step to {1}.{2} failed, delta {3} > {4} seconds, number of large corrections > {5}"
+    },
+    "esx.problem.clock.correction.delta.warning": {
+     "category": "warning",
+     "text": "Clock stepped to {1}.{2}, but delta {3} > {4} seconds, {5}/{6} large corrections"
+    },
+    "esx.problem.clock.correction.step.unsync": {
+     "category": "warning",
+     "text": "system clock stepped to {1}.{2}, lost synchronization"
+    },
+    "esx.problem.clock.parameter.set.maxLargeCorrections": {
+     "category": "warning",
+     "text": "system clock max number of correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.maxNegPhaseCorrection": {
+     "category": "warning",
+     "text": "system clock max negative phase correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.maxPosPhaseCorrection": {
+     "category": "warning",
+     "text": "system clock max positive phase correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.numLargeCorrections": {
+     "category": "warning",
+     "text": "system clock number of large correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.vobReportInterval": {
+     "category": "warning",
+     "text": "system clock max number of correction set to {1}"
+    },
+    "esx.problem.clock.state.reset": {
+     "category": "warning",
+     "text": "system clock state has been reset"
+    },
+    "esx.problem.net.connectivity.lost": {
+     "category": "error",
+     "text": "Lost network connectivity on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.dvport.connectivity.lost": {
+     "category": "error",
+     "text": "Lost network connectivity on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.dvport.redundancy.degraded": {
+     "category": "warning",
+     "text": "Uplink redundancy degraded on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.dvport.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost uplink redundancy on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.e1000.tso6.notsupported": {
+     "category": "error",
+     "text": "Guest-initiated IPv6 TCP Segmentation Offload (TSO) packets ignored. Manually disable TSO inside the guest operating system in virtual machine {1}, or use a different virtual adapter."
+    },
+    "esx.problem.net.fence.port.badfenceid": {
+     "category": "error",
+     "text": "VMkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: invalid fenceId."
+    },
+    "esx.problem.net.fence.resource.limited": {
+     "category": "error",
+     "text": "Vmkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: maximum number of fence networks or ports have been reached."
+    },
+    "esx.problem.net.fence.switch.unavailable": {
+     "category": "error",
+     "text": "Vmkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: dvSwitch fence property is not set."
+    },
+    "esx.problem.net.firewall.config.failed": {
+     "category": "error",
+     "text": "Firewall configuration operation '{1}' failed. The changes were not applied to rule set {2}."
+    },
+    "esx.problem.net.firewall.port.hookfailed": {
+     "category": "error",
+     "text": "Adding port {1} to Firewall failed."
+    },
+    "esx.problem.net.gateway.set.failed": {
+     "category": "error",
+     "text": "Cannot connect to the specified gateway {1}. Failed to set it."
+    },
+    "esx.problem.net.heap.belowthreshold": {
+     "category": "warning",
+     "text": "{1} free size dropped below {2} percent."
+    },
+    "esx.problem.net.lacp.lag.transition.down": {
+     "category": "warning",
+     "text": "LACP warning: LAG {1} on VDS {2} is down."
+    },
+    "esx.problem.net.lacp.peer.noresponse": {
+     "category": "error",
+     "text": "LACP error: No peer response on uplink {1} for VDS {2}."
+    },
+    "esx.problem.net.lacp.peer.noresponse.2": {
+     "category": "error",
+     "text": "LACP error: No peer response on VDS {1}."
+    },
+    "esx.problem.net.lacp.policy.incompatible": {
+     "category": "error",
+     "text": "LACP error: Current teaming policy on VDS {1} is incompatible, supported is IP hash only."
+    },
+    "esx.problem.net.lacp.policy.linkstatus": {
+     "category": "error",
+     "text": "LACP error: Current teaming policy on VDS {1} is incompatible, supported link failover detection is link status only."
+    },
+    "esx.problem.net.lacp.uplink.blocked": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} is blocked."
+    },
+    "esx.problem.net.lacp.uplink.disconnected": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} got disconnected."
+    },
+    "esx.problem.net.lacp.uplink.fail.duplex": {
+     "category": "error",
+     "text": "LACP error: Duplex mode across all uplink ports must be full, VDS {1} uplink {2} has different mode."
+    },
+    "esx.problem.net.lacp.uplink.fail.speed": {
+     "category": "error",
+     "text": "LACP error: Speed across all uplink ports must be same, VDS {1} uplink {2} has different speed."
+    },
+    "esx.problem.net.lacp.uplink.inactive": {
+     "category": "error",
+     "text": "LACP error: All uplinks on VDS {1} must be active."
+    },
+    "esx.problem.net.lacp.uplink.transition.down": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} is moved out of link aggregation group."
+    },
+    "esx.problem.net.migrate.bindtovmk": {
+     "category": "warning",
+     "text": "The ESX advanced configuration option /Migrate/Vmknic is set to an invalid vmknic: {1}.  /Migrate/Vmknic specifies a vmknic that vMotion binds to for improved performance. Update the configuration option with a valid vmknic. Alternatively, if you do not want vMotion to bind to a specific vmknic, remove the invalid vmknic and leave the option blank."
+    },
+    "esx.problem.net.migrate.unsupported.latency": {
+     "category": "warning",
+     "text": "ESXi has detected {1}ms round-trip vMotion network latency between host {2} and {3}.  High latency vMotion networks are supported only if both ESXi hosts have been configured for vMotion latency tolerance."
+    },
+    "esx.problem.net.portset.port.full": {
+     "category": "error",
+     "text": "Portset {1} has reached the maximum number of ports ({2}). Cannot apply for any more free ports."
+    },
+    "esx.problem.net.portset.port.vlan.invalidid": {
+     "category": "error",
+     "text": "{1} VLANID {2} is invalid. VLAN ID must be between 0 and 4095."
+    },
+    "esx.problem.net.portset.unsupported.psclass": {
+     "category": "warning",
+     "text": "{1} is not a VMware supported portset class, the relevant module must be unloaded."
+    },
+    "esx.problem.net.proxyswitch.port.unavailable": {
+     "category": "warning",
+     "text": "Virtual NIC with hardware address {1} failed to connect to distributed virtual port {2} on switch {3}. There are no more ports available on the host proxy switch."
+    },
+    "esx.problem.net.redundancy.degraded": {
+     "category": "warning",
+     "text": "Uplink redundancy degraded on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost uplink redundancy on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.rspan.teaming.uplink.io.conflict": {
+     "category": "error",
+     "text": "Failed to set RSPAN src session {1} on portset {2} due to it disallows uplink I/O which conflicts with {3} teaming policy {4}."
+    },
+    "esx.problem.net.teaming.policy.invalid.uplink": {
+     "category": "error",
+     "text": "Failed to update teaming policy {1} on portset {2} due to an invalid uplink {3} which disallows normal I/O."
+    },
+    "esx.problem.net.uplink.mtu.failed": {
+     "category": "warning",
+     "text": "VMkernel failed to set the MTU value {1} on the uplink {2}."
+    },
+    "esx.problem.net.vmknic.ip.duplicate": {
+     "category": "warning",
+     "text": "A duplicate IP address was detected for {1} on the interface {2}. The current owner is {3}."
+    },
+    "esx.problem.net.vmnic.linkstate.down": {
+     "category": "warning",
+     "text": "Physical NIC {1} linkstate is down."
+    },
+    "esx.problem.net.vmnic.linkstate.flapping": {
+     "category": "warning",
+     "text": "Taking down physical NIC {1} because the link is unstable."
+    },
+    "esx.problem.net.vmnic.watchdog.reset": {
+     "category": "warning",
+     "text": "Uplink {1} has recovered from a transient failure due to watchdog timeout"
     },
     "esx.problem.psastor.apd.event.descriptor.alloc.failed": {
      "category": "warning",
@@ -796,6 +1662,46 @@
      "category": "warning",
      "text": "Lost path redundancy to storage device {1}. Path {2} is down. Affected datastores: {3}."
     },
+    "esx.problem.vm.kill.unexpected.fault.failure": {
+     "category": "error",
+     "text": "The VM using the config file {1} could not fault in a guest physical page from the hypervisor level swap file at {2}. The VM is terminated as further progress is impossible."
+    },
+    "esx.problem.vm.kill.unexpected.fault.failure.2": {
+     "category": "error",
+     "text": "{1} could not fault in a guest physical page from the hypervisor level swap file on {2}. The VM is terminated as further progress is impossible"
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire": {
+     "category": "error",
+     "text": "The VM using the config file {1} contains the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the VM is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire.64": {
+     "category": "error",
+     "text": "The VM using the config file {1} contains the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the VM is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire.64.2": {
+     "category": "error",
+     "text": "{1} contained the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the virtual machine is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.noSwapResponse": {
+     "category": "error",
+     "text": "The VM using the config file {1} did not respond to {2} swap actions in {3} seconds and is forcefully powered off to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.noSwapResponse.2": {
+     "category": "error",
+     "text": "{1} did not respond to {2} swap actions in {3} seconds and is forcefully powered off to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmtrack": {
+     "category": "error",
+     "text": "The VM using the config file {1} is allocating too many pages while system is critically low in free memory. It is forcefully terminated to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmtrack.2": {
+     "category": "error",
+     "text": "{1} is allocating too many pages while system is critically low in free memory. It is forcefully terminated to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmx.fault.failure.2": {
+     "category": "error",
+     "text": "The user world daemon of {1} could not fault in a page. The virtual machine is terminated as further progress is impossible."
+    },
     "esx.problem.vmfs.ats.incompatibility.detected": {
      "category": "error",
      "text": "Multi-extent ATS-only volume '{1}' ({2}) is unable to use ATS because HardwareAcceleratedLocking is disabled on this host: potential for introducing filesystem corruption. Volume should not be used from other hosts."
@@ -938,6 +1844,10 @@
      "category": "error",
      "text": "Cannot migrate {vm.name} from {host.name}, {ds.name} in {datacenter.name} to {destHost.name}, {destDatastore.name} in {destDatacenter.name}"
     },
+    "com.vmware.vc.HA.DasHostFailedEvent": {
+     "category": "error",
+     "text": "vSphere HA detected a possible host failure of host {host.name} in cluster {computeResource.name} in datacenter {datacenter.name}"
+    },
     "com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore": {
      "category": "warning",
      "text": "vSphere HA did not terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name}: {reason.@enum.com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore}"
@@ -957,6 +1867,202 @@
     "com.vmware.vc.HA.VmcpTerminatingVm": {
      "category": "warning",
      "text": "vSphere HA attempted to terminate VM {vm.name} on host{host.name} in cluster {computeResource.name} in {datacenter.name} because the VM was affected by an inaccessible datastore"
+    },
+    "com.vmware.vc.ha.VmRestartedByHAEvent": {
+     "category": "warning",
+     "text": "vSphere HA restarted virtual machine {vm.name} on host {host.name} in cluster {computeResource.name}"
+    },
+    "esx.audit.host.boot": {
+     "category": "info",
+     "text": "Host has booted."
+    },
+    "esx.audit.host.crash.reason": {
+     "category": "info",
+     "text": "The crash at {1} occurred due to: {2}. More details will be available in the generated vmkernel-zdump."
+    },
+    "esx.audit.host.crash.reason.available": {
+     "category": "info",
+     "text": "The host experienced a crash. Reason: {1}."
+    },
+    "esx.audit.host.crash.reason.unavailable": {
+     "category": "info",
+     "text": "Host experienced a crash. More details will be available in the generated vmkernel-zdump."
+    },
+    "esx.audit.host.maxRegisteredVMsExceeded": {
+     "category": "warning",
+     "text": "The number of virtual machines registered on host {host.name} in cluster {computeResource.name} in {datacenter.name} exceeded limit: {current} registered, {limit} is the maximum supported."
+    },
+    "esx.audit.host.poweroff.reason.available": {
+     "category": "info",
+     "text": "The host has been powered off. Reason for powering off: {1}."
+    },
+    "esx.audit.host.poweroff.reason.management": {
+     "category": "info",
+     "text": "The power off at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.poweroff.reason.subsystem": {
+     "category": "info",
+     "text": "The power off at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.poweroff.reason.timestamp": {
+     "category": "info",
+     "text": "The power off at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.poweroff.reason.unavailable": {
+     "category": "info",
+     "text": "Host had been powered off. The poweroff was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.poweroff.reason.user": {
+     "category": "info",
+     "text": "The power off at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.quickboot.reason.available": {
+     "category": "info",
+     "text": "The host experienced Quick Boot. Reason for reboot: {1}."
+    },
+    "esx.audit.host.quickboot.reason.management": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.quickboot.reason.subsystem": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.quickboot.reason.timestamp": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.quickboot.reason.unavailable": {
+     "category": "info",
+     "text": "Host experienced Quick Boot. The Quick Boot was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.quickboot.reason.user": {
+     "category": "info",
+     "text": "The Quick Boot at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.reboot.reason.available": {
+     "category": "info",
+     "text": "The host has been rebooted. Reason for reboot: {1}."
+    },
+    "esx.audit.host.reboot.reason.management": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by {2} by user/entity {3} due to: {4}."
+    },
+    "esx.audit.host.reboot.reason.subsystem": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by {2} due to: {3}."
+    },
+    "esx.audit.host.reboot.reason.timestamp": {
+     "category": "info",
+     "text": "The reboot at {1} was requested due to: {2}."
+    },
+    "esx.audit.host.reboot.reason.unavailable": {
+     "category": "info",
+     "text": "Host had been rebooted. The reboot was not the result of a kernel error, deliberate reboot, or shut down. This could indicate a hardware issue. Hardware may reboot abruptly due to power outages, faulty components, and heating issues. To investigate further, engage the hardware vendor."
+    },
+    "esx.audit.host.reboot.reason.user": {
+     "category": "info",
+     "text": "The reboot at {1} was requested by user/entity {2} due to: {3}."
+    },
+    "esx.audit.host.stop.reboot": {
+     "category": "info",
+     "text": "Host is rebooting."
+    },
+    "esx.audit.host.stop.shutdown": {
+     "category": "info",
+     "text": "Host is shutting down."
+    },
+    "esx.audit.hostd.host.poweroff.reason": {
+     "category": "warning",
+     "text": "The host is being powered off through hostd. Reason for powering off: {1}, User: {2}."
+    },
+    "esx.audit.hostd.host.reboot.reason": {
+     "category": "warning",
+     "text": "The host is being rebooted through hostd. Reason for reboot: {1}, User: {2}."
+    },
+    "esx.audit.hostd.host.restart.reason": {
+     "category": "warning",
+     "text": "The host is being rebooted through hostd. Reason for reboot: {1}, User: {2}."
+    },
+    "esx.audit.net.firewall.config.changed": {
+     "category": "info",
+     "text": "Firewall configuration has changed. Operation '{1}' for rule set {2} succeeded."
+    },
+    "esx.audit.net.firewall.disabled": {
+     "category": "warning",
+     "text": "Firewall has been disabled."
+    },
+    "esx.audit.net.firewall.enabled": {
+     "category": "info",
+     "text": "Firewall has been enabled for port {1}."
+    },
+    "esx.audit.net.firewall.port.hooked": {
+     "category": "info",
+     "text": "Port {1} is now protected by Firewall."
+    },
+    "esx.audit.net.firewall.port.removed": {
+     "category": "warning",
+     "text": "Port {1} is no longer protected with Firewall."
+    },
+    "esx.audit.shell.disabled": {
+     "category": "info",
+     "text": "The ESXi command line shell has been disabled."
+    },
+    "esx.audit.shell.enabled": {
+     "category": "info",
+     "text": "The ESXi command line shell has been enabled."
+    },
+    "esx.audit.ssh.disabled": {
+     "category": "info",
+     "text": "SSH access has been disabled."
+    },
+    "esx.audit.ssh.enabled": {
+     "category": "info",
+     "text": "SSH access has been enabled."
+    },
+    "esx.audit.ssh.session.closed": {
+     "category": "info",
+     "text": "SSH session was closed for '{1}@{2}'."
+    },
+    "esx.audit.ssh.session.failed": {
+     "category": "info",
+     "text": "SSH login has failed for '{1}@{2}'."
+    },
+    "esx.audit.ssh.session.opened": {
+     "category": "info",
+     "text": "SSH session was opened for '{1}@{2}'."
+    },
+    "esx.clear.net.connectivity.restored": {
+     "category": "info",
+     "text": "Network connectivity restored on virtual switch {1}, portgroups: {2}. Physical NIC {3} is up."
+    },
+    "esx.clear.net.dvport.connectivity.restored": {
+     "category": "info",
+     "text": "Network connectivity restored on DVPorts: {1}. Physical NIC {2} is up."
+    },
+    "esx.clear.net.dvport.redundancy.restored": {
+     "category": "info",
+     "text": "Uplink redundancy restored on DVPorts: {1}. Physical NIC {2} is up recently."
+    },
+    "esx.clear.net.lacp.lag.transition.up": {
+     "category": "info",
+     "text": "LACP info: LAG {1} on VDS {2} is up."
+    },
+    "esx.clear.net.lacp.uplink.transition.up": {
+     "category": "info",
+     "text": "LACP info: uplink {1} on VDS {2} is moved into link aggregation group."
+    },
+    "esx.clear.net.lacp.uplink.unblocked": {
+     "category": "info",
+     "text": "LACP info: uplink {1} on VDS {2} is unblocked."
+    },
+    "esx.clear.net.redundancy.restored": {
+     "category": "info",
+     "text": "Uplink redundancy restored on virtual switch {1}, portgroups: {2}. Physical NIC {3} is up."
+    },
+    "esx.clear.net.vmnic.linkstate.up": {
+     "category": "info",
+     "text": "Physical NIC {1} linkstate is up."
     },
     "esx.clear.psastor.device.io.latency.improved": {
      "category": "info",
@@ -1001,6 +2107,214 @@
     "esx.clear.vmfs.nfs.volume.io.latency.improved": {
      "category": "info",
      "text": "NFS volume {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.clock.correction.adjtime.lostsync": {
+     "category": "warning",
+     "text": "system clock no longer synchronized to upstream time servers"
+    },
+    "esx.problem.clock.correction.adjtime.sync": {
+     "category": "warning",
+     "text": "system clock synchronized to upstream time servers"
+    },
+    "esx.problem.clock.correction.adjtime.unsync": {
+     "category": "warning",
+     "text": "system clock lost synchronization to upstream time servers"
+    },
+    "esx.problem.clock.correction.changed": {
+     "category": "warning",
+     "text": "{1} stepped system clock to {2}.{3}, synchronization lost"
+    },
+    "esx.problem.clock.correction.delta.allowed": {
+     "category": "warning",
+     "text": "Clock stepped to {1}.{2}, but delta {3} > {4} seconds"
+    },
+    "esx.problem.clock.correction.delta.failed": {
+     "category": "error",
+     "text": "Clock step to {1}.{2} failed, delta {3} > {4} seconds, number of large corrections > {5}"
+    },
+    "esx.problem.clock.correction.delta.warning": {
+     "category": "warning",
+     "text": "Clock stepped to {1}.{2}, but delta {3} > {4} seconds, {5}/{6} large corrections"
+    },
+    "esx.problem.clock.correction.step.unsync": {
+     "category": "warning",
+     "text": "system clock stepped to {1}.{2}, lost synchronization"
+    },
+    "esx.problem.clock.parameter.set.maxLargeCorrections": {
+     "category": "warning",
+     "text": "system clock max number of correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.maxNegPhaseCorrection": {
+     "category": "warning",
+     "text": "system clock max negative phase correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.maxPosPhaseCorrection": {
+     "category": "warning",
+     "text": "system clock max positive phase correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.numLargeCorrections": {
+     "category": "warning",
+     "text": "system clock number of large correction set to {1}"
+    },
+    "esx.problem.clock.parameter.set.vobReportInterval": {
+     "category": "warning",
+     "text": "system clock max number of correction set to {1}"
+    },
+    "esx.problem.clock.state.reset": {
+     "category": "warning",
+     "text": "system clock state has been reset"
+    },
+    "esx.problem.net.connectivity.lost": {
+     "category": "error",
+     "text": "Lost network connectivity on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.dvport.connectivity.lost": {
+     "category": "error",
+     "text": "Lost network connectivity on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.dvport.redundancy.degraded": {
+     "category": "warning",
+     "text": "Uplink redundancy degraded on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.dvport.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost uplink redundancy on DVPorts: {1}. Physical NIC {2} is down."
+    },
+    "esx.problem.net.e1000.tso6.notsupported": {
+     "category": "error",
+     "text": "Guest-initiated IPv6 TCP Segmentation Offload (TSO) packets ignored. Manually disable TSO inside the guest operating system in virtual machine {1}, or use a different virtual adapter."
+    },
+    "esx.problem.net.fence.port.badfenceid": {
+     "category": "error",
+     "text": "VMkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: invalid fenceId."
+    },
+    "esx.problem.net.fence.resource.limited": {
+     "category": "error",
+     "text": "Vmkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: maximum number of fence networks or ports have been reached."
+    },
+    "esx.problem.net.fence.switch.unavailable": {
+     "category": "error",
+     "text": "Vmkernel failed to set fenceId {1} on distributed virtual port {2} on switch {3}. Reason: dvSwitch fence property is not set."
+    },
+    "esx.problem.net.firewall.config.failed": {
+     "category": "error",
+     "text": "Firewall configuration operation '{1}' failed. The changes were not applied to rule set {2}."
+    },
+    "esx.problem.net.firewall.port.hookfailed": {
+     "category": "error",
+     "text": "Adding port {1} to Firewall failed."
+    },
+    "esx.problem.net.gateway.set.failed": {
+     "category": "error",
+     "text": "Cannot connect to the specified gateway {1}. Failed to set it."
+    },
+    "esx.problem.net.heap.belowthreshold": {
+     "category": "warning",
+     "text": "{1} free size dropped below {2} percent."
+    },
+    "esx.problem.net.lacp.lag.transition.down": {
+     "category": "warning",
+     "text": "LACP warning: LAG {1} on VDS {2} is down."
+    },
+    "esx.problem.net.lacp.peer.noresponse": {
+     "category": "error",
+     "text": "LACP error: No peer response on uplink {1} for VDS {2}."
+    },
+    "esx.problem.net.lacp.peer.noresponse.2": {
+     "category": "error",
+     "text": "LACP error: No peer response on VDS {1}."
+    },
+    "esx.problem.net.lacp.policy.incompatible": {
+     "category": "error",
+     "text": "LACP error: Current teaming policy on VDS {1} is incompatible, supported is IP hash only."
+    },
+    "esx.problem.net.lacp.policy.linkstatus": {
+     "category": "error",
+     "text": "LACP error: Current teaming policy on VDS {1} is incompatible, supported link failover detection is link status only."
+    },
+    "esx.problem.net.lacp.uplink.blocked": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} is blocked."
+    },
+    "esx.problem.net.lacp.uplink.disconnected": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} got disconnected."
+    },
+    "esx.problem.net.lacp.uplink.fail.duplex": {
+     "category": "error",
+     "text": "LACP error: Duplex mode across all uplink ports must be full, VDS {1} uplink {2} has different mode."
+    },
+    "esx.problem.net.lacp.uplink.fail.speed": {
+     "category": "error",
+     "text": "LACP error: Speed across all uplink ports must be same, VDS {1} uplink {2} has different speed."
+    },
+    "esx.problem.net.lacp.uplink.inactive": {
+     "category": "error",
+     "text": "LACP error: All uplinks on VDS {1} must be active."
+    },
+    "esx.problem.net.lacp.uplink.transition.down": {
+     "category": "warning",
+     "text": "LACP warning: uplink {1} on VDS {2} is moved out of link aggregation group."
+    },
+    "esx.problem.net.migrate.bindtovmk": {
+     "category": "warning",
+     "text": "The ESX advanced configuration option /Migrate/Vmknic is set to an invalid vmknic: {1}.  /Migrate/Vmknic specifies a vmknic that vMotion binds to for improved performance. Update the configuration option with a valid vmknic. Alternatively, if you do not want vMotion to bind to a specific vmknic, remove the invalid vmknic and leave the option blank."
+    },
+    "esx.problem.net.migrate.unsupported.latency": {
+     "category": "warning",
+     "text": "ESXi has detected {1}ms round-trip vMotion network latency between host {2} and {3}.  High latency vMotion networks are supported only if both ESXi hosts have been configured for vMotion latency tolerance."
+    },
+    "esx.problem.net.portset.port.full": {
+     "category": "error",
+     "text": "Portset {1} has reached the maximum number of ports ({2}). Cannot apply for any more free ports."
+    },
+    "esx.problem.net.portset.port.vlan.invalidid": {
+     "category": "error",
+     "text": "{1} VLANID {2} is invalid. VLAN ID must be between 0 and 4095."
+    },
+    "esx.problem.net.portset.unsupported.psclass": {
+     "category": "warning",
+     "text": "{1} is not a VMware supported portset class, the relevant module must be unloaded."
+    },
+    "esx.problem.net.proxyswitch.port.unavailable": {
+     "category": "warning",
+     "text": "Virtual NIC with hardware address {1} failed to connect to distributed virtual port {2} on switch {3}. There are no more ports available on the host proxy switch."
+    },
+    "esx.problem.net.redundancy.degraded": {
+     "category": "warning",
+     "text": "Uplink redundancy degraded on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost uplink redundancy on virtual switch {1}. Physical NIC {2} is down. Affected portgroups:{3}."
+    },
+    "esx.problem.net.rspan.teaming.uplink.io.conflict": {
+     "category": "error",
+     "text": "Failed to set RSPAN src session {1} on portset {2} due to it disallows uplink I/O which conflicts with {3} teaming policy {4}."
+    },
+    "esx.problem.net.teaming.policy.invalid.uplink": {
+     "category": "error",
+     "text": "Failed to update teaming policy {1} on portset {2} due to an invalid uplink {3} which disallows normal I/O."
+    },
+    "esx.problem.net.uplink.mtu.failed": {
+     "category": "warning",
+     "text": "VMkernel failed to set the MTU value {1} on the uplink {2}."
+    },
+    "esx.problem.net.vmknic.ip.duplicate": {
+     "category": "warning",
+     "text": "A duplicate IP address was detected for {1} on the interface {2}. The current owner is {3}."
+    },
+    "esx.problem.net.vmnic.linkstate.down": {
+     "category": "warning",
+     "text": "Physical NIC {1} linkstate is down."
+    },
+    "esx.problem.net.vmnic.linkstate.flapping": {
+     "category": "warning",
+     "text": "Taking down physical NIC {1} because the link is unstable."
+    },
+    "esx.problem.net.vmnic.watchdog.reset": {
+     "category": "warning",
+     "text": "Uplink {1} has recovered from a transient failure due to watchdog timeout"
     },
     "esx.problem.psastor.apd.event.descriptor.alloc.failed": {
      "category": "warning",
@@ -1245,6 +2559,46 @@
     "esx.problem.storage.redundancy.lost": {
      "category": "warning",
      "text": "Lost path redundancy to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.vm.kill.unexpected.fault.failure": {
+     "category": "error",
+     "text": "The VM using the config file {1} could not fault in a guest physical page from the hypervisor level swap file at {2}. The VM is terminated as further progress is impossible."
+    },
+    "esx.problem.vm.kill.unexpected.fault.failure.2": {
+     "category": "error",
+     "text": "{1} could not fault in a guest physical page from the hypervisor level swap file on {2}. The VM is terminated as further progress is impossible"
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire": {
+     "category": "error",
+     "text": "The VM using the config file {1} contains the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the VM is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire.64": {
+     "category": "error",
+     "text": "The VM using the config file {1} contains the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the VM is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.forcefulPageRetire.64.2": {
+     "category": "error",
+     "text": "{1} contained the host physical page {2} which was scheduled for immediate retirement. To avoid system instability the virtual machine is forcefully powered off."
+    },
+    "esx.problem.vm.kill.unexpected.noSwapResponse": {
+     "category": "error",
+     "text": "The VM using the config file {1} did not respond to {2} swap actions in {3} seconds and is forcefully powered off to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.noSwapResponse.2": {
+     "category": "error",
+     "text": "{1} did not respond to {2} swap actions in {3} seconds and is forcefully powered off to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmtrack": {
+     "category": "error",
+     "text": "The VM using the config file {1} is allocating too many pages while system is critically low in free memory. It is forcefully terminated to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmtrack.2": {
+     "category": "error",
+     "text": "{1} is allocating too many pages while system is critically low in free memory. It is forcefully terminated to prevent system instability."
+    },
+    "esx.problem.vm.kill.unexpected.vmx.fault.failure.2": {
+     "category": "error",
+     "text": "The user world daemon of {1} could not fault in a page. The virtual machine is terminated as further progress is impossible."
     },
     "esx.problem.vmfs.ats.incompatibility.detected": {
      "category": "error",

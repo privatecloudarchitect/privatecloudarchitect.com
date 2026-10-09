@@ -13,7 +13,7 @@ Proven on VCF 9.1.1 (VCF Operations and Log Management 9.1.1, three vCenters and
 
 | File | What it does | Writes |
 |---|---|---|
-| `signatures.py` | `catalog`: the event types each vCenter can emit, filtered by family or by a word in the message (`--grep`). `seen`: the identifiers your hosts' `vobd` records and vCenter's stream carried. `try`: one query over stored events, with counts by application and host, samples, and the object kind the records name. `fields`: whether every field a query names exists. `monitor`: what Log Management built from a symptom (its schedule, its window and the query each filter became), read from OpenSearch's own log of the definition. `bindings`: which object kinds your records belong to, and the object each vCenter event type about a VM binds to | nothing |
+| `signatures.py` | `catalog`: the event types each vCenter can emit, filtered by family or by a word in the message (`--grep`). `seen`: the identifiers your hosts' `vobd` records and vCenter's stream carried. `try`: one query over stored events, with counts by application and host, samples, the object kind the records name, and how many records came within ten minutes after the same host booted. `fields`: whether every field a query names exists. `monitor`: what Log Management built from a symptom (its schedule, its window and the query each filter became), read from OpenSearch's own log of the definition. `bindings`: which object kinds your records belong to, and the object each vCenter event type about a VM binds to | nothing |
 | `deploy.py` | `plan`, `apply`, `status`, `teardown` for a bundle, scoped by a scope file | a custom group, a policy, log symptoms and alerts (with `--yes`) |
 | `prove.py` | labelled lines in the host's own record format, then when they were indexed, which alerts raised on that host, and (with `--until-clear`) when each cleared; `--backdate N` stamps the lines N minutes old | syslog lines to the target you name (with `--send`) |
 | `lmlib.py` | the sign-in, the Log Management token and the search, shared by the three | |
@@ -42,6 +42,7 @@ python3 signatures.py bindings --hours 24
 # try the query before it becomes an alert
 python3 signatures.py try --vc-event esx.problem.storage.apd.start --days 7
 python3 signatures.py try --app vobd --text esx.problem.storage.apd.start --days 7
+python3 signatures.py try --app vobd --text esx.audit.ssh.enabled --days 7      # a starter, and its restarts
 
 # deploy the catalog to one group of hosts, read it back, prove it
 cp scope.example.json scope.json        # then edit it
@@ -67,6 +68,11 @@ from `signatures.py`, `deploy.py status` and `prove.py`.
 - **The search before the alert.** `try` prints the same filters as a search: the event type matches exactly (a
   partial one matches nothing), and a phrase in text matches every identifier that begins with the same words. It
   also prints the object kind the records name, which is the kind the alert takes.
+- **Noise from restarts.** `try` counts the records that came within ten minutes after the same host booted, from
+  the host's own `esx.audit.host.boot` records and vCenter's. A host writes some of the records an alert would count
+  while it starts: on the reference estate, 14 of 18 SSH-enabled records and a third of the NIC link-down and
+  uplink-redundancy records. An alert on those fires at every planned restart, so route it to a queue, or read the
+  setting that causes it, before it reaches a pager.
 - **Which object an alert can sit on.** An alert counts only records that belong to an object of its own kind.
   `bindings` and `try` show it: a host's own syslog belongs to the host, even when a line is about a VM; most of
   vCenter's events about a VM (power, reconfigure, DRS, HA, guest operations) belong to the host the VM runs on, so

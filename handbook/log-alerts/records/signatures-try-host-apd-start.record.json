@@ -1,4 +1,11 @@
 {
+ "after_boot": {
+  "after_boot": 0,
+  "boots": 37,
+  "matched": 4,
+  "minutes": 10,
+  "records": 4
+ },
  "body": {
   "query": {
    "bool": {
@@ -6,8 +13,8 @@
      {
       "range": {
        "timestamp": {
-        "gte": 1790920824824,
-        "lte": 1791525624824
+        "gte": 1790965300186,
+        "lte": 1791570100186
        }
       }
      }
@@ -52,7 +59,7 @@
  "object_kinds": {
   "HostSystem": 3
  },
- "read_at": "2026-10-09T06:00:24Z",
+ "read_at": "2026-10-09T18:21:40Z",
  "samples": [
   {
    "appname": "vobd",

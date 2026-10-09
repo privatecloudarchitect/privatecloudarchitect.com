@@ -20,8 +20,9 @@ Read-only. Three subcommands, each answering one question a log alert depends on
             One query (`--vc-event <id>`, or `--app <name> --text <token>`, optionally `--within field=value`;
             `--text` alone shows which applications write a word, which is why a condition fixes `--app`)
             over --days: how many events, on which hosts, three samples, the VCF Operations object kind the
-            samples' `vmw_vr_ops_id` names (the kind an alert on them takes), and the exact search body it sent, so
-            the same query can become a log symptom. `--body FILE` sends a search body as it stands.
+            samples' `vmw_vr_ops_id` names (the kind an alert on them takes), how many of the records came within
+            ten minutes after the same host booted (an alert on them fires on every restart), and the exact search
+            body it sent, so the same query can become a log symptom. `--body FILE` sends a search body as it stands.
 
   monitor   What did Log Management build from my condition, and when does it run?
             Log Management runs each log symptom as an OpenSearch monitor, and OpenSearch logs the definition it
@@ -73,7 +74,10 @@ sys.path.insert(0, str(HERE))
 
 # Families an ESX storage alert set draws on, plus the host-path and vCenter types the exercises use.
 FAMILIES = ("esx.problem.storage", "esx.clear.storage", "esx.problem.scsi", "esx.clear.scsi", "esx.problem.psastor",
-            "esx.clear.psastor", "esx.problem.vmfs", "esx.clear.vmfs", "esx.problem.vmsyslogd", "com.vmware.vc.HA.Vmcp")
+            "esx.clear.psastor", "esx.problem.vmfs", "esx.clear.vmfs", "esx.problem.vmsyslogd", "com.vmware.vc.HA.Vmcp",
+            # the chapter's starters beyond storage: links and uplinks, time, a VM's process, who opened a host, boots, HA
+            "esx.problem.net", "esx.clear.net", "esx.problem.clock", "esx.problem.vm.kill", "esx.audit.ssh", "esx.audit.shell",
+            "esx.audit.net.firewall", "esx.audit.host", "com.vmware.vc.HA.DasHostFailedEvent", "com.vmware.vc.ha.VmRestartedByHAEvent")
 BUILTIN = ("HostConnectionLostEvent", "HostDisconnectedEvent", "VmFailedMigrateEvent", "BadUsernameSessionEvent")
 # The forwarder's firewall ruleset writes flood vobd and would truncate the slices; labelled test lines are not
 # the platform's own records. Both are left out of `seen`.
@@ -83,7 +87,9 @@ IDENT = re.compile(r"\[((?:vob|esx)\.[A-Za-z0-9_.]+)\]")
 DEVICE = re.compile(r"\b(?:naa|eui|t10|mpx)\.[A-Za-z0-9_.:-]+")
 FSID = re.compile(r"\[[0-9a-f]{8}-[0-9a-f]{8}(?:-[0-9a-f]{4}-[0-9a-f]{12})?\]")
 IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
-UUID = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b")
+DSPATH = re.compile(r"/vmfs/volumes/\S+")  # a VM's file on a datastore names the datastore and the VM
+UUID = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"
+                  r"|\b(?:[0-9a-f]{2} ){7}[0-9a-f]{2}-(?:[0-9a-f]{2} ){7}[0-9a-f]{2}\b")  # and a distributed switch's, as ESX writes it
 ENRICH = ("hostname", "vmw_vcenter", "vmw_cluster", "vmw_datacenter", "vmw_host", "source")
 
 
@@ -228,6 +234,43 @@ def try_query(s, body: dict, scrub) -> dict:
             "by_host": rows, "object_kinds": dict(kinds), "samples": samples}
 
 
+BOOT = "esx.audit.host.boot"
+AFTER_BOOT_MIN = 10
+
+
+def after_boot(s, body: dict, start: int, end: int) -> dict:
+    """How many of a query's records came within ten minutes after the same host booted.
+
+    A host writes some of the records an alert would count while it starts: on the reference estate most of its
+    SSH-enabled records and a third of its link-down ones. An alert on such a record fires at each planned restart,
+    which is how alerts get muted. The boots are the host's own `esx.audit.host.boot` records and vCenter's events of
+    the same type, matched by host name.
+    """
+    def hits(q: dict) -> list[tuple[str, int]]:
+        ev = s.search(dict(q, size=2000)).get("events") or {}
+        total[0] = ev.get("total") or 0
+        out = []
+        for h in ev.get("hits") or []:
+            m = h.get("msgContent") or {}
+            ts = m.get("logTimestamp")
+            if ts:
+                out.append(((hit_fields(h).get("hostname") or "").lower(), int(ts)))
+        return out
+
+    total = [0]
+    rng = {"range": {"timestamp": {"gte": start, "lte": end}}}
+    boots: dict[str, list[int]] = collections.defaultdict(list)
+    for clause in ({"bool": {"must": [{"term": {"appname": "vobd"}}, {"match_phrase": {"text": BOOT}}]}},
+                   {"term": {"vc_event_type": BOOT}}):
+        for host, ts in hits({"query": {"bool": {"must": [clause], "filter": [rng]}}}):
+            boots[host].append(ts)
+    rows = hits(body)
+    near = sum(1 for host, ts in rows if any(0 <= ts - b <= AFTER_BOOT_MIN * 60_000 for b in boots.get(host, [])))
+    # one read of up to 2,000 records: past that the count covers the first 2,000, and `matched` says so
+    return {"minutes": AFTER_BOOT_MIN, "boots": sum(len(v) for v in boots.values()), "records": len(rows),
+            "matched": total[0], "after_boot": near}
+
+
 def object_kind(s, ops_id: str | None) -> str:
     """The VCF Operations object kind a record's `vmw_vr_ops_id` names: the kind an alert on these records takes."""
     if not ops_id:
@@ -328,7 +371,7 @@ def clean(scrub, text: str) -> str:
     for v in sorted(set(ACCOUNT.findall(text)), key=len, reverse=True):  # before names: an account holds a domain
         text = text.replace(v, scrub.add(v, "account"))
     text = scrub.scrub(text)
-    for rx, cat in ((DEVICE, "device"), (IPV4, "address"), (UUID, "uuid")):
+    for rx, cat in ((DSPATH, "datastore-path"), (DEVICE, "device"), (IPV4, "address"), (UUID, "uuid")):
         for v in sorted(set(rx.findall(text)), key=len, reverse=True):
             text = text.replace(v, scrub.add(v, cat))
     for v in sorted(set(FSID.findall(text)), key=len, reverse=True):
@@ -339,7 +382,7 @@ def clean(scrub, text: str) -> str:
 def scrub_text(scrub, obj):
     """Registered names first (longest first), then the shapes no list can hold: devices, filesystems, addresses."""
     text = json.dumps(scrub.scrub_obj(obj))
-    for rx, cat in ((DEVICE, "device"), (FSID, "filesystem"), (IPV4, "address"), (UUID, "uuid")):
+    for rx, cat in ((DSPATH, "datastore-path"), (DEVICE, "device"), (FSID, "filesystem"), (IPV4, "address"), (UUID, "uuid")):
         for v in sorted(set(rx.findall(text)), key=len, reverse=True):
             text = text.replace(v, scrub.add(v, cat).strip("[]") if cat != "filesystem" else "[" + scrub.add(v, cat) + "]")
     return json.loads(text)
@@ -458,11 +501,18 @@ def main(argv: list[str]) -> int:
     body = (json.loads(a["body"].read_text(encoding="utf-8")) if a["body"]
             else query_body(a["vc_event"], a["app"], a["text"], a["within"], start, end))
     record = {"read_at": taken, "window_days": a["days"], **try_query(s, body, scrub)}
+    if not a["body"]:
+        record["after_boot"] = after_boot(s, body, start, end)
     print(json.dumps(body))
     print(f"{record['events']} events; by application: " + ", ".join(f"{r['appname']} {r['events']}" for r in record["by_application"]))
     for r in record["by_host"][:12]:
         print(f"  {r['events']:>6}  {r['appname'] or '-':<10} {r['host']}")
     print(f"  the records name: {record['object_kinds']} (the object kind an alert on them takes)")
+    if (record.get("after_boot") or {}).get("records"):
+        ab = record["after_boot"]
+        part = "" if ab["records"] == ab["matched"] else f" (of the first {ab['records']} of {ab['matched']})"
+        print(f"  after a boot: {ab['after_boot'] or 'none'} of the records{part} came within {ab['minutes']} minutes after the "
+              f"same host booted ({ab['boots']} boots in the window); an alert on them would fire at each of those restarts")
     for x in record["samples"]:
         print(f"  sample: {x['text'][:160]}")
     write(a["out"], f"try-{a['label']}" if a["label"] else "try", record, scrub)

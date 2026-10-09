@@ -42,11 +42,35 @@ wrote signatures-seen.record.json
 The search body it sent is its first line; the summary follows.
 
 ```
-{"query": {"bool": {"must": [{"term": {"vc_event_type": "esx.problem.storage.apd.start"}}], "must_not": [{"match_phrase": {"text": "labelled test line"}}], "filter": [{"range": {"timestamp": {"gte": 1790923020779, "lte":
+{"query": {"bool": {"must": [{"term": {"vc_event_type": "esx.problem.storage.apd.start"}}], "must_not": [{"match_phrase": {"text": "labelled test line"}}], "filter": [{"range": {"timestamp": {"gte": 1790965593655, "lte":
 2 events; by application: vcenter-server 2
        2  vcenter-server {{host-1}}
   the records name: {'HostSystem': 1} (the object kind an alert on them takes)
+  after a boot: none of the records came within 10 minutes after the same host booted (37 boots in the window); an alert on them would fire at each of those restarts
   sample: 2026-10-06 14:11:10.175 {{host-1}} vcenter-server: <the catalog text of esx.problem.storage.apd.start>
+```
+
+## signatures.py try --app vobd --text esx.audit.ssh.enabled --days 7
+
+A starter's records, and how many came within ten minutes after the same host booted: an alert on them
+fires at each of those restarts.
+
+```
+18 events; by application: vobd 18
+       2  vobd       {{host-3}}
+       2  vobd       {{host-4}}
+       2  vobd       {{host-5}}
+       2  vobd       {{host-6}}
+       2  vobd       {{host-7}}
+       2  vobd       {{host-8}}
+       2  vobd       {{host-9}}
+       2  vobd       {{host-2}}
+       2  vobd       {{host-1}}
+  the records name: {'HostSystem': 3} (the object kind an alert on them takes)
+  after a boot: 14 of the records came within 10 minutes after the same host booted (37 boots in the window); an alert on them would fire at each of those restarts
+  sample: 2026-10-06T14:58:45.004Z {{host-1}} vobd 2097976 - [esx@4413 threadName="UserLevelCorrelator"] 4071741286us: [esx.audit.ssh.enabled] SSH access has been enabled
+  sample: 2026-10-06T14:58:45.004Z {{host-1}} vobd 2097976 - [esx@4413 threadName="UserLevelCorrelator"] The event ([esx.audit.ssh.enabled] SSH access has been enabled.)
+  sample: 2026-10-06T14:58:42.671Z {{host-2}} vobd 2097979 - [esx@4413 threadName="UserLevelCorrelator"] 136928738us: [esx.audit.ssh.enabled] SSH access has been enabled.
 ```
 
 ## signatures.py try --app vobd --text storage.apd --days 7
@@ -57,6 +81,7 @@ A partial identifier in text matches its siblings: the starts and the exits, in 
 12 events; by application: vobd 12
       12  vobd       {{host-1}}
   the records name: {'HostSystem': 3} (the object kind an alert on them takes)
+  after a boot: none of the records came within 10 minutes after the same host booted (37 boots in the window); an alert on them would fire at each of those restarts
   sample: 2026-10-06T14:11:33.123Z {{host-1}} vobd 2097451 - [esx@4413 threadName="APDCorrelator"] 4846243989us: [vob.storage.apd.exit] Device or filesystem with identifi
   sample: 2026-10-06T14:11:33.123Z {{host-1}} vobd 2097451 - [esx@4413 threadName="APDCorrelator"] 4846448728us: [esx.clear.storage.apd.exit] Device or filesystem with id
   sample: 2026-10-06T14:11:33.123Z {{host-1}} vobd 2097451 - [esx@4413 threadName="APDCorrelator"] The event ([esx.clear.storage.apd.exit] Device or filesystem with ident
@@ -90,11 +115,11 @@ A bare word, with one record from each application that writes it.
        5  vmkernel   {{host-10}}
        1  audit      {{host-3}}
   the records name: {'HostSystem': 3, 'VirtualMachine': 1} (the object kind an alert on them takes)
+  after a boot: none of the records came within 10 minutes after the same host booted (37 boots in the window); an alert on them would fire at each of those restarts
   sample: 2026-10-06T14:56:57.843Z {{host-1}} vmkernel - - [esx@4413] cpu2:2097963)StorageApdHandler: 967: APD Handle 9093fe95-3a4075e7 Created with lock[StorageApd-0x431
   sample: 2026-10-06T14:11:33.123Z {{host-2}} vobd 2097451 - [esx@4413 threadName="APDCorrelator"] 4846243989us: [vob.storage.apd.exit] Device or filesystem with identifi
   sample: 2026-10-06T14:11:34.123Z {{host-2}} Hostd 2098516 - [esx@4413 sub="Hostsvc.DatastoreSystem"] StorageApdUpdateInt: Processing Storage APD msg [N11HostdCommon24Vm
   sample: 2026-10-08T22:54:05.107Z INFO audit 5916 [ops@4413 auditID="ALERT_DEFINITION.CREATE" threadId="203530" userID="{{uuid-2}}" subject="{{account-1}}" authSource="V
-wrote signatures-try-word-apd.record.json
 ```
 
 ## deploy.py apply --scope scope.json --yes, first run
