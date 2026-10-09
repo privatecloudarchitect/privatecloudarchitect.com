@@ -150,6 +150,41 @@ SP-C3: on in PCA - Storage Path - <scope>, monitors enabled 6 of 6 (attempt 1)
 apply: 0 created, 37 unchanged
 ```
 
+## signatures.py bindings --hours 24 --days 7
+
+Which objects the records belong to, and the object each vCenter event type about a VM binds to (the first 20 types).
+
+```
+records with an inventory object over 24 hours, by the object kind they bind to:
+  HostSystem: 11 objects, 32855344 records; applications ['envoy-access', 'crx-cli', 'nsxdavim', 'Hostd', 'localcli', 'vsansystem']
+  VMwareAdapter Instance: 3 objects, 97526 records; applications ['vcenter-server']
+  VirtualMachine: 6 objects, 20559 records; applications ['audit', 'common', 'NSX', 'pcaprobe', 'vcf_om']
+vCenter events about a virtual machine over 7 days, and the object kind each binds to:
+    25610  com.vmware.vc.authorization.NoPermission                   {'HostSystem': 5}
+    21869  com.vmware.vc.guestOperations.GuestOperation               {'HostSystem': 5}
+     2494  com.vmware.vim25.AlarmStatusChangedEvent                   {'HostSystem': 5}
+     1198  com.vmware.vim25.TaskEvent                                 {'VMwareAdapter Instance': 2, 'HostSystem': 3}
+      635  com.vmware.vc.vm.VmHotMigratingWithEncryptionEvent         {'HostSystem': 5}
+      635  com.vmware.vim25.VmEmigratingEvent                         {'HostSystem': 5}
+      631  com.vmware.vim25.DrsVmMigratedEvent                        {'HostSystem': 5}
+      346  com.vmware.vim25.VmReconfiguredEvent                       {'HostSystem': 5}
+      227  com.vmware.vc.vm.Tier1BandwidthGreen                       {'HostSystem': 5}
+      128  com.vmware.pbm.profile.associate                           {'HostSystem': 2, 'VMwareAdapter Instance': 3}
+       83  com.vmware.vim25.VmStartingEvent                           {'HostSystem': 5}
+       80  com.vmware.vc.EventBurstCompressedEvent                    {'HostSystem': 2, 'VMwareAdapter Instance': 3}
+       80  com.vmware.vc.EventBurstEndedEvent                         {'HostSystem': 2, 'VMwareAdapter Instance': 3}
+       80  com.vmware.vc.EventBurstStartedEvent                       {'HostSystem': 2, 'VMwareAdapter Instance': 3}
+       77  com.vmware.vim25.VmMessageEvent                            {'HostSystem': 5}
+       72  com.vmware.vc.HA.VmProtectedEvent                          {'HostSystem': 5}
+       71  com.vmware.vim25.VmPoweredOffEvent                         {'HostSystem': 5}
+       67  esx.problem.vm.kill.unexpected.vmx.fault.failure.2         {'HostSystem': 5}
+       64  com.vmware.vc.HA.VmUnprotectedEvent                        {'HostSystem': 5}
+       64  com.vmware.vim25.DrsVmPoweredOnEvent                       {'HostSystem': 5}
+       61  com.vmware.vim25.VmMacAssignedEvent                        {'HostSystem': 5}
+...
+wrote signatures-bindings.record.json
+```
+
 ## signatures.py monitor --name "PCA - Storage Path - Host - All paths down started, host record"
 
 What Log Management built from the condition, read from OpenSearch's own log of the monitor definition.

@@ -1,0 +1,471 @@
+{
+ "kinds": {
+  "HostSystem": {
+   "applications": [
+    "envoy-access",
+    "crx-cli",
+    "nsxdavim",
+    "Hostd",
+    "localcli",
+    "vsansystem"
+   ],
+   "objects": 11,
+   "records": 32855344
+  },
+  "VMwareAdapter Instance": {
+   "applications": [
+    "vcenter-server"
+   ],
+   "objects": 3,
+   "records": 97526
+  },
+  "VirtualMachine": {
+   "applications": [
+    "audit",
+    "common",
+    "NSX",
+    "pcaprobe",
+    "vcf_om"
+   ],
+   "objects": 6,
+   "records": 20559
+  }
+ },
+ "read_at": "2026-10-09T08:52:37Z",
+ "vm_events": [
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 25610,
+   "vc_event_type": "com.vmware.vc.authorization.NoPermission"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 21869,
+   "vc_event_type": "com.vmware.vc.guestOperations.GuestOperation"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 2494,
+   "vc_event_type": "com.vmware.vim25.AlarmStatusChangedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 3,
+    "VMwareAdapter Instance": 2
+   },
+   "events": 1198,
+   "vc_event_type": "com.vmware.vim25.TaskEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 635,
+   "vc_event_type": "com.vmware.vc.vm.VmHotMigratingWithEncryptionEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 635,
+   "vc_event_type": "com.vmware.vim25.VmEmigratingEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 631,
+   "vc_event_type": "com.vmware.vim25.DrsVmMigratedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 346,
+   "vc_event_type": "com.vmware.vim25.VmReconfiguredEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 227,
+   "vc_event_type": "com.vmware.vc.vm.Tier1BandwidthGreen"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2,
+    "VMwareAdapter Instance": 3
+   },
+   "events": 128,
+   "vc_event_type": "com.vmware.pbm.profile.associate"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 83,
+   "vc_event_type": "com.vmware.vim25.VmStartingEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2,
+    "VMwareAdapter Instance": 3
+   },
+   "events": 80,
+   "vc_event_type": "com.vmware.vc.EventBurstCompressedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2,
+    "VMwareAdapter Instance": 3
+   },
+   "events": 80,
+   "vc_event_type": "com.vmware.vc.EventBurstEndedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2,
+    "VMwareAdapter Instance": 3
+   },
+   "events": 80,
+   "vc_event_type": "com.vmware.vc.EventBurstStartedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 77,
+   "vc_event_type": "com.vmware.vim25.VmMessageEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 72,
+   "vc_event_type": "com.vmware.vc.HA.VmProtectedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 71,
+   "vc_event_type": "com.vmware.vim25.VmPoweredOffEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 67,
+   "vc_event_type": "esx.problem.vm.kill.unexpected.vmx.fault.failure.2"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 64,
+   "vc_event_type": "com.vmware.vc.HA.VmUnprotectedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 64,
+   "vc_event_type": "com.vmware.vim25.DrsVmPoweredOnEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 61,
+   "vc_event_type": "com.vmware.vim25.VmMacAssignedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 60,
+   "vc_event_type": "com.vmware.vc.certificatemanagement.CPVMCertificateUpdateHealthyEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 60,
+   "vc_event_type": "com.vmware.vim25.VmBeingCreatedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 60,
+   "vc_event_type": "com.vmware.vim25.VmCreatedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 58,
+   "vc_event_type": "com.vmware.vim25.VmRemovedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 56,
+   "vc_event_type": "com.vmware.vim25.VmInstanceUuidAssignedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 56,
+   "vc_event_type": "com.vmware.vim25.VmUuidAssignedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 39,
+   "vc_event_type": "com.vmware.vim25.VmPoweredOnEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 31,
+   "vc_event_type": "com.vmware.vim25.VmBeingRelocatedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 31,
+   "vc_event_type": "com.vmware.vim25.VmRelocatedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 30,
+   "vc_event_type": "com.vmware.vim25.VmGuestShutdownEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 27,
+   "vc_event_type": "com.vmware.vc.guestOperations.GuestOperationAuthFailure"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 23,
+   "vc_event_type": "com.vmware.vc.ha.VmRestartedByHAEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 18,
+   "vc_event_type": "com.vmware.vim25.VmAcquiredTicketEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 17,
+   "vc_event_type": "com.vmware.vim25.VmStoppingEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 3,
+    "VirtualMachine": 2
+   },
+   "events": 15,
+   "vc_event_type": "com.vmware.vim25.VmDisconnectedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 3,
+    "VirtualMachine": 2
+   },
+   "events": 12,
+   "vc_event_type": "com.vmware.vim25.VmConnectedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 8,
+   "vc_event_type": "com.vmware.vc.vm.VmDisksPromotedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 8,
+   "vc_event_type": "com.vmware.vc.vm.VmDisksPromotingEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 8,
+   "vc_event_type": "com.vmware.vim.eam.agent.cluster.markAgentVmAsAvailableAfterPowerOn"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 8,
+   "vc_event_type": "com.vmware.vim.eam.agent.task.powerOnVm"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 7,
+   "vc_event_type": "com.vmware.vim25.CustomizationSucceeded"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 6,
+   "vc_event_type": "com.vmware.vim.eam.agent.cluster.markAgentVmAsAvailableAfterProvisioning"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 6,
+   "vc_event_type": "com.vmware.vim.eam.agent.task.deployVm"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 6,
+   "vc_event_type": "com.vmware.vim.eam.agent.task.powerOffVm"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 6,
+   "vc_event_type": "com.vmware.vim25.CustomizationStartedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 6,
+   "vc_event_type": "com.vmware.vim25.VmUpgradeFailedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 6,
+   "vc_event_type": "com.vmware.vim25.VmUpgradingEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 3,
+    "VirtualMachine": 2
+   },
+   "events": 5,
+   "vc_event_type": "com.vmware.vc.StatelessAlarmTriggeredEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 5
+   },
+   "events": 5,
+   "vc_event_type": "com.vmware.vim25.NoMaintenanceModeDrsRecommendationForVM"
+  },
+  {
+   "binds_to": {
+    "VirtualMachine": 5
+   },
+   "events": 5,
+   "vc_event_type": "com.vmware.vim25.VmFailedMigrateEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 4
+   },
+   "events": 4,
+   "vc_event_type": "com.vmware.vim25.VmBeingDeployedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 4
+   },
+   "events": 4,
+   "vc_event_type": "com.vmware.vim25.VmDeployedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 4
+   },
+   "events": 4,
+   "vc_event_type": "com.vmware.vim25.VmInstanceUuidChangedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 4,
+    "VirtualMachine": 1
+   },
+   "events": 3,
+   "vc_event_type": "com.vmware.vim25.AlarmActionTriggeredEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 4,
+    "VirtualMachine": 1
+   },
+   "events": 3,
+   "vc_event_type": "com.vmware.vim25.AlarmSnmpCompletedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2
+   },
+   "events": 2,
+   "vc_event_type": "com.vmware.vim.eam.issue.cluster.agent.vmPoweredOff"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2
+   },
+   "events": 2,
+   "vc_event_type": "com.vmware.vim.vm.SbPkUpdateNeeded"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2,
+    "VMwareAdapter Instance": 3
+   },
+   "events": 2,
+   "vc_event_type": "com.vmware.vim25.PermissionAddedEvent"
+  },
+  {
+   "binds_to": {
+    "HostSystem": 2,
+    "VMwareAdapter Instance": 3
+   },
+   "events": 2,
+   "vc_event_type": "com.vmware.vim25.PermissionRemovedEvent"
+  }
+ ],
+ "vm_events_window_days": 7.0,
+ "window_hours": 24.0
+}

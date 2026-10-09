@@ -30,6 +30,12 @@ Read-only. Three subcommands, each answering one question a log alert depends on
             window as a range on the event's own timestamp, and each filter as the query it became (an exact `term`
             for `vc_event_type` and `appname`, a `match_phrase` on the whole line for `text`).
 
+  bindings  Which objects can my logs raise alerts on?
+            A record belongs to the object its `vmw_vr_ops_id` names, and an alert counts only records of its own
+            object kind. Over --hours: for each object kind, how many objects and records, and which applications
+            wrote them; and for vCenter's events about a virtual machine, the object each event type binds to (on
+            the reference estate most bind to the VM's host, not the VM).
+
   fields    Does every field my query names exist here?
             Log Management's field catalog (`GET /api/v2/fields`), tallied by source and category, and with
             `--check a,b,c` each named field present or missing. Content packs are gone on 9.1, so a field an
@@ -45,6 +51,7 @@ lmlib.py's (OPS_HOST, OPS_API_TOKEN, ...).
   python3 signatures.py catalog [--family PREFIX ...] [--grep WORD] [--out DIR]
   python3 signatures.py seen    [--days N] [--out DIR]
   python3 signatures.py fields  [--check NAME,NAME,...] [--out DIR]
+  python3 signatures.py bindings [--hours N] [--out DIR]
   python3 signatures.py monitor --name "<symptom name>" [--out DIR [--label NAME]]
   python3 signatures.py try     (--vc-event ID | [--app APP] --text TOKEN | --body FILE) [--within FIELD=VALUE] [--days N]
                                 [--out DIR [--label NAME]]
@@ -241,6 +248,47 @@ def shape(text: str, ident: str) -> str:
 ESTATE_SHAPES = re.compile(r"(?<![\w{}])[\w.-]+@(?:\{\{|(?!\d+\b)[\w.-])|/vmfs/volumes/\S+")
 
 
+# ---------------------------------------------------------------- bindings: which objects records belong to
+def bindings(s, hours: float, days: float) -> dict:
+    """Records by the object kind their vmw_vr_ops_id names, and vCenter's VM events by the kind they bind to."""
+    cache: dict[str, str] = {}
+
+    def kind(rid: str | None) -> str:
+        if not rid:
+            return "no inventory object"
+        if rid not in cache:
+            st, r = s.ops("GET", f"/api/resources/{rid}")
+            cache[rid] = ((r or {}).get("resourceKey") or {}).get("resourceKindKey") or f"unresolved (HTTP {st})"
+        return cache[rid]
+
+    end = now_ms()
+    body = {"query": {"bool": {"must": [{"exists": {"field": "vmw_vr_ops_id"}}],
+                               "filter": [{"range": {"timestamp": {"gte": end - int(hours * 3600000), "lte": end}}}]}},
+            "size": 0, "aggs": {"a": {"multi_terms": {"terms": [{"field": "vmw_vr_ops_id"}, {"field": "appname"}], "size": 5000}}}}
+    objects: dict[str, set] = collections.defaultdict(set)
+    records: collections.Counter[str] = collections.Counter()
+    apps: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    for b in (s.search(body).get("aggregations") or {}).get("buckets") or []:
+        k = kind(b["key"][0])
+        objects[k].add(b["key"][0])
+        records[k] += b["doc_count"]
+        apps[k][b["key"][1]] += b["doc_count"]
+    kinds = {k: {"objects": len(objects[k]), "records": records[k], "applications": [a for a, _ in apps[k].most_common(6)]}
+             for k, _ in records.most_common()}
+    start = end - int(days * 86400000)
+    body = {"query": {"bool": {"must": [{"term": {"vc_event_obj_type": "VirtualMachine"}}],
+                               "filter": [{"range": {"timestamp": {"gte": start, "lte": end}}}]}},
+            "size": 0, "aggs": {"a": {"multi_terms": {"terms": [{"field": "vc_event_type"}], "size": 60}}}}
+    vm_events = []
+    for b in (s.search(body).get("aggregations") or {}).get("buckets") or []:
+        et = b["key"][0]
+        ev = s.search({"query": {"bool": {"must": [{"term": {"vc_event_type": et}}],
+                                          "filter": [{"range": {"timestamp": {"gte": start, "lte": end}}}]}}, "size": 5}).get("events") or {}
+        seen = collections.Counter(kind(hit_fields(h).get("vmw_vr_ops_id")) for h in ev.get("hits") or [])
+        vm_events.append({"vc_event_type": et, "events": b["doc_count"], "binds_to": dict(seen)})
+    return {"window_hours": hours, "kinds": kinds, "vm_events_window_days": days, "vm_events": vm_events}
+
+
 # ---------------------------------------------------------------- monitor: what a condition became
 def monitor_definition(s, name: str, hours: float = 24) -> dict:
     """The latest definition OpenSearch logged for the monitor named `name`: schedule, window and filter clauses."""
@@ -310,17 +358,17 @@ def write(out_dir: Path | None, name: str, record: dict, scrub) -> None:
 
 
 def parse_args(argv: list[str]) -> dict:
-    if not argv or argv[0] not in ("catalog", "seen", "try", "fields", "monitor"):
+    if not argv or argv[0] not in ("catalog", "seen", "try", "fields", "monitor", "bindings"):
         raise SystemExit(__doc__)
     a = {"cmd": argv[0], "family": [], "grep": None, "days": 7.0, "out": None, "vc_event": None, "app": None,
-         "text": None, "within": [], "body": None, "label": None, "check": [], "name": None}
+         "text": None, "within": [], "body": None, "label": None, "check": [], "name": None, "hours": 24.0}
     rest = argv[1:]
     while rest:
         x = rest.pop(0)
         if x == "--family" and rest:
             a["family"].append(rest.pop(0))
-        elif x == "--days" and rest and re.fullmatch(r"\d+(\.\d+)?", rest[0]):
-            a["days"] = float(rest.pop(0))
+        elif x in ("--days", "--hours") and rest and re.fullmatch(r"\d+(\.\d+)?", rest[0]):
+            a[x[2:]] = float(rest.pop(0))
         elif x == "--within" and rest and "=" in rest[0]:
             a["within"].append(tuple(rest.pop(0).split("=", 1)))
         elif x == "--check" and rest:
@@ -360,6 +408,16 @@ def main(argv: list[str]) -> int:
     from lmlib import Session
 
     s = Session()
+    if a["cmd"] == "bindings":
+        record = {"read_at": taken, **bindings(s, a["hours"], a["days"])}
+        print(f"records with an inventory object over {a['hours']:g} hours, by the object kind they bind to:")
+        for k, v in record["kinds"].items():
+            print(f"  {k}: {v['objects']} objects, {v['records']} records; applications {v['applications']}")
+        print(f"vCenter events about a virtual machine over {a['days']:g} days, and the object kind each binds to:")
+        for e in record["vm_events"]:
+            print(f"  {e['events']:>7}  {e['vc_event_type']:<58} {e['binds_to']}")
+        write(a["out"], "bindings", record, scrub)
+        return 0
     if a["cmd"] == "monitor":
         if not a["name"]:
             raise SystemExit("monitor needs --name \"<symptom name>\"")

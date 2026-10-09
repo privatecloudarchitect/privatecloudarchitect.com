@@ -13,7 +13,7 @@ Proven on VCF 9.1.1 (VCF Operations and Log Management 9.1.1, three vCenters and
 
 | File | What it does | Writes |
 |---|---|---|
-| `signatures.py` | `catalog`: the event types each vCenter can emit, filtered by family or by a word in the message (`--grep`). `seen`: the identifiers your hosts' `vobd` records and vCenter's stream carried. `try`: one query over stored events, with counts by application and host, samples, and the object kind the records name. `fields`: whether every field a query names exists. `monitor`: what Log Management built from a symptom (its schedule, its window and the query each filter became), read from OpenSearch's own log of the definition | nothing |
+| `signatures.py` | `catalog`: the event types each vCenter can emit, filtered by family or by a word in the message (`--grep`). `seen`: the identifiers your hosts' `vobd` records and vCenter's stream carried. `try`: one query over stored events, with counts by application and host, samples, and the object kind the records name. `fields`: whether every field a query names exists. `monitor`: what Log Management built from a symptom (its schedule, its window and the query each filter became), read from OpenSearch's own log of the definition. `bindings`: which object kinds your records belong to, and the object each vCenter event type about a VM binds to | nothing |
 | `deploy.py` | `plan`, `apply`, `status`, `teardown` for a bundle, scoped by a scope file | a custom group, a policy, log symptoms and alerts (with `--yes`) |
 | `prove.py` | labelled lines in the host's own record format, then when they were indexed, which alerts raised on that host, and (with `--until-clear`) when each cleared; `--backdate N` stamps the lines N minutes old | syslog lines to the target you name (with `--send`) |
 | `lmlib.py` | the sign-in, the Log Management token and the search, shared by the three | |
@@ -37,6 +37,7 @@ export VC_HOST=<vcenter fqdn>  VC_USER=<account>  VC_PASSWORD=<password>  VC_TLS
 python3 signatures.py catalog --grep permanently
 python3 signatures.py fields --check appname,text,vc_event_type
 python3 signatures.py monitor --name "PCA - Storage Path - Host - All paths down started, host record"
+python3 signatures.py bindings --hours 24
 
 # try the query before it becomes an alert
 python3 signatures.py try --vc-event esx.problem.storage.apd.start --days 7
@@ -66,6 +67,11 @@ from `signatures.py`, `deploy.py status` and `prove.py`.
 - **The search before the alert.** `try` prints the same filters as a search: the event type matches exactly (a
   partial one matches nothing), and a phrase in text matches every identifier that begins with the same words. It
   also prints the object kind the records name, which is the kind the alert takes.
+- **Which object an alert can sit on.** An alert counts only records that belong to an object of its own kind.
+  `bindings` and `try` show it: a host's own syslog belongs to the host, even when a line is about a VM; most of
+  vCenter's events about a VM (power, reconfigure, DRS, HA, guest operations) belong to the host the VM runs on, so
+  their alerts take the host kind; a failed migration belongs to the VM; a running VM's own syslog belongs to the VM when
+  its HOSTNAME is the VM's name, guest FQDN or guest address; a line naming a powered-off VM belongs to nothing.
 - **What a condition becomes.** `monitor` prints the query Log Management built: `CONTAINS` on `vc_event_type` or
   `appname` is an exact, case-insensitive match of the whole value; on `text` it is a phrase of whole words anywhere in
   the line, the syslog header included. The window is a range on the event's own timestamp.
