@@ -1,0 +1,20 @@
+{
+ "clauses": [
+  {
+   "field": "appname",
+   "query": "term",
+   "value": "vobd"
+  },
+  {
+   "field": "originalText",
+   "query": "match_phrase",
+   "value": "esx.problem.storage.apd.start"
+  }
+ ],
+ "enabled": true,
+ "found": true,
+ "name": "PCA - Storage Path - Host - All paths down started, host record",
+ "read_at": "2026-10-09T07:45:39Z",
+ "schedule": "1 minute",
+ "window": "the last 5m by logDate"
+}

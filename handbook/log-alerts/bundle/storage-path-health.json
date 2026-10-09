@@ -1,0 +1,318 @@
+{
+  "bundle": "Storage Path",
+  "about": "Storage connectivity failures on ESX 9.1.1 hosts, read from logs. One symptom per identifier; where both channels carry an identifier, both are symptoms and the alert joins them with OR. Every condition is CONTAINS on the complete identifier and every trigger is COUNT above a threshold. The alerts inform people and record the timeline; vSphere HA VM Component Protection is the actuator for device loss and all paths down.",
+  "kind": {
+    "label": "Host",
+    "adapterKind": "VMWARE",
+    "resourceKind": "HostSystem"
+  },
+  "autoCancelMinutes": 15,
+  "runbook": "storage-path-runbook.md",
+  "validatedMeans": {
+    "catalog9.1.1": "the event type is in the 9.1.1 vCenter event catalog (EventManager.description.eventInfo)",
+    "seen9.1.1": "the identifier or record format was read in a 9.1.1 host's records or vCenter's event stream",
+    "family9.1.1": "a sibling was read on 9.1.1 and the identifier itself comes from the vendor's knowledge base; proven by a labelled line"
+  },
+  "symptoms": [
+    {
+      "key": "sp-01-pdl-vcenter",
+      "condition": "Device permanently lost, vCenter event",
+      "severity": "CRITICAL",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.scsi.device.state.permanentloss"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-01-pdl-vcenter-psastor",
+      "condition": "Psastor device permanently lost, vCenter event",
+      "severity": "CRITICAL",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.psastor.device.state.permanentloss"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-01-pdl-host",
+      "condition": "Device permanently lost, host record",
+      "severity": "CRITICAL",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vobd"]}, {"field": "text", "operator": "CONTAINS", "values": ["esx.problem.scsi.device.state.permanentloss"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1",
+      "note": "vobd writes each esx.problem event it sends as [<id>] <text>; that form was read on 9.1.1 hosts for apd.start",
+      "prove": {"app": "vobd", "procid": "2097451", "sd": "[esx@4413 threadName=\"scsiCorrelator\"]", "message": "1us: [esx.problem.scsi.device.state.permanentloss] Device naa.600000000000000000000000pca0test has been removed or is permanently inaccessible. Affected datastores (if any): pcatest-ds."}
+    },
+    {
+      "key": "sp-01-pdl-host-psastor",
+      "condition": "Psastor device permanently lost, host record",
+      "severity": "CRITICAL",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vobd"]}, {"field": "text", "operator": "CONTAINS", "values": ["esx.problem.psastor.device.state.permanentloss"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1",
+      "prove": {"app": "vobd", "procid": "2097451", "sd": "[esx@4413 threadName=\"psastorCorrelator\"]", "message": "1us: [esx.problem.psastor.device.state.permanentloss] Device eui.0000000000000000000000pca0test has been removed or is permanently inaccessible. Affected datastores (if any): pcatest-ds."}
+    },
+    {
+      "key": "sp-02-apd-start-vcenter",
+      "condition": "All paths down started, vCenter event",
+      "severity": "WARNING",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.apd.start"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "seen9.1.1",
+      "note": "occurred for real on the reference estate, 2026-10-03 and 2026-10-06"
+    },
+    {
+      "key": "sp-02-apd-start-host",
+      "condition": "All paths down started, host record",
+      "severity": "WARNING",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vobd"]}, {"field": "text", "operator": "CONTAINS", "values": ["esx.problem.storage.apd.start"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "seen9.1.1",
+      "note": "read in a 9.1.1 host's own vobd records, 2026-10-06",
+      "prove": {"app": "vobd", "procid": "2097451", "sd": "[esx@4413 threadName=\"APDCorrelator\"]", "message": "1us: [esx.problem.storage.apd.start] Device or filesystem with identifier [pcatest-0000] has entered the All Paths Down state."}
+    },
+    {
+      "key": "sp-03-apd-timeout-vcenter",
+      "condition": "All paths down timed out, vCenter event",
+      "severity": "CRITICAL",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.apd.timeout"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-03-apd-timeout-host",
+      "condition": "All paths down timed out, host record",
+      "severity": "CRITICAL",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vobd"]}, {"field": "text", "operator": "CONTAINS", "values": ["esx.problem.storage.apd.timeout"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1",
+      "prove": {"app": "vobd", "procid": "2097451", "sd": "[esx@4413 threadName=\"APDCorrelator\"]", "message": "1us: [esx.problem.storage.apd.timeout] Device or filesystem with identifier [pcatest-0000] has entered the All Paths Down Timeout state after being in the All Paths Down state for 140 seconds. I/Os will now be fast failed."}
+    },
+    {
+      "key": "sp-04-path-dead-host",
+      "condition": "SCSI paths dead, host record",
+      "severity": "WARNING",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vobd"]}, {"field": "text", "operator": "CONTAINS", "values": ["vob.scsi.scsipath.pathstate.dead"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 1, "windowMinutes": 5},
+      "validated": "family9.1.1",
+      "note": "the sibling vob.scsi.scsipath.pathstate.on (changed state from dead) was read on 9.1.1 hosts; the dead form is named in KB 376147",
+      "prove": {"app": "vobd", "procid": "2097451", "sd": "[esx@4413 threadName=\"scsiCorrelator\"]", "message": "1us: [vob.scsi.scsipath.pathstate.dead] scsiPath vmhba64:C0:T0:L0 changed state from on"}
+    },
+    {
+      "key": "sp-04-path-dead-host-psastor",
+      "condition": "Psastor paths dead, host record",
+      "severity": "WARNING",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vobd"]}, {"field": "text", "operator": "CONTAINS", "values": ["vob.psastor.psastorpath.pathstate.dead"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 1, "windowMinutes": 5},
+      "validated": "family9.1.1",
+      "note": "the sibling vob.psastor.psastorpath.pathstate.on was read on 9.1.1 hosts",
+      "prove": {"app": "vobd", "procid": "2097451", "sd": "[esx@4413 threadName=\"psastorCorrelator\"]", "message": "1us: [vob.psastor.psastorpath.pathstate.dead] storagePath vmhba64:C0:T0:L0 changed state from on"}
+    },
+    {
+      "key": "sp-04-path-flapping-vcenter",
+      "condition": "Path state changing frequently, vCenter event",
+      "severity": "WARNING",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.connectivity.pathstatechanges"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 15},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-05-redundancy-degraded-vcenter",
+      "condition": "Path redundancy degraded, vCenter event",
+      "severity": "WARNING",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.redundancy.degraded"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-05-redundancy-lost-vcenter",
+      "condition": "Path redundancy lost, vCenter event",
+      "severity": "WARNING",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.redundancy.lost"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-05-connectivity-lost-vcenter",
+      "condition": "Device connectivity lost, vCenter event",
+      "severity": "CRITICAL",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.connectivity.lost"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-06-vmfs-heartbeat-timedout-vcenter",
+      "condition": "VMFS heartbeat timed out, vCenter event",
+      "severity": "WARNING",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.vmfs.heartbeat.timedout"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-06-vmfs-heartbeat-unrecoverable-vcenter",
+      "condition": "VMFS heartbeat unrecoverable, vCenter event",
+      "severity": "CRITICAL",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.vmfs.heartbeat.unrecoverable"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-06-nfs-server-disconnect-vcenter",
+      "condition": "NFS server disconnected, vCenter event",
+      "severity": "CRITICAL",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.vmfs.nfs.server.disconnect"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 5},
+      "validated": "catalog9.1.1",
+      "note": "its clear, esx.clear.vmfs.nfs.server.restored, was read on both channels"
+    },
+    {
+      "key": "sp-07-device-por-vcenter",
+      "condition": "Device power-on resets frequent, vCenter event",
+      "severity": "WARNING",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.connectivity.devicepor"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 15},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-07-path-por-vcenter",
+      "condition": "Path power-on resets frequent, vCenter event",
+      "severity": "WARNING",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["esx.problem.storage.connectivity.pathpor"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 15},
+      "validated": "catalog9.1.1"
+    },
+    {
+      "key": "sp-08-host-status-no-connect-warning",
+      "condition": "SCSI host status H:0x1 no connect over 4, host record",
+      "severity": "WARNING",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vmkernel"]}, {"field": "text", "operator": "CONTAINS", "values": ["H:0x1"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 4, "windowMinutes": 5},
+      "validated": "seen9.1.1",
+      "note": "the vmkernel form failed H:0x5 D:0x0 P:0x0 was read on 9.1.1 hosts; code meanings from KB 337796 (all versions); never H:0x0, which is no host-side error",
+      "prove": {"app": "vmkernel", "procid": "-", "sd": "[esx@4413]", "message": "cpu2:2097189)ScsiDeviceIO: 4797: Cmd(0x0) 0x2a, CmdSN 0x0 from world 0 to dev \"naa.600000000000000000000000pca0test\" failed H:0x1 D:0x0 P:0x0"}
+    },
+    {
+      "key": "sp-08-host-status-no-connect-critical",
+      "condition": "SCSI host status H:0x1 no connect over 10, host record",
+      "severity": "CRITICAL",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vmkernel"]}, {"field": "text", "operator": "CONTAINS", "values": ["H:0x1"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 10, "windowMinutes": 5},
+      "validated": "seen9.1.1",
+      "prove": {"app": "vmkernel", "procid": "-", "sd": "[esx@4413]", "message": "cpu2:2097189)ScsiDeviceIO: 4797: Cmd(0x0) 0x2a, CmdSN 0x0 from world 0 to dev \"naa.600000000000000000000000pca0test\" failed H:0x1 D:0x0 P:0x0"}
+    },
+    {
+      "key": "sp-08-host-status-timeout",
+      "condition": "SCSI host status H:0x3 timeout over 4, host record",
+      "severity": "WARNING",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vmkernel"]}, {"field": "text", "operator": "CONTAINS", "values": ["H:0x3"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 4, "windowMinutes": 5},
+      "validated": "seen9.1.1",
+      "prove": {"app": "vmkernel", "procid": "-", "sd": "[esx@4413]", "message": "cpu2:2097189)ScsiDeviceIO: 4797: Cmd(0x0) 0x2a, CmdSN 0x0 from world 0 to dev \"naa.600000000000000000000000pca0test\" failed H:0x3 D:0x0 P:0x0"}
+    },
+    {
+      "key": "sp-08-host-status-reset",
+      "condition": "SCSI host status H:0x8 reset over 4, host record",
+      "severity": "WARNING",
+      "filters": [{"field": "appname", "operator": "CONTAINS", "values": ["vmkernel"]}, {"field": "text", "operator": "CONTAINS", "values": ["H:0x8"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 4, "windowMinutes": 5},
+      "validated": "seen9.1.1",
+      "prove": {"app": "vmkernel", "procid": "-", "sd": "[esx@4413]", "message": "cpu2:2097189)ScsiDeviceIO: 4797: Cmd(0x0) 0x2a, CmdSN 0x0 from world 0 to dev \"naa.600000000000000000000000pca0test\" failed H:0x8 D:0x0 P:0x0"}
+    },
+    {
+      "key": "sp-10-host-connection-lost-vcenter",
+      "condition": "Host connection lost, vCenter event",
+      "severity": "CRITICAL",
+      "filters": [{"field": "vc_event_type", "operator": "CONTAINS", "values": ["com.vmware.vim25.HostConnectionLostEvent"]}],
+      "trigger": {"function": "COUNT", "operator": "GREATER_THAN", "value": 0, "windowMinutes": 15},
+      "validated": "seen9.1.1",
+      "note": "occurs on the reference estate; with SP-02 or SP-03 it raises the host-lost correlation"
+    }
+  ],
+  "alerts": [
+    {
+      "id": "SP-01",
+      "condition": "SP-01 Storage device permanently lost, PDL",
+      "detects": "permanent device loss: the array reported the device gone on all paths",
+      "criticality": "CRITICAL",
+      "anyOf": ["sp-01-pdl-vcenter", "sp-01-pdl-vcenter-psastor", "sp-01-pdl-host", "sp-01-pdl-host-psastor"],
+      "runbook": "sp-01"
+    },
+    {
+      "id": "SP-02",
+      "condition": "SP-02 All paths down started",
+      "detects": "all paths down began: no path answers and no device-loss code arrived",
+      "criticality": "WARNING",
+      "anyOf": ["sp-02-apd-start-vcenter", "sp-02-apd-start-host"],
+      "runbook": "sp-02"
+    },
+    {
+      "id": "SP-03",
+      "condition": "SP-03 All paths down timed out, non-VM I/O failing fast",
+      "detects": "the all-paths-down timer ran out: non-VM I/O now fails fast, VM I/O keeps retrying",
+      "criticality": "CRITICAL",
+      "anyOf": ["sp-03-apd-timeout-vcenter", "sp-03-apd-timeout-host"],
+      "runbook": "sp-03"
+    },
+    {
+      "id": "SP-04",
+      "condition": "SP-04 Storage paths dead or flapping",
+      "detects": "paths changed state to dead, or a path's state keeps changing",
+      "criticality": "WARNING",
+      "anyOf": ["sp-04-path-dead-host", "sp-04-path-dead-host-psastor", "sp-04-path-flapping-vcenter"],
+      "runbook": "sp-04"
+    },
+    {
+      "id": "SP-05",
+      "condition": "SP-05 Path redundancy degraded or connectivity lost",
+      "detects": "a device runs on fewer paths than configured, or on none",
+      "criticality": "SYMPTOM_BASED",
+      "anyOf": ["sp-05-redundancy-degraded-vcenter", "sp-05-redundancy-lost-vcenter", "sp-05-connectivity-lost-vcenter"],
+      "runbook": "sp-05"
+    },
+    {
+      "id": "SP-06",
+      "condition": "SP-06 Datastore access lost, VMFS heartbeat or NFS server",
+      "detects": "a datastore stopped answering: a VMFS heartbeat timed out or an NFS server disconnected",
+      "criticality": "SYMPTOM_BASED",
+      "anyOf": ["sp-06-vmfs-heartbeat-timedout-vcenter", "sp-06-vmfs-heartbeat-unrecoverable-vcenter", "sp-06-nfs-server-disconnect-vcenter"],
+      "runbook": "sp-06"
+    },
+    {
+      "id": "SP-07",
+      "condition": "SP-07 Frequent power-on resets on a device or path",
+      "detects": "frequent power-on reset unit attentions on a device or a path",
+      "criticality": "WARNING",
+      "anyOf": ["sp-07-device-por-vcenter", "sp-07-path-por-vcenter"],
+      "runbook": "sp-07"
+    },
+    {
+      "id": "SP-08",
+      "condition": "SP-08 Host-side SCSI command failures",
+      "detects": "host-side SCSI command failures: lost connections, timeouts, resets",
+      "criticality": "SYMPTOM_BASED",
+      "anyOf": ["sp-08-host-status-no-connect-warning", "sp-08-host-status-no-connect-critical", "sp-08-host-status-timeout", "sp-08-host-status-reset"],
+      "runbook": "sp-08"
+    },
+    {
+      "id": "SP-C1",
+      "condition": "SP-C1 Host at risk of hanging, storage lost and commands failing",
+      "detects": "storage lost (device loss or timeout) while commands fail with no connection, on one host",
+      "criticality": "CRITICAL",
+      "allOf": [["sp-01-pdl-vcenter", "sp-01-pdl-vcenter-psastor", "sp-01-pdl-host", "sp-01-pdl-host-psastor", "sp-03-apd-timeout-vcenter", "sp-03-apd-timeout-host"], ["sp-08-host-status-no-connect-critical"]],
+      "runbook": "sp-c1"
+    },
+    {
+      "id": "SP-C2",
+      "condition": "SP-C2 Host lost to vCenter after storage symptoms",
+      "detects": "vCenter lost the host while it was reporting all paths down",
+      "criticality": "CRITICAL",
+      "allOf": [["sp-10-host-connection-lost-vcenter"], ["sp-02-apd-start-vcenter", "sp-03-apd-timeout-vcenter"]],
+      "runbook": "sp-c2"
+    },
+    {
+      "id": "SP-C3",
+      "condition": "SP-C3 Zoning or optics signature, lost connections and failing paths",
+      "detects": "lost connections together with dead paths or lost redundancy: a zoning or optics signature",
+      "criticality": "WARNING",
+      "allOf": [["sp-08-host-status-no-connect-warning"], ["sp-04-path-dead-host", "sp-04-path-dead-host-psastor", "sp-05-redundancy-degraded-vcenter", "sp-05-redundancy-lost-vcenter", "sp-05-connectivity-lost-vcenter"]],
+      "runbook": "sp-c3"
+    }
+  ]
+}

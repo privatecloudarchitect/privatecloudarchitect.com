@@ -1,0 +1,79 @@
+{
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1790920848117,
+        "lte": 1791525648117
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "term": {
+       "vc_event_type": "com.vmware.vim25.BadUsernameSessionEvent"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [
+  {
+   "appname": "vcenter-server",
+   "events": 5623
+  }
+ ],
+ "by_host": [
+  {
+   "appname": "vcenter-server",
+   "events": 4851,
+   "host": "{{host-1}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 767,
+   "host": "{{host-2}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 2,
+   "host": "{{host-3}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 2,
+   "host": "{{host-4}}"
+  },
+  {
+   "appname": "vcenter-server",
+   "events": 1,
+   "host": "{{host-5}}"
+  }
+ ],
+ "events": 5623,
+ "object_kinds": {
+  "VMwareAdapter Instance": 1
+ },
+ "read_at": "2026-10-09T06:00:48Z",
+ "samples": [
+  {
+   "appname": "vcenter-server",
+   "text": "2026-10-09 05:56:43.246 {{host-1}} vcenter-server: <the catalog text of com.vmware.vim25.BadUsernameSessionEvent>",
+   "vc_event_type": "com.vmware.vim25.BadUsernameSessionEvent"
+  }
+ ],
+ "window_days": 7.0
+}

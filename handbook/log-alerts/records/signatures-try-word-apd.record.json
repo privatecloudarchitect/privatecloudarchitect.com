@@ -1,0 +1,142 @@
+{
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1790923110962,
+        "lte": 1791527910962
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "match_phrase": {
+       "text": "APD"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [
+  {
+   "appname": "vmkernel",
+   "events": 81
+  },
+  {
+   "appname": "vobd",
+   "events": 12
+  },
+  {
+   "appname": "Hostd",
+   "events": 8
+  },
+  {
+   "appname": "audit",
+   "events": 1
+  }
+ ],
+ "by_host": [
+  {
+   "appname": "vmkernel",
+   "events": 20,
+   "host": "{{host-1}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 13,
+   "host": "{{host-2}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 13,
+   "host": "{{host-4}}"
+  },
+  {
+   "appname": "vobd",
+   "events": 12,
+   "host": "{{host-2}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 10,
+   "host": "{{host-5}}"
+  },
+  {
+   "appname": "Hostd",
+   "events": 8,
+   "host": "{{host-2}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 5,
+   "host": "{{host-6}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 5,
+   "host": "{{host-7}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 5,
+   "host": "{{host-8}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 5,
+   "host": "{{host-9}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 5,
+   "host": "{{host-10}}"
+  },
+  {
+   "appname": "audit",
+   "events": 1,
+   "host": "{{host-3}}"
+  }
+ ],
+ "events": 211,
+ "object_kinds": {
+  "HostSystem": 3,
+  "VirtualMachine": 1
+ },
+ "read_at": "2026-10-09T06:38:30Z",
+ "samples": [
+  {
+   "appname": "vmkernel",
+   "text": "2026-10-06T14:56:57.843Z {{host-1}} vmkernel - - [esx@4413] cpu2:2097963)StorageApdHandler: 967: APD Handle 9093fe95-3a4075e7 Created with lock[StorageApd-0x431734c1ade0] ",
+   "vc_event_type": null
+  },
+  {
+   "appname": "vobd",
+   "text": "2026-10-06T14:11:33.123Z {{host-2}} vobd 2097451 - [esx@4413 threadName=\"APDCorrelator\"] 4846243989us: [vob.storage.apd.exit] Device or filesystem with identifier [{{filesystem-1}}] has exited the All Paths Down state. ",
+   "vc_event_type": null
+  },
+  {
+   "appname": "Hostd",
+   "text": "2026-10-06T14:11:34.123Z {{host-2}} Hostd 2098516 - [esx@4413 sub=\"Hostsvc.DatastoreSystem\"] StorageApdUpdateInt: Processing Storage APD msg [N11HostdCommon24VmkernelUpdateStorageApdE] timestamp=4846446413 updated={{filesystem-1}} eventType=2 deviceType=2 with identifier {{filesystem-1}} ",
+   "vc_event_type": null
+  },
+  {
+   "appname": "audit",
+   "text": "2026-10-08T22:54:05.107Z INFO audit 5916 [ops@4413 auditID=\"ALERT_DEFINITION.CREATE\" threadId=\"203530\" userID=\"{{uuid-2}}\" subject=\"{{account-1}}\" authSource=\"VCF SSO\" session=\"{{uuid-1}}\" origin=\"{{address-1}}\" result=\"success\" comment=\"Creating alert definition success. ID: \\\"AlertDefinition-{{uui",
+   "vc_event_type": null
+  }
+ ],
+ "window_days": 7.0
+}

@@ -1,0 +1,15 @@
+{
+ "clauses": [
+  {
+   "field": "vc_event_type",
+   "query": "term",
+   "value": "com.vmware.vim25.HostConnectionLostEvent"
+  }
+ ],
+ "enabled": true,
+ "found": true,
+ "name": "PCA - Storage Path - Host - Host connection lost, vCenter event",
+ "read_at": "2026-10-09T07:45:10Z",
+ "schedule": "5 minutes",
+ "window": "the last 15m by logDate"
+}

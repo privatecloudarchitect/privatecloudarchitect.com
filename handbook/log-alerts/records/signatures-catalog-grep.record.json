@@ -1,0 +1,197 @@
+{
+ "families": [
+  "esx.problem.storage",
+  "esx.clear.storage",
+  "esx.problem.scsi",
+  "esx.clear.scsi",
+  "esx.problem.psastor",
+  "esx.clear.psastor",
+  "esx.problem.vmfs",
+  "esx.clear.vmfs",
+  "esx.problem.vmsyslogd",
+  "com.vmware.vc.HA.Vmcp",
+  "HostConnectionLostEvent",
+  "HostDisconnectedEvent",
+  "VmFailedMigrateEvent",
+  "BadUsernameSessionEvent"
+ ],
+ "grep": "permanently",
+ "read_at": "2026-10-09T05:36:12Z",
+ "same_on_every_vcenter": true,
+ "vcenters": {
+  "{{vcenter-1}}": {
+   "build": "25712839",
+   "events": {
+    "esx.clear.psastor.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.scsi.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.psastor.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.scsi.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.scsi.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.lost": {
+     "category": "error",
+     "text": "The iSCSI target {2} was permanently removed from {1}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.removed": {
+     "category": "error",
+     "text": "The iSCSI target {1} was permanently removed from {2}."
+    }
+   },
+   "host_builds": [
+    "9.1.1 25714478"
+   ],
+   "types": 2365,
+   "version": "9.1.1"
+  },
+  "{{vcenter-2}}": {
+   "build": "25712839",
+   "events": {
+    "esx.clear.psastor.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.scsi.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.psastor.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.scsi.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.scsi.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.lost": {
+     "category": "error",
+     "text": "The iSCSI target {2} was permanently removed from {1}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.removed": {
+     "category": "error",
+     "text": "The iSCSI target {1} was permanently removed from {2}."
+    }
+   },
+   "host_builds": [
+    "9.1.1 25714478"
+   ],
+   "types": 2574,
+   "version": "9.1.1"
+  },
+  "{{vcenter-3}}": {
+   "build": "25712839",
+   "events": {
+    "esx.clear.psastor.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.scsi.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.psastor.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.scsi.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.scsi.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.lost": {
+     "category": "error",
+     "text": "The iSCSI target {2} was permanently removed from {1}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.removed": {
+     "category": "error",
+     "text": "The iSCSI target {1} was permanently removed from {2}."
+    }
+   },
+   "host_builds": [
+    "9.1.1 25714478"
+   ],
+   "types": 2359,
+   "version": "9.1.1"
+  }
+ }
+}

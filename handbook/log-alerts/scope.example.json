@@ -1,0 +1,7 @@
+{
+  "owner": "<your owner prefix>",
+  "scope": "<what these hosts are, such as storage canary>",
+  "clusters": ["<the cluster whose hosts the alerts watch>"],
+  "parentPolicy": "<the policy those hosts are governed by today>",
+  "disableIn": []
+}

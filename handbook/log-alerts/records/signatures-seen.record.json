@@ -1,0 +1,652 @@
+{
+ "read_at": "2026-10-09T06:38:12Z",
+ "vc_event_types": {
+  "DBHealthStatusClearEvent": 4,
+  "DatastoreFileDownloadEvent": 5763,
+  "DatastoreFileNfcModificationEvent": 1,
+  "DatastoreFileUploadEvent": 6,
+  "DrmSupportReadyEvent": 4,
+  "com.vmware.applmgmt.backup.job.finished.event": 18,
+  "com.vmware.applmgmt.backup.job.start.event": 18,
+  "com.vmware.cis.CreateGlobalPermission": 2231,
+  "com.vmware.cis.tagging.attach": 21,
+  "com.vmware.cis.tagging.detach": 20,
+  "com.vmware.cl.CreateLibraryItemEvent": 1,
+  "com.vmware.cl.DeleteLibraryItemEvent": 1,
+  "com.vmware.cl.SyncLibraryEvent": 181,
+  "com.vmware.cl.SyncLibraryFailEvent": 17,
+  "com.vmware.license.HostRejectedLicenseEvent": 19,
+  "com.vmware.net.lsport.connected": 1627,
+  "com.vmware.ovfs.DeployEvent": 3,
+  "com.vmware.pbm.profile.associate": 154,
+  "com.vmware.sso.LoginFailure": 1,
+  "com.vmware.sso.LoginSuccess": 3,
+  "com.vmware.sso.Logout": 4,
+  "com.vmware.sso.PrincipalManagement": 27,
+  "com.vmware.trustmanagement.VcIdentityProviders": 2,
+  "com.vmware.vc.AllEventBurstsEndedEvent": 123,
+  "com.vmware.vc.AuthzDataSynced": 4,
+  "com.vmware.vc.EventBurstCompressedEvent": 251,
+  "com.vmware.vc.EventBurstEndedEvent": 251,
+  "com.vmware.vc.EventBurstStartedEvent": 246,
+  "com.vmware.vc.HA.AllIsoAddrsPingable": 1,
+  "com.vmware.vc.HA.ClusterFailoverActionCompletedEvent": 6,
+  "com.vmware.vc.HA.ClusterFailoverActionInitiatedEvent": 3,
+  "com.vmware.vc.HA.ClusterFailoverInProgressEvent": 4,
+  "com.vmware.vc.HA.ConnectedToMaster": 33,
+  "com.vmware.vc.HA.DasHostFailedEvent": 3,
+  "com.vmware.vc.HA.HeartbeatDatastoreChanged": 90,
+  "com.vmware.vc.HA.HostAgentErrorEvent": 1,
+  "com.vmware.vc.HA.HostDasAgentHealthyEvent": 71,
+  "com.vmware.vc.HA.HostPartitionedFromMasterEvent": 2,
+  "com.vmware.vc.HA.HostStateChangedEvent": 170,
+  "com.vmware.vc.HA.HostStateDeadSeenOnPrimaryFdm": 3,
+  "com.vmware.vc.HA.VcConnectedToMasterEvent": 25,
+  "com.vmware.vc.HA.VcDisconnectedFromMasterEvent": 16,
+  "com.vmware.vc.HA.VmProtectedEvent": 72,
+  "com.vmware.vc.HA.VmUnprotectedEvent": 64,
+  "com.vmware.vc.HA.VmcpStorageFailureCleared": 1,
+  "com.vmware.vc.HardwareSensorGroupStatus": 204,
+  "com.vmware.vc.StatelessAlarmTriggeredEvent": 31,
+  "com.vmware.vc.authorization.NoPermission": 25526,
+  "com.vmware.vc.certificatemanagement.CPVMCertificateUpdateHealthyEvent": 60,
+  "com.vmware.vc.guestOperations.GuestOperation": 21869,
+  "com.vmware.vc.guestOperations.GuestOperationAuthFailure": 27,
+  "com.vmware.vc.ha.VmRestartedByHAEvent": 23,
+  "com.vmware.vc.host.TieringMemoryActiveDRAMGreen": 4,
+  "com.vmware.vc.iofilter.HostVendorProviderRegistrationSuccessEvent": 1,
+  "com.vmware.vc.kms.crypto.AllBackedUp": 4,
+  "com.vmware.vc.sms.EsxiVasaClientCertificateRegisterSuccess": 244,
+  "com.vmware.vc.vds.HostVdsStatusUp": 4,
+  "com.vmware.vc.vm.Tier1BandwidthGreen": 227,
+  "com.vmware.vc.vm.VmDisksPromotedEvent": 8,
+  "com.vmware.vc.vm.VmDisksPromotingEvent": 8,
+  "com.vmware.vc.vm.VmHotMigratingWithEncryptionEvent": 622,
+  "com.vmware.vc.vmdir.ReplicationStatusChangeEvent": 5,
+  "com.vmware.vim.eam.agency.statusChanged": 31,
+  "com.vmware.vim.eam.agent.cluster.markAgentVmAsAvailableAfterPowerOn": 8,
+  "com.vmware.vim.eam.agent.cluster.markAgentVmAsAvailableAfterProvisioning": 6,
+  "com.vmware.vim.eam.agent.statusChanged": 25,
+  "com.vmware.vim.eam.agent.task.deleteVm": 6,
+  "com.vmware.vim.eam.agent.task.deployVm": 6,
+  "com.vmware.vim.eam.agent.task.powerOffVm": 6,
+  "com.vmware.vim.eam.agent.task.powerOnVm": 8,
+  "com.vmware.vim.eam.issue.cluster.agent.vmPoweredOff": 2,
+  "com.vmware.vim.eam.issue.resolved": 2,
+  "com.vmware.vim.eam.login.invalid": 262,
+  "com.vmware.vim.eam.login.succeeded": 292,
+  "com.vmware.vim.eam.logout": 270,
+  "com.vmware.vim.vm.SbPkUpdateNeeded": 2,
+  "com.vmware.vim.vm.SbPkUpdateNoLongerNeeded": 1,
+  "com.vmware.vim25.AccountCreatedEvent": 8,
+  "com.vmware.vim25.AccountRemovedEvent": 7,
+  "com.vmware.vim25.AlarmActionTriggeredEvent": 31,
+  "com.vmware.vim25.AlarmClearedEvent": 4,
+  "com.vmware.vim25.AlarmCreatedEvent": 16,
+  "com.vmware.vim25.AlarmReconfiguredEvent": 2,
+  "com.vmware.vim25.AlarmSnmpCompletedEvent": 31,
+  "com.vmware.vim25.AlarmStatusChangedEvent": 2638,
+  "com.vmware.vim25.AlreadyAuthenticatedSessionEvent": 5,
+  "com.vmware.vim25.BadUsernameSessionEvent": 5646,
+  "com.vmware.vim25.ClusterReconfiguredEvent": 10,
+  "com.vmware.vim25.CustomizationStartedEvent": 6,
+  "com.vmware.vim25.CustomizationSucceeded": 7,
+  "com.vmware.vim25.DVPortgroupCreatedEvent": 127,
+  "com.vmware.vim25.DVPortgroupDestroyedEvent": 120,
+  "com.vmware.vim25.DVPortgroupReconfiguredEvent": 96,
+  "com.vmware.vim25.DasDisabledEvent": 3,
+  "com.vmware.vim25.DasEnabledEvent": 3,
+  "com.vmware.vim25.DatastoreCapacityIncreasedEvent": 80,
+  "com.vmware.vim25.DatastoreFileDeletedEvent": 205,
+  "com.vmware.vim25.DrsResourceConfigureFailedEvent": 6,
+  "com.vmware.vim25.DrsResourceConfigureSyncedEvent": 5,
+  "com.vmware.vim25.DrsVmMigratedEvent": 618,
+  "com.vmware.vim25.DrsVmPoweredOnEvent": 64,
+  "com.vmware.vim25.DvsHostBackInSyncEvent": 22,
+  "com.vmware.vim25.DvsHostStatusUpdated": 2,
+  "com.vmware.vim25.DvsHostWentOutOfSyncEvent": 29,
+  "com.vmware.vim25.DvsPortBlockedEvent": 11,
+  "com.vmware.vim25.DvsPortConnectedEvent": 196,
+  "com.vmware.vim25.DvsPortCreatedEvent": 46,
+  "com.vmware.vim25.DvsPortDeletedEvent": 44,
+  "com.vmware.vim25.DvsPortDisconnectedEvent": 102,
+  "com.vmware.vim25.DvsPortExitedPassthruEvent": 108,
+  "com.vmware.vim25.DvsPortLinkDownEvent": 87,
+  "com.vmware.vim25.DvsPortLinkUpEvent": 147,
+  "com.vmware.vim25.DvsPortUnblockedEvent": 109,
+  "com.vmware.vim25.DvsReconfiguredEvent": 19,
+  "com.vmware.vim25.EnteredMaintenanceModeEvent": 21,
+  "com.vmware.vim25.EnteringMaintenanceModeEvent": 21,
+  "com.vmware.vim25.ExitMaintenanceModeEvent": 22,
+  "com.vmware.vim25.ExtendedEvent": 100,
+  "com.vmware.vim25.GeneralHostWarningEvent": 3,
+  "com.vmware.vim25.HealthStatusChangedEvent": 13,
+  "com.vmware.vim25.HostConnectedEvent": 11,
+  "com.vmware.vim25.HostConnectionLostEvent": 10,
+  "com.vmware.vim25.HostDasDisabledEvent": 22,
+  "com.vmware.vim25.HostDasEnabledEvent": 23,
+  "com.vmware.vim25.HostDisconnectedEvent": 10,
+  "com.vmware.vim25.HostIsolationIpPingFailedEvent": 1,
+  "com.vmware.vim25.HostSyncFailedEvent": 1907,
+  "com.vmware.vim25.MigrationResourceErrorEvent": 1,
+  "com.vmware.vim25.NoAccessUserEvent": 28,
+  "com.vmware.vim25.NoMaintenanceModeDrsRecommendationForVM": 5,
+  "com.vmware.vim25.PermissionAddedEvent": 78,
+  "com.vmware.vim25.PermissionRemovedEvent": 49,
+  "com.vmware.vim25.PermissionUpdatedEvent": 40234,
+  "com.vmware.vim25.RemoteTSMEnabledEvent": 4,
+  "com.vmware.vim25.ResourcePoolCreatedEvent": 7,
+  "com.vmware.vim25.ResourcePoolDestroyedEvent": 3,
+  "com.vmware.vim25.RoleAddedEvent": 30,
+  "com.vmware.vim25.RoleRemovedEvent": 24,
+  "com.vmware.vim25.RoleUpdatedEvent": 8,
+  "com.vmware.vim25.ScheduledTaskCompletedEvent": 32,
+  "com.vmware.vim25.ScheduledTaskStartedEvent": 32,
+  "com.vmware.vim25.ServerStartedSessionEvent": 4,
+  "com.vmware.vim25.TaskEvent": 7561,
+  "com.vmware.vim25.UserLoginSessionEvent": 193289,
+  "com.vmware.vim25.UserLogoutSessionEvent": 327017,
+  "com.vmware.vim25.UserPasswordChanged": 11,
+  "com.vmware.vim25.VimAccountPasswordChangedEvent": 11,
+  "com.vmware.vim25.VmAcquiredTicketEvent": 18,
+  "com.vmware.vim25.VmBeingCreatedEvent": 60,
+  "com.vmware.vim25.VmBeingDeployedEvent": 4,
+  "com.vmware.vim25.VmBeingHotMigratedEvent": 1,
+  "com.vmware.vim25.VmBeingRelocatedEvent": 31,
+  "com.vmware.vim25.VmConnectedEvent": 12,
+  "com.vmware.vim25.VmCreatedEvent": 60,
+  "com.vmware.vim25.VmDeployedEvent": 4,
+  "com.vmware.vim25.VmDisconnectedEvent": 15,
+  "com.vmware.vim25.VmEmigratingEvent": 622,
+  "com.vmware.vim25.VmFailedMigrateEvent": 5,
+  "com.vmware.vim25.VmGuestRebootEvent": 2,
+  "com.vmware.vim25.VmGuestShutdownEvent": 30,
+  "com.vmware.vim25.VmInstanceUuidAssignedEvent": 56,
+  "com.vmware.vim25.VmInstanceUuidChangedEvent": 4,
+  "com.vmware.vim25.VmMacAssignedEvent": 61,
+  "com.vmware.vim25.VmMacChangedEvent": 1,
+  "com.vmware.vim25.VmMessageEvent": 77,
+  "com.vmware.vim25.VmMigratedEvent": 1,
+  "com.vmware.vim25.VmPoweredOffEvent": 71,
+  "com.vmware.vim25.VmPoweredOnEvent": 39,
+  "com.vmware.vim25.VmReconfiguredEvent": 346,
+  "com.vmware.vim25.VmRelocatedEvent": 31,
+  "com.vmware.vim25.VmRemovedEvent": 58,
+  "com.vmware.vim25.VmStartingEvent": 83,
+  "com.vmware.vim25.VmStaticMacConflictEvent": 1,
+  "com.vmware.vim25.VmStoppingEvent": 17,
+  "com.vmware.vim25.VmUpgradeFailedEvent": 6,
+  "com.vmware.vim25.VmUpgradingEvent": 6,
+  "com.vmware.vim25.VmUuidAssignedEvent": 56,
+  "com.vmware.vmon.statuschange.manual.event": 121,
+  "com.vmware.vxlan.network.cpdown": 15,
+  "com.vmware.wcp.ClusterSupervisorService.create": 1,
+  "com.vmware.wcp.ClusterSupervisorService.set": 9,
+  "com.vmware.wcp.Datastore.accessible": 2163,
+  "com.vmware.wcp.StoragePolicyUpdateK8sCompliantNames.success": 2,
+  "com.vmware.wcp.Supervisor.backupJob.create": 6,
+  "com.vmware.wcp.Supervisor.state.CONFIGURING": 83,
+  "com.vmware.wcp.Supervisor.state.ERROR": 2,
+  "com.vmware.wcp.Supervisor.state.RUNNING": 91,
+  "com.vmware.wcp.Supervisor.upgrade.success": 2,
+  "com.vmware.wcp.Supervisor.upgradePrecheck.success": 16,
+  "com.vmware.wcp.SupervisorService.create": 1,
+  "com.vmware.wcp.SupervisorServiceVersion.create": 8,
+  "com.vmware.wcp.WorkloadModel.ResourceConfigSpecDetailed.failedToRealize": 4,
+  "com.vmware.wcp.WorkloadModel.ResourceConfigSpecDetailed.realized": 16337,
+  "com.vmware.wcp.WorkloadModel.create": 4,
+  "com.vmware.wcp.WorkloadModel.delete": 1,
+  "esx.audit.dcui.enabled": 10,
+  "esx.audit.esximage.software.apply.succeeded": 21,
+  "esx.audit.host.boot": 10,
+  "esx.audit.host.poweroff.reason.timestamp": 1,
+  "esx.audit.host.quickboot.reason.user": 9,
+  "esx.audit.host.stop.reboot": 9,
+  "esx.audit.hostd.host.reboot.reason": 9,
+  "esx.audit.lockdownmode.exceptions.changed": 14,
+  "esx.audit.maintenancemode.entered": 21,
+  "esx.audit.maintenancemode.entering": 21,
+  "esx.audit.maintenancemode.exited": 22,
+  "esx.audit.net.firewall.config.changed": 7494,
+  "esx.audit.net.firewall.disabled": 3,
+  "esx.audit.net.firewall.port.hooked": 60,
+  "esx.audit.partialmaintenancemode.entered": 5,
+  "esx.audit.partialmaintenancemode.entering": 5,
+  "esx.audit.partialmaintenancemode.exited": 5,
+  "esx.audit.shell.disabled": 1,
+  "esx.audit.shell.enabled": 5,
+  "esx.audit.ssh.disabled": 10,
+  "esx.audit.ssh.enabled": 9,
+  "esx.audit.usb.config.changed": 11,
+  "esx.audit.uw.secpolicy.domain.level.changed": 3,
+  "esx.audit.vmfs.volume.mounted": 13,
+  "esx.clear.coredump.configured2": 20,
+  "esx.clear.net.connectivity.restored": 90,
+  "esx.clear.net.dvport.connectivity.restored": 90,
+  "esx.clear.net.dvport.redundancy.restored": 104,
+  "esx.clear.net.redundancy.restored": 84,
+  "esx.clear.net.vmnic.linkstate.up": 90,
+  "esx.clear.storage.apd.exit": 1,
+  "esx.clear.vmfs.nfs.server.restored": 26,
+  "esx.problem.clock.correction.adjtime.lostsync": 1,
+  "esx.problem.clock.correction.adjtime.sync": 21,
+  "esx.problem.clock.correction.changed": 10,
+  "esx.problem.net.dvport.redundancy.lost": 20,
+  "esx.problem.net.firewall.config.failed": 14,
+  "esx.problem.net.vmnic.linkstate.down": 20,
+  "esx.problem.storage.apd.start": 2,
+  "esx.problem.vm.kill.unexpected.vmx.fault.failure.2": 67,
+  "esx.problem.vmsyslogd.remote.auditrecords.dropped": 2,
+  "esx.problem.vmsyslogd.remote.failure": 63,
+  "esx.problem.vmsyslogd.remote.logmessages.dropped": 11,
+  "vim.event.ResourceExhaustionStatusChangedEvent": 54,
+  "vsphere.online.health.alarm.event": 11
+ },
+ "vobd": {
+  "excluded": [
+   "esx.audit.net.firewall.config.changed",
+   "vob.net.firewall.config.changed",
+   "labelled test line"
+  ],
+  "identifiers": {
+   "esx.audit.dcui.disabled": {
+    "example": "2026-10-06T14:56:14.179Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] 99820259328us: [esx.audit.dcui.disabled]",
+    "hosts": 5,
+    "records": 10
+   },
+   "esx.audit.dcui.enabled": {
+    "example": "2026-10-06T14:57:48.006Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.audit.dcui.enabled]",
+    "hosts": 6,
+    "records": 16
+   },
+   "esx.audit.esximage.software.apply.succeeded": {
+    "example": "2026-10-06T14:55:36.781Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] 99782861237us: [esx.audit.esximage.software.apply.succeeded]",
+    "hosts": 9,
+    "records": 30
+   },
+   "esx.audit.host.boot": {
+    "example": "2026-10-06T14:57:48.029Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.audit.host.boot]",
+    "hosts": 6,
+    "records": 18
+   },
+   "esx.audit.host.quickboot.reason.user": {
+    "example": "2026-10-06T14:57:48.030Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.audit.host.quickboot.reason.user]",
+    "hosts": 6,
+    "records": 18
+   },
+   "esx.audit.host.stop.reboot": {
+    "example": "2026-10-06T14:55:40.704Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] The event ([esx.audit.host.stop.reboot]",
+    "hosts": 3,
+    "records": 6
+   },
+   "esx.audit.hostd.host.reboot.reason": {
+    "example": "2026-10-06T14:55:40.640Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] 99786720261us: [esx.audit.hostd.host.reboot.reason]",
+    "hosts": 3,
+    "records": 6
+   },
+   "esx.audit.maintenancemode.entered": {
+    "example": "2026-10-06T14:54:48.213Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] 99734293649us: [esx.audit.maintenancemode.entered]",
+    "hosts": 9,
+    "records": 30
+   },
+   "esx.audit.maintenancemode.entering": {
+    "example": "2026-10-06T14:54:48.160Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] The event ([esx.audit.maintenancemode.entering]",
+    "hosts": 9,
+    "records": 30
+   },
+   "esx.audit.maintenancemode.exited": {
+    "example": "2026-10-06T14:57:51.546Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"UserLevelCorrelator\"] The event ([esx.audit.maintenancemode.exited]",
+    "hosts": 9,
+    "records": 37
+   },
+   "esx.audit.net.firewall.disabled": {
+    "example": "2026-10-06T14:57:48.000Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.audit.net.firewall.disabled]",
+    "hosts": 3,
+    "records": 9
+   },
+   "esx.audit.net.firewall.port.hooked": {
+    "example": "2026-10-06T14:57:48.004Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.audit.net.firewall.port.hooked]",
+    "hosts": 6,
+    "records": 96
+   },
+   "esx.audit.partialmaintenancemode.entered": {
+    "example": "2026-10-06T00:30:09.898Z {{esx-2}} vobd 2097978 - [esx@4413 threadName=\"UserLevelCorrelator\"] 47835938741us: [esx.audit.partialmaintenancemode.entered]",
+    "hosts": 5,
+    "records": 10
+   },
+   "esx.audit.partialmaintenancemode.entering": {
+    "example": "2026-10-06T00:30:09.850Z {{esx-2}} vobd 2097978 - [esx@4413 threadName=\"UserLevelCorrelator\"] The event ([esx.audit.partialmaintenancemode.entering]",
+    "hosts": 5,
+    "records": 10
+   },
+   "esx.audit.partialmaintenancemode.exited": {
+    "example": "2026-10-06T00:30:13.228Z {{esx-2}} vobd 2097978 - [esx@4413 threadName=\"UserLevelCorrelator\"] The event ([esx.audit.partialmaintenancemode.exited]",
+    "hosts": 5,
+    "records": 10
+   },
+   "esx.audit.shell.disabled": {
+    "example": "2026-10-05T13:18:32.207Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] The event ([esx.audit.shell.disabled]",
+    "hosts": 2,
+    "records": 4
+   },
+   "esx.audit.shell.enabled": {
+    "example": "2026-10-06T12:58:02.007Z {{esx-7}} vobd 2097451 - [esx@4413 threadName=\"host-2097457\"] Successfully sent event ([esx.audit.shell.enabled]",
+    "hosts": 2,
+    "records": 4
+   },
+   "esx.audit.ssh.disabled": {
+    "example": "2026-10-05T13:18:43.180Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] The event ([esx.audit.ssh.disabled]",
+    "hosts": 9,
+    "records": 20
+   },
+   "esx.audit.ssh.enabled": {
+    "example": "2026-10-06T14:58:45.004Z {{esx-2}} vobd 2097976 - [esx@4413 threadName=\"UserLevelCorrelator\"] 4071741286us: [esx.audit.ssh.enabled]",
+    "hosts": 9,
+    "records": 18
+   },
+   "esx.audit.uw.secpolicy.domain.level.changed": {
+    "example": "2026-10-06T14:57:48.006Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.audit.uw.secpolicy.domain.level.changed]",
+    "hosts": 3,
+    "records": 9
+   },
+   "esx.audit.vmfs.volume.mounted": {
+    "example": "2026-10-06T14:57:48.005Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.audit.vmfs.volume.mounted]",
+    "hosts": 6,
+    "records": 25
+   },
+   "esx.clear.coredump.configured2": {
+    "example": "2026-10-06T14:57:48.029Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.clear.coredump.configured2]",
+    "hosts": 6,
+    "records": 34
+   },
+   "esx.clear.net.connectivity.restored": {
+    "example": "2026-10-06T14:57:48.022Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.clear.net.connectivity.restored]",
+    "hosts": 6,
+    "records": 160
+   },
+   "esx.clear.net.dvport.connectivity.restored": {
+    "example": "2026-10-06T14:57:48.023Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.clear.net.dvport.connectivity.restored]",
+    "hosts": 6,
+    "records": 161
+   },
+   "esx.clear.net.dvport.redundancy.restored": {
+    "example": "2026-10-06T14:57:48.025Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.clear.net.dvport.redundancy.restored]",
+    "hosts": 6,
+    "records": 187
+   },
+   "esx.clear.net.redundancy.restored": {
+    "example": "2026-10-06T14:57:48.023Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.clear.net.redundancy.restored]",
+    "hosts": 6,
+    "records": 150
+   },
+   "esx.clear.net.vmnic.linkstate.up": {
+    "example": "2026-10-06T14:57:48.022Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.clear.net.vmnic.linkstate.up]",
+    "hosts": 6,
+    "records": 163
+   },
+   "esx.clear.storage.apd.exit": {
+    "example": "2026-10-06T14:11:33.123Z {{esx-5}} vobd 2097451 - [esx@4413 threadName=\"APDCorrelator\"] 4846448728us: [esx.clear.storage.apd.exit]",
+    "hosts": 1,
+    "records": 4
+   },
+   "esx.clear.vmfs.nfs.server.restored": {
+    "example": "2026-10-06T14:57:48.005Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.clear.vmfs.nfs.server.restored]",
+    "hosts": 6,
+    "records": 50
+   },
+   "esx.problem.clock.correction.adjtime.lostsync": {
+    "example": "2026-10-08T04:48:38.008Z {{esx-11}} vobd 2097451 - [esx@4413 threadName=\"ClockCorrelator\"] 143937425480us: [esx.problem.clock.correction.adjtime.lostsync]",
+    "hosts": 1,
+    "records": 2
+   },
+   "esx.problem.clock.correction.adjtime.sync": {
+    "example": "2026-10-06T15:32:26.134Z {{esx-7}} vobd 2097451 - [esx@4413 threadName=\"ClockCorrelator\"] The event ([esx.problem.clock.correction.adjtime.sync]",
+    "hosts": 11,
+    "records": 42
+   },
+   "esx.problem.clock.correction.changed": {
+    "example": "2026-10-06T15:32:26.134Z {{esx-7}} vobd 2097451 - [esx@4413 threadName=\"ClockCorrelator\"] The event ([esx.problem.clock.correction.changed]",
+    "hosts": 8,
+    "records": 24
+   },
+   "esx.problem.net.dvport.redundancy.lost": {
+    "example": "2026-10-06T14:57:48.017Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.problem.net.dvport.redundancy.lost]",
+    "hosts": 6,
+    "records": 36
+   },
+   "esx.problem.net.firewall.config.failed": {
+    "example": "2026-10-06T14:57:48.029Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.problem.net.firewall.config.failed]",
+    "hosts": 3,
+    "records": 38
+   },
+   "esx.problem.net.vmnic.linkstate.down": {
+    "example": "2026-10-06T14:57:48.004Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.problem.net.vmnic.linkstate.down]",
+    "hosts": 6,
+    "records": 32
+   },
+   "esx.problem.storage.apd.start": {
+    "example": "2026-10-06T14:11:12.344Z {{esx-5}} vobd 2097451 - [esx@4413 threadName=\"APDCorrelator\"] 4825669418us: [esx.problem.storage.apd.start]",
+    "hosts": 1,
+    "records": 4
+   },
+   "esx.problem.vm.kill.unexpected.vmx.fault.failure.2": {
+    "example": "2026-10-05T13:23:58.155Z {{esx-1}} vobd 2097977 - [esx@4413 threadName=\"VMCorrelator\"] 7875781831us: [esx.problem.vm.kill.unexpected.vmx.fault.failure.2]",
+    "hosts": 3,
+    "records": 114
+   },
+   "esx.problem.vmsyslogd.remote.failure": {
+    "example": "2026-10-04T22:22:59.872Z {{esx-2}} vobd 2097979 - [esx@4413 threadName=\"UserLevelCorrelator\"] 2418760855634us: [esx.problem.vmsyslogd.remote.failure]",
+    "hosts": 11,
+    "records": 147
+   },
+   "esx.problem.vmsyslogd.remote.logmessages.dropped": {
+    "example": "2026-10-06T14:57:48.026Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"host-2097985\"] Successfully sent event ([esx.problem.vmsyslogd.remote.logmessages.dropped]",
+    "hosts": 1,
+    "records": 3
+   },
+   "vob.clock.correction.adjtime.lostsync": {
+    "example": "2026-10-08T04:48:38.008Z {{esx-11}} vobd 2097451 - [esx@4413 threadName=\"ClockCorrelator\"] 143936727514us: [vob.clock.correction.adjtime.lostsync]",
+    "hosts": 1,
+    "records": 1
+   },
+   "vob.clock.correction.adjtime.sync": {
+    "example": "2026-10-05T11:35:37.270Z {{esx-6}} vobd 2097452 - [esx@4413 threadName=\"ClockCorrelator\"] 1036811808us: [vob.clock.correction.adjtime.sync]",
+    "hosts": 11,
+    "records": 27
+   },
+   "vob.clock.correction.changed": {
+    "example": "2026-10-06T15:32:26.134Z {{esx-7}} vobd 2097451 - [esx@4413 threadName=\"ClockCorrelator\"] 9337887239us: [vob.clock.correction.changed]",
+    "hosts": 8,
+    "records": 12
+   },
+   "vob.net.dvport.uplink.transition.down": {
+    "example": "2026-10-06T14:57:22.714Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 56971355us: [vob.net.dvport.uplink.transition.down]",
+    "hosts": 6,
+    "records": 55
+   },
+   "vob.net.dvport.uplink.transition.up": {
+    "example": "2026-10-06T14:57:29.785Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 64041775us: [vob.net.dvport.uplink.transition.up]",
+    "hosts": 6,
+    "records": 60
+   },
+   "vob.net.firewall.config.failed": {
+    "example": "2026-10-06T14:57:45.385Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 79641968us: [vob.net.firewall.config.failed]",
+    "hosts": 3,
+    "records": 16
+   },
+   "vob.net.firewall.disabled": {
+    "example": "2026-10-06T14:56:48.670Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 23818616us: [vob.net.firewall.disabled]",
+    "hosts": 3,
+    "records": 3
+   },
+   "vob.net.firewall.port.hooked": {
+    "example": "2026-10-06T14:56:55.570Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 30719319us: [vob.net.firewall.port.hooked]",
+    "hosts": 5,
+    "records": 30
+   },
+   "vob.net.vmnic.linkstate.down": {
+    "example": "2026-10-06T14:57:23.173Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 57430869us: [vob.net.vmnic.linkstate.down]",
+    "hosts": 6,
+    "records": 21
+   },
+   "vob.net.vmnic.linkstate.up": {
+    "example": "2026-10-06T14:57:25.108Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"netCorrelator\"] 59365901us: [vob.net.vmnic.linkstate.up]",
+    "hosts": 6,
+    "records": 54
+   },
+   "vob.psastor.psastorpath.pathstate.on": {
+    "example": "2026-10-06T14:39:14.197Z {{esx-1}} vobd 2097975 - [esx@4413 threadName=\"psastorCorrelator\"] 38269269us: [vob.psastor.psastorpath.pathstate.on]",
+    "hosts": 2,
+    "records": 2
+   },
+   "vob.scsi.scsipath.add": {
+    "example": "2026-10-06T14:56:49.353Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"scsiCorrelator\"] 24500470us: [vob.scsi.scsipath.add]",
+    "hosts": 5,
+    "records": 9
+   },
+   "vob.scsi.scsipath.pathstate.on": {
+    "example": "2026-10-06T14:56:55.951Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"scsiCorrelator\"] 31100109us: [vob.scsi.scsipath.pathstate.on]",
+    "hosts": 5,
+    "records": 9
+   },
+   "vob.scsi.scsipath.por": {
+    "example": "2026-10-05T00:34:22.021Z {{esx-1}} vobd 2097977 - [esx@4413 threadName=\"scsiCorrelator\"] 2426562623554us: [vob.scsi.scsipath.por]",
+    "hosts": 1,
+    "records": 191
+   },
+   "vob.storage.apd.exit": {
+    "example": "2026-10-06T14:11:33.123Z {{esx-5}} vobd 2097451 - [esx@4413 threadName=\"APDCorrelator\"] 4846243989us: [vob.storage.apd.exit]",
+    "hosts": 1,
+    "records": 2
+   },
+   "vob.storage.apd.start": {
+    "example": "2026-10-06T14:11:12.343Z {{esx-5}} vobd 2097451 - [esx@4413 threadName=\"APDCorrelator\"] 4825468745us: [vob.storage.apd.start]",
+    "hosts": 1,
+    "records": 2
+   },
+   "vob.user.coredump.configured2": {
+    "example": "2026-10-06T14:57:46.774Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"GenericCorrelator\"] 81031781us: [vob.user.coredump.configured2]",
+    "hosts": 6,
+    "records": 22
+   },
+   "vob.user.dcui.disabled": {
+    "example": "2026-10-06T14:56:14.179Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"GenericCorrelator\"] 99820258974us: [vob.user.dcui.disabled]",
+    "hosts": 5,
+    "records": 10
+   },
+   "vob.user.dcui.enabled": {
+    "example": "2026-10-06T14:57:00.385Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"GenericCorrelator\"] 35534113us: [vob.user.dcui.enabled]",
+    "hosts": 5,
+    "records": 10
+   },
+   "vob.user.esximage.software.apply.succeeded": {
+    "example": "2026-10-06T14:55:36.780Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"GenericCorrelator\"] 99782860848us: [vob.user.esximage.software.apply.succeeded]",
+    "hosts": 9,
+    "records": 30
+   },
+   "vob.user.host.boot": {
+    "example": "2026-10-06T14:57:46.307Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"GenericCorrelator\"] 80565048us: [vob.user.host.boot]",
+    "hosts": 6,
+    "records": 12
+   },
+   "vob.user.host.quickboot.reason.user": {
+    "example": "2026-10-06T14:57:46.802Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"GenericCorrelator\"] 81059813us: [vob.user.host.quickboot.reason.user]",
+    "hosts": 6,
+    "records": 12
+   },
+   "vob.user.host.stop.reboot": {
+    "example": "2026-10-06T14:55:40.704Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"GenericCorrelator\"] 99786784686us: [vob.user.host.stop.reboot]",
+    "hosts": 3,
+    "records": 6
+   },
+   "vob.user.hostd.host.reboot.reason": {
+    "example": "2026-10-06T14:55:40.639Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"GenericCorrelator\"] 99786719906us: [vob.user.hostd.host.reboot.reason]",
+    "hosts": 3,
+    "records": 6
+   },
+   "vob.user.maintenancemode.entered": {
+    "example": "2026-10-06T14:54:48.213Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"GenericCorrelator\"] 99734293508us: [vob.user.maintenancemode.entered]",
+    "hosts": 9,
+    "records": 30
+   },
+   "vob.user.maintenancemode.entering": {
+    "example": "2026-10-06T14:54:48.160Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"UserLevelCorrelator\"] 99734240795us: [vob.user.maintenancemode.entering]",
+    "hosts": 9,
+    "records": 30
+   },
+   "vob.user.maintenancemode.exited": {
+    "example": "2026-10-06T14:57:51.545Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"GenericCorrelator\"] 85803247us: [vob.user.maintenancemode.exited]",
+    "hosts": 9,
+    "records": 36
+   },
+   "vob.user.partialmaintenancemode.entered": {
+    "example": "2026-10-06T00:30:09.898Z {{esx-2}} vobd 2097978 - [esx@4413 threadName=\"GenericCorrelator\"] 47835938505us: [vob.user.partialmaintenancemode.entered]",
+    "hosts": 5,
+    "records": 10
+   },
+   "vob.user.partialmaintenancemode.entering": {
+    "example": "2026-10-06T00:30:09.849Z {{esx-2}} vobd 2097978 - [esx@4413 threadName=\"GenericCorrelator\"] 47835889441us: [vob.user.partialmaintenancemode.entering]",
+    "hosts": 5,
+    "records": 10
+   },
+   "vob.user.partialmaintenancemode.exited": {
+    "example": "2026-10-06T00:30:13.228Z {{esx-2}} vobd 2097978 - [esx@4413 threadName=\"UserLevelCorrelator\"] 47839267847us: [vob.user.partialmaintenancemode.exited]",
+    "hosts": 5,
+    "records": 10
+   },
+   "vob.user.shell.disabled": {
+    "example": "2026-10-05T13:18:32.206Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"GenericCorrelator\"] 7558286575us: [vob.user.shell.disabled]",
+    "hosts": 2,
+    "records": 4
+   },
+   "vob.user.shell.enabled": {
+    "example": "2026-10-06T12:57:13.110Z {{esx-7}} vobd 2097451 - [esx@4413 threadName=\"GenericCorrelator\"] 26034138us: [vob.user.shell.enabled]",
+    "hosts": 1,
+    "records": 2
+   },
+   "vob.user.ssh.disabled": {
+    "example": "2026-10-05T13:18:43.180Z {{esx-3}} vobd 2097977 - [esx@4413 threadName=\"GenericCorrelator\"] 7569260592us: [vob.user.ssh.disabled]",
+    "hosts": 9,
+    "records": 20
+   },
+   "vob.user.ssh.enabled": {
+    "example": "2026-10-06T14:58:45.004Z {{esx-2}} vobd 2097976 - [esx@4413 threadName=\"UserLevelCorrelator\"] 4071740669us: [vob.user.ssh.enabled]",
+    "hosts": 9,
+    "records": 18
+   },
+   "vob.user.vmsyslogd.remote.failure": {
+    "example": "2026-10-04T22:22:59.872Z {{esx-2}} vobd 2097979 - [esx@4413 threadName=\"UserLevelCorrelator\"] 2418760855136us: [vob.user.vmsyslogd.remote.failure]",
+    "hosts": 11,
+    "records": 126
+   },
+   "vob.user.vmsyslogd.remote.logmessages.dropped": {
+    "example": "2026-10-06T14:57:32.540Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"GenericCorrelator\"] 66798290us: [vob.user.vmsyslogd.remote.logmessages.dropped]",
+    "hosts": 1,
+    "records": 2
+   },
+   "vob.uw.secpolicy.domain.level.changed": {
+    "example": "2026-10-06T14:56:58.085Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"UserWorldCorrelator\"] 33233780us: [vob.uw.secpolicy.domain.level.changed]",
+    "hosts": 3,
+    "records": 3
+   },
+   "vob.vm.kill.unexpected.vmx.fault.failure": {
+    "example": "2026-10-05T13:23:58.155Z {{esx-1}} vobd 2097977 - [esx@4413 threadName=\"VMCorrelator\"] 7875466234us: [vob.vm.kill.unexpected.vmx.fault.failure]",
+    "hosts": 3,
+    "records": 57
+   },
+   "vob.vmfs.nfs.server.restored": {
+    "example": "2026-10-06T14:56:57.846Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"vmfsCorrelator\"] 32994501us: [vob.vmfs.nfs.server.restored]",
+    "hosts": 5,
+    "records": 16
+   },
+   "vob.vmfs.volume.mounted": {
+    "example": "2026-10-06T14:56:56.292Z {{esx-3}} vobd 2097979 - [esx@4413 threadName=\"vmfsCorrelator\"] 31441066us: [vob.vmfs.volume.mounted]",
+    "hosts": 5,
+    "records": 8
+   }
+  },
+  "records_read": 2771,
+  "truncated_slices": 1
+ },
+ "window_days": 7.0
+}

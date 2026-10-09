@@ -1,0 +1,1373 @@
+{
+ "families": [
+  "esx.problem.storage",
+  "esx.clear.storage",
+  "esx.problem.scsi",
+  "esx.clear.scsi",
+  "esx.problem.psastor",
+  "esx.clear.psastor",
+  "esx.problem.vmfs",
+  "esx.clear.vmfs",
+  "esx.problem.vmsyslogd",
+  "com.vmware.vc.HA.Vmcp",
+  "HostConnectionLostEvent",
+  "HostDisconnectedEvent",
+  "VmFailedMigrateEvent",
+  "BadUsernameSessionEvent"
+ ],
+ "grep": null,
+ "read_at": "2026-10-09T05:34:37Z",
+ "same_on_every_vcenter": true,
+ "vcenters": {
+  "{{vcenter-1}}": {
+   "build": "25712839",
+   "events": {
+    "BadUsernameSessionEvent": {
+     "category": "error",
+     "text": "Cannot login {userName}@{ipAddress}"
+    },
+    "HostConnectionLostEvent": {
+     "category": "error",
+     "text": "Host {host.name} in {datacenter.name} is not responding"
+    },
+    "HostDisconnectedEvent": {
+     "category": "info",
+     "text": "Disconnected from {host.name} in {datacenter.name}. Reason: {reason.@enum.HostDisconnectedEvent.ReasonCode}"
+    },
+    "VmFailedMigrateEvent": {
+     "category": "error",
+     "text": "Cannot migrate {vm.name} from {host.name}, {ds.name} in {datacenter.name} to {destHost.name}, {destDatastore.name} in {destDatacenter.name}"
+    },
+    "com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore": {
+     "category": "warning",
+     "text": "vSphere HA did not terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name}: {reason.@enum.com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore}"
+    },
+    "com.vmware.vc.HA.VmcpStorageFailureCleared": {
+     "category": "info",
+     "text": "Datastore {ds.name} mounted on host {host.name} was inaccessible. The condition was cleared and the datastore is now accessible"
+    },
+    "com.vmware.vc.HA.VmcpStorageFailureDetectedForVm": {
+     "category": "warning",
+     "text": "vSphere HA detected that a datastore mounted on host {host.name} in cluster {computeResource.name} in {datacenter.name} was inaccessible due to {failureType.@enum.com.vmware.vc.HA.VmcpStorageFailureDetectedForVm}. This affected VM {vm.name} with files on the datastore"
+    },
+    "com.vmware.vc.HA.VmcpTerminateVmAborted": {
+     "category": "error",
+     "text": "vSphere HA was unable to terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name} after {retryTimes} retries"
+    },
+    "com.vmware.vc.HA.VmcpTerminatingVm": {
+     "category": "warning",
+     "text": "vSphere HA attempted to terminate VM {vm.name} on host{host.name} in cluster {computeResource.name} in {datacenter.name} because the VM was affected by an inaccessible datastore"
+    },
+    "esx.clear.psastor.device.io.latency.improved": {
+     "category": "info",
+     "text": "Device {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.clear.psastor.device.state.on": {
+     "category": "info",
+     "text": "Device {1}, has been turned on administratively."
+    },
+    "esx.clear.psastor.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.scsi.device.io.latency.improved": {
+     "category": "info",
+     "text": "Device {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.clear.scsi.device.state.on": {
+     "category": "info",
+     "text": "Device {1}, has been turned on administratively."
+    },
+    "esx.clear.scsi.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.storage.apd.exit": {
+     "category": "info",
+     "text": "Device or filesystem with identifier {1} has exited the All Paths Down state."
+    },
+    "esx.clear.storage.connectivity.restored": {
+     "category": "info",
+     "text": "Connectivity to storage device {1} (Datastores: {2}) restored. Path {3} is active again."
+    },
+    "esx.clear.storage.redundancy.restored": {
+     "category": "info",
+     "text": "Path redundancy to storage device {1} (Datastores: {2}) restored. Path {3} is active again."
+    },
+    "esx.clear.vmfs.nfs.server.restored": {
+     "category": "info",
+     "text": "Restored connection to server {1} mount point {2} mounted as {3} ({4})."
+    },
+    "esx.clear.vmfs.nfs.volume.io.latency.improved": {
+     "category": "info",
+     "text": "NFS volume {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.psastor.apd.event.descriptor.alloc.failed": {
+     "category": "warning",
+     "text": "No memory to allocate APD (All Paths Down) event subsystem."
+    },
+    "esx.problem.psastor.device.close.failed": {
+     "category": "warning",
+     "text": "\"Failed to close the device {1} properly, plugin {2}."
+    },
+    "esx.problem.psastor.device.detach.failed": {
+     "category": "warning",
+     "text": "Detach failed for device :{1}. Exceeded the number of devices that can be detached, please cleanup stale detach entries."
+    },
+    "esx.problem.psastor.device.io.bad.plugin.type": {
+     "category": "warning",
+     "text": "Bad plugin type for device {1}, plugin {2}"
+    },
+    "esx.problem.psastor.device.io.latency.high": {
+     "category": "warning",
+     "text": "Device {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.psastor.device.is.local.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a local - not shared - device"
+    },
+    "esx.problem.psastor.device.is.pseudo.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a pseudo device"
+    },
+    "esx.problem.psastor.device.is.ssd.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a Solid State Disk device"
+    },
+    "esx.problem.psastor.device.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported devices of {1} has been reached. A device from plugin {2} could not be created."
+    },
+    "esx.problem.psastor.device.state.off": {
+     "category": "info",
+     "text": "Device {1}, has been turned off administratively."
+    },
+    "esx.problem.psastor.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.psastor.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.too.many.io.error": {
+     "category": "warning",
+     "text": "Too many errors observed for device {1} errPercentage {2}"
+    },
+    "esx.problem.psastor.psastorpath.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported paths of {1} has been reached. Path {2} could not be added."
+    },
+    "esx.problem.psastor.unsupported.plugin.type": {
+     "category": "warning",
+     "text": "Storage Device Allocation not supported for plugin type {1}"
+    },
+    "esx.problem.scsi.apd.event.descriptor.alloc.failed": {
+     "category": "warning",
+     "text": "No memory to allocate APD (All Paths Down) event subsystem."
+    },
+    "esx.problem.scsi.device.close.failed": {
+     "category": "warning",
+     "text": "\"Failed to close the device {1} properly, plugin {2}."
+    },
+    "esx.problem.scsi.device.detach.failed": {
+     "category": "warning",
+     "text": "Detach failed for device :{1}. Exceeded the number of devices that can be detached, please cleanup stale detach entries."
+    },
+    "esx.problem.scsi.device.filter.attach.failed": {
+     "category": "warning",
+     "text": "Failed to attach filters to device '%s' during registration. Plugin load failed or the filter rules are incorrect."
+    },
+    "esx.problem.scsi.device.invalid.xcopy.request": {
+     "category": "warning",
+     "text": "Invalid XCOPY request for device {1}. Host {2}, Device {3}, Plugin {4}, {5} sense, sense.key = {6}, sense.asc = {7}, sense.ascq = {8}: {9}"
+    },
+    "esx.problem.scsi.device.io.bad.plugin.type": {
+     "category": "warning",
+     "text": "Bad plugin type for device {1}, plugin {2}"
+    },
+    "esx.problem.scsi.device.io.inquiry.failed": {
+     "category": "warning",
+     "text": "Failed to get standard inquiry for device {1} from Plugin {2}."
+    },
+    "esx.problem.scsi.device.io.invalid.disk.qfull.value": {
+     "category": "warning",
+     "text": "QFullSampleSize should be bigger than QFullThreshold. LUN queue depth throttling algorithm will not function as expected. Please set the QFullSampleSize and QFullThreshold disk configuration values in ESX correctly."
+    },
+    "esx.problem.scsi.device.io.latency.high": {
+     "category": "warning",
+     "text": "Device {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.scsi.device.io.qerr.change.config": {
+     "category": "warning",
+     "text": "QErr set to 0x{1} for device {2}. This may cause unexpected behavior. The system is not configured to change the QErr setting of device. The QErr value supported by system is 0x{3}. Please check the SCSI ChangeQErrSetting configuration value for ESX."
+    },
+    "esx.problem.scsi.device.io.qerr.changed": {
+     "category": "warning",
+     "text": "QErr set to 0x{1} for device {2}. This may cause unexpected behavior. The device was originally configured to the supported  QErr setting of 0x{3}, but this has been changed and could not be changed back."
+    },
+    "esx.problem.scsi.device.is.local.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a local - not shared - device"
+    },
+    "esx.problem.scsi.device.is.pseudo.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a pseudo device"
+    },
+    "esx.problem.scsi.device.is.ssd.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a Solid State Disk device"
+    },
+    "esx.problem.scsi.device.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported devices of {1} has been reached. A device from plugin {2} could not be created."
+    },
+    "esx.problem.scsi.device.nmp.satp.option.failed": {
+     "category": "warning",
+     "text": "Invalid config parameter: \\\"{1}\\\" provided in the nmp satp claimrule, this setting was not applied while claiming the path {2}"
+    },
+    "esx.problem.scsi.device.state.off": {
+     "category": "info",
+     "text": "Device {1}, has been turned off administratively."
+    },
+    "esx.problem.scsi.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.scsi.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.scsi.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.thinprov.atquota": {
+     "category": "warning",
+     "text": "Space utilization on thin-provisioned device {1} exceeded configured threshold. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.too.many.io.error": {
+     "category": "warning",
+     "text": "Too many errors observed for device {1} errPercentage {2}"
+    },
+    "esx.problem.scsi.scsipath.badpath.unreachpe": {
+     "category": "error",
+     "text": "Sanity check failed for path {1}. The path is to a vVol PE, but it goes out of adapter {2} which is not PE capable. Path dropped."
+    },
+    "esx.problem.scsi.scsipath.badpath.unsafepe": {
+     "category": "error",
+     "text": "Sanity check failed for path {1}. Could not safely determine if the path is to a vVol PE. Path dropped."
+    },
+    "esx.problem.scsi.scsipath.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported paths of {1} has been reached. Path {2} could not be added."
+    },
+    "esx.problem.scsi.unsupported.plugin.type": {
+     "category": "warning",
+     "text": "Scsi Device Allocation not supported for plugin type {1}"
+    },
+    "esx.problem.storage.apd.start": {
+     "category": "warning",
+     "text": "Device or filesystem with identifier {1} has entered the All Paths Down state."
+    },
+    "esx.problem.storage.apd.timeout": {
+     "category": "warning",
+     "text": "Device or filesystem with identifier {1} has entered the All Paths Down Timeout state after being in the All Paths Down state for {2} seconds. I/Os will now be fast failed."
+    },
+    "esx.problem.storage.connectivity.devicepor": {
+     "category": "warning",
+     "text": "Frequent PowerOn Reset Unit Attentions are occurring on device {1}. This might indicate a storage problem. Affected datastores: {2}"
+    },
+    "esx.problem.storage.connectivity.lost": {
+     "category": "error",
+     "text": "Lost connectivity to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.storage.connectivity.pathpor": {
+     "category": "warning",
+     "text": "Frequent PowerOn Reset Unit Attentions are occurring on path {1}. This might indicate a storage problem. Affected device: {2}.  Affected datastores: {3}"
+    },
+    "esx.problem.storage.connectivity.pathstatechanges": {
+     "category": "info",
+     "text": "Frequent path state changes are occurring for path {1}. This might indicate a storage problem. Affected device: {2}. Affected datastores: {3}"
+    },
+    "esx.problem.storage.iscsi.connection.error.cmd.sn.max": {
+     "category": "error",
+     "text": "iSCSI connection {1} on device {2} is being reset because command window is closed."
+    },
+    "esx.problem.storage.iscsi.discovery.connect.error": {
+     "category": "error",
+     "text": "iSCSI discovery to {1} on {2} failed. The iSCSI Initiator could not establish a network connection to the discovery address."
+    },
+    "esx.problem.storage.iscsi.discovery.login.error": {
+     "category": "error",
+     "text": "iSCSI discovery to {1} on {2} failed. The Discovery target returned login error: {3}."
+    },
+    "esx.problem.storage.iscsi.isns.discovery.error": {
+     "category": "error",
+     "text": "iSCSI iSns discovery to {1} on {2} failed. ({3} : {4})."
+    },
+    "esx.problem.storage.iscsi.session.recovery.timeout": {
+     "category": "error",
+     "text": "Unable to connect to iSCSI target after multiple retries. The iSCSI path {1} is down."
+    },
+    "esx.problem.storage.iscsi.target.connect.error": {
+     "category": "error",
+     "text": "Login to iSCSI target {1} on {2} failed. The iSCSI initiator could not establish a network connection to the target."
+    },
+    "esx.problem.storage.iscsi.target.login.error": {
+     "category": "error",
+     "text": "Login to iSCSI target {1} on {2} failed. Target returned login error: {3}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.lost": {
+     "category": "error",
+     "text": "The iSCSI target {2} was permanently removed from {1}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.removed": {
+     "category": "error",
+     "text": "The iSCSI target {1} was permanently removed from {2}."
+    },
+    "esx.problem.storage.redundancy.degraded": {
+     "category": "warning",
+     "text": "Path redundancy to storage device {1} degraded. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.storage.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost path redundancy to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.vmfs.ats.incompatibility.detected": {
+     "category": "error",
+     "text": "Multi-extent ATS-only volume '{1}' ({2}) is unable to use ATS because HardwareAcceleratedLocking is disabled on this host: potential for introducing filesystem corruption. Volume should not be used from other hosts."
+    },
+    "esx.problem.vmfs.ats.support.lost": {
+     "category": "error",
+     "text": "ATS-Only VMFS volume '{1}' not mounted. Host does not support ATS or ATS initialization has failed."
+    },
+    "esx.problem.vmfs.error.volume.is.locked": {
+     "category": "error",
+     "text": "Volume on device {1} is locked, possibly because some remote host encountered an error during a volume operation and could not recover."
+    },
+    "esx.problem.vmfs.extent.offline": {
+     "category": "error",
+     "text": "An attached device {1} may be offline. The file system {2} is now in a degraded state. While the datastore is still available, parts of data that reside on the extent that went offline might be inaccessible."
+    },
+    "esx.problem.vmfs.extent.online": {
+     "category": "info",
+     "text": "Device {1} backing file system {2} came online. This extent was previously offline. All resources on this device are now available."
+    },
+    "esx.problem.vmfs.heartbeat.recovered": {
+     "category": "info",
+     "text": "Successfully restored access to volume {1} ({2}) following connectivity issues."
+    },
+    "esx.problem.vmfs.heartbeat.timedout": {
+     "category": "info",
+     "text": "Lost access to volume {1} ({2}) due to connectivity issues. Recovery attempt is in progress and outcome will be reported shortly."
+    },
+    "esx.problem.vmfs.heartbeat.unrecoverable": {
+     "category": "error",
+     "text": "Lost connectivity to volume {1} ({2}) and subsequent recovery attempts have failed."
+    },
+    "esx.problem.vmfs.journal.createfailed": {
+     "category": "error",
+     "text": "No space for journal on volume {1} ({2}). Volume will remain in read-only metadata mode with limited write support until journal can be created."
+    },
+    "esx.problem.vmfs.lock.busy.filedesc": {
+     "category": "error",
+     "text": "{1} Lock(s) held on a file on volume {2}. numHolders: {3}. gblNumHolders: {4}. Locking Host(s) MAC: {5}"
+    },
+    "esx.problem.vmfs.lock.busy.filename": {
+     "category": "error",
+     "text": "Lock(s) held on file {1} by other host(s)."
+    },
+    "esx.problem.vmfs.lockmode.inconsistency.detected": {
+     "category": "error",
+     "text": "Inconsistent lockmode change detected for VMFS volume '{1} ({2})': volume was configured for {3} lockmode at time of open and now it is configured for {4} lockmode but this host is not using {5} lockmode. Protocol error during ATS transition. Volume descriptor refresh operations will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmfs.metadata.corruptondisk": {
+     "category": "error",
+     "text": "Metadata corruption was detected on volume {1} ({2}). Check vmkernel.log."
+    },
+    "esx.problem.vmfs.nfs.mount.failed": {
+     "category": "error",
+     "text": "NFS mount failed for {1}:{2} volume {3}. Status: {4}"
+    },
+    "esx.problem.vmfs.nfs.server.disconnect": {
+     "category": "error",
+     "text": "Lost connection to server {1} mount point {2} mounted as {3} ({4})."
+    },
+    "esx.problem.vmfs.nfs.vmknic.removed": {
+     "category": "warning",
+     "text": "vmknic {1} removed, NFS{2} datastore {3} configured with the vmknic will be inaccessible."
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.exceed.threshold.period": {
+     "category": "warning",
+     "text": "NFS volume {1} average I/O latency {2}(us) has exceeded threshold {3}(us) for last {4} minutes"
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.high": {
+     "category": "warning",
+     "text": "NFS volume {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.high.exceed.threshold": {
+     "category": "warning",
+     "text": "NFS volume {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds. Exceeded threshold {4} microseconds"
+    },
+    "esx.problem.vmfs.nfs.volume.no.space": {
+     "category": "warning",
+     "text": "{1}: No space on NFS volume."
+    },
+    "esx.problem.vmfs.spanned.lockmode.inconsistency.detected": {
+     "category": "error",
+     "text": "Inconsistent lockmode change detected for spanned VMFS volume '{1} ({2})': volume was configured for {3} lockmode at time of open and now it is configured for {4} lockmode but this host is not using {5} lockmode. All operations on this volume will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmfs.spanstate.incompatibility.detected": {
+     "category": "error",
+     "text": "Incompatible span change detected for VMFS volume '{1} ({2})': volume was not spanned at time of open but now it is, and this host is using ATS-only lockmode but the volume is not ATS-only. Volume descriptor refresh operations will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmsyslogd.auditrecord.local.disabled": {
+     "category": "error",
+     "text": "The local storage of audit records is disabled due to the error: {1}. Please refer to KB-386607 for remediation steps."
+    },
+    "esx.problem.vmsyslogd.remote.auditrecords.dropped": {
+     "category": "error",
+     "text": "The host \"{1}://{2}:{3}\" has lost {4} audit records. Please refer to KB 424922 for details."
+    },
+    "esx.problem.vmsyslogd.remote.failure": {
+     "category": "error",
+     "text": "The host \"{1}://{2}:{3}\" has become unreachable.  Remote logging to this host has stopped."
+    },
+    "esx.problem.vmsyslogd.remote.logmessages.dropped": {
+     "category": "error",
+     "text": "The host \"{1}://{2}:{3}\" has lost {4} log messages. Please refer to KB 424922 for details."
+    },
+    "esx.problem.vmsyslogd.storage.failure": {
+     "category": "error",
+     "text": "Logging to storage has failed.  Logs are no longer being stored locally on this host."
+    },
+    "esx.problem.vmsyslogd.storage.logdir.invalid": {
+     "category": "error",
+     "text": "The configured log directory {1} cannot be used.  The default directory {2} will be used instead."
+    },
+    "esx.problem.vmsyslogd.unexpected": {
+     "category": "error",
+     "text": "Log daemon has failed for an unexpected reason: {1}"
+    }
+   },
+   "host_builds": [
+    "9.1.1 25714478"
+   ],
+   "types": 2365,
+   "version": "9.1.1"
+  },
+  "{{vcenter-2}}": {
+   "build": "25712839",
+   "events": {
+    "BadUsernameSessionEvent": {
+     "category": "error",
+     "text": "Cannot login {userName}@{ipAddress}"
+    },
+    "HostConnectionLostEvent": {
+     "category": "error",
+     "text": "Host {host.name} in {datacenter.name} is not responding"
+    },
+    "HostDisconnectedEvent": {
+     "category": "info",
+     "text": "Disconnected from {host.name} in {datacenter.name}. Reason: {reason.@enum.HostDisconnectedEvent.ReasonCode}"
+    },
+    "VmFailedMigrateEvent": {
+     "category": "error",
+     "text": "Cannot migrate {vm.name} from {host.name}, {ds.name} in {datacenter.name} to {destHost.name}, {destDatastore.name} in {destDatacenter.name}"
+    },
+    "com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore": {
+     "category": "warning",
+     "text": "vSphere HA did not terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name}: {reason.@enum.com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore}"
+    },
+    "com.vmware.vc.HA.VmcpStorageFailureCleared": {
+     "category": "info",
+     "text": "Datastore {ds.name} mounted on host {host.name} was inaccessible. The condition was cleared and the datastore is now accessible"
+    },
+    "com.vmware.vc.HA.VmcpStorageFailureDetectedForVm": {
+     "category": "warning",
+     "text": "vSphere HA detected that a datastore mounted on host {host.name} in cluster {computeResource.name} in {datacenter.name} was inaccessible due to {failureType.@enum.com.vmware.vc.HA.VmcpStorageFailureDetectedForVm}. This affected VM {vm.name} with files on the datastore"
+    },
+    "com.vmware.vc.HA.VmcpTerminateVmAborted": {
+     "category": "error",
+     "text": "vSphere HA was unable to terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name} after {retryTimes} retries"
+    },
+    "com.vmware.vc.HA.VmcpTerminatingVm": {
+     "category": "warning",
+     "text": "vSphere HA attempted to terminate VM {vm.name} on host{host.name} in cluster {computeResource.name} in {datacenter.name} because the VM was affected by an inaccessible datastore"
+    },
+    "esx.clear.psastor.device.io.latency.improved": {
+     "category": "info",
+     "text": "Device {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.clear.psastor.device.state.on": {
+     "category": "info",
+     "text": "Device {1}, has been turned on administratively."
+    },
+    "esx.clear.psastor.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.scsi.device.io.latency.improved": {
+     "category": "info",
+     "text": "Device {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.clear.scsi.device.state.on": {
+     "category": "info",
+     "text": "Device {1}, has been turned on administratively."
+    },
+    "esx.clear.scsi.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.storage.apd.exit": {
+     "category": "info",
+     "text": "Device or filesystem with identifier {1} has exited the All Paths Down state."
+    },
+    "esx.clear.storage.connectivity.restored": {
+     "category": "info",
+     "text": "Connectivity to storage device {1} (Datastores: {2}) restored. Path {3} is active again."
+    },
+    "esx.clear.storage.redundancy.restored": {
+     "category": "info",
+     "text": "Path redundancy to storage device {1} (Datastores: {2}) restored. Path {3} is active again."
+    },
+    "esx.clear.vmfs.nfs.server.restored": {
+     "category": "info",
+     "text": "Restored connection to server {1} mount point {2} mounted as {3} ({4})."
+    },
+    "esx.clear.vmfs.nfs.volume.io.latency.improved": {
+     "category": "info",
+     "text": "NFS volume {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.psastor.apd.event.descriptor.alloc.failed": {
+     "category": "warning",
+     "text": "No memory to allocate APD (All Paths Down) event subsystem."
+    },
+    "esx.problem.psastor.device.close.failed": {
+     "category": "warning",
+     "text": "\"Failed to close the device {1} properly, plugin {2}."
+    },
+    "esx.problem.psastor.device.detach.failed": {
+     "category": "warning",
+     "text": "Detach failed for device :{1}. Exceeded the number of devices that can be detached, please cleanup stale detach entries."
+    },
+    "esx.problem.psastor.device.io.bad.plugin.type": {
+     "category": "warning",
+     "text": "Bad plugin type for device {1}, plugin {2}"
+    },
+    "esx.problem.psastor.device.io.latency.high": {
+     "category": "warning",
+     "text": "Device {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.psastor.device.is.local.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a local - not shared - device"
+    },
+    "esx.problem.psastor.device.is.pseudo.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a pseudo device"
+    },
+    "esx.problem.psastor.device.is.ssd.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a Solid State Disk device"
+    },
+    "esx.problem.psastor.device.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported devices of {1} has been reached. A device from plugin {2} could not be created."
+    },
+    "esx.problem.psastor.device.state.off": {
+     "category": "info",
+     "text": "Device {1}, has been turned off administratively."
+    },
+    "esx.problem.psastor.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.psastor.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.too.many.io.error": {
+     "category": "warning",
+     "text": "Too many errors observed for device {1} errPercentage {2}"
+    },
+    "esx.problem.psastor.psastorpath.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported paths of {1} has been reached. Path {2} could not be added."
+    },
+    "esx.problem.psastor.unsupported.plugin.type": {
+     "category": "warning",
+     "text": "Storage Device Allocation not supported for plugin type {1}"
+    },
+    "esx.problem.scsi.apd.event.descriptor.alloc.failed": {
+     "category": "warning",
+     "text": "No memory to allocate APD (All Paths Down) event subsystem."
+    },
+    "esx.problem.scsi.device.close.failed": {
+     "category": "warning",
+     "text": "\"Failed to close the device {1} properly, plugin {2}."
+    },
+    "esx.problem.scsi.device.detach.failed": {
+     "category": "warning",
+     "text": "Detach failed for device :{1}. Exceeded the number of devices that can be detached, please cleanup stale detach entries."
+    },
+    "esx.problem.scsi.device.filter.attach.failed": {
+     "category": "warning",
+     "text": "Failed to attach filters to device '%s' during registration. Plugin load failed or the filter rules are incorrect."
+    },
+    "esx.problem.scsi.device.invalid.xcopy.request": {
+     "category": "warning",
+     "text": "Invalid XCOPY request for device {1}. Host {2}, Device {3}, Plugin {4}, {5} sense, sense.key = {6}, sense.asc = {7}, sense.ascq = {8}: {9}"
+    },
+    "esx.problem.scsi.device.io.bad.plugin.type": {
+     "category": "warning",
+     "text": "Bad plugin type for device {1}, plugin {2}"
+    },
+    "esx.problem.scsi.device.io.inquiry.failed": {
+     "category": "warning",
+     "text": "Failed to get standard inquiry for device {1} from Plugin {2}."
+    },
+    "esx.problem.scsi.device.io.invalid.disk.qfull.value": {
+     "category": "warning",
+     "text": "QFullSampleSize should be bigger than QFullThreshold. LUN queue depth throttling algorithm will not function as expected. Please set the QFullSampleSize and QFullThreshold disk configuration values in ESX correctly."
+    },
+    "esx.problem.scsi.device.io.latency.high": {
+     "category": "warning",
+     "text": "Device {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.scsi.device.io.qerr.change.config": {
+     "category": "warning",
+     "text": "QErr set to 0x{1} for device {2}. This may cause unexpected behavior. The system is not configured to change the QErr setting of device. The QErr value supported by system is 0x{3}. Please check the SCSI ChangeQErrSetting configuration value for ESX."
+    },
+    "esx.problem.scsi.device.io.qerr.changed": {
+     "category": "warning",
+     "text": "QErr set to 0x{1} for device {2}. This may cause unexpected behavior. The device was originally configured to the supported  QErr setting of 0x{3}, but this has been changed and could not be changed back."
+    },
+    "esx.problem.scsi.device.is.local.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a local - not shared - device"
+    },
+    "esx.problem.scsi.device.is.pseudo.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a pseudo device"
+    },
+    "esx.problem.scsi.device.is.ssd.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a Solid State Disk device"
+    },
+    "esx.problem.scsi.device.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported devices of {1} has been reached. A device from plugin {2} could not be created."
+    },
+    "esx.problem.scsi.device.nmp.satp.option.failed": {
+     "category": "warning",
+     "text": "Invalid config parameter: \\\"{1}\\\" provided in the nmp satp claimrule, this setting was not applied while claiming the path {2}"
+    },
+    "esx.problem.scsi.device.state.off": {
+     "category": "info",
+     "text": "Device {1}, has been turned off administratively."
+    },
+    "esx.problem.scsi.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.scsi.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.scsi.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.thinprov.atquota": {
+     "category": "warning",
+     "text": "Space utilization on thin-provisioned device {1} exceeded configured threshold. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.too.many.io.error": {
+     "category": "warning",
+     "text": "Too many errors observed for device {1} errPercentage {2}"
+    },
+    "esx.problem.scsi.scsipath.badpath.unreachpe": {
+     "category": "error",
+     "text": "Sanity check failed for path {1}. The path is to a vVol PE, but it goes out of adapter {2} which is not PE capable. Path dropped."
+    },
+    "esx.problem.scsi.scsipath.badpath.unsafepe": {
+     "category": "error",
+     "text": "Sanity check failed for path {1}. Could not safely determine if the path is to a vVol PE. Path dropped."
+    },
+    "esx.problem.scsi.scsipath.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported paths of {1} has been reached. Path {2} could not be added."
+    },
+    "esx.problem.scsi.unsupported.plugin.type": {
+     "category": "warning",
+     "text": "Scsi Device Allocation not supported for plugin type {1}"
+    },
+    "esx.problem.storage.apd.start": {
+     "category": "warning",
+     "text": "Device or filesystem with identifier {1} has entered the All Paths Down state."
+    },
+    "esx.problem.storage.apd.timeout": {
+     "category": "warning",
+     "text": "Device or filesystem with identifier {1} has entered the All Paths Down Timeout state after being in the All Paths Down state for {2} seconds. I/Os will now be fast failed."
+    },
+    "esx.problem.storage.connectivity.devicepor": {
+     "category": "warning",
+     "text": "Frequent PowerOn Reset Unit Attentions are occurring on device {1}. This might indicate a storage problem. Affected datastores: {2}"
+    },
+    "esx.problem.storage.connectivity.lost": {
+     "category": "error",
+     "text": "Lost connectivity to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.storage.connectivity.pathpor": {
+     "category": "warning",
+     "text": "Frequent PowerOn Reset Unit Attentions are occurring on path {1}. This might indicate a storage problem. Affected device: {2}.  Affected datastores: {3}"
+    },
+    "esx.problem.storage.connectivity.pathstatechanges": {
+     "category": "info",
+     "text": "Frequent path state changes are occurring for path {1}. This might indicate a storage problem. Affected device: {2}. Affected datastores: {3}"
+    },
+    "esx.problem.storage.iscsi.connection.error.cmd.sn.max": {
+     "category": "error",
+     "text": "iSCSI connection {1} on device {2} is being reset because command window is closed."
+    },
+    "esx.problem.storage.iscsi.discovery.connect.error": {
+     "category": "error",
+     "text": "iSCSI discovery to {1} on {2} failed. The iSCSI Initiator could not establish a network connection to the discovery address."
+    },
+    "esx.problem.storage.iscsi.discovery.login.error": {
+     "category": "error",
+     "text": "iSCSI discovery to {1} on {2} failed. The Discovery target returned login error: {3}."
+    },
+    "esx.problem.storage.iscsi.isns.discovery.error": {
+     "category": "error",
+     "text": "iSCSI iSns discovery to {1} on {2} failed. ({3} : {4})."
+    },
+    "esx.problem.storage.iscsi.session.recovery.timeout": {
+     "category": "error",
+     "text": "Unable to connect to iSCSI target after multiple retries. The iSCSI path {1} is down."
+    },
+    "esx.problem.storage.iscsi.target.connect.error": {
+     "category": "error",
+     "text": "Login to iSCSI target {1} on {2} failed. The iSCSI initiator could not establish a network connection to the target."
+    },
+    "esx.problem.storage.iscsi.target.login.error": {
+     "category": "error",
+     "text": "Login to iSCSI target {1} on {2} failed. Target returned login error: {3}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.lost": {
+     "category": "error",
+     "text": "The iSCSI target {2} was permanently removed from {1}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.removed": {
+     "category": "error",
+     "text": "The iSCSI target {1} was permanently removed from {2}."
+    },
+    "esx.problem.storage.redundancy.degraded": {
+     "category": "warning",
+     "text": "Path redundancy to storage device {1} degraded. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.storage.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost path redundancy to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.vmfs.ats.incompatibility.detected": {
+     "category": "error",
+     "text": "Multi-extent ATS-only volume '{1}' ({2}) is unable to use ATS because HardwareAcceleratedLocking is disabled on this host: potential for introducing filesystem corruption. Volume should not be used from other hosts."
+    },
+    "esx.problem.vmfs.ats.support.lost": {
+     "category": "error",
+     "text": "ATS-Only VMFS volume '{1}' not mounted. Host does not support ATS or ATS initialization has failed."
+    },
+    "esx.problem.vmfs.error.volume.is.locked": {
+     "category": "error",
+     "text": "Volume on device {1} is locked, possibly because some remote host encountered an error during a volume operation and could not recover."
+    },
+    "esx.problem.vmfs.extent.offline": {
+     "category": "error",
+     "text": "An attached device {1} may be offline. The file system {2} is now in a degraded state. While the datastore is still available, parts of data that reside on the extent that went offline might be inaccessible."
+    },
+    "esx.problem.vmfs.extent.online": {
+     "category": "info",
+     "text": "Device {1} backing file system {2} came online. This extent was previously offline. All resources on this device are now available."
+    },
+    "esx.problem.vmfs.heartbeat.recovered": {
+     "category": "info",
+     "text": "Successfully restored access to volume {1} ({2}) following connectivity issues."
+    },
+    "esx.problem.vmfs.heartbeat.timedout": {
+     "category": "info",
+     "text": "Lost access to volume {1} ({2}) due to connectivity issues. Recovery attempt is in progress and outcome will be reported shortly."
+    },
+    "esx.problem.vmfs.heartbeat.unrecoverable": {
+     "category": "error",
+     "text": "Lost connectivity to volume {1} ({2}) and subsequent recovery attempts have failed."
+    },
+    "esx.problem.vmfs.journal.createfailed": {
+     "category": "error",
+     "text": "No space for journal on volume {1} ({2}). Volume will remain in read-only metadata mode with limited write support until journal can be created."
+    },
+    "esx.problem.vmfs.lock.busy.filedesc": {
+     "category": "error",
+     "text": "{1} Lock(s) held on a file on volume {2}. numHolders: {3}. gblNumHolders: {4}. Locking Host(s) MAC: {5}"
+    },
+    "esx.problem.vmfs.lock.busy.filename": {
+     "category": "error",
+     "text": "Lock(s) held on file {1} by other host(s)."
+    },
+    "esx.problem.vmfs.lockmode.inconsistency.detected": {
+     "category": "error",
+     "text": "Inconsistent lockmode change detected for VMFS volume '{1} ({2})': volume was configured for {3} lockmode at time of open and now it is configured for {4} lockmode but this host is not using {5} lockmode. Protocol error during ATS transition. Volume descriptor refresh operations will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmfs.metadata.corruptondisk": {
+     "category": "error",
+     "text": "Metadata corruption was detected on volume {1} ({2}). Check vmkernel.log."
+    },
+    "esx.problem.vmfs.nfs.mount.failed": {
+     "category": "error",
+     "text": "NFS mount failed for {1}:{2} volume {3}. Status: {4}"
+    },
+    "esx.problem.vmfs.nfs.server.disconnect": {
+     "category": "error",
+     "text": "Lost connection to server {1} mount point {2} mounted as {3} ({4})."
+    },
+    "esx.problem.vmfs.nfs.vmknic.removed": {
+     "category": "warning",
+     "text": "vmknic {1} removed, NFS{2} datastore {3} configured with the vmknic will be inaccessible."
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.exceed.threshold.period": {
+     "category": "warning",
+     "text": "NFS volume {1} average I/O latency {2}(us) has exceeded threshold {3}(us) for last {4} minutes"
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.high": {
+     "category": "warning",
+     "text": "NFS volume {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.high.exceed.threshold": {
+     "category": "warning",
+     "text": "NFS volume {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds. Exceeded threshold {4} microseconds"
+    },
+    "esx.problem.vmfs.nfs.volume.no.space": {
+     "category": "warning",
+     "text": "{1}: No space on NFS volume."
+    },
+    "esx.problem.vmfs.spanned.lockmode.inconsistency.detected": {
+     "category": "error",
+     "text": "Inconsistent lockmode change detected for spanned VMFS volume '{1} ({2})': volume was configured for {3} lockmode at time of open and now it is configured for {4} lockmode but this host is not using {5} lockmode. All operations on this volume will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmfs.spanstate.incompatibility.detected": {
+     "category": "error",
+     "text": "Incompatible span change detected for VMFS volume '{1} ({2})': volume was not spanned at time of open but now it is, and this host is using ATS-only lockmode but the volume is not ATS-only. Volume descriptor refresh operations will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmsyslogd.auditrecord.local.disabled": {
+     "category": "error",
+     "text": "The local storage of audit records is disabled due to the error: {1}. Please refer to KB-386607 for remediation steps."
+    },
+    "esx.problem.vmsyslogd.remote.auditrecords.dropped": {
+     "category": "error",
+     "text": "The host \"{1}://{2}:{3}\" has lost {4} audit records. Please refer to KB 424922 for details."
+    },
+    "esx.problem.vmsyslogd.remote.failure": {
+     "category": "error",
+     "text": "The host \"{1}://{2}:{3}\" has become unreachable.  Remote logging to this host has stopped."
+    },
+    "esx.problem.vmsyslogd.remote.logmessages.dropped": {
+     "category": "error",
+     "text": "The host \"{1}://{2}:{3}\" has lost {4} log messages. Please refer to KB 424922 for details."
+    },
+    "esx.problem.vmsyslogd.storage.failure": {
+     "category": "error",
+     "text": "Logging to storage has failed.  Logs are no longer being stored locally on this host."
+    },
+    "esx.problem.vmsyslogd.storage.logdir.invalid": {
+     "category": "error",
+     "text": "The configured log directory {1} cannot be used.  The default directory {2} will be used instead."
+    },
+    "esx.problem.vmsyslogd.unexpected": {
+     "category": "error",
+     "text": "Log daemon has failed for an unexpected reason: {1}"
+    }
+   },
+   "host_builds": [
+    "9.1.1 25714478"
+   ],
+   "types": 2574,
+   "version": "9.1.1"
+  },
+  "{{vcenter-3}}": {
+   "build": "25712839",
+   "events": {
+    "BadUsernameSessionEvent": {
+     "category": "error",
+     "text": "Cannot login {userName}@{ipAddress}"
+    },
+    "HostConnectionLostEvent": {
+     "category": "error",
+     "text": "Host {host.name} in {datacenter.name} is not responding"
+    },
+    "HostDisconnectedEvent": {
+     "category": "info",
+     "text": "Disconnected from {host.name} in {datacenter.name}. Reason: {reason.@enum.HostDisconnectedEvent.ReasonCode}"
+    },
+    "VmFailedMigrateEvent": {
+     "category": "error",
+     "text": "Cannot migrate {vm.name} from {host.name}, {ds.name} in {datacenter.name} to {destHost.name}, {destDatastore.name} in {destDatacenter.name}"
+    },
+    "com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore": {
+     "category": "warning",
+     "text": "vSphere HA did not terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name}: {reason.@enum.com.vmware.vc.HA.VmcpNotTerminateVmWithInaccessibleDatastore}"
+    },
+    "com.vmware.vc.HA.VmcpStorageFailureCleared": {
+     "category": "info",
+     "text": "Datastore {ds.name} mounted on host {host.name} was inaccessible. The condition was cleared and the datastore is now accessible"
+    },
+    "com.vmware.vc.HA.VmcpStorageFailureDetectedForVm": {
+     "category": "warning",
+     "text": "vSphere HA detected that a datastore mounted on host {host.name} in cluster {computeResource.name} in {datacenter.name} was inaccessible due to {failureType.@enum.com.vmware.vc.HA.VmcpStorageFailureDetectedForVm}. This affected VM {vm.name} with files on the datastore"
+    },
+    "com.vmware.vc.HA.VmcpTerminateVmAborted": {
+     "category": "error",
+     "text": "vSphere HA was unable to terminate VM {vm.name} affected by an inaccessible datastore on host {host.name} in cluster {computeResource.name} in {datacenter.name} after {retryTimes} retries"
+    },
+    "com.vmware.vc.HA.VmcpTerminatingVm": {
+     "category": "warning",
+     "text": "vSphere HA attempted to terminate VM {vm.name} on host{host.name} in cluster {computeResource.name} in {datacenter.name} because the VM was affected by an inaccessible datastore"
+    },
+    "esx.clear.psastor.device.io.latency.improved": {
+     "category": "info",
+     "text": "Device {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.clear.psastor.device.state.on": {
+     "category": "info",
+     "text": "Device {1}, has been turned on administratively."
+    },
+    "esx.clear.psastor.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.scsi.device.io.latency.improved": {
+     "category": "info",
+     "text": "Device {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.clear.scsi.device.state.on": {
+     "category": "info",
+     "text": "Device {1}, has been turned on administratively."
+    },
+    "esx.clear.scsi.device.state.permanentloss.deviceonline": {
+     "category": "info",
+     "text": "Device {1}, that was permanently inaccessible is now online. No data consistency guarantees."
+    },
+    "esx.clear.storage.apd.exit": {
+     "category": "info",
+     "text": "Device or filesystem with identifier {1} has exited the All Paths Down state."
+    },
+    "esx.clear.storage.connectivity.restored": {
+     "category": "info",
+     "text": "Connectivity to storage device {1} (Datastores: {2}) restored. Path {3} is active again."
+    },
+    "esx.clear.storage.redundancy.restored": {
+     "category": "info",
+     "text": "Path redundancy to storage device {1} (Datastores: {2}) restored. Path {3} is active again."
+    },
+    "esx.clear.vmfs.nfs.server.restored": {
+     "category": "info",
+     "text": "Restored connection to server {1} mount point {2} mounted as {3} ({4})."
+    },
+    "esx.clear.vmfs.nfs.volume.io.latency.improved": {
+     "category": "info",
+     "text": "NFS volume {1} performance has improved. I/O latency reduced from {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.psastor.apd.event.descriptor.alloc.failed": {
+     "category": "warning",
+     "text": "No memory to allocate APD (All Paths Down) event subsystem."
+    },
+    "esx.problem.psastor.device.close.failed": {
+     "category": "warning",
+     "text": "\"Failed to close the device {1} properly, plugin {2}."
+    },
+    "esx.problem.psastor.device.detach.failed": {
+     "category": "warning",
+     "text": "Detach failed for device :{1}. Exceeded the number of devices that can be detached, please cleanup stale detach entries."
+    },
+    "esx.problem.psastor.device.io.bad.plugin.type": {
+     "category": "warning",
+     "text": "Bad plugin type for device {1}, plugin {2}"
+    },
+    "esx.problem.psastor.device.io.latency.high": {
+     "category": "warning",
+     "text": "Device {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.psastor.device.is.local.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a local - not shared - device"
+    },
+    "esx.problem.psastor.device.is.pseudo.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a pseudo device"
+    },
+    "esx.problem.psastor.device.is.ssd.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a Solid State Disk device"
+    },
+    "esx.problem.psastor.device.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported devices of {1} has been reached. A device from plugin {2} could not be created."
+    },
+    "esx.problem.psastor.device.state.off": {
+     "category": "info",
+     "text": "Device {1}, has been turned off administratively."
+    },
+    "esx.problem.psastor.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.psastor.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.psastor.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.psastor.device.too.many.io.error": {
+     "category": "warning",
+     "text": "Too many errors observed for device {1} errPercentage {2}"
+    },
+    "esx.problem.psastor.psastorpath.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported paths of {1} has been reached. Path {2} could not be added."
+    },
+    "esx.problem.psastor.unsupported.plugin.type": {
+     "category": "warning",
+     "text": "Storage Device Allocation not supported for plugin type {1}"
+    },
+    "esx.problem.scsi.apd.event.descriptor.alloc.failed": {
+     "category": "warning",
+     "text": "No memory to allocate APD (All Paths Down) event subsystem."
+    },
+    "esx.problem.scsi.device.close.failed": {
+     "category": "warning",
+     "text": "\"Failed to close the device {1} properly, plugin {2}."
+    },
+    "esx.problem.scsi.device.detach.failed": {
+     "category": "warning",
+     "text": "Detach failed for device :{1}. Exceeded the number of devices that can be detached, please cleanup stale detach entries."
+    },
+    "esx.problem.scsi.device.filter.attach.failed": {
+     "category": "warning",
+     "text": "Failed to attach filters to device '%s' during registration. Plugin load failed or the filter rules are incorrect."
+    },
+    "esx.problem.scsi.device.invalid.xcopy.request": {
+     "category": "warning",
+     "text": "Invalid XCOPY request for device {1}. Host {2}, Device {3}, Plugin {4}, {5} sense, sense.key = {6}, sense.asc = {7}, sense.ascq = {8}: {9}"
+    },
+    "esx.problem.scsi.device.io.bad.plugin.type": {
+     "category": "warning",
+     "text": "Bad plugin type for device {1}, plugin {2}"
+    },
+    "esx.problem.scsi.device.io.inquiry.failed": {
+     "category": "warning",
+     "text": "Failed to get standard inquiry for device {1} from Plugin {2}."
+    },
+    "esx.problem.scsi.device.io.invalid.disk.qfull.value": {
+     "category": "warning",
+     "text": "QFullSampleSize should be bigger than QFullThreshold. LUN queue depth throttling algorithm will not function as expected. Please set the QFullSampleSize and QFullThreshold disk configuration values in ESX correctly."
+    },
+    "esx.problem.scsi.device.io.latency.high": {
+     "category": "warning",
+     "text": "Device {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.scsi.device.io.qerr.change.config": {
+     "category": "warning",
+     "text": "QErr set to 0x{1} for device {2}. This may cause unexpected behavior. The system is not configured to change the QErr setting of device. The QErr value supported by system is 0x{3}. Please check the SCSI ChangeQErrSetting configuration value for ESX."
+    },
+    "esx.problem.scsi.device.io.qerr.changed": {
+     "category": "warning",
+     "text": "QErr set to 0x{1} for device {2}. This may cause unexpected behavior. The device was originally configured to the supported  QErr setting of 0x{3}, but this has been changed and could not be changed back."
+    },
+    "esx.problem.scsi.device.is.local.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a local - not shared - device"
+    },
+    "esx.problem.scsi.device.is.pseudo.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a pseudo device"
+    },
+    "esx.problem.scsi.device.is.ssd.failed": {
+     "category": "warning",
+     "text": "Failed to verify if the device {1} from plugin {2} is a Solid State Disk device"
+    },
+    "esx.problem.scsi.device.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported devices of {1} has been reached. A device from plugin {2} could not be created."
+    },
+    "esx.problem.scsi.device.nmp.satp.option.failed": {
+     "category": "warning",
+     "text": "Invalid config parameter: \\\"{1}\\\" provided in the nmp satp claimrule, this setting was not applied while claiming the path {2}"
+    },
+    "esx.problem.scsi.device.state.off": {
+     "category": "info",
+     "text": "Device {1}, has been turned off administratively."
+    },
+    "esx.problem.scsi.device.state.permanentloss": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.state.permanentloss.noopens": {
+     "category": "info",
+     "text": "Permanently inaccessible device {1} has no more opens. It is now safe to unmount datastores (if any) {2} and delete the device."
+    },
+    "esx.problem.scsi.device.state.permanentloss.pluggedback": {
+     "category": "error",
+     "text": "Device {1} has been plugged back in after being marked permanently inaccessible. No data consistency guarantees."
+    },
+    "esx.problem.scsi.device.state.permanentloss.withreservationheld": {
+     "category": "error",
+     "text": "Device {1} has been removed or is permanently inaccessible, while holding a reservation. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.thinprov.atquota": {
+     "category": "warning",
+     "text": "Space utilization on thin-provisioned device {1} exceeded configured threshold. Affected datastores (if any): {2}."
+    },
+    "esx.problem.scsi.device.too.many.io.error": {
+     "category": "warning",
+     "text": "Too many errors observed for device {1} errPercentage {2}"
+    },
+    "esx.problem.scsi.scsipath.badpath.unreachpe": {
+     "category": "error",
+     "text": "Sanity check failed for path {1}. The path is to a vVol PE, but it goes out of adapter {2} which is not PE capable. Path dropped."
+    },
+    "esx.problem.scsi.scsipath.badpath.unsafepe": {
+     "category": "error",
+     "text": "Sanity check failed for path {1}. Could not safely determine if the path is to a vVol PE. Path dropped."
+    },
+    "esx.problem.scsi.scsipath.limitreached": {
+     "category": "error",
+     "text": "The maximum number of supported paths of {1} has been reached. Path {2} could not be added."
+    },
+    "esx.problem.scsi.unsupported.plugin.type": {
+     "category": "warning",
+     "text": "Scsi Device Allocation not supported for plugin type {1}"
+    },
+    "esx.problem.storage.apd.start": {
+     "category": "warning",
+     "text": "Device or filesystem with identifier {1} has entered the All Paths Down state."
+    },
+    "esx.problem.storage.apd.timeout": {
+     "category": "warning",
+     "text": "Device or filesystem with identifier {1} has entered the All Paths Down Timeout state after being in the All Paths Down state for {2} seconds. I/Os will now be fast failed."
+    },
+    "esx.problem.storage.connectivity.devicepor": {
+     "category": "warning",
+     "text": "Frequent PowerOn Reset Unit Attentions are occurring on device {1}. This might indicate a storage problem. Affected datastores: {2}"
+    },
+    "esx.problem.storage.connectivity.lost": {
+     "category": "error",
+     "text": "Lost connectivity to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.storage.connectivity.pathpor": {
+     "category": "warning",
+     "text": "Frequent PowerOn Reset Unit Attentions are occurring on path {1}. This might indicate a storage problem. Affected device: {2}.  Affected datastores: {3}"
+    },
+    "esx.problem.storage.connectivity.pathstatechanges": {
+     "category": "info",
+     "text": "Frequent path state changes are occurring for path {1}. This might indicate a storage problem. Affected device: {2}. Affected datastores: {3}"
+    },
+    "esx.problem.storage.iscsi.connection.error.cmd.sn.max": {
+     "category": "error",
+     "text": "iSCSI connection {1} on device {2} is being reset because command window is closed."
+    },
+    "esx.problem.storage.iscsi.discovery.connect.error": {
+     "category": "error",
+     "text": "iSCSI discovery to {1} on {2} failed. The iSCSI Initiator could not establish a network connection to the discovery address."
+    },
+    "esx.problem.storage.iscsi.discovery.login.error": {
+     "category": "error",
+     "text": "iSCSI discovery to {1} on {2} failed. The Discovery target returned a login error of: {3}."
+    },
+    "esx.problem.storage.iscsi.isns.discovery.error": {
+     "category": "error",
+     "text": "iSCSI iSns discovery to {1} on {2} failed. ({3} : {4})."
+    },
+    "esx.problem.storage.iscsi.session.recovery.timeout": {
+     "category": "event.esx.problem.storage.iscsi.session.recovery.timeout.category",
+     "text": "event.esx.problem.storage.iscsi.session.recovery.timeout.fullFormat"
+    },
+    "esx.problem.storage.iscsi.target.connect.error": {
+     "category": "error",
+     "text": "Login to iSCSI target {1} on {2} failed. The iSCSI initiator could not establish a network connection to the target."
+    },
+    "esx.problem.storage.iscsi.target.login.error": {
+     "category": "error",
+     "text": "Login to iSCSI target {1} on {2} failed. Target returned login error of: {3}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.lost": {
+     "category": "error",
+     "text": "The iSCSI target {2} was permanently removed from {1}."
+    },
+    "esx.problem.storage.iscsi.target.permanently.removed": {
+     "category": "error",
+     "text": "The iSCSI target {1} was permanently removed from {2}."
+    },
+    "esx.problem.storage.redundancy.degraded": {
+     "category": "warning",
+     "text": "Path redundancy to storage device {1} degraded. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.storage.redundancy.lost": {
+     "category": "warning",
+     "text": "Lost path redundancy to storage device {1}. Path {2} is down. Affected datastores: {3}."
+    },
+    "esx.problem.vmfs.ats.incompatibility.detected": {
+     "category": "error",
+     "text": "Multi-extent ATS-only volume '{1}' ({2}) is unable to use ATS because HardwareAcceleratedLocking is disabled on this host: potential for introducing filesystem corruption. Volume should not be used from other hosts."
+    },
+    "esx.problem.vmfs.ats.support.lost": {
+     "category": "error",
+     "text": "ATS-Only VMFS volume '{1}' not mounted. Host does not support ATS or ATS initialization has failed."
+    },
+    "esx.problem.vmfs.error.volume.is.locked": {
+     "category": "error",
+     "text": "Volume on device {1} is locked, possibly because some remote host encountered an error during a volume operation and could not recover."
+    },
+    "esx.problem.vmfs.extent.offline": {
+     "category": "error",
+     "text": "An attached device {1} may be offline. The file system {2} is now in a degraded state. While the datastore is still available, parts of data that reside on the extent that went offline might be inaccessible."
+    },
+    "esx.problem.vmfs.extent.online": {
+     "category": "info",
+     "text": "Device {1} backing file system {2} came online. This extent was previously offline. All resources on this device are now available."
+    },
+    "esx.problem.vmfs.heartbeat.recovered": {
+     "category": "info",
+     "text": "Successfully restored access to volume {1} ({2}) following connectivity issues."
+    },
+    "esx.problem.vmfs.heartbeat.timedout": {
+     "category": "info",
+     "text": "Lost access to volume {1} ({2}) due to connectivity issues. Recovery attempt is in progress and outcome will be reported shortly."
+    },
+    "esx.problem.vmfs.heartbeat.unrecoverable": {
+     "category": "error",
+     "text": "Lost connectivity to volume {1} ({2}) and subsequent recovery attempts have failed."
+    },
+    "esx.problem.vmfs.journal.createfailed": {
+     "category": "error",
+     "text": "No space for journal on volume {1} ({2}). Volume will remain in read-only metadata mode with limited write support until journal can be created."
+    },
+    "esx.problem.vmfs.lock.busy.filedesc": {
+     "category": "error",
+     "text": "{1} Lock(s) held on a file on volume {2}. numHolders: {3}. gblNumHolders: {4}. Locking Host(s) MAC: {5}"
+    },
+    "esx.problem.vmfs.lock.busy.filename": {
+     "category": "error",
+     "text": "Lock(s) held on file {1} by other host(s)."
+    },
+    "esx.problem.vmfs.lockmode.inconsistency.detected": {
+     "category": "error",
+     "text": "Inconsistent lockmode change detected for VMFS volume '{1} ({2})': volume was configured for {3} lockmode at time of open and now it is configured for {4} lockmode but this host is not using {5} lockmode. Protocol error during ATS transition. Volume descriptor refresh operations will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmfs.metadata.corruptondisk": {
+     "category": "event.esx.problem.vmfs.metadata.corruptondisk.category",
+     "text": "event.esx.problem.vmfs.metadata.corruptondisk.fullFormat"
+    },
+    "esx.problem.vmfs.nfs.mount.failed": {
+     "category": "error",
+     "text": "NFS mount failed for {1}:{2} volume {3}. Status: {4}"
+    },
+    "esx.problem.vmfs.nfs.server.disconnect": {
+     "category": "error",
+     "text": "Lost connection to server {1} mount point {2} mounted as {3} ({4})."
+    },
+    "esx.problem.vmfs.nfs.vmknic.removed": {
+     "category": "warning",
+     "text": "vmknic {1} removed, NFS{2} datastore {3} configured with the vmknic will be inaccessible."
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.exceed.threshold.period": {
+     "category": "warning",
+     "text": "NFS volume {1} average I/O latency {2}(us) has exceeded threshold {3}(us) for last {4} minutes"
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.high": {
+     "category": "warning",
+     "text": "NFS volume {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds."
+    },
+    "esx.problem.vmfs.nfs.volume.io.latency.high.exceed.threshold": {
+     "category": "warning",
+     "text": "NFS volume {1} performance has deteriorated. I/O latency increased from average value of {2} microseconds to {3} microseconds. Exceeded threshold {4} microseconds"
+    },
+    "esx.problem.vmfs.nfs.volume.no.space": {
+     "category": "warning",
+     "text": "{1}: No space on NFS volume."
+    },
+    "esx.problem.vmfs.spanned.lockmode.inconsistency.detected": {
+     "category": "error",
+     "text": "Inconsistent lockmode change detected for spanned VMFS volume '{1} ({2})': volume was configured for {3} lockmode at time of open and now it is configured for {4} lockmode but this host is not using {5} lockmode. All operations on this volume will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmfs.spanstate.incompatibility.detected": {
+     "category": "error",
+     "text": "Incompatible span change detected for VMFS volume '{1} ({2})': volume was not spanned at time of open but now it is, and this host is using ATS-only lockmode but the volume is not ATS-only. Volume descriptor refresh operations will fail until this host unmounts and remounts the volume."
+    },
+    "esx.problem.vmsyslogd.auditrecord.local.disabled": {
+     "category": "error",
+     "text": "The local storage of audit records is disabled due to the error: {1}. Please refer to KB-386607 for remediation steps."
+    },
+    "esx.problem.vmsyslogd.remote.auditrecords.dropped": {
+     "category": "event.esx.problem.vmsyslogd.remote.auditrecords.dropped.category",
+     "text": "event.esx.problem.vmsyslogd.remote.auditrecords.dropped.fullFormat"
+    },
+    "esx.problem.vmsyslogd.remote.failure": {
+     "category": "error",
+     "text": "The host \"{1}\" has become unreachable.  Remote logging to this host has stopped."
+    },
+    "esx.problem.vmsyslogd.remote.logmessages.dropped": {
+     "category": "event.esx.problem.vmsyslogd.remote.logmessages.dropped.category",
+     "text": "event.esx.problem.vmsyslogd.remote.logmessages.dropped.fullFormat"
+    },
+    "esx.problem.vmsyslogd.storage.failure": {
+     "category": "error",
+     "text": "Logging to storage has failed.  Logs are no longer being stored locally on this host."
+    },
+    "esx.problem.vmsyslogd.storage.logdir.invalid": {
+     "category": "error",
+     "text": "The configured log directory {1} cannot be used.  The default directory {2} will be used instead."
+    },
+    "esx.problem.vmsyslogd.unexpected": {
+     "category": "error",
+     "text": "Log daemon has failed for an unexpected reason: {1}"
+    }
+   },
+   "host_builds": [
+    "9.1.1 25714478"
+   ],
+   "types": 2359,
+   "version": "9.1.1"
+  }
+ }
+}

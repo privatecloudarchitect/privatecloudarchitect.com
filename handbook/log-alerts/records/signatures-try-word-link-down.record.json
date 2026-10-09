@@ -1,0 +1,163 @@
+{
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1790920859772,
+        "lte": 1791525659772
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "match_phrase": {
+       "text": "link down"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [
+  {
+   "appname": "vmkernel",
+   "events": 550
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 68
+  }
+ ],
+ "by_host": [
+  {
+   "appname": "vmkernel",
+   "events": 119,
+   "host": "{{host-3}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 109,
+   "host": "{{host-2}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 77,
+   "host": "{{host-4}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 74,
+   "host": "{{host-5}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 62,
+   "host": "{{host-6}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 43,
+   "host": "{{host-7}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 36,
+   "host": "{{host-8}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 22,
+   "host": "{{host-9}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 10,
+   "host": "{{host-3}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 10,
+   "host": "{{host-9}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 9,
+   "host": "{{host-4}}"
+  },
+  {
+   "appname": "vmkernel",
+   "events": 8,
+   "host": "{{host-1}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 8,
+   "host": "{{host-7}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 7,
+   "host": "{{host-1}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 6,
+   "host": "{{host-2}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 5,
+   "host": "{{host-5}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 5,
+   "host": "{{host-6}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 5,
+   "host": "{{host-8}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 2,
+   "host": "{{host-10}}"
+  },
+  {
+   "appname": "vmsyslogd",
+   "events": 1,
+   "host": "{{host-11}}"
+  }
+ ],
+ "events": 718,
+ "object_kinds": {
+  "HostSystem": 2
+ },
+ "read_at": "2026-10-09T06:00:59Z",
+ "samples": [
+  {
+   "appname": "vmkernel",
+   "text": "2026-10-06T14:57:24.701Z {{host-1}} vmkernel - - [esx@4413] cpu82:2098191)netschedHClk: NetSchedHClkNotify:5193: vmnic1: link down notification ",
+   "vc_event_type": null
+  },
+  {
+   "appname": "vmsyslogd",
+   "text": "2026-10-07T19:00:54.811Z {{host-2}} vmsyslogd 2097423 - [esx@4413 auditID=\"syslog.net.link.down\" subject=\"@component\" object=\"{{address-1}}:1514\" result=\"failure\" reason=\"4076358599000000:error:0A0000CF:SSL routines:ssl_write_internal:protocol is shutdown:ssl/ssl_lib.c:2543: \"] ",
+   "vc_event_type": null
+  }
+ ],
+ "window_days": 7.0
+}

@@ -1,0 +1,20 @@
+{
+ "by_source_and_category": {
+  "DISCOVERED/INDEXED": 4,
+  "DISCOVERED/NON_INDEXED": 170,
+  "SYSTEM/EXTRACTED": 48,
+  "SYSTEM/INDEXED": 77,
+  "USER/EXTRACTED": 1
+ },
+ "check": {
+  "appname": true,
+  "hostname": true,
+  "text": true,
+  "vc_event_type": true,
+  "vmw_cluster": true,
+  "vmw_esxi_scsi_host_status": false,
+  "vmw_scsi_path_state": false
+ },
+ "fields": 300,
+ "read_at": "2026-10-09T06:17:40Z"
+}

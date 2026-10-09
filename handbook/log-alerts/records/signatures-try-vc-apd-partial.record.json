@@ -1,0 +1,40 @@
+{
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1790920835528,
+        "lte": 1791525635528
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "term": {
+       "vc_event_type": "esx.problem.storage.apd"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [],
+ "by_host": [],
+ "events": 0,
+ "object_kinds": {},
+ "read_at": "2026-10-09T06:00:35Z",
+ "samples": [],
+ "window_days": 7.0
+}

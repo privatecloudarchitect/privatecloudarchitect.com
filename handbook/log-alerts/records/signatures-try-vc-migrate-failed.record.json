@@ -1,0 +1,59 @@
+{
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1790920843622,
+        "lte": 1791525643622
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "term": {
+       "vc_event_type": "com.vmware.vim25.VmFailedMigrateEvent"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [
+  {
+   "appname": "vcenter-server",
+   "events": 5
+  }
+ ],
+ "by_host": [
+  {
+   "appname": "vcenter-server",
+   "events": 5,
+   "host": "{{host-1}}"
+  }
+ ],
+ "events": 5,
+ "object_kinds": {
+  "VirtualMachine": 1
+ },
+ "read_at": "2026-10-09T06:00:43Z",
+ "samples": [
+  {
+   "appname": "vcenter-server",
+   "text": "2026-10-06 14:41:01.016 {{host-1}} vcenter-server: <the catalog text of com.vmware.vim25.VmFailedMigrateEvent>",
+   "vc_event_type": "com.vmware.vim25.VmFailedMigrateEvent"
+  }
+ ],
+ "window_days": 7.0
+}

@@ -1,0 +1,87 @@
+{
+ "alerts": [
+  {
+   "id": "SP-01",
+   "monitors": 4,
+   "monitorsEnabled": 4,
+   "present": true,
+   "raised": 3
+  },
+  {
+   "id": "SP-02",
+   "monitors": 2,
+   "monitorsEnabled": 2,
+   "present": true,
+   "raised": 3
+  },
+  {
+   "id": "SP-03",
+   "monitors": 2,
+   "monitorsEnabled": 2,
+   "present": true,
+   "raised": 3
+  },
+  {
+   "id": "SP-04",
+   "monitors": 3,
+   "monitorsEnabled": 3,
+   "present": true,
+   "raised": 3
+  },
+  {
+   "id": "SP-05",
+   "monitors": 3,
+   "monitorsEnabled": 3,
+   "present": true,
+   "raised": 0
+  },
+  {
+   "id": "SP-06",
+   "monitors": 3,
+   "monitorsEnabled": 3,
+   "present": true,
+   "raised": 0
+  },
+  {
+   "id": "SP-07",
+   "monitors": 2,
+   "monitorsEnabled": 2,
+   "present": true,
+   "raised": 0
+  },
+  {
+   "id": "SP-08",
+   "monitors": 4,
+   "monitorsEnabled": 4,
+   "present": true,
+   "raised": 3
+  },
+  {
+   "id": "SP-C1",
+   "monitors": 7,
+   "monitorsEnabled": 7,
+   "present": true,
+   "raised": 2
+  },
+  {
+   "id": "SP-C2",
+   "monitors": 3,
+   "monitorsEnabled": 3,
+   "present": true,
+   "raised": 0
+  },
+  {
+   "id": "SP-C3",
+   "monitors": 6,
+   "monitorsEnabled": 6,
+   "present": true,
+   "raised": 2
+  }
+ ],
+ "bundle": "Storage Path",
+ "group": true,
+ "members": 2,
+ "policy": true,
+ "read_at": "2026-10-09T08:08:19Z",
+ "scope": "{{scope-1}}"
+}

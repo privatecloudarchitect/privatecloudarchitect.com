@@ -1,0 +1,170 @@
+{
+ "backdated_minutes": 0,
+ "bundle": "Storage Path",
+ "can_raise": {
+  "SP-01": [
+   "sp-01-pdl-host",
+   "sp-01-pdl-host-psastor"
+  ],
+  "SP-02": [
+   "sp-02-apd-start-host"
+  ],
+  "SP-03": [
+   "sp-03-apd-timeout-host"
+  ],
+  "SP-04": [
+   "sp-04-path-dead-host",
+   "sp-04-path-dead-host-psastor"
+  ],
+  "SP-08": [
+   "sp-08-host-status-no-connect-warning",
+   "sp-08-host-status-no-connect-critical",
+   "sp-08-host-status-timeout",
+   "sp-08-host-status-reset"
+  ],
+  "SP-C1": [
+   "sp-01-pdl-host",
+   "sp-01-pdl-host-psastor",
+   "sp-03-apd-timeout-host",
+   "sp-08-host-status-no-connect-critical"
+  ],
+  "SP-C3": [
+   "sp-08-host-status-no-connect-warning",
+   "sp-04-path-dead-host",
+   "sp-04-path-dead-host-psastor"
+  ]
+ },
+ "host": "{{esx-1}}",
+ "indexed": {
+  "copies": 29,
+  "seconds_after_send": 1.6
+ },
+ "lines": [
+  {
+   "app": "vobd",
+   "copies": 1,
+   "symptoms": [
+    "sp-01-pdl-host",
+    "sp-01-pdl-host"
+   ]
+  },
+  {
+   "app": "vobd",
+   "copies": 1,
+   "symptoms": [
+    "sp-01-pdl-host-psastor",
+    "sp-01-pdl-host-psastor"
+   ]
+  },
+  {
+   "app": "vobd",
+   "copies": 1,
+   "symptoms": [
+    "sp-02-apd-start-host"
+   ]
+  },
+  {
+   "app": "vobd",
+   "copies": 1,
+   "symptoms": [
+    "sp-03-apd-timeout-host",
+    "sp-03-apd-timeout-host"
+   ]
+  },
+  {
+   "app": "vobd",
+   "copies": 2,
+   "symptoms": [
+    "sp-04-path-dead-host",
+    "sp-04-path-dead-host"
+   ]
+  },
+  {
+   "app": "vobd",
+   "copies": 2,
+   "symptoms": [
+    "sp-04-path-dead-host-psastor",
+    "sp-04-path-dead-host-psastor"
+   ]
+  },
+  {
+   "app": "vmkernel",
+   "copies": 11,
+   "symptoms": [
+    "sp-08-host-status-no-connect-warning",
+    "sp-08-host-status-no-connect-critical",
+    "sp-08-host-status-no-connect-critical",
+    "sp-08-host-status-no-connect-warning"
+   ]
+  },
+  {
+   "app": "vmkernel",
+   "copies": 5,
+   "symptoms": [
+    "sp-08-host-status-timeout"
+   ]
+  },
+  {
+   "app": "vmkernel",
+   "copies": 5,
+   "symptoms": [
+    "sp-08-host-status-reset"
+   ]
+  }
+ ],
+ "minutes": 30,
+ "not_raised": [],
+ "raised": {
+  "SP-01": {
+   "cleared_seconds_after_send": 1382,
+   "level": "CRITICAL",
+   "seconds_after_send": 136,
+   "status": "CANCELED"
+  },
+  "SP-02": {
+   "cleared_seconds_after_send": 1382,
+   "level": "WARNING",
+   "seconds_after_send": 76,
+   "status": "CANCELED"
+  },
+  "SP-03": {
+   "cleared_seconds_after_send": 1382,
+   "level": "CRITICAL",
+   "seconds_after_send": 76,
+   "status": "CANCELED"
+  },
+  "SP-04": {
+   "cleared_seconds_after_send": 1382,
+   "level": "WARNING",
+   "seconds_after_send": 76,
+   "status": "CANCELED"
+  },
+  "SP-08": {
+   "cleared_seconds_after_send": 1238,
+   "level": "CRITICAL",
+   "seconds_after_send": 76,
+   "status": "CANCELED"
+  },
+  "SP-C1": {
+   "cleared_seconds_after_send": 1238,
+   "level": "CRITICAL",
+   "seconds_after_send": 76,
+   "status": "CANCELED"
+  },
+  "SP-C3": {
+   "cleared_seconds_after_send": 1238,
+   "level": "WARNING",
+   "seconds_after_send": 76,
+   "status": "CANCELED"
+  }
+ },
+ "read_at": "2026-10-09T08:07:42Z",
+ "sent_at": "2026-10-09T07:43:29.467Z",
+ "target": "ssl://{{listener-1}}:1514?formatter=RFC_5424&framing=octet_counting",
+ "vcenter_channel_only": [
+  "SP-05",
+  "SP-06",
+  "SP-07",
+  "SP-C2"
+ ]
+}
