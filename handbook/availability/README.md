@@ -100,8 +100,10 @@ or API, is walked screen by screen in [IMPORTING.md](../../IMPORTING.md) at the 
    the *Manage ▸ Import* used for views and dashboards). It carries each metric's id, so the views
    and dashboard that reference them by `Super Metric|sm_<id>` resolve on your instance; a plain
    `POST /api/supermetrics` would mint new ids and break those references.
-   **Import** in the UI through **Operate**, **Administration**, **Control Panel**, **Content Management**, the
-   **Import** tab (choose **Skip item(s)**; the default overwrites), or
+   In the UI, import the readable `supermetrics/availability-slis.import.json` below through **Operate**,
+   **Administration**, **Configurations**, **Super Metrics**, **⋯**, **Import** (default **Skip import**); or this
+   package through **Control Panel**, **Content Management**, **Import** (choose **Skip item(s)**; that tab's
+   default overwrites); or
    `POST /suite-api/api/content/operations/import` (multipart field `contentFile`; poll
    `GET /api/content/operations/import` for `state=FINISHED`). The import **creates** any metric
    that is absent, with its shipped id, so a first import into a fresh environment needs nothing
