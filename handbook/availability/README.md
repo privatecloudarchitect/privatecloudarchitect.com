@@ -100,10 +100,10 @@ or API, is walked screen by screen in [IMPORTING.md](../../IMPORTING.md) at the 
    the *Manage ▸ Import* used for views and dashboards). It carries each metric's id, so the views
    and dashboard that reference them by `Super Metric|sm_<id>` resolve on your instance; a plain
    `POST /api/supermetrics` would mint new ids and break those references.
-   In the UI, import the readable `supermetrics/availability-slis.import.json` below through **Operate**,
-   **Administration**, **Configurations**, **Super Metrics**, **⋯**, **Import** (default **Skip import**); or this
-   package through **Control Panel**, **Content Management**, **Import** (choose **Skip item(s)**; that tab's
-   default overwrites); or
+   In the UI, import the readable `supermetrics/availability-slis.import.json` below through
+   **Operate ▸ Administration ▸ Configurations ▸ Super Metrics ▸ ⋯ ▸ Import** (default **Skip import**); or this
+   package through **Operate ▸ Administration ▸ Control Panel ▸ Content Management ▸ Import** (choose
+   **Skip item(s)**; that tab's default overwrites); or
    `POST /suite-api/api/content/operations/import` (multipart field `contentFile`; poll
    `GET /api/content/operations/import` for `state=FINISHED`). The import **creates** any metric
    that is absent, with its shipped id, so a first import into a fresh environment needs nothing
@@ -115,11 +115,11 @@ or API, is walked screen by screen in [IMPORTING.md](../../IMPORTING.md) at the 
    Built as a verbatim filter of the reference instance's own export, so what ships is the
    export format exactly.
    - `supermetrics/availability-slis.import.json`: the same five metrics in readable, id-keyed
-     form (names, formulas, object types, units): a reference for review or a hand-rebuild, not
-     a direct import.
+     form (names, formulas, object types, units), which the **Super Metrics ▸ ⋯ ▸ Import** route
+     above takes, keeping each id.
    - `supermetrics/editor-formulas.yaml`: the by-hand path: editor-syntax formulas with the two
      id substitutions the composition metrics need if you mint your own ids.
-2. `views/availability-views.import.zip`: all thirteen views in the **Views, Manage, Import** shape
+2. `views/availability-views.import.zip`: all thirteen views in the **Views ▸ Manage ▸ ⋯ ▸ Import** shape
    (import the zip directly). Id-preserving, so the dashboard resolves them. Layer five carries
    two views, one per sensor: agentless Service Discovery and the agent's service monitors.
    Layer one carries two too: the ping-adapter tables and the object-level reachability view.
@@ -128,7 +128,7 @@ or API, is walked screen by screen in [IMPORTING.md](../../IMPORTING.md) at the 
    a Powered On VM whose Tools is silent is read as running rather than misread as down.
    - `views/availability-views.contentpkg.zip`: the same thirteen views for the content-import API
      path, if you prefer one mechanism for metrics and views.
-3. `dashboard/availability-service-levels.import.zip`: the dashboard, via **Dashboards, Manage,
+3. `dashboard/availability-service-levels.import.zip`: the dashboard, via **Dashboards ▸ Manage ▸ ⋯ ▸
    Import**, after the views. Twenty-three widgets: a collapsed Setup panel on top (expand it once:
    it is the from-scratch runbook), then education beside evidence for every layer. The two
    world providers (vSphere World, Ping World) bind YOUR instance's objects automatically

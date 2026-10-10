@@ -13,21 +13,20 @@ best-practices documentation.
 ## Get started in the VCF Operations UI
 
 Three files, imported in this order, then one setting. No CLI or API is needed. The screens, with what each option
-does, are in [IMPORTING.md](../../IMPORTING.md) at the top of this repository. Download the files and import each zip as
-it is, without unzipping it.
+does, are in [IMPORTING.md](../../IMPORTING.md) at the top of this repository. Each path below is clicked in order, left
+to right. Download the files and import each zip as it is, without unzipping it.
 
-1. **The super metrics.** **Operate**, **Administration**, **Configurations**, the **Super Metrics** tile, **⋯**,
-   **Import**: choose `supermetrics/memory-tiering-supermetrics.import.json`, keep **Skip import**, and click
-   **IMPORT**. The dialog reports **19** imported (or skipped, for any you already have).
-2. **The views.** **Operate**, **Dashboards**, **Views**, **Manage**, **⋯**, **Import**: choose
+1. **The super metrics.** **Operate ▸ Administration ▸ Configurations ▸ Super Metrics ▸ ⋯ ▸ Import**: choose
+   `supermetrics/memory-tiering-supermetrics.import.json`, keep **Skip import**, and click **IMPORT**. The dialog reports **19** imported (or skipped, for any you already have).
+2. **The views.** **Operate ▸ Dashboards ▸ Views ▸ Manage ▸ ⋯ ▸ Import**: choose
    `views/memory-tiering-views.import.zip`, keep **Skip import**. Three views arrive: **PCA - MemTier - Host
    Candidates**, **Capex Avoidance** and **Cluster Readiness**.
-3. **The dashboard.** **Operate**, **Dashboards**, **Manage**, **⋯**, **Import**: choose
+3. **The dashboard.** **Operate ▸ Dashboards ▸ Manage ▸ ⋯ ▸ Import**: choose
    `dashboard/memory-tiering-readiness.import.zip`. It arrives as **PCA - MemTier - Readiness**, owned by you, and its
    Setup panel repeats these steps.
 4. **Switch the 19 super metrics on** in the policy that governs your hosts and clusters (the **Default Policy** if
    you have not made your own). On the **Super Metrics** screen, filter on `PCA - MemTier` and `PCA - Shared`, then
-   for each one **EDIT**, **4 - Policies**, tick that policy in the column its name gives, and **UPDATE**: **Host
+   for each one **EDIT ▸ 4 - Policies**, tick that policy in the column its name gives, and **UPDATE**: **Host
    System** for a `- Host -` metric, **Cluster Compute Resource** for a `- Cluster -` one. Four host metrics are
    also assigned to clusters, where their DRAM-tier denominator does not roll up, so leave their cluster column
    unticked. Until this step the dashboard's rows stay blank.
@@ -35,7 +34,7 @@ it is, without unzipping it.
    collection cycles and open the dashboard.
 
 Importing again later? Keep **Skip import**, or the shipped Price Delta replaces yours. The same super metrics and
-views also ship as content packages (`*.contentpkg.zip`) for **Content Management**, **Import**; choose **Skip
+views also ship as content packages (`*.contentpkg.zip`) for **Content Management ▸ Import**; choose **Skip
 item(s)** there, because its default overwrites.
 
 ## The three metrics
@@ -59,7 +58,7 @@ each layer references the previous one by id):
   fleet); and the cluster's HA headroom. Id-keyed; the ids are what the views bind to. A unit rides as
   `unitId` where one is declared, because an import is how a unit gets set.
 - `supermetrics/memory-tiering-supermetrics.contentpkg.zip`: the same 19 metrics as an
-  **id-preserving content package**, importable in the UI through **Content Management**, **Import** (the steps
+  **id-preserving content package**, importable in the UI through **Content Management ▸ Import** (the steps
   above) or through `POST /suite-api/api/content/operations/import` (multipart field `contentFile`). The import
   creates any absent metric with its shipped id; the `force` flag affects only a metric that
   already exists: `force=false` skips it (safe, non-destructive), `force=true` overwrites it (only
@@ -69,16 +68,16 @@ each layer references the previous one by id):
   the export format verbatim. A no-force test-import on the reference instance (2026-10-08) reported
   all 19 skipped and none failed, and a read of every field of all 19 before and after showed no change,
   with the instance's super metric count the same.
-- `views/memory-tiering-views.import.zip`: the lens's three views in the **Views**, **Manage**, **Import** shape,
+- `views/memory-tiering-views.import.zip`: the lens's three views in the **Views ▸ Manage ▸ ⋯ ▸ Import** shape,
   the UI route above. Id-preserving, so the dashboard finds them.
 - `views/memory-tiering-views.contentpkg.zip`: the lens's three views (host candidates, capex
   avoidance, cluster readiness) as the same kind of id-preserving package; a no-force test-import
   (2026-10-08) reported all three skipped and none failed. The views reference the metrics by id, which is why the
   package pair imports in order.
-- `dashboard/memory-tiering-readiness.import.zip`: the readiness dashboard in the Dashboards,
-  Manage, Import shape (dashboard import is UI-only on this build; import the zip directly, do
+- `dashboard/memory-tiering-readiness.import.zip`: the readiness dashboard in the **Dashboards ▸
+  Manage ▸ ⋯ ▸ Import** shape (dashboard import is UI-only on this build; import the zip directly, do
   not unzip it). This is the reference estate's own deploy artifact: its runbook deploys exactly
-  this file through Manage, Import, and the live dashboard matches the committed contents. It
+  this file through **Manage ▸ ⋯ ▸ Import**, and the live dashboard matches the committed contents. It
   references the views and metrics by id, so import it last, after the super metrics and the views. Blank rows
   right after import mean the super metrics are not yet activated in the collecting policy,
   which is step 4 above.

@@ -71,7 +71,7 @@ placeholder, the six lists fill, and the three viewers show the message above un
 ## If something looks wrong
 
 - **The six lists are empty.** The views were not imported, or were imported after the dashboard. Import the
-  views, then delete and re-import the dashboard.
+  views, then import the dashboard again with **Overwrite**, which replaces it in place.
 - **The three viewers say "Unable to establish a connection with the Real-time metrics component".** The
   source is not bound (step 3). Bind it before reading logs; if the message stays with a domain chosen, check
   that the Real-Time Metrics service runs on that domain's VCF instance.
