@@ -1,0 +1,249 @@
+{
+ "captured_utc": "2026-10-10T01:54:43Z",
+ "observations": [
+  {
+   "after_s": 91,
+   "control": [],
+   "aware": [],
+   "rollup": []
+  },
+  {
+   "after_s": 152,
+   "control": [],
+   "aware": [],
+   "rollup": []
+  },
+  {
+   "after_s": 214,
+   "control": [],
+   "aware": [],
+   "rollup": []
+  },
+  {
+   "after_s": 276,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 337,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 399,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 461,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 523,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 585,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 646,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 708,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 769,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 831,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  },
+  {
+   "after_s": 893,
+   "control": [
+    "vm a",
+    "vm b"
+   ],
+   "aware": [
+    "vm b"
+   ],
+   "rollup": [
+    "host b",
+    "host a"
+   ]
+  }
+ ],
+ "cleanup": {
+  "alert:control": 204,
+  "alert:aware": 204,
+  "alert:rollup": 204,
+  "symptom:vm": 204,
+  "symptom:host": 204,
+  "policy": 204,
+  "group": 200
+ },
+ "governedByTheThrowawayPolicy": true,
+ "stayedOnTheirHosts": true,
+ "residue": [],
+ "verdict": {
+  "controlOnBothVms": true,
+  "awareQuietUnderTheMarkedHost": true,
+  "awareRaisedUnderTheOtherHost": true,
+  "rollupOncePerHost": true,
+  "nothingOutsideTheGroup": true,
+  "samplesAfterSettling": 11,
+  "firstRaiseAfterSeconds": 276
+ },
+ "bodies": {
+  "control": {
+   "type": "SYMPTOM_SET",
+   "relation": "SELF",
+   "aggregation": "ALL",
+   "symptomSetOperator": "AND",
+   "symptomDefinitionIds": [
+    "<S_vm>"
+   ]
+  },
+  "aware": {
+   "type": "SYMPTOM_SET_COMPOSITE",
+   "operator": "AND",
+   "symptom-sets": [
+    {
+     "type": "SYMPTOM_SET",
+     "relation": "SELF",
+     "aggregation": "ALL",
+     "symptomSetOperator": "AND",
+     "symptomDefinitionIds": [
+      "<S_vm>"
+     ]
+    },
+    {
+     "type": "SYMPTOM_SET",
+     "adapterKindKey": "VMWARE",
+     "resourceKindKey": "HostSystem",
+     "relation": "PARENT",
+     "aggregation": "ANY",
+     "symptomSetOperator": "AND",
+     "symptomDefinitionIds": [
+      "!<S_host>"
+     ]
+    }
+   ]
+  },
+  "rollup": {
+   "type": "SYMPTOM_SET",
+   "adapterKindKey": "VMWARE",
+   "resourceKindKey": "VirtualMachine",
+   "relation": "CHILD",
+   "aggregation": "COUNT",
+   "populationOperator": "GT",
+   "value": 0,
+   "symptomSetOperator": "AND",
+   "symptomDefinitionIds": [
+    "<S_vm>"
+   ]
+  }
+ },
+ "held": true
+}

@@ -15,12 +15,16 @@ Alerting doctrine is easy to state and rarely checked. This checks it, on a runn
   3. WHERE THE THRESHOLD LIVES. Every symptom definition's condition type, operator, value and metric key.
      A doctrine of dumb conditions over intelligent metrics shows up as a tiny value vocabulary against keys
      that are mostly super metrics, and the opposite shows up as arithmetic buried in conditions;
-  4. THE DEBOUNCE CENSUS. Wait and cancel cycles across every definition, yours beside the vendor's. If yours
-     are one value on every definition, those dials were set once for all of them; a symptom's own wait and
-     cancel are not counted here;
+  4. THE DEBOUNCE CENSUS. Wait and cancel cycles across every definition, yours beside the vendor's, and the
+     same two dials on the symptoms, which is where a condition can be held before the alert sees it. If yours
+     are one value on every definition, those dials were set once for all of them;
   5. WHERE ROUTING CAN AND CANNOT SEE. A notification rule's complete field list, and how many of the live
-     rules are scoped by anything at all. If the rule object has no policy field, routing cannot read the
-     thing that scopes the alert, and the definition's NAME is the only bridge.
+     rules are scoped by any of the filters the API defines. If the rule object has no policy field, routing
+     cannot read the thing that scopes the alert, and the definition's NAME is the only bridge;
+  6. ONE FAILURE, ONE ALERT. Whether anything on the instance keeps a child's alert quiet while its parent
+     fails (a symptom set on the PARENT or ANCESTOR with a negated reference), how many sets roll children up
+     into the parent instead, which of your definitions on a child kind are parent-aware, and which enabled
+     rules would send a child kind's alerts one by one, because a notification rule has no field that groups them.
 
 Auth and request plumbing come from opslib.py, the same module the ops-estate harness uses; the policy export
 is the one request it cannot carry, because that endpoint answers 500 to any Accept other than a zip.
@@ -34,6 +38,7 @@ Run:
   export OPS_API_TOKEN=<api-token>                # minted in the operations console
   export OPS_OWNER="PCA"                          # the owner prefix your content carries
   export OPS_KIND=VirtualMachine                  # the resource kind to measure blast radius against
+  export OPS_CHILD_KINDS=VirtualMachine,HostSystem  # the kinds that fail with a parent, for check 6
   export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
   python3 alerts.py
 """
@@ -54,6 +59,38 @@ from opslib import _ctx, bearer, ops
 
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 EXPORT_ACCEPT = "application/zip"
+# Every property of a notification rule that narrows which alerts it selects, from the VCF Operations 9.1.1 API's
+# notification-rule schema. A rule with all of them empty selects every alert on the instance.
+RULE_FILTERS = ("alertDefinitionIdFilters", "alertImpactFilters", "alertTypeFilters", "alertStatuses",
+                "alertControlStates", "actionStatuses", "criticalities", "resourceFilters", "resourceFilter",
+                "resourceKindFilters", "resourceKindFilter", "collectorGroupId", "collectorUUId")
+REPORT = []
+
+
+def say(line=""):
+    """Print a line and keep it, so the record carries what the reader saw."""
+    print(line)
+    REPORT.extend(str(line).split("\n"))
+
+
+def filter_size(value):
+    """How many entries one rule filter carries: a str-values object counts its values, an object counts once."""
+    if isinstance(value, dict):
+        if "values" in value:
+            return len(value.get("values") or [])
+        return 1 if any(v not in (None, "", [], {}) for v in value.values()) else 0
+    if isinstance(value, (list, tuple)):
+        return len(value)
+    return 1 if value not in (None, "", False) else 0
+
+
+def symptom_sets(node):
+    """Every plain symptom set inside an alert state's base-symptom-set, walking composites."""
+    if not isinstance(node, dict):
+        return []
+    if node.get("type") == "SYMPTOM_SET_COMPOSITE" or "symptom-sets" in node:
+        return [s for child in node.get("symptom-sets") or [] for s in symptom_sets(child)]
+    return [node]
 
 
 def owned_by(name, owner):
@@ -160,7 +197,7 @@ def main():
     kind = os.environ.get("OPS_KIND", "VirtualMachine")
     out_dir = os.environ.get("OUT_DIR", ".")
     tok = bearer()
-    print(f"alerts.py: auditing an alerting estate owned by {owner!r}\n")
+    say(f"alerts.py: auditing an alerting estate owned by {owner!r}\n")
 
     ads = page("/api/alertdefinitions", "alertDefinitions", tok)
     sds = page("/api/symptomdefinitions", "symptomDefinitions", tok)
@@ -173,10 +210,10 @@ def main():
     # ---- 1: where scope can live
     fields = collections.Counter(k for a in ads for k in a)
     universal = sorted(k for k, n in fields.items() if n == len(ads))
-    print(f"  1. AN ALERT DEFINITION CARRIES {len(fields)} distinct field(s); {len(universal)} on every one "
+    say(f"  1. AN ALERT DEFINITION CARRIES {len(fields)} distinct field(s); {len(universal)} on every one "
           f"of the {len(ads)}")
-    print(f"     {', '.join(universal)}")
-    print(f"     none of them names an object or a group: the kind key constrains WHAT kind may fire, never "
+    say(f"     {', '.join(universal)}")
+    say(f"     none of them names an object or a group: the kind key constrains WHAT kind may fire, never "
           f"WHICH objects")
 
     # ---- 2: the any-any review
@@ -191,13 +228,13 @@ def main():
                   "ownedEntries": len(ours), "ownedEnabled": len(on),
                   "ownedEnabledNames": sorted((by_id.get(e["alertId"]) or {}).get("name") for e in on),
                   "ownedEnabledKinds": sorted({e["resourceKind"] for e in on})}
-        print(f"\n  2. THE DEFAULT POLICY carries {len(entries)} explicit entries, {review['enabledEntries']} "
+        say(f"\n  2. THE DEFAULT POLICY carries {len(entries)} explicit entries, {review['enabledEntries']} "
               f"of them enabled")
-        print(f"     {len(ours)} are yours, and " + (f"{len(on)} of those are ENABLED there, which scopes them to "
+        say(f"     {len(ours)} are yours, and " + (f"{len(on)} of those are ENABLED there, which scopes them to "
               f"everything no other policy claims and every policy that inherits from it" if on else
               "none of those is enabled there"))
         for n in review["ownedEnabledNames"]:
-            print(f"        {n}")
+            say(f"        {n}")
 
     # the measured blast radius: what the default policy actually governs today
     st, body = ops("GET", "/api/resources", tok,
@@ -240,15 +277,15 @@ def main():
                              "reachableFromTheDefaultPolicy": governed["underTheDefaultPolicy"] + below,
                              "undetermined": undetermined,
                              "ownedEnabledReach": {a["name"]: reach.get(a["name"], 0) for a in mine_on}})
-            print(f"\n     BLAST RADIUS: of {governed['queried']} {kind} object(s) asked about, "
+            say(f"\n     BLAST RADIUS: of {governed['queried']} {kind} object(s) asked about, "
                   f"{governed['underTheDefaultPolicy']} are governed by the default policy and {below} more by "
                   f"{len(inheriting)} {'policy that inherits' if len(inheriting) == 1 else 'policies that inherit'} from it, so an alert switched on there reaches up to "
                   f"{governed['reachableFromTheDefaultPolicy']} today"
                   + (f"; {undetermined} not determined (their policy would not export)" if undetermined else ""))
             for name, n in governed["ownedEnabledReach"].items():
-                print(f"        {name}: on for {n} of them")
+                say(f"        {name}: on for {n} of them")
         else:
-            print(f"\n     BLAST RADIUS: not determined; the effective-policy query did not answer")
+            say(f"\n     BLAST RADIUS: not determined; the effective-policy query did not answer")
 
     # ---- 3: where the threshold lives
     def condition(s):
@@ -256,15 +293,19 @@ def main():
     my_sym = [s for s in sds if owned_by(s.get("name"), owner)]
     thresholds = {"estateConditionTypes": dict(collections.Counter(condition(s).get("type") for s in sds)),
                   "ownedConditionTypes": dict(collections.Counter(condition(s).get("type") for s in my_sym)),
-                  "ownedValues": dict(collections.Counter(str(condition(s).get("value")) for s in my_sym)),
+                  "ownedValues": dict(collections.Counter(str(condition(s).get("value")) for s in my_sym
+                                                          if condition(s).get("value") is not None)),
+                  "ownedWithoutAValue": sum(1 for s in my_sym if condition(s).get("value") is None),
                   "ownedOperators": dict(collections.Counter(condition(s).get("operator") for s in my_sym)),
                   "ownedReadingASuperMetric": sum(1 for s in my_sym
                                                   if str(condition(s).get("key") or "").startswith("Super Metric|")),
                   "ownedTotal": len(my_sym)}
-    print(f"\n  3. THRESHOLDS: {thresholds['ownedReadingASuperMetric']} of {len(my_sym)} of your symptom "
+    say(f"\n  3. THRESHOLDS: {thresholds['ownedReadingASuperMetric']} of {len(my_sym)} of your symptom "
           f"conditions read a super metric key")
-    print(f"     your whole value vocabulary is {sorted(thresholds['ownedValues'])}")
-    print(f"     estate-wide condition types: {thresholds['estateConditionTypes']}")
+    say(f"     your whole value vocabulary is {sorted(thresholds['ownedValues'], key=float)}"
+          + (f"; {thresholds['ownedWithoutAValue']} compare no value (a log or event condition)"
+             if thresholds["ownedWithoutAValue"] else ""))
+    say(f"     estate-wide condition types: {thresholds['estateConditionTypes']}")
 
     # ---- 4: the debounce census
     debounce = {"estateWait": dict(collections.Counter(a.get("waitCycles") for a in ads)),
@@ -278,35 +319,91 @@ def main():
                 "longestWait": max((a.get("waitCycles") or 0) for a in ads),
                 "longestWaitIsVendorContent": not any((a.get("waitCycles") or 0) == max((x.get("waitCycles") or 0)
                                                       for x in ads) for a in mine)}
-    print(f"\n  4. DEBOUNCE: your definitions use wait {sorted(debounce['ownedWait'])} and cancel "
-          f"{sorted(debounce['ownedCancel'])}")
-    print(f"     the estate uses wait {debounce['estateWait'].get(1, 0)} of {len(ads)} at 1, and the longest "
+    # the symptoms carry their own wait and cancel, which is where a condition can be held before an alert sees it
+    debounce.update({"ownedSymptomWait": dict(collections.Counter(s.get("waitCycles") for s in my_sym)),
+                     "ownedSymptomCancel": dict(collections.Counter(s.get("cancelCycles") for s in my_sym)),
+                     "estateSymptomWait": dict(collections.Counter(s.get("waitCycles") for s in sds)),
+                     "estateSymptomCancel": dict(collections.Counter(s.get("cancelCycles") for s in sds))})
+    say(f"\n  4. DEBOUNCE: your definitions use wait {sorted(debounce['ownedWait'])} and cancel "
+          f"{sorted(debounce['ownedCancel'])}; your symptoms use wait {sorted(debounce['ownedSymptomWait'])} and "
+          f"cancel {sorted(debounce['ownedSymptomCancel'])}")
+    say(f"     the estate uses wait {debounce['estateWait'].get(1, 0)} of {len(ads)} at 1, and the longest "
           f"wait on the instance is {debounce['longestWait']} cycles")
-    print(f"     every definition carries exactly {sorted(debounce['statesPerDefinition'])} state(s); impact "
+    say(f"     every definition carries exactly {sorted(debounce['statesPerDefinition'])} state(s); impact "
           f"badges {debounce['impactDetail']}")
 
     # ---- 5: what routing can see
+    def kinds_of(r):
+        out = [k.get("resourceKind") for k in (r.get("resourceKindFilters") or []) if isinstance(k, dict)]
+        one = r.get("resourceKindFilter") or {}
+        return sorted({k for k in out + [one.get("resourceKind")] if k})
     rule_fields = sorted({k for r in rules for k in r})
     scoped = []
     for r in rules:
+        sizes = {f: filter_size(r.get(f)) for f in RULE_FILTERS}
         scoped.append({"enabled": bool(r.get("enabled")),
-                       "alertDefinitionFilters": len(((r.get("alertDefinitionIdFilters") or {})
-                                                      .get("values") or [])),
-                       "resourceFilters": len(r.get("resourceFilters") or []),
-                       "resourceKindFilters": len(r.get("resourceKindFilters") or []),
-                       "criticalities": len(r.get("criticalities") or [])})
+                       "alertDefinitionFilters": sizes["alertDefinitionIdFilters"],
+                       "resourceFilters": sizes["resourceFilters"],
+                       "resourceKindFilters": sizes["resourceKindFilters"],
+                       "criticalities": sizes["criticalities"],
+                       "otherFilters": {f: n for f, n in sizes.items() if n and f not in (
+                           "alertDefinitionIdFilters", "resourceFilters", "resourceKindFilters", "criticalities")},
+                       "filters": sum(1 for n in sizes.values() if n),
+                       "kinds": kinds_of(r)})
     live = [s for s in scoped if s["enabled"]]
-    unscoped = [s for s in scoped if not any((s["alertDefinitionFilters"], s["resourceFilters"],
-                                              s["resourceKindFilters"], s["criticalities"]))]
+    unscoped = [s for s in scoped if not s["filters"]]
     routing = {"rules": len(rules), "enabled": len(live), "withNoFilterAtAll": len(unscoped),
-               "fields": rule_fields,
+               "enabledWithNoFilter": sum(1 for s in unscoped if s["enabled"]),
+               "fields": rule_fields, "filterFields": list(RULE_FILTERS),
                "hasAPolicyField": any("polic" in f.lower() for f in rule_fields),
                "perRule": scoped}
-    print(f"\n  5. ROUTING: {len(rules)} notification rule(s), {len(live)} enabled, {len(unscoped)} with no "
-          f"filter of any kind")
-    print(f"     a rule carries {len(rule_fields)} fields and a policy field is "
+    say(f"\n  5. ROUTING: {len(rules)} notification rule(s), {len(live)} enabled, {len(unscoped)} with none of the "
+          f"{len(RULE_FILTERS)} filters set, {routing['enabledWithNoFilter']} of those enabled")
+    say(f"     a rule carries {len(rule_fields)} fields and a policy field is "
           f"{'present' if routing['hasAPolicyField'] else 'ABSENT'}: routing cannot read the thing that "
           f"scopes the alert")
+
+    # ---- 6: one failure, one alert
+    child_kinds = [k.strip() for k in os.environ.get("OPS_CHILD_KINDS", "VirtualMachine,HostSystem").split(",")
+                   if k.strip()]
+
+    def sets_of(a):
+        return [s for st in (a.get("states") or []) for s in symptom_sets(st.get("base-symptom-set"))]
+
+    def negated(s):
+        return any(str(x).startswith("!") for x in s.get("symptomDefinitionIds") or [])
+
+    def parent_aware(a):
+        return any(s.get("relation") in ("PARENT", "ANCESTOR") and negated(s) for s in sets_of(a))
+
+    def rolls_up(s):
+        return s.get("relation") in ("CHILD", "DESCENDANT") and s.get("aggregation") in ("COUNT", "PERCENT")
+    every_set = [s for a in ads for s in sets_of(a)]
+    mine_child = [a for a in mine if a.get("resourceKindKey") in child_kinds]
+    # A rule narrowed to a definition or to an object (and that object's children) is not counted here: it
+    # selects what it names. One with neither, whose kind filter is empty or names a child kind, selects every
+    # alert on every object of that kind.
+    one_by_one = [s for s in live if not s["alertDefinitionFilters"] and not s["resourceFilters"]
+                  and "resourceFilter" not in s["otherFilters"]
+                  and (not s["kinds"] or set(s["kinds"]) & set(child_kinds))]
+    correlation = {"childKinds": child_kinds,
+                   "setsByRelation": dict(collections.Counter(s.get("relation") for s in every_set)),
+                   "rollupSets": sum(1 for s in every_set if rolls_up(s)),
+                   "definitionsWithARollup": sum(1 for a in ads if any(rolls_up(s) for s in sets_of(a))),
+                   "negatedSets": sum(1 for s in every_set if negated(s)),
+                   "definitionsKeepingAChildQuiet": sum(1 for a in ads if parent_aware(a)),
+                   "ownedOnAChildKind": dict(collections.Counter(a["resourceKindKey"] for a in mine_child)),
+                   "ownedParentAware": sum(1 for a in mine_child if parent_aware(a)),
+                   "enabledRulesSendingChildAlertsOneByOne": len(one_by_one)}
+    say(f"\n  6. ONE FAILURE, ONE ALERT: {correlation['definitionsKeepingAChildQuiet']} of {len(ads)} definitions keep "
+          f"a child quiet while its parent fails (a negated PARENT or ANCESTOR set); "
+          f"{correlation['definitionsWithARollup']} roll children up into the parent (CHILD or DESCENDANT, COUNT or "
+          f"PERCENT)")
+    say(f"     symptom sets by relation: {correlation['setsByRelation']}")
+    say(f"     of your {len(mine_child)} definition(s) on {', '.join(child_kinds)}, {correlation['ownedParentAware']} "
+          f"parent-aware")
+    say(f"     {len(one_by_one)} enabled rule(s) select every alert on a child kind, narrowed by no definition and no "
+          f"object; a rule has no field that groups alerts, so each one it selects reaches its plug-in on its own")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "owner": owner,
@@ -322,7 +419,9 @@ def main():
                "blastRadius": governed,
                "thresholds": thresholds,
                "debounce": debounce,
-               "routing": routing}
+               "routing": routing,
+               "correlation": correlation,
+               "report": REPORT}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
     for var in ("OPS_HOST", "OPS_BROKER_HOST"):
         v = os.environ.get(var)
@@ -331,7 +430,7 @@ def main():
         assert owned_by(name, owner), "a name that is not the owner's reached the published list"
     os.makedirs(out_dir, exist_ok=True)
     open(os.path.join(out_dir, "alerts.json"), "w", encoding="utf-8").write(text + "\n")
-    print(f"\nwrote alerts.json ({len(ads)} definitions, {len(sds)} symptoms, {len(rules)} rules audited); "
+    say(f"\nwrote alerts.json ({len(ads)} definitions, {len(sds)} symptoms, {len(rules)} rules audited); "
           f"only your own object names are published, everything else is a count")
 
 

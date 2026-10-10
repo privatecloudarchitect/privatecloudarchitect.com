@@ -1,9 +1,9 @@
 {
- "captured_utc": "2026-10-08T04:16:29Z",
+ "captured_utc": "2026-10-10T02:11:47Z",
  "owner": "PCA",
  "definitions": {
-  "total": 1872,
-  "owned": 13,
+  "total": 1882,
+  "owned": 24,
   "universalFields": [
    "adapterKindKey",
    "cancelCycles",
@@ -21,18 +21,19 @@
    "VirtualMachine": 1,
    "ping_adapter_instance": 1,
    "ip_type": 1,
-   "HostSystem": 4,
+   "HostSystem": 15,
    "fqdn_type": 1,
    "ClusterComputeResource": 5
   },
   "ownedSeverity": {
-   "CRITICAL": 11,
-   "WARNING": 2
+   "CRITICAL": 15,
+   "WARNING": 6,
+   "AUTO": 3
   },
   "estateSeverity": {
-   "AUTO": 728,
-   "CRITICAL": 567,
-   "WARNING": 381,
+   "AUTO": 730,
+   "CRITICAL": 571,
+   "WARNING": 385,
    "IMMEDIATE": 136,
    "INFORMATION": 60
   }
@@ -47,14 +48,14 @@
  },
  "blastRadius": {
   "kind": "VirtualMachine",
-  "resources": 139,
-  "queried": 139,
-  "resolved": 139,
-  "underTheDefaultPolicy": 119,
+  "resources": 133,
+  "queried": 133,
+  "resolved": 133,
+  "underTheDefaultPolicy": 113,
   "governingPolicies": 5,
   "underAPolicyInheritingFromIt": 20,
   "policiesInheritingFromIt": 4,
-  "reachableFromTheDefaultPolicy": 139,
+  "reachableFromTheDefaultPolicy": 133,
   "undetermined": 0,
   "ownedEnabledReach": {}
  },
@@ -66,10 +67,11 @@
    "CONDITION_FAULT": 795,
    "CONDITION_PROPERTY_NUMERIC": 175,
    "CONDITION_DT": 33,
-   "CONDITION_LOG": 3
+   "CONDITION_LOG": 27
   },
   "ownedConditionTypes": {
    "CONDITION_HT": 20,
+   "CONDITION_LOG": 24,
    "CONDITION_PROPERTY_NUMERIC": 4
   },
   "ownedValues": {
@@ -77,25 +79,27 @@
    "100.0": 4,
    "0.0": 6
   },
+  "ownedWithoutAValue": 24,
   "ownedOperators": {
    "GT": 18,
    "LT": 2,
    "GT_EQ": 2,
+   "null": 24,
    "NOT_EQ": 2
   },
   "ownedReadingASuperMetric": 18,
-  "ownedTotal": 24
+  "ownedTotal": 48
  },
  "debounce": {
   "estateWait": {
-   "1": 1819,
+   "1": 1829,
    "3": 42,
    "2": 9,
    "6": 1,
    "865": 1
   },
   "estateCancel": {
-   "1": 1816,
+   "1": 1826,
    "9": 7,
    "12": 16,
    "6": 1,
@@ -103,27 +107,52 @@
    "2": 2
   },
   "ownedWait": {
-   "1": 13
+   "1": 24
   },
   "ownedCancel": {
-   "1": 13
+   "1": 24
   },
   "statesPerDefinition": {
-   "1": 1872
+   "1": 1882
   },
   "impactDetail": {
-   "health": 1626,
+   "health": 1636,
    "risk": 215,
    "efficiency": 31
   },
-  "withoutADescription": 526,
+  "withoutADescription": 525,
   "longestWait": 865,
-  "longestWaitIsVendorContent": true
+  "longestWaitIsVendorContent": true,
+  "ownedSymptomWait": {
+   "3": 14,
+   "1": 33,
+   "12": 1
+  },
+  "ownedSymptomCancel": {
+   "1": 48
+  },
+  "estateSymptomWait": {
+   "3": 376,
+   "6": 5,
+   "1": 2551,
+   "12": 3,
+   "2": 31,
+   "4": 4,
+   "72": 7,
+   "60": 1
+  },
+  "estateSymptomCancel": {
+   "3": 337,
+   "1": 2616,
+   "2": 24,
+   "6": 1
+  }
  },
  "routing": {
   "rules": 6,
   "enabled": 2,
   "withNoFilterAtAll": 3,
+  "enabledWithNoFilter": 0,
   "fields": [
    "actionStatuses",
    "alertControlStates",
@@ -143,6 +172,21 @@
    "sendHeartbeat",
    "templateId"
   ],
+  "filterFields": [
+   "alertDefinitionIdFilters",
+   "alertImpactFilters",
+   "alertTypeFilters",
+   "alertStatuses",
+   "alertControlStates",
+   "actionStatuses",
+   "criticalities",
+   "resourceFilters",
+   "resourceFilter",
+   "resourceKindFilters",
+   "resourceKindFilter",
+   "collectorGroupId",
+   "collectorUUId"
+  ],
   "hasAPolicyField": false,
   "perRule": [
    {
@@ -150,43 +194,116 @@
     "alertDefinitionFilters": 1,
     "resourceFilters": 3,
     "resourceKindFilters": 0,
-    "criticalities": 1
+    "criticalities": 1,
+    "otherFilters": {
+     "alertStatuses": 1
+    },
+    "filters": 4,
+    "kinds": []
    },
    {
     "enabled": true,
     "alertDefinitionFilters": 1,
     "resourceFilters": 0,
     "resourceKindFilters": 0,
-    "criticalities": 0
+    "criticalities": 0,
+    "otherFilters": {},
+    "filters": 1,
+    "kinds": []
    },
    {
     "enabled": false,
     "alertDefinitionFilters": 0,
     "resourceFilters": 0,
     "resourceKindFilters": 0,
-    "criticalities": 0
+    "criticalities": 0,
+    "otherFilters": {},
+    "filters": 0,
+    "kinds": []
    },
    {
     "enabled": false,
     "alertDefinitionFilters": 0,
     "resourceFilters": 0,
     "resourceKindFilters": 0,
-    "criticalities": 0
+    "criticalities": 0,
+    "otherFilters": {},
+    "filters": 0,
+    "kinds": []
    },
    {
     "enabled": true,
     "alertDefinitionFilters": 0,
     "resourceFilters": 1,
     "resourceKindFilters": 0,
-    "criticalities": 0
+    "criticalities": 0,
+    "otherFilters": {
+     "resourceFilter": 1
+    },
+    "filters": 2,
+    "kinds": []
    },
    {
     "enabled": false,
     "alertDefinitionFilters": 0,
     "resourceFilters": 0,
     "resourceKindFilters": 0,
-    "criticalities": 0
+    "criticalities": 0,
+    "otherFilters": {},
+    "filters": 0,
+    "kinds": []
    }
   ]
- }
+ },
+ "correlation": {
+  "childKinds": [
+   "VirtualMachine",
+   "HostSystem"
+  ],
+  "setsByRelation": {
+   "SELF": 1990,
+   "DESCENDANT": 117,
+   "CHILD": 99,
+   "PARENT": 6,
+   "ANCESTOR": 4
+  },
+  "rollupSets": 141,
+  "definitionsWithARollup": 43,
+  "negatedSets": 34,
+  "definitionsKeepingAChildQuiet": 0,
+  "ownedOnAChildKind": {
+   "VirtualMachine": 1,
+   "HostSystem": 15
+  },
+  "ownedParentAware": 0,
+  "enabledRulesSendingChildAlertsOneByOne": 0
+ },
+ "report": [
+  "alerts.py: auditing an alerting estate owned by 'PCA'",
+  "",
+  "  1. AN ALERT DEFINITION CARRIES 11 distinct field(s); 10 on every one of the 1882",
+  "     adapterKindKey, cancelCycles, forVCDTenants, id, name, resourceKindKey, states, subType, type, waitCycles",
+  "     none of them names an object or a group: the kind key constrains WHAT kind may fire, never WHICH objects",
+  "",
+  "  2. THE DEFAULT POLICY carries 77 explicit entries, 64 of them enabled",
+  "     13 are yours, and none of those is enabled there",
+  "",
+  "     BLAST RADIUS: of 133 VirtualMachine object(s) asked about, 113 are governed by the default policy and 20 more by 4 policies that inherit from it, so an alert switched on there reaches up to 133 today",
+  "",
+  "  3. THRESHOLDS: 18 of 48 of your symptom conditions read a super metric key",
+  "     your whole value vocabulary is ['0.0', '1.0', '100.0']; 24 compare no value (a log or event condition)",
+  "     estate-wide condition types: {'CONDITION_HT': 678, 'CONDITION_MESSAGE_EVENT': 567, 'CONDITION_PROPERTY_STRING': 703, 'CONDITION_FAULT': 795, 'CONDITION_PROPERTY_NUMERIC': 175, 'CONDITION_DT': 33, 'CONDITION_LOG': 27}",
+  "",
+  "  4. DEBOUNCE: your definitions use wait [1] and cancel [1]; your symptoms use wait [1, 3, 12] and cancel [1]",
+  "     the estate uses wait 1829 of 1882 at 1, and the longest wait on the instance is 865 cycles",
+  "     every definition carries exactly [1] state(s); impact badges {'health': 1636, 'risk': 215, 'efficiency': 31}",
+  "",
+  "  5. ROUTING: 6 notification rule(s), 2 enabled, 3 with none of the 13 filters set, 0 of those enabled",
+  "     a rule carries 17 fields and a policy field is ABSENT: routing cannot read the thing that scopes the alert",
+  "",
+  "  6. ONE FAILURE, ONE ALERT: 0 of 1882 definitions keep a child quiet while its parent fails (a negated PARENT or ANCESTOR set); 43 roll children up into the parent (CHILD or DESCENDANT, COUNT or PERCENT)",
+  "     symptom sets by relation: {'SELF': 1990, 'DESCENDANT': 117, 'CHILD': 99, 'PARENT': 6, 'ANCESTOR': 4}",
+  "     of your 16 definition(s) on VirtualMachine, HostSystem, 0 parent-aware",
+  "     0 enabled rule(s) select every alert on a child kind, narrowed by no definition and no object; a rule has no field that groups alerts, so each one it selects reaches its plug-in on its own"
+ ]
 }

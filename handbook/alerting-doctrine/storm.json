@@ -1,0 +1,360 @@
+{
+ "captured_utc": "2026-10-10T02:13:36Z",
+ "alertsHeld": 3262,
+ "oldestAlertStart": "2025-07-07T23:01:22Z",
+ "byStatus": {
+  "ACTIVE": 634,
+  "CANCELED": 2628
+ },
+ "byControlState": {
+  "OPEN": 3262
+ },
+ "hostDefinitions": [
+  "Host has lost connection to vCenter Server",
+  "vSphere High Availability (HA) has detected a possible host failure"
+ ],
+ "windowMinutes": {
+  "before": 15,
+  "after": 90,
+  "eventGrouping": 5
+ },
+ "events": [
+  {
+   "event": 1,
+   "start": "2026-09-07T00:37:25Z",
+   "hosts": 5,
+   "clusters": 3,
+   "spreadSeconds": 0,
+   "hostDefinitions": {
+    "Host has lost connection to vCenter Server": 5
+   },
+   "longestHostAlertMinutes": 4,
+   "window": {
+    "HostSystem": {
+     "alerts": 22,
+     "objects": 8,
+     "definitions": {
+      "Uplink redundancy on DVPorts degraded": 8,
+      "ESXi has CPU contention": 3,
+      "Host has lost connection to vCenter Server": 5,
+      "vSphere High Availability (HA) host agent has encountered an error": 6
+     }
+    },
+    "TransportNode": {
+     "alerts": 8,
+     "objects": 8,
+     "definitions": {
+      "Transport Node Controller/Manager Connectivity is not UP": 8
+     }
+    },
+    "ClusterComputeResource": {
+     "alerts": 2,
+     "objects": 2,
+     "definitions": {
+      "vSphere Cluster has CPU contention": 2
+     }
+    },
+    "VirtualMachine": {
+     "alerts": 0,
+     "objects": 0,
+     "definitions": {}
+    }
+   },
+   "windowOtherKinds": 22,
+   "vmAlertsThatCouldSayDown": 0,
+   "vmsUnderItsHostsNow": 29,
+   "onThoseVms": {},
+   "onItsClusters": {
+    "vSphere Cluster has CPU contention": 1
+   }
+  },
+  {
+   "event": 2,
+   "start": "2026-10-02T13:29:33Z",
+   "hosts": 2,
+   "clusters": 2,
+   "spreadSeconds": 0,
+   "hostDefinitions": {
+    "vSphere High Availability (HA) has detected a possible host failure": 2
+   },
+   "longestHostAlertMinutes": 4,
+   "window": {
+    "HostSystem": {
+     "alerts": 9,
+     "objects": 6,
+     "definitions": {
+      "ESXi host CPU utilization has reached a critical level": 1,
+      "ESXi host has memory contention": 1,
+      "ESXi has CPU contention": 5,
+      "vSphere High Availability (HA) has detected a possible host failure": 2
+     }
+    },
+    "TransportNode": {
+     "alerts": 3,
+     "objects": 3,
+     "definitions": {
+      "Transport Node Controller/Manager Connectivity is not UP": 3
+     }
+    },
+    "ClusterComputeResource": {
+     "alerts": 3,
+     "objects": 3,
+     "definitions": {
+      "vSphere Cluster has CPU contention": 3
+     }
+    },
+    "VirtualMachine": {
+     "alerts": 43,
+     "objects": 36,
+     "definitions": {
+      "VM experiencing disk write latency": 20,
+      "VM experiencing CPU contention": 18,
+      "VM experiencing memory contention": 3,
+      "VM network has dropped transmit packets": 2
+     }
+    }
+   },
+   "windowOtherKinds": 20,
+   "vmAlertsThatCouldSayDown": 0,
+   "vmsUnderItsHostsNow": 15,
+   "onThoseVms": {
+    "VM experiencing CPU contention": 6
+   },
+   "onItsClusters": {
+    "vSphere Cluster has CPU contention": 2
+   }
+  },
+  {
+   "event": 3,
+   "start": "2026-10-04T19:06:45Z",
+   "hosts": 2,
+   "clusters": 2,
+   "spreadSeconds": 297,
+   "hostDefinitions": {
+    "vSphere High Availability (HA) has detected a possible host failure": 2,
+    "Host has lost connection to vCenter Server": 1
+   },
+   "longestHostAlertMinutes": 1098,
+   "window": {
+    "HostSystem": {
+     "alerts": 6,
+     "objects": 4,
+     "definitions": {
+      "ESXi host CPU utilization has reached a critical level": 2,
+      "ESXi has CPU contention": 1,
+      "Host has lost connection to vCenter Server": 1,
+      "vSphere High Availability (HA) has detected a possible host failure": 2
+     }
+    },
+    "TransportNode": {
+     "alerts": 1,
+     "objects": 1,
+     "definitions": {
+      "Transport Node Controller/Manager Connectivity is not UP": 1
+     }
+    },
+    "ClusterComputeResource": {
+     "alerts": 2,
+     "objects": 2,
+     "definitions": {
+      "vSphere Cluster has CPU contention": 2
+     }
+    },
+    "VirtualMachine": {
+     "alerts": 18,
+     "objects": 14,
+     "definitions": {
+      "VM experiencing CPU contention": 11,
+      "VM experiencing memory contention": 2,
+      "Virtual Machine is violating DISA (v8 and above)": 1,
+      "Virtual Machine is violating CIS L1/L2 Profile (v8 and above)": 1,
+      "Virtual Machine is violating CIS L1 Profile (v8 and above)": 1,
+      "Virtual Machine is violating HIPAA (v7 and above)": 1,
+      "VM network has dropped transmit packets": 1
+     }
+    }
+   },
+   "windowOtherKinds": 19,
+   "vmAlertsThatCouldSayDown": 0,
+   "vmsUnderItsHostsNow": 23,
+   "onThoseVms": {
+    "VM experiencing CPU contention": 1,
+    "VM experiencing memory contention": 2,
+    "VM network has dropped transmit packets": 1
+   },
+   "onItsClusters": {
+    "vSphere Cluster has CPU contention": 1
+   }
+  },
+  {
+   "event": 4,
+   "start": "2026-10-06T13:01:37Z",
+   "hosts": 2,
+   "clusters": 2,
+   "spreadSeconds": 0,
+   "hostDefinitions": {
+    "Host has lost connection to vCenter Server": 2
+   },
+   "longestHostAlertMinutes": 4,
+   "window": {
+    "HostSystem": {
+     "alerts": 20,
+     "objects": 11,
+     "definitions": {
+      "ESXi host CPU utilization has reached a critical level": 10,
+      "ESXi has CPU contention": 8,
+      "Host has lost connection to vCenter Server": 2
+     }
+    },
+    "TransportNode": {
+     "alerts": 2,
+     "objects": 2,
+     "definitions": {
+      "Transport Node Controller/Manager Connectivity is not UP": 2
+     }
+    },
+    "ClusterComputeResource": {
+     "alerts": 8,
+     "objects": 5,
+     "definitions": {
+      "vSphere Cluster CPU utilization has reached a critical level": 4,
+      "vSphere Cluster has CPU contention": 4
+     }
+    },
+    "VirtualMachine": {
+     "alerts": 55,
+     "objects": 40,
+     "definitions": {
+      "VM experiencing disk write latency": 8,
+      "VM experiencing CPU contention": 37,
+      "Guest OS CPU queue has reached a critical level": 2,
+      "VM experiencing memory contention": 3,
+      "VM network has dropped transmit packets": 5
+     }
+    }
+   },
+   "windowOtherKinds": 48,
+   "vmAlertsThatCouldSayDown": 0,
+   "vmsUnderItsHostsNow": 15,
+   "onThoseVms": {
+    "VM experiencing CPU contention": 6
+   },
+   "onItsClusters": {
+    "vSphere Cluster CPU utilization has reached a critical level": 2,
+    "vSphere Cluster has CPU contention": 2
+   }
+  },
+  {
+   "event": 5,
+   "start": "2026-10-06T15:02:06Z",
+   "hosts": 1,
+   "clusters": 1,
+   "spreadSeconds": 0,
+   "hostDefinitions": {
+    "Host has lost connection to vCenter Server": 1
+   },
+   "longestHostAlertMinutes": 4,
+   "window": {
+    "HostSystem": {
+     "alerts": 3,
+     "objects": 3,
+     "definitions": {
+      "ESXi host CPU utilization has reached a critical level": 2,
+      "Host has lost connection to vCenter Server": 1
+     }
+    },
+    "TransportNode": {
+     "alerts": 4,
+     "objects": 2,
+     "definitions": {
+      "Transport Node Controller/Manager Connectivity is not UP": 4
+     }
+    },
+    "ClusterComputeResource": {
+     "alerts": 1,
+     "objects": 1,
+     "definitions": {
+      "vSphere Cluster CPU utilization has reached a critical level": 1
+     }
+    },
+    "VirtualMachine": {
+     "alerts": 2,
+     "objects": 2,
+     "definitions": {
+      "Virtual Machine is violating DISA (v8 and above)": 1,
+      "Guest OS CPU queue has reached a critical level": 1
+     }
+    }
+   },
+   "windowOtherKinds": 8,
+   "vmAlertsThatCouldSayDown": 0,
+   "vmsUnderItsHostsNow": 19,
+   "onThoseVms": {
+    "Virtual Machine is violating DISA (v8 and above)": 1
+   },
+   "onItsClusters": {
+    "vSphere Cluster CPU utilization has reached a critical level": 1
+   }
+  }
+ ],
+ "vmVocabulary": {
+  "definitions": 73,
+  "couldSayDown": [
+   {
+    "name": "One or more monitored service(s) are unavailable on the virtual machine",
+    "raised": 0
+   },
+   {
+    "name": "Operations for Networks-Most of the allocated disk space for an infrastructure VM has been consumed. The infrastructure VM may become inaccessible or lead to a service disruption.",
+    "raised": 0
+   },
+   {
+    "name": "Operations for Networks-Network and security container information used with the NSX distributed firewall or with Service Composer failed to be updated on an NSX host.",
+    "raised": 0
+   },
+   {
+    "name": "Operations for Networks-The NSX infrastructure VM found to be in powered off state. Services provided by it may get impacted.",
+    "raised": 1
+   },
+   {
+    "name": "Virtual machine is in an invalid or orphaned state",
+    "raised": 0
+   },
+   {
+    "name": "Windows Service Down",
+    "raised": 0
+   },
+   {
+    "name": "vSphere HA cannot perform a failover operation for the virtual machine",
+    "raised": 0
+   },
+   {
+    "name": "vSphere HA failed to restart a network isolated virtual machine",
+    "raised": 0
+   }
+  ]
+ },
+ "definitionsTotal": 1882,
+ "report": [
+  "storm.py: what this instance raised when a host failed or went away",
+  "",
+  "  1. HOST INCIDENTS: 13 alert(s) of the shipped host-availability definitions, in 5 event(s); the history reaches back to 2025-07-07",
+  "     event 1, 2026-09-07T00:37:25Z: 5 host(s) in 3 cluster(s); in the window, host 22 on 8, transport node 8, cluster 2, VM 0 on 0 (0 that could say down); on the 29 VMs under its hosts now, 0",
+  "     event 2, 2026-10-02T13:29:33Z: 2 host(s) in 2 cluster(s); in the window, host 9 on 6, transport node 3, cluster 3, VM 43 on 36 (0 that could say down); on the 15 VMs under its hosts now, 6",
+  "     event 3, 2026-10-04T19:06:45Z: 2 host(s) in 2 cluster(s); in the window, host 6 on 4, transport node 1, cluster 2, VM 18 on 14 (0 that could say down); on the 23 VMs under its hosts now, 4",
+  "     event 4, 2026-10-06T13:01:37Z: 2 host(s) in 2 cluster(s); in the window, host 20 on 11, transport node 2, cluster 8, VM 55 on 40 (0 that could say down); on the 15 VMs under its hosts now, 6",
+  "     event 5, 2026-10-06T15:02:06Z: 1 host(s) in 1 cluster(s); in the window, host 3 on 3, transport node 4, cluster 1, VM 2 on 2 (0 that could say down); on the 19 VMs under its hosts now, 1",
+  "",
+  "  2. THE VOCABULARY: 8 of 73 VirtualMachine definitions have a name that could say a VM is down; together they have raised 1 time(s) here",
+  "           0  One or more monitored service(s) are unavailable on the virtual machine",
+  "           0  Operations for Networks-Most of the allocated disk space for an infrastructure VM has been consumed. The infrastructure VM may become inaccessible or lead to a service disruption.",
+  "           0  Operations for Networks-Network and security container information used with the NSX distributed firewall or with Service Composer failed to be updated on an NSX host.",
+  "           1  Operations for Networks-The NSX infrastructure VM found to be in powered off state. Services provided by it may get impacted.",
+  "           0  Virtual machine is in an invalid or orphaned state",
+  "           0  Windows Service Down",
+  "           0  vSphere HA cannot perform a failover operation for the virtual machine",
+  "           0  vSphere HA failed to restart a network isolated virtual machine",
+  "",
+  "  3. CONTROL STATES: {'OPEN': 3262} across the 3262 alert(s) held"
+ ]
+}
