@@ -181,7 +181,10 @@ proven live. The short form, in sensor-chain order:
    record, not optional depth. Install by promise, not by fleet; it needs the target vCenter
    mapped to a proxy first, and the plugin needs the service's own connection (CONFIGURATION.md).
 6. **The computed layer.** Step 1 above (the super metrics), plus alerting scoped to a dedicated
-   group and policy, never to everything.
+   group and policy, never to everything. A check object has no inventory parent, so the one cause
+   that takes every check down at once is the vantage itself: each check alert stays quiet while its
+   ping instance reports that no check answers, and the instance's No Check Answers alert carries that
+   as one alert instead of one per check.
 7. **Keep it true.** Templates carry current Tools and the agent; Tools currency rides the guest
    patching cadence (the dashboard's yellow "Supported Old" rows are the queue, pre-sorted); new
    endpoints enter the check set declared and reviewed. The dashboard is its own drift watch:

@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-10T02:11:47Z",
+ "captured_utc": "2026-10-10T20:27:53Z",
  "owner": "PCA",
  "definitions": {
   "total": 1882,
@@ -39,23 +39,23 @@
   }
  },
  "defaultPolicyReview": {
-  "explicitEntries": 77,
+  "explicitEntries": 88,
   "enabledEntries": 64,
-  "ownedEntries": 13,
+  "ownedEntries": 24,
   "ownedEnabled": 0,
   "ownedEnabledNames": [],
   "ownedEnabledKinds": []
  },
  "blastRadius": {
   "kind": "VirtualMachine",
-  "resources": 133,
-  "queried": 133,
-  "resolved": 133,
-  "underTheDefaultPolicy": 113,
+  "resources": 129,
+  "queried": 129,
+  "resolved": 129,
+  "underTheDefaultPolicy": 109,
   "governingPolicies": 5,
   "underAPolicyInheritingFromIt": 20,
   "policiesInheritingFromIt": 4,
-  "reachableFromTheDefaultPolicy": 133,
+  "reachableFromTheDefaultPolicy": 129,
   "undetermined": 0,
   "ownedEnabledReach": {}
  },
@@ -285,10 +285,10 @@
   "     adapterKindKey, cancelCycles, forVCDTenants, id, name, resourceKindKey, states, subType, type, waitCycles",
   "     none of them names an object or a group: the kind key constrains WHAT kind may fire, never WHICH objects",
   "",
-  "  2. THE DEFAULT POLICY carries 77 explicit entries, 64 of them enabled",
-  "     13 are yours, and none of those is enabled there",
+  "  2. THE DEFAULT POLICY carries 88 explicit entries, 64 of them enabled",
+  "     24 are yours, and none of those is enabled there",
   "",
-  "     BLAST RADIUS: of 133 VirtualMachine object(s) asked about, 113 are governed by the default policy and 20 more by 4 policies that inherit from it, so an alert switched on there reaches up to 133 today",
+  "     BLAST RADIUS: of 129 VirtualMachine object(s) asked about, 109 are governed by the default policy and 20 more by 4 policies that inherit from it, so an alert switched on there reaches up to 129 today",
   "",
   "  3. THRESHOLDS: 18 of 48 of your symptom conditions read a super metric key",
   "     your whole value vocabulary is ['0.0', '1.0', '100.0']; 24 compare no value (a log or event condition)",
