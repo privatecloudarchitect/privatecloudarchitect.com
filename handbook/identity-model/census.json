@@ -1,0 +1,1172 @@
+{
+ "captured": "2026-10-12T20:58:02Z",
+ "sent": [
+  "POST and DELETE /api/session on each vCenter: a session opened and closed"
+ ],
+ "fleet": {
+  "brokers": [
+   {
+    "id": "{{id-1}}",
+    "displayName": "{{host-4}}",
+    "fqdn": "{{host-4}}",
+    "deploymentType": "EMBEDDED",
+    "version": "9.1.1.0.56",
+    "healthy": true,
+    "vcfInstanceId": "{{id-2}}",
+    "vidbStatus": {
+     "eligibilityStatus": "ELIGIBLE",
+     "reasons": []
+    }
+   },
+   {
+    "id": "{{id-3}}",
+    "displayName": "{{host-5}}",
+    "fqdn": "{{host-5}}",
+    "deploymentType": "EMBEDDED",
+    "version": "9.1.1.0.56",
+    "healthy": true,
+    "vcfInstanceId": "{{id-4}}",
+    "vidbStatus": {
+     "eligibilityStatus": "ELIGIBLE",
+     "reasons": []
+    }
+   },
+   {
+    "id": "{{id-5}}",
+    "displayName": "{{host-2}}",
+    "fqdn": "{{host-2}}",
+    "deploymentType": "EXTERNAL",
+    "version": "9.1.1.0.56",
+    "healthy": true,
+    "vcfInstanceId": "{{id-4}}",
+    "vidbStatus": {
+     "eligibilityStatus": "ELIGIBLE",
+     "reasons": []
+    }
+   }
+  ],
+  "realms": [
+   {
+    "id": "{{id-6}}",
+    "name": "{{host-2}}",
+    "idpId": "{{id-7}}",
+    "vcfInstanceId": "{{id-4}}",
+    "vidbResourceId": "{{id-5}}",
+    "totalConfiguredComponents": 10,
+    "ssoRealmCoverage": [
+     {
+      "id": "{{id-4}}",
+      "name": "{{name-2}}",
+      "ssoEntityType": "VCF_INSTANCE"
+     },
+     {
+      "id": "{{id-2}}",
+      "name": "{{name-3}}",
+      "ssoEntityType": "VCF_INSTANCE"
+     },
+     {
+      "id": "{{id-8}}",
+      "name": "Automation Appliance",
+      "ssoEntityType": "MANAGEMENT_COMPONENT"
+     },
+     {
+      "id": "{{id-9}}",
+      "name": "Operations Appliance",
+      "ssoEntityType": "MANAGEMENT_COMPONENT"
+     },
+     {
+      "id": "{{id-10}}",
+      "name": "VCF Operations for Networks",
+      "ssoEntityType": "OTHER_COMPONENTS"
+     },
+     {
+      "id": "{{id-11}}",
+      "name": "VCF Operations for Logs",
+      "ssoEntityType": "OTHER_COMPONENTS"
+     },
+     {
+      "id": "{{id-12}}",
+      "name": "{{name-4}}",
+      "ssoEntityType": "OTHER_COMPONENTS"
+     }
+    ],
+    "issues": []
+   }
+  ],
+  "providers": [
+   {
+    "id": "{{id-7}}",
+    "name": "{{name-5}}",
+    "idpProtocol": "LDAP_BIND",
+    "idpType": "ADLDAP",
+    "provisionType": "LDAP",
+    "ssoRealmId": "{{id-6}}",
+    "provisioningConfig": {
+     "ldapConfigurations": [
+      {
+       "name": "ad",
+       "domains": [
+        "{{domain-1}}"
+       ],
+       "ldapConfigurationId": "{{id-13}}",
+       "ldapBindConfiguration": {
+        "type": "ACTIVE_DIRECTORY_LDAP",
+        "baseDn": "{{dn-1}}",
+        "bindDn": "{{dn-2}}",
+        "directorySearchAttribute": "sAMAccountName",
+        "primaryDomainController": {
+         "host": "{{host-7}}",
+         "port": 389,
+         "protocol": "LDAP",
+         "certificateName": "{{name-6}}"
+        }
+       }
+      }
+     ]
+    }
+   }
+  ],
+  "directories": [
+   {
+    "idpId": "{{id-7}}",
+    "name": "ad",
+    "domains": [
+     "{{domain-1}}"
+    ],
+    "domainControllerHost": "{{host-8}}",
+    "domainControllerPort": 389,
+    "lastSyncStatus": "COMPLETED",
+    "lastSyncDateTime": 1790233522048,
+    "numberOfUsers": 14,
+    "numberOfGroups": 6,
+    "setupStatus": "COMPLETED",
+    "ldapConfigurationId": "{{id-13}}"
+   }
+  ],
+  "clients": [
+   {
+    "realmId": "{{id-6}}",
+    "api_clients": [
+     {
+      "clientId": "{{name-7}}",
+      "clientUuid": "{{id-14}}",
+      "clientName": "{{name-8}}",
+      "roles": [
+       {
+        "roleName": "sddc_admin",
+        "expiresAt": 0
+       },
+       {
+        "roleName": "vcf_administrator",
+        "expiresAt": 0
+       },
+       {
+        "roleName": "{{role-1}}",
+        "expiresAt": 0
+       }
+      ]
+     },
+     {
+      "clientId": "{{name-9}}",
+      "clientUuid": "{{id-15}}",
+      "clientName": "{{name-10}}",
+      "roles": [
+       {
+        "roleName": "vcf_administrator",
+        "expiresAt": 0
+       }
+      ]
+     },
+     {
+      "clientId": "{{name-11}}",
+      "clientUuid": "{{id-16}}",
+      "clientName": "{{name-12}}",
+      "roles": [
+       {
+        "roleName": "vcf_viewer",
+        "expiresAt": 0
+       }
+      ]
+     },
+     {
+      "clientId": "{{name-13}}",
+      "clientUuid": "{{id-17}}",
+      "clientName": "{{name-14}}",
+      "roles": [
+       {
+        "roleName": "vcf_administrator",
+        "expiresAt": 0
+       }
+      ]
+     }
+    ],
+    "api_tokens": [
+     {
+      "tokenName": "{{name-15}}",
+      "tokenType": "USER",
+      "tokenStatus": "ACTIVE",
+      "principalName": "{{name-1}}",
+      "principalStatus": "ACTIVE",
+      "apiTokenTtl": 259200,
+      "accessTokenTtl": 60,
+      "expirationDate": 1801671996000,
+      "lastUsedDate": 1791838681000
+     },
+     {
+      "tokenName": "{{name-16}}",
+      "tokenType": "API_CLIENT",
+      "tokenStatus": "ACTIVE",
+      "principalName": "{{name-9}}",
+      "apiClientId": "{{name-9}}",
+      "apiTokenTtl": 259200,
+      "accessTokenTtl": 60,
+      "expirationDate": 1800823311000,
+      "lastUsedDate": 1785354298000
+     },
+     {
+      "tokenName": "{{name-17}}",
+      "tokenType": "API_CLIENT",
+      "tokenStatus": "ACTIVE",
+      "principalName": "{{name-11}}",
+      "apiClientId": "{{name-11}}",
+      "apiTokenTtl": 259200,
+      "accessTokenTtl": 60,
+      "expirationDate": 1806579876000,
+      "lastUsedDate": 1791835311000
+     }
+    ],
+    "emergency_clients": [],
+    "oauth_apps": [
+     {
+      "clientName": "VCF Operations for Networks",
+      "clientId": "{{name-18}}",
+      "redirectHosts": []
+     },
+     {
+      "clientName": "VCF Operations for Logs",
+      "clientId": "{{name-19}}",
+      "redirectHosts": []
+     },
+     {
+      "clientName": "{{name-4}}",
+      "clientId": "{{name-20}}",
+      "redirectHosts": [
+       "{{host-3}}"
+      ]
+     }
+    ]
+   }
+  ],
+  "auth_sources": [
+   {
+    "componentType": "VCENTER",
+    "status": "CONFIGURED",
+    "authSourceType": "VCF_COMPONENT",
+    "ssoRealmId": "{{id-6}}",
+    "vcfComponentId": "{{id-1}}"
+   },
+   {
+    "componentType": "NSX_MANAGER",
+    "status": "CONFIGURED",
+    "authSourceType": "VCF_COMPONENT",
+    "ssoRealmId": "{{id-6}}",
+    "vcfComponentId": "{{id-18}}"
+   },
+   {
+    "componentType": "VCENTER",
+    "status": "CONFIGURED",
+    "authSourceType": "VCF_COMPONENT",
+    "ssoRealmId": "{{id-6}}",
+    "vcfComponentId": "{{id-19}}"
+   },
+   {
+    "componentType": "VCENTER",
+    "status": "CONFIGURED",
+    "authSourceType": "VCF_COMPONENT",
+    "ssoRealmId": "{{id-6}}",
+    "vcfComponentId": "{{id-3}}"
+   },
+   {
+    "componentType": "NSX_MANAGER",
+    "status": "CONFIGURED",
+    "authSourceType": "VCF_COMPONENT",
+    "ssoRealmId": "{{id-6}}",
+    "vcfComponentId": "{{id-20}}"
+   },
+   {
+    "componentType": "NSX_MANAGER",
+    "status": "CONFIGURED",
+    "authSourceType": "VCF_COMPONENT",
+    "ssoRealmId": "{{id-6}}",
+    "vcfComponentId": "{{id-21}}"
+   },
+   {
+    "componentType": "VCF_OPERATIONS",
+    "status": "CONFIGURED",
+    "authSourceType": "MANAGEMENT_COMPONENT",
+    "ssoRealmId": "{{id-6}}"
+   },
+   {
+    "componentType": "VCF_AUTOMATION",
+    "status": "CONFIGURED",
+    "authSourceType": "MANAGEMENT_COMPONENT",
+    "ssoRealmId": "{{id-6}}"
+   },
+   {
+    "componentType": "VCF_SALT_RAAS",
+    "status": "NOT_CONFIGURED",
+    "authSourceType": "MANAGEMENT_COMPONENT"
+   }
+  ],
+  "settings": {
+   "accessTokenTtl": 60,
+   "apiTokenTtl": 259200,
+   "apiTokenRetentionPeriod": 43200,
+   "allUsersGroupEnabled": false,
+   "jitInactiveUserEnabled": false,
+   "jitInactiveUserTtl": 43200
+  },
+  "roles": [
+   {
+    "roleName": "{{role-1}}",
+    "type": "CUSTOM"
+   },
+   {
+    "roleName": "{{role-2}}",
+    "type": "CUSTOM"
+   },
+   {
+    "roleName": "sddc_admin",
+    "type": "BUILT_IN"
+   },
+   {
+    "roleName": "sddc_viewer",
+    "type": "BUILT_IN"
+   },
+   {
+    "roleName": "{{role-3}}",
+    "type": "CUSTOM"
+   },
+   {
+    "roleName": "vcf_administrator",
+    "type": "BUILT_IN"
+   },
+   {
+    "roleName": "vcf_viewer",
+    "type": "BUILT_IN"
+   }
+  ]
+ },
+ "organizations": [
+  {
+   "name": "{{org-1}}",
+   "id": "{{id-22}}",
+   "classic": false,
+   "providerConsumption": false,
+   "enabled": false,
+   "ldapMode": "SYSTEM",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": false,
+   "oidcVidb": false,
+   "issuerHost": null,
+   "saml": false
+  },
+  {
+   "name": "{{org-2}}",
+   "id": "{{id-23}}",
+   "classic": true,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "SYSTEM",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": false,
+   "oidcVidb": false,
+   "issuerHost": null,
+   "saml": false
+  },
+  {
+   "name": "{{org-3}}",
+   "id": "{{id-24}}",
+   "classic": false,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "NONE",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": true,
+   "oidcVidb": false,
+   "issuerHost": "login.microsoftonline.com",
+   "saml": false
+  },
+  {
+   "name": "{{org-4}}",
+   "id": "{{id-25}}",
+   "classic": false,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "NONE",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": false,
+   "oidcVidb": false,
+   "issuerHost": "login.microsoftonline.com",
+   "saml": true
+  },
+  {
+   "name": "{{org-5}}",
+   "id": "{{id-26}}",
+   "classic": true,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "NONE",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": true,
+   "oidcVidb": false,
+   "issuerHost": "login.microsoftonline.com",
+   "saml": false
+  },
+  {
+   "name": "{{org-6}}",
+   "id": "{{id-27}}",
+   "classic": true,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "NONE",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": false,
+   "oidcVidb": false,
+   "issuerHost": "login.microsoftonline.com",
+   "saml": true
+  },
+  {
+   "name": "{{org-7}}",
+   "id": "{{id-28}}",
+   "classic": false,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "SYSTEM",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": false,
+   "oidcVidb": false,
+   "issuerHost": null,
+   "saml": false
+  },
+  {
+   "name": "{{org-8}}",
+   "id": "{{id-29}}",
+   "classic": false,
+   "providerConsumption": true,
+   "enabled": true,
+   "ldapMode": "SYSTEM",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": true,
+   "oidcVidb": false,
+   "issuerHost": "{{host-5}}",
+   "saml": false
+  },
+  {
+   "name": "System",
+   "id": "{{id-30}}",
+   "classic": false,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "SYSTEM",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": true,
+   "oidcVidb": true,
+   "issuerHost": "{{host-2}}",
+   "saml": false
+  },
+  {
+   "name": "{{org-9}}",
+   "id": "{{id-31}}",
+   "classic": true,
+   "providerConsumption": false,
+   "enabled": true,
+   "ldapMode": "SYSTEM",
+   "ldapHost": null,
+   "ldapPort": null,
+   "ldapSsl": null,
+   "oidc": true,
+   "oidcVidb": false,
+   "issuerHost": "{{host-9}}",
+   "saml": false
+  }
+ ],
+ "vcenters": [
+  {
+   "vcenter": "{{host-4}}",
+   "identity_providers": [
+    {
+     "name": "{{name-21}}",
+     "config_tag": "Oidc",
+     "federation_type": "VMWARE_SSO_FEDERATION",
+     "is_default": true,
+     "domain_names": [
+      "{{domain-1}}"
+     ],
+     "discoveryHost": "{{host-2}}"
+    }
+   ],
+   "supervisors": []
+  },
+  {
+   "vcenter": "{{host-5}}",
+   "identity_providers": [
+    {
+     "name": "{{name-21}}",
+     "config_tag": "Oidc",
+     "federation_type": "VMWARE_SSO_FEDERATION",
+     "is_default": true,
+     "domain_names": [
+      "{{domain-1}}"
+     ],
+     "discoveryHost": "{{host-2}}"
+    }
+   ],
+   "supervisors": []
+  },
+  {
+   "vcenter": "{{host-6}}",
+   "identity_providers": [
+    {
+     "name": "{{name-21}}",
+     "config_tag": "Oidc",
+     "federation_type": "VMWARE_SSO_FEDERATION",
+     "is_default": true,
+     "domain_names": [
+      "{{domain-1}}"
+     ],
+     "discoveryHost": "{{host-2}}"
+    }
+   ],
+   "supervisors": [
+    {
+     "supervisor": "{{id-32}}",
+     "name": "{{name-22}}",
+     "identity_providers": [
+      {
+       "display_name": "{{name-23}}",
+       "provider": "{{id-44}}",
+       "issuerHost": "{{host-3}}",
+       "username_claim": "preferred_username",
+       "groups_claim": "groups"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "egress": null,
+ "calls": [
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/ssorealms",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/vidbs",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/identity-providers/{{id-7}}",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/identity-providers/{{id-7}}/ldap-directories",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/oauth-apps",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "POST",
+   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/api-clients/query",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "POST",
+   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/api-tokens/query",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/emergency-clients",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "POST",
+   "path": "/api/fleet-management/iam/components/auth-sources/query",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/settings",
+   "status": 200
+  },
+  {
+   "plane": "vcf-operations",
+   "method": "GET",
+   "path": "/api/fleet-management/iam/roles",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/orgs?page=1&pageSize=128",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-33}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-33}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-33}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-34}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-34}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-34}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-35}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-35}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-35}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-36}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-36}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-36}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-37}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-37}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-37}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-38}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-38}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-38}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-39}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-39}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-39}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-40}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-40}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-40}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-41}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-41}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-41}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-42}}/settings/ldap",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-42}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-42}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-4}}",
+   "method": "POST",
+   "path": "/api/session",
+   "status": 201
+  },
+  {
+   "plane": "vcenter:{{host-4}}",
+   "method": "GET",
+   "path": "/api/vcenter/identity/providers",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-4}}",
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/summaries",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-4}}",
+   "method": "DELETE",
+   "path": "/api/session",
+   "status": 204
+  },
+  {
+   "plane": "vcenter:{{host-5}}",
+   "method": "POST",
+   "path": "/api/session",
+   "status": 201
+  },
+  {
+   "plane": "vcenter:{{host-5}}",
+   "method": "GET",
+   "path": "/api/vcenter/identity/providers",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-5}}",
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/summaries",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-5}}",
+   "method": "DELETE",
+   "path": "/api/session",
+   "status": 204
+  },
+  {
+   "plane": "vcenter:{{host-6}}",
+   "method": "POST",
+   "path": "/api/session",
+   "status": 201
+  },
+  {
+   "plane": "vcenter:{{host-6}}",
+   "method": "GET",
+   "path": "/api/vcenter/identity/providers",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-6}}",
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/summaries",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-6}}",
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/{{id-32}}/identity/providers",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-6}}",
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/{{id-32}}/identity/providers/{{id-44}}",
+   "status": 200
+  },
+  {
+   "plane": "vcenter:{{host-6}}",
+   "method": "DELETE",
+   "path": "/api/session",
+   "status": 204
+  }
+ ],
+ "summary": {
+  "brokers": [
+   {
+    "fqdn": "{{host-4}}",
+    "kind": "embedded",
+    "realm": null,
+    "healthy": true
+   },
+   {
+    "fqdn": "{{host-5}}",
+    "kind": "embedded",
+    "realm": null,
+    "healthy": true
+   },
+   {
+    "fqdn": "{{host-2}}",
+    "kind": "instance",
+    "realm": "{{host-2}}",
+    "healthy": true
+   }
+  ],
+  "realms": [
+   {
+    "name": "{{host-2}}",
+    "broker": "{{host-2}}",
+    "broker_kind": "instance",
+    "instances": [
+     "{{name-2}}",
+     "{{name-3}}"
+    ],
+    "components": 10,
+    "issues": []
+   }
+  ],
+  "providers": [
+   {
+    "realm": "{{host-2}}",
+    "name": "{{name-5}}",
+    "type": "ADLDAP",
+    "protocol": "LDAP_BIND",
+    "provisioning": "LDAP"
+   }
+  ],
+  "directories": [
+   {
+    "name": "ad",
+    "domains": [
+     "{{domain-1}}"
+    ],
+    "protocol": "LDAP",
+    "port": 389,
+    "host": "{{host-7}}",
+    "secondary": null,
+    "sync": "COMPLETED",
+    "users": 14,
+    "groups": 6
+   }
+  ],
+  "emergency_clients": [],
+  "api_clients": [
+   {
+    "name": "{{name-8}}",
+    "roles": [
+     "sddc_admin",
+     "vcf_administrator",
+     "{{role-1}}"
+    ],
+    "tokens": []
+   },
+   {
+    "name": "{{name-10}}",
+    "roles": [
+     "vcf_administrator"
+    ],
+    "tokens": [
+     {
+      "name": "{{name-16}}",
+      "principal": "{{name-9}}",
+      "status": "ACTIVE",
+      "api_token_ttl_min": 259200,
+      "access_token_ttl_min": 60
+     }
+    ]
+   },
+   {
+    "name": "{{name-12}}",
+    "roles": [
+     "vcf_viewer"
+    ],
+    "tokens": [
+     {
+      "name": "{{name-17}}",
+      "principal": "{{name-11}}",
+      "status": "ACTIVE",
+      "api_token_ttl_min": 259200,
+      "access_token_ttl_min": 60
+     }
+    ]
+   },
+   {
+    "name": "{{name-14}}",
+    "roles": [
+     "vcf_administrator"
+    ],
+    "tokens": []
+   }
+  ],
+  "user_tokens": [
+   {
+    "name": "{{name-15}}",
+    "principal": "{{name-1}}",
+    "status": "ACTIVE",
+    "api_token_ttl_min": 259200,
+    "access_token_ttl_min": 60
+   }
+  ],
+  "settings": {
+   "access_token_ttl_min": 60,
+   "api_token_ttl_min": 259200,
+   "api_token_retention_min": 43200,
+   "all_users_group": false,
+   "jit_inactive_user_ttl_min": null
+  },
+  "organizations": [
+   {
+    "name": "{{org-1}}",
+    "type": "all-apps",
+    "provider_consumption": false,
+    "sign_in": [
+     "ldap-system"
+    ],
+    "issuer": null
+   },
+   {
+    "name": "{{org-2}}",
+    "type": "classic",
+    "provider_consumption": false,
+    "sign_in": [
+     "ldap-system"
+    ],
+    "issuer": null
+   },
+   {
+    "name": "{{org-3}}",
+    "type": "all-apps",
+    "provider_consumption": false,
+    "sign_in": [
+     "oidc"
+    ],
+    "issuer": "entra"
+   },
+   {
+    "name": "{{org-4}}",
+    "type": "all-apps",
+    "provider_consumption": false,
+    "sign_in": [
+     "saml"
+    ],
+    "issuer": null
+   },
+   {
+    "name": "{{org-5}}",
+    "type": "classic",
+    "provider_consumption": false,
+    "sign_in": [
+     "oidc"
+    ],
+    "issuer": "entra"
+   },
+   {
+    "name": "{{org-6}}",
+    "type": "classic",
+    "provider_consumption": false,
+    "sign_in": [
+     "saml"
+    ],
+    "issuer": null
+   },
+   {
+    "name": "{{org-7}}",
+    "type": "all-apps",
+    "provider_consumption": false,
+    "sign_in": [
+     "ldap-system"
+    ],
+    "issuer": null
+   },
+   {
+    "name": "{{org-8}}",
+    "type": "all-apps",
+    "provider_consumption": true,
+    "sign_in": [
+     "oidc-broker",
+     "ldap-system"
+    ],
+    "issuer": "broker"
+   },
+   {
+    "name": "System",
+    "type": "all-apps",
+    "provider_consumption": false,
+    "sign_in": [
+     "vcf-sso",
+     "ldap-system"
+    ],
+    "issuer": "broker"
+   },
+   {
+    "name": "{{org-9}}",
+    "type": "classic",
+    "provider_consumption": false,
+    "sign_in": [
+     "oidc",
+     "ldap-system"
+    ],
+    "issuer": "other"
+   }
+  ],
+  "vcenters": [
+   {
+    "vcenter": "{{host-4}}",
+    "config_tag": "Oidc",
+    "through": "{{host-2}}",
+    "broker_kind": "instance",
+    "supervisors": []
+   },
+   {
+    "vcenter": "{{host-5}}",
+    "config_tag": "Oidc",
+    "through": "{{host-2}}",
+    "broker_kind": "instance",
+    "supervisors": []
+   },
+   {
+    "vcenter": "{{host-6}}",
+    "config_tag": "Oidc",
+    "through": "{{host-2}}",
+    "broker_kind": "instance",
+    "supervisors": [
+     {
+      "name": "{{name-22}}",
+      "issuers": [
+       "{{host-3}}"
+      ]
+     }
+    ]
+   }
+  ],
+  "egress": null
+ },
+ "exit": 0
+}
