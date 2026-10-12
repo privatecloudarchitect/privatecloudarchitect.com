@@ -1,0 +1,28 @@
+{
+ "release": "9.1.1",
+ "source": "Broadcom TechDocs, VMware Cloud Foundation 9.1.1.0 Release Notes, Bill of Materials (techdocs.broadcom.com, vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-1-0-release-notes/vmware-cloud-foundation-9-1-1-0-bill-of-material.html)",
+ "read": "2026-10-12",
+ "note": "Keys are the names inventory.py prints; bom_name is the row as the bill of materials writes it. A later patch of the same release (9.1.1.0100 against 9.1.1.0) is reported as such, not as a difference. For another release, copy this file and fill it from that release's bill of materials.",
+ "components": {
+  "SDDC Manager": {"bom_name": "VCF Installer/ SDDC Manager", "version": "9.1.1.0", "build": "25713928"},
+  "ESX": {"bom_name": "ESX", "version": "9.1.1.0", "build": "25714478"},
+  "vCenter": {"bom_name": "vCenter", "version": "9.1.1.0", "build": "25712839"},
+  "NSX": {"bom_name": "NSX", "version": "9.1.1.0", "build": "25691509"},
+  "VCF Operations": {"bom_name": "VCF Operations", "version": "9.1.1.0", "build": "25679751"},
+  "VCF Operations for networks": {"bom_name": "VCF Operations for networks", "version": "9.1.1.0", "build": "25682214"},
+  "VCF Operations orchestrator": {"bom_name": "VCF Operations orchestrator", "version": "9.1.1.0", "build": "25679883"},
+  "VCF Automation": {"bom_name": "VCF Automation", "version": "9.1.1.0", "build": "25714559"},
+  "Supervisor": {"bom_name": "Supervisor", "version": "9.1.1.0", "build": "25714555"},
+  "Fleet lifecycle": {"bom_name": "Fleet lifecycle", "version": "9.1.1.0", "build": "25713934"},
+  "Identity broker": {"bom_name": "Identity broker", "version": "9.1.1.0", "build": "25679886"},
+  "Log management": {"bom_name": "Log management", "version": "9.1.1.0", "build": "25679624"},
+  "Real-time metrics": {"bom_name": "Real-time metrics", "version": "9.1.1.0", "build": "25679622"},
+  "Real-time metrics store": {"bom_name": "Real-time metrics store", "version": "9.1.1.0", "build": "25714471"},
+  "Salt RaaS": {"bom_name": "Salt RaaS", "version": "9.1.1.0", "build": "25679895"},
+  "Salt master": {"bom_name": "Salt master", "version": "9.1.1.0", "build": "25679895"},
+  "SDDC lifecycle": {"bom_name": "SDDC lifecycle", "version": "9.1.1.0", "build": "25713940"},
+  "Software depot": {"bom_name": "Software depot", "version": "9.1.1.0", "build": "25713941"},
+  "Telemetry": {"bom_name": "Telemetry", "version": "9.1.1.0", "build": "25671600"},
+  "VCF services runtime": {"bom_name": "VCF services runtime", "version": "9.1.1.0", "build": "25714471"}
+ }
+}

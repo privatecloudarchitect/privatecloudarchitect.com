@@ -1,7 +1,8 @@
 {
- "captured": "2026-10-07T15:04:33Z",
+ "captured": "2026-10-12T20:01:54Z",
  "instances": [
   {
+   "sddc_manager": "9.1.1.0.25713928",
    "domains": [
     {
      "type": "MANAGEMENT",
@@ -10,8 +11,26 @@
       3
      ],
      "hosts": 3,
+     "esx": {
+      "9.1.1.0.25714478": 3
+     },
      "vcenters": 1,
-     "nsx": 1
+     "vcenter_version": "9.1.1.0.25712839",
+     "nsx": 1,
+     "nsx_version": "9.1.1.0.25691509",
+     "vc": {
+      "read": "ok",
+      "supervisors": [],
+      "zones": [
+       0,
+       0
+      ],
+      "services": {},
+      "namespaces": {
+       "total": 0,
+       "system": 0
+      }
+     }
     },
     {
      "type": "VI",
@@ -22,12 +41,71 @@
       2
      ],
      "hosts": 6,
+     "esx": {
+      "9.1.1.0.25714478": 6
+     },
      "vcenters": 1,
-     "nsx": 1
+     "vcenter_version": "9.1.1.0.25712839",
+     "nsx": 1,
+     "nsx_version": "9.1.1.0.25691509",
+     "vc": {
+      "read": "ok",
+      "supervisors": [
+       {
+        "status": "READY",
+        "config": "RUNNING",
+        "version": "v1.34.9+vmware.1-vsc9.1.1.0-25712839"
+       }
+      ],
+      "zones": [
+       1,
+       1,
+       1
+      ],
+      "services": {
+       "auto-attach.vksm.broadcom.com": {
+        "name": "VKS cluster management",
+        "version": "0.2.1-0100-25757808"
+       },
+       "cci-ns.vmware.com": {
+        "name": "Local Consumption Interface",
+        "version": "9.1.2-embedded+fe6ddfd1"
+       },
+       "configuration.vsphere.vmware.com": {
+        "name": "Configuration Service",
+        "version": "9.1.1-25670523"
+       },
+       "consumption-operator.dsm.vsphere.vmware.com": {
+        "name": "Data Services Manager Consumption Operator",
+        "version": "9.1.0+vmware.0.25261877"
+       },
+       "harbor.tanzu.vmware.com": {
+        "name": "Harbor",
+        "version": "2.15.2+vmware.1-vks.1"
+       },
+       "metrics-aggregator.vmware.com": {
+        "name": "Metrics Aggregator",
+        "version": "0.1.0"
+       },
+       "tkg.vsphere.vmware.com": {
+        "name": "Kubernetes Service",
+        "version": "3.7.1+v1.36"
+       },
+       "velero.vsphere.vmware.com": {
+        "name": "Velero vSphere Operator",
+        "version": "1.9.0-embedded+25647146"
+       }
+      },
+      "namespaces": {
+       "total": 14,
+       "system": 8
+      }
+     }
     }
    ]
   },
   {
+   "sddc_manager": "9.1.1.0.25713928",
    "domains": [
     {
      "type": "MANAGEMENT",
@@ -36,8 +114,23 @@
       2
      ],
      "hosts": 2,
+     "esx": {
+      "9.1.1.0.25714478": 2
+     },
      "vcenters": 1,
-     "nsx": 1
+     "vcenter_version": "9.1.1.0.25712839",
+     "nsx": 1,
+     "nsx_version": "9.1.1.0.25691509",
+     "vc": {
+      "read": "ok",
+      "supervisors": [],
+      "zones": [],
+      "services": {},
+      "namespaces": {
+       "total": 0,
+       "system": 0
+      }
+     }
     }
    ]
   }
@@ -46,6 +139,7 @@
   {
    "type": "OPS",
    "what": "VCF Operations",
+   "version": "9.1.1.0.25679751",
    "deployment": "OVA",
    "scope": "FLEET",
    "size": "medium",
@@ -53,31 +147,48 @@
     "MASTER": 1,
     "ONE_WAY_REMOTE_COLLECTOR": 2
    },
-   "instance": 1
+   "node_sizes": {
+    "medium": 1,
+    "smallunifiedcp": 2
+   },
+   "instance": 1,
+   "name_group": 1,
+   "shares_name": false
   },
   {
    "type": "OPS_NETWORKS",
    "what": "VCF Operations for networks",
+   "version": "9.1.1.0.25682214",
    "deployment": "OVA",
    "scope": "FLEET",
    "size": "extra_large",
    "nodes": {
     "PLATFORM": 1
    },
-   "instance": 1
+   "node_sizes": {
+    "extra_large": 1
+   },
+   "instance": 1,
+   "name_group": 2,
+   "shares_name": false
   },
   {
    "type": "VCFA",
    "what": "VCF Automation",
+   "version": "9.1.1.0100.25757808",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "small",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 3,
+   "shares_name": false
   },
   {
    "type": "VSP",
    "what": "VCF services runtime",
+   "version": "9.1.1.0.25714471",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
@@ -85,11 +196,17 @@
     "worker": 4,
     "control-plane": 3
    },
-   "instance": 1
+   "node_sizes": {
+    "null": 7
+   },
+   "instance": 1,
+   "name_group": 4,
+   "shares_name": false
   },
   {
    "type": "VSP",
    "what": "VCF services runtime",
+   "version": "9.1.1.0.25714471",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "small",
@@ -97,108 +214,399 @@
     "control-plane": 1,
     "worker": 2
    },
-   "instance": 2
+   "node_sizes": {
+    "null": 3
+   },
+   "instance": 2,
+   "name_group": 5,
+   "shares_name": false
   },
   {
    "type": "VCF_FLEET_LCM",
    "what": "Fleet lifecycle",
+   "version": "9.1.1.0100.25761871",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "small",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 6,
+   "shares_name": true
   },
   {
    "type": "VIDB",
    "what": "Identity broker",
+   "version": "9.1.1.0.25679886",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 7,
+   "shares_name": false
   },
   {
    "type": "OPS_LOGS",
    "what": "Log management",
+   "version": "9.1.1.0.25679624",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "small",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 8,
+   "shares_name": false
   },
   {
    "type": "SALT_RAAS",
    "what": "Salt RaaS",
+   "version": "9.1.1.0.25679895",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "medium",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 6,
+   "shares_name": true
   },
   {
    "type": "VCF_FLEET_DEPOT",
    "what": "Software depot",
+   "version": "9.1.1.0.25713941",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "medium",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 6,
+   "shares_name": true
   },
   {
    "type": "OPS_DATA_PLATFORM",
    "what": "Real-time metrics",
+   "version": "9.1.1.0.25679622",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 9,
+   "shares_name": true
   },
   {
    "type": "VCFMS_METRICS_STORE",
    "what": "Real-time metrics store",
+   "version": "9.1.1.0.25714471",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 9,
+   "shares_name": true
   },
   {
    "type": "SALT",
    "what": "Salt master",
+   "version": "9.1.1.0.25679895",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 9,
+   "shares_name": true
   },
   {
    "type": "VCF_SDDC_LCM",
    "what": "SDDC lifecycle",
+   "version": "9.1.1.0100.25761870",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "small",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 9,
+   "shares_name": true
   },
   {
    "type": "VCF_SDDC_LCM",
    "what": "SDDC lifecycle",
+   "version": "9.1.1.0100.25761870",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "small",
    "nodes": {},
-   "instance": 2
+   "node_sizes": {},
+   "instance": 2,
+   "name_group": 10,
+   "shares_name": false
   },
   {
    "type": "TELEMETRY_ACCEPTOR",
    "what": "Telemetry",
+   "version": "9.1.1.0.25671600",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
    "nodes": {},
-   "instance": 1
+   "node_sizes": {},
+   "instance": 1,
+   "name_group": 9,
+   "shares_name": true
   }
  ],
+ "collection": {
+  "remote_collectors": {
+   "UNIFIED_CLOUD_PROXY": 2
+  },
+  "on_remote": 48,
+  "on_analytics_node": 10,
+  "unassigned": 2,
+  "domain_adapters_remote": 9,
+  "domain_adapters_on_analytics_node": 0,
+  "kinds_on_analytics_node": [
+   "Container",
+   "DiagnosticsAdapter",
+   "ManagementPackBuilderAdapter",
+   "OrchestratorAdapter",
+   "PingAdapter",
+   "SERVICENOW_ADAPTER",
+   "VMWARE_INFRA_HEALTH",
+   "VMWARE_INFRA_MANAGEMENT",
+   "vCenter Operations Adapter",
+   "vRealizeOpsMgrAPI"
+  ]
+ },
+ "standalone": [
+  {
+   "what": "VCF Operations orchestrator",
+   "version": "9.1.0.0400.25545107",
+   "read": "ok"
+  }
+ ],
+ "releases": {
+  "9.1.1": 28,
+  "9.1.0": 1
+ },
+ "bom": {
+  "release": "9.1.1",
+  "read": "2026-10-12",
+  "rows": [
+   {
+    "what": "SDDC Manager",
+    "where": "instance 1",
+    "version": "9.1.1.0.25713928",
+    "bom": "9.1.1.0.25713928",
+    "status": "build"
+   },
+   {
+    "what": "vCenter",
+    "where": "instance 1 MANAGEMENT",
+    "version": "9.1.1.0.25712839",
+    "bom": "9.1.1.0.25712839",
+    "status": "build"
+   },
+   {
+    "what": "NSX",
+    "where": "instance 1 MANAGEMENT",
+    "version": "9.1.1.0.25691509",
+    "bom": "9.1.1.0.25691509",
+    "status": "build"
+   },
+   {
+    "what": "ESX",
+    "where": "instance 1 MANAGEMENT",
+    "version": "9.1.1.0.25714478",
+    "bom": "9.1.1.0.25714478",
+    "status": "build"
+   },
+   {
+    "what": "vCenter",
+    "where": "instance 1 VI",
+    "version": "9.1.1.0.25712839",
+    "bom": "9.1.1.0.25712839",
+    "status": "build"
+   },
+   {
+    "what": "NSX",
+    "where": "instance 1 VI",
+    "version": "9.1.1.0.25691509",
+    "bom": "9.1.1.0.25691509",
+    "status": "build"
+   },
+   {
+    "what": "ESX",
+    "where": "instance 1 VI",
+    "version": "9.1.1.0.25714478",
+    "bom": "9.1.1.0.25714478",
+    "status": "build"
+   },
+   {
+    "what": "Supervisor",
+    "where": "instance 1 VI",
+    "version": "v1.34.9+vmware.1-vsc9.1.1.0-25712839",
+    "bom": "9.1.1.0.25714555",
+    "status": "release"
+   },
+   {
+    "what": "SDDC Manager",
+    "where": "instance 2",
+    "version": "9.1.1.0.25713928",
+    "bom": "9.1.1.0.25713928",
+    "status": "build"
+   },
+   {
+    "what": "vCenter",
+    "where": "instance 2 MANAGEMENT",
+    "version": "9.1.1.0.25712839",
+    "bom": "9.1.1.0.25712839",
+    "status": "build"
+   },
+   {
+    "what": "NSX",
+    "where": "instance 2 MANAGEMENT",
+    "version": "9.1.1.0.25691509",
+    "bom": "9.1.1.0.25691509",
+    "status": "build"
+   },
+   {
+    "what": "ESX",
+    "where": "instance 2 MANAGEMENT",
+    "version": "9.1.1.0.25714478",
+    "bom": "9.1.1.0.25714478",
+    "status": "build"
+   },
+   {
+    "what": "VCF Operations",
+    "where": "instance 1",
+    "version": "9.1.1.0.25679751",
+    "bom": "9.1.1.0.25679751",
+    "status": "build"
+   },
+   {
+    "what": "VCF Operations for networks",
+    "where": "instance 1",
+    "version": "9.1.1.0.25682214",
+    "bom": "9.1.1.0.25682214",
+    "status": "build"
+   },
+   {
+    "what": "VCF Automation",
+    "where": "instance 1",
+    "version": "9.1.1.0100.25757808",
+    "bom": "9.1.1.0.25714559",
+    "status": "later patch"
+   },
+   {
+    "what": "VCF services runtime",
+    "where": "instance 1",
+    "version": "9.1.1.0.25714471",
+    "bom": "9.1.1.0.25714471",
+    "status": "build"
+   },
+   {
+    "what": "VCF services runtime",
+    "where": "instance 2",
+    "version": "9.1.1.0.25714471",
+    "bom": "9.1.1.0.25714471",
+    "status": "build"
+   },
+   {
+    "what": "Fleet lifecycle",
+    "where": "instance 1",
+    "version": "9.1.1.0100.25761871",
+    "bom": "9.1.1.0.25713934",
+    "status": "later patch"
+   },
+   {
+    "what": "Identity broker",
+    "where": "instance 1",
+    "version": "9.1.1.0.25679886",
+    "bom": "9.1.1.0.25679886",
+    "status": "build"
+   },
+   {
+    "what": "Log management",
+    "where": "instance 1",
+    "version": "9.1.1.0.25679624",
+    "bom": "9.1.1.0.25679624",
+    "status": "build"
+   },
+   {
+    "what": "Salt RaaS",
+    "where": "instance 1",
+    "version": "9.1.1.0.25679895",
+    "bom": "9.1.1.0.25679895",
+    "status": "build"
+   },
+   {
+    "what": "Software depot",
+    "where": "instance 1",
+    "version": "9.1.1.0.25713941",
+    "bom": "9.1.1.0.25713941",
+    "status": "build"
+   },
+   {
+    "what": "Real-time metrics",
+    "where": "instance 1",
+    "version": "9.1.1.0.25679622",
+    "bom": "9.1.1.0.25679622",
+    "status": "build"
+   },
+   {
+    "what": "Real-time metrics store",
+    "where": "instance 1",
+    "version": "9.1.1.0.25714471",
+    "bom": "9.1.1.0.25714471",
+    "status": "build"
+   },
+   {
+    "what": "Salt master",
+    "where": "instance 1",
+    "version": "9.1.1.0.25679895",
+    "bom": "9.1.1.0.25679895",
+    "status": "build"
+   },
+   {
+    "what": "SDDC lifecycle",
+    "where": "instance 1",
+    "version": "9.1.1.0100.25761870",
+    "bom": "9.1.1.0.25713940",
+    "status": "later patch"
+   },
+   {
+    "what": "SDDC lifecycle",
+    "where": "instance 2",
+    "version": "9.1.1.0100.25761870",
+    "bom": "9.1.1.0.25713940",
+    "status": "later patch"
+   },
+   {
+    "what": "Telemetry",
+    "where": "instance 1",
+    "version": "9.1.1.0.25671600",
+    "bom": "9.1.1.0.25671600",
+    "status": "build"
+   },
+   {
+    "what": "VCF Operations orchestrator",
+    "where": "standalone",
+    "version": "9.1.0.0400.25545107",
+    "bom": "9.1.1.0.25679883",
+    "status": "behind"
+   }
+  ]
+ },
  "checks": [
   {
    "ok": true,
@@ -211,6 +619,10 @@
   {
    "ok": true,
    "check": "instance 1, MANAGEMENT domain: its own vCenter (1) and an NSX manager (1)"
+  },
+  {
+   "ok": true,
+   "check": "instance 1, MANAGEMENT domain: no Supervisor (0)"
   },
   {
    "ok": true,
@@ -230,11 +642,23 @@
   },
   {
    "ok": true,
+   "check": "instance 2, MANAGEMENT domain: no Supervisor (0)"
+  },
+  {
+   "ok": true,
    "check": "every fleet component matched to an instance"
   },
   {
    "ok": true,
    "check": "one services runtime per instance (2 for 2)"
+  },
+  {
+   "ok": false,
+   "check": "one release across every component read: 2 releases (9.1.0, 9.1.1)"
+  },
+  {
+   "ok": false,
+   "check": "no component behind the bill of materials: 1 (VCF Operations orchestrator)"
   }
  ]
 }

@@ -1,31 +1,47 @@
 #!/usr/bin/env python3
-"""inventory.py - your own VCF estate placed on the platform map, read-only.
+"""inventory.py - your own VCF estate placed on the platform map, with the release each component runs, read-only.
 
-The platform-map chapter draws one estate. This reads yours from the same two services, so the picture you hold
-is your own:
+The platform-map chapter draws one estate. This reads yours from the services that hold the answers, so the picture
+you hold is your own:
 
-  1  every SDDC Manager you name (one per VCF instance): its domains with their type and status, each domain's
-     clusters and hosts, and the vCenter and NSX manager each domain brings (GET /v1/domains, /v1/clusters,
-     /v1/hosts, /v1/vcenters, /v1/nsxt-clusters)
-  2  the fleet: VCF Operations exchanges its session for the Fleet lifecycle service's key (GET
+  1  every SDDC Manager you name (one per VCF instance): its own version, and each domain's type and status, its
+     clusters and hosts with the ESX version they run, and the vCenter and NSX manager it brings with theirs
+     (GET /v1/sddc-managers, /v1/domains, /v1/clusters, /v1/hosts, /v1/vcenters, /v1/nsxt-clusters)
+  2  every vCenter those SDDC Managers list, signed in as the same user: its Supervisors and the version each runs,
+     its vSphere zones and the clusters each holds, the Supervisor services installed, and how many of its
+     namespaces are the platform's own (GET /api/vcenter/namespace-management/supervisors/summaries,
+     .../namespace-management/software/clusters, /api/vcenter/consumption-domains/zones,
+     .../zones/cluster/{zone}/associations, .../supervisors/{id}/supervisor-services, /api/vcenter/namespaces/instances)
+  3  the fleet: VCF Operations exchanges its session for the Fleet lifecycle service's key (GET
      /suite-api/api/integrations/services, the entry of type VCF_FLEET_LCM; POST /suite-api/api/auth/token/exchange),
-     then GET /fleet-lcm/v1/components at the address that entry names: each component's type, how it is hosted
-     (an appliance from an OVA, or a service on the VCF services runtime), its scope, size and nodes, and the
-     instance it belongs to, matched through its vCenter to the SDDC Managers read in step 1
-  3  the placement checks plate 01 and plate 02 teach: one management domain per instance, a vCenter and an NSX
-     manager for every domain, and where the services runtime and its nodes are
+     then GET /fleet-lcm/v1/components at the address that entry names: each component's type, version, how it is
+     hosted (an appliance from an OVA, or a service on the VCF services runtime), its scope, size and nodes, and the
+     instance it belongs to, matched through its vCenter; and where VCF Operations collects (GET
+     /suite-api/api/collectors, /suite-api/api/adapters): adapter instances on its cloud proxies, and on the
+     analytics node's own collector
+  4  optionally, the standalone VCF Operations orchestrator appliances you name (GET /vco/api/about, which needs no
+     sign-in): neither SDDC Manager nor the fleet list carries one, so nothing else here would see its version
+  5  the checks the chapter teaches: one management domain per instance, a vCenter and an NSX manager for every
+     domain, a Supervisor only in a workload domain, one services runtime per instance, one release across every
+     component read, and with --bom FILE every component against that release's bill of materials
 
-Read-only throughout. No token value is printed. With --record FILE it also writes the counts and types it read,
-with every host name, identifier and object name left out, which is the shape of the record the chapter renders.
+Read-only throughout. No token or password value is printed. With --record FILE it also writes what it read, with
+every host name, identifier and object name left out, which is the shape of the record the chapter renders.
 
-Env:  SDDC_HOSTS (comma-separated, one SDDC Manager per instance), SDDC_USER, SDDC_PASSWORD
-      OPS_HOST, OPS_API_TOKEN (OPS_BROKER_HOST and OPS_REALM optional), for the fleet; omit them to skip it
-      TLS_VERIFY=false on a self-signed lab CA
-Exit: 0 every read answered and every check held · 1 a check differs · 2 a read failed
+Env:   SDDC_HOSTS (comma-separated, one SDDC Manager per instance), SDDC_USER, SDDC_PASSWORD
+       OPS_HOST, OPS_API_TOKEN (OPS_BROKER_HOST and OPS_REALM optional), for the fleet; omit them to skip it
+       VCFO_HOSTS (comma-separated, optional): standalone VCF Operations orchestrator appliances
+       TLS_VERIFY=false on a self-signed lab CA
+Flags: --record FILE    write the record
+       --bom FILE       compare every component with a bill of materials (bom-9.1.1.json ships beside this script)
+       --no-vcenter     skip step 2
+Exit:  0 every read answered and every check held · 1 a check differs · 2 a read failed
 """
 
+import base64
 import json
 import os
+import re
 import ssl
 import sys
 import urllib.error
@@ -35,6 +51,7 @@ from collections import Counter
 from datetime import datetime, timezone
 
 GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
+DOMAIN_ADAPTERS = ("VMWARE", "NSXTAdapter", "VirtualAndPhysicalSANAdapter")   # vCenter, NSX and vSAN collection
 
 
 def ctx():
@@ -55,13 +72,24 @@ def call(method, url, headers, body=None, form=None):
             return e.code, json.loads(raw)
         except ValueError:
             return e.code, None
+    except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+        return type(e).__name__, None
 
 
 def need(status, body, what):
-    if status != 200 or body is None:
-        print(f"\nFAILED: {what} answered HTTP {status}; nothing below it was read")
+    if status not in (200, 201) or body is None:
+        print(f"\nFAILED: {what} answered {status}; nothing below it was read")
         sys.exit(2)
     return body
+
+
+def listed(body, key):
+    """A vCenter list endpoint answers a bare array on some paths and wraps it under one key on others."""
+    if isinstance(body, list):
+        return body
+    if isinstance(body, dict):
+        return body.get(key) or []
+    return []
 
 
 def elements(host, path, bearer):
@@ -82,12 +110,31 @@ def elements(host, path, bearer):
     return out
 
 
+# ---------------------------------------------------------------- versions
+def release(v):
+    """9.1.1 from 9.1.1.0.25713928, 9.1.1.0100.25761871, or a Supervisor's v1.34.9+vmware.1-vsc9.1.1.0-25712839."""
+    m = re.search(r"vsc(\d+\.\d+\.\d+)", str(v or "")) or re.match(r"(\d+\.\d+\.\d+)", str(v or ""))
+    return m.group(1) if m else None
+
+
+def patch(v):
+    m = re.match(r"\d+\.\d+\.\d+\.(\d+)", str(v or ""))
+    return m.group(1) if m else None
+
+
+def build(v):
+    m = re.search(r"[.-](\d{6,})$", str(v or ""))
+    return m.group(1) if m else None
+
+
+# ---------------------------------------------------------------- step 1: SDDC Manager
 def read_instance(host, user, password):
     st, tok = call("POST", f"https://{host}/v1/tokens", {"Content-Type": "application/json", "Accept": "application/json"},
                    body={"username": user, "password": password})
     bearer = need(st, tok, f"the token request at {host}").get("accessToken")
     if not bearer:
         print(f"\nFAILED: {host} answered the token request without an accessToken"); sys.exit(2)
+    managers = elements(host, "/v1/sddc-managers", bearer)
     domains = elements(host, "/v1/domains", bearer)
     clusters = elements(host, "/v1/clusters", bearer)
     hosts = elements(host, "/v1/hosts", bearer)
@@ -96,19 +143,68 @@ def read_instance(host, user, password):
     rows = []
     for d in domains:
         did = d.get("id")
+        vcs = [v for v in vcenters if (v.get("domain") or {}).get("id") == did]
+        nx = [n for n in nsx if did in [x.get("id") for x in (n.get("domains") or [])]]
         rows.append({
             "type": d.get("type"), "status": d.get("status"),
             "clusters": sorted((sum(1 for h in hosts if (h.get("cluster") or {}).get("id") == c.get("id")))
                                for c in clusters if (c.get("domain") or {}).get("id") == did),
             "hosts": sum(1 for h in hosts if (h.get("domain") or {}).get("id") == did),
-            "vcenters": sum(1 for v in vcenters if (v.get("domain") or {}).get("id") == did),
-            "nsx": sum(1 for n in nsx if did in [x.get("id") for x in (n.get("domains") or [])]),
+            "esx": dict(Counter(str(h.get("esxiVersion")) for h in hosts if (h.get("domain") or {}).get("id") == did)),
+            "vcenters": len(vcs), "vcenter_version": vcs[0].get("version") if vcs else None,
+            "nsx": len(nx), "nsx_version": nx[0].get("version") if nx else None,
+            "_vcenter_fqdn": vcs[0].get("fqdn") if vcs else None,
         })
-    names = {str(x) for d in (domains, clusters, hosts, vcenters, nsx) for o in d for x in (o.get("id"), o.get("name"), o.get("fqdn"), o.get("vipFqdn")) if x}
+    names = {str(x) for d in (managers, domains, clusters, hosts, vcenters, nsx) for o in d
+             for x in (o.get("id"), o.get("name"), o.get("fqdn"), o.get("vipFqdn"), o.get("ipAddress")) if x}
     names.add(host)
-    return {"domains": rows, "vcenter_fqdns": {v.get("fqdn") for v in vcenters}}, names
+    return {"sddc_manager": managers[0].get("version") if managers else None, "domains": rows,
+            "vcenter_fqdns": {v.get("fqdn") for v in vcenters}}, names
 
 
+# ---------------------------------------------------------------- step 2: vCenter
+def read_vcenter(fqdn, user, password):
+    """The Supervisor rungs of one vCenter: counts, versions and product names only."""
+    auth = "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+    st, sid = call("POST", f"https://{fqdn}/api/session", {"Authorization": auth})
+    if st not in (200, 201) or not isinstance(sid, str):
+        return {"read": f"refused ({st})"}, set()
+    h = {"vmware-api-session-id": sid, "Accept": "application/json"}
+    names = set()
+    st, sups = call("GET", f"https://{fqdn}/api/vcenter/namespace-management/supervisors/summaries", h)
+    sup_items = listed(sups, "items")
+    st, sw = call("GET", f"https://{fqdn}/api/vcenter/namespace-management/software/clusters", h)
+    versions = [c.get("current_version") for c in listed(sw, "items")]
+    st, reg = call("GET", f"https://{fqdn}/api/vcenter/namespace-management/supervisor-services", h)
+    display = {s.get("supervisor_service"): s.get("display_name") for s in listed(reg, "items")}   # the platform's own names
+    supervisors, services = [], {}
+    for i, s in enumerate(sup_items):
+        info = s.get("info") or {}
+        names |= {str(x) for x in (s.get("supervisor"), info.get("name"), info.get("APIEndpoint")) if x}
+        supervisors.append({"status": info.get("kubernetes_status"), "config": info.get("config_status"),
+                            # software/clusters answers per cluster, not per Supervisor: pair them only when the counts agree
+                            "version": versions[i] if len(versions) == len(sup_items) else None})
+        st, raw = call("GET", f"https://{fqdn}/api/vcenter/namespace-management/supervisors/{s.get('supervisor')}/supervisor-services", h)
+        for svc in listed(raw, "supervisor_services"):
+            sid = svc.get("supervisor_service")
+            services[sid] = {"name": display.get(sid) or sid, "version": svc.get("current_version")}
+    st, zs = call("GET", f"https://{fqdn}/api/vcenter/consumption-domains/zones", h)
+    zones = []
+    for z in listed(zs, "items"):
+        names.add(str(z.get("zone")))
+        st, assoc = call("GET", f"https://{fqdn}/api/vcenter/consumption-domains/zones/cluster/{urllib.parse.quote(str(z.get('zone')))}/associations", h)
+        members = assoc if isinstance(assoc, list) else []
+        names |= {str(c) for c in members}
+        zones.append(len(members))
+    st, ns = call("GET", f"https://{fqdn}/api/vcenter/namespaces/instances", h)
+    nsl = listed(ns, "items")
+    names |= {str(n.get("namespace")) for n in nsl if n.get("namespace")}
+    call("DELETE", f"https://{fqdn}/api/session", h)   # ends this read's own session, nothing else
+    return {"read": "ok", "supervisors": supervisors, "zones": sorted(zones), "services": dict(sorted(services.items())),
+            "namespaces": {"total": len(nsl), "system": sum(1 for n in nsl if str(n.get("namespace", "")).startswith("svc-"))}}, names
+
+
+# ---------------------------------------------------------------- step 3: the fleet and collection
 def ops_bearer():
     host = os.environ["OPS_HOST"]
     broker, realm = os.environ.get("OPS_BROKER_HOST", host), os.environ.get("OPS_REALM", "CUSTOMER")
@@ -139,47 +235,179 @@ def read_fleet(instances):
     for c in comps:
         vc = (c.get("vcenter") or {}).get("fqdn")
         where = next((i for i, inst in enumerate(instances, start=1) if vc in inst["vcenter_fqdns"]), None)
-        rows.append({"type": c.get("componentType"), "what": c.get("componentTypeDescription"),
+        rows.append({"type": c.get("componentType"), "what": c.get("componentTypeDescription"), "version": c.get("version"),
                      "deployment": c.get("deploymentType"), "scope": c.get("scope"), "size": c.get("size"),
-                     "nodes": dict(Counter(n.get("nodeType") for n in c.get("nodes") or [])), "instance": where})
+                     "nodes": dict(Counter(n.get("nodeType") for n in c.get("nodes") or [])),
+                     "node_sizes": dict(Counter(n.get("size") for n in c.get("nodes") or [])), "instance": where})
+    # which components answer on one shared name: a group number, in order of first appearance, never the name itself
+    order = list(dict.fromkeys(c.get("fqdn") for c in comps))
+    for row, c in zip(rows, comps):
+        row["name_group"] = order.index(c.get("fqdn")) + 1
+        row["shares_name"] = sum(1 for x in comps if x.get("fqdn") == c.get("fqdn")) > 1
     names = {str(x) for c in comps for x in (c.get("id"), c.get("fqdn"), c.get("sddcLcmId"), (c.get("vcenter") or {}).get("fqdn"),
-                                            (c.get("vcenter") or {}).get("id")) if x}
+                                            (c.get("vcenter") or {}).get("id"), (c.get("vspCluster") or {}).get("id")
+                                            if isinstance(c.get("vspCluster"), dict) else c.get("vspCluster")) if x}
     names |= {str(x) for c in comps for n in c.get("nodes") or [] for x in (n.get("fqdn"), n.get("name"), n.get("ipAddress"), n.get("id")) if x}
     names |= {entry.get("address", ""), host}
+    # where VCF Operations collects: the analytics node's own collector reads INTERNAL, every other type is remote
+    st, col = call("GET", f"https://{host}/suite-api/api/collectors", h)
+    st2, ad = call("GET", f"https://{host}/suite-api/api/adapters", h)
+    collection = None
+    if st == 200 and st2 == 200:
+        ctype = {str(c.get("id")): c.get("type") for c in (col or {}).get("collector") or []}
+        names |= {str(x) for c in (col or {}).get("collector") or [] for x in (c.get("name"), c.get("hostName"), c.get("uuId")) if x}
+        inst = (ad or {}).get("adapterInstancesInfoDto") or []
+        names |= {str(x) for a in inst for x in ((a.get("resourceKey") or {}).get("name"), a.get("id")) if x}
+        def kind(a):
+            return (a.get("resourceKey") or {}).get("adapterKindKey")
+        own = [a for a in inst if ctype.get(str(a.get("collectorId"))) == "INTERNAL"]
+        remote = [a for a in inst if ctype.get(str(a.get("collectorId"))) not in (None, "INTERNAL")]
+        collection = {
+            "remote_collectors": dict(Counter(t for t in ctype.values() if t != "INTERNAL")),
+            "on_remote": len(remote), "on_analytics_node": len(own), "unassigned": len(inst) - len(own) - len(remote),
+            "domain_adapters_remote": sum(1 for a in remote if kind(a) in DOMAIN_ADAPTERS),
+            "domain_adapters_on_analytics_node": sum(1 for a in own if kind(a) in DOMAIN_ADAPTERS),
+            # custom Management Pack Builder kinds (mpb_*) are named by whoever built them, so they are counted, not named
+            "kinds_on_analytics_node": sorted({kind(a) for a in own if kind(a) and not kind(a).startswith("mpb_")}),
+        }
+    return rows, collection, names
+
+
+def read_standalone(hosts):
+    rows, names = [], set()
+    for host in hosts:
+        st, about = call("GET", f"https://{host}/vco/api/about", {"Accept": "application/json"})
+        names.add(host)
+        rows.append({"what": "VCF Operations orchestrator", "version": (about or {}).get("version") if st == 200 else None,
+                     "read": "ok" if st == 200 else f"failed ({st})"})
     return rows, names
 
 
+# ---------------------------------------------------------------- the version rows every check reads
+def version_rows(instances, fleet, standalone):
+    """(what, version, where) for every component whose version is on the VCF release line."""
+    rows = []
+    for i, inst in enumerate(instances, start=1):
+        rows.append(("SDDC Manager", inst["sddc_manager"], f"instance {i}"))
+        for d in inst["domains"]:
+            where = f"instance {i} {d['type']}"
+            rows += [("vCenter", d["vcenter_version"], where), ("NSX", d["nsx_version"], where)]
+            rows += [("ESX", v, where) for v in d["esx"]]
+            for s in (d.get("vc") or {}).get("supervisors") or []:
+                rows.append(("Supervisor", s["version"], where))
+    rows += [(c["what"], c["version"], f"instance {c['instance'] or '?'}") for c in fleet]
+    rows += [(s["what"], s["version"], "standalone") for s in standalone if s["version"]]
+    return [r for r in rows if r[1]]
+
+
+def compare_bom(rows, bom):
+    """Each version row against the bill of materials: at its build, a later patch of the release, or behind it."""
+    out = []
+    for what, ver, where in rows:
+        b = bom["components"].get(what)
+        if not b:
+            continue
+        if what == "Supervisor":   # its version string carries the vCenter build, so only the release compares
+            status = "release" if release(ver) == bom["release"] else "behind"
+        elif build(ver) == b["build"]:
+            status = "build"
+        elif release(ver) == bom["release"] and int(patch(ver) or 0) > int(patch(b["version"]) or 0):
+            status = "later patch"
+        elif tuple(map(int, (release(ver) or "0.0.0").split("."))) < tuple(map(int, bom["release"].split("."))):
+            status = "behind"
+        else:
+            status = "differs"
+        out.append({"what": what, "where": where, "version": ver, "bom": f"{b['version']}.{b['build']}", "status": status})
+    return out
+
+
 def main():
-    record = None
-    if "--record" in sys.argv:
-        record = sys.argv[sys.argv.index("--record") + 1]
+    record = sys.argv[sys.argv.index("--record") + 1] if "--record" in sys.argv else None
+    bom_file = sys.argv[sys.argv.index("--bom") + 1] if "--bom" in sys.argv else None
     sddc = [h.strip() for h in os.environ.get("SDDC_HOSTS", "").split(",") if h.strip()]
     if not sddc:
         print("set SDDC_HOSTS to one SDDC Manager per instance"); sys.exit(2)
     user, password = os.environ["SDDC_USER"], os.environ["SDDC_PASSWORD"]
     print("inventory.py: your estate on the platform map, read-only\n")
     instances, seen = [], set()
-    for i, host in enumerate(sddc, start=1):
+    for host in sddc:
         inst, names = read_instance(host, user, password)
         instances.append(inst); seen |= names
-        print(f"instance {i}  (SDDC Manager {host})")
+    if "--no-vcenter" not in sys.argv:
+        for inst in instances:
+            for d in inst["domains"]:
+                if d["_vcenter_fqdn"]:
+                    d["vc"], names = read_vcenter(d["_vcenter_fqdn"], user, password)
+                    seen |= names
+    for i, (host, inst) in enumerate(zip(sddc, instances), start=1):
+        print(f"instance {i}  SDDC Manager {inst['sddc_manager']}  ({host})")
         for d in inst["domains"]:
+            esx = ", ".join(f"{n} on ESX {v}" for v, n in sorted(d["esx"].items()))
             print(f"  domain  {str(d['type']):<11} {str(d['status']):<8} clusters {len(d['clusters'])} (hosts per cluster: "
-                  f"{', '.join(map(str, d['clusters'])) or '-'})  hosts {d['hosts']}  vCenter {d['vcenters']}  NSX {d['nsx']}")
-    fleet = []
+                  f"{', '.join(map(str, d['clusters'])) or '-'})  hosts {esx or 0}")
+            print(f"          vCenter {d['vcenters']} ({d['vcenter_version']})  NSX {d['nsx']} ({d['nsx_version']})")
+            vc = d.get("vc")
+            if not vc:
+                continue
+            if vc["read"] != "ok":
+                print(f"          vCenter read: {vc['read']}")
+                continue
+            if not vc["supervisors"]:
+                print("          Supervisor: none")
+                continue
+            for s in vc["supervisors"]:
+                print(f"          Supervisor {s['status']}, {s['version']}; {len(vc['zones'])} vSphere zone(s), clusters per zone: "
+                      f"{', '.join(map(str, vc['zones'])) or '-'}")
+            print(f"          Supervisor services {len(vc['services'])}: " + ", ".join(f"{v['name']} {v['version']}" for v in vc["services"].values()))
+            print(f"          namespaces {vc['namespaces']['total']}, {vc['namespaces']['system']} of them the platform's own (svc-)")
+    fleet, collection = [], None
     if os.environ.get("OPS_HOST") and os.environ.get("OPS_API_TOKEN"):
-        fleet, names = read_fleet(instances); seen |= names
+        fleet, collection, names = read_fleet(instances); seen |= names
         print("\nfleet  (the Fleet lifecycle service's component list)")
-        print(f"  {'component':<22} {'hosted as':<10} {'scope':<9} {'size':<12} {'nodes':<36} instance")
+        print(f"  {'component':<20} {'version':<21} {'hosted as':<9} {'scope':<9} {'size':<12} {'nodes':<36} instance")
         for c in sorted(fleet, key=lambda c: (c["instance"] or 0, c["scope"] or "", c["type"] or "")):
             nodes = ", ".join(f"{n} {k}" for k, n in sorted(c["nodes"].items())) or "-"
-            print(f"  {str(c['type']):<22} {str(c['deployment']):<10} {str(c['scope']):<9} {str(c['size']):<12} {nodes:<36} {c['instance'] or '?'}")
+            print(f"  {str(c['type']):<20} {str(c['version']):<21} {str(c['deployment']):<9} {str(c['scope']):<9} {str(c['size']):<12} {nodes:<36} {c['instance'] or '?'}")
         per = Counter(c["instance"] for c in fleet); scope = Counter(c["scope"] for c in fleet); dep = Counter(c["deployment"] for c in fleet)
         print(f"  {len(fleet)} components: " + ", ".join(f"{per[i]} on instance {i}" for i in sorted(k for k in per if k)) +
               f"; {scope.get('FLEET', 0)} at fleet scope, {scope.get('INSTANCE', 0)} at instance scope; "
               f"{dep.get('OVA', 0)} appliances from an OVA, {dep.get('VSP', 0)} on the services runtime")
+        if collection:
+            rc = ", ".join(f"{n} {t}" for t, n in sorted(collection["remote_collectors"].items())) or "none"
+            print(f"  where VCF Operations collects: {collection['on_remote']} adapter instances on its remote collectors ({rc}), "
+                  f"{collection['on_analytics_node']} on the analytics node's own collector; vCenter, NSX and vSAN adapters: "
+                  f"{collection['domain_adapters_remote']} remote, {collection['domain_adapters_on_analytics_node']} on the analytics node")
     else:
         print("\nfleet  skipped: set OPS_HOST and OPS_API_TOKEN to read it")
+    standalone = []
+    vcfo = [h.strip() for h in os.environ.get("VCFO_HOSTS", "").split(",") if h.strip()]
+    if vcfo:
+        standalone, names = read_standalone(vcfo); seen |= names
+        print("\nstandalone  (named in VCFO_HOSTS; neither SDDC Manager nor the fleet list carries these)")
+        for i, s in enumerate(standalone, start=1):
+            print(f"  {s['what']} {i}: {s['version'] or s['read']}")
+    # ---- releases, and the bill of materials
+    rows = version_rows(instances, fleet, standalone)
+    rel = Counter(release(v) for _, v, _ in rows)
+    print("\nreleases  (every version on the VCF release line read above)")
+    for r, n in sorted(rel.items(), key=lambda x: str(x[0])):
+        odd = sorted({f"{w} {v}" for w, v, _ in rows if release(v) == r}) if len(rel) > 1 and n <= 3 else []
+        print(f"  {r}: {n} component reading(s)" + (f": {'; '.join(odd)}" if odd else ""))
+    bom_rows = []
+    if bom_file:
+        with open(bom_file, encoding="utf-8") as f:
+            bom = json.load(f)
+        bom_rows = compare_bom(rows, bom)
+        print(f"\nbill of materials {bom['release']}  ({os.path.basename(bom_file)}, read {bom['read']})")
+        for status in ("build", "release", "later patch", "behind", "differs"):
+            hit = [r for r in bom_rows if r["status"] == status]
+            if hit:
+                label = {"build": "at its build", "release": "on its release", "later patch": "a later patch",
+                         "behind": "behind", "differs": "differs"}[status]
+                shown = sorted({f"{r['what']} {r['version']}" + (f" (the bill lists {r['bom']})" if status in ("behind", "differs") else "")
+                                for r in hit})
+                count = f"{len(shown)}" + (f" ({len(hit)} readings)" if len(hit) != len(shown) else "")
+                print(f"  {label:<14} {count}: " + "; ".join(shown))
     # ---- the checks a map makes possible
     checks = []
     for i, inst in enumerate(instances, start=1):
@@ -189,24 +417,43 @@ def main():
         checks.append((True, f"instance {i} has {len(work)} workload domain(s)" + (": management only" if not work else "")))
         for d in inst["domains"]:
             checks.append((d["vcenters"] == 1 and d["nsx"] >= 1, f"instance {i}, {d['type']} domain: its own vCenter ({d['vcenters']}) and an NSX manager ({d['nsx']})"))
+            vc = d.get("vc") or {}
+            if vc.get("read") == "ok" and d["type"] == "MANAGEMENT":
+                checks.append((not vc["supervisors"], f"instance {i}, MANAGEMENT domain: no Supervisor ({len(vc['supervisors'])})"))
     if fleet:
         unmatched = [c["type"] for c in fleet if not c["instance"]]
         checks.append((not unmatched, "every fleet component matched to an instance" + (f"; not matched: {unmatched}" if unmatched else "")))
         rt = [c for c in fleet if c["type"] == "VSP"]
         checks.append((len(rt) == len(instances), f"one services runtime per instance ({len(rt)} for {len(instances)})"))
+    checks.append((len(rel) == 1, "one release across every component read" + (f": {next(iter(rel))}" if len(rel) == 1 else
+                                                                               f": {len(rel)} releases ({', '.join(sorted(map(str, rel)))})")))
+    if bom_rows:
+        off = [r for r in bom_rows if r["status"] in ("behind", "differs")]
+        checks.append((not off, "no component behind the bill of materials" + (f": {len(off)} ({', '.join(sorted({r['what'] for r in off}))})" if off else "")))
     print("\nchecks")
     for ok, what in checks:
         print(f"  {'ok     ' if ok else 'DIFFERS'} {what}")
     if record:
         out = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-               "instances": [{"domains": inst["domains"]} for inst in instances], "fleet": fleet,
+               "instances": [{"sddc_manager": inst["sddc_manager"],
+                              "domains": [{k: v for k, v in d.items() if not k.startswith("_")} for d in inst["domains"]]}
+                             for inst in instances],
+               "fleet": fleet, "collection": collection, "standalone": standalone,
+               "releases": {str(k): v for k, v in rel.items()},
+               "bom": {"release": bom["release"], "read": bom["read"], "rows": bom_rows} if bom_file else None,
                "checks": [{"ok": ok, "check": what} for ok, what in checks]}
         text = json.dumps(out, indent=1)
-        leaked = sorted(n for n in seen if n and len(n) > 3 and n in text)
+        # the product's own vocabulary is what the record is for; an object an operator happened to name after it is not a leak
+        reserved = {str(x) for c in fleet for x in (c["type"], c["what"], c["deployment"], c["scope"], c["size"], *c["nodes"], *c["node_sizes"])}
+        reserved |= set((collection or {}).get("kinds_on_analytics_node") or []) | set((collection or {}).get("remote_collectors") or {})
+        reserved |= {str(x) for inst in instances for d in inst["domains"] for x in (d["type"], d["status"], *((d.get("vc") or {}).get("services") or {}),
+                                                                                *(s["name"] for s in ((d.get("vc") or {}).get("services") or {}).values()))}
+        reserved |= {s["what"] for s in standalone} | {"INTERNAL"}
+        leaked = sorted(n for n in seen - reserved if n and len(n) > 3 and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w-])", text))
         assert not leaked, f"an estate name reached the record ({len(leaked)}); nothing was written"
         with open(record, "w", encoding="utf-8") as f:
             f.write(text + "\n")
-        print(f"\nwrote {record}: counts and types only, no host name, identifier or object name")
+        print(f"\nwrote {record}: versions, counts and types only, no host name, identifier or object name")
     sys.exit(0 if all(ok for ok, _ in checks) else 1)
 
 
