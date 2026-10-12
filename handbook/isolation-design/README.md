@@ -45,7 +45,10 @@ newer one.
 ## Prerequisites
 
 - A VCF Automation 9.1 (All Apps) org with an identity provider holding four test users
-  (`user1..user4` by default) that share one password, plus one member of your operators' group.
+  (`user1..user4` by default) that share one password, plus one member of your operators' group. The org's
+  groups and users must come from a directory: a user federated straight to an identity provider such as
+  Entra ID carries no provider group into the namespace plane and cannot be named in a binding, so the
+  per-user bindings here do not apply to such an org as written.
 - `kubectl` and Python 3 (standard library only).
 - The environment variables listed at the top of `verify.py`. Nothing secret touches disk.
 

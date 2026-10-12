@@ -161,7 +161,7 @@
     "door": "vCenter",
     "surface": "/api/vcenter",
     "answeredTheTenantBearer": 401,
-    "identityDomain": "vSphere SSO, a different directory",
+    "identityDomain": "vCenter's own single sign-on, not the organization's",
     "takesInstead": "a session id from POST /api/session, or Basic, as an SSO principal"
    }
   ],

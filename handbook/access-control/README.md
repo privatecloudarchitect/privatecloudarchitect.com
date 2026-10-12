@@ -53,8 +53,10 @@ It needs no vCenter credential, because the finding is the refusal.
 
 On the estate this was verified against it answered `401` as a bearer token, `401` as a session id, and `401`
 with no credential at all. Identical. The token that reads the organization gateway in the same run is not a
-weak credential at vCenter; it is not a credential there. vCenter authenticates vSphere SSO principals, so no
-project role grants or revokes it, and no dial in this chapter reaches it.
+weak credential at vCenter; it is not a credential there. vCenter takes its own sign-in and decides by its own
+grants, so no dial in this chapter sets them. Where the organization signs in through VCF single sign-on, the
+person behind both can be the same directory user, and the two grants are still made and reviewed in different
+places.
 
 That is a boundary of the model rather than a gap in it, and it means the platform cannot close that door for
 you. vCenter accounts are a separate grant needing a separate review, and they will not appear in any access

@@ -206,8 +206,8 @@ def main():
     # 5b. the third surface, which is not a tier of the first two
     #
     # The four dials govern the deployment plane and the project role tier governs the workload plane. There
-    # is a third plane underneath both, and no dial reaches it, because it does not authenticate the same
-    # principals: vCenter answers to vSphere SSO, and the bearer this whole script holds is not one of those.
+    # is a third plane underneath both, and no dial sets it: vCenter takes its own sign-in and decides by its
+    # own grants, and the bearer this whole script holds is not a vCenter credential.
     # Proving that needs NO vCenter credential, which is the point: the probe presents the credential it
     # already has and records the refusal.
     vc = os.environ.get("VC_HOST")
@@ -226,11 +226,10 @@ def main():
                 answers[label] = None
         rec["third_surface"] = {
             "plane": "vCenter",
-            "governedBy": "vSphere SSO principals and permissions on inventory objects",
-            "reachedByAnyProjectRole": False,
+            "governedBy": "vCenter's own sign-in and its grants on inventory objects",
             "tenantBearerAnswers": answers,
-            "note": "the same bearer reads its own plane in this run; these codes are the platform declining "
-                    "a credential from a different identity domain, not a role that is too narrow"}
+            "note": "the same bearer reads its own plane in this run; these codes are vCenter declining a "
+                    "credential it does not take, the same answer as none at all, not a role that is too narrow"}
         codes = ", ".join(f"{k}: {v}" for k, v in answers.items())
         print(f"  third surface (vCenter): the bearer that works above answers {codes} here")
     else:

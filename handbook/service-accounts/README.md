@@ -50,7 +50,8 @@ python3 doors.py
   OAuth bearer's: the difference is the identity-management delta the chapter calls the arrival rule.
 - Read-only against the platform. The one file the script writes is the refresh-token file, and only when the
   platform answers with a different value than it was sent; on the reference estate it never did.
-- An expired or revoked api-token answers HTTP 500 at the broker, not 401. Both scripts say so when it happens.
+- An api-token that was deleted or rotated away answers HTTP 500 at the broker, not 401; one past its expiry date
+  is not tested. Both scripts say so when it happens.
 
 ## Reading the output
 

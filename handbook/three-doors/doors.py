@@ -292,7 +292,7 @@ def credentials(e, L, project, vc_host=None):
         except Exception:
             code = None
         rows.append({"door": "vCenter", "surface": "/api/vcenter", "answeredTheTenantBearer": code,
-                     "identityDomain": "vSphere SSO, a different directory",
+                     "identityDomain": "vCenter's own single sign-on, not the organization's",
                      "takesInstead": "a session id from POST /api/session, or Basic, as an SSO principal"})
     same = sum(1 for r in rows if r["answeredTheTenantBearer"] == 200)
     print(f"  one credential, {len(rows)} door(s): {same} answered it, "

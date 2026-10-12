@@ -64,9 +64,9 @@ python3 authz.py --probe-grants --probe-tags --supervisor-vm <a Supervisor VM yo
   reconciled on every run, instead of creating and deleting roles each time. Their reserved groups hold a
   grant of a role nobody else is given, which changes no one's access. `--remove-probe-roles` removes them and
   reports the groups left behind; removing those takes the vCenter's SSO administrator.
-- Membership of the reserved groups is not stored in the SSO domain: the SSO administration API lists no
-  members even for groups whose VCF role is held. The census does not claim who holds a VCF role; VCF
-  Operations' fleet IAM answers that.
+- The reserved groups list no members: vCenter's user directory returns none for them, even for a group
+  whose VCF role is held. The census does not claim who holds a VCF role; VCF Operations' fleet IAM answers
+  that.
 - Every vCenter, user, group, domain and custom role name in the record is a placeholder.
 
 ## Reading the record

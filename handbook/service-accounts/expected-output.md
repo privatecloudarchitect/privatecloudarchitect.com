@@ -53,8 +53,8 @@ exit 0
 
 ## claims.py
 
-Three runs: the operator's own api-token (a person), an API client's stored api-token (dead: the broker answers
-500, the expiry trap in action), and a service JWT decoded through JWT_ENV (it names the person who minted the
+Three runs: the operator's own api-token (a person), an API client's stored api-token (dead: deleted or rotated
+away, so the broker answers 500), and a service JWT decoded through JWT_ENV (it names the person who minted the
 Operations session it was exchanged from).
 
 ```text
@@ -76,7 +76,7 @@ other claims present: acct, auth_time, authorization_details, ctx, domain, group
 exit 0
 ----- claims.py with the API client's api-token
 FATAL: the broker exchange failed: HTTPError: HTTP Error 500: Internal Server Error
-       an EXPIRED api-token answers HTTP 500 here, not 401: check its expiry before the service
+       a deleted or rotated api-token answers HTTP 500 here, not 401: check the token still exists, then its expiry, before the service
 
 exit 2
 ----- claims.py with JWT_ENV=SERVICE_JWT (a service JWT)

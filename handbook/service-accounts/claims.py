@@ -58,7 +58,7 @@ def main():
             jwt = bearer()
         except Exception as e:  # noqa: BLE001 - the harness reports, it does not retry
             print(f"FATAL: the broker exchange failed: {type(e).__name__}: {e}")
-            print("       an EXPIRED api-token answers HTTP 500 here, not 401: check its expiry before the service")
+            print("       a deleted or rotated api-token answers HTTP 500 here, not 401: check the token still exists, then its expiry, before the service")
             sys.exit(2)
     header, claims = decode(jwt)
     print(f"decoded: {source} ({len(jwt)} characters; value never printed)")

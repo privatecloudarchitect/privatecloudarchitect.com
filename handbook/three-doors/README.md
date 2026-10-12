@@ -95,7 +95,7 @@ The table is measured rather than documented:
 | VCF Automation, API | `/deployment/api` | 200 | the organization's identity provider |
 | VCF Automation, catalog | `/catalog/api` | 200 | the organization's identity provider |
 | Supervisor, direct | the namespace's own Kubernetes endpoint | 200 | the organization's identity provider |
-| vCenter | `/api/vcenter` | **401** | vSphere SSO, a different directory |
+| vCenter | `/api/vcenter` | **401** | vCenter's own single sign-on, not the organization's |
 
 Three of the four doors are one identity question. That is why choosing the catalog over `kubectl` changes
 what claims the machine and not who you have to be, and why a project role can open or close those three

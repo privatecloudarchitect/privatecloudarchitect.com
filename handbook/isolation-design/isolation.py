@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """isolation.py: the assembled isolation design, checked against the platform rather than described.
 
-The design this chapter assembles is five settings and no per-user objects. Every one of those settings is
+The design this chapter assembles is five settings and no per-user grants. Every one of those settings is
 readable, and most of them are checkable, so this asks:
 
   1. the ROLES: the project roles the platform publishes, with the description each ships. The set is small and

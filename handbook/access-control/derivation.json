@@ -207,13 +207,12 @@
  },
  "third_surface": {
   "plane": "vCenter",
-  "governedBy": "vSphere SSO principals and permissions on inventory objects",
-  "reachedByAnyProjectRole": false,
+  "governedBy": "vCenter's own sign-in and its grants on inventory objects",
   "tenantBearerAnswers": {
    "as a bearer token": 401,
    "as a vCenter session id": 401,
    "with no credential": 401
   },
-  "note": "the same bearer reads its own plane in this run; these codes are the platform declining a credential from a different identity domain, not a role that is too narrow"
+  "note": "the same bearer reads its own plane in this run; these codes are vCenter declining a credential it does not take, the same answer as none at all, not a role that is too narrow"
  }
 }
