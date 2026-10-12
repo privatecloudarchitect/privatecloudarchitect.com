@@ -45,7 +45,8 @@ python3 promise.py
 
 It then reports the **shape** of the failure rather than only its size, grouping checks by anonymised address
 block, because five unreachable endpoints spread across three blocks is five problems and five in one block
-is one routing boundary. A percentage cannot tell those apart.
+is one cause to find: a routing boundary, or front doors retired together. A percentage cannot tell those
+apart.
 
 Finally it crosses the guest layer against the floor beneath it: every machine's guest availability KPI, which
 rides VMware Tools, against the hypervisor's own uptime, which does not. A KPI of zero with a climbing uptime

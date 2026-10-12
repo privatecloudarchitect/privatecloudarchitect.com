@@ -14,6 +14,7 @@ prunes the check objects for addresses you have removed. Nothing else on the est
   python reconcile_checks.py --teardown --execute   # stop and delete this instance
 """
 import argparse
+import ipaddress
 import re
 import sys
 import time
@@ -114,6 +115,33 @@ def instance_resources(tok, aid):
     return out
 
 
+def covered(name, desired):
+    """True when a check named `name` is one the declared set asks for: the entry itself (an IP or an FQDN), or an
+    address inside a declared CIDR (192.0.2.0/24) or inclusive range (192.0.2.1-192.0.2.254)."""
+    if name in desired:
+        return True
+    try:
+        ip = ipaddress.ip_address(name)
+    except ValueError:
+        return False
+    for entry in desired:
+        try:
+            if "/" in entry and ip in ipaddress.ip_network(entry, strict=False):
+                return True
+            low, sep, high = entry.partition("-")
+            if sep and ipaddress.ip_address(low) <= ip <= ipaddress.ip_address(high):
+                return True
+        except (ValueError, TypeError):
+            continue
+    return False
+
+
+def unminted(checks, names):
+    """The declared entries no check object answers to yet: an IP or an FQDN needs its own object, a CIDR or a range
+    at least one address inside it. Counting objects is not enough, since the ones a removal leaves behind count too."""
+    return [entry for entry in checks if not any(covered(n, {entry}) for n in names)]
+
+
 def prune_stale_checks(tok, aid, desired, execute):
     """Converge the check objects to exactly the desired addresses (plus the resolved-IP children an
     FQDN still owns). Removing an address stops the ping but leaves the object behind, red and still
@@ -126,7 +154,7 @@ def prune_stale_checks(tok, aid, desired, execute):
         if rk.get("resourceKindKey") not in ("ip_type", "fqdn_type"):
             continue
         name = rk.get("name", "")
-        if name in desired:
+        if covered(name, desired):
             continue
         parents = [p.get("resourceKey", {}) for p in
                    req("GET", f"/api/resources/{r['identifier']}/relationships/parents", tok).get("resourceList", [])]
@@ -267,18 +295,20 @@ def main():
             print(f"  updated {len(drift)} identifier(s) + (re)started monitoring")
 
     deadline = time.time() + args.poll_minutes * 60
-    minted = []
+    minted, missing = [], list(checks)
     while time.time() < deadline:
         live = find_instance(tok, name)
         minted = [r for r in instance_resources(tok, live["id"]) if r[0] in ("ip_type", "fqdn_type")] if live else []
-        if len(minted) >= len(checks):
+        missing = unminted(checks, {r[1] for r in minted})
+        if not missing:
             break
         time.sleep(15)
-    print(f"\n  minted {len(minted)} check resource(s) (expected >= {len(checks)}):")
+    print(f"\n  {len(checks) - len(missing)} of {len(checks)} declared entries have a check object; "
+          f"{len(minted)} check resource(s) on the instance before the prune:")
     for kind, rname, _ in minted:
         print(f"    {kind:10} {rname}")
-    if len(minted) < len(checks):
-        print("  (collection may still be warming; re-run --status in a few minutes)")
+    if missing:
+        print(f"  not minted yet: {', '.join(missing)} (collection may still be warming; re-run --status in a few minutes)")
     pruned = prune_stale_checks(tok, live["id"], set(checks), args.execute)
     if pruned:
         print(f"  {'pruned' if args.execute else 'would prune'} {pruned} stale check object(s)")
