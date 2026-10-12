@@ -1,0 +1,193 @@
+{
+ "protocol": "saml",
+ "org_type": "classic",
+ "user_key": null,
+ "runs": {
+  "execute": {
+   "captured": "2026-10-12T17:42:15Z",
+   "steps": [
+    {
+     "step": "organization created",
+     "status": 202,
+     "at_s": 2.3,
+     "classic": true
+    },
+    {
+     "step": "organization roles read",
+     "status": "done",
+     "at_s": 2.9,
+     "count": 11,
+     "expected_present": true
+    },
+    {
+     "step": "entitlement group created",
+     "status": 201,
+     "at_s": 3.3
+    },
+    {
+     "step": "organization's service-provider metadata read",
+     "status": 200,
+     "at_s": 9.5,
+     "after_s": 6
+    },
+    {
+     "step": "enterprise app created from the Custom template",
+     "status": 201,
+     "at_s": 11.6
+    },
+    {
+     "step": "single sign-on SAML, identifier and reply URL set, assignment required",
+     "status": 204,
+     "at_s": 22.9
+    },
+    {
+     "step": "signing certificate added and made preferred",
+     "status": 204,
+     "at_s": 24.3
+    },
+    {
+     "step": "email claim set before any sign-in, read back",
+     "status": 200,
+     "at_s": 30.0,
+     "claims": [
+      "emailaddress"
+     ],
+     "seconds": 6
+    },
+    {
+     "step": "entitlement group is the app's only assignment",
+     "status": "done",
+     "at_s": 30.5,
+     "others_removed": 0
+    },
+    {
+     "step": "entitled test user added as a direct member of the group",
+     "status": 204,
+     "at_s": 31.1
+    },
+    {
+     "step": "Entra's metadata names the signing certificate",
+     "status": 200,
+     "at_s": 41.8,
+     "after_s": 11
+    },
+    {
+     "step": "SAML settings written and read back",
+     "status": 200,
+     "at_s": 43.3,
+     "stored": {
+      "enabled": true,
+      "mapping": [
+       "emailAttributeName",
+       "firstNameAttributeName",
+       "groupAttributeName",
+       "surnameAttributeName",
+       "userNameAttributeName"
+      ]
+     }
+    },
+    {
+     "step": "group imported with its role",
+     "status": 201,
+     "at_s": 44.6,
+     "role": "Organization Member",
+     "providerType": "SAML"
+    }
+   ]
+  },
+  "prove": {
+   "captured": "2026-10-12T17:42:21Z",
+   "steps": [
+    {
+     "step": "check: organization exists and is enabled",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: assignment required on the app",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: the entitlement group is the only assignment",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: the entitled user is in the group",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: the unentitled user is not in the group",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: SAML enabled",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: email mapped",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: the app emits an email claim",
+     "status": "pass",
+     "at_s": 3.1
+    },
+    {
+     "step": "check: group imported with the member-level role",
+     "status": "pass",
+     "at_s": 3.1
+    }
+   ]
+  },
+  "teardown": {
+   "captured": "2026-10-12T17:47:10Z",
+   "steps": [
+    {
+     "step": "organization disabled and deleted",
+     "status": 202,
+     "at_s": 2.4
+    },
+    {
+     "step": "Entra app deleted by object id",
+     "status": 204,
+     "at_s": 3.2
+    },
+    {
+     "step": "Entra group deleted by object id",
+     "status": 204,
+     "at_s": 3.7
+    },
+    {
+     "step": "Entra app purged from the recycle bin",
+     "status": 204,
+     "at_s": 4.1,
+     "after_s": 0
+    },
+    {
+     "step": "Entra service principal purged from the recycle bin",
+     "status": 204,
+     "at_s": 14.6,
+     "after_s": 10
+    },
+    {
+     "step": "Entra group purged from the recycle bin",
+     "status": 204,
+     "at_s": 14.9,
+     "after_s": 0
+    },
+    {
+     "step": "residue check",
+     "status": "none",
+     "at_s": 32.5,
+     "left": []
+    }
+   ]
+  }
+ }
+}
