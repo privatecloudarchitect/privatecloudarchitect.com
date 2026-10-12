@@ -103,6 +103,11 @@ objects), samples each alert every minute until the pattern has held for two col
 passed, deletes every object in a `finally` block and reads each one back absent. Set `OPS_HOST_A` and `OPS_HOST_B`
 to choose the hosts; otherwise it takes the first two that qualify.
 
+One layout the platform insists on, which the script does not show because it keeps every object in one group: in a
+real deployment the parent must be governed by a policy that uses its symptom, so give the parent its own alert on its
+failure symptom, in its own policy. A cluster under a policy where nothing used its symptom left a host alert negating it
+raised; with the cluster's own alert in the cluster's own policy, the host alert stayed quiet.
+
 Two shapes the API insists on: a related set names the related kind (`adapterKindKey` and `resourceKindKey`), and a
 CHILD COUNT set without them and without `populationOperator` answers 400.
 
