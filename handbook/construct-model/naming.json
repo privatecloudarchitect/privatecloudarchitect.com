@@ -1,6 +1,6 @@
 {
- "captured_utc": "2026-09-21T07:07:15Z",
- "audited_objects": 51,
+ "captured_utc": "2026-10-13T04:08:22Z",
+ "audited_objects": 49,
  "constructs": {
   "project": {
    "objects": 2,
@@ -11,7 +11,7 @@
    "verdict": "keep"
   },
   "supervisor-namespace": {
-   "objects": 3,
+   "objects": 5,
    "conform": 0,
    "convention": "<app>-<env>-<region>-<sup-hash>",
    "example": "checkout-prod-eu-west-1-g9w34",
@@ -67,7 +67,7 @@
    "verdict": "rename"
   },
   "virtualmachine": {
-   "objects": 15,
+   "objects": 12,
    "conform": 1,
    "convention": "<app>-<role>-<ordinal>",
    "example": "checkout-web-01",
@@ -75,7 +75,7 @@
    "verdict": "refine"
   },
   "vks-cluster": {
-   "objects": 4,
+   "objects": 3,
    "conform": 2,
    "convention": "<app>-<env>-vks",
    "example": "checkout-prod-vks",

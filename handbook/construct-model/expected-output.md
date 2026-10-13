@@ -1,34 +1,38 @@
 # Expected output
 
-One run of `inventory.py` against a VCF Automation 9.1 organization on 2026-09-18, with `naming-standard.json`
-beside it so the naming audit runs. Every estate name is a placeholder the script assigned in the order it met
+One run of `inventory.py` against a VCF Automation 9.1.1 organization on 2026-10-12, signed in with a session login
+(`VCFA_USER`, `VCFA_PASSWORD`), with `naming-standard.json` beside it so the naming audit runs. Every estate name is a placeholder the script assigned in the order it met
 the object; the audit prints conformance counts and never a name. The kind counts are distinct kinds:
-SupervisorNamespace is served in two API versions and counts once, so `taxonomy.json` holds 100 entries and 99 kinds.
+SupervisorNamespace is served in two API versions and counts once, so `taxonomy.json` holds 101 entries and 100 kinds.
 
 ```text
 inventory.py: the construct model read through the Cloud Consumption Interface, read-only
 
-  taxonomy: 13 VMware API groups, 99 kinds; 60 published at the top level, 39 under a project
+  taxonomy: 13 VMware API groups, 100 kinds; 61 published at the top level, 39 under a project
   published: 1 region(s), 3 zone(s), 3 namespace class(es), 1 VPC(s), 3 subnet(s), 3 storage-class quota(s), 16 VM class summaries
-  {{project-1}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 4, 'roles': ['admin', 'edit', 'edit_adv'], 'fields': ['roleRef', 'subjects']}; images 3;
-     {{namespace-1}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-3}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True}; workloads {'virtualMachines': 7, 'vk
-     {{namespace-2}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-2}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True}; workloads {'virtualMachines': 3, 'vk
-     {{namespace-3}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True}; workloads {'virtualMachines': 5, 'vk
-  {{project-2}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 2, 'roles': ['edit'], 'fields': ['roleRef', 'subjects']}; images 3; catalog items 10; nam
+  {{project-1}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 4, 'roles': ['admin', 'edit', 'edit_adv'], 'fields': ['roleRef', 'subjects']}; images 3; catalog items 10; namespaces 5
+     {{namespace-1}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-3}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 2, 'vksClusters': 1}
+     {{namespace-2}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 4, 'vksClusters': 1}
+     {{namespace-3}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-3}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 0, 'vksClusters': 0}
+     {{namespace-4}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-2}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 3, 'vksClusters': 1}
+     {{namespace-5}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 3, 'vksClusters': 0}
+  {{project-2}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 2, 'roles': ['edit'], 'fields': ['roleRef', 'subjects']}; images 3; catalog items 10; namespaces 0
 
-  naming: 6 of 51 names conform to the standard, across 10 constructs
+  naming: 6 of 49 names conform to the standard, across 10 constructs
      project                  2 of 2   keep    <team / app-portfolio>  e.g. checkout-team
-     supervisor-namespace     0 of 3   rename  <app>-<env>-<region>-<sup-hash>  e.g. checkout-prod-eu-west-1-g9w34
+     supervisor-namespace     0 of 5   rename  <app>-<env>-<region>-<sup-hash>  e.g. checkout-prod-eu-west-1-g9w34
      region                   1 of 1   keep    <geo>-<direction>-<ordinal>  e.g. eu-west-1
      supervisor-zone          0 of 3   rename  <region>-az<n>  e.g. eu-west-1-az1
      namespace-class          0 of 3   rename  ns-<profile>-<size>  e.g. ns-general-small
      vpc                      0 of 1   rename  vpc-<consumer>-<region>[-<ordinal>]  e.g. vpc-checkout-eu-west-1
      vpc-subnet               0 of 3   rename  <access-mode>-<purpose?>-<ordinal>  e.g. private-web-01
      vm-class                 0 of 16  rename  <qos>-<profile?>-<size>  e.g. guaranteed-general-large
-     virtualmachine           1 of 15  refine  <app>-<role>-<ordinal>  e.g. checkout-web-01
-     vks-cluster              2 of 4   refine  <app>-<env>-vks  e.g. checkout-prod-vks
+     virtualmachine           1 of 12  refine  <app>-<role>-<ordinal>  e.g. checkout-web-01
+     vks-cluster              2 of 3   refine  <app>-<env>-vks  e.g. checkout-prod-vks
 
-wrote taxonomy.json (99 kinds) and estate.json (2 project(s)) and naming.json (counts only); every estate name replaced by a stable label
+  bindings: not asked (pass --probe-bindings to send the refused attempts; see the README)
+
+wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only); every estate name replaced by a stable label
 ```
 
 Read the `bound` map as the namespace's four create-time bindings. `zone` is not a `zoneName` field on the
@@ -101,3 +105,5 @@ that moment and never after. What a Supervisor on vSphere networking answers is 
 
 A documented cross-project path does exist and it is a copy, not a move: capture the namespace as a blueprint and
 redeploy it under another project, leaving the original where it is.
+
+On 9.1.1 the spec also carries `sharedSubnets` and `infraPolicyNames`, and the `bound` map counts both: none of the namespaces here names either.

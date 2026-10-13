@@ -1,5 +1,6 @@
 {
- "captured_utc": "2026-09-21T07:07:15Z",
+ "captured_utc": "2026-10-13T04:08:22Z",
+ "acquired_by": "session",
  "organization": "{{org}}",
  "published": {
   "regions": [
@@ -14,16 +15,16 @@
     "region": "{{region-1}}",
     "cpuLimit": "60000M",
     "memoryLimit": "131072Mi",
-    "cpuUsed": "20000M",
-    "memoryUsed": "40000Mi"
+    "cpuUsed": "48000M",
+    "memoryUsed": "76384Mi"
    },
    {
     "name": "{{zone-2}}",
     "region": "{{region-1}}",
     "cpuLimit": "60000M",
     "memoryLimit": "131072Mi",
-    "cpuUsed": "60000M",
-    "memoryUsed": "120000Mi"
+    "cpuUsed": "10000M",
+    "memoryUsed": "12000Mi"
    },
    {
     "name": "{{zone-3}}",
@@ -85,12 +86,43 @@
      "phase": "Created",
      "bound": {
       "region": "{{region-1}}",
-      "zone": "{{zone-3}}",
+      "zone": "{{zone-1}}",
+      "class": "{{class-3}}",
+      "vpc": "{{vpc-1}}",
+      "storageClasses": 1,
+      "vmClasses": 4,
+      "classOverrides": true,
+      "sharedSubnets": 0,
+      "infraPolicies": 0
+     },
+     "specFields": [
+      "classConfigOverrides",
+      "className",
+      "description",
+      "infraPolicyNames",
+      "regionName",
+      "segName",
+      "sharedSubnets",
+      "vpcName"
+     ],
+     "workloads": {
+      "virtualMachines": 2,
+      "vksClusters": 1
+     }
+    },
+    {
+     "name": "{{namespace-2}}",
+     "phase": "Created",
+     "bound": {
+      "region": "{{region-1}}",
+      "zone": "{{zone-1}}",
       "class": "{{class-1}}",
       "vpc": "{{vpc-1}}",
       "storageClasses": 1,
       "vmClasses": 4,
-      "classOverrides": true
+      "classOverrides": true,
+      "sharedSubnets": 0,
+      "infraPolicies": 0
      },
      "specFields": [
       "classConfigOverrides",
@@ -101,12 +133,39 @@
       "vpcName"
      ],
      "workloads": {
-      "virtualMachines": 7,
-      "vksClusters": 2
+      "virtualMachines": 4,
+      "vksClusters": 1
      }
     },
     {
-     "name": "{{namespace-2}}",
+     "name": "{{namespace-3}}",
+     "phase": "Created",
+     "bound": {
+      "region": "{{region-1}}",
+      "zone": "{{zone-3}}",
+      "class": "{{class-1}}",
+      "vpc": "{{vpc-1}}",
+      "storageClasses": 1,
+      "vmClasses": 4,
+      "classOverrides": true,
+      "sharedSubnets": 0,
+      "infraPolicies": 0
+     },
+     "specFields": [
+      "classConfigOverrides",
+      "className",
+      "description",
+      "regionName",
+      "segName",
+      "vpcName"
+     ],
+     "workloads": {
+      "virtualMachines": 0,
+      "vksClusters": 0
+     }
+    },
+    {
+     "name": "{{namespace-4}}",
      "phase": "Created",
      "bound": {
       "region": "{{region-1}}",
@@ -115,7 +174,9 @@
       "vpc": "{{vpc-1}}",
       "storageClasses": 1,
       "vmClasses": 4,
-      "classOverrides": true
+      "classOverrides": true,
+      "sharedSubnets": 0,
+      "infraPolicies": 0
      },
      "specFields": [
       "classConfigOverrides",
@@ -131,7 +192,7 @@
      }
     },
     {
-     "name": "{{namespace-3}}",
+     "name": "{{namespace-5}}",
      "phase": "Created",
      "bound": {
       "region": "{{region-1}}",
@@ -140,7 +201,9 @@
       "vpc": "{{vpc-1}}",
       "storageClasses": 1,
       "vmClasses": 4,
-      "classOverrides": true
+      "classOverrides": true,
+      "sharedSubnets": 0,
+      "infraPolicies": 0
      },
      "specFields": [
       "classConfigOverrides",
@@ -151,8 +214,8 @@
       "vpcName"
      ],
      "workloads": {
-      "virtualMachines": 5,
-      "vksClusters": 1
+      "virtualMachines": 3,
+      "vksClusters": 0
      }
     }
    ],

@@ -20,7 +20,9 @@ Every name that belongs to your estate is replaced by a stable placeholder on th
 ({{project-1}}, {{namespace-2}}, {{region-1}}, {{zone-2}}, {{class-1}}, {{vpc-1}}, {{org}}, {{id}}), so the records
 can be published and diffed; the script refuses to write a record in which any estate name survived. Stdlib only. No token is printed or written.
 
-Env:  VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE; TLS_VERIFY=false on a self-signed lab CA; OUT_DIR (default .)
+Env:  VCFA_HOST, VCFA_ORG, and either VCFA_REFRESH_TOKEN_FILE (an api-token minted for that org) or VCFA_USER and
+      VCFA_PASSWORD (a session login as user@org, which needs nothing pre-minted); TLS_VERIFY=false on a self-signed
+      lab CA; OUT_DIR (default .)
 Exit: 0 the records were written · 1 the mint or the discovery failed
 """
 
@@ -37,12 +39,13 @@ import urllib.request
 CCI = "/cci/kubernetes"
 INFRA = "infrastructure.cci.vmware.com/v1alpha3"
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-# The namespace spec on VCF 9.1, as the interface declares it. `zoneName` and a top-level `storageClasses`
+# The namespace spec on VCF 9.1.1, as the interface declares it (9.1.1 added `sharedSubnets` and `infraPolicyNames`
+# beside the 9.1 fields). `zoneName` and a top-level `storageClasses`
 # and `vmClasses` are NOT here: the zone is named inside classConfigOverrides.zones[].name, the storage limit
 # inside classConfigOverrides.storageClasses[], and the effective class sets are reported in status. The field
 # was `initialClassConfigOverrides` on an earlier build; reading the removed name returns nothing and prints as
 # an empty binding, which reads exactly like a namespace that bound nothing.
-NS_FIELDS = ("regionName", "className", "vpcName", "segName", "classConfigOverrides", "description")
+NS_FIELDS = ("regionName", "className", "vpcName", "segName", "classConfigOverrides", "sharedSubnets", "infraPolicyNames", "description")
 NS_STATUS_FIELDS = ("storageClasses", "vmClasses", "zones")
 
 
@@ -70,12 +73,27 @@ class Labels:
 
 
 class Cci:
-    def __init__(self, host, org, refresh_token):
+    def __init__(self, host, org, refresh_token=None, user=None, password=None):
+        """A tenant bearer, from the org's refresh token or from a session login. Either way the server's own answer to a
+        refused mint is printed: "invalid_grant" means the grant is dead, a 401 at the session means the login is."""
         self.host = host
-        body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
-        req = urllib.request.Request(f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST", headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
-        with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
-            self.bearer = json.loads(r.read())["access_token"]
+        if refresh_token:
+            self.kind = "oauth"
+            body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
+            req = urllib.request.Request(f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
+                                         headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
+        else:
+            self.kind = "session"
+            basic = __import__("base64").b64encode(f"{user.split('@')[0]}@{org}:{password}".encode()).decode()
+            req = urllib.request.Request(f"https://{host}/cloudapi/1.0.0/sessions", method="POST",
+                                         headers={"Authorization": f"Basic {basic}", "Accept": "application/json;version=40.0"})
+        try:
+            with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                self.bearer = json.loads(r.read())["access_token"] if refresh_token else r.headers.get("X-VMWARE-VCLOUD-ACCESS-TOKEN")
+        except urllib.error.HTTPError as e:
+            raise SystemExit(f"FATAL: the {self.kind} mint answered HTTP {e.code}: {e.read().decode(errors='replace')[:200]}")
+        if not self.bearer:
+            raise SystemExit(f"FATAL: the {self.kind} mint answered without a bearer")
 
     def get(self, path, absolute=False):
         url = path if absolute else f"https://{self.host}{CCI}{path}"
@@ -346,9 +364,13 @@ def refuse_unknown_args(known, takes_value=()):
 def main():
     refuse_unknown_args({"--probe-bindings"})
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
+    refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip() if os.environ.get("VCFA_REFRESH_TOKEN_FILE") else None
+    user, password = os.environ.get("VCFA_USER"), os.environ.get("VCFA_PASSWORD")
+    if not refresh and not (user and password):
+        raise SystemExit("set VCFA_REFRESH_TOKEN_FILE, or VCFA_USER and VCFA_PASSWORD for a session login")
     out_dir = os.environ.get("OUT_DIR", ".")
-    c = Cci(host, org, refresh); L = Labels(); observed = {}
+    c = Cci(host, org, refresh, user, password); L = Labels(); observed = {}
+    secrets = tuple(s for s in (c.bearer, refresh, password, host, org) if s)
     print("inventory.py: the construct model read through the Cloud Consumption Interface, read-only\n")
     # ---- 1. the taxonomy, from discovery
     st, groups = c.get("/apis")
@@ -443,7 +465,8 @@ def main():
                   "bound": {"region": L.get("region", sp["regionName"]) if sp.get("regionName") else None,
                             "zone": L.get("zone", ((sp.get("classConfigOverrides") or {}).get("zones") or [{}])[0].get("name")) if ((sp.get("classConfigOverrides") or {}).get("zones") or [{}])[0].get("name") else None,
                             "class": L.get("class", sp["className"]) if sp.get("className") else None, "vpc": L.get("vpc", sp["vpcName"]) if sp.get("vpcName") else None,
-                            "storageClasses": len((stt.get("storageClasses") or [])), "vmClasses": len((stt.get("vmClasses") or [])), "classOverrides": bool(sp.get("classConfigOverrides"))},
+                            "storageClasses": len((stt.get("storageClasses") or [])), "vmClasses": len((stt.get("vmClasses") or [])), "classOverrides": bool(sp.get("classConfigOverrides")),
+                            "sharedSubnets": len(sp.get("sharedSubnets") or []), "infraPolicies": len(sp.get("infraPolicyNames") or [])},
                   "specFields": sorted(sp.keys()), "workloads": {}}
             ep = stt.get("namespaceEndpointURL")
             if ep:
@@ -513,9 +536,9 @@ def main():
     # ---- 5. write, sanitized
     stamp = __import__("time").strftime("%Y-%m-%dT%H:%M:%SZ", __import__("time").gmtime())
     text = json.dumps({"captured_utc": stamp, "taxonomy": taxonomy}, indent=1, ensure_ascii=False)
-    text2 = json.dumps({"captured_utc": stamp, **estate}, indent=1, ensure_ascii=False)
+    text2 = json.dumps({"captured_utc": stamp, "acquired_by": c.kind, **estate}, indent=1, ensure_ascii=False)
     text2 = UUID.sub("{{id}}", text2)
-    for secret in (c.bearer, refresh, host, org):
+    for secret in secrets:
         assert secret not in text and secret not in text2, "an estate value reached a record"
     bare = re.sub(r"\{\{[^}]*\}\}", "", text2)   # the placeholders themselves are not leaks, even when a real name happens to match one
     for fam, m in L.maps.items():
@@ -544,7 +567,7 @@ def main():
         wrote += " and naming.json (counts only)"
     if bindings is not None:
         text4 = UUID.sub("{{id}}", json.dumps({"captured_utc": stamp, **bindings}, indent=1, ensure_ascii=False))
-        for secret in (c.bearer, refresh, host, org):
+        for secret in secrets:
             assert secret not in text4, "an estate value reached the bindings record"
         for fam, m in L.maps.items():
             for name in m:

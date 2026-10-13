@@ -1,18 +1,6 @@
 {
- "captured_utc": "2026-09-21T07:07:15Z",
+ "captured_utc": "2026-10-13T04:08:22Z",
  "taxonomy": [
-  {
-   "group": "authorization.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "ProjectRole",
-   "resource": "projectroles",
-   "namespaced": false,
-   "verbs": [
-    "list",
-    "get"
-   ],
-   "count": 4
-  },
   {
    "group": "authorization.cci.vmware.com",
    "version": "v1alpha1",
@@ -27,6 +15,18 @@
     "update",
     "patch"
    ]
+  },
+  {
+   "group": "authorization.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "ProjectRole",
+   "resource": "projectroles",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 4
   },
   {
    "group": "avi.vmware.com",
@@ -84,19 +84,8 @@
   {
    "group": "blueprint.cci.vmware.com",
    "version": "v1alpha1",
-   "kind": "BlueprintResourceType",
-   "resource": "blueprintresourcetypes",
-   "namespaced": true,
-   "verbs": [
-    "list",
-    "get"
-   ]
-  },
-  {
-   "group": "blueprint.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "BlueprintExportRequest",
-   "resource": "blueprintexportrequests",
+   "kind": "Blueprint",
+   "resource": "blueprints",
    "namespaced": true,
    "verbs": [
     "create",
@@ -110,8 +99,19 @@
   {
    "group": "blueprint.cci.vmware.com",
    "version": "v1alpha1",
-   "kind": "Blueprint",
-   "resource": "blueprints",
+   "kind": "BlueprintResourceType",
+   "resource": "blueprintresourcetypes",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "blueprint.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "BlueprintExportRequest",
+   "resource": "blueprintexportrequests",
    "namespaced": true,
    "verbs": [
     "create",
@@ -155,6 +155,28 @@
   {
    "group": "catalog.cci.vmware.com",
    "version": "v1alpha1",
+   "kind": "InstanceResource",
+   "resource": "instanceresources",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "InstanceUserEvents",
+   "resource": "instanceuserevents",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
    "kind": "Instance",
    "resource": "instances",
    "namespaced": true,
@@ -165,6 +187,17 @@
     "get",
     "update",
     "patch"
+   ]
+  },
+  {
+   "group": "catalog.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "InstanceActions",
+   "resource": "instanceactions",
+   "namespaced": true,
+   "verbs": [
+    "list",
+    "get"
    ]
   },
   {
@@ -194,39 +227,6 @@
    "version": "v1alpha1",
    "kind": "InstanceRequests",
    "resource": "instancerequests",
-   "namespaced": true,
-   "verbs": [
-    "list",
-    "get"
-   ]
-  },
-  {
-   "group": "catalog.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "InstanceActions",
-   "resource": "instanceactions",
-   "namespaced": true,
-   "verbs": [
-    "list",
-    "get"
-   ]
-  },
-  {
-   "group": "catalog.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "InstanceResource",
-   "resource": "instanceresources",
-   "namespaced": true,
-   "verbs": [
-    "list",
-    "get"
-   ]
-  },
-  {
-   "group": "catalog.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "InstanceUserEvents",
-   "resource": "instanceuserevents",
    "namespaced": true,
    "verbs": [
     "list",
@@ -398,21 +398,6 @@
   {
    "group": "infrastructure.cci.vmware.com",
    "version": "v1alpha2",
-   "kind": "SupervisorNamespace",
-   "resource": "supervisornamespaces",
-   "namespaced": true,
-   "verbs": [
-    "create",
-    "delete",
-    "list",
-    "get",
-    "update",
-    "patch"
-   ]
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha2",
    "kind": "SupervisorNamespaceClass",
    "resource": "supervisornamespaceclasses",
    "namespaced": false,
@@ -444,6 +429,102 @@
   },
   {
    "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha2",
+   "kind": "SupervisorNamespace",
+   "resource": "supervisornamespaces",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionInfraPolicy",
+   "resource": "regioninfrapolicies",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 0
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionVirtualMachineClassQuota",
+   "resource": "regionvirtualmachineclassquotas",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 0
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SupervisorNamespaceCaptureRequest",
+   "resource": "supervisornamespacecapturerequests",
+   "namespaced": true,
+   "verbs": [
+    "create",
+    "delete",
+    "list",
+    "get",
+    "update",
+    "patch"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "VirtualMachineRemoteConsoleRequest",
+   "resource": "virtualmachineremoteconsolerequests",
+   "namespaced": true,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionVirtualMachineClassSummary",
+   "resource": "regionvirtualmachineclasssummaries",
+   "namespaced": false,
+   "verbs": [
+    "list",
+    "get"
+   ],
+   "count": 16
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "RegionMonitorTokenRequest",
+   "resource": "regionmonitortokenrequests",
+   "namespaced": false,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
+   "version": "v1alpha1",
+   "kind": "SupervisorNamespaceRegionalOptionsRequest",
+   "resource": "supervisornamespaceregionaloptionsrequests",
+   "namespaced": true,
+   "verbs": [
+    "create"
+   ]
+  },
+  {
+   "group": "infrastructure.cci.vmware.com",
    "version": "v1alpha1",
    "kind": "SupervisorNamespaceMetricsRequest",
    "resource": "supervisornamespacemetricsrequests",
@@ -470,48 +551,12 @@
   {
    "group": "infrastructure.cci.vmware.com",
    "version": "v1alpha1",
-   "kind": "RegionInfraPolicy",
-   "resource": "regioninfrapolicies",
-   "namespaced": false,
-   "verbs": [
-    "list",
-    "get"
-   ],
-   "count": 0
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "RegionStorageClassQuota",
-   "resource": "regionstorageclassquotas",
-   "namespaced": false,
-   "verbs": [
-    "list",
-    "get"
-   ],
-   "count": 3
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha1",
    "kind": "ResourceMetricsRequest",
    "resource": "resourcemetricsrequests",
    "namespaced": true,
    "verbs": [
     "create"
    ]
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "RegionVirtualMachineClassSummary",
-   "resource": "regionvirtualmachineclasssummaries",
-   "namespaced": false,
-   "verbs": [
-    "list",
-    "get"
-   ],
-   "count": 16
   },
   {
    "group": "infrastructure.cci.vmware.com",
@@ -531,59 +576,12 @@
   {
    "group": "infrastructure.cci.vmware.com",
    "version": "v1alpha1",
-   "kind": "RegionMonitorTokenRequest",
-   "resource": "regionmonitortokenrequests",
+   "kind": "VksCredentialRequest",
+   "resource": "vkscredentialrequests",
    "namespaced": false,
    "verbs": [
     "create"
    ]
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "UtilizationMetricsRequest",
-   "resource": "utilizationmetricsrequests",
-   "namespaced": false,
-   "verbs": [
-    "create"
-   ]
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "SupervisorNamespaceCaptureRequest",
-   "resource": "supervisornamespacecapturerequests",
-   "namespaced": true,
-   "verbs": [
-    "create",
-    "delete",
-    "list",
-    "get",
-    "update",
-    "patch"
-   ]
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "SupervisorNamespaceRegionalOptionsRequest",
-   "resource": "supervisornamespaceregionaloptionsrequests",
-   "namespaced": true,
-   "verbs": [
-    "create"
-   ]
-  },
-  {
-   "group": "infrastructure.cci.vmware.com",
-   "version": "v1alpha1",
-   "kind": "RegionVirtualMachineClassQuota",
-   "resource": "regionvirtualmachineclassquotas",
-   "namespaced": false,
-   "verbs": [
-    "list",
-    "get"
-   ],
-   "count": 0
   },
   {
    "group": "infrastructure.cci.vmware.com",
@@ -604,8 +602,8 @@
   {
    "group": "infrastructure.cci.vmware.com",
    "version": "v1alpha1",
-   "kind": "VksCredentialRequest",
-   "resource": "vkscredentialrequests",
+   "kind": "UtilizationMetricsRequest",
+   "resource": "utilizationmetricsrequests",
    "namespaced": false,
    "verbs": [
     "create"
@@ -614,12 +612,14 @@
   {
    "group": "infrastructure.cci.vmware.com",
    "version": "v1alpha1",
-   "kind": "VirtualMachineRemoteConsoleRequest",
-   "resource": "virtualmachineremoteconsolerequests",
-   "namespaced": true,
+   "kind": "RegionStorageClassQuota",
+   "resource": "regionstorageclassquotas",
+   "namespaced": false,
    "verbs": [
-    "create"
-   ]
+    "list",
+    "get"
+   ],
+   "count": 3
   },
   {
    "group": "operations.cci.vmware.com",
@@ -743,6 +743,18 @@
    "version": "v1alpha1",
    "kind": "DistributedVLANConnection",
    "resource": "distributedvlanconnections",
+   "namespaced": false,
+   "verbs": [
+    "get",
+    "list"
+   ],
+   "count": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "version": "v1alpha1",
+   "kind": "DistributedVXLANConnection",
+   "resource": "distributedvxlanconnections",
    "namespaced": false,
    "verbs": [
     "get",
