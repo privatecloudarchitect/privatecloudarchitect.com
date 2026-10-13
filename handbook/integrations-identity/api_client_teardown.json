@@ -1,0 +1,47 @@
+{
+ "captured": "2026-10-13T04:53:17Z",
+ "mode": "teardown",
+ "client": "{{client-1}}",
+ "calls": [
+  {
+   "method": "GET",
+   "path": "/ssorealms",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "DELETE",
+   "path": "/ssorealms/{realm}/api-tokens/{token id}",
+   "status": 204
+  },
+  {
+   "method": "DELETE",
+   "path": "/ssorealms/{realm}/api-clients/{client id}",
+   "status": 204
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  }
+ ],
+ "residue": {
+  "client_present": false,
+  "tokens_left": 0
+ },
+ "exit": 0
+}

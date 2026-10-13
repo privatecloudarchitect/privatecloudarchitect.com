@@ -1,9 +1,10 @@
 {
- "captured": "2026-10-13T02:56:09Z",
+ "captured": "2026-10-13T04:52:44Z",
+ "census_as": "client",
  "sent": [
   "POST /acs/t/<realm>/token at the broker (unless BEARER_FILE)",
   "per vCenter: POST /api/vcenter/authentication/token, REST and SOAP sessions opened and closed",
-  "per vCenter: a SOAP session as VC_USER, opened and closed"
+  "per vCenter: a third exchange, and a SOAP session as the client, opened and closed"
  ],
  "vcenters": [
   {
@@ -25,20 +26,24 @@
     "user": "CUSTOMER\\{{client-1}}"
    },
    "sessions": {
-    "sessions": 312,
+    "sessions": 319,
     "by_class": {
-     "local administrator": 15,
-     "local, VCF integration account": 249,
-     "local, other": 48
+     "local administrator": 17,
+     "local, VCF integration account": 256,
+     "local, other": 46
     },
     "local_administrator_by_agent": {
      "VMware vim-java": 5,
      "XML-WS Runtime git-revision#50dbfd3": 2,
+     "vAPI": 2,
      "vapi-endpoint": 8
     },
     "directory": [],
     "api_clients": 0,
-    "own_session_left_out": true
+    "own_session_left_out": true,
+    "census_identity": {
+     "user": "CUSTOMER\\{{client-1}}"
+    }
    }
   },
   {
@@ -60,10 +65,11 @@
     "user": "CUSTOMER\\{{client-1}}"
    },
    "sessions": {
-    "sessions": 351,
+    "sessions": 354,
     "by_class": {
+     "directory": 1,
      "local administrator": 8,
-     "local, VCF integration account": 270,
+     "local, VCF integration account": 272,
      "local, other": 73
     },
     "local_administrator_by_agent": {
@@ -71,9 +77,20 @@
      "XML-WS Runtime git-revision#50dbfd3": 3,
      "vAPI": 4
     },
-    "directory": [],
+    "directory": [
+     {
+      "principal": "{{domain-1}}\\{{name-1}}",
+      "agents": {
+       "vSphereUI": 1
+      },
+      "sdk": false
+     }
+    ],
     "api_clients": 0,
-    "own_session_left_out": true
+    "own_session_left_out": true,
+    "census_identity": {
+     "user": "CUSTOMER\\{{client-1}}"
+    }
    }
   },
   {
@@ -95,21 +112,27 @@
     "user": "CUSTOMER\\{{client-1}}"
    },
    "sessions": {
-    "sessions": 263,
+    "sessions": 275,
     "by_class": {
-     "local, VCF integration account": 151,
-     "local, other": 112
+     "local, VCF integration account": 150,
+     "local, other": 125
     },
     "local_administrator_by_agent": {},
     "directory": [],
     "api_clients": 0,
-    "own_session_left_out": true
+    "own_session_left_out": true,
+    "census_identity": {
+     "user": "CUSTOMER\\{{client-1}}"
+    }
    }
   }
  ],
  "summary": {
   "vcenters": 3,
+  "census_as": "client",
+  "client_tried": 3,
   "client_took_both_sessions": 3,
+  "census_only_own_session": 0,
   "bearer_as_presented": [
    401
   ],
@@ -121,17 +144,20 @@
   ],
   "sessions_read": 3,
   "sessions_by_class": {
-   "local administrator": 23,
-   "local, VCF integration account": 670,
-   "local, other": 233
+   "directory": 1,
+   "local administrator": 25,
+   "local, VCF integration account": 678,
+   "local, other": 244
   },
   "local_administrator_by_agent": {
    "VMware vim-java": 6,
    "XML-WS Runtime git-revision#50dbfd3": 5,
-   "vAPI": 4,
+   "vAPI": 6,
    "vapi-endpoint": 8
   },
-  "directory_principals": [],
+  "directory_principals": [
+   "{{domain-1}}\\{{name-1}}"
+  ],
   "directory_from_sdk": []
  },
  "exit": 0

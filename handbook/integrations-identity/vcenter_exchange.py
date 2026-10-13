@@ -5,35 +5,42 @@ Under VCF single sign-on a vCenter does not take the broker's bearer as presente
 traded at the broker for a bearer, the bearer is exchanged at vCenter for a SAML token that lives minutes, and the
 SAML token opens a REST session (an Authorization header of the SIGN scheme) or a SOAP session (LoginByToken). This
 script makes the exchange on each vCenter, opens and closes one session of each kind, and records who the session
-is. With --sessions it then reads each vCenter's session list as an administrator and groups every session by the
-kind of principal and its client agent, so an integration still signing in as a person's directory account shows
-up beside the machine identities.
+is. With --sessions it reads each vCenter's session list and groups every session by the kind of principal and its
+client agent, so an integration still signing in as a person's directory account shows up beside the machine
+identities. The census needs no API client: with VC_USER alone it reads the list as that account, so it can come
+first; with an API client and no VC_USER it reads the list as the client's own session, so a scheduled census runs
+as a machine identity rather than on a person's password. An identity that may read only its own session is reported
+as unable to read the list, never as an empty one. The census reads vCenter only: NSX, VCF Operations, the SDDC
+Manager API and VCF Automation are not read.
 
   1. the bearer as presented     GET  /api/vcenter/datacenter                      (refused, the expected answer)
   2. the exchange                POST /api/vcenter/authentication/token            (form; the access token alone)
   3. a REST session              POST /api/session   Authorization: SIGN token="<base64(gzip(assertion))>"
   4. a SOAP session              SessionManager.LoginByToken, the assertion in a WS-Security header
-  5. --sessions                  SessionManager.sessionList, read as VC_USER, the census's own session left out
+  5. --sessions                  SessionManager.sessionList, read as VC_USER or, without it, as the client's own
+                                 session; the census's own session left out
 
 It opens sessions and closes them, and changes no configuration. No token, assertion, password, address, session
 key or login time is printed or recorded.
 
-Env:  BROKER_HOST                 the identity broker that trades the API client's token for a bearer
+Env:  BROKER_HOST                 the identity broker that trades the API client's token for a bearer (not needed for a
+                                  census as VC_USER alone)
       BROKER_REALM                the broker's realm path segment (default CUSTOMER)
       API_TOKEN_FILE              the API client's API token (mode 0600); API_TOKEN is read if it is unset
       BEARER_FILE                 instead, a broker bearer you already hold
       VC_HOSTS                    comma-separated vCenter FQDNs
-      VC_USER, VC_PASSWORD_FILE   for --sessions: an account that may read the session list, user@domain (mode 0600;
-                                  VC_PASSWORD is read if it is unset)
+      VC_USER, VC_PASSWORD_FILE   for --sessions as an account: one that may read the session list, user@domain (mode
+                                  0600; VC_PASSWORD is read if it is unset); leave both unset to read as the API client
       DIRECTORY_DOMAINS           for --sessions: the directory domains as vCenter spells them, comma-separated
       REALM_DOMAIN                the realm's domain as a session spells it (default CUSTOMER)
       LOCAL_DOMAIN                the vCenter's own SSO domain (default VSPHERE.LOCAL)
       TLS_VERIFY=false            only on a self-signed lab CA
       OUT                         the record (default exchange.json)
 Use:  python3 vcenter_exchange.py [--sessions] [--redact]
-Exit: 0 every vCenter took the client through both sessions, and with --sessions no directory account signs in from
-      a vSphere SDK · 1 a vCenter refused the client, or a read failed · 2 a usage error, or the record was refused
-      because an estate value survived the scrub · 3 --sessions found a directory account signing in from a vSphere SDK
+Exit: 0 every vCenter took the client through both sessions (when a client is given), and with --sessions no directory
+      account signs in from a vSphere SDK · 1 a vCenter refused the client, a read failed, or the census identity could
+      read only its own session · 2 a usage error, or the record was refused because an estate value survived the
+      scrub · 3 --sessions found a directory account signing in from a vSphere SDK
 """
 
 from __future__ import annotations
@@ -278,17 +285,37 @@ def census(rows: list[dict], mine: str | None, realm: str, directories: set[str]
             "api_clients": len(clients), "own_session_left_out": mine is not None}
 
 
-def read_sessions(host: str, user: str, password: str, realm: str, directories: set[str], local: str) -> dict:
-    s = Soap(host)
-    if not s.session_manager or not s.login(user, password):
-        return {"error": s.fault or f"HTTP {s.status}"}
+def _census_of(s: Soap, who: str, realm: str, directories: set[str], local: str) -> dict:
+    """The census from an open session. A list that holds only the census's own session means this identity may not
+    read the others, which is reported as such and never as an empty estate."""
     try:
         rows, mine = s.sessions()
         if s.fault:
             return {"error": s.fault}
-        return census(rows, mine, realm, directories, local)
+        if mine and all(r["key"] == mine for r in rows):
+            return {"error": "the session list held only this census's own session: this identity cannot read the others",
+                    "only_own_session_visible": True, "census_identity": {"user": who}}
+        return {**census(rows, mine, realm, directories, local), "census_identity": {"user": who}}
     finally:
         s.logout()
+
+
+def read_sessions(host: str, user: str, password: str, realm: str, directories: set[str], local: str) -> dict:
+    """The census as an account that signs in with a password (VC_USER)."""
+    s = Soap(host)
+    who = s.login(user, password) if s.session_manager else None
+    if not who:
+        return {"error": s.fault or f"HTTP {s.status}"}
+    return _census_of(s, who, realm, directories, local)
+
+
+def read_sessions_as_client(host: str, assertion: str, realm: str, directories: set[str], local: str) -> dict:
+    """The census as the API client itself: its own SOAP session from a fresh SAML assertion."""
+    s = Soap(host)
+    who = s.login_by_token(assertion) if s.session_manager else None
+    if not who:
+        return {"error": s.fault or f"HTTP {s.status}"}
+    return _census_of(s, who, realm, directories, local)
 
 
 # ── the record ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -300,7 +327,11 @@ def summary(record: dict) -> dict:
     sessions = [v for v in vcs if isinstance(v.get("sessions"), dict) and "by_class" in v["sessions"]]
     return {
         "vcenters": len(vcs),
+        "census_as": record.get("census_as"),
+        "client_tried": sum(1 for v in vcs if "exchange" in v),
         "client_took_both_sessions": len(took),
+        "census_only_own_session": sum(1 for v in vcs if isinstance(v.get("sessions"), dict)
+                                       and v["sessions"].get("only_own_session_visible")),
         "bearer_as_presented": sorted({v.get("bearer_as_presented") for v in vcs}, key=str),
         "saml_lifetime_s": sorted({(v.get("exchange") or {}).get("expires_in_s") for v in vcs} - {None}),
         "session_users": sorted({u for v in vcs for u in ((v.get("rest") or {}).get("user"), (v.get("soap") or {}).get("user")) if u}),
@@ -315,15 +346,19 @@ def summary(record: dict) -> dict:
 
 def report(record: dict) -> list[str]:
     lines = []
+    if record.get("census_as"):
+        lines.append("Census read as " + ("the API client's own session" if record["census_as"] == "client"
+                                          else "VC_USER, an account with a password"))
     for v in record["vcenters"]:
         ex, rest, soap = v.get("exchange") or {}, v.get("rest") or {}, v.get("soap") or {}
         lines.append(f"vCenter {v['vcenter']}")
-        lines.append(f"  the bearer as presented: HTTP {v['bearer_as_presented']}")
-        lines.append(f"  exchange: HTTP {ex.get('status')}, {ex.get('issued_token_type') or 'no token'}"
-                     + (f", {ex.get('token_type')}, lives {ex.get('expires_in_s')} s" if ex.get("status") == 200 else ""))
-        lines.append(f"  REST session (SIGN): HTTP {rest.get('status')}" + (f", user {rest.get('user')}, VM list HTTP "
-                                                                             f"{rest.get('vm_list_status')}" if rest.get("user") else ""))
-        lines.append("  SOAP session (LoginByToken): " + (f"user {soap['user']}" if soap.get("user") else f"refused: {soap.get('fault')}"))
+        if "exchange" in v:
+            lines.append(f"  the bearer as presented: HTTP {v['bearer_as_presented']}")
+            lines.append(f"  exchange: HTTP {ex.get('status')}, {ex.get('issued_token_type') or 'no token'}"
+                         + (f", {ex.get('token_type')}, lives {ex.get('expires_in_s')} s" if ex.get("status") == 200 else ""))
+            lines.append(f"  REST session (SIGN): HTTP {rest.get('status')}" + (f", user {rest.get('user')}, VM list HTTP "
+                                                                                 f"{rest.get('vm_list_status')}" if rest.get("user") else ""))
+            lines.append("  SOAP session (LoginByToken): " + (f"user {soap['user']}" if soap.get("user") else f"refused: {soap.get('fault')}"))
         s = v.get("sessions")
         if isinstance(s, dict) and "by_class" in s:
             lines.append(f"  sessions ({s['sessions']}, this census's own left out): "
@@ -336,7 +371,8 @@ def report(record: dict) -> list[str]:
         elif isinstance(s, dict):
             lines.append(f"  sessions not read: {s.get('error')}")
     sm = record["summary"]
-    lines.append(f"The client took both sessions on {sm['client_took_both_sessions']} of {sm['vcenters']} vCenter(s)")
+    if sm["client_tried"]:
+        lines.append(f"The client took both sessions on {sm['client_took_both_sessions']} of {sm['vcenters']} vCenter(s)")
     if sm["sessions_read"]:
         lines.append(f"Directory accounts signing in from a vSphere SDK: {len(sm['directory_from_sdk'])}")
     return lines
@@ -412,27 +448,43 @@ def leaks(obj, table: dict) -> list[str]:
 
 
 # ── the run ──────────────────────────────────────────────────────────────────────────────────────────────────────
+def have_client() -> bool:
+    return bool(os.environ.get("BEARER_FILE") or (os.environ.get("BROKER_HOST") and _secret("API_TOKEN")))
+
+
 def run(with_sessions: bool) -> dict:
     hosts = [h.strip() for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
-    bearer = broker_bearer()
+    bearer = broker_bearer() if have_client() else None
+    census_as = None if not with_sessions else ("password" if os.environ.get("VC_USER") else "client")
     realm = os.environ.get("REALM_DOMAIN", "CUSTOMER")
     directories = {d.strip().upper() for d in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if d.strip()}
     local = os.environ.get("LOCAL_DOMAIN", "VSPHERE.LOCAL")
-    record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "sent": ["POST /acs/t/<realm>/token at the broker (unless BEARER_FILE)",
-                       "per vCenter: POST /api/vcenter/authentication/token, REST and SOAP sessions opened and closed"]
-              + (["per vCenter: a SOAP session as VC_USER, opened and closed"] if with_sessions else []),
-              "vcenters": []}
+    sent = []
+    if bearer:
+        sent += ["POST /acs/t/<realm>/token at the broker (unless BEARER_FILE)",
+                 "per vCenter: POST /api/vcenter/authentication/token, REST and SOAP sessions opened and closed"]
+    if census_as == "password":
+        sent.append("per vCenter: a SOAP session as VC_USER, opened and closed")
+    elif census_as == "client":
+        sent.append("per vCenter: a third exchange, and a SOAP session as the client, opened and closed")
+    record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "census_as": census_as,
+              "sent": sent, "vcenters": []}
     for host in hosts:
-        status, _ = _open(urllib.request.Request(f"https://{host}/api/vcenter/datacenter",
-                                                 headers={"Authorization": f"Bearer {bearer}", "User-Agent": AGENT}))
-        row = {"vcenter": host, "bearer_as_presented": status}
-        row["exchange"], assertion = exchange(host, bearer)
-        row["rest"] = rest_session(host, assertion) if assertion else {"status": None}
-        _, second = exchange(host, bearer)   # a second assertion for SOAP: one may not open two sessions
-        row["soap"] = soap_session(host, second) if second else {"status": None}
-        if with_sessions:
+        row = {"vcenter": host}
+        if bearer:
+            status, _ = _open(urllib.request.Request(f"https://{host}/api/vcenter/datacenter",
+                                                     headers={"Authorization": f"Bearer {bearer}", "User-Agent": AGENT}))
+            row["bearer_as_presented"] = status
+            row["exchange"], assertion = exchange(host, bearer)
+            row["rest"] = rest_session(host, assertion) if assertion else {"status": None}
+            _, second = exchange(host, bearer)   # a second assertion for SOAP: one may not open two sessions
+            row["soap"] = soap_session(host, second) if second else {"status": None}
+        if census_as == "password":
             row["sessions"] = read_sessions(host, os.environ["VC_USER"], _secret("VC_PASSWORD"), realm, directories, local)
+        elif census_as == "client":
+            _, third = exchange(host, bearer)
+            row["sessions"] = (read_sessions_as_client(host, third, realm, directories, local) if third
+                               else {"error": "the exchange for the census's own session failed"})
         record["vcenters"].append(row)
     record["summary"] = summary(record)
     record["exit"] = exit_code(record)
@@ -443,7 +495,8 @@ def exit_code(record: dict) -> int:
     """1 when a vCenter refused the client or a read failed; else 3 when a directory account signs in from a vSphere
     SDK; else 0. A scheduler reads it."""
     vcs = record["vcenters"]
-    refused = [v for v in vcs if not ((v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user"))]
+    refused = [v for v in vcs if "exchange" in v
+               and not ((v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user"))]
     unread = [v for v in vcs if isinstance(v.get("sessions"), dict) and "error" in v["sessions"]]
     if refused or unread or not vcs:
         return 1
@@ -459,16 +512,23 @@ def given_values() -> list[tuple[str, str]]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="A VCF SSO API client into vCenter, and who else signs in there. Read-only.")
-    ap.add_argument("--sessions", action="store_true", help="read each vCenter's session list as VC_USER")
+    ap.add_argument("--sessions", action="store_true",
+                    help="read each vCenter's session list: as VC_USER when it is set, otherwise as the API client")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
     a = ap.parse_args(argv)
-    if not os.environ.get("VC_HOSTS") or not (os.environ.get("BEARER_FILE") or
-                                              (os.environ.get("BROKER_HOST") and _secret("API_TOKEN"))):
-        print("VC_HOSTS and the API client's credential (BROKER_HOST with API_TOKEN_FILE, or BEARER_FILE) are required",
-              file=sys.stderr)
+    if not os.environ.get("VC_HOSTS"):
+        print("VC_HOSTS is required", file=sys.stderr)
         return 2
-    if a.sessions and not (os.environ.get("VC_USER") and _secret("VC_PASSWORD")):
-        print("--sessions needs VC_USER and VC_PASSWORD_FILE", file=sys.stderr)
+    if not a.sessions and not have_client():
+        print("the exchange needs the API client's credential (BROKER_HOST with API_TOKEN_FILE, or BEARER_FILE); "
+              "--sessions alone needs only VC_USER", file=sys.stderr)
+        return 2
+    if a.sessions and os.environ.get("VC_USER") and not _secret("VC_PASSWORD"):
+        print("--sessions as VC_USER needs VC_PASSWORD_FILE", file=sys.stderr)
+        return 2
+    if a.sessions and not os.environ.get("VC_USER") and not have_client():
+        print("--sessions needs VC_USER and VC_PASSWORD_FILE, or the API client's credential to read as the client",
+              file=sys.stderr)
         return 2
     try:
         record = run(a.sessions)

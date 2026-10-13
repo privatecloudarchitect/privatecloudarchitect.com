@@ -156,6 +156,9 @@ def decide(user: dict, found: dict | None, member_of: set | None, gate: dict | N
     if not entra_gate:
         return "leaver", "not assigned to the app, directly or through a group"
     carried = member_of & set(claim_groups(gate))
+    if not carried and gate.get("unresolved"):
+        return "undetermined", ("an imported group matches no single Entra group ("
+                                + ", ".join(gate["unresolved"]) + "), so membership through it cannot be read")
     if not carried:
         return "leaver", "in no imported group the sign-in can carry"
     return "keep", "entitled through " + ", ".join(sorted(claim_groups(gate)[g] for g in carried))
@@ -396,9 +399,11 @@ def read_gate(graph: Graph, of: dict, groups: list[dict]) -> dict:
     ids, unresolved = {}, []
     for name in imported:
         rows = graph.values("/groups", filter=f"displayName eq '{name}'", select="id")
-        if rows is not None and len(rows) == 1:
+        if rows is None:   # refused (GroupMember.Read.All missing): the gate cannot be read, so nothing is judged
+            raise LookupError("Graph refused /groups: the imported groups cannot be matched to Entra")
+        if len(rows) == 1:
             ids[rows[0]["id"]] = name
-        else:
+        else:              # no Entra group, or several, by that name: a rename or a duplicate, never "nobody is in it"
             unresolved.append(name)
     return {"assignment_required": bool(sp.get("appRoleAssignmentRequired")),
             "group_claims": app.get("groupMembershipClaims"),
@@ -677,7 +682,9 @@ def report_lines(record: dict) -> list[str]:
                   if r.get("providerType") in FEDERATED and r["direct_roles"]]
         out.append("    direct role assignments on federated accounts: " + ("; ".join(direct) if direct else "none"))
         for r in o["users"]:
-            out.append(f"    {r.get('username')}: {r['decision']} ({r['reason']})"
+            ends = sorted(t["expirationTimeUtc"][:10] for t in r.get("tokens") or [] if t.get("expirationTimeUtc"))
+            held = (f"; {len(r['tokens'])} token(s)" + (f", the last ending {ends[-1]}" if ends else "")) if r.get("tokens") else ""
+            out.append(f"    {r.get('username')}: {r['decision']} ({r['reason']}{held})"
                        + (f" -> {r['action']}" if r.get("action") else "")
                        + "".join(f"  FLAG {f.split(':', 1)[0]}" for f in r["flags"]))
     keys = ("keep", "leaver", "out_of_scope", "undetermined", "open_leavers", "closed", "not_held", "in_step",

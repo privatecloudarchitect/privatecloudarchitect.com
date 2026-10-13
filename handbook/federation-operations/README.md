@@ -19,7 +19,7 @@ password is printed or written.
 export VCFA_HOST=<automation-fqdn>
 export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer             # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE
 export TLS_VERIFY=false                                             # only on a self-signed lab CA
-# optional: the Graph checks (an app that can read applications and service principals)
+# optional: the Graph checks, through the tenant's read-only app (Microsoft Graph application permission Application.Read.All)
 export ENTRA_TENANT_ID=<tenant-id> ENTRA_CLIENT_ID=<app-id>
 export ENTRA_CERT_FILE=/path/to/cert.pem ENTRA_KEY_FILE=/path/to/key.pem   # or ENTRA_CLIENT_SECRET_FILE
 export ORGS=<org>,<org>                                             # optional; default every federated organization
@@ -58,9 +58,18 @@ Schedule it and read the exit code:
 - What it cannot see: whether a provider that is unreachable (rather than refusing) would be survived; the claim
   form synchronized Active Directory groups need (not tested); a user's MFA state; Entra's sign-in log, which is
   where `--why` sends you first.
-- Measured on VCF Automation 9.1 against Entra ID, with a provider bearer and a Graph certificate; the provider
-  api-token and Graph client secret paths were not exercised on the reference estate. The minimum Graph permission
-  for the reads was not tested; the reference run used an app with broader rights.
+- Whose read each check is. `key_refresh`, `keys_held`, `pkce` and `break_glass` read the organization and the
+  provider's public keys endpoint: the provider runs them alone. `secret_end`, `saml_cert_end`, `saml_cert_held`,
+  `app_gate` and `group_names` read the tenant's Entra app in Microsoft Graph, so they run through a read-only app
+  the tenant registers and consents in its own directory; without one, the tenant runs them and reports them.
+- The Graph application permission those checks need is `Application.Read.All`, measured on 2026-10-13 by narrowing:
+  a throwaway app on the lab tenant ran this script read-only under six sets of `Application.Read.All`,
+  `User.Read.All` and `GroupMember.Read.All`. With `Application.Read.All` alone every Graph check ran; in every set
+  without it, none did. In one run holding `Application.Read.All` and `GroupMember.Read.All` the Graph checks were
+  skipped with an HTTP error; that run was not repeated and is not explained. The app was deleted and purged.
+- Measured on VCF Automation 9.1 against Entra ID, with a provider bearer, and with a Graph certificate (the
+  reference run) and a Graph client secret (the permission measurement); the provider api-token path was not
+  exercised.
 
 ## Reading the record
 
