@@ -26,13 +26,16 @@ It opens sessions and closes them, and changes no configuration. No token, asser
 key or login time is printed or recorded.
 
 Env:  BROKER_HOST                 the identity broker that trades the API client's token for a bearer (not needed for a
-                                  census as VC_USER alone)
+                                  census as VC_USER alone); OPS_BROKER_HOST, then OPS_HOST, are read when it is unset,
+                                  the names api_client.py and identity-model's census.py take
       BROKER_TENANT               the broker tenant: the realm's path segment, which an API client's vCenter session
                                   carries as its domain (default CUSTOMER; BROKER_REALM, its earlier name, is still
                                   read). When the client's own session is opened, the domain it reads is used. This is
                                   not vcenter-authorization's REALM_DOMAIN, which is the realm's name
-      API_TOKEN_FILE              the API client's API token (mode 0600); API_TOKEN is read if it is unset
-      BEARER_FILE                 instead, a broker bearer you already hold
+      API_TOKEN_FILE              the API client's API token (mode 0600); API_TOKEN is read if it is unset, then
+                                  OPS_API_TOKEN_FILE and OPS_API_TOKEN, with a note: the census then reads as whoever
+                                  holds that token
+      BEARER_FILE                 instead, a broker bearer you already hold (OPS_BEARER_FILE is read when it is unset)
       VC_HOSTS                    comma-separated vCenter FQDNs
       VC_USER, VC_PASSWORD_FILE   for --sessions as an account: one that may read the session list, user@domain (mode
                                   0600; VC_PASSWORD is read if it is unset); leave both unset to read as the API client
@@ -116,6 +119,20 @@ def _secret(name: str) -> str:
     return os.environ.get(name, "")
 
 
+def broker_host() -> str:
+    """The broker to trade at: BROKER_HOST, or the names api_client.py and census.py take (OPS_BROKER_HOST, OPS_HOST)."""
+    return os.environ.get("BROKER_HOST") or os.environ.get("OPS_BROKER_HOST") or os.environ.get("OPS_HOST", "")
+
+
+def api_token() -> str:
+    """The API client's token: API_TOKEN[_FILE], or OPS_API_TOKEN[_FILE] as the other companions name it."""
+    return _secret("API_TOKEN") or _secret("OPS_API_TOKEN")
+
+
+def bearer_file() -> str:
+    return os.environ.get("BEARER_FILE") or os.environ.get("OPS_BEARER_FILE", "")
+
+
 def _open(req: urllib.request.Request, opener=None, timeout: int = 60) -> tuple[int, bytes]:
     """(status, body) for any answer, a refusal included; (0, b"") when the host did not answer."""
     try:
@@ -141,10 +158,11 @@ def _form(url: str, fields: dict, headers: dict | None = None) -> tuple[int, dic
 
 def broker_bearer() -> str:
     """The bearer in BEARER_FILE, or the API client's API token traded at the broker for one."""
-    if os.environ.get("BEARER_FILE"):
-        return _secret("BEARER").removeprefix("Bearer ").strip()
-    status, answer = _form(f"https://{os.environ['BROKER_HOST']}/acs/t/{broker_tenant()}/token",
-                           {"grant_type": API_TOKEN_GRANT, "api_token": _secret("API_TOKEN")})
+    if bearer_file():
+        with open(bearer_file(), encoding="utf-8") as f:
+            return f.read().strip().removeprefix("Bearer ").strip()
+    status, answer = _form(f"https://{broker_host()}/acs/t/{broker_tenant()}/token",
+                           {"grant_type": API_TOKEN_GRANT, "api_token": api_token()})
     if status != 200 or "access_token" not in answer:
         # a deleted or rotated API token answers 500 here, not 401: check the token still exists before its expiry
         raise RuntimeError(f"the broker did not trade the API token for a bearer (HTTP {status})")
@@ -492,7 +510,7 @@ def leaks(obj, table: dict) -> list[str]:
 
 # ── the run ──────────────────────────────────────────────────────────────────────────────────────────────────────
 def have_client() -> bool:
-    return bool(os.environ.get("BEARER_FILE") or (os.environ.get("BROKER_HOST") and _secret("API_TOKEN")))
+    return bool(bearer_file() or (broker_host() and api_token()))
 
 
 def run(with_sessions: bool) -> dict:
@@ -554,7 +572,8 @@ def exit_code(record: dict) -> int:
 
 def given_values() -> list[tuple[str, str]]:
     out = [(h.strip(), "host") for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
-    out += [(os.environ.get("BROKER_HOST", ""), "host"), (os.environ.get("VC_USER", ""), "name")]
+    out += [(os.environ.get(k, ""), "host") for k in ("BROKER_HOST", "OPS_BROKER_HOST", "OPS_HOST")]
+    out += [(os.environ.get("VC_USER", ""), "name")]
     out += [(d.strip(), "domain") for d in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if d.strip()]
     return [(v, k) for v, k in out if v]
 
@@ -569,9 +588,13 @@ def main(argv: list[str] | None = None) -> int:
         print("VC_HOSTS is required", file=sys.stderr)
         return 2
     if not a.sessions and not have_client():
-        print("the exchange needs the API client's credential (BROKER_HOST with API_TOKEN_FILE, or BEARER_FILE); "
+        print("the exchange needs the API client's credential (BROKER_HOST with API_TOKEN_FILE, or BEARER_FILE; "
+              "OPS_BROKER_HOST or OPS_HOST, OPS_API_TOKEN_FILE and OPS_BEARER_FILE are read in their place); "
               "--sessions alone needs only VC_USER", file=sys.stderr)
         return 2
+    if have_client() and not bearer_file() and not _secret("API_TOKEN"):
+        print("note: API_TOKEN_FILE is unset; reading OPS_API_TOKEN_FILE, so the exchange and a census without VC_USER "
+              "run as whoever holds that token", file=sys.stderr)
     if a.sessions and os.environ.get("VC_USER") and not _secret("VC_PASSWORD"):
         print("--sessions as VC_USER needs VC_PASSWORD_FILE", file=sys.stderr)
         return 2

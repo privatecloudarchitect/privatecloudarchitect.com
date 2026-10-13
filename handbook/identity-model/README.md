@@ -20,6 +20,8 @@ export OPS_API_TOKEN_FILE=/path/to/api-token          # mode 0600; an API token 
 export OPS_BROKER_HOST=<identity-broker-fqdn>           # where the token is traded for a bearer; default OPS_HOST
 export BROKER_TENANT=CUSTOMER                          # the broker tenant, the realm's path segment at the broker (it was OPS_REALM)
 # or, instead of the API token: export OPS_BEARER_FILE=/path/to/bearer   (a bearer you already hold)
+# BROKER_HOST and API_TOKEN_FILE, the names integrations-identity's vcenter_exchange.py takes, are read when
+# OPS_BROKER_HOST and OPS_API_TOKEN_FILE are unset, so one shell serves both companions
 export VCFA_HOST=<automation-fqdn>                       # optional: each organization's ways in
 export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer   # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE
 export VC_HOSTS=<vcenter-fqdn>,<vcenter-fqdn>            # optional: the broker each vCenter signs in through

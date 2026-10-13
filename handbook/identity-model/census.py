@@ -37,8 +37,10 @@ client secret and bind password, an API token's value); the reader deletes each 
 sees it, and the record keeps only the fields the allow-lists below name.
 
 Env:  OPS_HOST                 VCF Operations FQDN (required)
-      OPS_API_TOKEN_FILE       an API token from VCF Operations (mode 0600; OPS_API_TOKEN is read if it is unset),
-                               traded at the broker for a bearer: OPS_BROKER_HOST (default OPS_HOST), BROKER_TENANT
+      OPS_API_TOKEN_FILE       an API token from VCF Operations (mode 0600; OPS_API_TOKEN is read if it is unset, then
+                               API_TOKEN_FILE and API_TOKEN, the names integrations-identity's vcenter_exchange.py
+                               takes), traded at the broker for a bearer: OPS_BROKER_HOST (BROKER_HOST is read when it
+                               is unset; default OPS_HOST), BROKER_TENANT
                                (the broker tenant, the realm's path segment at the broker; default CUSTOMER; it was
                                OPS_REALM, still read when BROKER_TENANT is unset, with a notice)
       OPS_BEARER_FILE          instead, a bearer you already hold (it lives an hour unless the fleet says otherwise)
@@ -252,9 +254,9 @@ def ops_bearer() -> str:
     """A bearer for VCF Operations: the one in OPS_BEARER_FILE, or an API token traded at the broker for one."""
     if os.environ.get("OPS_BEARER_FILE"):
         return _secret("OPS_BEARER").removeprefix("Bearer ").strip()
-    broker = os.environ.get("OPS_BROKER_HOST") or os.environ["OPS_HOST"]
+    broker = os.environ.get("OPS_BROKER_HOST") or os.environ.get("BROKER_HOST") or os.environ["OPS_HOST"]
     answer = _form(f"https://{broker}/acs/t/{broker_tenant()}/token",
-                   {"grant_type": API_TOKEN_GRANT, "api_token": _secret("OPS_API_TOKEN")})
+                   {"grant_type": API_TOKEN_GRANT, "api_token": (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))})
     return answer["access_token"]
 
 
@@ -795,7 +797,7 @@ def unread(bad: list[dict]) -> str | None:
 
 
 def given_values(egress_url: str | None) -> list[tuple[str, str]]:
-    hosts = [os.environ.get(k, "") for k in ("OPS_HOST", "OPS_BROKER_HOST", "VCFA_HOST")]
+    hosts = [os.environ.get(k, "") for k in ("OPS_HOST", "OPS_BROKER_HOST", "BROKER_HOST", "VCFA_HOST")]
     hosts += os.environ.get("VC_HOSTS", "").split(",")
     out = [(h.strip(), "host") for h in hosts if h.strip()]
     out += [(os.environ.get("VC_USER", ""), "name")] + ([(egress_url, "metadata-url")] if egress_url else [])
@@ -811,7 +813,7 @@ def main(argv: list[str] | None = None) -> int:
     if os.environ.get("OPS_REALM") and not os.environ.get("BROKER_TENANT"):
         print("note: OPS_REALM is now BROKER_TENANT (the broker tenant, the realm's path segment at the broker, CUSTOMER by "
               "default, which is not the realm's name); reading OPS_REALM this time.", file=sys.stderr)
-    if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or _secret("OPS_API_TOKEN")):
+    if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required", file=sys.stderr)
         return 2
     if a.egress_metadata_url:

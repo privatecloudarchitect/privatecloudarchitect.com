@@ -27,9 +27,10 @@ are refused before anything is sent.
 
 Env:  OPS_HOST                 VCF Operations FQDN (required)
       OPS_API_TOKEN_FILE       an API token of a user who may manage the fleet's API clients (mode 0600; OPS_API_TOKEN
-                               is read if it is unset), traded at the broker for a bearer: OPS_BROKER_HOST (default
-                               OPS_HOST), BROKER_TENANT (the broker tenant, the realm's path segment; default
-                               CUSTOMER; OPS_REALM, its earlier name, is still read)
+                               is read if it is unset, then API_TOKEN_FILE and API_TOKEN), traded at the broker for a
+                               bearer: OPS_BROKER_HOST (BROKER_HOST is read when it is unset; default OPS_HOST),
+                               BROKER_TENANT (the broker tenant, the realm's path segment; default CUSTOMER;
+                               OPS_REALM, its earlier name, is still read)
       OPS_BEARER_FILE          instead, a bearer you already hold
       TLS_VERIFY=false         only on a self-signed lab CA
       OUT                      the record (default api_client.json)
@@ -115,9 +116,9 @@ def ops_bearer() -> str:
     """The bearer in OPS_BEARER_FILE, or the operator's API token traded at the broker for one."""
     if os.environ.get("OPS_BEARER_FILE"):
         return _secret("OPS_BEARER").removeprefix("Bearer ").strip()
-    broker = os.environ.get("OPS_BROKER_HOST") or os.environ["OPS_HOST"]
+    broker = os.environ.get("OPS_BROKER_HOST") or os.environ.get("BROKER_HOST") or os.environ["OPS_HOST"]
     status, answer = _send("POST", f"https://{broker}/acs/t/{broker_tenant()}/token",
-                           form={"grant_type": API_TOKEN_GRANT, "api_token": _secret("OPS_API_TOKEN")})
+                           form={"grant_type": API_TOKEN_GRANT, "api_token": (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))})
     if status != 200 or not isinstance(answer, dict) or "access_token" not in answer:
         # a deleted or rotated API token answers 500 here, not 401: check the token still exists before its expiry
         raise RuntimeError(f"the broker did not trade the operator's API token for a bearer (HTTP {status})")
@@ -243,7 +244,7 @@ def readback(fleet: Fleet, rid: str, client_id: str) -> dict:
 def prove(token: str) -> dict:
     """Trade the new API token at the broker once: the status, and the bearer's principal type and lifetime. The
     token and the bearer stay in memory."""
-    broker = os.environ.get("OPS_BROKER_HOST") or os.environ["OPS_HOST"]
+    broker = os.environ.get("OPS_BROKER_HOST") or os.environ.get("BROKER_HOST") or os.environ["OPS_HOST"]
     status, answer = _send("POST", f"https://{broker}/acs/t/{broker_tenant()}/token",
                            form={"grant_type": API_TOKEN_GRANT, "api_token": token})
     out = {"status": status}
@@ -535,7 +536,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(lines))
         print("\nplan only: nothing was sent (--execute sends it)")
         return 0
-    if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or _secret("OPS_API_TOKEN")):
+    if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required", file=sys.stderr)
         return 2
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -559,7 +560,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         record["exit"] = (teardown(fleet, rid, a.client_id, record) if a.teardown
                           else rotate(fleet, rid, a, record) if a.rotate else create(fleet, rid, a, record))
-    given = ([(os.environ.get(k, ""), "host") for k in ("OPS_HOST", "OPS_BROKER_HOST")] + [(a.client_id, "client")]
+    given = ([(os.environ.get(k, ""), "host") for k in ("OPS_HOST", "OPS_BROKER_HOST", "BROKER_HOST")] + [(a.client_id, "client")]
              + [(a.instance or "", "instance")])
     table = estate_values(record, [(v, k) for v, k in given if v])
     clean = scrub(record, table)

@@ -10,8 +10,11 @@ though vCenter accepts it and an administrator's privilege query reports it as e
 Read-only by default:
 
   1. GRANTS: every permission on each vCenter, global and per-object, from the vSphere Automation API's list
-     action, classified by how it behaves for a broker session: reserved group (a VCF role arriving), local,
-     directory user, directory group, realm spelling (inert), or another provider's;
+     action, classified by how it behaves for a broker session: reserved group (a VCF role arriving); local, split
+     three ways (VCF-managed: svc- and wcp- accounts and solution users, left to VCF; Administrators: the local
+     administrator and its group; other: what an operator made, and groups vCenter or another product ships under
+     their own names, each read with its members); directory user, directory group, realm spelling (inert), or
+     another provider's;
   2. ROLES: the role catalog, and the custom roles whose copies differ between vCenters;
   3. SESSIONS (pyVmomi, optional): who is signed in now, by principal class and client agent. Addresses,
      session keys and login times are never read into the record.
@@ -31,7 +34,9 @@ the vCenter's SSO administrator.
 
   --probe-grants   on PROBE_VCENTER: a one-privilege role (Folder.Create) on a throwaway folder, granted in turn
                    to TEST_USER and to TEST_GROUP, each in the directory and the realm spelling, measured from
-                   fresh sessions of TEST_USER (vCenter's own check, an actual subfolder create, a REST read).
+                   fresh sessions of TEST_USER (vCenter's own check, an actual subfolder create, a REST read). With
+                   TEST_LOCAL_GROUP set, one more case grants the role to that local SSO group, which you have
+                   made to hold TEST_GROUP as a member: does a directory group nested in a local group carry it?
   --probe-tags     on PROBE_VCENTER, where TEST_USER should hold nothing: where the two tag privileges must come
                    from. AttachTag counts only from a global permission that propagates; ObjectAttachable must
                    be in effect on the object. Each case attaches a throwaway tag as TEST_USER and detaches it.
@@ -48,8 +53,11 @@ Environment:
   REALM_DOMAIN        the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); not the
                       broker tenant an API client's session carries (CUSTOMER by default)
   DIRECTORY_DOMAINS   comma-separated directory domains under the broker's identity provider
+  LOCAL_DOMAIN        the vCenter's own SSO domain (default VSPHERE.LOCAL); set it where yours is named otherwise,
+                      or every local grant reads as another provider's
   TLS_VERIFY          false only on a self-signed lab CA
   TEST_USER, TEST_PASSWORD_FILE, TEST_GROUP, PROBE_VCENTER   for the probes (TEST_USER must not be an administrator)
+  TEST_LOCAL_GROUP    optional: a local SSO group holding TEST_GROUP, for the nested case of --probe-grants
   SUPERVISOR_VCENTER  the vCenter for --supervisor-vm (default PROBE_VCENTER)
   OUT_DIR             where authz.json is written (default: this folder)
 
@@ -73,6 +81,13 @@ ATTACH = "InventoryService.Tagging.AttachTag"
 ON_OBJECT = "InventoryService.Tagging.ObjectAttachable"
 MODIFY = "Authorization.ModifyPermissions"
 RESERVED_PREFIX = "vcf_reserved_"
+# The local principals VCF keeps for itself: its integration accounts (svc-), the Supervisor's (wcp-) and the solution
+# users, named with a UUID at the end (nsxt_<uuid> among them). The census sorts by name, so an account an operator
+# named svc- lands here too. vCenter's own administrator and Administrators group are a class of their own. Every other
+# local principal, a group or user an operator made or a group vCenter or another product ships under its own name, is
+# read rather than left: a directory group nested in a local group may carry that group's grants.
+VCF_MANAGED = re.compile(r"^(svc-|wcp-)|[-_][0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
+LOCAL_CLASSES = ("local, VCF-managed", "local, Administrators", "local, other")
 
 # The platform's own vocabulary: system roles, the roles the Supervisor grants, the local groups vCenter ships.
 # A word in this set identifies no estate, so it is never replaced, and the leak check never fires on it.
@@ -171,10 +186,21 @@ def have_pyvmomi():
 
 # ---------------------------------------------------------------- the census
 
-def classify(domain, name, realm, directories):
+def local_domain():
+    return (os.environ.get("LOCAL_DOMAIN") or "VSPHERE.LOCAL").strip().upper()
+
+
+def classify(domain, name, realm, directories, local=None):
+    """One principal's class, by how it behaves for a broker session and who looks after it. A local principal is
+    reserved (a VCF role arriving), VCF-managed (leave it), Administrators (the administrator and its group: read the
+    members), or other (read it, members included)."""
     d = domain.upper()
-    if d == "VSPHERE.LOCAL":
-        return "reserved group" if name.startswith(RESERVED_PREFIX) else "local"
+    if d == (local or local_domain()).upper():
+        if name.startswith(RESERVED_PREFIX):
+            return "reserved group"
+        if VCF_MANAGED.search(name):
+            return LOCAL_CLASSES[0]
+        return LOCAL_CLASSES[1] if name.lower() in {p.lower() for p in PRODUCT_LOCAL} else LOCAL_CLASSES[2]
     if realm and d == realm.upper():
         return "realm spelling"
     if d.lower() in directories:
@@ -231,7 +257,7 @@ def sessions(si, realm, directories):
         domain, _, name = str(s.userName).rpartition("\\")
         cls = classify(domain, name, realm, directories)
         by_class[cls] += 1
-        if domain.upper() == "VSPHERE.LOCAL" and name == "Administrator":
+        if domain.upper() == local_domain() and name == "Administrator":
             admin_agents[str(getattr(s, "userAgent", "") or "").split("/")[0][:40] or "(none)"] += 1
     return {"byClass": dict(sorted(by_class.items())), "localAdministratorByAgent": dict(sorted(admin_agents.items()))}
 
@@ -291,7 +317,7 @@ def reserved_groups_left(si, role_ids):
         if rid is None:
             continue
         res = si.content.userDirectory.RetrieveUserGroups(
-            domain="VSPHERE.LOCAL", searchStr=f"{RESERVED_PREFIX}{rid}", belongsToGroup=None, belongsToUser=None,
+            domain=local_domain(), searchStr=f"{RESERVED_PREFIX}{rid}", belongsToGroup=None, belongsToUser=None,
             exactMatch=False, findUsers=False, findGroups=True)
         found += sum(1 for g in res if g.principal == f"{RESERVED_PREFIX}{rid}")
     return found
@@ -670,6 +696,9 @@ def main():
                  ("user, directory spelling", d_user, False),
                  ("user, realm spelling", r_user, False),
                  ("group, realm spelling", f"{realm.upper()}\\{group}", True)]
+        nested = os.environ.get("TEST_LOCAL_GROUP", "").strip()
+        if nested:
+            cases.append(("group, nested in a local SSO group", f"{local_domain()}\\{nested}", True))
         record["grantProbe"] = {"vcenter": vc_label.get(probe_host, L.get("vcenter", probe_host)),
                                 **probe_grants(probe_host, (user, password), subject, cases)}
         print(f"\n  grant probe: {[(c['case'], c.get('check'), c.get('enforced')) for c in record['grantProbe']['cases']]}")
@@ -689,6 +718,7 @@ def main():
 
     text = json.dumps(record, indent=1, ensure_ascii=False)
     estate = set(hosts) | {user, local, dom, realm, test_user, os.environ.get("TEST_GROUP", ""), a.supervisor_vm,
+                           os.environ.get("TEST_LOCAL_GROUP", ""),
                            user.partition("@")[0]} | set(directories) | set(L.words())
     estate |= {h.split(".")[0] for h in hosts}
     for value in sorted({v for v in estate if v and v not in PRODUCT_ROLES | PRODUCT_LOCAL}, key=len, reverse=True):

@@ -44,9 +44,9 @@ provider, so the next report finds them in step.
 By hand, a provider bearer (`VCFA_PROVIDER_BEARER_FILE`) lasts an hour. A scheduled report holds a provider API token
 instead (`VCFA_PROVIDER_REFRESH_TOKEN_FILE`), which the script trades at `/oauth/provider/token` for a bearer each run.
 The close does not run on one (below): run `--execute` and `--close-now --execute` on a provider bearer.
-Mint it for the identity the job runs as, a provider identity of its own and never a person's, and hold it as tier-0:
-the job revokes tokens and disables accounts in every organization it closes. The programmatic mint is two calls,
-with a provider bearer of that identity:
+Mint it for the identity the report runs as, a provider identity of its own and never a person's, and hold it as
+tier-0: it is minted for a provider System Administrator and reads every organization. The programmatic mint is two
+calls, with a provider bearer of that identity:
 
 ```text
 POST https://<automation-fqdn>/oauth/provider/register   Authorization: Bearer <provider bearer>
@@ -60,13 +60,17 @@ The token appears in the provider's token list (`GET /cloudapi/1.0.0/tokens`) un
 `REFRESH`; retire it with `DELETE /cloudapi/1.0.0/tokens/{id}`, after which its refresh answers 400 `invalid_grant`.
 The registered client stays: the API reference has no delete path for it. On the reference estate, 2026-10-13, a
 token minted this way for a provider System Administrator carried a report run over every federated organization with
-no call refused, reaching the same decision for every account as the provider bearer, and read back with rotation
-not required. The close was refused on such a token: the write that disables the account answered 403 and the
+no call refused, reaching the provider bearer's decision on 11 of 12 accounts (the twelfth made between the two runs),
+and read back with rotation not required. The close was refused on such a token: the write that disables the account answered 403 and the
 account stayed enabled (a local user in a classic organization, one run), so the script exited 2. Every close that
-held on the reference estate ran on a provider bearer from the provider portal's sign-in. The narrowest provider role
-that lets the job pass was not measured.
+held on the reference estate ran on a provider bearer from the provider portal's sign-in. Neither credential tried
+could carry the close: the token was refused it, and a dedicated local user of the provider's own organization could
+not be made, the organization already holding its one local user (2026-10-13). Not tried: that existing local user,
+the provider administrator, and a directory service account granted a provider role through the portal flow. The
+narrowest provider role that lets the job pass was not measured.
 
-Schedule the report and read the exit code:
+So the close is a person's step. Schedule the report on the token and read its exit code; exit 1 is the alert, and
+whoever receives it runs `--execute --org` (or `--close-now`) on a provider bearer from a portal sign-in:
 
 | Exit | Means |
 |---|---|

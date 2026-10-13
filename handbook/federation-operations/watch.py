@@ -66,7 +66,7 @@ Use:  python3 watch.py                      read, print, write the record
 Exit: 0 every check ok · 1 a warning (an end date inside WARN_DAYS, a refresh interval over 1 h, a gap that is not
       yet an outage) · 2 a failure that stops sign-in now or at the provider's next roll (a key not held, refresh not
       succeeding, an expired secret or certificate, a renamed group, PKCE on, a disabled app) · 3 a read failed and
-      nothing failed. --why: 0 a row matched, 1 none did.
+      nothing failed. --why: 0 a row matched; 1 none did, and it prints the first reads for a message no run showed.
 """
 
 from __future__ import annotations
@@ -155,13 +155,29 @@ SIGN_IN_ROUTER = [
     {"id": "saml-upn-renamed", "seen": [SSO_FAILURE_URL], "hints": ["upn", "renamed user", "user name changed"],
      "protocol": "saml", "refused_by": "organization", "entra_log": "a success",
      "look_at": "whether the user's UPN changed: the organization matches a returning SAML user on its user name, so the renamed user is refused and no account is made",
-     "then": "plan a rename as a leaver and a joiner", "teaches": "upn-rename"},
+     "then": "restore the user's principal name at Entra: the next sign-in reached the same account. If the new name must "
+             "stay, delete the old VCF Automation account: the next sign-in made a new account holding its groups' roles. Each "
+             "was run once, on an All Apps organization; the run granted the old account no direct role, so what deleting it drops "
+             "was not measured. Plan the next rename as a leaver and a joiner", "teaches": "upn-rename"},
     {"id": "oidc-upn-renamed", "seen": [], "hints": ["roles gone", "second account", "lost my roles", "upn", "renamed user"],
      "protocol": "oidc", "refused_by": "none: admitted as a second user", "entra_log": "a success",
      "look_at": "the organization's subject mapping: keyed on preferred_username, a renamed user signs in as a new user holding only its groups' roles; keyed on oid, as the same user",
      "then": "grant roles only through groups; plan a rename as a leaver and a joiner and disable the first account",
      "teaches": "upn-rename"},
 ]
+
+
+# What to read first when no row fits: a message none of the measured runs showed. It places the refusal by the plane
+# that refused it, as every row does, and keeps the message, so the router can gain a row for it.
+UNMATCHED = {
+    "id": "no-row-fits", "seen": [], "hints": [], "protocol": "any", "refused_by": "not placed yet",
+    "entra_log": "an error with an AADSTS code where Entra refused it; a success where VCF Automation did",
+    "look_at": "the plane order every row follows. First Entra: the user's sign-in log for the organization's app at that "
+               "minute; an error there is Entra's refusal, and its AADSTS code, pasted here, may name the row. A success there "
+               "means the organization refused it: run the watch for every check, then read the organization's imported groups "
+               "and the user's account",
+    "then": "fix it on the plane that refused it, and keep the message with that plane, so it can become a row",
+    "teaches": "assignment"}
 
 
 def route(seen: str, protocol: str = "any") -> list[dict]:
@@ -651,7 +667,9 @@ def main(argv: list[str]) -> int:
             if without_tenant_app(r):
                 print(f"  without the tenant's read-only app: {without_tenant_app(r)}")
         if not rows:
-            print("No row matches. Read the user's sign-in log for the app first: an error there is Entra's refusal; a success means VCF Automation refused it.")
+            r = UNMATCHED
+            print(f"\nNo row matches; read these first. Entra's sign-in log shows {r['entra_log']}")
+            print(f"  look at: {r['look_at']}\n  then:    {r['then']}")
         return 0 if rows else 1
     unknown = [a for a in argv if a not in ("--redact",)]
     if unknown:

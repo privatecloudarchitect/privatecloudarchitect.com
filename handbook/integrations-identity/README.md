@@ -69,6 +69,13 @@ census's client holds `vcf_administrator`, give it nothing else to do and keep i
 (the vCenter's own SSO domain, default `VSPHERE.LOCAL`) and `OUT` (default `exchange.json`) are optional. `VC_PASSWORD`
 and `API_TOKEN` are read when their `_FILE` forms are unset.
 
+**One shell for every companion.** `vcenter_exchange.py` also reads the names `api_client.py` and identity-model's
+`census.py` take: `OPS_BROKER_HOST`, then `OPS_HOST`, when `BROKER_HOST` is unset; `OPS_API_TOKEN_FILE` (or
+`OPS_API_TOKEN`) when `API_TOKEN_FILE` and `API_TOKEN` are unset; `OPS_BEARER_FILE` when `BEARER_FILE` is unset. Its
+own names win. When it falls back to `OPS_API_TOKEN_FILE` it prints a note, because the exchange, and a census without
+`VC_USER`, then run as whoever holds that token: your own token if it is the one `api_client.py` used. `census.py` reads
+`BROKER_HOST` and `API_TOKEN_FILE` the same way when its `OPS_` names are unset.
+
 **The broker tenant is not the realm's name.** The broker tenant is the realm's path segment in the broker's token URL,
 `CUSTOMER` unless your broker says otherwise, and an API client's vCenter session carries it as its domain:
 `CUSTOMER\<client id>`. The realm's name is the broker realm as the fleet identity plane names it, and a vCenter grant
@@ -126,8 +133,8 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | Env | Meaning |
 |---|---|
 | `OPS_HOST` | the VCF Operations FQDN (required to execute) |
-| `OPS_API_TOKEN_FILE` | your VCF Operations API token, mode 0600 (`OPS_API_TOKEN` is read if it is unset), traded at the broker for a bearer |
-| `OPS_BROKER_HOST` | the broker that trades it (default `OPS_HOST`) |
+| `OPS_API_TOKEN_FILE` | your VCF Operations API token, mode 0600 (`OPS_API_TOKEN` is read if it is unset, then `API_TOKEN_FILE` and `API_TOKEN`), traded at the broker for a bearer |
+| `OPS_BROKER_HOST` | the broker that trades it (`BROKER_HOST` is read when it is unset; default `OPS_HOST`) |
 | `BROKER_TENANT` | the broker tenant, the realm's path segment in the broker's token URL (default `CUSTOMER`; `OPS_REALM`, its earlier name, is still read) |
 | `OPS_BEARER_FILE` | instead of the API token, a bearer you already hold |
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |
