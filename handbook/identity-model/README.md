@@ -54,8 +54,10 @@ python3 census.py --egress-metadata-url https://login.microsoftonline.com/<tenan
   the fields the allow-lists in the script name. Of every URL it keeps only the host.
 - An organization's ways in are read from its own three settings: `vcf-sso` when VCF Automation's `vidb` flag is
   on, `oidc-broker` when OIDC points at a broker without that flag, `oidc` for another OIDC provider, `saml`,
-  `ldap-system` or `ldap-custom`, and `local` when none is on. A Supervisor's issuer is read from each provider's
-  own record; the Supervisor's provider list does not carry it.
+  `ldap-system` or `ldap-custom`, and `local` when none is on. `ldap-system` is VCF Automation's system LDAP
+  service, the connection the provider administrator configures for organizations that belong to the provider; the
+  census reads the organization's mode, not which directory that connection names. A Supervisor's issuer is read
+  from each provider's own record; the Supervisor's provider list does not carry it.
 - Measured on VCF 9.1.1 with the VCF Operations API token of a VCF single sign-on user holding the VCF
   Administrator role, and once with a bearer file from the same user. An API client holding VCF Administrator read
   every fleet line the same as that user's token, field by field (one run, 2026-10-13). An API client holding VCF

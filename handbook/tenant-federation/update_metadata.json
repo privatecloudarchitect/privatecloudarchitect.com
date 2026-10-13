@@ -1,0 +1,40 @@
+{
+ "mode": "update",
+ "protocol": "saml",
+ "asked": [
+  "metadata"
+ ],
+ "captured": "2026-10-13T08:48:23Z",
+ "steps": [
+  {
+   "step": "plan",
+   "status": "read",
+   "at_s": 1.1,
+   "protocol": "SAML",
+   "metadata": {
+    "certificates_now": 1,
+    "certificates_new": 1,
+    "new_not_held": 0
+   }
+  },
+  {
+   "step": "SAML settings written",
+   "status": 200,
+   "at_s": 2.1,
+   "changed": [
+    "samlMetadata"
+   ]
+  },
+  {
+   "step": "check: the organization holds the new metadata's certificates",
+   "status": "pass",
+   "at_s": 2.6
+  },
+  {
+   "step": "check: SAML still enabled",
+   "status": "pass",
+   "at_s": 2.6
+  }
+ ],
+ "held": true
+}

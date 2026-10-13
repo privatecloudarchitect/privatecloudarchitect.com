@@ -110,7 +110,9 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | Flag | What it does |
 |---|---|
 | `--client-id ID` | the client's id, also its name; one per integration (required) |
-| `--role ROLE` | the one VCF role the client holds, at realm scope, for example `vcf_viewer` (required to create) |
+| `--role ROLE` | the one VCF role the client holds, for example `vcf_viewer` (required to create) |
+| `--scope realm\|instance` | where the role applies: the whole realm (the default), or one VCF instance with `--instance` |
+| `--instance NAME` | with `--scope instance`: the VCF instance's name as the realm's coverage names it; a name the realm does not cover is refused before any write |
 | `--api-token-ttl MIN` | the API token's lifetime in minutes, 1,440 to 259,200 (required to create) |
 | `--access-token-ttl MIN` | the lifetime in minutes of each bearer the token yields, 30 to 60 (required to create) |
 | `--token-file PATH` | where the token is written, mode 0600; the file must not exist (required with `--execute`) |
@@ -144,10 +146,16 @@ Every path is under `/api/fleet-management/iam` on VCF Operations.
 1. `GET /ssorealms`: the realm's id. Then a query of the realm's API clients; a client with the id you gave is refused,
    so a run cannot take over an identity someone else made.
 2. `POST /ssorealms/{realm}/api-clients` with `clientId`, `clientName` and `clientDescription`.
-3. `PUT /ssorealms/{realm}/principals/{client uuid}/roles`: one role, `scopeType` `SSO_REALM`.
+3. `PUT /ssorealms/{realm}/principals/{client uuid}/roles`: one role, `scopeType` `SSO_REALM`, or with `--scope instance`
+   `VCF_INSTANCE` with the instance's id, read first from `GET /ssorealms/{realm}`'s coverage. The fleet takes only these
+   two scopes, never a folder. On the reference estate it refused `vcf_viewer` at an instance's scope ("Invalid role
+   scope for the given role") and took `sddc_viewer`, which bundles only an instance's components (vCenter ReadOnly, NSX
+   auditor). Holding it at one instance, the client reached that instance's vCenters (a REST session seeing their VMs, a
+   SOAP sign-in); on the vCenter outside it a REST session still opened and saw no VM, and the SOAP sign-in was refused.
+   Which other roles take an instance's scope was not read. A refused call's reason is kept in the record.
 4. `POST /ssorealms/{realm}/api-tokens` with `tokenType` `API_CLIENT`, `apiTokenTtl` and `accessTokenTtl` in minutes. The
    token is written to `--token-file`, created exclusively at mode 0600, and never printed.
-5. The token traded at the broker once (`POST /acs/t/{realm}/token`, the API token grant), to prove it; the record keeps
+5. The token traded at the broker once (`POST /acs/t/{broker tenant}/token`, the API token grant), to prove it; the record keeps
    the status, the bearer's principal type and its lifetime, never the bearer.
 6. The client and its token read back: present, its roles and their scope, the token's status and both lifetimes.
 
@@ -231,7 +239,8 @@ teardown of an account that is not there removes nothing and exits 0, so it is s
 2. `POST /api/vcenter/authentication/token`, form-encoded, with the access token alone. vCenter answers a SAML token of
    the Bearer type that lives minutes.
 3. `POST /api/session` with `Authorization: SIGN token="<base64(gzip(assertion))>"`: who the session is, whether it reads
-   the VM list, then `DELETE /api/session`.
+   the VM list and how many VMs it sees (a count, never names: vCenter filters the list by the session's permissions, so a
+   session with none reads an empty list with HTTP 200), then `DELETE /api/session`.
 4. A second exchange, then `SessionManager.LoginByToken` over SOAP with the assertion in a WS-Security header, its XML
    declaration removed: who the session is, then `Logout`.
 5. With `--sessions`: a SOAP session as `VC_USER` or, without it, a third exchange and `LoginByToken` as the client;
@@ -295,8 +304,9 @@ Client), `directory_principals` and `directory_not_interactive`. `broker_tenant`
 client's own session named that differed from the one set. `vcenters` holds each vCenter's steps; `sent` names every
 request that was not a plain read.
 
-`api_client.json`: `asked` (the role, its scope and both lifetimes), `calls` (each call's method, templated path and
-status), `exchange` (the broker's status, the bearer's principal type and lifetime), `readback` and `exit`. A teardown's
+`api_client.json` (and `api_client_instance.json`, the same at one instance's scope): `asked` (the role, its scope, the
+instance when one was named, and both lifetimes), `calls` (each call's method, templated path and status, and the
+fleet's reason when it refused), `exchange` (the broker's status, the bearer's principal type and lifetime), `readback` and `exit`. A teardown's
 record holds `calls`, `residue` (`client_present`, `tokens_left`) and `exit`. A rotation's record holds `asked` (both
 lifetimes, and whether an old token was given), `calls`, `tokens_before`, `exchange` (the new token at the broker),
 `overlap` (the active tokens once the new one was issued), `old_token_before_delete` and `old_token_after_delete` (the

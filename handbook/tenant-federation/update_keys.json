@@ -1,0 +1,40 @@
+{
+ "mode": "update",
+ "protocol": "oidc",
+ "asked": [
+  "keys"
+ ],
+ "captured": "2026-10-13T08:48:00Z",
+ "steps": [
+  {
+   "step": "plan",
+   "status": "read",
+   "at_s": 1.4,
+   "protocol": "OIDC",
+   "key_refresh": null,
+   "keys": {
+    "held": 6,
+    "published": 6,
+    "published_not_held": 0
+   },
+   "secret": null
+  },
+  {
+   "step": "OIDC settings written",
+   "status": 200,
+   "at_s": 2.3,
+   "changed": []
+  },
+  {
+   "step": "check: the organization holds every key the provider publishes",
+   "status": "pass",
+   "at_s": 2.7
+  },
+  {
+   "step": "check: every other field read back unchanged",
+   "status": "pass",
+   "at_s": 2.7
+  }
+ ],
+ "held": true
+}

@@ -1,0 +1,74 @@
+{
+  "captured": "2026-10-13T09:01:57Z",
+  "warn_days": 30,
+  "exit": 1,
+  "organizations": [
+    {
+      "org": "{{org-1}}",
+      "org_type": "all-apps",
+      "checks": [
+        {
+          "check": "key_refresh",
+          "state": "ok",
+          "detail": "refreshes every 1 h, strategy ADD, last success on schedule",
+          "measure": {
+            "interval_h": 1,
+            "success_age_h": 0.0
+          }
+        },
+        {
+          "check": "keys_held",
+          "state": "ok",
+          "detail": "all 6 published keys are held",
+          "measure": {
+            "held": 6,
+            "published": 6,
+            "missing": 0
+          }
+        },
+        {
+          "check": "pkce",
+          "state": "ok",
+          "detail": "PKCE is off",
+          "measure": {}
+        },
+        {
+          "check": "secret_end",
+          "state": "warn",
+          "detail": "the secret the organization holds ends in 30.0 days: rotate with overlap",
+          "measure": {
+            "days_left": 30.0,
+            "matched": true
+          }
+        },
+        {
+          "check": "app_gate",
+          "state": "ok",
+          "detail": "the app is enabled and requires assignment",
+          "measure": {}
+        },
+        {
+          "check": "group_names",
+          "state": "ok",
+          "detail": "every imported group (1) is assigned to the app by that name",
+          "measure": {
+            "imported": 1,
+            "assigned": 1,
+            "unmatched": 0
+          }
+        },
+        {
+          "check": "break_glass",
+          "state": "ok",
+          "detail": "1 enabled local user(s) holding Organization Administrator",
+          "measure": {
+            "local_admins": 1,
+            "role": "Organization Administrator"
+          }
+        }
+      ],
+      "read_errors": [],
+      "protocol": "oidc"
+    }
+  ]
+}

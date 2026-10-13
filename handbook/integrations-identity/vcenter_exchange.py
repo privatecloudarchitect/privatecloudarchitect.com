@@ -176,7 +176,11 @@ def rest_session(host: str, assertion: str) -> dict:
     h = {"vmware-api-session-id": json.loads(raw), "User-Agent": AGENT}
     _, who = _open(urllib.request.Request(f"https://{host}/api/session", headers=h))
     out["user"] = (json.loads(who or b"{}") or {}).get("user")
-    out["vm_list_status"], _ = _open(urllib.request.Request(f"https://{host}/api/vcenter/vm", headers=h))
+    out["vm_list_status"], vms = _open(urllib.request.Request(f"https://{host}/api/vcenter/vm", headers=h))
+    try:   # how many VMs the session sees, never which: vCenter filters the list by the session's permissions
+        out["vm_count"] = len(json.loads(vms or b"[]")) if out["vm_list_status"] == 200 else None
+    except ValueError:
+        out["vm_count"] = None
     _open(urllib.request.Request(f"https://{host}/api/session", method="DELETE", headers=h))
     return out
 
@@ -390,7 +394,10 @@ def report(record: dict) -> list[str]:
             lines.append(f"  exchange: HTTP {ex.get('status')}, {ex.get('issued_token_type') or 'no token'}"
                          + (f", {ex.get('token_type')}, lives {ex.get('expires_in_s')} s" if ex.get("status") == 200 else ""))
             lines.append(f"  REST session (SIGN): HTTP {rest.get('status')}" + (f", user {rest.get('user')}, VM list HTTP "
-                                                                                 f"{rest.get('vm_list_status')}" if rest.get("user") else ""))
+                                                                                 f"{rest.get('vm_list_status')}"
+                                                                                 + (f" ({rest['vm_count']} VMs visible)"
+                                                                                    if rest.get("vm_count") is not None else "")
+                                                                                 if rest.get("user") else ""))
             lines.append("  SOAP session (LoginByToken): " + (f"user {soap['user']}" if soap.get("user") else f"refused: {soap.get('fault')}"))
         s = v.get("sessions")
         if isinstance(s, dict) and "by_class" in s:

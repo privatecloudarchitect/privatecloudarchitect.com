@@ -8,7 +8,8 @@ value back to the file it came from (see VCFA_REFRESH_TOKEN_FILE). Stdlib only. 
 
 Surfaces are chosen by which environment variables are set; unset ones are skipped and reported as such.
 
-  The broker (required): OPS_HOST, OPS_API_TOKEN  (OPS_BROKER_HOST, BROKER_TENANT, OPS_TLS_VERIFY optional)
+  The broker (required): OPS_HOST, OPS_API_TOKEN_FILE  (OPS_BROKER_HOST, BROKER_TENANT, OPS_TLS_VERIFY optional)
+  Every password and token below is read from NAME_FILE (a file, mode 0600) when it is set, or else from NAME itself.
       VCF Operations         GET /suite-api/api/resources?pageSize=1         broker bearer      expect accepted
       NSX          NSX_HOST  GET /api/v1/node                                broker bearer      expect accepted
       Real-Time Metrics RTM_HOST   GET /data-query-service/api/v1/metadata   broker bearer      expect refused
@@ -27,14 +28,14 @@ Surfaces are chosen by which environment variables are set; unset ones are skipp
                                GET /cloudapi/1.0.0/sessions/current/rights   the count of effective rights
                                GET /iaas/api/about                            expect accepted
                                GET /cci/kubernetes/api                        expect accepted
-      the Basic session login  VCFA_USER (user@org), VCFA_PASSWORD
+      the Basic session login  VCFA_USER (user@org), VCFA_PASSWORD_FILE
                                POST /cloudapi/1.0.0/sessions -> the bearer in X-VMWARE-VCLOUD-ACCESS-TOKEN
                                GET /cloudapi/1.0.0/sessions/current/rights   the count, to compare: the arrival rule
       the provider api-token   VCFA_PROVIDER_REFRESH_TOKEN_FILE  (POST /oauth/provider/token)
                                GET /cloudapi/1.0.0/sessions/current/rights   the count
                                GET /cci/kubernetes/api                        expect refused (a tenant surface)
-  vCenter (VC_HOST, VC_USER, VC_PASSWORD):  POST /api/session, then GET /api/vcenter/datacenter    expect accepted
-  SDDC Manager (SDDC_HOST, SDDC_USER, SDDC_PASSWORD): POST /v1/tokens, then GET /v1/sddc-managers  expect accepted
+  vCenter (VC_HOST, VC_USER, VC_PASSWORD_FILE):  POST /api/session, then GET /api/vcenter/datacenter    expect accepted
+  SDDC Manager (SDDC_HOST, SDDC_USER, SDDC_PASSWORD_FILE): POST /v1/tokens, then GET /v1/sddc-managers  expect accepted
 
 Verdict: accepted (status below 400), refused (401 or 403), other. Where the Platform identity chapter states
 an expectation, the row says MATCH or DIFFERS; a DIFFERS row is worth a report, because the chapter's matrix
@@ -52,7 +53,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from opslib import _ctx, bearer, ops
+from opslib import _ctx, bearer, ops, secret
 from rtmlib import service_jwt
 
 CLOUDAPI_ACCEPT = "application/json;version=9.1.0"
@@ -146,7 +147,7 @@ def main():
         print(f"FATAL: the broker exchange failed: {type(e).__name__}: {e}")
         print("       a deleted or rotated api-token answers HTTP 500 here, not 401: check the token still exists, then its expiry, before the service")
         sys.exit(2)
-    print("broker bearer minted from OPS_API_TOKEN\n")
+    print("broker bearer minted from the api-token\n")
     st, _ = ops("GET", "/api/resources", tok, params={"pageSize": 1})
     row("VCF Operations", "broker bearer", st, "accepted")
     if os.environ.get("NSX_HOST"):
@@ -216,9 +217,9 @@ def main():
             row("VCF Automation, control plane", "tenant OAuth bearer", st, "accepted")
     else:
         print("\n  VCF Automation, tenant OAuth grant   skipped: VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE not all set")
-    if host and os.environ.get("VCFA_USER") and os.environ.get("VCFA_PASSWORD"):
+    if host and os.environ.get("VCFA_USER") and secret("VCFA_PASSWORD"):
         print("\nVCF Automation, the Basic session login")
-        cred = base64.b64encode(f"{os.environ['VCFA_USER']}:{os.environ['VCFA_PASSWORD']}".encode()).decode()
+        cred = base64.b64encode(f"{os.environ['VCFA_USER']}:{secret('VCFA_PASSWORD')}".encode()).decode()
         st, data, hdrs = req("POST", f"https://{host}/cloudapi/1.0.0/sessions", {"Authorization": f"Basic {cred}", "Accept": CLOUDAPI_ACCEPT})
         t = {k.lower(): v for k, v in hdrs.items()}.get("x-vmware-vcloud-access-token")
         row("VCF Automation, session login", "Basic (user@org)", st, "accepted", "bearer returned in a response header" if t else "")
@@ -226,7 +227,7 @@ def main():
             st, n = rights_count(host, t); counts["Basic session"] = n
             row("VCF Automation, rights", "session bearer", st, "accepted", f"{n} effective rights" if n is not None else "")
     else:
-        print("\n  VCF Automation, Basic session login   skipped: VCFA_USER and VCFA_PASSWORD not set")
+        print("\n  VCF Automation, Basic session login   skipped: VCFA_USER and VCFA_PASSWORD_FILE not set")
     if host and os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
         print("\nVCF Automation, the provider api-token")
         t = vcfa_refresh_grant(host, "/oauth/provider/token", os.environ["VCFA_PROVIDER_REFRESH_TOKEN_FILE"])
@@ -240,19 +241,19 @@ def main():
     if len(counts) > 1:
         print("\n  the arrival rule, in numbers: " + " · ".join(f"{k}: {v}" for k, v in counts.items()))
     # ---- components with a flow of their own
-    if os.environ.get("VC_HOST") and os.environ.get("VC_USER") and os.environ.get("VC_PASSWORD"):
+    if os.environ.get("VC_HOST") and os.environ.get("VC_USER") and secret("VC_PASSWORD"):
         print("\nvCenter, its own session")
-        cred = base64.b64encode(f"{os.environ['VC_USER']}:{os.environ['VC_PASSWORD']}".encode()).decode()
+        cred = base64.b64encode(f"{os.environ['VC_USER']}:{secret('VC_PASSWORD')}".encode()).decode()
         st, sid, _ = req("POST", f"https://{os.environ['VC_HOST']}/api/session", {"Authorization": f"Basic {cred}", "Accept": "application/json"})
         row("vCenter, session mint", "Basic", st, "accepted", "a session id in the body, no Bearer prefix" if st and st < 400 else "")
         if st and st < 400 and isinstance(sid, str):
             st, _, _ = req("GET", f"https://{os.environ['VC_HOST']}/api/vcenter/datacenter", {"vmware-api-session-id": sid, "Accept": "application/json"})
             row("vCenter API", "session id", st, "accepted")
     else:
-        print("\n  vCenter                              skipped: VC_HOST, VC_USER, VC_PASSWORD not all set")
-    if os.environ.get("SDDC_HOST") and os.environ.get("SDDC_USER") and os.environ.get("SDDC_PASSWORD"):
+        print("\n  vCenter                              skipped: VC_HOST, VC_USER, VC_PASSWORD_FILE not all set")
+    if os.environ.get("SDDC_HOST") and os.environ.get("SDDC_USER") and secret("SDDC_PASSWORD"):
         print("\nSDDC Manager, its own bearer")
-        body = json.dumps({"username": os.environ["SDDC_USER"], "password": os.environ["SDDC_PASSWORD"]}).encode()
+        body = json.dumps({"username": os.environ["SDDC_USER"], "password": secret("SDDC_PASSWORD")}).encode()
         st, data, _ = req("POST", f"https://{os.environ['SDDC_HOST']}/v1/tokens", {"Content-Type": "application/json", "Accept": "application/json"}, body)
         t = data.get("accessToken") if st == 200 and isinstance(data, dict) else None
         row("SDDC Manager, token mint", "username and password", st, "accepted")
@@ -260,7 +261,7 @@ def main():
             st, _, _ = req("GET", f"https://{os.environ['SDDC_HOST']}/v1/sddc-managers", {"Authorization": f"Bearer {t}", "Accept": "application/json"})
             row("SDDC Manager API", "its bearer", st, "accepted")
     else:
-        print("\n  SDDC Manager                         skipped: SDDC_HOST, SDDC_USER, SDDC_PASSWORD not all set")
+        print("\n  SDDC Manager                         skipped: SDDC_HOST, SDDC_USER, SDDC_PASSWORD_FILE not all set")
     print(f"\n{len(ROWS)} pairs read; {sum(1 for r in ROWS if r[4].startswith('DIFFERS'))} differ from the chapter; {sum(1 for r in ROWS if r[2] is None)} without an answer")
     sys.exit(1 if any(r[2] is None for r in ROWS) else 0)
 

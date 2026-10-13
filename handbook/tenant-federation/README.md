@@ -10,6 +10,7 @@ Entra is reached with a certificate rather than a client secret. No secret or to
 |---|---|
 | `org_federation.py` | Plans by default: prints every body each side will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. Writes `federation.json`, and refuses to write a record carrying any estate value. |
 | `federation.json` | That record from the reference estate. The chapter's plates render it. |
+| `update_key_refresh.json`, `update_keys.json`, `update_secret.json`, `update_metadata.json` | The day-2 writer's records, one per kind of write, from a throwaway OIDC organization and a throwaway SAML one on the reference estate. federation-operations' plates render them. |
 | `expected-output.md` | A run's transcript, with what to read in it. |
 
 ## Run it
@@ -46,6 +47,39 @@ estate it ran as an app holding, among other Microsoft Graph application permiss
 `AppRoleAssignment.ReadWrite.All`, `DelegatedPermissionGrant.ReadWrite.All`, `Group.ReadWrite.All`,
 `User.ReadWrite.All` and `Policy.ReadWrite.ApplicationConfiguration`; a smaller set was not tried. Those are
 tenant-wide powers: run it in a tenant made for trials, or as an app you remove afterwards.
+
+## Day 2: change an existing organization
+
+`--update` works on an organization that already exists and is federated to your tenant, whoever built it. It reads
+the organization's settings, changes only the fields you name, prints the plan, and with `--execute` writes the whole
+body back and reads every changed field back. It never touches Entra: the tenant's administrator rotates secrets and
+certificates on Entra ID, and this writes what the organization must hold.
+
+```bash
+export VCFA_HOST=<automation-fqdn> VCFA_PROVIDER_REFRESH_TOKEN_FILE=<file> ENTRA_TENANT_ID=<tenant-id>
+export ORG=<the organization>
+
+python3 org_federation.py --update --key-refresh               # plan: automatic refresh on, strategy ADD, every hour
+python3 org_federation.py --update --key-refresh --execute     # write it and read it back
+python3 org_federation.py --update --keys --execute            # the keys the provider publishes now (after an emergency roll)
+NEW_SECRET_FILE=<file> python3 org_federation.py --update --secret --execute      # the secret the tenant's administrator rotated
+METADATA_FILE=<file> python3 org_federation.py --update --metadata --execute      # SAML: metadata naming both certificates
+```
+
+It refuses (exit 2) an organization not federated to `ENTRA_TENANT_ID` (an organization signed in through VCF single
+sign-on included), a change the organization's protocol does not take (`--metadata` on OIDC, the others on SAML), a
+`--secret` or `--metadata` without its file, and metadata that is not this tenant's or names no signing certificate.
+A settings write carries the client secret, because VCF Automation refuses an OIDC settings write without it: the one
+the organization holds, read and sent back in memory, or the new one; neither is printed or written.
+
+On the reference estate (2026-10-13, a throwaway All Apps organization over OIDC and one over
+SAML, built and removed by the run): the key refresh was written to 24 hours and back to one hour, the keys the
+provider publishes were written (all six already held), a secret rotated at Entra was written and read back, and the
+SAML metadata Entra publishes for the app was written, with the same signing certificate. Every changed field read back
+as written. On OIDC the check compares every settings field except the key-refresh fields, the keys and the secret; on
+SAML it checks only that the organization holds the metadata's certificates and that SAML stayed enabled, so the keys
+and metadata writes were round trips, not repairs. The writer was not run against an organization this script did not
+build, and `--key-refresh` above one hour is for drills.
 
 ## What it does, in order
 

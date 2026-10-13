@@ -7,7 +7,10 @@ Operations' fleet identity API, and nothing else:
 
   plan (no flag)              prints every call it would send, with its body, and changes nothing
   --execute                   1. POST /ssorealms/{realm}/api-clients              the client, by the id you give
-                              2. PUT  /ssorealms/{realm}/principals/{uuid}/roles    one VCF role, at realm scope
+                              2. PUT  /ssorealms/{realm}/principals/{uuid}/roles    one VCF role, at the realm's scope
+                                                                                     or, with --scope instance, at one
+                                                                                     VCF instance's (its id read from
+                                                                                     the realm's coverage)
                               3. POST /ssorealms/{realm}/api-tokens                 its token, with both lifetimes
                               then trades the token at the broker for a bearer once, to prove it, and reads the client
                               and its token back; the token goes to --token-file (mode 0600) and is never printed
@@ -31,7 +34,7 @@ Env:  OPS_HOST                 VCF Operations FQDN (required)
       TLS_VERIFY=false         only on a self-signed lab CA
       OUT                      the record (default api_client.json)
 Use:  python3 api_client.py --client-id ID --role ROLE --api-token-ttl MIN --access-token-ttl MIN [--token-file PATH]
-                            [--execute] [--redact]
+                            [--scope instance --instance NAME] [--execute] [--redact]
       python3 api_client.py --client-id ID --rotate --api-token-ttl MIN --access-token-ttl MIN --token-file NEW
                             [--old-token-file OLD] [--execute] [--redact]
       python3 api_client.py --client-id ID --teardown [--execute] [--redact]
@@ -129,18 +132,30 @@ class Fleet:
 
     def call(self, method: str, path: str, shown: str, body: object | None = None) -> tuple[int, object]:
         status, answer = _send(method, self.base + path, body, {"Authorization": f"Bearer {self.bearer}"})
-        self.calls.append({"method": method, "path": shown, "status": status})
+        rec = {"method": method, "path": shown, "status": status}
+        if status >= 400 and isinstance(answer, dict):   # the fleet's own reason for a refusal, kept short
+            rec["message"] = str(answer.get("message") or answer.get("errorMessage") or answer.get("error") or "")[:200]
+        self.calls.append(rec)
         return status, answer
 
 
 # ── the plan: every call and body, from the arguments alone ──────────────────────────────────────────────────────
-def create_bodies(client_id: str, role: str, api_ttl: int, access_ttl: int, description: str) -> list[dict]:
+REALM_SCOPE = {"scopeType": "SSO_REALM", "resources": []}
+
+
+def instance_scope(instance_id: str, name: str) -> dict:
+    """One VCF instance's scope: what a role bound at it reaches is that instance's components, not the realm's."""
+    return {"scopeType": "VCF_INSTANCE", "resources": [{"id": instance_id, "name": name}]}
+
+
+def create_bodies(client_id: str, role: str, api_ttl: int, access_ttl: int, description: str,
+                  scope: dict | None = None) -> list[dict]:
     """The three writes that make one client with one role and one token, in the order they are sent."""
     return [
         {"method": "POST", "path": "/ssorealms/{realm}/api-clients",
          "body": {"clientId": client_id, "clientName": client_id, "clientDescription": description}},
         {"method": "PUT", "path": "/ssorealms/{realm}/principals/{client uuid}/roles",
-         "body": {"vcfRoleAssignments": [{"roleName": role, "roleScope": {"scopeType": "SSO_REALM", "resources": []}}]}},
+         "body": {"vcfRoleAssignments": [{"roleName": role, "roleScope": scope or REALM_SCOPE}]}},
         {"method": "POST", "path": "/ssorealms/{realm}/api-tokens",
          "body": {"apiClientId": client_id, "tokenName": f"{client_id}-token", "tokenType": "API_CLIENT",
                   "apiTokenTtl": api_ttl, "accessTokenTtl": access_ttl}},
@@ -186,6 +201,15 @@ def realm_id(fleet: Fleet) -> str | None:
     return realms[0].get("id") if status == 200 and realms else None
 
 
+def instances(fleet: Fleet, rid: str) -> dict[str, str] | None:
+    """The VCF instances the realm covers, name to id, from the realm's own coverage."""
+    status, answer = fleet.call("GET", f"/ssorealms/{rid}", "/ssorealms/{realm}")
+    if status != 200 or not isinstance(answer, dict):
+        return None
+    return {str(c.get("name")): str(c.get("id")) for c in answer.get("ssoRealmCoverage") or []
+            if c.get("ssoEntityType") == "VCF_INSTANCE" and c.get("id")}
+
+
 def clients(fleet: Fleet, rid: str) -> list[dict] | None:
     status, answer = fleet.call("POST", f"/ssorealms/{rid}/api-clients/query", "/ssorealms/{realm}/api-clients/query",
                                 {"pageSize": 500})
@@ -210,6 +234,8 @@ def readback(fleet: Fleet, rid: str, client_id: str) -> dict:
     return {"client_present": bool(c),
             "roles": sorted({r.get("roleName") for x in c for r in (x.get("roles") or [])} - {None}),
             "role_scopes": sorted({(r.get("roleScope") or {}).get("scopeType") for x in c for r in (x.get("roles") or [])} - {None}),
+            "scope_resources": sorted({str(res.get("name") or res.get("id")) for x in c for r in (x.get("roles") or [])
+                                       for res in (r.get("roleScope") or {}).get("resources") or []}),
             "tokens": [{"status": t.get("tokenStatus"), "api_token_ttl_min": t.get("apiTokenTtl"),
                         "access_token_ttl_min": t.get("accessTokenTtl")} for t in mine(tk, client_id)]}
 
@@ -238,7 +264,17 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     if mine(existing, a.client_id):
         record["refused"] = "the client exists; this script never adopts a client: --teardown it first, or choose another id"
         return 2
-    post, put, issue = create_bodies(a.client_id, a.role, a.api_token_ttl, a.access_token_ttl, a.description)
+    scope = REALM_SCOPE
+    if a.scope == "instance":
+        covered = instances(fleet, rid)
+        if covered is None:
+            return 1
+        if a.instance not in covered:
+            record["refused"] = (f"the realm covers no VCF instance named {a.instance}; it covers "
+                                 f"{', '.join(sorted(covered)) or 'none'}")
+            return 2
+        scope = instance_scope(covered[a.instance], a.instance)
+    post, put, issue = create_bodies(a.client_id, a.role, a.api_token_ttl, a.access_token_ttl, a.description, scope)
     status, answer = fleet.call("POST", f"/ssorealms/{rid}/api-clients", post["path"], post["body"])
     if status not in (200, 201) or not isinstance(answer, dict):
         return 1
@@ -260,7 +296,8 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     record["exchange"] = prove(token)
     del token
     record["readback"] = rb = readback(fleet, rid, a.client_id)
-    held = (rb.get("client_present") and rb.get("roles") == [a.role] and rb.get("role_scopes") == ["SSO_REALM"]
+    held = (rb.get("client_present") and rb.get("roles") == [a.role] and rb.get("role_scopes") == [scope["scopeType"]]
+            and rb.get("scope_resources") == sorted(str(r.get("name")) for r in scope["resources"])
             and any(t["status"] == "ACTIVE" and t["api_token_ttl_min"] == a.api_token_ttl
                     and t["access_token_ttl_min"] == a.access_token_ttl for t in rb.get("tokens") or [])
             and record["exchange"].get("status") == 200)
@@ -398,7 +435,9 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
     elif a.rotate:
         calls, kind = rotate_calls(a.client_id, a.api_token_ttl, a.access_token_ttl), "Rotation"
     else:
-        calls, kind = create_bodies(a.client_id, a.role, a.api_token_ttl, a.access_token_ttl, a.description), "Create"
+        scope = (instance_scope(f"<id of {a.instance}, from the realm's coverage>", a.instance) if a.scope == "instance"
+                 else REALM_SCOPE)
+        calls, kind = create_bodies(a.client_id, a.role, a.api_token_ttl, a.access_token_ttl, a.description, scope), "Create"
     out = [f"{kind} plan for API client {a.client_id} on {os.environ.get('OPS_HOST', '<OPS_HOST>')}:"]
     for c in calls:
         out.append(f"  {c['method']:6} {c['path'] if c['path'].startswith('/acs') else IAM + c['path']}")
@@ -416,7 +455,7 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
 def report(record: dict) -> list[str]:
     lines = [f"{record['mode']}: API client {record['client']}"]
     for c in record.get("calls", []):
-        lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}")
+        lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}" + (f" ({c['message']})" if c.get("message") else ""))
     if record.get("refused"):
         lines.append(f"  refused: {record['refused']}")
     if record.get("partial"):
@@ -435,7 +474,8 @@ def report(record: dict) -> list[str]:
     if "readback" in record:
         rb = record["readback"]
         lines.append(f"  read back: client present {rb.get('client_present')}, roles {', '.join(rb.get('roles') or []) or 'none'} "
-                     f"at {', '.join(rb.get('role_scopes') or []) or 'no'} scope; tokens "
+                     f"at {', '.join(rb.get('role_scopes') or []) or 'no'} scope"
+                     + (f" ({', '.join(rb['scope_resources'])})" if rb.get("scope_resources") else "") + "; tokens "
                      + ("; ".join(f"{t['status']} API {t['api_token_ttl_min']} min, access {t['access_token_ttl_min']} min"
                                   for t in rb.get("tokens") or []) or "none"))
     if "residue" in record:
@@ -449,7 +489,10 @@ def report(record: dict) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="One VCF SSO API client for one integration: plan, create, remove. Plan by default.")
     ap.add_argument("--client-id", required=True, help="the client's id, also its name; one per integration")
-    ap.add_argument("--role", help="the one VCF role the client holds, at realm scope (for example vcf_viewer)")
+    ap.add_argument("--role", help="the one VCF role the client holds (for example vcf_viewer)")
+    ap.add_argument("--scope", choices=("realm", "instance"), default="realm",
+                    help="where the role applies: the whole realm (default), or one VCF instance with --instance")
+    ap.add_argument("--instance", help="with --scope instance: the VCF instance's name, as the realm's coverage names it")
     ap.add_argument("--api-token-ttl", type=int, help="the API token's lifetime in minutes (1440 to 259200)")
     ap.add_argument("--access-token-ttl", type=int, help="the lifetime in minutes of each bearer it yields (30 to 60)")
     ap.add_argument("--token-file", help="where the token is written, mode 0600; it must not exist")
@@ -462,6 +505,12 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     if a.rotate and a.teardown:
         print("--rotate and --teardown are two runs, not one", file=sys.stderr)
+        return 2
+    if (a.scope == "instance") != bool(a.instance):
+        print("--scope instance and --instance NAME go together", file=sys.stderr)
+        return 2
+    if a.scope == "instance" and (a.rotate or a.teardown):
+        print("--scope is read only when a client is created", file=sys.stderr)
         return 2
     if a.old_token_file and not a.rotate:
         print("--old-token-file is read only with --rotate", file=sys.stderr)
@@ -481,7 +530,7 @@ def main(argv: list[str] | None = None) -> int:
     if not a.execute:
         lines = plan_lines(a)
         if a.redact:   # the plan carries the host and the client id you gave; a shared transcript carries neither
-            given = [(os.environ.get("OPS_HOST", ""), "host"), (a.client_id, "client")]
+            given = [(os.environ.get("OPS_HOST", ""), "host"), (a.client_id, "client"), (a.instance or "", "instance")]
             lines = scrub(lines, estate_values({"plan": lines}, [(v, k) for v, k in given if v]))
         print("\n".join(lines))
         print("\nplan only: nothing was sent (--execute sends it)")
@@ -495,8 +544,10 @@ def main(argv: list[str] | None = None) -> int:
         record["asked"] = {"api_token_ttl_min": a.api_token_ttl, "access_token_ttl_min": a.access_token_ttl,
                            "old_token_given": bool(a.old_token_file)}
     elif not a.teardown:
-        record["asked"] = {"role": a.role, "scope": "SSO_REALM", "api_token_ttl_min": a.api_token_ttl,
-                           "access_token_ttl_min": a.access_token_ttl}
+        record["asked"] = {"role": a.role, "scope": "VCF_INSTANCE" if a.scope == "instance" else "SSO_REALM",
+                           "api_token_ttl_min": a.api_token_ttl, "access_token_ttl_min": a.access_token_ttl}
+        if a.instance:
+            record["asked"]["instance"] = a.instance
     try:
         fleet = Fleet(os.environ["OPS_HOST"], ops_bearer(), record["calls"])
     except (RuntimeError, urllib.error.URLError, OSError) as e:
@@ -508,7 +559,8 @@ def main(argv: list[str] | None = None) -> int:
     else:
         record["exit"] = (teardown(fleet, rid, a.client_id, record) if a.teardown
                           else rotate(fleet, rid, a, record) if a.rotate else create(fleet, rid, a, record))
-    given = [(os.environ.get(k, ""), "host") for k in ("OPS_HOST", "OPS_BROKER_HOST")] + [(a.client_id, "client")]
+    given = ([(os.environ.get(k, ""), "host") for k in ("OPS_HOST", "OPS_BROKER_HOST")] + [(a.client_id, "client")]
+             + [(a.instance or "", "instance")])
     table = estate_values(record, [(v, k) for v, k in given if v])
     clean = scrub(record, table)
     left = leaks(clean, table)

@@ -15,6 +15,13 @@ the organization with a role. This script does both sides in the order that work
                          browser steps that prove it (a sign-in is a browser protocol; this script does not drive one)
   --teardown --execute   deletes what --execute created (only that), purges it from Entra's recycle bin, and reads
                          each object back to confirm nothing is left
+  --update               day 2 on an existing organization federated to the tenant (it need not be one this script
+                         built): reads its settings, changes only the fields named by --key-refresh [HOURS] (automatic
+                         refresh on, strategy ADD, every HOURS, default 1), --keys (the keys the provider publishes now,
+                         the write after an emergency roll), --secret (the client secret in NEW_SECRET_FILE, which the
+                         tenant's administrator rotated) or --metadata (the SAML metadata in METADATA_FILE), and prints
+                         the plan; with --execute it writes the whole body back, with the secret the organization holds
+                         or the new one, and reads every changed field back. It never touches Entra.
 
 Writes `federation.json`: the steps, their HTTP statuses, the waits Entra imposed, the setting names stored on
 read-back and any refusal verbatim. Every value from your estate (host, organization, tenant, users, ids) is replaced
@@ -31,8 +38,11 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token) or VCFA
       ENTRA_CLIENT_SECRET_FILE or ENTRA_CERT_FILE + ENTRA_KEY_FILE (the certificate form needs the `cryptography`
       package); ORG (the throwaway organization's name); ENTITLED_UPN and UNENTITLED_UPN (your test users);
       SECRET_DAYS (OIDC secret life, default 180); OUT (default federation.json); STATE (default
-      org_federation.<ORG>.state.json)
-Exit: 0 done · 1 a call or a check failed · 2 refused (a name this script did not create)
+      org_federation.<ORG>.state.json). --update needs VCFA_HOST, the provider credential, ENTRA_TENANT_ID and ORG
+      (the existing organization), NEW_SECRET_FILE for --secret, METADATA_FILE for --metadata; it writes OUT
+      (default update.json)
+Exit: 0 done · 1 a call or a check failed · 2 refused (a name this script did not create; for --update, an
+      organization not federated to ENTRA_TENANT_ID, a change its protocol does not take, or a missing file)
 """
 
 import argparse
@@ -234,7 +244,8 @@ def entra_checklist(protocol, org_type, user_key):
     out = [
         "One app for this organization, with assignment required on its service principal",
         "One cloud-only security group per organization role, assigned to the app; users as direct members, "
-        "because a member only through a nested group is refused at Entra",
+        "because a member only through a nested group is refused at Entra (a group synchronized from on-premises AD "
+        "was not measured)",
         "The groups claim limited to groups assigned to the app (ApplicationGroup), carrying display names "
         "(cloud_displayname), so the claim holds the name the organization imports",
         "Conditional Access MFA on the app, with any exemption group kept apart from the entitlement group",
@@ -504,6 +515,13 @@ class Vcfa:
         _, data, _ = self.ok("GET", f"/api/admin/org/{uuid_}/settings/{kind}", f"read {kind} settings", accept=VCD_JSON)
         data.pop("clientSecret", None)
         return data
+
+    def settings_for_write(self, uuid_, kind):
+        """GET the settings for a round trip: the body and the client secret apart, the secret kept only in memory
+        for the write that needs it (VCF Automation refuses an OIDC settings write without it)."""
+        _, data, _ = self.ok("GET", f"/api/admin/org/{uuid_}/settings/{kind}", f"read {kind} settings", accept=VCD_JSON)
+        secret = data.pop("clientSecret", None)
+        return data, secret
 
     def role(self, org_urn, name):
         _, data, _ = self.ok("GET", "/cloudapi/1.0.0/roles", "find role", tenant=org_urn, params={"filter": f"name=={name}", "pageSize": 10})
@@ -1011,15 +1029,188 @@ class Run:
         print(f"\nrecorded {len(self.steps)} steps to {out}; every estate value replaced by a placeholder")
 
 
+# ── day 2: change an existing organization's federation, only the named fields ─────────────────────────────────
+def federated_to(oauth, fed, tenant):
+    """The protocol the organization is federated to this tenant over, or None: OIDC by its issuer, SAML by the issuer
+    in the metadata it holds. An organization signed in through VCF single sign-on is neither."""
+    if oauth.get("enabled") and not oauth.get("vidb") and f"login.microsoftonline.com/{tenant}" in str(oauth.get("issuerId") or ""):
+        return "oidc"
+    if fed.get("enabled") and f"sts.windows.net/{tenant}" in str(fed.get("samlMetadata") or ""):
+        return "saml"
+    return None
+
+
+def oidc_update(current, secret, refresh_hours=None, keys=None):
+    """The OIDC settings for a day-2 write: the GET body with only the named fields changed and every other field
+    carried through, the client secret on the write because VCF Automation refuses one without it. Returns the body
+    and the names of the fields whose value changes."""
+    body = {k: v for k, v in current.items() if k not in ("link", "href", "type", "clientSecret")}
+    changed = []
+    if refresh_hours is not None:
+        want = {"autoRefreshKey": True, "keyRefreshStrategy": "ADD", "keyRefreshFrequencyInHours": refresh_hours}
+        changed += [k for k, v in want.items() if current.get(k) != v]
+        body.update(want)
+    if keys is not None:
+        held = sorted(k.get("keyId") for k in ((current.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or []))
+        if held != sorted(k["keyId"] for k in keys):
+            changed.append("oAuthKeyConfigurations")
+        body["oAuthKeyConfigurations"] = {"oAuthKeyConfiguration": keys}
+    body["clientSecret"] = secret
+    return body, changed
+
+
+def saml_update(current, metadata):
+    """The SAML settings for a day-2 write: the GET body with the provider's metadata replaced."""
+    body = {k: v for k, v in current.items() if k not in ("link", "href", "type")}
+    changed = ["samlMetadata"] if current.get("samlMetadata") != metadata else []
+    body["samlMetadata"] = metadata
+    return body, changed
+
+
+def metadata_certs(xml):
+    """The signing certificates a SAML metadata document names, as the base64 text between its X509Certificate tags."""
+    return sorted({"".join(c.split()) for c in re.findall(r"<(?:\w+:)?X509Certificate>([^<]+)</(?:\w+:)?X509Certificate>", xml or "")})
+
+
+def update(a):
+    """--update: one existing organization's federation settings, only the named fields; a plan unless --execute."""
+    host, org_name, tenant = os.environ.get("VCFA_HOST"), os.environ.get("ORG"), os.environ.get("ENTRA_TENANT_ID")
+    asked = [n for n, on in (("key refresh", a.key_refresh is not None), ("keys", a.keys), ("secret", a.secret),
+                             ("metadata", a.metadata)) if on]
+    if not (host and org_name and tenant) or not asked:
+        print("--update needs VCFA_HOST, ORG, ENTRA_TENANT_ID and at least one of --key-refresh, --keys, --secret, --metadata")
+        return 2
+    new_secret = _read_file("NEW_SECRET_FILE") if a.secret else None
+    metadata = _read_file("METADATA_FILE") if a.metadata else None
+    if (a.secret and not new_secret) or (a.metadata and not metadata):
+        print("refused: --secret needs NEW_SECRET_FILE and --metadata needs METADATA_FILE")
+        return 2
+    san, steps, t0 = Scrubber(), [], time.monotonic()
+    for v, ph in ((host, "{{host}}"), (org_name, "{{org}}"), (tenant, "{{tenant-id}}")):
+        san.add(v, ph)
+
+    def step(name, status, **facts):
+        steps.append({"step": name, "status": status, "at_s": round(time.monotonic() - t0, 1), **facts})
+        print(f"  {name}: {status}" + (f"  {facts}" if facts else ""), flush=True)
+
+    def write(proto, ok):
+        out = os.environ.get("OUT", "update.json")
+        rec = {"mode": "update" if a.execute else "update plan", "protocol": proto, "asked": asked,
+               "captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": steps, "held": ok}
+        text = san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
+        san.check(text)
+        with open(out, "w", encoding="utf-8") as f:
+            f.write(text + "\n")
+        print(f"\nrecorded {len(steps)} steps to {out}; every estate value replaced by a placeholder")
+
+    vcfa = Vcfa(host)
+    org = vcfa.org(org_name)
+    if org is None:
+        print("refused: no organization by that name")
+        return 2
+    uid = org["id"].rsplit(":", 1)[-1]
+    san.add(org["id"], "{{org-id}}")
+    oauth, fed = vcfa.settings(uid, "oauth"), vcfa.settings(uid, "federation")
+    proto = federated_to(oauth, fed, tenant)
+    san.add(oauth.get("clientId"), "{{client-id}}")
+    if proto is None:
+        print("refused: the organization is not federated to ENTRA_TENANT_ID over OIDC or SAML")
+        return 2
+    wrong = [n for n in asked if (proto == "oidc") == (n == "metadata")]
+    if wrong:
+        print(f"refused: an organization federated over {proto.upper()} does not take {', '.join(wrong)}")
+        return 2
+    try:
+        if proto == "oidc":
+            keys = None
+            if a.keys:
+                st, _, raw = _send("GET", oauth["jwksUri"], {"Accept": "application/json"}, None, ssl.create_default_context())
+                if st != 200:
+                    raise CallError(f"the provider's keys endpoint answered {st}")
+                keys = jwks_keys(json.loads(raw))
+            held = [k.get("keyId") for k in ((oauth.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])]
+            step("plan", "read", protocol="OIDC",
+                 key_refresh={"now": [oauth.get("autoRefreshKey"), oauth.get("keyRefreshStrategy"), oauth.get("keyRefreshFrequencyInHours")],
+                              "to": [True, "ADD", a.key_refresh]} if a.key_refresh is not None else None,
+                 keys={"held": len(held), "published": len(keys), "published_not_held": len(set(k["keyId"] for k in keys) - set(held))} if keys is not None else None,
+                 secret="the organization's secret is replaced by the one in NEW_SECRET_FILE (no value shown)" if a.secret else None)
+            if not a.execute:
+                print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
+                write(proto, None)
+                return 0
+            current, held_secret = vcfa.settings_for_write(uid, "oauth")
+            body, changed = oidc_update(current, new_secret or held_secret, a.key_refresh, keys)
+            if a.secret and new_secret != held_secret:
+                changed.append("clientSecret")
+            del held_secret
+            put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{uid}/settings/oauth", "write OIDC settings", body=body, accept=VCD_JSON, ctype=OAUTH_SETTINGS)
+            del body
+            step("OIDC settings written", put_st, changed=changed)
+            back, back_secret = vcfa.settings_for_write(uid, "oauth")
+            checks = {}
+            if a.key_refresh is not None:
+                checks[f"keys refresh every {a.key_refresh} h, added"] = (back.get("autoRefreshKey"), back.get("keyRefreshStrategy"), back.get("keyRefreshFrequencyInHours")) == (True, "ADD", a.key_refresh)
+            if keys is not None:
+                stored = {k.get("keyId") for k in ((back.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
+                checks["the organization holds every key the provider publishes"] = {k["keyId"] for k in keys} <= stored
+            if a.secret:
+                checks["the organization holds the new secret"] = back_secret == new_secret
+            checks["every settings field but the key refresh, the keys and the secret read back unchanged"] = all(
+                back.get(k) == current.get(k) for k in current
+                if k not in ("link", "href", "type", "autoRefreshKey", "keyRefreshStrategy", "keyRefreshFrequencyInHours",
+                             "oAuthKeyConfigurations", "lastKeyRefreshAttempt", "lastKeySuccessfulRefresh"))
+            del back_secret, new_secret
+        else:
+            certs = metadata_certs(metadata)
+            if f"sts.windows.net/{tenant}" not in metadata or not certs:
+                print("refused: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
+                return 2
+            step("plan", "read", protocol="SAML", metadata={"certificates_now": len(metadata_certs(fed.get("samlMetadata"))),
+                                                             "certificates_new": len(certs),
+                                                             "new_not_held": len(set(certs) - set(metadata_certs(fed.get("samlMetadata"))))})
+            if not a.execute:
+                print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
+                write(proto, None)
+                return 0
+            current = vcfa.settings(uid, "federation")
+            body, changed = saml_update(current, metadata)
+            put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{uid}/settings/federation", "write SAML settings", body=body, accept=VCD_JSON, ctype=FEDERATION_SETTINGS)
+            step("SAML settings written", put_st, changed=changed)
+            back = vcfa.settings(uid, "federation")
+            checks = {"the organization holds the new metadata's certificates": set(certs) <= set(metadata_certs(back.get("samlMetadata"))),
+                      "SAML still enabled": back.get("enabled") is True}
+    except CallError as e:
+        step("refused", str(e))
+        write(proto, False)
+        return 1
+    for name, ok in checks.items():
+        step(f"check: {name}", "pass" if ok else "FAIL")
+    write(proto, all(checks.values()))
+    return 0 if all(checks.values()) else 1
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("--protocol", choices=("oidc", "saml"), required=True)
-    p.add_argument("--org-type", choices=("classic", "all-apps"), required=True)
+    p.add_argument("--protocol", choices=("oidc", "saml"))
+    p.add_argument("--org-type", choices=("classic", "all-apps"))
     p.add_argument("--user-key", choices=("oid", "preferred_username"), default="oid")
     p.add_argument("--execute", action="store_true")
     p.add_argument("--prove", action="store_true")
     p.add_argument("--teardown", action="store_true")
+    p.add_argument("--update", action="store_true", help="day 2 on an existing organization (see the docstring)")
+    p.add_argument("--key-refresh", type=int, nargs="?", const=1, metavar="HOURS")
+    p.add_argument("--keys", action="store_true")
+    p.add_argument("--secret", action="store_true")
+    p.add_argument("--metadata", action="store_true")
     a = p.parse_args()
+    if a.update:
+        if a.prove or a.teardown:
+            p.error("--update does not combine with --prove or --teardown")
+        return update(a)
+    if a.key_refresh is not None or a.keys or a.secret or a.metadata:
+        p.error("--key-refresh, --keys, --secret and --metadata go with --update")
+    if not (a.protocol and a.org_type):
+        p.error("--protocol and --org-type are required")
     if a.teardown and not a.execute:
         state = os.environ.get("STATE", f"org_federation.{os.environ.get('ORG', '<org>')}.state.json")
         print(f"teardown plan: delete the organization, the Entra app and the group recorded as created in {state},")

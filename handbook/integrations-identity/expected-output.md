@@ -112,6 +112,42 @@ api_client_rotate.json written with every estate value replaced
   three seconds later, and the new one HTTP 200. An integration reading the old value fails from that moment, so rotate with
   `--rotate` and its overlap, not by regenerating.
 
+## 1b. `api_client.py --scope instance`: the role at one VCF instance
+
+The same estate, 2026-10-13, throwaway clients each made and removed. The fleet refused `vcf_viewer` at an instance's scope on a first
+attempt, and the record keeps its reason:
+
+```text
+  PUT    /ssorealms/{realm}/principals/{client uuid}/roles: HTTP 400 (Invalid role scope for the given role:vcf_viewer)
+```
+
+`sddc_viewer` bundles only an instance's components (vCenter ReadOnly, NSX auditor), and the fleet took it:
+
+```text
+create: API client {{client-1}}
+  GET    /ssorealms: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  GET    /ssorealms/{realm}: HTTP 200
+  POST   /ssorealms/{realm}/api-clients: HTTP 201
+  PUT    /ssorealms/{realm}/principals/{client uuid}/roles: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens: HTTP 201
+  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  the token traded at the broker: HTTP 200, a SERVICE bearer living 30.0 min
+  read back: client present True, roles sddc_viewer at VCF_INSTANCE scope ({{instance-1}}); tokens ACTIVE API 1440 min, access 30 min
+exit 0
+
+api_client_instance.json written with every estate value replaced
+```
+
+- **The binding reads back at the instance.** One role, `VCF_INSTANCE`, one instance named.
+- **It reaches that instance's vCenters and no other.** Taken through each vCenter's exchange, the client opened a REST
+  session that saw 56 and 36 VMs on the instance's 2 vCenters, and
+  signed in over SOAP on each. On the vCenter outside the instance a REST session still opened but saw
+  0 VMs, and the SOAP sign-in was refused ("Permission to perform this operation was denied."). So a
+  REST session that opens is not a reach: read what it sees.
+- Torn down after, with no client or token left.
+
 ## 2. `vcenter_exchange.py --sessions` as a client, holding `vcf_viewer`
 
 An earlier throwaway client (X-142, 04:51), `VC_USER` unset, so the census read the session lists as the client's own

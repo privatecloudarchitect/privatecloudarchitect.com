@@ -16,7 +16,9 @@ no longer pass both gates a sign-in passes:
   Entra's gate          when the app requires assignment, the user is assigned to it, directly or through a group
   VCF Automation's      the sign-in carries a group imported into the organization (a user in none is refused); with
                         groupMembershipClaims ApplicationGroup the claim carries only groups assigned to the app
-Accounts are matched to Entra by user name, the way VCF Automation matches a returning user. Local accounts are out
+Accounts are matched to Entra by the key the organization names them with, read from its own settings: by principal
+name for OIDC keyed on preferred_username and for SAML keyed on Entra's name claim, by object id for OIDC keyed on oid.
+Any other key, or an account whose name does not fit its organization's key, is undetermined. Local accounts are out
 of scope. Two more things are flagged and never acted on: a federated account holding a role directly (a reused
 name inherits it), and an account disabled here whose name an enabled, entitled Entra user now holds (if that is a
 different person, re-enabling the account hands them its roles).
@@ -53,9 +55,15 @@ Use:  python3 leavers.py                                   report every federate
       python3 leavers.py --redact                          the same, printed with placeholders, to share
       python3 leavers.py --execute --org NAME [--user UPN] close the confirmed leavers of one organization (with
                                                            --user, only that account; every account is still read)
-Exit: 0 nothing open and nothing flagged · 1 an open leaver to close, or a flag (a direct role, a name in use again)
-      · 2 with --execute, a close that did not hold on read-back · 3 a read failed and nothing worse · 4 a usage
-      error, or the record refused because an estate value survived the scrub (nothing is written)
+      python3 leavers.py --close-now --org NAME --user ACCOUNT [--execute]
+                                                           the urgent close: one named account (its user name, a
+                                                           principal name or an object id), closed now without asking
+                                                           Entra whether the person has left; plan only without
+                                                           --execute. Needs no Graph credential.
+Exit: 0 nothing open and nothing flagged (with --close-now: the plan printed, or the close held) · 1 an open leaver
+      to close, or a flag (a direct role, a name in use again) · 2 with --execute, a close that did not hold on
+      read-back · 3 a read failed and nothing worse · 4 a usage error, an account --close-now cannot name exactly
+      once, or the record refused because an estate value survived the scrub (nothing is written)
 """
 
 from __future__ import annotations
@@ -515,6 +523,57 @@ def close(vcfa: Vcfa, urn: str, user: dict, tokens: list[dict]) -> dict:
     return out
 
 
+def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool) -> dict:
+    """The urgent close: one account of one organization, named exactly, closed now without asking Entra whether the
+    person has left (they may still be entitled there, so remove them at the provider too). Plan only unless
+    `execute`. Reads the organization's accounts and tokens, and touches the named account's tokens and record only;
+    an account the name does not match exactly once is refused, never guessed."""
+    record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "mode": "close-now" if execute else "close-now plan", "organizations": [], "unreadable": [],
+              "federated_elsewhere": 0, "sent": []}
+    orgs = vcfa.pages("/cloudapi/1.0.0/orgs")
+    if orgs is None:
+        record["refused"] = "the organization list was refused"
+        record["summary"] = summary(record)
+        return record
+    org = [o for o in orgs if str(o.get("name")) == org_name]
+    if len(org) != 1:
+        record["refused"] = f"no single organization is named {org_name}"
+        record["summary"] = summary(record)
+        return record
+    urn = str(org[0]["id"])
+    users = vcfa.pages("/cloudapi/1.0.0/users", urn)
+    tokens = vcfa.pages("/cloudapi/1.0.0/tokens", urn)
+    if users is None or tokens is None:
+        record["refused"] = "the organization's users or tokens were refused"
+        record["summary"] = summary(record)
+        return record
+    match = [u for u in users if str(u.get("username", "")).lower() == account.lower()]
+    if len(match) != 1:
+        record["refused"] = (f"{len(match)} accounts in {org_name} are named {account}; --close-now acts on exactly one"
+                             " and never guesses")
+        record["summary"] = summary(record)
+        return record
+    user = match[0]
+    mine = [t for t in tokens if (t.get("owner") or {}).get("id") == user.get("id")]
+    row = {**keep(user, USER), "tokens": keep(mine, TOKEN), "decision": "closed on request",
+           "reason": "named with --close-now; Entra was not asked whether the person has left",
+           "direct_roles": sorted(str(r.get("name")) for r in user.get("roleEntityRefs") or []),
+           "effective_roles": sorted(str(r.get("name")) for r in user.get("effectiveRoleEntityRefs") or []),
+           "flags": []}
+    if not execute:
+        row["action"] = (f"planned: revoke {len(mine)} token(s) (DELETE /cloudapi/1.0.0/tokens/{{id}} each), then "
+                         "disable the account (PUT /cloudapi/1.0.0/users/{id} with enabled false); nothing sent")
+    else:
+        row["action"] = "closed"
+        row["result"] = close(vcfa, urn, user, mine)
+    record["organizations"].append({"org": org_name, "protocol": user.get("providerType"), "user_key": None,
+                                    "close_now": True, "users": [row]})
+    record["summary"] = summary(record)
+    record["sent"] = [f"{c['method']} {c['path']}" for c in vcfa.calls if c["method"] in ("PUT", "DELETE")]
+    return record
+
+
 def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: bool, act_on: str | None,
               say=print) -> dict:
     """Report every federated organization's leavers; with `execute`, close the confirmed ones of `only`."""
@@ -699,13 +758,21 @@ def leaks(obj: object, table: dict) -> list[str]:
 def report_lines(record: dict) -> list[str]:
     """The run as the lines it prints, from the record alone (so a redacted record prints the same way)."""
     s = record["summary"]
-    out = [f"Leavers · {record['mode'].upper()} · {s['organizations']} organization(s) federated to the tenant"
-           + (f", {s['federated_elsewhere']} federated elsewhere (not read)" if s["federated_elsewhere"] else "")]
+    if record["mode"].startswith("close-now"):
+        out = [f"Leavers · {record['mode'].upper()} · one named account, closed without asking Entra"]
+    else:
+        out = [f"Leavers · {record['mode'].upper()} · {s['organizations']} organization(s) federated to the tenant"
+               + (f", {s['federated_elsewhere']} federated elsewhere (not read)" if s["federated_elsewhere"] else "")]
     out += [f"  {u['org']}: unreadable ({u['reason']})" for u in record.get("unreadable") or []]
+    if record.get("refused"):
+        out.append(f"  refused: {record['refused']}")
     for o in record["organizations"]:
         g = o.get("gate")
-        out.append(f"  {o['org']} ({o['protocol']}): {len(o['users'])} account(s); gate "
-                   + (", ".join(g["claimable"]) or "no claimable group" if g else f"UNREAD ({o.get('gate_error') or o.get('error')})"))
+        if o.get("close_now"):
+            out.append(f"  {o['org']}: one account named for --close-now; Entra not asked")
+        else:
+            out.append(f"  {o['org']} ({o['protocol']}): {len(o['users'])} account(s); gate "
+                       + (", ".join(g["claimable"]) or "no claimable group" if g else f"UNREAD ({o.get('gate_error') or o.get('error')})"))
         direct = [f"{r.get('username')} ({', '.join(r['direct_roles'])})" for r in o["users"]
                   if r.get("providerType") in FEDERATED and r["direct_roles"]]
         out.append("    direct role assignments on federated accounts: " + ("; ".join(direct) if direct else "none"))
@@ -715,9 +782,17 @@ def report_lines(record: dict) -> list[str]:
             out.append(f"    {r.get('username')}: {r['decision']} ({r['reason']}{held})"
                        + (f" -> {r['action']}" if r.get("action") else "")
                        + "".join(f"  FLAG {f.split(':', 1)[0]}" for f in r["flags"]))
+            res = r.get("result")
+            if res:
+                rb = res.get("read_back") or {}
+                out.append(f"      revoked {sum(1 for t in res.get('revoked') or [] if t.get('status') in (200, 204))} of "
+                           f"{len(res.get('revoked') or [])} token(s); read back: enabled {rb.get('enabled')}, "
+                           f"tokens left {len(rb.get('tokens_left') or [])}, other fields changed "
+                           f"{len(rb.get('changed_unasked') or [])}; held {res.get('held')}"
+                           + (f" ({res['error']})" if res.get("error") else ""))
     keys = ("keep", "leaver", "out_of_scope", "undetermined", "open_leavers", "closed", "not_held", "in_step",
             "direct_role", "name_in_use_again")
-    out.append("  totals: " + ", ".join(f"{k.replace('_', ' ')} {s[k]}" for k in keys))
+    out.append("  totals: " + ", ".join(f"{k.replace('_', ' ')} {s.get(k, 0)}" for k in keys))
     return out
 
 
@@ -727,6 +802,50 @@ def given_values() -> list[tuple[str, str]]:
     return [(v, k) for v, k in out if v]
 
 
+def _write(record: dict, calls: list, redact: bool) -> int:
+    """Print the run, scrub the record and write it; refuse to write one in which an estate value survived."""
+    record["calls"] = [{k: v for k, v in c.items() if k != "message"} for c in calls]
+    table = estate_values(record, given_values())
+    clean = scrub(record, table)
+    left = leaks(clean, table)
+    out = os.environ.get("OUT", "leavers.json")
+    if not (left and redact):  # a redacted print with a surviving value would print that value
+        print("\n".join(report_lines(clean if redact else record)))
+        for c in calls:
+            if c["status"] is None or c["status"] >= 400:
+                where = scrub(c["path"], table) if redact else c["path"]
+                print(f"  FAILED {c['plane']} {c['method']} {where}: {c['status'] or c.get('error') or ''}"
+                      + ("" if redact else f" {c.get('message') or ''}"))
+    if left:
+        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))})",
+              file=sys.stderr)
+        return 4
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
+    print(f"\n{len(calls)} call(s), {sum(1 for c in calls if c['status'] is None or c['status'] >= 400)} refused; "
+          f"{out} written with every estate value replaced; exit {record['exit']}")
+    return record["exit"]
+
+
+def _close_now_main(a: argparse.Namespace) -> int:
+    if not (a.org and a.user):
+        print("--close-now needs --org and --user: it closes exactly one named account", file=sys.stderr)
+        return 4
+    if not os.environ.get("VCFA_HOST"):
+        print("set VCFA_HOST (see the header); --close-now needs no Graph credential", file=sys.stderr)
+        return 4
+    calls: list = []
+    try:
+        vcfa = Vcfa(os.environ["VCFA_HOST"], calls)
+    except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
+        why = getattr(e, "reason", "") or getattr(e, "code", "")
+        print(f"could not obtain a credential: {type(e).__name__} {str(why)[:160]}".rstrip(), file=sys.stderr)
+        return 4
+    record = close_now(vcfa, a.org, a.user, a.execute)
+    record["exit"] = 4 if record.get("refused") else exit_code(record["summary"], a.execute)
+    return _write(record, calls, a.redact)
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Report, and on request close, VCF Automation accounts of people who "
                                              "have left at Entra ID.")
@@ -734,7 +853,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--org", help="the one organization --execute acts on")
     ap.add_argument("--user", help="with --execute, act on this account only (every account is still read)")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
+    ap.add_argument("--close-now", action="store_true",
+                    help="close the one account --user names in --org now, without asking Entra; plan only without --execute")
     a = ap.parse_args(argv)
+    if a.close_now:
+        return _close_now_main(a)
     if a.execute and not a.org:
         print("--execute needs --org: the script never acts on every organization it can see", file=sys.stderr)
         return 4
@@ -754,28 +877,8 @@ def main(argv: list[str] | None = None) -> int:
         return 4
     only = [a.org] if a.execute else [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
     record = reconcile(vcfa, graph, os.environ["ENTRA_TENANT_ID"], only, a.execute, a.user, say=lambda _m: None)
-    record["calls"] = [{k: v for k, v in c.items() if k != "message"} for c in calls]
     record["exit"] = exit_code(record["summary"], a.execute)
-    table = estate_values(record, given_values())
-    clean = scrub(record, table)
-    left = leaks(clean, table)
-    out = os.environ.get("OUT", "leavers.json")
-    if not (left and a.redact):  # a redacted print with a surviving value would print that value
-        print("\n".join(report_lines(clean if a.redact else record)))
-        for c in calls:
-            if c["status"] is None or c["status"] >= 400:
-                where = scrub(c["path"], table) if a.redact else c["path"]
-                print(f"  FAILED {c['plane']} {c['method']} {where}: {c['status'] or c.get('error') or ''}"
-                      + ("" if a.redact else f" {c.get('message') or ''}"))
-    if left:
-        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))})",
-              file=sys.stderr)
-        return 4
-    with open(out, "w", encoding="utf-8") as f:
-        f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
-    print(f"\n{len(calls)} call(s), {sum(1 for c in calls if c['status'] is None or c['status'] >= 400)} refused; "
-          f"{out} written with every estate value replaced; exit {record['exit']}")
-    return record["exit"]
+    return _write(record, calls, a.redact)
 
 
 if __name__ == "__main__":

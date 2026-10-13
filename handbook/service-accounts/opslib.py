@@ -10,13 +10,15 @@ Environment:
   OPS_BROKER_HOST (optional)  Identity Broker FQDN; defaults to OPS_HOST
   BROKER_TENANT   (optional)  the broker tenant, the realm's path segment at the broker, default CUSTOMER;
                               not the realm's name (OPS_REALM, its earlier name, is still read)
-  OPS_API_TOKEN   (required)  the api-token from the operations console
+  OPS_API_TOKEN_FILE          a file holding the api-token from the operations console, mode 0600 (or
+                              OPS_API_TOKEN, the value itself, which lands in the shell's history)
   OPS_TLS_VERIFY  (optional)  TLS verification, on by default; set false for a self-signed CA
 """
 
 import json
 import os
 import ssl
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -30,11 +32,32 @@ def _ctx():
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
+def broker_tenant():
+    """The broker tenant: the realm's path segment at the broker (/acs/t/<tenant>/), CUSTOMER unless set; not the realm's
+    name. OPS_REALM, its earlier name, is still read when BROKER_TENANT is unset, with a notice."""
+    if os.environ.get("OPS_REALM") and not os.environ.get("BROKER_TENANT"):
+        print("note: OPS_REALM is now BROKER_TENANT (the broker tenant, not the realm's name); reading OPS_REALM this time",
+              file=sys.stderr)
+    return os.environ.get("BROKER_TENANT") or os.environ.get("OPS_REALM") or "CUSTOMER"
+
+
 def bearer():
     host = os.environ["OPS_HOST"]
     broker = os.environ.get("OPS_BROKER_HOST", host)
-    tenant = os.environ.get("BROKER_TENANT") or os.environ.get("OPS_REALM") or "CUSTOMER"
-    token = os.environ["OPS_API_TOKEN"]
+    tenant = broker_tenant()
+    token = secret("OPS_API_TOKEN")
+    if not token:
+        raise KeyError("OPS_API_TOKEN_FILE (or OPS_API_TOKEN) is not set")
     body = urllib.parse.urlencode({"grant_type": GRANT, "api_token": token}).encode()
     req = urllib.request.Request(
         f"https://{broker}/acs/t/{tenant}/token", data=body, method="POST",

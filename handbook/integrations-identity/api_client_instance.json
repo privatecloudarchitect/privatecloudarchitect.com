@@ -1,0 +1,80 @@
+{
+ "captured": "2026-10-13T08:47:45Z",
+ "mode": "create",
+ "client": "{{client-1}}",
+ "calls": [
+  {
+   "method": "GET",
+   "path": "/ssorealms",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "GET",
+   "path": "/ssorealms/{realm}",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients",
+   "status": 201
+  },
+  {
+   "method": "PUT",
+   "path": "/ssorealms/{realm}/principals/{client uuid}/roles",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens",
+   "status": 201
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  }
+ ],
+ "asked": {
+  "role": "sddc_viewer",
+  "scope": "VCF_INSTANCE",
+  "api_token_ttl_min": 1440,
+  "access_token_ttl_min": 30,
+  "instance": "{{instance-1}}"
+ },
+ "token_file_written": true,
+ "exchange": {
+  "status": 200,
+  "principal_type": "SERVICE",
+  "bearer_lifetime_min": 30.0
+ },
+ "readback": {
+  "client_present": true,
+  "roles": [
+   "sddc_viewer"
+  ],
+  "role_scopes": [
+   "VCF_INSTANCE"
+  ],
+  "scope_resources": [
+   "{{instance-1}}"
+  ],
+  "tokens": [
+   {
+    "status": "ACTIVE",
+    "api_token_ttl_min": 1440,
+    "access_token_ttl_min": 30
+   }
+  ]
+ },
+ "exit": 0
+}

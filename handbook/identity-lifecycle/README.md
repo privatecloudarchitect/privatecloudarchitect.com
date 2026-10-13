@@ -9,7 +9,7 @@ secret or password is printed or written.
 
 | File | What it is |
 |---|---|
-| `leavers.py` | Finds every organization federated to one Entra tenant from the organization's own settings (OIDC by an issuer on the tenant, SAML by metadata naming it), reads each account against Entra and both gates a sign-in passes (the app's assignment, and a group imported into the organization that the sign-in can carry), and reports every leaver, the tokens it holds (how many, and the last one's end date, for every account) and what the run would do. It lists every role granted to a federated account directly, and flags an account disabled here whose name an enabled, entitled Entra user now holds. `--execute --org` closes the confirmed leavers of one organization. Writes `leavers.json`, and refuses to write a record carrying any estate value. |
+| `leavers.py` | Finds every organization federated to one Entra tenant from the organization's own settings (OIDC by an issuer on the tenant, SAML by metadata naming it), reads each account against Entra and both gates a sign-in passes (the app's assignment, and a group imported into the organization that the sign-in can carry), and reports every leaver, the tokens it holds (how many, and the last one's end date, for every account) and what the run would do. It lists every role granted to a federated account directly, and flags an account disabled here whose name an enabled, entitled Entra user now holds. `--execute --org` closes the confirmed leavers of one organization; `--close-now --org --user` closes one named account at once, without asking Entra. Writes `leavers.json`, and refuses to write a record carrying any estate value. |
 | `leavers.json` | That record from the reference estate, a read-only run on 2026-10-13: every organization federated to the lab tenant. |
 | `expected-output.md` | The transcripts of that run and of a closed leaver, with what to read in them. |
 
@@ -28,25 +28,61 @@ python3 leavers.py                     # report, print, record
 python3 leavers.py --redact            # the same, printed with placeholders, for a transcript you will share
 python3 leavers.py --execute --org <org> --user <upn>   # close one confirmed leaver of one organization
 python3 leavers.py --execute --org <org>                # close every confirmed leaver of that organization
+
+# the urgent close, for a person who must lose access now, whether or not Entra has let them go yet:
+python3 leavers.py --close-now --org <org> --user <account>             # the plan: the account, its tokens, the disable
+python3 leavers.py --close-now --org <org> --user <account> --execute   # close that one account now, reading both back
 ```
+
+`<account>` is the account's user name in VCF Automation: a principal name, or the object id in an organization keyed
+on `oid`. `--close-now` needs no Graph credential, acts on exactly one account the name matches (it refuses a name
+that matches none or several), and touches only that account's tokens and record. Then remove the person at the
+provider, so the next report finds them in step.
+
+### Your provider credential
+
+By hand, a provider bearer (`VCFA_PROVIDER_BEARER_FILE`) lasts an hour. A scheduled report holds a provider API token
+instead (`VCFA_PROVIDER_REFRESH_TOKEN_FILE`), which the script trades at `/oauth/provider/token` for a bearer each run.
+The close does not run on one (below): run `--execute` and `--close-now --execute` on a provider bearer.
+Mint it for the identity the job runs as, a provider identity of its own and never a person's, and hold it as tier-0:
+the job revokes tokens and disables accounts in every organization it closes. The programmatic mint is two calls,
+with a provider bearer of that identity:
+
+```text
+POST https://<automation-fqdn>/oauth/provider/register   Authorization: Bearer <provider bearer>
+     {"client_name": "<the job's name>"}                  -> client_id
+POST https://<automation-fqdn>/oauth/provider/token      (form)
+     grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&client_id=<client_id>&assertion=<the same bearer>
+                                                          -> refresh_token: write it to a file of mode 0600
+```
+
+The token appears in the provider's token list (`GET /cloudapi/1.0.0/tokens`) under the client's name, type
+`REFRESH`; retire it with `DELETE /cloudapi/1.0.0/tokens/{id}`, after which its refresh answers 400 `invalid_grant`.
+The registered client stays: the API reference has no delete path for it. On the reference estate, 2026-10-13, a
+token minted this way for a provider System Administrator carried a report run over every federated organization with
+no call refused, reaching the same decision for every account as the provider bearer, and read back with rotation
+not required. The close was refused on such a token: the write that disables the account answered 403 and the
+account stayed enabled (a local user in a classic organization, one run), so the script exited 2. Every close that
+held on the reference estate ran on a provider bearer from the provider portal's sign-in. The narrowest provider role
+that lets the job pass was not measured.
 
 Schedule the report and read the exit code:
 
 | Exit | Means |
 |---|---|
-| 0 | nothing open and nothing flagged |
+| 0 | nothing open and nothing flagged; with `--close-now`, the plan printed or the close held |
 | 1 | an open leaver to close (an account still enabled, or holding a token, whose person has left), or a flag: a role granted to a federated account directly, or a name in use again |
 | 2 | with `--execute`, a close that did not hold on read-back (a token left, the account still enabled, or another field changed) |
 | 3 | a read failed (an organization, a gate or an account could not be read) and nothing worse |
-| 4 | a usage error, or the record was refused because an estate value survived the scrub; nothing is written |
+| 4 | a usage error, an account `--close-now` cannot name exactly once, or the record was refused because an estate value survived the scrub; nothing is written |
 
 ## What it decides, and when it acts
 
 - **A leaver** is a federated account whose name Entra no longer holds, whose Entra user is disabled, or whose user
   can no longer pass both gates: the app's assignment (when the app requires one) and a group imported into the
   organization that the sign-in carries. With the app's group claims set to `ApplicationGroup`, only an imported
-  group that is also assigned to the app is carried. Accounts are matched to Entra by user name, the way VCF
-  Automation matches a returning user. Local accounts are out of scope.
+  group that is also assigned to the app is carried. Accounts are matched to Entra by the key the organization
+  names them with (see Scope). Local accounts are out of scope.
 - **It fails closed.** An organization whose gate cannot be read, or an account whose user cannot be read, is
   reported undetermined and never acted on.
 - **It acts only on what three reads agree on.** Entra's directory reads settle after a change. With `--execute`,
@@ -85,13 +121,16 @@ flagged.
 - Each organization's accounts are matched to Entra by the key the organization names them with, read from its own
   settings: by principal name for OIDC keyed on `preferred_username` and for SAML keyed on Entra's name claim, and by
   object id for OIDC keyed on `oid`. An organization keyed on anything else has every account undetermined, never a
-  leaver, and an account whose name does not fit its organization's key is undetermined too. Matching by object id is
-  tested, not run on a live organization.
+  leaver, and an account whose name does not fit its organization's key is undetermined too. Matching by object id ran
+  once on the reference estate (2026-10-13), on an All Apps organization keyed on `oid` for the run: two accounts
+  named by object id read keep, one was closed with `--close-now`, the other read leaver once disabled at Entra and
+  was closed; the accounts named by principal name read undetermined.
 - What it cannot see: whether a revoked token was in use, sessions a leaver already holds (they run to their own
   expiry), and the fleet's own users behind the identity broker (that half of the job is a design today). It cannot
   tell whether a name in use again belongs to the same person; it flags the case and acts on nothing.
-- Measured on VCF Automation 9.1 against Entra ID with a provider bearer and a Graph certificate; the provider
-  refresh-token and Graph client-secret paths were not exercised on the reference estate. The Graph application
+- Measured on VCF Automation 9.1 against Entra ID with a provider bearer and a Graph certificate, and with a provider
+  API token (2026-10-13: a report run held; a close was refused 403); the Graph client-secret path was not exercised
+  on the reference estate. The Graph application
   permissions the reads need were measured on a throwaway app: `Application.Read.All`, `User.Read.All` and
   `GroupMember.Read.All`, and with the last one missing every account reads undetermined.
 

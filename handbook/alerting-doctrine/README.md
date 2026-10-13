@@ -18,7 +18,7 @@ Stdlib Python only; no token is printed or written.
 ```bash
 export OPS_HOST=<operations-fqdn>
 export OPS_BROKER_HOST=<identity-broker-fqdn>   # omit if the broker shares the Ops FQDN
-export OPS_REALM=CUSTOMER                       # the broker realm, usually this
+export OPS_REALM=CUSTOMER                       # the broker tenant (the realm's path segment), usually this
 export OPS_API_TOKEN=<api-token>                # minted in the operations console
 export OPS_OWNER="PCA"                          # the owner prefix your content carries
 export OPS_KIND=VirtualMachine                  # the kind to measure blast radius against

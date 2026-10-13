@@ -21,7 +21,7 @@ metrics-collection harness ships.
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>          # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>              # BROKER_TENANT defaults to CUSTOMER
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # BROKER_TENANT defaults to CUSTOMER
 export OPS_TLS_VERIFY=false                        # only on a self-signed lab CA
 
 python3 claims.py                                  # what the bearer says it is
@@ -33,10 +33,10 @@ export FLEET_HOST=<fleet-lifecycle-fqdn>           # fronts /fleet-lcm
 export LOGS_HOST=<log-management-fqdn>:9543        # the API port on the build this was proven on
 export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
 export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token   # mode 0600; rewritten only if the answer carries a different value
-export VCFA_USER=<user>@<org> VCFA_PASSWORD=<password>  # the Basic session login; use a dedicated account
+export VCFA_USER=<user>@<org> VCFA_PASSWORD_FILE=<a file holding the password, mode 0600>  # the Basic session login; a dedicated account
 export VCFA_PROVIDER_REFRESH_TOKEN_FILE=/path/to/provider-refresh-token   # a provider api-token minted in the console
-export VC_HOST=<vcenter-fqdn> VC_USER=<user>@<domain> VC_PASSWORD=<password>
-export SDDC_HOST=<sddc-manager-fqdn> SDDC_USER=<user>@<domain> SDDC_PASSWORD=<password>
+export VC_HOST=<vcenter-fqdn> VC_USER=<user>@<domain> VC_PASSWORD_FILE=<a file holding the password, mode 0600>
+export SDDC_HOST=<sddc-manager-fqdn> SDDC_USER=<user>@<domain> SDDC_PASSWORD_FILE=<a file holding the password, mode 0600>
 
 python3 doors.py
 
@@ -44,6 +44,10 @@ python3 doors.py
 cp credentials.example.json credentials.json       # then one entry per credential your automation holds
 python3 catalog_check.py credentials.json
 ```
+
+Every password and token is read from `NAME_FILE`, a file of mode 0600, when it is set. The value itself in `NAME`
+(`OPS_API_TOKEN`, `VC_PASSWORD` and the rest) still works, but it lands in the shell's history and the process list,
+so keep it for a throwaway credential.
 
 ## Scope, stated plainly
 
