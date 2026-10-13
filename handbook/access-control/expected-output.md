@@ -1,13 +1,15 @@
 # Expected output
 
-One run of `whoami.py` against a VCF Automation 9.1 All Apps organization on 2026-10-07, with `VC_HOST` set, as
-an identity holding Organization Administrator and a project `admin` binding. Your numbers will differ with your
-rights and your role; the shape is what to expect.
+One run of `whoami.py` against a VCF Automation 9.1.1.0100.25757808 All Apps organization on 2026-10-13, with `VC_HOST` set and
+`VCFA_BEARER_FILE` holding a session login's bearer for one identity of that organization (its roles were not read
+in this run; the rights it derived are in the record). The run of 2026-10-07 on the earlier 9.1 build read the same counts except the rules review (186 then,
+209 now). Your numbers will differ with your rights and your role; the shape is what to expect.
 
 ```text
 whoami.py: the derivation, asked of the platform rather than inferred
 
   organization gateway: 67 groups derived (66 from rights, 1 system); userInfo extra: org, token
+      its token field is the bearer you sent (compared by digest): never log the whole answer
   project roles published: ['view', 'edit', 'admin', 'edit_adv']
   authority: 4 ProjectRoleBindings, by role {'admin': 2, 'edit': 1, 'edit_adv': 1}, subject kinds ['Group', 'User']
   projection: project-service arrays administrators (2, the admin bindings), advancedUsers (1, the edit_adv bindings), auditors (0), users (1, the edit bindings)
@@ -22,14 +24,16 @@ whoami.py: the derivation, asked of the platform rather than inferred
       create core                    secrets         False     True
       create core                    namespaces      False     False
   real reads for comparison: {'virtualmachines': 200, 'secrets': 200}
-  SelfSubjectRulesReview: 186 resource rules in that one namespace
+  SelfSubjectRulesReview: 209 resource rules in that one namespace
   third surface (vCenter): the bearer that works above answers as a bearer token: 401, as a vCenter session id: 401, with no credential: 401 here
 
 wrote derivation.json: the derivation as the platform states it, group names are product rights, nothing estate-shaped
 ```
 
-Four things in that output carry the chapter:
+Five things in that output carry the chapter:
 
+- **The token field is the bearer you sent.** The gateway's answer carries it in `extra`; the script compares it with
+  the bearer by digest, prints only that it matched, and keeps neither. Never log a whole self review.
 - **67 groups at the organization gateway, 2 at a namespace endpoint, for the same bearer.** None of the
   right-named groups crosses. That is the two-surface model stated by the platform rather than argued.
 - **The plane-scoped group is keyed by the project, not by the user.** Every holder of that namespace resolves

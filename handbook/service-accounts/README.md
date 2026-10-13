@@ -2,13 +2,14 @@
 
 Step three of the chapter
 ([privatecloudarchitect.com/handbook/service-accounts](https://privatecloudarchitect.com/handbook/service-accounts)):
-prove a credential before a pipeline trusts it. Two read-only scripts, stdlib Python only, and no token value
-is ever printed. The Platform identity chapter's matrix of which token opens which door is built from exactly
+prove a credential before a pipeline trusts it, and keep every credential your automation holds a managed object.
+Three scripts, stdlib Python only, and no token value is ever printed. The Platform identity chapter's matrix of which token opens which door is built from exactly
 these reads, so a row that differs on your estate is worth a report.
 
 | Script | What it answers | Exit |
 |---|---|---|
 | `claims.py` | What does the bearer my api-token exchanges for say about its holder? Issuer, audience, the principal claims (a person shows up as user@realm with an email claim; a machine identity as a client id), scopes, and the lifetime read off the token itself. Any other JWT can be decoded through `JWT_ENV`. | 0 printed · 2 the mint failed |
+| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. | 0 every entry complete · 1 a warning · 2 a failure · 3 the file could not be read |
 | `doors.py` | Which token does each surface accept? One harmless read per pair: the broker's bearer against VCF Operations, NSX, and the fleet plane's services; the per-service JWTs; VCF Automation's three login paths with the count of effective rights each carries (the arrival rule in numbers); vCenter's and SDDC Manager's own flows. Rows say MATCH or DIFFERS against the chapter's matrix. | 0 every pair answered · 1 a transport error · 2 the broker mint failed |
 
 `opslib.py` holds the broker exchange (the api-token flow the Platform identity chapter teaches); `rtmlib.py`
@@ -38,6 +39,10 @@ export VC_HOST=<vcenter-fqdn> VC_USER=<user>@<domain> VC_PASSWORD=<password>
 export SDDC_HOST=<sddc-manager-fqdn> SDDC_USER=<user>@<domain> SDDC_PASSWORD=<password>
 
 python3 doors.py
+
+# the catalog check needs no credential and no network
+cp credentials.example.json credentials.json       # then one entry per credential your automation holds
+python3 catalog_check.py credentials.json
 ```
 
 ## Scope, stated plainly
@@ -52,6 +57,8 @@ python3 doors.py
   platform answers with a different value than it was sent; on the reference estate it never did.
 - An api-token that was deleted or rotated away answers HTTP 500 at the broker, not 401; one past its expiry date
   is not tested. Both scripts say so when it happens.
+- `catalog_check.py` reads metadata you keep and was run on the example catalog only; it never reads a backend,
+  so it cannot tell whether the value in the vault still works. That is what `claims.py` and `doors.py` are for.
 
 ## Reading the output
 

@@ -5,7 +5,8 @@ Authorization here is not one system, and the hardest part to hold is the deriva
 becomes a group, a project role mints a second bundle of groups, and Kubernetes-style RBAC then evaluates the
 union. This script asks the platform to state that derivation rather than inferring it, read-only:
 
-  1. SelfSubjectReview at the organization gateway   the groups the gateway derived for your bearer
+  1. SelfSubjectReview at the organization gateway   the groups the gateway derived for your bearer, and whether
+                                                      the answer hands that bearer back (by digest, never kept)
   2. SelfSubjectReview at a namespace's own endpoint  the groups the workload plane derived for the same bearer
   3. the ProjectRole catalog                          the four tiers, as the platform publishes them
   4. ProjectRoleBinding in a project                  the authority: which role each subject kind holds
@@ -18,10 +19,13 @@ It writes `derivation.json`: group names (which are product right names, not you
 verdicts. No estate name, endpoint, user, project, or namespace reaches the record, and the script refuses to
 write one that does. Stdlib only; no token is printed or written.
 
-Env:  VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE; TLS_VERIFY=false on a self-signed lab CA; OUT (derivation.json)
+Env:  VCFA_HOST, VCFA_ORG, and VCFA_REFRESH_TOKEN_FILE (a tenant refresh token, traded for a bearer) or
+      VCFA_BEARER_FILE (a bearer you already hold, such as one from a session login); each file mode 0600;
+      VC_HOST to present the same bearer to vCenter; TLS_VERIFY=false on a self-signed lab CA; OUT (derivation.json)
 Exit: 0 recorded · 1 a call failed
 """
 
+import hashlib
 import json
 import os
 import re
@@ -43,8 +47,12 @@ def ctx():
 
 
 class Api:
-    def __init__(self, host, org, refresh):
+    def __init__(self, host, org, refresh=None, bearer=None):
+        """A bearer you already hold is used as it is; otherwise the refresh token is traded for one."""
         self.host = host
+        if bearer:
+            self.bearer = bearer
+            return
         body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh}).encode()
         req = urllib.request.Request(f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
                                      headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
@@ -70,9 +78,20 @@ class Api:
         st, r = self.call("POST", base + "/apis/authentication.k8s.io/v1/selfsubjectreviews",
                           {"apiVersion": "authentication.k8s.io/v1", "kind": "SelfSubjectReview"})
         if st >= 400:
-            return st, [], []
+            return st, [], [], None
         ui = (r.get("status") or {}).get("userInfo") or {}
-        return st, sorted(ui.get("groups") or []), sorted((ui.get("extra") or {}).keys())
+        extra = ui.get("extra") or {}
+        return st, sorted(ui.get("groups") or []), sorted(extra.keys()), self.hands_back_bearer(extra)
+
+    def hands_back_bearer(self, extra):
+        """Whether the answer carries the bearer this script sent, compared by digest; the value is never kept."""
+        tok = extra.get("token")
+        tok = tok[0] if isinstance(tok, list) and tok else tok
+        if not isinstance(tok, str):
+            return False
+        if tok.lower().startswith("bearer "):          # the Authorization header's form: the scheme word, then the bearer
+            tok = tok.split(" ", 1)[1]
+        return hashlib.sha256(tok.encode()).digest() == hashlib.sha256(self.bearer.encode()).digest()
 
 
 def classify(groups):
@@ -93,17 +112,23 @@ def classify(groups):
 
 def main():
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
-    api = Api(host, org, refresh); G = f"https://{host}{CCI}"
+    if os.environ.get("VCFA_BEARER_FILE"):
+        refresh, held = None, open(os.environ["VCFA_BEARER_FILE"], encoding="utf-8").read().strip()
+    else:
+        refresh, held = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip(), None
+    api = Api(host, org, refresh, held); G = f"https://{host}{CCI}"
     rec = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     print("whoami.py: the derivation, asked of the platform rather than inferred\n")
 
     # 1. the organization gateway
-    st, groups, extra = api.groups_at(G)
+    st, groups, extra, echoed = api.groups_at(G)
     org_cls = classify(groups)
-    rec["organization_gateway"] = {"status": st, "groups": len(groups), "extra_claims": extra, **org_cls}
+    rec["organization_gateway"] = {"status": st, "groups": len(groups), "extra_claims": extra,
+                                   "extra_hands_back_the_bearer_sent": echoed, **org_cls}
     print(f"  organization gateway: {len(groups)} groups derived "
           f"({len(org_cls['from_rights'])} from rights, {len(org_cls['system'])} system); userInfo extra: {', '.join(extra)}")
+    if echoed:
+        print("      its token field is the bearer you sent (compared by digest): never log the whole answer")
 
     # 2. the project role catalog
     st, roles = api.call("GET", f"{G}/apis/authorization.cci.vmware.com/v1alpha1/projectroles")
@@ -164,9 +189,10 @@ def main():
         print("  workload plane: no namespace has a published endpoint yet")
     else:
         n0 = items[0]; ep = n0["status"]["namespaceEndpointURL"].rstrip("/"); sup = n0["metadata"]["name"]
-        st, wgroups, wextra = api.groups_at(ep)
+        st, wgroups, wextra, wecho = api.groups_at(ep)
         w_cls = classify(wgroups)
-        rec["workload_plane"] = {"status": st, "groups": len(wgroups), "endpoint_shape": "/proxy/k8s/namespaces/urn:vcloud:namespace:<uuid>", **w_cls}
+        rec["workload_plane"] = {"status": st, "groups": len(wgroups), "endpoint_shape": "/proxy/k8s/namespaces/urn:vcloud:namespace:<uuid>",
+                                 "extra_claims": wextra, "extra_hands_back_the_bearer_sent": wecho, **w_cls}
         print(f"  workload plane:       {len(wgroups)} groups derived for the same bearer "
               f"({len(w_cls['from_rights'])} from rights, {len(w_cls['plane_scoped'])} plane-scoped)")
         for g in w_cls["plane_scoped"]:

@@ -1,0 +1,138 @@
+{
+ "captured": "2026-10-13T02:56:09Z",
+ "sent": [
+  "POST /acs/t/<realm>/token at the broker (unless BEARER_FILE)",
+  "per vCenter: POST /api/vcenter/authentication/token, REST and SOAP sessions opened and closed",
+  "per vCenter: a SOAP session as VC_USER, opened and closed"
+ ],
+ "vcenters": [
+  {
+   "vcenter": "{{host-1}}",
+   "bearer_as_presented": 401,
+   "exchange": {
+    "status": 200,
+    "issued_token_type": "urn:ietf:params:oauth:token-type:saml2",
+    "token_type": "Bearer",
+    "expires_in_s": 299
+   },
+   "rest": {
+    "status": 201,
+    "user": "CUSTOMER\\{{client-1}}",
+    "vm_list_status": 200
+   },
+   "soap": {
+    "status": 200,
+    "user": "CUSTOMER\\{{client-1}}"
+   },
+   "sessions": {
+    "sessions": 312,
+    "by_class": {
+     "local administrator": 15,
+     "local, VCF integration account": 249,
+     "local, other": 48
+    },
+    "local_administrator_by_agent": {
+     "VMware vim-java": 5,
+     "XML-WS Runtime git-revision#50dbfd3": 2,
+     "vapi-endpoint": 8
+    },
+    "directory": [],
+    "api_clients": 0,
+    "own_session_left_out": true
+   }
+  },
+  {
+   "vcenter": "{{host-2}}",
+   "bearer_as_presented": 401,
+   "exchange": {
+    "status": 200,
+    "issued_token_type": "urn:ietf:params:oauth:token-type:saml2",
+    "token_type": "Bearer",
+    "expires_in_s": 299
+   },
+   "rest": {
+    "status": 201,
+    "user": "CUSTOMER\\{{client-1}}",
+    "vm_list_status": 200
+   },
+   "soap": {
+    "status": 200,
+    "user": "CUSTOMER\\{{client-1}}"
+   },
+   "sessions": {
+    "sessions": 351,
+    "by_class": {
+     "local administrator": 8,
+     "local, VCF integration account": 270,
+     "local, other": 73
+    },
+    "local_administrator_by_agent": {
+     "VMware vim-java": 1,
+     "XML-WS Runtime git-revision#50dbfd3": 3,
+     "vAPI": 4
+    },
+    "directory": [],
+    "api_clients": 0,
+    "own_session_left_out": true
+   }
+  },
+  {
+   "vcenter": "{{host-3}}",
+   "bearer_as_presented": 401,
+   "exchange": {
+    "status": 200,
+    "issued_token_type": "urn:ietf:params:oauth:token-type:saml2",
+    "token_type": "Bearer",
+    "expires_in_s": 299
+   },
+   "rest": {
+    "status": 201,
+    "user": "CUSTOMER\\{{client-1}}",
+    "vm_list_status": 200
+   },
+   "soap": {
+    "status": 200,
+    "user": "CUSTOMER\\{{client-1}}"
+   },
+   "sessions": {
+    "sessions": 263,
+    "by_class": {
+     "local, VCF integration account": 151,
+     "local, other": 112
+    },
+    "local_administrator_by_agent": {},
+    "directory": [],
+    "api_clients": 0,
+    "own_session_left_out": true
+   }
+  }
+ ],
+ "summary": {
+  "vcenters": 3,
+  "client_took_both_sessions": 3,
+  "bearer_as_presented": [
+   401
+  ],
+  "saml_lifetime_s": [
+   299
+  ],
+  "session_users": [
+   "CUSTOMER\\{{client-1}}"
+  ],
+  "sessions_read": 3,
+  "sessions_by_class": {
+   "local administrator": 23,
+   "local, VCF integration account": 670,
+   "local, other": 233
+  },
+  "local_administrator_by_agent": {
+   "VMware vim-java": 6,
+   "XML-WS Runtime git-revision#50dbfd3": 5,
+   "vAPI": 4,
+   "vapi-endpoint": 8
+  },
+  "directory_principals": [],
+  "directory_from_sdk": []
+ },
+ "exit": 0
+}

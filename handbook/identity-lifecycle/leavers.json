@@ -1,0 +1,771 @@
+{
+ "captured": "2026-10-13T03:05:35Z",
+ "mode": "report",
+ "tenant": "{{id-1}}",
+ "organizations": [
+  {
+   "org": "{{org-1}}",
+   "protocol": "OIDC",
+   "users": [
+    {
+     "id": "{{id-3}}",
+     "username": "{{user-1}}",
+     "providerType": "LOCAL",
+     "enabled": true,
+     "inheritGroupRoles": false,
+     "tokens": [],
+     "decision": "out of scope",
+     "reason": "LOCAL account, not federated",
+     "direct_roles": [
+      "Organization Administrator"
+     ],
+     "effective_roles": [
+      "Organization Administrator"
+     ],
+     "flags": []
+    },
+    {
+     "id": "{{id-4}}",
+     "username": "{{user-2}}",
+     "providerType": "OAUTH",
+     "enabled": true,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "keep",
+     "reason": "entitled through {{group-1}}",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization User"
+     ],
+     "flags": []
+    },
+    {
+     "id": "{{id-5}}",
+     "username": "{{user-3}}",
+     "providerType": "OAUTH",
+     "enabled": false,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "leaver",
+     "reason": "not assigned to the app, directly or through a group",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization User"
+     ],
+     "flags": [],
+     "action": "in step: already disabled, no token"
+    }
+   ],
+   "gate": {
+    "assignment_required": true,
+    "group_claims": "ApplicationGroup",
+    "assigned_groups": [
+     "{{group-1}}"
+    ],
+    "directly_assigned_users": 0,
+    "imported": [
+     "{{group-1}}"
+    ],
+    "claimable": [
+     "{{group-1}}"
+    ],
+    "unresolved": []
+   }
+  },
+  {
+   "org": "{{org-2}}",
+   "protocol": "SAML",
+   "users": [
+    {
+     "id": "{{id-6}}",
+     "username": "{{user-2}}",
+     "providerType": "SAML",
+     "enabled": true,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "keep",
+     "reason": "entitled through {{group-2}}",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization User"
+     ],
+     "flags": []
+    },
+    {
+     "id": "{{id-7}}",
+     "username": "{{user-3}}",
+     "providerType": "SAML",
+     "enabled": false,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "leaver",
+     "reason": "not assigned to the app, directly or through a group",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization User"
+     ],
+     "flags": [],
+     "action": "in step: already disabled, no token"
+    }
+   ],
+   "gate": {
+    "assignment_required": true,
+    "group_claims": "ApplicationGroup",
+    "assigned_groups": [
+     "{{group-2}}"
+    ],
+    "directly_assigned_users": 0,
+    "imported": [
+     "{{group-2}}"
+    ],
+    "claimable": [
+     "{{group-2}}"
+    ],
+    "unresolved": []
+   }
+  },
+  {
+   "org": "{{org-3}}",
+   "protocol": "OIDC",
+   "users": [
+    {
+     "id": "{{id-8}}",
+     "username": "{{user-2}}",
+     "providerType": "OAUTH",
+     "enabled": true,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "keep",
+     "reason": "entitled through {{group-3}}",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization Member"
+     ],
+     "flags": []
+    },
+    {
+     "id": "{{id-9}}",
+     "username": "{{user-3}}",
+     "providerType": "OAUTH",
+     "enabled": true,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "keep",
+     "reason": "entitled through {{group-3}}",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization Member"
+     ],
+     "flags": []
+    },
+    {
+     "id": "{{id-10}}",
+     "username": "{{user-4}}",
+     "providerType": "OAUTH",
+     "enabled": false,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "leaver",
+     "reason": "the Entra account is disabled",
+     "direct_roles": [
+      "Service Broker User"
+     ],
+     "effective_roles": [
+      "Organization Member",
+      "Service Broker User"
+     ],
+     "flags": [
+      "direct-role: a person later given this name holds these roles at the first sign-in"
+     ],
+     "action": "in step: already disabled, no token"
+    }
+   ],
+   "gate": {
+    "assignment_required": true,
+    "group_claims": "ApplicationGroup",
+    "assigned_groups": [
+     "{{group-3}}"
+    ],
+    "directly_assigned_users": 0,
+    "imported": [
+     "{{group-3}}"
+    ],
+    "claimable": [
+     "{{group-3}}"
+    ],
+    "unresolved": []
+   }
+  },
+  {
+   "org": "{{org-4}}",
+   "protocol": "SAML",
+   "users": [
+    {
+     "id": "{{id-11}}",
+     "username": "{{user-2}}",
+     "providerType": "SAML",
+     "enabled": true,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "keep",
+     "reason": "entitled through {{group-4}}",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization Member"
+     ],
+     "flags": []
+    },
+    {
+     "id": "{{id-12}}",
+     "username": "{{user-3}}",
+     "providerType": "SAML",
+     "enabled": true,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "keep",
+     "reason": "entitled through {{group-4}}",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization Member"
+     ],
+     "flags": []
+    },
+    {
+     "id": "{{id-13}}",
+     "username": "{{user-5}}",
+     "providerType": "SAML",
+     "enabled": true,
+     "inheritGroupRoles": true,
+     "tokens": [],
+     "decision": "keep",
+     "reason": "entitled through {{group-4}}",
+     "direct_roles": [],
+     "effective_roles": [
+      "Organization Member"
+     ],
+     "flags": []
+    }
+   ],
+   "gate": {
+    "assignment_required": true,
+    "group_claims": "ApplicationGroup",
+    "assigned_groups": [
+     "{{group-4}}"
+    ],
+    "directly_assigned_users": 0,
+    "imported": [
+     "{{group-4}}"
+    ],
+    "claimable": [
+     "{{group-4}}"
+    ],
+    "unresolved": []
+   }
+  }
+ ],
+ "unreadable": [],
+ "federated_elsewhere": 3,
+ "sent": [],
+ "summary": {
+  "keep": 7,
+  "leaver": 3,
+  "out_of_scope": 1,
+  "undetermined": 0,
+  "organizations": 4,
+  "federated_elsewhere": 3,
+  "unreadable": 0,
+  "open_leavers": 0,
+  "closed": 0,
+  "not_held": 0,
+  "in_step": 3,
+  "direct_role": 1,
+  "name_in_use_again": 0,
+  "flagged": 1,
+  "per_org": [
+   {
+    "org": "{{org-1}}",
+    "protocol": "OIDC",
+    "accounts": 3,
+    "federated": 2,
+    "keep": 1,
+    "leaver": 1,
+    "open": 0,
+    "flagged": 0,
+    "direct_federated": [],
+    "direct_local": 1
+   },
+   {
+    "org": "{{org-2}}",
+    "protocol": "SAML",
+    "accounts": 2,
+    "federated": 2,
+    "keep": 1,
+    "leaver": 1,
+    "open": 0,
+    "flagged": 0,
+    "direct_federated": [],
+    "direct_local": 0
+   },
+   {
+    "org": "{{org-3}}",
+    "protocol": "OIDC",
+    "accounts": 3,
+    "federated": 3,
+    "keep": 2,
+    "leaver": 1,
+    "open": 0,
+    "flagged": 1,
+    "direct_federated": [
+     {
+      "user": "{{user-4}}",
+      "roles": [
+       "Service Broker User"
+      ]
+     }
+    ],
+    "direct_local": 0
+   },
+   {
+    "org": "{{org-4}}",
+    "protocol": "SAML",
+    "accounts": 3,
+    "federated": 3,
+    "keep": 3,
+    "leaver": 0,
+    "open": 0,
+    "flagged": 0,
+    "direct_federated": [],
+    "direct_local": 0
+   }
+  ]
+ },
+ "calls": [
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/orgs",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-25}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-25}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-26}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-26}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-27}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-27}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-28}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-28}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/login/org/{{org-2}}/saml/metadata/alias/vcd",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-29}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-29}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-30}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-30}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/login/org/{{org-4}}/saml/metadata/alias/vcd",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-31}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-31}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-32}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-32}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-33}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-33}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-34}}/settings/oauth",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/api/admin/org/{{id-34}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/applications",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals/{{id-35}}/appRoleAssignedTo",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/groups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-36}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-37}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/applications",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals/{{id-38}}/appRoleAssignedTo",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/groups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-36}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-37}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/applications",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals/{{id-39}}/appRoleAssignedTo",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/groups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-36}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-37}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-40}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/applications",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals/{{id-41}}/appRoleAssignedTo",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/groups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-36}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-37}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-42}}/checkMemberGroups",
+   "status": 200
+  }
+ ],
+ "exit": 1
+}

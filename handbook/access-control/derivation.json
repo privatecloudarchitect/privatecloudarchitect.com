@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-07T07:36:55Z",
+ "captured_utc": "2026-10-13T03:06:55Z",
  "organization_gateway": {
   "status": 201,
   "groups": 67,
@@ -7,6 +7,7 @@
    "org",
    "token"
   ],
+  "extra_hands_back_the_bearer_sent": true,
   "from_rights": [
    "vcf:Billing: View",
    "vcf:Blueprint Request: Manage",
@@ -148,6 +149,12 @@
   "status": 201,
   "groups": 2,
   "endpoint_shape": "/proxy/k8s/namespaces/urn:vcloud:namespace:<uuid>",
+  "extra_claims": [
+   "authentication.kubernetes.io/credential-id",
+   "vcf.vmware.com/org_id",
+   "vcf.vmware.com/rights"
+  ],
+  "extra_hands_back_the_bearer_sent": false,
   "from_rights": [],
   "system": [
    "system:authenticated"
@@ -203,7 +210,7 @@
  },
  "rules_review": {
   "status": 201,
-  "resource_rules": 186
+  "resource_rules": 209
  },
  "third_surface": {
   "plane": "vCenter",

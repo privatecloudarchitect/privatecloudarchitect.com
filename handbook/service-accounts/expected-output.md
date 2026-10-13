@@ -93,3 +93,20 @@ other claims present: acct, auth_time, authorization_details, prn_type
 
 exit 0
 ```
+
+## catalog_check.py
+
+The example catalog, read with a fixed date so the run is reproducible. One entry falls due inside the 30-day window,
+which is a warning, so the exit is 1.
+
+```text
+$ python3 catalog_check.py credentials.example.json --today 2026-10-13
+catalog_check.py: 3 credential(s) in credentials.example.json, read on 2026-10-13, warning window 30 days
+
+  ok    gitops-reconciler        owner platform-team    due 2027-08-01
+  warn  ci-inventory-read        owner ci-team          due 2026-10-18
+        due 2026-10-18, inside the 30-day window
+  ok    directory-bind           owner identity-team    due 2027-03-23
+
+exit 1
+```
