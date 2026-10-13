@@ -82,12 +82,18 @@ flagged.
   the account's record; the record's `sent` lists every one.
 - Entra ID only, one tenant per run. An organization federated to another provider, or signed in through VCF single
   sign-on, is counted as federated elsewhere and not read.
+- Each organization's accounts are matched to Entra by the key the organization names them with, read from its own
+  settings: by principal name for OIDC keyed on `preferred_username` and for SAML keyed on Entra's name claim, and by
+  object id for OIDC keyed on `oid`. An organization keyed on anything else has every account undetermined, never a
+  leaver, and an account whose name does not fit its organization's key is undetermined too. Matching by object id is
+  tested, not run on a live organization.
 - What it cannot see: whether a revoked token was in use, sessions a leaver already holds (they run to their own
   expiry), and the fleet's own users behind the identity broker (that half of the job is a design today). It cannot
   tell whether a name in use again belongs to the same person; it flags the case and acts on nothing.
 - Measured on VCF Automation 9.1 against Entra ID with a provider bearer and a Graph certificate; the provider
-  refresh-token and Graph client-secret paths were not exercised on the reference estate. The minimum Graph
-  permission for the reads was not tested; the reference runs used an app with broader rights.
+  refresh-token and Graph client-secret paths were not exercised on the reference estate. The Graph application
+  permissions the reads need were measured on a throwaway app: `Application.Read.All`, `User.Read.All` and
+  `GroupMember.Read.All`, and with the last one missing every account reads undetermined.
 
 ## Reading the record
 

@@ -84,6 +84,14 @@ GRAPH = "https://graph.microsoft.com/v1.0"
 ENTRA = "https://login.microsoftonline.com"
 TENANT_HEADER = "X-VMWARE-VCLOUD-TENANT-CONTEXT"
 FEDERATED = ("OAUTH", "SAML")
+# How an organization's user key names its accounts, and so how Entra is asked for the person behind one. Matched by
+# principal name: OIDC keyed on preferred_username and SAML keyed on Entra's name claim, the two keys the reference runs
+# read. Matched by object id: OIDC keyed on oid, whose accounts are named by the object id. Any other key (sub is
+# pairwise per app; an unset key falls back to it) makes every account of the organization undetermined, never a
+# leaver: a lookup by the wrong name finds nobody, and nobody reads as a leaver (G-380).
+BY_NAME = {"preferred_username", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"}
+BY_ID = {"oid"}
+OBJECT_ID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 APPLICATION_GROUP = "ApplicationGroup"
 CONFIRM_READS = 3   # reads that must all say "leaver" before the script acts
 CONFIRM_PAUSE = 10  # seconds between them
@@ -365,14 +373,16 @@ def federated_orgs(vcfa: Vcfa, tenant: str, only: list[str]) -> tuple[list[dict]
             continue
         if oauth.get("enabled") and f"login.microsoftonline.com/{tenant}" in str(oauth.get("issuerId") or "") \
                 and oauth.get("clientId"):
-            found.append({"org": name, "urn": urn, "protocol": "OIDC", "app": oauth["clientId"]})
+            found.append({"org": name, "urn": urn, "protocol": "OIDC", "app": oauth["clientId"],
+                          "key": (oauth.get("oidcAttributeMapping") or {}).get("subjectAttributeName")})
         elif fed.get("enabled") and f"sts.windows.net/{tenant}" in str(fed.get("samlMetadata") or ""):
             href = next((ln["href"] for ln in fed.get("link") or [] if ln.get("type") == SAML_METADATA), None)
             _s, xml = vcfa.call("GET", "/" + href.split("://", 1)[-1].split("/", 1)[-1], accept=SAML_METADATA) \
                 if href else (None, None)
             m = re.search(r'entityID="([^"]+)"', xml) if isinstance(xml, str) else None
             if m:
-                found.append({"org": name, "urn": urn, "protocol": "SAML", "app": m.group(1)})
+                found.append({"org": name, "urn": urn, "protocol": "SAML", "app": m.group(1),
+                              "key": (fed.get("samlAttributeMapping") or {}).get("userNameAttributeName")})
             else:
                 unreadable.append({"org": name, "reason": "its SAML service-provider metadata was refused"})
         elif oauth.get("enabled") or fed.get("enabled"):
@@ -405,7 +415,9 @@ def read_gate(graph: Graph, of: dict, groups: list[dict]) -> dict:
             ids[rows[0]["id"]] = name
         else:              # no Entra group, or several, by that name: a rename or a duplicate, never "nobody is in it"
             unresolved.append(name)
-    return {"assignment_required": bool(sp.get("appRoleAssignmentRequired")),
+    key = of.get("key")
+    return {"user_key": key, "lookup": "name" if key in BY_NAME else "id" if key in BY_ID else None,
+            "assignment_required": bool(sp.get("appRoleAssignmentRequired")),
             "group_claims": app.get("groupMembershipClaims"),
             "assigned_groups": {a["principalId"]: str(a.get("principalDisplayName")) for a in assigned
                                 if a.get("principalType") == "Group"},
@@ -413,8 +425,18 @@ def read_gate(graph: Graph, of: dict, groups: list[dict]) -> dict:
             "imported": imported, "imported_ids": ids, "unresolved": unresolved}
 
 
-def entra_user(graph: Graph, username: str) -> dict | None:
-    return graph.one("/users", f"userPrincipalName eq '{username}'", "id,userPrincipalName,accountEnabled")
+def entra_user(graph: Graph, username: str, lookup: str = "name") -> dict | None:
+    """The Entra user an account names: by principal name, or by object id where the organization is keyed on oid.
+    None means Entra holds no such user; a refused read raises, so the account is undetermined."""
+    select = "id,userPrincipalName,accountEnabled"
+    if lookup == "id":
+        status, answer = graph.call("GET", f"/users/{urllib.parse.quote(username)}?$select={select}")
+        if status == 404:
+            return None
+        if not isinstance(answer, dict) or not answer.get("id"):
+            raise LookupError("Graph refused /users/{id}")
+        return answer
+    return graph.one("/users", f"userPrincipalName eq '{username}'", select)
 
 
 def member_of(graph: Graph, user_id: str, groups: list[str]) -> set | None:
@@ -432,8 +454,14 @@ def judge(graph: Graph, user: dict, gate: dict | None) -> tuple[str, str]:
     """Read Entra for one account and apply the rule; a refused read makes it undetermined."""
     if user.get("providerType") not in FEDERATED or gate is None:
         return decide(user, None, None, gate)
+    lookup = gate.get("lookup")
+    if lookup is None:
+        return "undetermined", (f"the organization's user key ({gate.get('user_key') or 'not set'}) is not one this job "
+                                "matches to Entra, so no account of it is judged")
+    if lookup == "id" and not OBJECT_ID.match(str(user.get("username"))):
+        return "undetermined", "the organization is keyed on the object id and this account's name is not one"
     try:
-        found = entra_user(graph, user["username"])
+        found = entra_user(graph, user["username"], lookup)
     except LookupError:
         return "undetermined", "Entra could not be read for this user"
     groups = member_of(graph, found["id"], watched(gate)) if found else set()
@@ -502,7 +530,7 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
         users = vcfa.pages("/cloudapi/1.0.0/users", of["urn"])
         groups = vcfa.pages("/cloudapi/1.0.0/groups", of["urn"])
         tokens = vcfa.pages("/cloudapi/1.0.0/tokens", of["urn"])
-        entry = {"org": of["org"], "protocol": of["protocol"], "users": []}
+        entry = {"org": of["org"], "protocol": of["protocol"], "user_key": of.get("key"), "users": []}
         if users is None or groups is None or tokens is None:
             entry["error"] = "the organization's users, groups or tokens were refused"
             record["organizations"].append(entry)
