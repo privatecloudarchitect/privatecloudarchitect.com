@@ -8,7 +8,7 @@ value back to the file it came from (see VCFA_REFRESH_TOKEN_FILE). Stdlib only. 
 
 Surfaces are chosen by which environment variables are set; unset ones are skipped and reported as such.
 
-  The broker (required): OPS_HOST, OPS_API_TOKEN  (OPS_BROKER_HOST, OPS_REALM, OPS_TLS_VERIFY optional)
+  The broker (required): OPS_HOST, OPS_API_TOKEN  (OPS_BROKER_HOST, BROKER_TENANT, OPS_TLS_VERIFY optional)
       VCF Operations         GET /suite-api/api/resources?pageSize=1         broker bearer      expect accepted
       NSX          NSX_HOST  GET /api/v1/node                                broker bearer      expect accepted
       Real-Time Metrics RTM_HOST   GET /data-query-service/api/v1/metadata   broker bearer      expect refused

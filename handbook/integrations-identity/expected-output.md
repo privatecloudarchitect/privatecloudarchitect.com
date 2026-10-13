@@ -2,9 +2,10 @@
 
 The reference estate, 2026-10-13 (UTC): three vCenters on 9.1.1 joined to VCF single sign-on, whose broker's identity
 provider is Active Directory over LDAP. Every run on the estate used `--redact`, so the names are placeholders, and each
-record path is shown as the script's default file name. The API client in them was a throwaway, made by
-`api_client.py` for these runs and removed at the end. The plan and the refusal in section 1 send nothing, and were run
-with a stand-in host.
+record path is shown as the script's default file name. The API clients in them were throwaways, made by
+`api_client.py` for these runs and removed at the end: sections 1, 1a, 3 and 5 are one run at 07:45, section 4 a read
+two minutes later, and section 2 an earlier client at 04:51. The plans and the refusal in sections 1 and 1a send
+nothing, and were run with a stand-in host.
 
 ## 1. `api_client.py`: the plan, then the client made
 
@@ -31,10 +32,10 @@ $ python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 
 --api-token-ttl 100 is outside the broker's bounds of 1440 to 259200 minutes
 ```
 
-The create on the reference estate, with the shortest API token lifetime the broker takes. Exit 0.
+The create on the reference estate, with the shortest lifetimes the broker takes. Exit 0.
 
 ```
-$ python3 api_client.py --client-id <id> --role vcf_viewer --api-token-ttl 1440 --access-token-ttl 60 \
+$ python3 api_client.py --client-id <id> --role vcf_viewer --api-token-ttl 1440 --access-token-ttl 30 \
     --description <a throwaway> --token-file <path> --execute --redact
 create: API client {{client-1}}
   GET    /ssorealms: HTTP 200
@@ -44,8 +45,8 @@ create: API client {{client-1}}
   POST   /ssorealms/{realm}/api-tokens: HTTP 201
   POST   /ssorealms/{realm}/api-clients/query: HTTP 200
   POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
-  the token traded at the broker: HTTP 200, a SERVICE bearer living 60.0 min
-  read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 1440 min, access 60 min
+  the token traded at the broker: HTTP 200, a SERVICE bearer living 30.0 min
+  read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 1440 min, access 30 min
 exit 0
 
 api_client.json written with every estate value replaced
@@ -53,14 +54,68 @@ api_client.json written with every estate value replaced
 
 - **The query comes before the create.** A client with the id you gave is refused, never adopted.
 - **The token proves itself once.** The broker traded it for a bearer whose principal type is `SERVICE` and which lived
-  60 minutes, the access lifetime asked for. The token is in the file you named, mode 0600; it is in neither the
+  30 minutes, the access lifetime asked for. The token is in the file you named, mode 0600; it is in neither the
   transcript nor the record.
 - **The read-back is the result.** The client, its one role at realm scope, and an active token with both lifetimes as
   asked. Exit 0 means all of it held.
 
-## 2. `vcenter_exchange.py --sessions` as that client, holding `vcf_viewer`
+## 1a. `api_client.py --rotate`: a new token, the old one refused
 
-`VC_USER` unset, so the census read the session lists as the client's own session. Exit 1.
+The plan, then the rotation on the same throwaway client, with other lifetimes for the new token so the read-back shows
+which token is left. Exit 0.
+
+```
+$ python3 api_client.py --client-id backup-01 --rotate --api-token-ttl 2880 --access-token-ttl 60
+Rotation plan for API client backup-01 on operations.example.net:
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens
+         {"accessTokenTtl": 60, "apiClientId": "backup-01", "apiTokenTtl": 2880, "tokenName": "backup-01-token-<UTC stamp>", "tokenType": "API_CLIENT"}
+  POST   /acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)
+  DELETE /api/fleet-management/iam/ssorealms/{realm}/api-tokens/{token id}  (each token the client held before)
+  POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (read back: one token left)
+  then: the new token to <--token-file> (mode 0600, never printed); the old ones are deleted only after the new one trades at the broker
+
+plan only: nothing was sent (--execute sends it)
+```
+
+```
+$ python3 api_client.py --client-id <id> --rotate --api-token-ttl 2880 --access-token-ttl 60 \
+    --token-file <new path> --old-token-file <path> --execute --redact
+rotate: API client {{client-1}}
+  GET    /ssorealms: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens: HTTP 201
+  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  DELETE /ssorealms/{realm}/api-tokens/{token id}: HTTP 204
+  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  the new token traded at the broker: HTTP 200, a SERVICE bearer living 60.0 min
+  in the overlap: 1 token(s) held before, 2 active with the new one
+  the old token at the broker, before the delete: HTTP 200, traded
+  the old token at the broker, after the delete: HTTP 400, refused
+  read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 2880 min, access 60 min
+exit 0
+
+api_client_rotate.json written with every estate value replaced
+```
+
+- **A client holds two tokens at once.** Once the new token was issued, the client held two active tokens, and the old
+  one still traded at the broker (HTTP 200): that overlap is the window in which an integration switches to the new file.
+- **The old token is refused once it is deleted.** After the delete the broker answered the old token with HTTP 400, and
+  one token was left, with the new lifetimes. The old token's file can then be removed.
+- **Regenerating a token in place gives no overlap.** The fleet API also regenerates a token's value
+  (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`). In the same run, called outside the script, the answer
+  was a token under a new id with a new end date and a new value; the value from before answered HTTP 400 at the broker
+  three seconds later, and the new one HTTP 200. An integration reading the old value fails from that moment, so rotate with
+  `--rotate` and its overlap, not by regenerating.
+
+## 2. `vcenter_exchange.py --sessions` as a client, holding `vcf_viewer`
+
+An earlier throwaway client (X-142, 04:51), `VC_USER` unset, so the census read the session lists as the client's own
+session. Exit 1.
 
 ```
 $ python3 vcenter_exchange.py --sessions --redact
@@ -92,10 +147,10 @@ exchange.json written with every estate value replaced; exit 1
   sessions each; a list of one means this identity may not see the others. The census prints that the read was narrowed and exits 1, rather than
   reporting an estate with nobody signed in.
 
-## 3. The same client rebound to `vcf_administrator`
+## 3. That client rebound to `vcf_administrator`
 
-The same throwaway client, its role changed to `vcf_administrator` at realm scope, read again. Exit 0. This is the run
-in `exchange.json`.
+Section 1a's client, its role changed to `vcf_administrator` at realm scope, as X-142 found the census needs. Exit 3.
+This is the run in `exchange.json`.
 
 ```
 $ python3 vcenter_exchange.py --sessions --redact
@@ -105,26 +160,30 @@ vCenter {{host-1}}
   exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
   REST session (SIGN): HTTP 201, user CUSTOMER\{{client-1}}, VM list HTTP 200
   SOAP session (LoginByToken): user CUSTOMER\{{client-1}}
-  sessions (319, this census's own left out): local administrator 17, local, VCF integration account 256, local, other 46
-    local administrator by agent: VMware vim-java 5, XML-WS Runtime git-revision#50dbfd3 2, vAPI 2, vapi-endpoint 8
+  sessions (319, this census's own left out): directory 1, local administrator 15, local, VCF integration account 256, local, other 47
+    local administrator by agent: VMware vim-java 5, XML-WS Runtime git-revision#50dbfd3 2, vapi-endpoint 8
+    directory {{domain-1}}\{{name-1}}: vapi-endpoint 1  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
 vCenter {{host-2}}
   the bearer as presented: HTTP 401
   exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
   REST session (SIGN): HTTP 201, user CUSTOMER\{{client-1}}, VM list HTTP 200
   SOAP session (LoginByToken): user CUSTOMER\{{client-1}}
-  sessions (354, this census's own left out): directory 1, local administrator 8, local, VCF integration account 272, local, other 73
+  sessions (358, this census's own left out): directory 2, local administrator 8, local, VCF integration account 274, local, other 74
     local administrator by agent: VMware vim-java 1, XML-WS Runtime git-revision#50dbfd3 3, vAPI 4
-    directory {{domain-1}}\{{name-1}}: vSphereUI 1
+    directory {{domain-1}}\{{name-1}}: vapi-endpoint 1  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
+    directory {{domain-1}}\{{name-2}}: vSphereUI 1
 vCenter {{host-3}}
   the bearer as presented: HTTP 401
   exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
   REST session (SIGN): HTTP 201, user CUSTOMER\{{client-1}}, VM list HTTP 200
   SOAP session (LoginByToken): user CUSTOMER\{{client-1}}
-  sessions (275, this census's own left out): local, VCF integration account 150, local, other 125
+  sessions (280, this census's own left out): directory 3, local, VCF integration account 154, local, other 123
+    directory {{domain-1}}\{{name-1}}: vapi-endpoint 3  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
 The client took both sessions on 3 of 3 vCenter(s)
-Directory accounts signing in from a vSphere SDK: 0
+Directory accounts signing in from a client that is not interactive: 1
+WATCH: the local administrator holds 23 session(s) from clients that are not interactive: an account in automated use is not a break-glass account
 
-exchange.json written with every estate value replaced; exit 0
+exchange.json written with every estate value replaced; exit 3
 ```
 
 - **The bearer as presented is refused, and that is expected.** Every vCenter answered the broker's bearer with HTTP 401.
@@ -132,39 +191,50 @@ exchange.json written with every estate value replaced; exit 0
 - **The exchange answers a SAML token that lives minutes.** `urn:ietf:params:oauth:token-type:saml2`, of the Bearer type,
   about 299 seconds. Make the exchange just before the session, not ahead of time.
 - **Both sessions are the client itself.** The REST session (the assertion in a `SIGN` header) and the SOAP session
-  (`LoginByToken`) both read `CUSTOMER\{{client-1}}`: the realm's domain and the client's id. That is how a machine identity
-  shows in a session census.
+  (`LoginByToken`) both read `CUSTOMER\{{client-1}}`: the broker tenant and the client's id. That is how a machine identity
+  shows in a session census. The broker tenant is not the realm's name, the spelling a vCenter grant is accepted in and
+  applies to nobody.
 - **The role decided what the census could see.** Holding `vcf_viewer` the client saw only itself; holding
   `vcf_administrator` it read every list. A role between the two was not tried.
 - **Most sessions are VCF's own.** VCF's integration accounts (local, named `svc-`) and other local accounts (solution
   users, Supervisor accounts) held nearly all of them. Leave those; VCF runs them.
 - **The local administrator is in automated use on the two management vCenters.** Its sessions came from `VMware vim-java`,
-  `XML-WS Runtime`, `vAPI` and `vapi-endpoint` agents: programs, not a person at a console. An account in automated use is
-  not a break-glass account; find the client behind each before you vault it.
-- **One directory account was signed in, from `vSphereUI`, not from a vSphere SDK.** Sessions show what is signed in at
-  that moment; a nightly or weekly job is absent between runs. Read on several days before you conclude no integration
-  signs in on a directory password.
+  `XML-WS Runtime`, `vAPI` and `vapi-endpoint` agents: programs, not a person at a console. The census prints a `WATCH`
+  line for it and, with nothing worse, exits 4. An account in automated use is not a break-glass account; find the client
+  behind each before you vault it.
+- **One directory account signs in from `vapi-endpoint` on all three vCenters, and is flagged.** It is the directory
+  account the reference tooling itself signs in to vCenter with, so it is an integration on a directory password: the
+  very thing this chapter moves to an identity of its own. The census exits 3 until it moves, or until its owner confirms
+  each remaining session is a person's.
+- **One directory account was at the vSphere Client, `vSphereUI`, and is not flagged.** That agent is the only one the
+  census treats as a person's. Sessions show what is signed in at that moment; a nightly or weekly job is absent between
+  runs, so read on several days before you conclude no integration signs in on a directory password.
 
 ## 4. The census with no API client
 
-`VC_USER` set to a directory account and no API client credential: the census alone, as that account. Exit 0. The counts
-differ from run 3 by a few sessions, read minutes apart.
+`VC_USER` set to a directory account and no API client credential: the census alone, as that account. Exit 3. The counts
+differ from run 3 by a few sessions, read minutes apart. The account it reads as is the one run 3 flagged: its own
+session is left out, its other sessions are not.
 
 ```
 $ python3 vcenter_exchange.py --sessions --redact
 Census read as VC_USER, an account with a password
 vCenter {{host-1}}
-  sessions (317, this census's own left out): local administrator 17, local, VCF integration account 254, local, other 46
-    local administrator by agent: VMware vim-java 5, XML-WS Runtime git-revision#50dbfd3 2, vAPI 2, vapi-endpoint 8
+  sessions (320, this census's own left out): directory 1, local administrator 15, local, VCF integration account 257, local, other 47
+    local administrator by agent: VMware vim-java 5, XML-WS Runtime git-revision#50dbfd3 2, vapi-endpoint 8
+    directory {{domain-1}}\{{name-2}}: vapi-endpoint 1  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
 vCenter {{host-2}}
-  sessions (353, this census's own left out): directory 1, local administrator 8, local, VCF integration account 271, local, other 73
+  sessions (359, this census's own left out): directory 2, local administrator 8, local, VCF integration account 275, local, other 74
     local administrator by agent: VMware vim-java 1, XML-WS Runtime git-revision#50dbfd3 3, vAPI 4
+    directory {{domain-1}}\{{name-2}}: vapi-endpoint 1  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
     directory {{domain-1}}\{{name-3}}: vSphereUI 1
 vCenter {{host-3}}
-  sessions (276, this census's own left out): local, VCF integration account 151, local, other 125
-Directory accounts signing in from a vSphere SDK: 0
+  sessions (280, this census's own left out): directory 3, local, VCF integration account 154, local, other 123
+    directory {{domain-1}}\{{name-2}}: vapi-endpoint 3  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
+Directory accounts signing in from a client that is not interactive: 1
+WATCH: the local administrator holds 23 session(s) from clients that are not interactive: an account in automated use is not a break-glass account
 
-exchange.json written with every estate value replaced; exit 0
+exchange.json written with every estate value replaced; exit 3
 ```
 
 ## 5. `api_client.py --teardown --execute`

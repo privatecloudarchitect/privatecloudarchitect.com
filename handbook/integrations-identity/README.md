@@ -34,6 +34,12 @@ export TLS_VERIFY=false                             # only on a self-signed lab 
 python3 vcenter_exchange.py --sessions --redact     # the census, printed with placeholders, for a transcript you will share
 ```
 
+The census flags every directory-account session from a client other than the vSphere Client: a REST integration on
+a password (`vAPI`, `curl`, a product's own agent) as much as a vSphere SDK. On the reference estate the vSphere Client's
+sessions read `vSphereUI`, and that is the only agent the census treats as a person's; name others in
+`INTERACTIVE_AGENTS` (comma-separated, versions left off) only for a client people sign in from by hand. A person who
+signs in with PowerCLI is flagged too, and is cleared by confirming who it is.
+
 The census reads vCenter only. NSX, VCF Operations, the SDDC Manager API and VCF Automation each keep their own
 sign-ins, and it does not read them.
 
@@ -59,16 +65,29 @@ saw only its own session in every vCenter's session list, on three of three vCen
 list that holds only the census's own session is reported as a failed read (exit 1), never as an empty estate. If the
 census's client holds `vcf_administrator`, give it nothing else to do and keep its token on its own rotation.
 
-`BROKER_REALM` (default `CUSTOMER`), `REALM_DOMAIN` (how a session spells the realm, default `CUSTOMER`),
-`LOCAL_DOMAIN` (the vCenter's own SSO domain, default `VSPHERE.LOCAL`) and `OUT` (default `exchange.json`) are optional.
-`VC_PASSWORD` and `API_TOKEN` are read when their `_FILE` forms are unset.
+`BROKER_TENANT` (the broker tenant, default `CUSTOMER`), `INTERACTIVE_AGENTS` (default `vSphereUI`), `LOCAL_DOMAIN`
+(the vCenter's own SSO domain, default `VSPHERE.LOCAL`) and `OUT` (default `exchange.json`) are optional. `VC_PASSWORD`
+and `API_TOKEN` are read when their `_FILE` forms are unset.
+
+**The broker tenant is not the realm's name.** The broker tenant is the realm's path segment in the broker's token URL,
+`CUSTOMER` unless your broker says otherwise, and an API client's vCenter session carries it as its domain:
+`CUSTOMER\<client id>`. The realm's name is the broker realm as the fleet identity plane names it, and a vCenter grant
+spelled with it in capitals applies to nobody; that is the string `REALM_DOMAIN` takes in vcenter-authorization's
+`authz.py`. This script reads `BROKER_TENANT` (`BROKER_REALM`, its earlier name, is still read), takes the tenant from
+the client's own session when one is opened, and only notes a `REALM_DOMAIN` left in the shell. Whether a grant spelled
+`CUSTOMER\<name>` applies to anyone was not tested.
 
 | Exit | Means |
 |---|---|
-| 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` no directory account signs in from a vSphere SDK |
+| 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client and the local administrator signs in from no other client |
 | 1 | a vCenter refused the client, a read failed, or the census's identity could read only its own session |
 | 2 | a usage error, or the record was refused because an estate value survived the scrub; nothing is written |
-| 3 | `--sessions` found a directory account signing in from a vSphere SDK: an integration on a person's or a directory account's password |
+| 3 | `--sessions` found a directory account signing in from a client other than the vSphere Client: an integration on a person's or a directory account's password, until its owner says otherwise |
+| 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client, and nothing worse: an account in automated use is not a break-glass account |
+
+The exit reads each session list at one moment. An integration that is not signed in at that moment is not seen, so
+the gate before the broker federates is exit 0 on several days, with every remaining directory session owned and
+confirmed as a person.
 
 ## The API client an integration moves to: `api_client.py`
 
@@ -82,6 +101,8 @@ export TLS_VERIFY=false                             # only on a self-signed lab 
 python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43200 --access-token-ttl 60
 python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43200 --access-token-ttl 60 \
     --token-file /path/to/backup-01-token --execute
+python3 api_client.py --client-id backup-01 --rotate --api-token-ttl 43200 --access-token-ttl 60 \
+    --token-file /path/to/backup-01-token-new --old-token-file /path/to/backup-01-token --execute   # before the old one ends
 python3 api_client.py --client-id backup-01 --teardown              # the teardown's plan
 python3 api_client.py --client-id backup-01 --teardown --execute    # when the integration retires
 ```
@@ -94,6 +115,8 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `--access-token-ttl MIN` | the lifetime in minutes of each bearer the token yields, 30 to 60 (required to create) |
 | `--token-file PATH` | where the token is written, mode 0600; the file must not exist (required with `--execute`) |
 | `--description TEXT` | the client's description (default `an integration's own identity`) |
+| `--rotate` | issue the client a new token with both lifetimes, prove it, then delete every token it held before (needs both lifetimes and `--token-file`; no `--role`) |
+| `--old-token-file PATH` | with `--rotate`: the token the integration holds now, shown trading before the delete and refused after it |
 | `--teardown` | remove the client and its tokens instead of creating them |
 | `--execute` | send the calls; without it the plan is printed |
 | `--redact` | print with placeholders instead of your host and client id |
@@ -103,16 +126,16 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `OPS_HOST` | the VCF Operations FQDN (required to execute) |
 | `OPS_API_TOKEN_FILE` | your VCF Operations API token, mode 0600 (`OPS_API_TOKEN` is read if it is unset), traded at the broker for a bearer |
 | `OPS_BROKER_HOST` | the broker that trades it (default `OPS_HOST`) |
-| `OPS_REALM` | the broker's realm path segment (default `CUSTOMER`) |
+| `BROKER_TENANT` | the broker tenant, the realm's path segment in the broker's token URL (default `CUSTOMER`; `OPS_REALM`, its earlier name, is still read) |
 | `OPS_BEARER_FILE` | instead of the API token, a bearer you already hold |
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |
 | `OUT` | the record (default `api_client.json`) |
 
 | Exit | Means |
 |---|---|
-| 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes, or, for a teardown, no client and no token left |
+| 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved, one token left and, when given, the old token refused; for a teardown, no client and no token left |
 | 1 | a call failed, or the read-back did not hold; a create that stopped part way prints where it stopped and the teardown to run before trying again |
-| 2 | a usage error, a refusal before anything is sent (a lifetime outside the bounds, a token file that exists), a client that already exists (refused, never adopted), or the record was refused because an estate value survived the scrub |
+| 2 | a usage error, a refusal before anything is sent (a lifetime outside the bounds, a token file that exists), a client that already exists (refused, never adopted), for a rotation a client that does not exist, or the record was refused because an estate value survived the scrub |
 
 ### What it sends, and in what order
 
@@ -127,6 +150,15 @@ Every path is under `/api/fleet-management/iam` on VCF Operations.
 5. The token traded at the broker once (`POST /acs/t/{realm}/token`, the API token grant), to prove it; the record keeps
    the status, the bearer's principal type and its lifetime, never the bearer.
 6. The client and its token read back: present, its roles and their scope, the token's status and both lifetimes.
+
+A rotation queries the client and the tokens it holds, and refuses a client that is not there (it never creates
+one). It then issues a new token (`POST /ssorealms/{realm}/api-tokens`, a name stamped with the time, both lifetimes),
+writes it to `--token-file` and trades it at the broker once. With `--old-token-file` it trades the old token too, so
+the record shows both working in the overlap. Only once the new token has traded does it delete each token the client
+held before; with `--old-token-file` it trades the old token again, which must be refused, and it reads back that one
+token is left. If the new token does not trade, the old ones are kept and the run stops with exit 1. Point the
+integration at the new token between the issue and the delete, or run the rotation in two steps: the issue, then the
+delete once the integration has switched.
 
 A teardown queries the client's tokens and deletes each, deletes the client, then reads both lists again and records
 the residue. A teardown of a client that is not there removes nothing and exits 0, so it is safe to re-run.
@@ -215,6 +247,12 @@ Steps 1 to 4 run only when an API client's credential is given.
 - `api_client.py` writes only with `--execute`: one client, one role binding, one token, or their removal. A create
   refuses a client id that exists; a teardown removes the client you name and its tokens, so name only one you made.
 - The lifetime bounds are the ones the broker held a create to on the reference estate, not documented ranges.
+- A rotation was run once, on VCF 9.1.1: the client held two active tokens in the overlap, the old token traded before
+  the delete and was refused after it (HTTP 400). The fleet API's in-place regenerate
+  (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`), called outside the script in the same run, answered a
+  token under a new id with a new end date, and the value from before was refused three seconds later: it leaves no
+  overlap, so the script does not use it. How long an overlap may last is bounded only by the old token's own end date,
+  which was not waited out.
 - `service_account.py` writes only with `--execute`: one service account and its token, or their revocation and
   removal. Rotation: the account read back with rotation required on every refresh, and each refresh returned a new
   refresh token, which the script stores. In the same run the token a refresh had replaced still refreshed, so retire
@@ -229,11 +267,12 @@ Steps 1 to 4 run only when an API client's credential is given.
   events, and no session list for every user was found in it; VCF Operations' lists a system audit report and a call
   that ends the caller's own session, and no session list; whether either audit records each sign-in was not read. NSX
   and SDDC Manager were not searched.
-- The census classifies each session by its principal's domain: the realm's domain is an API client, a domain in
+- The census classifies each session by its principal's domain: the broker tenant is an API client, a domain in
   `DIRECTORY_DOMAINS` is a directory account, the vCenter's own SSO domain is a local account (the local administrator
   apart, and accounts named `svc-` counted as VCF's integration accounts). Each session's client agent is recorded
-  without its version. An agent naming pyvmomi, govmomi, vim-java, XML-WS, PowerCLI or rbvmomi counts as a vSphere SDK;
-  that list is a judgment from the agents seen, not a vendor list, so read the agents yourself.
+  without its version. Every agent but `vSphereUI` counts as a program; that rule comes from the agents seen on the
+  reference estate's lists, where the one session from the vSphere Client read `vSphereUI`, not from a vendor list, so
+  read the agents yourself.
 - No local account is named in the record, because a local account's name can carry estate names; the census counts
   them. Directory accounts and API clients are recorded as placeholders, with their agents.
 - A session list shows what is signed in at the moment of the read. Run it on several days, and on a schedule, before
@@ -251,12 +290,17 @@ Steps 1 to 4 run only when an API client's credential is given.
 `exchange.json`: `summary` holds the lines the run exists for: `census_as` (`client` or `password`), `client_tried` and
 `client_took_both_sessions` of `vcenters`, `bearer_as_presented` (the statuses seen), `saml_lifetime_s`, `session_users`
 (who the client's sessions were), and with `--sessions` `sessions_read`, `census_only_own_session`, `sessions_by_class`,
-`local_administrator_by_agent`, `directory_principals` and `directory_from_sdk`. `vcenters` holds each vCenter's steps;
-`sent` names every request that was not a plain read.
+`local_administrator_by_agent`, `local_administrator_not_interactive` (its sessions from clients other than the vSphere
+Client), `directory_principals` and `directory_not_interactive`. `broker_tenant`, when present, records a tenant the
+client's own session named that differed from the one set. `vcenters` holds each vCenter's steps; `sent` names every
+request that was not a plain read.
 
 `api_client.json`: `asked` (the role, its scope and both lifetimes), `calls` (each call's method, templated path and
 status), `exchange` (the broker's status, the bearer's principal type and lifetime), `readback` and `exit`. A teardown's
-record holds `calls`, `residue` (`client_present`, `tokens_left`) and `exit`.
+record holds `calls`, `residue` (`client_present`, `tokens_left`) and `exit`. A rotation's record holds `asked` (both
+lifetimes, and whether an old token was given), `calls`, `tokens_before`, `exchange` (the new token at the broker),
+`overlap` (the active tokens once the new one was issued), `old_token_before_delete` and `old_token_after_delete` (the
+old token's status at the broker), `readback` and `exit`.
 
 `service_account.json`: `asked` (the role and its scope), `calls`, `registered` and `readback` (present, status, roles,
 `require_rotation`), `device_grant` (its status, whether a refresh token came back, the bearer's lifetime in seconds),

@@ -8,7 +8,8 @@ via a custom OAuth grant, and that bearer authenticates /suite-api.
 Environment:
   OPS_HOST        (required)  VCF Operations FQDN
   OPS_BROKER_HOST (optional)  Identity Broker FQDN; defaults to OPS_HOST
-  OPS_REALM       (optional)  broker realm, default CUSTOMER
+  BROKER_TENANT   (optional)  the broker tenant, the realm's path segment at the broker, default CUSTOMER;
+                              not the realm's name (OPS_REALM, its earlier name, is still read)
   OPS_API_TOKEN   (required)  the api-token from the operations console
   OPS_TLS_VERIFY  (optional)  TLS verification, on by default; set false for a self-signed CA
 """
@@ -32,11 +33,11 @@ def _ctx():
 def bearer():
     host = os.environ["OPS_HOST"]
     broker = os.environ.get("OPS_BROKER_HOST", host)
-    realm = os.environ.get("OPS_REALM", "CUSTOMER")
+    tenant = os.environ.get("BROKER_TENANT") or os.environ.get("OPS_REALM") or "CUSTOMER"
     token = os.environ["OPS_API_TOKEN"]
     body = urllib.parse.urlencode({"grant_type": GRANT, "api_token": token}).encode()
     req = urllib.request.Request(
-        f"https://{broker}/acs/t/{realm}/token", data=body, method="POST",
+        f"https://{broker}/acs/t/{tenant}/token", data=body, method="POST",
         headers={"Content-Type": "application/x-www-form-urlencoded"})
     with urllib.request.urlopen(req, context=_ctx(), timeout=30) as r:
         return json.loads(r.read())["access_token"]

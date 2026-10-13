@@ -38,8 +38,9 @@ sees it, and the record keeps only the fields the allow-lists below name.
 
 Env:  OPS_HOST                 VCF Operations FQDN (required)
       OPS_API_TOKEN_FILE       an API token from VCF Operations (mode 0600; OPS_API_TOKEN is read if it is unset),
-                               traded at the broker for a bearer: OPS_BROKER_HOST (default OPS_HOST), OPS_REALM
-                               (default CUSTOMER)
+                               traded at the broker for a bearer: OPS_BROKER_HOST (default OPS_HOST), BROKER_TENANT
+                               (the broker tenant, the realm's path segment at the broker; default CUSTOMER; it was
+                               OPS_REALM, still read when BROKER_TENANT is unset, with a notice)
       OPS_BEARER_FILE          instead, a bearer you already hold (it lives an hour unless the fleet says otherwise)
       VCFA_HOST                optional, with VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE
       VC_HOSTS                 optional, comma-separated, with VC_USER (user@domain) and VC_PASSWORD_FILE (mode
@@ -240,13 +241,19 @@ def _form(url: str, fields: dict) -> dict:
         return json.loads(r.read())
 
 
+def broker_tenant() -> str:
+    """The broker tenant: the realm's path segment at the broker (/acs/t/<tenant>/), CUSTOMER unless set. It is not the
+    realm's name. On the reference estate an API client's vCenter session carried it as its domain, CUSTOMER\\<client id>
+    (X-141), while a grant spelled with the realm's name applied to nobody (the 2026-10-06 grant probe)."""
+    return os.environ.get("BROKER_TENANT") or os.environ.get("OPS_REALM") or "CUSTOMER"
+
+
 def ops_bearer() -> str:
     """A bearer for VCF Operations: the one in OPS_BEARER_FILE, or an API token traded at the broker for one."""
     if os.environ.get("OPS_BEARER_FILE"):
         return _secret("OPS_BEARER").removeprefix("Bearer ").strip()
     broker = os.environ.get("OPS_BROKER_HOST") or os.environ["OPS_HOST"]
-    realm = os.environ.get("OPS_REALM", "CUSTOMER")
-    answer = _form(f"https://{broker}/acs/t/{realm}/token",
+    answer = _form(f"https://{broker}/acs/t/{broker_tenant()}/token",
                    {"grant_type": API_TOKEN_GRANT, "api_token": _secret("OPS_API_TOKEN")})
     return answer["access_token"]
 
@@ -548,6 +555,7 @@ def summary(record: dict) -> dict:
         "settings": settings_line(f.get("settings") or {}),
         "organizations": org_lines(record.get("organizations") or [], set(kinds)),
         "vcenters": vcenter_lines(record.get("vcenters") or [], kinds),
+        "broker_tenant": record.get("broker_tenant"),
         "egress": None if not egress_read else {
             "reached": [{"broker": r.get("broker"), "status": r.get("status")} for r in egress_read["results"]],
             "unchanged": egress_read["unchanged"]},
@@ -574,7 +582,15 @@ def spellings(s: dict) -> str | None:
     bound = sorted({x for d in s["directories"] if d["host"] for x in d["domains"] if x})
     return "vCenter grant spellings: " + "; ".join(
         [f"{spelled(x)}\\<name> (directory)" for x in bound]
-        + [f"{spelled(r['name'])}\\<name> (realm, inert)" for r in s["realms"]])
+        + [f"{spelled(r['name'])}\\<name> (the realm's name, inert)" for r in s["realms"]])
+
+
+def client_session(s: dict) -> str | None:
+    """How an API client's vCenter session reads: the broker tenant, a different string from the realm's name."""
+    if not s["realms"] or not s.get("broker_tenant"):
+        return None
+    return (f"API client sessions in vCenter: {s['broker_tenant']}\\<client id> "
+            "(the broker tenant, not the realm's name)")
 
 
 def _token_text(t: dict) -> str:
@@ -602,6 +618,8 @@ def report(s: dict) -> list[str]:
                      f"port {d['port'] or 'none'}{where}{extra}{sync}")
     if spellings(s):
         lines.append(spellings(s))
+    if client_session(s):
+        lines.append(client_session(s))
     lines.append("Emergency client: " + (", ".join(
         f"{e['name']} ({e['status']}, access token {_minutes(e['access_token_ttl_min'])})"
         for e in s["emergency_clients"]) or "none"))
@@ -650,7 +668,7 @@ FIELDS = {"fqdn": "host", "host": "host", "domainControllerHost": "host", "ldapH
           "name": "name", "displayName": "name", "display_name": "name", "clientName": "name", "clientId": "name",
           "apiClientId": "name", "tokenName": "name", "principalName": "name", "certificateName": "name",
           "domains": "domain", "defaultDomain": "domain", "domain_names": "domain", "baseDn": "dn", "bindDn": "dn",
-          "roleName": "role"}
+          "roleName": "role", "broker_tenant": "name"}
 PATTERNS = [("id", re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")),
             ("host", re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}\b", re.I)),
             ("ip", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
@@ -742,7 +760,7 @@ def census(egress_url: str | None, ops_token: str, vcfa_token: str | None) -> di
     """Read every plane the environment names; the egress check, when asked, runs straight after the fleet read."""
     calls: list = []
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "sent": [], "fleet": {},
-              "organizations": [], "vcenters": [], "egress": None, "calls": calls}
+              "organizations": [], "vcenters": [], "egress": None, "calls": calls, "broker_tenant": broker_tenant()}
     ops = Reader("vcf-operations", f"https://{os.environ['OPS_HOST']}/suite-api", {"Authorization": f"Bearer {ops_token}"}, calls)
     record["fleet"] = fleet(ops)
     if egress_url:
@@ -790,6 +808,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--egress-metadata-url", metavar="URL",
                     help="ask each broker to fetch this SAML metadata URL (sends one request per broker)")
     a = ap.parse_args(argv)
+    if os.environ.get("OPS_REALM") and not os.environ.get("BROKER_TENANT"):
+        print("note: OPS_REALM is now BROKER_TENANT (the broker tenant, the realm's path segment at the broker, CUSTOMER by "
+              "default, which is not the realm's name); reading OPS_REALM this time.", file=sys.stderr)
     if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or _secret("OPS_API_TOKEN")):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required", file=sys.stderr)
         return 2

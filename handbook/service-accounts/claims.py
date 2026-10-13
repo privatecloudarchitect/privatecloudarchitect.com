@@ -13,7 +13,7 @@ verification is the platform's job) and prints what the token says about its hol
 Any other JWT can be decoded instead: set JWT_ENV to the name of an environment variable holding it (for
 example a service JWT from the fleet plane's exchange, or the bearer another flow returned).
 
-Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN; OPS_BROKER_HOST, OPS_REALM, OPS_TLS_VERIFY optional)
+Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN; OPS_BROKER_HOST, BROKER_TENANT, OPS_TLS_VERIFY optional)
        JWT_ENV (optional)  name of an env var holding a JWT to decode instead of minting one
 Exit:  0 claims printed · 2 the mint failed
 Never prints a token value.

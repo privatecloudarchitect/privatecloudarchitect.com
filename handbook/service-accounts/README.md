@@ -21,7 +21,7 @@ metrics-collection harness ships.
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>          # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>              # OPS_REALM defaults to CUSTOMER
+export OPS_API_TOKEN=<your-api-token>              # BROKER_TENANT defaults to CUSTOMER
 export OPS_TLS_VERIFY=false                        # only on a self-signed lab CA
 
 python3 claims.py                                  # what the bearer says it is

@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-13T04:51:49Z",
+ "captured": "2026-10-13T07:45:20Z",
  "mode": "create",
  "client": "{{client-1}}",
  "calls": [
@@ -43,13 +43,13 @@
   "role": "vcf_viewer",
   "scope": "SSO_REALM",
   "api_token_ttl_min": 1440,
-  "access_token_ttl_min": 60
+  "access_token_ttl_min": 30
  },
  "token_file_written": true,
  "exchange": {
   "status": 200,
   "principal_type": "SERVICE",
-  "bearer_lifetime_min": 60.0
+  "bearer_lifetime_min": 30.0
  },
  "readback": {
   "client_present": true,
@@ -63,7 +63,7 @@
    {
     "status": "ACTIVE",
     "api_token_ttl_min": 1440,
-    "access_token_ttl_min": 60
+    "access_token_ttl_min": 30
    }
   ]
  },

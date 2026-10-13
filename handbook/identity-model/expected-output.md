@@ -17,7 +17,8 @@ Brokers, from the identity plane: 3 (2 embedded, 1 instance)
 Realm {{host-2}} on the instance broker {{host-2}}: covers 2 VCF instance(s) ({{name-2}}, {{name-3}}), 10 component(s); issues: none
 Provider {{name-5}}: type ADLDAP, protocol LDAP_BIND, provisioning LDAP
   directory ad ({{domain-1}}): LDAP port 389 to {{host-7}}; sync COMPLETED, 14 users, 6 groups
-vCenter grant spellings: {{domain-1}}\<name> (directory); {{host-2}}\<name> (realm, inert)
+vCenter grant spellings: {{domain-1}}\<name> (directory); {{host-2}}\<name> (the realm's name, inert)
+API client sessions in vCenter: CUSTOMER\<client id> (the broker tenant, not the realm's name)
 Emergency client: none
 API clients: 4
   {{name-8}}: roles sddc_admin, vcf_administrator, {{role-1}}; no token
@@ -70,6 +71,9 @@ Egress (each broker fetched the metadata URL): {{host-4}} 200, {{host-5}} 200, {
   the name a broker session carries in vCenter, and a grant spelled that way applies. `{{host-2}}\<name>` is the
   realm's name in capitals: vCenter accepts a grant spelled that way and it applies to nobody. Grant the first;
   `authz.py` in the vcenter-authorization companion finds grants spelled the second way.
+- **A third string, the broker tenant.** `CUSTOMER\<client id>` is how an API client's own session reads in vCenter:
+  the broker tenant, the realm's path segment at the broker (`BROKER_TENANT`, CUSTOMER by default). It is not the
+  realm's name. Whether a grant spelled with the broker tenant applies was not tested.
 - **No emergency client.** The realm holds no emergency access client: the break-glass client VCF documents for
   when standard sign-in fails, holding the highest role with the largest scope. None means automation has no way in
   of its own while the provider cannot authenticate anyone; creating and drilling one belongs with the recovery plan
@@ -112,3 +116,11 @@ FAILED vcf-operations GET /api/fleet-management/iam/roles: 403 403
 
 The run above it used a VCF single sign-on user's API token holding VCF Administrator. A role between the two was not
 tried, and neither was an API client holding VCF Administrator.
+
+## The same census as an API client holding VCF Administrator
+
+The same day, a throwaway API client holding VCF Administrator at realm scope ran the census on the fleet plane: every
+fleet identity read answered, and each fleet line (brokers, realm, provider, directories, emergency clients, settings,
+API clients other than itself, user tokens) was the same as a VCF single sign-on user's API token read straight
+after it. One run. With VCF Viewer every read was refused (above), and no role between the two was tried, so the
+census credential reads at the administrator's level: hold it as tier-0.

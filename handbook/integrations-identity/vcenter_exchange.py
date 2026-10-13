@@ -7,9 +7,11 @@ SAML token opens a REST session (an Authorization header of the SIGN scheme) or 
 script makes the exchange on each vCenter, opens and closes one session of each kind, and records who the session
 is. With --sessions it reads each vCenter's session list and groups every session by the kind of principal and its
 client agent, so an integration still signing in as a person's directory account shows up beside the machine
-identities. The census needs no API client: with VC_USER alone it reads the list as that account, so it can come
-first; with an API client and no VC_USER it reads the list as the client's own session, so a scheduled census runs
-as a machine identity rather than on a person's password. An identity that may read only its own session is reported
+identities: every directory-account session from a client that is not interactive (anything but the vSphere Client,
+unless INTERACTIVE_AGENTS says otherwise) is flagged, so a REST integration on a password is flagged as an SDK one is.
+The census needs no API client: with VC_USER alone it reads the list as that account, so it can come first; with an
+API client and no VC_USER it reads the list as the client's own session, so a scheduled census runs as a machine
+identity rather than on a person's password. An identity that may read only its own session is reported
 as unable to read the list, never as an empty one. The census reads vCenter only: NSX, VCF Operations, the SDDC
 Manager API and VCF Automation are not read.
 
@@ -25,22 +27,31 @@ key or login time is printed or recorded.
 
 Env:  BROKER_HOST                 the identity broker that trades the API client's token for a bearer (not needed for a
                                   census as VC_USER alone)
-      BROKER_REALM                the broker's realm path segment (default CUSTOMER)
+      BROKER_TENANT               the broker tenant: the realm's path segment, which an API client's vCenter session
+                                  carries as its domain (default CUSTOMER; BROKER_REALM, its earlier name, is still
+                                  read). When the client's own session is opened, the domain it reads is used. This is
+                                  not vcenter-authorization's REALM_DOMAIN, which is the realm's name
       API_TOKEN_FILE              the API client's API token (mode 0600); API_TOKEN is read if it is unset
       BEARER_FILE                 instead, a broker bearer you already hold
       VC_HOSTS                    comma-separated vCenter FQDNs
       VC_USER, VC_PASSWORD_FILE   for --sessions as an account: one that may read the session list, user@domain (mode
                                   0600; VC_PASSWORD is read if it is unset); leave both unset to read as the API client
       DIRECTORY_DOMAINS           for --sessions: the directory domains as vCenter spells them, comma-separated
-      REALM_DOMAIN                the realm's domain as a session spells it (default CUSTOMER)
+      INTERACTIVE_AGENTS          for --sessions: the client agents a person signs in from, comma-separated, versions
+                                  left off (default vSphereUI, the vSphere Client: the only agent a person's session
+                                  showed on the reference estate's lists)
       LOCAL_DOMAIN                the vCenter's own SSO domain (default VSPHERE.LOCAL)
       TLS_VERIFY=false            only on a self-signed lab CA
       OUT                         the record (default exchange.json)
 Use:  python3 vcenter_exchange.py [--sessions] [--redact]
-Exit: 0 every vCenter took the client through both sessions (when a client is given), and with --sessions no directory
-      account signs in from a vSphere SDK · 1 a vCenter refused the client, a read failed, or the census identity could
-      read only its own session · 2 a usage error, or the record was refused because an estate value survived the
-      scrub · 3 --sessions found a directory account signing in from a vSphere SDK
+Exit: 0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
+      directory-account session is from an interactive client and the local administrator signs in from none other
+      · 1 a vCenter refused the client, a read failed, or the census identity could read only its own session · 2 a
+      usage error, or the record was refused because an estate value survived the scrub · 3 --sessions found a
+      directory account signing in from a client that is not interactive · 4 --sessions found the local administrator
+      signing in from a client that is not interactive, and nothing above it
+      The exit reads vCenter's session lists at one moment: an integration that is not signed in then is not seen, so
+      read on several days, and confirm each remaining directory session's owner as a person.
 """
 
 from __future__ import annotations
@@ -69,9 +80,26 @@ EXCHANGE = {"grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
 SOAPENV = "http://schemas.xmlsoap.org/soap/envelope/"
 WSSE = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
 VIM = "urn:vim25"
-# Client agents that name a vSphere SDK. A directory account signing in from one is an integration, not a person at a
-# browser; the list is the SDKs seen on the reference estate's session lists plus PowerCLI and rbvmomi.
-SDK_MARKERS = ("pyvmomi", "govmomi", "vim-java", "XML-WS", "PowerCLI", "rbvmomi")
+# The client agents a person signs in from. Every other agent on a directory account or the local administrator is
+# treated as an integration: a REST client (vAPI, curl, a product's own agent) on a password as much as an SDK. On the
+# reference estate a person's session at the vSphere Client read vSphereUI and nothing else (X-142, one session).
+INTERACTIVE_AGENTS = ("vSphereUI",)
+
+
+def interactive_agents() -> set[str]:
+    raw = os.environ.get("INTERACTIVE_AGENTS")
+    names = [a.strip() for a in raw.split(",")] if raw else list(INTERACTIVE_AGENTS)
+    return {a.lower() for a in names if a}
+
+
+def interactive(agent: str, allowed: set[str] | None = None) -> bool:
+    """Whether a session's agent (its name, version left off) is one a person signs in from."""
+    return agent.lower() in (allowed if allowed is not None else interactive_agents())
+
+
+def broker_tenant() -> str:
+    """The broker tenant: the realm's path segment, and the domain an API client's vCenter session carries."""
+    return os.environ.get("BROKER_TENANT") or os.environ.get("BROKER_REALM") or "CUSTOMER"
 
 
 # ── HTTP, standard library only ──────────────────────────────────────────────────────────────────────────────────
@@ -115,8 +143,7 @@ def broker_bearer() -> str:
     """The bearer in BEARER_FILE, or the API client's API token traded at the broker for one."""
     if os.environ.get("BEARER_FILE"):
         return _secret("BEARER").removeprefix("Bearer ").strip()
-    realm = os.environ.get("BROKER_REALM", "CUSTOMER")
-    status, answer = _form(f"https://{os.environ['BROKER_HOST']}/acs/t/{realm}/token",
+    status, answer = _form(f"https://{os.environ['BROKER_HOST']}/acs/t/{broker_tenant()}/token",
                            {"grant_type": API_TOKEN_GRANT, "api_token": _secret("API_TOKEN")})
     if status != 200 or "access_token" not in answer:
         # a deleted or rotated API token answers 500 here, not 401: check the token still exists before its expiry
@@ -247,12 +274,12 @@ def agent_of(raw: str) -> str:
     return " ".join(name.split())[:60] or "(none)"
 
 
-def classify(principal: str, realm: str, directories: set[str], local: str) -> str:
+def classify(principal: str, tenant: str, directories: set[str], local: str) -> str:
     """The kind of principal a session holds, by how it signs in under VCF single sign-on."""
     domain, _, name = principal.rpartition("\\")
     d = domain.upper()
-    if d == realm.upper():
-        return "api client"            # a VCF SSO API client's session reads <realm>\<client id>
+    if d == tenant.upper():
+        return "api client"            # a VCF SSO API client's session reads <broker tenant>\<client id>
     if d in directories:
         return "directory"             # a person or an integration signing in through the broker
     if d == local.upper():
@@ -262,14 +289,15 @@ def classify(principal: str, realm: str, directories: set[str], local: str) -> s
     return "another provider"
 
 
-def census(rows: list[dict], mine: str | None, realm: str, directories: set[str], local: str) -> dict:
-    """Sessions by class; the local administrator by agent; each directory principal with its agents. No local
-    principal is named, because a local account's name can carry estate values."""
+def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str) -> dict:
+    """Sessions by class; the local administrator by agent; each directory principal with its agents, flagged when any
+    agent is not interactive. No local principal is named, because a local account's name can carry estate values."""
     by_class, admin, dirs, clients = Counter(), Counter(), {}, set()
+    allowed = interactive_agents()
     for r in rows:
         if r["key"] == mine:
             continue
-        cls, agent = classify(r["user"], realm, directories, local), agent_of(r["agent"])
+        cls, agent = classify(r["user"], tenant, directories, local), agent_of(r["agent"])
         by_class[cls] += 1
         if cls == "local administrator":
             admin[agent] += 1
@@ -279,13 +307,14 @@ def census(rows: list[dict], mine: str | None, realm: str, directories: set[str]
             clients.add(r["user"])
     return {"sessions": sum(by_class.values()), "by_class": dict(sorted(by_class.items())),
             "local_administrator_by_agent": dict(sorted(admin.items())),
+            "local_administrator_not_interactive": sum(n for ag, n in admin.items() if not interactive(ag, allowed)),
             "directory": [{"principal": p, "agents": dict(sorted(a.items())),
-                           "sdk": any(m.lower() in ag.lower() for ag in a for m in SDK_MARKERS)}
+                           "not_interactive": any(not interactive(ag, allowed) for ag in a)}
                           for p, a in sorted(dirs.items())],
             "api_clients": len(clients), "own_session_left_out": mine is not None}
 
 
-def _census_of(s: Soap, who: str, realm: str, directories: set[str], local: str) -> dict:
+def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str) -> dict:
     """The census from an open session. A list that holds only the census's own session means this identity may not
     read the others, which is reported as such and never as an empty estate."""
     try:
@@ -295,33 +324,34 @@ def _census_of(s: Soap, who: str, realm: str, directories: set[str], local: str)
         if mine and all(r["key"] == mine for r in rows):
             return {"error": "the session list held only this census's own session: this identity cannot read the others",
                     "only_own_session_visible": True, "census_identity": {"user": who}}
-        return {**census(rows, mine, realm, directories, local), "census_identity": {"user": who}}
+        return {**census(rows, mine, tenant, directories, local), "census_identity": {"user": who}}
     finally:
         s.logout()
 
 
-def read_sessions(host: str, user: str, password: str, realm: str, directories: set[str], local: str) -> dict:
+def read_sessions(host: str, user: str, password: str, tenant: str, directories: set[str], local: str) -> dict:
     """The census as an account that signs in with a password (VC_USER)."""
     s = Soap(host)
     who = s.login(user, password) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, realm, directories, local)
+    return _census_of(s, who, tenant, directories, local)
 
 
-def read_sessions_as_client(host: str, assertion: str, realm: str, directories: set[str], local: str) -> dict:
+def read_sessions_as_client(host: str, assertion: str, tenant: str, directories: set[str], local: str) -> dict:
     """The census as the API client itself: its own SOAP session from a fresh SAML assertion."""
     s = Soap(host)
     who = s.login_by_token(assertion) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, realm, directories, local)
+    return _census_of(s, who, tenant, directories, local)
 
 
 # ── the record ───────────────────────────────────────────────────────────────────────────────────────────────────
 def summary(record: dict) -> dict:
     """The lines the run exists for: per vCenter, whether the client got both sessions and who it was; with
-    --sessions, the census by class and every directory principal signing in from a vSphere SDK."""
+    --sessions, the census by class, every directory principal signing in from a client that is not interactive, and the
+    local administrator's sessions from one."""
     vcs = record.get("vcenters") or []
     took = [v for v in vcs if (v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user")]
     sessions = [v for v in vcs if isinstance(v.get("sessions"), dict) and "by_class" in v["sessions"]]
@@ -340,7 +370,10 @@ def summary(record: dict) -> dict:
         "local_administrator_by_agent": dict(sorted(sum((Counter(v["sessions"]["local_administrator_by_agent"])
                                                          for v in sessions), Counter()).items())),
         "directory_principals": sorted({d["principal"] for v in sessions for d in v["sessions"]["directory"]}),
-        "directory_from_sdk": sorted({d["principal"] for v in sessions for d in v["sessions"]["directory"] if d["sdk"]}),
+        "directory_not_interactive": sorted({d["principal"] for v in sessions for d in v["sessions"]["directory"]
+                                             if d["not_interactive"]}),
+        "local_administrator_not_interactive": sum(v["sessions"].get("local_administrator_not_interactive", 0)
+                                                   for v in sessions),
     }
 
 
@@ -367,14 +400,17 @@ def report(record: dict) -> list[str]:
                 lines.append("    local administrator by agent: " + ", ".join(f"{a} {n}" for a, n in s["local_administrator_by_agent"].items()))
             for d in s["directory"]:
                 lines.append(f"    directory {d['principal']}: " + ", ".join(f"{a} {n}" for a, n in d["agents"].items())
-                             + ("  SIGNS IN FROM A vSPHERE SDK" if d["sdk"] else ""))
+                             + ("  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE" if d["not_interactive"] else ""))
         elif isinstance(s, dict):
             lines.append(f"  sessions not read: {s.get('error')}")
     sm = record["summary"]
     if sm["client_tried"]:
         lines.append(f"The client took both sessions on {sm['client_took_both_sessions']} of {sm['vcenters']} vCenter(s)")
     if sm["sessions_read"]:
-        lines.append(f"Directory accounts signing in from a vSphere SDK: {len(sm['directory_from_sdk'])}")
+        lines.append(f"Directory accounts signing in from a client that is not interactive: {len(sm['directory_not_interactive'])}")
+        if sm["local_administrator_not_interactive"]:
+            lines.append(f"WATCH: the local administrator holds {sm['local_administrator_not_interactive']} session(s) from "
+                         "clients that are not interactive: an account in automated use is not a break-glass account")
     return lines
 
 
@@ -415,7 +451,7 @@ def estate_values(record: dict, given: list[tuple[str, str]]) -> dict[str, str]:
         if field in ("user", "principal") or (field == "__key__" and "\\" in s):
             domain, _, name = s.rpartition("\\")
             add(domain, "domain")
-            add(name, "client" if domain.upper() == os.environ.get("REALM_DOMAIN", "CUSTOMER").upper() else "name")
+            add(name, "client" if domain.upper() == broker_tenant().upper() else "name")
     for field, s in _strings(record):
         if field not in NOT_SHAPED:
             for kind, rx in PATTERNS:
@@ -456,12 +492,12 @@ def run(with_sessions: bool) -> dict:
     hosts = [h.strip() for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
     bearer = broker_bearer() if have_client() else None
     census_as = None if not with_sessions else ("password" if os.environ.get("VC_USER") else "client")
-    realm = os.environ.get("REALM_DOMAIN", "CUSTOMER")
+    tenant = broker_tenant()
     directories = {d.strip().upper() for d in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if d.strip()}
     local = os.environ.get("LOCAL_DOMAIN", "VSPHERE.LOCAL")
     sent = []
     if bearer:
-        sent += ["POST /acs/t/<realm>/token at the broker (unless BEARER_FILE)",
+        sent += ["POST /acs/t/<broker tenant>/token at the broker (unless BEARER_FILE)",
                  "per vCenter: POST /api/vcenter/authentication/token, REST and SOAP sessions opened and closed"]
     if census_as == "password":
         sent.append("per vCenter: a SOAP session as VC_USER, opened and closed")
@@ -479,11 +515,15 @@ def run(with_sessions: bool) -> dict:
             row["rest"] = rest_session(host, assertion) if assertion else {"status": None}
             _, second = exchange(host, bearer)   # a second assertion for SOAP: one may not open two sessions
             row["soap"] = soap_session(host, second) if second else {"status": None}
+            seen = ((row["soap"].get("user") or row["rest"].get("user") or "").rpartition("\\")[0])
+            if seen and seen.upper() != tenant.upper():   # the client's own session names the broker tenant
+                record["broker_tenant"] = {"set": tenant, "read_from_client_session": seen}
+                tenant = seen
         if census_as == "password":
-            row["sessions"] = read_sessions(host, os.environ["VC_USER"], _secret("VC_PASSWORD"), realm, directories, local)
+            row["sessions"] = read_sessions(host, os.environ["VC_USER"], _secret("VC_PASSWORD"), tenant, directories, local)
         elif census_as == "client":
             _, third = exchange(host, bearer)
-            row["sessions"] = (read_sessions_as_client(host, third, realm, directories, local) if third
+            row["sessions"] = (read_sessions_as_client(host, third, tenant, directories, local) if third
                                else {"error": "the exchange for the census's own session failed"})
         record["vcenters"].append(row)
     record["summary"] = summary(record)
@@ -492,15 +532,17 @@ def run(with_sessions: bool) -> dict:
 
 
 def exit_code(record: dict) -> int:
-    """1 when a vCenter refused the client or a read failed; else 3 when a directory account signs in from a vSphere
-    SDK; else 0. A scheduler reads it."""
+    """1 when a vCenter refused the client or a read failed; else 3 when a directory account signs in from a client that
+    is not interactive; else 4 when the local administrator does; else 0. A scheduler reads it."""
     vcs = record["vcenters"]
     refused = [v for v in vcs if "exchange" in v
                and not ((v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user"))]
     unread = [v for v in vcs if isinstance(v.get("sessions"), dict) and "error" in v["sessions"]]
     if refused or unread or not vcs:
         return 1
-    return 3 if record["summary"]["directory_from_sdk"] else 0
+    if record["summary"]["directory_not_interactive"]:
+        return 3
+    return 4 if record["summary"]["local_administrator_not_interactive"] else 0
 
 
 def given_values() -> list[tuple[str, str]]:
@@ -526,6 +568,9 @@ def main(argv: list[str] | None = None) -> int:
     if a.sessions and os.environ.get("VC_USER") and not _secret("VC_PASSWORD"):
         print("--sessions as VC_USER needs VC_PASSWORD_FILE", file=sys.stderr)
         return 2
+    if os.environ.get("REALM_DOMAIN") and not (os.environ.get("BROKER_TENANT") or os.environ.get("BROKER_REALM")):
+        print("note: REALM_DOMAIN is not read here. It is the realm's name, which vcenter-authorization's authz.py takes; "
+              "an API client's session carries the broker tenant instead (BROKER_TENANT, default CUSTOMER)", file=sys.stderr)
     if a.sessions and not os.environ.get("VC_USER") and not have_client():
         print("--sessions needs VC_USER and VC_PASSWORD_FILE, or the API client's credential to read as the client",
               file=sys.stderr)

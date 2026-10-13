@@ -4,7 +4,7 @@
 Once vCenter signs people in through the VCF identity broker, two authorization planes apply at once: the
 vCenter's own permissions, and the VCF roles assigned in VCF Operations, which arrive in vCenter as global
 permissions on local groups named ``vcf_reserved_<role id>``. A broker session carries the directory's name
-for the user (``DOMAIN\\user``), so a permission spelled with the broker realm's domain applies to nobody, even
+for the user (``DOMAIN\\user``), so a permission spelled with the realm's name applies to nobody, even
 though vCenter accepts it and an administrator's privilege query reports it as effective.
 
 Read-only by default:
@@ -45,7 +45,8 @@ Environment:
   VC_HOSTS            comma-separated vCenter FQDNs
   VC_USER             an administrator of those vCenters, user@domain
   VC_PASSWORD_FILE    a file holding that password (mode 0600); VC_PASSWORD is read if it is not set
-  REALM_DOMAIN        the broker realm's domain as vCenter spells it (VCF Operations, fleet IAM realms)
+  REALM_DOMAIN        the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); not the
+                      broker tenant an API client's session carries (CUSTOMER by default)
   DIRECTORY_DOMAINS   comma-separated directory domains under the broker's identity provider
   TLS_VERIFY          false only on a self-signed lab CA
   TEST_USER, TEST_PASSWORD_FILE, TEST_GROUP, PROBE_VCENTER   for the probes (TEST_USER must not be an administrator)

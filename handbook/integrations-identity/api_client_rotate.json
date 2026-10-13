@@ -1,0 +1,90 @@
+{
+ "captured": "2026-10-13T07:45:32Z",
+ "mode": "rotate",
+ "client": "{{client-1}}",
+ "calls": [
+  {
+   "method": "GET",
+   "path": "/ssorealms",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens",
+   "status": 201
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  },
+  {
+   "method": "DELETE",
+   "path": "/ssorealms/{realm}/api-tokens/{token id}",
+   "status": 204
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  }
+ ],
+ "asked": {
+  "api_token_ttl_min": 2880,
+  "access_token_ttl_min": 60,
+  "old_token_given": true
+ },
+ "token_file_written": true,
+ "tokens_before": 1,
+ "exchange": {
+  "status": 200,
+  "principal_type": "SERVICE",
+  "bearer_lifetime_min": 60.0
+ },
+ "overlap": {
+  "active_tokens": 2
+ },
+ "old_token_before_delete": {
+  "status": 200
+ },
+ "old_token_after_delete": {
+  "status": 400
+ },
+ "readback": {
+  "client_present": true,
+  "roles": [
+   "vcf_viewer"
+  ],
+  "role_scopes": [
+   "SSO_REALM"
+  ],
+  "tokens": [
+   {
+    "status": "ACTIVE",
+    "api_token_ttl_min": 2880,
+    "access_token_ttl_min": 60
+   }
+  ]
+ },
+ "exit": 0
+}
