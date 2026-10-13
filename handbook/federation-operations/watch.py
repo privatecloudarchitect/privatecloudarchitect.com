@@ -172,6 +172,28 @@ def route(seen: str, protocol: str = "any") -> list[dict]:
     return exact or [r for r in fits if any(h in text for h in r["hints"])]
 
 
+# The checks that read the tenant's Entra app through Microsoft Graph, so they run only with the read-only app the
+# tenant consents to (main's graph_checks). Without it, what each reads is a question for the tenant's identity
+# administrator, and the router says so for every row that starts at one of them.
+TENANT_READS = {
+    "secret_end": "the client secret's end date",
+    "saml_cert_end": "the signing certificate's end date",
+    "saml_cert_held": "the app's active signing certificate",
+    "app_gate": "whether the app requires assignment",
+    "group_names": "the names of the groups assigned to the app",
+}
+
+
+def without_tenant_app(row: dict) -> str:
+    """What a router row's first read needs when the tenant's read-only app is not held; empty when the row reads only
+    the organization's side, the provider's published keys, or Entra itself."""
+    asks = [v for k, v in TENANT_READS.items() if re.search(rf"\b{k}\b", row["look_at"])]
+    if not asks:
+        return ""
+    ask = asks[0] if len(asks) == 1 else ", ".join(asks[:-1]) + " and " + asks[-1]
+    return f"ask the tenant's identity administrator for {ask}; the organization's side is yours to read"
+
+
 # ── time ───────────────────────────────────────────────────────────────────────────────────────────────────
 def when(value: str | None) -> datetime | None:
     """An ISO 8601 instant as either API writes it (a Z suffix, three to seven fractional digits)."""
@@ -626,6 +648,8 @@ def main(argv: list[str]) -> int:
         for r in rows:
             print(f"\n{r['id']}: refused by {r['refused_by']}; Entra's sign-in log shows {r['entra_log']}")
             print(f"  look at: {r['look_at']}\n  then:    {r['then']}")
+            if without_tenant_app(r):
+                print(f"  without the tenant's read-only app: {without_tenant_app(r)}")
         if not rows:
             print("No row matches. Read the user's sign-in log for the app first: an error there is Entra's refusal; a success means VCF Automation refused it.")
         return 0 if rows else 1

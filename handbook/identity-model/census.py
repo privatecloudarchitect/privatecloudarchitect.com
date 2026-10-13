@@ -5,8 +5,10 @@ The model: an identity broker holds one single sign-on realm; the realm covers w
 provider sits under the realm, with its directories under it; VCF Automation's organizations each choose their own
 way in. This script reads each piece from the API that answers for it, so every line it prints can be checked
 against that API, and prints the lines a reader should be able to explain: which brokers exist and of which kind,
-which realm covers which instances, the provider's type and protocol, each directory's protocol and port, whether an
-emergency client exists, the API clients and their tokens' lifetimes, and how each organization signs in.
+which realm covers which instances, the provider's type and protocol, each directory's protocol and port, the two
+ways a vCenter grant can spell a principal (a bound directory's domain, which a broker session carries, and the
+realm's name, which a grant accepts and nobody signs in as), whether an emergency client exists, the API clients and
+their tokens' lifetimes, and how each organization signs in.
 
 Fleet IAM, through VCF Operations (/suite-api/api/fleet-management/iam):
   GET  /vidbs                                 the brokers, instance or embedded. Read here, never from the fleet
@@ -45,8 +47,9 @@ Env:  OPS_HOST                 VCF Operations FQDN (required)
       TLS_VERIFY=false         only on a self-signed lab CA (the metadata URL is fetched by the broker, not here)
       OUT                      the record (default census.json)
 Use:  python3 census.py [--redact] [--egress-metadata-url URL]
-Exit: 0 recorded, every call answered · 1 a call failed (the record is still written and names the call) · 2 a usage
-      error, or the record refused because an estate value survived the scrub (nothing is written)
+Exit: 0 recorded, every call answered · 1 a call failed (the record is still written and names the call; a refused
+      fleet read opens the print with NOT READ, so its zero counts are not taken for the estate's) · 2 a usage error,
+      or the record refused because an estate value survived the scrub (nothing is written)
 """
 
 from __future__ import annotations
@@ -557,6 +560,23 @@ def _minutes(n: object) -> str:
     return f"{n} min ({n / 1440:g} d)" if n >= 1440 else f"{n} min"
 
 
+def spelled(value: str | None) -> str:
+    """A domain as a vCenter grant spells it, in capitals. A placeholder stays as it is, so a redacted line still
+    names the value its record replaced."""
+    return value if not value or PLACEHOLDER.fullmatch(value) else value.upper()
+
+
+def spellings(s: dict) -> str | None:
+    """The two ways to spell a principal in a vCenter grant under this estate's realm: each bound directory's domain,
+    which a broker session carries, and the realm's name, which a grant accepts and nobody signs in as."""
+    if not s["realms"]:
+        return None
+    bound = sorted({x for d in s["directories"] if d["host"] for x in d["domains"] if x})
+    return "vCenter grant spellings: " + "; ".join(
+        [f"{spelled(x)}\\<name> (directory)" for x in bound]
+        + [f"{spelled(r['name'])}\\<name> (realm, inert)" for r in s["realms"]])
+
+
 def _token_text(t: dict) -> str:
     return (f"token {t['name']} {t['status']}: API token {_minutes(t['api_token_ttl_min'])}, "
             f"access token {_minutes(t['access_token_ttl_min'])}")
@@ -580,6 +600,8 @@ def report(s: dict) -> list[str]:
         sync = f"; sync {d['sync']}, {d['users']} users, {d['groups']} groups" if d["sync"] else ""
         lines.append(f"  directory {d['name']} ({', '.join(d['domains'])}): {d['protocol']} "
                      f"port {d['port'] or 'none'}{where}{extra}{sync}")
+    if spellings(s):
+        lines.append(spellings(s))
     lines.append("Emergency client: " + (", ".join(
         f"{e['name']} ({e['status']}, access token {_minutes(e['access_token_ttl_min'])})"
         for e in s["emergency_clients"]) or "none"))
@@ -746,6 +768,14 @@ def failed(calls: list[dict]) -> list[dict]:
     return [c for c in calls if c["status"] is None or c["status"] >= 400]
 
 
+def unread(bad: list[dict]) -> str | None:
+    """A refused fleet read leaves its lines counting nothing: 0 brokers, no emergency client. Said first, so a count
+    is never read as the estate's when the identity plane did not answer."""
+    n = sum(1 for c in bad if c.get("plane") == "vcf-operations")
+    return (f"NOT READ: {n} fleet identity read(s) refused or failed; a line below that counts 0 or none is unread, "
+            "not empty. The credential's role must read the fleet identity plane.") if n else None
+
+
 def given_values(egress_url: str | None) -> list[tuple[str, str]]:
     hosts = [os.environ.get(k, "") for k in ("OPS_HOST", "OPS_BROKER_HOST", "VCFA_HOST")]
     hosts += os.environ.get("VC_HOSTS", "").split(",")
@@ -779,7 +809,7 @@ def main(argv: list[str] | None = None) -> int:
     out = os.environ.get("OUT", "census.json")
     if not (left and a.redact):  # a redacted print with a surviving value would print that value
         shown = clean if a.redact else record
-        print("\n".join(report(shown["summary"])))
+        print("\n".join(([unread(bad)] if unread(bad) else []) + report(shown["summary"])))
         for c, shown_call in zip(bad, failed(shown["calls"])):
             print(f"FAILED {shown_call['plane']} {c['method']} {shown_call['path']}: {c['status'] or ''} "
                   f"{c.get('error') or ''} {'' if a.redact else c.get('message') or ''}".rstrip())

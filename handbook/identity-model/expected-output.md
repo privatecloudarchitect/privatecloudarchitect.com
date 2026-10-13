@@ -1,6 +1,6 @@
 # What a run looks like
 
-The reference estate, 2026-10-12 (UTC): two VCF 9.1.1 instances, both management vCenters and one workload vCenter,
+The reference estate, 2026-10-13 (UTC): two VCF 9.1.1 instances, both management vCenters and one workload vCenter,
 VCF Operations and VCF Automation. Run with `--redact`, so the names are placeholders; the record path is shortened
 to its file name. Exit 0: every call answered.
 
@@ -17,6 +17,7 @@ Brokers, from the identity plane: 3 (2 embedded, 1 instance)
 Realm {{host-2}} on the instance broker {{host-2}}: covers 2 VCF instance(s) ({{name-2}}, {{name-3}}), 10 component(s); issues: none
 Provider {{name-5}}: type ADLDAP, protocol LDAP_BIND, provisioning LDAP
   directory ad ({{domain-1}}): LDAP port 389 to {{host-7}}; sync COMPLETED, 14 users, 6 groups
+vCenter grant spellings: {{domain-1}}\<name> (directory); {{host-2}}\<name> (realm, inert)
 Emergency client: none
 API clients: 4
   {{name-8}}: roles sddc_admin, vcf_administrator, {{role-1}}; no token
@@ -43,8 +44,8 @@ vCenter {{host-6}} signs in through {{host-2}} (instance); Supervisor {{name-22}
 57 call(s), 0 failed; census.json written with every estate value replaced
 ```
 
-The egress option, run once a few minutes earlier against Entra ID's federation metadata for the lab tenant, adds
-one notice before the run and one line after the vCenters:
+The egress option, run on 2026-10-12 against Entra ID's federation metadata for the lab tenant, adds one notice
+before the run and one line after the vCenters:
 
 ```
 $ python3 census.py --redact --egress-metadata-url https://login.microsoftonline.com/<tenant-id>/FederationMetadata/2007-06/FederationMetadata.xml
@@ -65,8 +66,14 @@ Egress (each broker fetched the metadata URL): {{host-4}} 200, {{host-5}} 200, {
 - **The provider is Active Directory over plain LDAP.** One identity provider of type `ADLDAP`, bound with
   `LDAP_BIND`, users arriving by `LDAP` sync. Its one directory binds to its domain controller over `LDAP` on port
   389, not `LDAPS`. That is the line to raise with the directory's owner.
+- **Two spellings for one person in a vCenter grant.** `{{domain-1}}\<name>` is the directory's domain in capitals,
+  the name a broker session carries in vCenter, and a grant spelled that way applies. `{{host-2}}\<name>` is the
+  realm's name in capitals: vCenter accepts a grant spelled that way and it applies to nobody. Grant the first;
+  `authz.py` in the vcenter-authorization companion finds grants spelled the second way.
 - **No emergency client.** The realm holds no emergency access client: the break-glass client VCF documents for
-  when standard sign-in fails, holding the highest role with the largest scope.
+  when standard sign-in fails, holding the highest role with the largest scope. None means automation has no way in
+  of its own while the provider cannot authenticate anyone; creating and drilling one belongs with the recovery plan
+  for a broker change.
 - **Machine identities and their lifetimes.** Four API clients; two hold an active token, each living 180 days and
   traded for a bearer that lives an hour. One person also holds an API token of the same lifetimes. The fleet
   settings hold the same two values.
@@ -80,3 +87,28 @@ Egress (each broker fetched the metadata URL): {{host-4}} 200, {{host-5}} 200, {
   Automation.
 - **The egress check reached Entra ID from all three brokers,** and the brokers, realms and providers read after
   it were the same as before it.
+
+## A credential whose role cannot read the fleet identity plane
+
+The same script, the same day, on the API token of an API client holding VCF Viewer, with the fleet plane only. Every
+fleet identity read answered 403, so the script prints NOT READ and the refused reads before any line that counts, and exits 1. Without that first
+line the counts below it would read as an estate with no broker and no emergency client.
+
+```
+$ python3 census.py --redact
+NOT READ: 5 fleet identity read(s) refused or failed; a line below that counts 0 or none is unread, not empty. The credential's role must read the fleet identity plane.
+Brokers, from the identity plane: 0 ()
+Emergency client: none
+API clients: 0
+Fleet settings: access token ?, API token ?, retention ?, all-users group off
+FAILED vcf-operations GET /api/fleet-management/iam/ssorealms: 403 403
+FAILED vcf-operations GET /api/fleet-management/iam/vidbs: 403 403
+FAILED vcf-operations POST /api/fleet-management/iam/components/auth-sources/query: 403 403
+FAILED vcf-operations GET /api/fleet-management/iam/settings: 403 403
+FAILED vcf-operations GET /api/fleet-management/iam/roles: 403 403
+
+5 call(s), 5 failed; census.json written with every estate value replaced
+```
+
+The run above it used a VCF single sign-on user's API token holding VCF Administrator. A role between the two was not
+tried, and neither was an API client holding VCF Administrator.

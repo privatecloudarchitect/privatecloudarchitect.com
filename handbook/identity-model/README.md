@@ -8,15 +8,15 @@ written.
 
 | File | What it is |
 |---|---|
-| `census.py` | Reads the brokers from the identity plane (never the fleet inventory), each realm and the VCF instances it covers, the realm's identity provider and its directories with protocol and port, the API clients with their tokens' lifetimes, the emergency clients, the fleet's token settings and roles, each VCF Automation organization's ways in, and the broker each vCenter signs in through. `--egress-metadata-url` asks each broker to fetch a SAML metadata URL itself, proving or refuting its reach to a cloud identity provider. Writes `census.json`, and refuses to write a record carrying any estate value. |
-| `census.json` | That record from the reference estate, 2026-10-12. |
-| `expected-output.md` | The transcript of that run, with what to read in it. |
+| `census.py` | Reads the brokers from the identity plane (never the fleet inventory), each realm and the VCF instances it covers, the realm's identity provider and its directories with protocol and port, the two ways a vCenter grant can spell a principal (the directory's domain and the realm's name, each in capitals), the API clients with their tokens' lifetimes, the emergency clients, the fleet's token settings and roles, each VCF Automation organization's ways in, and the broker each vCenter signs in through. `--egress-metadata-url` asks each broker to fetch a SAML metadata URL itself, proving or refuting its reach to a cloud identity provider. Writes `census.json`, and refuses to write a record carrying any estate value. |
+| `census.json` | That record from the reference estate, 2026-10-13. |
+| `expected-output.md` | The transcript of that run, with what to read in it, and a run whose credential could not read the fleet identity plane. |
 
 ## Run it
 
 ```bash
 export OPS_HOST=<operations-fqdn>
-export OPS_API_TOKEN_FILE=/path/to/api-token          # mode 0600; an API token from VCF Operations
+export OPS_API_TOKEN_FILE=/path/to/api-token          # mode 0600; an API token from VCF Operations whose role reads the fleet identity plane
 export OPS_BROKER_HOST=<identity-broker-fqdn>           # where the token is traded for a bearer; default OPS_HOST
 export OPS_REALM=CUSTOMER
 # or, instead of the API token: export OPS_BEARER_FILE=/path/to/bearer   (a bearer you already hold)
@@ -35,7 +35,7 @@ python3 census.py --egress-metadata-url https://login.microsoftonline.com/<tenan
 | Exit | Means |
 |---|---|
 | 0 | the record is written and every call answered |
-| 1 | a call failed; the record is still written and names the call, and the run prints the server's reason |
+| 1 | a call failed; the record is still written and names the call, and the run prints the server's reason. A refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing |
 | 2 | a usage error, or the record was refused because an estate value survived the scrub; nothing is written |
 
 ## Scope, stated plainly
@@ -57,8 +57,9 @@ python3 census.py --egress-metadata-url https://login.microsoftonline.com/<tenan
   `ldap-system` or `ldap-custom`, and `local` when none is on. A Supervisor's issuer is read from each provider's
   own record; the Supervisor's provider list does not carry it.
 - Measured on VCF 9.1.1 with the VCF Operations API token of a VCF single sign-on user holding the VCF
-  Administrator role, and once with a bearer file from the same user; a narrower fleet role and an API client's
-  token were not tried. VCF Automation was read with a provider bearer (the refresh-token path was not exercised
+  Administrator role, and once with a bearer file from the same user. An API client holding VCF Viewer was refused
+  on every fleet identity read (403, five reads, 2026-10-13); a role between the two, and an API client holding VCF
+  Administrator, were not tried. VCF Automation was read with a provider bearer (the refresh-token path was not exercised
   on the reference estate), and vCenter with a VCF single sign-on user's password; the least privilege each plane
   needs was not tested. The egress option was run once, against Entra ID's federation metadata for one tenant.
 - What it cannot see: whether an emergency client's token still works (the census reads its status, it does not
@@ -70,7 +71,9 @@ python3 census.py --egress-metadata-url https://login.microsoftonline.com/<tenan
 
 `summary` holds the lines the run prints: `brokers` (each with its `kind` and the `realm` it holds, or none),
 `realms` (the broker holding each, the VCF `instances` it covers, its component count and issues), `providers`
-(`type`, `protocol`, `provisioning`), `directories` (`protocol`, `port`, `host`, sync state), `emergency_clients`
+(`type`, `protocol`, `provisioning`), `directories` (`domains`, `protocol`, `port`, `host`, sync state; a directory
+with a `host` is one the broker binds, and its domains in capitals are the directory spelling the print shows beside
+the realm's name), `emergency_clients`
 (an empty list means none), `api_clients` (roles, and each token's `api_token_ttl_min` and `access_token_ttl_min`,
 in minutes), `user_tokens` (API tokens held by people), `settings` (the fleet's token lifetimes in minutes),
 `organizations` (`type`, `sign_in`, and the `issuer` of an OIDC organization: `broker`, `entra` or `other`),

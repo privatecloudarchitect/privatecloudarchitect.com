@@ -6,7 +6,8 @@ A tenant whose people sign in with their own Entra ID accounts gets an organizat
 over OIDC or SAML. Two gates admit a user: assignment required on the Entra app, and a narrow group imported into
 the organization with a role. This script does both sides in the order that works:
 
-  plan (default)         prints every body it would send, the Entra checklist and the proof checklist; changes nothing
+  plan (default)         prints every body it would send, the tenant's Entra checklist, the provider's organization
+                         checklist and the proof checklist, each with its owner; changes nothing
   --execute              builds a throwaway organization, an Entra app and one entitlement group, wires them, imports
                          the group with the member-level role the organization type holds; written to re-run over its
                          own build, though a re-run over a finished build was not exercised on the reference estate
@@ -215,27 +216,35 @@ def group_import(group_name, provider_type, role_ref):
     }
 
 
+# Who sets what. On a real tenant two administrators build a federation: the tenant's identity administrator owns the
+# app on Entra ID, its claims, credentials and groups; the provider administrator owns the organization. Every part of
+# the plan names its owner, so the plan is also the hand-off.
+TENANT_ADMIN = "the tenant's identity administrator, on Entra ID"
+PROVIDER_ADMIN = "you, the provider administrator, in the organization"
+BOTH = "both: the tenant's administrator makes the test users, and you run the sign-ins and keep the record"
+READ_ONLY_PERMISSIONS = {  # Microsoft Graph application permissions, measured by narrowing on the lab tenant (X-143)
+    "watch.py": ["Application.Read.All"],
+    "leavers.py": ["Application.Read.All", "User.Read.All", "GroupMember.Read.All"],
+}
+
+
 def entra_checklist(protocol, org_type, user_key):
-    """What the Entra side must hold before the first sign-in, for this protocol, organization type and user key."""
-    role = ROLES[org_type]["member"]
+    """What the tenant's identity administrator sets on Entra ID before the first sign-in, for this protocol. The
+    organization type and user key are the provider's settings and appear in organization_checklist()."""
     out = [
         "One app for this organization, with assignment required on its service principal",
         "One cloud-only security group per organization role, assigned to the app; users as direct members, "
         "because a member only through a nested group is refused at Entra",
         "The groups claim limited to groups assigned to the app (ApplicationGroup), carrying display names "
         "(cloud_displayname), so the claim holds the name the organization imports",
-        f"The group imported into the organization with {role}, the member-level role this organization type holds",
         "Conditional Access MFA on the app, with any exemption group kept apart from the entitlement group",
-        "The organization's local administrator kept, vaulted and drilled: it signs in when Entra refuses the app",
     ]
     if protocol == "oidc":
         out += [
             "A web redirect URI of https://<automation-host>/login/oauth?service=tenant:<org>",
             "Admin consent for openid profile email, so no user is asked to consent",
-            "A client secret that ends in under 12 months, its end date tracked, rotated with overlap",
-            f"Users keyed on {user_key}, decided before the first sign-in"
-            + (": a renamed user keeps the same account, and usernames read as object ids" if user_key == "oid"
-               else ": readable usernames, and a renamed user gets a second account, so plan a rename as a leaver and a joiner"),
+            "A client secret that ends in under 12 months, handed to the provider for the organization's settings, its end "
+            "date tracked, rotated with overlap",
         ]
     else:
         out += [
@@ -244,6 +253,36 @@ def entra_checklist(protocol, org_type, user_key):
             "An emailaddress claim from the user's mail, added before any user signs in",
             "The signing certificate's expiry notices sent to a monitored mailbox",
         ]
+    watch, leavers = READ_ONLY_PERMISSIONS["watch.py"], READ_ONLY_PERMISSIONS["leavers.py"]
+    out.append(
+        "A read-only app registration for the provider, consented in this directory with the Microsoft Graph application "
+        f"permission {' and '.join(watch)} for the watch, and {', '.join(leavers[:-1])} and {leavers[-1]} for the leaver "
+        "job; none of them grants a write"
+    )
+    return out
+
+
+def organization_checklist(protocol, org_type, user_key):
+    """What the provider administrator sets in the organization, for this protocol, organization type and user key."""
+    role = ROLES[org_type]["member"]
+    out = []
+    if protocol == "oidc":
+        out += [
+            "The settings written as a round trip with the app's client id and secret from the tenant's administrator, "
+            "signing keys refreshed hourly with strategy ADD, and PKCE off",
+            f"Users keyed on {user_key}, agreed with the tenant's administrator before the first sign-in"
+            + (": a renamed user keeps the same account, and usernames read as object ids" if user_key == "oid"
+               else ": readable usernames, and a renamed user gets a second account, so plan a rename as a leaver and a joiner"),
+        ]
+    else:
+        out += [
+            "The settings written as a round trip with the app's federation metadata from the tenant's administrator",
+        ]
+    out += [
+        f"Each Entra group imported into the organization with its role, the member-level group with {role}, the "
+        "member-level role this organization type holds",
+        "The organization's local administrator kept, vaulted and drilled: it signs in when Entra refuses the app",
+    ]
     return out
 
 
@@ -272,9 +311,10 @@ DISCOVERY_SHAPE = {  # Entra's v2.0 discovery fields the settings use, with the 
 
 def plan(protocol, org_type, user_key="oid"):
     """Everything both sides are sent for one protocol, organization type and user key, with placeholders where your
-    values go: what an in-page builder embeds, so a page cannot assemble a body this script would not send. The
-    settings fields are exactly those the round trip changes; every other field of the organization's settings is
-    carried through as read. The Entra app bodies are entra_oidc_app(), entra_saml_app() and entra_saml_email_claim()."""
+    values go, and who sets each part (owners): what an in-page builder embeds, so a page cannot assemble a body this
+    script would not send. The settings fields are exactly those the round trip changes; every other field of the
+    organization's settings is carried through as read. The Entra app bodies are entra_oidc_app(), entra_saml_app()
+    and entra_saml_email_claim()."""
     if protocol == "oidc":
         keys = [{"keyId": "{{key-id}}", "algorithm": "RSA", "key": "{{public-key-pem}}"}]
         fields = oidc_settings({}, DISCOVERY_SHAPE, keys, "{{client-id}}", "{{client-secret}}", user_key)
@@ -287,6 +327,7 @@ def plan(protocol, org_type, user_key="oid"):
         "org_type": org_type,
         "user_key": user_key if protocol == "oidc" else None,
         "entra": entra_checklist(protocol, org_type, user_key),
+        "organization": organization_checklist(protocol, org_type, user_key),
         "settings": {"method": "PUT", "path": path, "fields": fields},
         "group_import": {
             "method": "POST",
@@ -296,6 +337,8 @@ def plan(protocol, org_type, user_key="oid"):
         },
         "roles": dict(ROLES[org_type]),
         "proof": proof_checklist(protocol),
+        "owners": {"entra": TENANT_ADMIN, "organization": PROVIDER_ADMIN, "settings": PROVIDER_ADMIN,
+                   "group_import": PROVIDER_ADMIN, "proof": BOTH},
     }
 
 

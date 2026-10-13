@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-12T20:58:02Z",
+ "captured": "2026-10-13T06:37:34Z",
  "sent": [
   "POST and DELETE /api/session on each vCenter: a session opened and closed"
  ],
@@ -210,7 +210,7 @@
       "apiTokenTtl": 259200,
       "accessTokenTtl": 60,
       "expirationDate": 1801671996000,
-      "lastUsedDate": 1791838681000
+      "lastUsedDate": 1791873454000
      },
      {
       "tokenName": "{{name-16}}",
@@ -232,7 +232,7 @@
       "apiTokenTtl": 259200,
       "accessTokenTtl": 60,
       "expirationDate": 1806579876000,
-      "lastUsedDate": 1791835311000
+      "lastUsedDate": 1791873379000
      }
     ],
     "emergency_clients": [],

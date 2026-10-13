@@ -8,7 +8,7 @@ Entra is reached with a certificate rather than a client secret. No secret or to
 
 | File | What it is |
 |---|---|
-| `org_federation.py` | Plans by default: prints every body each side will be sent, the Entra checklist and the proof checklist, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. Writes `federation.json`, and refuses to write a record carrying any estate value. |
+| `org_federation.py` | Plans by default: prints every body each side will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. Writes `federation.json`, and refuses to write a record carrying any estate value. |
 | `federation.json` | That record from the reference estate. The chapter's plates render it. |
 | `expected-output.md` | A run's transcript, with what to read in it. |
 
@@ -38,7 +38,7 @@ python3 org_federation.py --protocol oidc --org-type all-apps --prove
 python3 org_federation.py --protocol oidc --org-type all-apps --teardown --execute
 ```
 
-A provider bearer lasts an hour, so mint it just before each run. `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider bearer and a certificate; the api-token and the client secret paths were not exercised there, and whether a provider api-token's bearer may create organizations and write their settings was not tested.
+A provider bearer lasts an hour, so mint it just before each run. `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider bearer and a certificate; the api-token and the client secret paths were not exercised there, and whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tested.
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
 assignments and permission grants, and groups, and sets a service principal's claims policy. On the reference
