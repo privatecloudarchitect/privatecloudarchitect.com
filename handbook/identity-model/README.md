@@ -42,17 +42,21 @@ privileged token. `--orgs-only` reads VCF Automation alone: no VCF Operations cr
 ```bash
 export VCFA_HOST=<automation-fqdn>
 export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer      # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE, a provider API token
-export BROKER_HOSTS=<instance-broker-fqdn>,<mgmt-vcenter-fqdn>,<mgmt-vcenter-fqdn>   # optional, see below
+export BROKER_HOSTS=<instance-broker-fqdn>,<mgmt-vcenter-fqdn>,<mgmt-vcenter-fqdn>   # required, see below
 export TLS_VERIFY=false                                        # only on a self-signed lab CA
 
-python3 census.py --orgs-only --redact    # the organizations block alone; exit 2 without a provider credential
+python3 census.py --orgs-only --redact    # the organizations block alone; exit 2 without a provider credential or BROKER_HOSTS
 ```
 
 It reads no broker, so it calls an organization's OIDC issuer the broker only when the issuer's host is in
 `BROKER_HOSTS`. Name every broker there, the embedded broker inside each management vCenter included: on the
 reference estate the provider consumption organization's issuer was on an embedded broker, and it read `oidc`
 (issuer `other`) until `BROKER_HOSTS` named the management vCenters, then `oidc-broker`, as the full census reads it
-(2026-10-15, one run).
+(2026-10-15, one run). So `--orgs-only` refuses to start without `BROKER_HOSTS`: unset, an organization on a broker
+reads as on a provider of its own and the run exits 0 on a reading it was never given the means to make. And an
+organization signing in through VCF single sign-on, whose issuer is a broker by definition, read with an issuer
+`BROKER_HOSTS` does not name fails the read (`NOT PLACED`, exit 1): the brokers given miss the one the platform signs in
+through. An embedded broker left out is not caught that way, so name every one.
 
 ### Joining the record to your credential catalog
 
@@ -65,8 +69,8 @@ without it. Give `catalog_check.py` the same file.
 | Exit | Means |
 |---|---|
 | 0 | the record is written and every call answered |
-| 1 | a call failed; the record is still written and names the call, and the run prints the server's reason. A refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing |
-| 2 | a usage error (with `--orgs-only`, no `VCFA_HOST` or no provider credential), or the record was refused because an estate value survived the scrub; nothing is written |
+| 1 | a call failed; the record is still written and names the call, and the run prints the server's reason. A refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing. With `--orgs-only`, also an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name |
+| 2 | a usage error (with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`), or the record was refused because an estate value survived the scrub; nothing is written |
 
 ## Scope, stated plainly
 
@@ -94,7 +98,10 @@ without it. Give `catalog_check.py` the same file.
   Administrator role, and once with a bearer file from the same user. An API client holding VCF Administrator read
   every fleet line the same as that user's token, field by field (one run, 2026-10-13). An API client holding VCF
   Viewer was refused on every fleet identity read (403, five reads, 2026-10-13); a role between the two was not
-  tried, so the census credential reads at the administrator's level: hold it as tier-0.
+  tried, so the census credential reads at the administrator's level: hold it as tier-0. A client you made in the
+  console for one read is removed in the console, on the API Clients tab, as the administrator who made it, never on
+  its own token: integrations-identity's `api_client.py --teardown` refuses a client it did not make and the client the
+  run is signed in as.
 - The broker tenant (`BROKER_TENANT`, CUSTOMER by default) is the realm's path segment at the broker, where the API
   token is traded; on the reference estate an API client's own vCenter session read `CUSTOMER\<client id>`. It is
   not the realm's name, and the census prints both. `OPS_REALM`, its earlier name, is still read when `BROKER_TENANT` is unset, with a notice. VCF Automation was read with a provider bearer (the refresh-token path was not exercised

@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-13T07:46:29Z",
+ "captured": "2026-10-15T06:38:08Z",
  "mode": "teardown",
  "client": "{{client-1}}",
  "calls": [
@@ -39,6 +39,7 @@
    "status": 200
   }
  ],
+ "signed_in_as": "a person's token",
  "residue": {
   "client_present": false,
   "tokens_left": 0

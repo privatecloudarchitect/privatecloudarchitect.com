@@ -17,13 +17,18 @@ Standard library Python, plus pyVmomi for the session read and the probes.
 export VC_HOSTS=<vcenter-fqdn>[,<another>]
 export VC_USER=<an administrator, user@domain>
 export VC_PASSWORD_FILE=/path/to/password          # mode 0600
-export REALM_DOMAIN=<the realm's name>            # VCF Operations, fleet IAM realms; not CUSTOMER
-export DIRECTORY_DOMAINS=<directory domain>[,<another>]
+export REALM_DOMAIN=<the realm's name>            # required; VCF Operations, fleet IAM realms; not CUSTOMER
+export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # required
 export LOCAL_DOMAIN=<your SSO domain>             # only if it is not vsphere.local; otherwise every local grant reads as another provider's
 export TLS_VERIFY=false                            # only on a self-signed lab CA
 
 python3 authz.py                                   # the census, read-only
 ```
+
+The census refuses to start without `REALM_DOMAIN` or `DIRECTORY_DOMAINS`: either one unset reads its grants as
+another provider's, so the census would count no realm-spelled or no directory grant on an estate full of them. On a
+vCenter where neither names a grant while another provider's grants are there, it prints `NOT PLACED` under that vCenter
+and records `domainsNamedNothing`; check the spelling against the vCenter's own before reading the census.
 
 The probes need a test user that is **not** an administrator, and a directory group it belongs to:
 

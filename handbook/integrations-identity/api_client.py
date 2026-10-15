@@ -14,36 +14,52 @@ Operations' fleet identity API, and nothing else:
                               3. POST /ssorealms/{realm}/api-tokens                 its token, with both lifetimes
                               then trades the token at the broker for a bearer once, to prove it, and reads the client
                               and its token back; the token goes to --token-file (mode 0600) and is never printed
-  --rotate --execute          issues the client a new token with both lifetimes, proves it at the broker, deletes every
-                              token the client held before, and reads back that one token is left; with
-                              --old-token-file it shows the old token trading for a bearer before the delete and
-                              refused after it, so an integration can switch over in the overlap
+  --rotate --execute          issues the client a new token with both lifetimes and proves it at the broker. The
+                              old tokens stay, so both work while you point the integration at the new one; with
+                              --old-token-file it shows the old token still trading in that overlap
+  --retire-old --execute      once the integration runs on the new token: deletes every token of the client older
+                              than its newest and reads back that one is left. Refused while the client holds only
+                              one token, and when its newest is not the one this script issued last; with
+                              --old-token-file it shows the old token trading before the delete and refused after
   --teardown --execute        deletes the client's tokens and the client, then reads both lists again for residue
 
-A client that already exists is refused, never adopted, so a run cannot take over an identity someone else made; a
-teardown of a client that is not there removes nothing and exits 0, so it is safe to re-run. Lifetimes outside the
-bounds the broker held on the reference estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60)
-are refused before anything is sent.
+A client that already exists is refused, never adopted, so a run cannot take over an identity someone else made. The
+create writes a state file (STATE, default api_client.<client id>.state.json, mode 0600: the client's id and uuid and
+the ids of the tokens this script issued, no secret; keep it beside the record and do not publish it), and --rotate,
+--retire-old and --teardown act only on a client that file records with the same uuid, so a mistyped id, or a client
+someone else made under it, is refused before anything is sent. A client made in the console is rotated and removed
+in the console. None of them removes the client, or a token of the client, that the run is signed in as: run them on
+the token of the administrator who made the client, never on the client's own. A teardown of a client that is not
+there removes nothing and exits 0, so it is safe to re-run. Lifetimes outside the bounds the broker held on the
+reference estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60) are refused before anything
+is sent.
 
 Env:  OPS_HOST                 VCF Operations FQDN (required)
-      OPS_API_TOKEN_FILE       an API token of a user who may manage the fleet's API clients (mode 0600; OPS_API_TOKEN
+      OPS_API_TOKEN_FILE       an API token of a user whose fleet role may manage the fleet's API clients: the
+                               reference runs sent these writes on a VCF single sign-on user's API token holding VCF
+                               Administrator, and no narrower role was tried (mode 0600; OPS_API_TOKEN
                                is read if it is unset, then API_TOKEN_FILE and API_TOKEN), traded at the broker for a
                                bearer: OPS_BROKER_HOST (BROKER_HOST is read when it is unset; default OPS_HOST),
                                BROKER_TENANT (the broker tenant, the realm's path segment; default CUSTOMER;
                                OPS_REALM, its earlier name, is still read)
       OPS_BEARER_FILE          instead, a bearer you already hold
+      STATE                    the state file (default api_client.<client id>.state.json)
       TLS_VERIFY=false         only on a self-signed lab CA
       OUT                      the record (default api_client.json)
 Use:  python3 api_client.py --client-id ID --role ROLE --api-token-ttl MIN --access-token-ttl MIN [--token-file PATH]
                             [--scope instance --instance NAME] [--execute] [--redact]
       python3 api_client.py --client-id ID --rotate --api-token-ttl MIN --access-token-ttl MIN --token-file NEW
                             [--old-token-file OLD] [--execute] [--redact]
+      python3 api_client.py --client-id ID --retire-old [--old-token-file OLD] [--execute] [--redact]
       python3 api_client.py --client-id ID --teardown [--execute] [--redact]
 Exit: 0 the plan printed, or the run held on read-back (the client with its one role and an active token with both
-      lifetimes; for a rotation, the new token proved, the old ones gone and, when given, the old token refused; for a
-      teardown, no client and no token left) · 1 a call failed, or the read-back did not hold · 2 a usage error, a
-      refusal (the client exists, or for a rotation does not; a lifetime outside the bounds; the token file exists),
-      or the record was refused because an estate value survived the scrub
+      lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
+      still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no
+      client and no token left) · 1 a call failed, or the read-back did not hold · 2 a usage error, a refusal (the
+      client exists, or for a rotation, a retirement or a teardown is not one the state file records; the run is
+      signed in as the client; a retirement with one token, or whose newest token this script did not issue; a
+      lifetime outside the bounds; the token file exists), or the record was refused because an estate value survived
+      the scrub
 """
 
 from __future__ import annotations
@@ -164,7 +180,8 @@ def create_bodies(client_id: str, role: str, api_ttl: int, access_ttl: int, desc
 
 
 def rotate_calls(client_id: str, api_ttl: int, access_ttl: int) -> list[dict]:
-    """A rotation in the order it is sent: the new token first, the old ones deleted only once the new one has traded."""
+    """A rotation in the order it is sent: a new token issued and proved, and nothing deleted. The old tokens go with
+    --retire-old, once the integration runs on the new one."""
     return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)",
              "body": {}},
             {"method": "POST", "path": "/ssorealms/{realm}/api-tokens",
@@ -172,7 +189,16 @@ def rotate_calls(client_id: str, api_ttl: int, access_ttl: int) -> list[dict]:
                       "apiTokenTtl": api_ttl, "accessTokenTtl": access_ttl}},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)",
              "body": None},
-            {"method": "DELETE", "path": "/ssorealms/{realm}/api-tokens/{token id}  (each token the client held before)", "body": None},
+            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (read back: the new token active beside the old)", "body": {}}]
+
+
+def retire_calls() -> list[dict]:
+    """A retirement in the order it is sent: every token older than the newest deleted, then the read-back."""
+    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)",
+             "body": {}},
+            {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token, before the delete)",
+             "body": None},
+            {"method": "DELETE", "path": "/ssorealms/{realm}/api-tokens/{token id}  (each token older than the newest)", "body": None},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)",
              "body": None},
             {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (read back: one token left)", "body": {}}]
@@ -257,6 +283,94 @@ def prove(token: str) -> dict:
     return out
 
 
+def claims_of(bearer: str | None) -> dict | None:
+    """A bearer's payload, read without a network call; None when it is not a JWT. Nothing of it is printed."""
+    try:
+        seg = (bearer or "").split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(seg + "=" * (-len(seg) % 4)))
+    except (IndexError, ValueError):
+        return None
+    return claims if isinstance(claims, dict) else None
+
+
+def signed_in_as(bearer: str | None) -> dict:
+    """Who the run is signed in as, from its own bearer: a person, or an API client and its id. An API client's bearer
+    reads prn_type SERVICE with its client id in azp (on the reference estate its prn carried a uuid that was not the
+    client's clientUuid, so the id is what names it)."""
+    claims = claims_of(bearer)
+    if claims is None:
+        return {"type": None}
+    kind = claims.get("prn_type")
+    if kind != "SERVICE":
+        return {"type": kind or "unknown"}
+    return {"type": "SERVICE", "client": str(claims.get("azp") or "")}
+
+
+def is_self(me: dict, client_id: str, row: dict | None = None) -> bool:
+    """Whether the run is signed in as this client: the client id its own bearer carries."""
+    return me.get("type") == "SERVICE" and bool(me.get("client")) and me["client"].lower() == client_id.lower()
+
+
+def whoami_words(me: dict, client_id: str, row: dict | None) -> str:
+    """The record's account of who the run is signed in as, with no name in it."""
+    if me.get("type") is None:
+        return "not readable: the bearer is not a JWT"
+    if me["type"] != "SERVICE":
+        return "a person's token" if me["type"] == "USER" else f"a principal of type {me['type']}"
+    return "this client itself" if is_self(me, client_id, row) else "another API client"
+
+
+def state_path(client_id: str) -> str:
+    """The state file the create writes and every later write reads: STATE, or one per client id in this folder."""
+    return os.environ.get("STATE") or f"api_client.{re.sub(r'[^A-Za-z0-9._-]', '_', client_id)}.state.json"
+
+
+def load_state(path: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as f:
+            state = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return state if isinstance(state, dict) else {}
+
+
+def save_state(path: str, state: dict) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=1)
+    os.chmod(path, 0o600)
+
+
+def owned(state: dict, client_id: str, row: dict | None) -> bool:
+    """Whether the state file records this client as one this script made: the same id, and the same uuid."""
+    uuid = (row or {}).get("clientUuid")
+    return bool(state.get("tool") == AGENT and state.get("client_id") == client_id and uuid
+                and state.get("client_uuid") == uuid)
+
+
+def guard(fleet: Fleet, client_id: str, row: dict | None, state: dict, record: dict, removes: bool) -> int | None:
+    """The refusals every write after the create runs before it sends anything: a client this script did not make,
+    and, for a write that removes, the client the run is signed in as. None when the write may go ahead."""
+    me = signed_in_as(getattr(fleet, "bearer", None))
+    record["signed_in_as"] = whoami_words(me, client_id, row)
+    if not owned(state, client_id, row):
+        record["refused"] = ("this script did not make this client: no state file records it with this uuid "
+                             f"({'none read' if not state else 'another client recorded'}). A client made in the "
+                             "console is rotated and removed in the console; for one made here, run from the folder, "
+                             "or with the STATE, its create wrote")
+        return 2
+    if removes and me.get("type") is None:
+        record["refused"] = ("the run's bearer is not a readable JWT, so this script cannot rule out removing the "
+                             "client it is signed in as; run it on the token of the administrator who made the client")
+        return 2
+    if removes and is_self(me, client_id, row):
+        record["refused"] = ("the run is signed in as this client: once its tokens or the client are gone, no "
+                             "credential outlives the removal to read the residue or to finish it. Run it on the token "
+                             "of the administrator who made the client, or remove it in the console")
+        return 2
+    return None
+
+
 # ── create and teardown ──────────────────────────────────────────────────────────────────────────────────────────
 def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     existing = clients(fleet, rid)
@@ -280,6 +394,11 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     if status not in (200, 201) or not isinstance(answer, dict):
         return 1
     uuid = answer.get("clientUuid") or answer.get("id") or answer.get("uuid")
+    state_file = state_path(a.client_id)
+    state = {"tool": AGENT, "client_id": a.client_id, "client_uuid": uuid,
+             "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "tokens": []}
+    save_state(state_file, state)   # before the role and the token, so a client left part way can still be removed
+    record["state_file_written"] = True
     partial = "the client exists without its role or its token: remove it with --teardown --execute before trying again"
     status, _ = fleet.call("PUT", f"/ssorealms/{rid}/principals/{uuid}/roles", put["path"], put["body"])
     if status not in (200, 201, 204):
@@ -296,6 +415,8 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     record["token_file_written"] = True
     record["exchange"] = prove(token)
     del token
+    state["tokens"] = [t["id"] for t in mine(tokens(fleet, rid) or [], a.client_id) if t.get("id")]
+    save_state(state_file, state)
     record["readback"] = rb = readback(fleet, rid, a.client_id)
     held = (rb.get("client_present") and rb.get("roles") == [a.role] and rb.get("role_scopes") == [scope["scopeType"]]
             and rb.get("scope_resources") == sorted(str(r.get("name")) for r in scope["resources"])
@@ -306,16 +427,22 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
 
 
 def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
-    """Issue a new token, prove it, delete the old ones, and read back that one is left. The client keeps its id and
-    role, so an integration changes only the token it reads; with --old-token-file the record shows the old token
-    working in the overlap and refused after the delete."""
+    """Issue a new token and prove it, and leave the old ones: the integration moves to the new token while both
+    work, and --retire-old removes the old ones after. The client keeps its id and role, so an integration changes
+    only the token it reads; with --old-token-file the record shows the old token still trading in the overlap."""
     cl, tk = clients(fleet, rid), tokens(fleet, rid)
     if cl is None or tk is None:
         return 1
-    if not mine(cl, a.client_id):
+    rows = mine(cl, a.client_id)
+    if not rows:
         record["refused"] = "no client by that id; a rotation never creates one: create it first"
         return 2
-    before = [t for t in mine(tk, a.client_id) if t.get("id")]
+    state_file = state_path(a.client_id)
+    state = load_state(state_file)
+    refused = guard(fleet, a.client_id, rows[0], state, record, removes=False)
+    if refused is not None:
+        return refused
+    before = {t["id"] for t in mine(tk, a.client_id) if t.get("id")}
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     body = {"apiClientId": a.client_id, "tokenName": f"{a.client_id}-token-{stamp}", "tokenType": "API_CLIENT",
             "apiTokenTtl": a.api_token_ttl, "accessTokenTtl": a.access_token_ttl}
@@ -331,24 +458,74 @@ def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     record["tokens_before"] = len(before)
     record["exchange"] = prove(token)
     del token
+    new = [t["id"] for t in mine(tokens(fleet, rid) or [], a.client_id) if t.get("id") and t["id"] not in before]
+    if len(new) == 1:
+        state["tokens"] = [*state.get("tokens", []), new[0]]
+        save_state(state_file, state)
     overlap = readback(fleet, rid, a.client_id)
     record["overlap"] = {"active_tokens": sum(1 for t in overlap.get("tokens") or [] if t["status"] == "ACTIVE")}
+    if a.old_token_file:
+        old = _read(a.old_token_file)
+        record["old_token_in_overlap"] = {"status": prove(old)["status"]}
+        del old
+    record["readback"] = overlap
+    if record["exchange"].get("status") != 200:
+        record["partial"] = ("the new token did not trade at the broker; the old ones are untouched: point nothing at "
+                             "the new one, and remove it with --retire-old only once a new token proves")
+        return 1
+    record["next"] = "point the integration at the new token, run one job, then --retire-old"
+    held = (record["overlap"]["active_tokens"] == len(before) + 1 and len(new) == 1
+            and ("old_token_in_overlap" not in record or record["old_token_in_overlap"]["status"] == 200))
+    return 0 if held else 1
+
+
+def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
+    """Delete every token of the client older than its newest, once the integration runs on the newest, and read
+    back that one is left. Refused while the client holds one token, when the newest is not the one this script issued
+    last, and when the run is signed in as the client; with --old-token-file the record shows the old token trading
+    before the delete and refused after it."""
+    cl, tk = clients(fleet, rid), tokens(fleet, rid)
+    if cl is None or tk is None:
+        return 1
+    rows = mine(cl, a.client_id)
+    if not rows:
+        record["refused"] = "no client by that id"
+        return 2
+    state = load_state(state_path(a.client_id))
+    refused = guard(fleet, a.client_id, rows[0], state, record, removes=True)
+    if refused is not None:
+        return refused
+    held_now = [t for t in mine(tk, a.client_id) if t.get("id")]
+    record["tokens_before"] = len(held_now)
+    if len(held_now) < 2:
+        record["refused"] = ("the client holds one token, so there is nothing older to retire; --rotate issues a new "
+                             "one first")
+        return 2
+    if any(t.get("creationDate") is None for t in held_now):
+        record["refused"] = "a token carries no creation date, so the newest cannot be told; retire them in the console"
+        return 2
+    newest = max(held_now, key=lambda t: t["creationDate"])
+    issued = state.get("tokens") or []
+    if not issued or newest["id"] != issued[-1]:
+        record["refused"] = ("the newest token is not the one this script issued last, so it may not be the one the "
+                             "integration holds: point the integration at the token you mean to keep, and retire the "
+                             "others in the console")
+        return 2
     old = _read(a.old_token_file) if a.old_token_file else None
     if old:
         record["old_token_before_delete"] = {"status": prove(old)["status"]}
-    if record["exchange"].get("status") != 200:
-        record["partial"] = ("the new token did not trade at the broker, so the old ones were kept: remove the new one by "
-                             "hand, or run --teardown --execute")
-        return 1
-    for t in before:
-        fleet.call("DELETE", f"/ssorealms/{rid}/api-tokens/{t['id']}", "/ssorealms/{realm}/api-tokens/{token id}")
+    gone = 0
+    for t in held_now:
+        if t["id"] != newest["id"]:
+            status, _ = fleet.call("DELETE", f"/ssorealms/{rid}/api-tokens/{t['id']}", "/ssorealms/{realm}/api-tokens/{token id}")
+            gone += status in (200, 204)
+    record["deleted"] = gone
     if old:
         record["old_token_after_delete"] = {"status": prove(old)["status"]}
         del old
     record["readback"] = rb = readback(fleet, rid, a.client_id)
     left = rb.get("tokens") or []
-    held = (len(left) == 1 and left[0]["status"] == "ACTIVE" and left[0]["api_token_ttl_min"] == a.api_token_ttl
-            and left[0]["access_token_ttl_min"] == a.access_token_ttl
+    held = (len(left) == 1 and left[0]["status"] == "ACTIVE"
             and ("old_token_after_delete" not in record or record["old_token_after_delete"]["status"] != 200))
     return 0 if held else 1
 
@@ -359,19 +536,32 @@ def _read(path: str) -> str:
 
 
 def teardown(fleet: Fleet, rid: str, client_id: str, record: dict) -> int:
+    """Delete the client's tokens and the client, then read both lists for residue. Only a client this script made,
+    and never the client the run is signed in as; a client that is not there removes nothing and exits 0."""
     tk, cl = tokens(fleet, rid), clients(fleet, rid)
     if tk is None or cl is None:
         return 1
-    for t in mine(tk, client_id):
-        if t.get("id"):
-            fleet.call("DELETE", f"/ssorealms/{rid}/api-tokens/{t['id']}", "/ssorealms/{realm}/api-tokens/{token id}")
-    if mine(cl, client_id):
+    rows = mine(cl, client_id)
+    state_file = state_path(client_id)
+    state = load_state(state_file)
+    if rows:
+        refused = guard(fleet, client_id, rows[0], state, record, removes=True)
+        if refused is not None:
+            return refused
+    if rows:
+        for t in mine(tk, client_id):
+            if t.get("id"):
+                fleet.call("DELETE", f"/ssorealms/{rid}/api-tokens/{t['id']}", "/ssorealms/{realm}/api-tokens/{token id}")
         fleet.call("DELETE", f"/ssorealms/{rid}/api-clients/{client_id}", "/ssorealms/{realm}/api-clients/{client id}")
     else:
         record["nothing_to_remove"] = True
     rb = readback(fleet, rid, client_id)
     record["residue"] = {"client_present": rb.get("client_present"), "tokens_left": len(rb.get("tokens") or [])}
-    return 0 if rb.get("client_present") is False and not rb.get("tokens") else 1
+    clean = rb.get("client_present") is False and not rb.get("tokens")
+    if clean and rows:
+        state["removed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        save_state(state_file, state)
+    return 0 if clean else 1
 
 
 # ── the record contract: every estate value replaced, or nothing written ─────────────────────────────────────────
@@ -433,6 +623,8 @@ def leaks(obj, table: dict) -> list[str]:
 def plan_lines(a: argparse.Namespace) -> list[str]:
     if a.teardown:
         calls, kind = teardown_calls(a.client_id), "Teardown"
+    elif a.retire_old:
+        calls, kind = retire_calls(), "Retirement"
     elif a.rotate:
         calls, kind = rotate_calls(a.client_id, a.api_token_ttl, a.access_token_ttl), "Rotation"
     else:
@@ -445,9 +637,14 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
         if c.get("body"):
             out.append("         " + json.dumps(c["body"], sort_keys=True))
     if a.rotate:
-        out.append(f"  then: the new token to {a.token_file or '<--token-file>'} (mode 0600, never printed); the old ones "
-                   "are deleted only after the new one trades at the broker")
-    elif not a.teardown:
+        out.append(f"  then: the new token to {a.token_file or '<--token-file>'} (mode 0600, never printed); nothing is "
+                   "deleted: point the integration at the new token, run one job, then --retire-old")
+    elif a.retire_old:
+        out.append("  only for a client the state file records, and never on the client's own token; refused while it "
+                   "holds one token, or when its newest is not the one this script issued last")
+    elif a.teardown:
+        out.append("  only for a client the state file records, and never on the client's own token")
+    else:
         out.append(f"  then: the token to {a.token_file or '<--token-file>'} (mode 0600, never printed), traded at the broker once, "
                    "and the client and its token read back")
     return out
@@ -465,10 +662,16 @@ def report(record: dict) -> list[str]:
         e = record["exchange"]
         lines.append(f"  the {'new ' if record.get('mode') == 'rotate' else ''}token traded at the broker: HTTP {e.get('status')}"
                      + (f", a {e.get('principal_type')} bearer living {e.get('bearer_lifetime_min')} min" if e.get("principal_type") else ""))
+    if record.get("signed_in_as"):
+        lines.append(f"  signed in as: {record['signed_in_as']}")
     if "overlap" in record:
         lines.append(f"  in the overlap: {record['tokens_before']} token(s) held before, {record['overlap']['active_tokens']} active "
                      "with the new one")
-    for key, when in (("old_token_before_delete", "before the delete"), ("old_token_after_delete", "after the delete")):
+    elif record.get("mode") == "retire-old" and "tokens_before" in record:
+        lines.append(f"  held before: {record['tokens_before']} token(s)"
+                     + (f"; deleted {record['deleted']}, every one older than the newest" if "deleted" in record else ""))
+    for key, when in (("old_token_in_overlap", "in the overlap, the old ones kept"),
+                      ("old_token_before_delete", "before the delete"), ("old_token_after_delete", "after the delete")):
         if key in record:
             st = record[key]["status"]
             lines.append(f"  the old token at the broker, {when}: HTTP {st}, {'traded' if st == 200 else 'refused'}")
@@ -479,6 +682,8 @@ def report(record: dict) -> list[str]:
                      + (f" ({', '.join(rb['scope_resources'])})" if rb.get("scope_resources") else "") + "; tokens "
                      + ("; ".join(f"{t['status']} API {t['api_token_ttl_min']} min, access {t['access_token_ttl_min']} min"
                                   for t in rb.get("tokens") or []) or "none"))
+    if record.get("next"):
+        lines.append(f"  next: {record['next']}")
     if "residue" in record:
         r = record["residue"]
         lines.append(f"  residue: client present {r['client_present']}, tokens left {r['tokens_left']}"
@@ -499,27 +704,30 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--token-file", help="where the token is written, mode 0600; it must not exist")
     ap.add_argument("--description", default="an integration's own identity", help="the client's description")
     ap.add_argument("--teardown", action="store_true", help="remove the client and its tokens instead")
-    ap.add_argument("--rotate", action="store_true", help="issue a new token, prove it, delete the old ones")
-    ap.add_argument("--old-token-file", help="with --rotate: the token the integration holds now, to show it refused after")
+    ap.add_argument("--rotate", action="store_true", help="issue a new token and prove it; the old ones stay")
+    ap.add_argument("--retire-old", action="store_true",
+                    help="delete every token older than the newest, once the integration runs on the newest")
+    ap.add_argument("--old-token-file",
+                    help="with --rotate or --retire-old: the token the integration held, to show it trading, then refused")
     ap.add_argument("--execute", action="store_true", help="send the calls; without it the plan is printed")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
     a = ap.parse_args(argv)
-    if a.rotate and a.teardown:
-        print("--rotate and --teardown are two runs, not one", file=sys.stderr)
+    if sum((a.rotate, a.retire_old, a.teardown)) > 1:
+        print("--rotate, --retire-old and --teardown are separate runs, not one", file=sys.stderr)
         return 2
     if (a.scope == "instance") != bool(a.instance):
         print("--scope instance and --instance NAME go together", file=sys.stderr)
         return 2
-    if a.scope == "instance" and (a.rotate or a.teardown):
+    if a.scope == "instance" and (a.rotate or a.retire_old or a.teardown):
         print("--scope is read only when a client is created", file=sys.stderr)
         return 2
-    if a.old_token_file and not a.rotate:
-        print("--old-token-file is read only with --rotate", file=sys.stderr)
+    if a.old_token_file and not (a.rotate or a.retire_old):
+        print("--old-token-file is read only with --rotate or --retire-old", file=sys.stderr)
         return 2
-    if a.rotate and a.old_token_file and not os.path.exists(a.old_token_file):
+    if a.old_token_file and not os.path.exists(a.old_token_file):
         print(f"{a.old_token_file} does not exist", file=sys.stderr)
         return 2
-    if not a.teardown:
+    if not (a.teardown or a.retire_old):
         problem = (None if a.role or a.rotate else "--role is required") or bounds_error(a.api_token_ttl, a.access_token_ttl)
         if not problem and a.execute and not a.token_file:
             problem = "--execute needs --token-file, where the token is written (mode 0600)"
@@ -539,11 +747,14 @@ def main(argv: list[str] | None = None) -> int:
     if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required", file=sys.stderr)
         return 2
+    mode = "teardown" if a.teardown else "retire-old" if a.retire_old else "rotate" if a.rotate else "create"
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "mode": "teardown" if a.teardown else "rotate" if a.rotate else "create", "client": a.client_id, "calls": []}
+              "mode": mode, "client": a.client_id, "calls": []}
     if a.rotate:
         record["asked"] = {"api_token_ttl_min": a.api_token_ttl, "access_token_ttl_min": a.access_token_ttl,
                            "old_token_given": bool(a.old_token_file)}
+    elif a.retire_old:
+        record["asked"] = {"old_token_given": bool(a.old_token_file)}
     elif not a.teardown:
         record["asked"] = {"role": a.role, "scope": "VCF_INSTANCE" if a.scope == "instance" else "SSO_REALM",
                            "api_token_ttl_min": a.api_token_ttl, "access_token_ttl_min": a.access_token_ttl}
@@ -559,6 +770,7 @@ def main(argv: list[str] | None = None) -> int:
         record["exit"] = 1
     else:
         record["exit"] = (teardown(fleet, rid, a.client_id, record) if a.teardown
+                          else retire_old(fleet, rid, a, record) if a.retire_old
                           else rotate(fleet, rid, a, record) if a.rotate else create(fleet, rid, a, record))
     given = ([(os.environ.get(k, ""), "host") for k in ("OPS_HOST", "OPS_BROKER_HOST", "BROKER_HOST")] + [(a.client_id, "client")]
              + [(a.instance or "", "instance")])

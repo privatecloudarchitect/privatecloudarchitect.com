@@ -1,3 +1,5 @@
 captures/
 __pycache__/
 .DS_Store
+# companion state files (a client or organization a run created; no secret, but the operator's own)
+*.state.json

@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-13T07:45:20Z",
+ "captured": "2026-10-15T06:36:48Z",
  "mode": "create",
  "client": "{{client-1}}",
  "calls": [
@@ -30,6 +30,11 @@
   },
   {
    "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
    "path": "/ssorealms/{realm}/api-clients/query",
    "status": 200
   },
@@ -43,13 +48,14 @@
   "role": "vcf_viewer",
   "scope": "SSO_REALM",
   "api_token_ttl_min": 1440,
-  "access_token_ttl_min": 30
+  "access_token_ttl_min": 60
  },
+ "state_file_written": true,
  "token_file_written": true,
  "exchange": {
   "status": 200,
   "principal_type": "SERVICE",
-  "bearer_lifetime_min": 30.0
+  "bearer_lifetime_min": 60.0
  },
  "readback": {
   "client_present": true,
@@ -59,11 +65,12 @@
   "role_scopes": [
    "SSO_REALM"
   ],
+  "scope_resources": [],
   "tokens": [
    {
     "status": "ACTIVE",
     "api_token_ttl_min": 1440,
-    "access_token_ttl_min": 30
+    "access_token_ttl_min": 60
    }
   ]
  },

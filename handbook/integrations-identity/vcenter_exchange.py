@@ -52,7 +52,10 @@ Env:  BROKER_HOST                 the identity broker that trades the API client
       VC_HOSTS                    comma-separated vCenter FQDNs
       VC_USER, VC_PASSWORD_FILE   for --sessions as an account: one that may read the session list, user@domain (mode
                                   0600; VC_PASSWORD is read if it is unset); leave both unset to read as the API client
-      DIRECTORY_DOMAINS           for --sessions: the directory domains as vCenter spells them, comma-separated
+      DIRECTORY_DOMAINS           for --sessions, required: the directory domains as vCenter spells them,
+                                  comma-separated. Unset, every directory session would read as another provider's,
+                                  which is never flagged, so --sessions refuses to start without it; a vCenter on which
+                                  they name no session while another provider's sessions are there is a failed read
       INTERACTIVE_AGENTS          for --sessions: the client agents a person signs in from, comma-separated, versions
                                   left off (default vSphereUI, the vSphere Client: the only agent a person's session
                                   showed on the reference estate's lists)
@@ -66,15 +69,19 @@ Use:  python3 vcenter_exchange.py [--sessions] [--redact]
       python3 vcenter_exchange.py --compare A.json B.json C.json
 Exit: 0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
       directory-account session is from an interactive client and the local administrator signs in from none other
-      · 1 a vCenter refused the client, a read failed, or the census identity could read only its own session · 2 a
-      usage error, or the record was refused because an estate value survived the scrub · 3 --sessions found a
-      directory account signing in from a client that is not interactive · 4 --sessions found the local administrator
-      signing in from a client that is not interactive, and nothing above it
+      · 1 a vCenter refused the client, a read failed, the census identity could read only its own session, or on a
+      vCenter DIRECTORY_DOMAINS named no session while sessions of another provider were there (the domains name
+      nothing on this vCenter, so the census saw nothing it was asked to see) · 2 a usage error (--sessions without
+      DIRECTORY_DOMAINS among them), or the record was refused because an estate value survived the scrub · 3
+      --sessions found a directory account signing in from a client that is not interactive · 4 --sessions found the
+      local administrator signing in from a client that is not interactive, and nothing above it
       The exit reads vCenter's session lists at one moment: an integration that is not signed in then is not seen, so
       read on three or more days, compare the records, and confirm each remaining directory session's owner as a person.
       --compare: 0 compared over three or more days with every vCenter in every record · 1 compared, but over fewer
-      than three days or with a vCenter missing from a record · 2 a usage error: fewer than two records, a record that
-      cannot be read, holds no session census or no fingerprints, or records made under two keys
+      than three days or with a vCenter missing from a record (a census whose DIRECTORY_DOMAINS named nothing on a
+      vCenter is not a read of it) · 2 a usage error: fewer than two records, a record that cannot be read, holds no
+      session census (or only censuses whose DIRECTORY_DOMAINS named nothing) or no fingerprints, or records made
+      under two keys
 """
 
 from __future__ import annotations
@@ -360,6 +367,20 @@ def classify(principal: str, tenant: str, directories: set[str], local: str) -> 
     return "another provider"
 
 
+def names_nothing(by_class: dict) -> bool:
+    """Whether the directory domains given name nothing on a vCenter: no session read as a directory account's while
+    sessions of another provider are there. Every directory session then hides as another provider's, which the census
+    never flags, so the read is a failed one, never a clean one (the local classes and the API clients do not depend on
+    the domains given)."""
+    return not by_class.get("directory") and bool(by_class.get("another provider"))
+
+
+def unplaced(record: dict) -> list[str]:
+    """The vCenters whose census the directory domains given named nothing on."""
+    return [v["vcenter"] for v in record.get("vcenters") or []
+            if isinstance(v.get("sessions"), dict) and "by_class" in v["sessions"] and names_nothing(v["sessions"]["by_class"])]
+
+
 def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str,
            key: bytes | None = None) -> dict:
     """Sessions by class; the local administrator by agent; each directory principal with its agents, flagged when any
@@ -491,6 +512,10 @@ def report(record: dict) -> list[str]:
         if isinstance(s, dict) and "by_class" in s:
             lines.append(f"  sessions ({s['sessions']}, this census's own left out): "
                          + ", ".join(f"{k} {n}" for k, n in s["by_class"].items()))
+            if names_nothing(s["by_class"]):
+                lines.append(f"    NOT PLACED: DIRECTORY_DOMAINS names nothing on this vCenter: {s['by_class']['another provider']} "
+                             "session(s) read as another provider's and none as a directory account's, so every directory "
+                             "session may be hiding there unflagged; set the domains as vCenter spells them and read again")
             if s["local_administrator_by_agent"]:
                 lines.append("    local administrator by agent: " + ", ".join(f"{a} {n}" for a, n in s["local_administrator_by_agent"].items()))
             for d in s["directory"]:
@@ -505,6 +530,10 @@ def report(record: dict) -> list[str]:
         lines.append(f"The client took both sessions on {sm['client_took_both_sessions']} of {sm['vcenters']} vCenter(s)")
     if sm["sessions_read"]:
         lines.append(f"Directory accounts signing in from a client that is not interactive: {len(sm['directory_not_interactive'])}")
+        nothing = unplaced(record)
+        if nothing:
+            lines.append(f"FAILED READ: DIRECTORY_DOMAINS named nothing on {len(nothing)} vCenter(s), so the census saw no directory "
+                         "session it was asked to see there; exit 1")
         if sm["local_administrator_not_interactive"]:
             lines.append(f"WATCH: the local administrator holds {sm['local_administrator_not_interactive']} session(s) from "
                          "clients that are not interactive: an account in automated use is not a break-glass account")
@@ -581,6 +610,11 @@ def leaks(obj, table: dict) -> list[str]:
 
 
 # ── the run ──────────────────────────────────────────────────────────────────────────────────────────────────────
+def directory_domains() -> set[str]:
+    """DIRECTORY_DOMAINS, upper-cased: the domains whose sessions the census flags."""
+    return {d.strip().upper() for d in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if d.strip()}
+
+
 def have_client() -> bool:
     return bool(bearer_file() or (broker_host() and api_token()))
 
@@ -593,7 +627,7 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
     bearer = broker_bearer() if have_client() else None
     census_as = None if not with_sessions else ("password" if os.environ.get("VC_USER") else "client")
     tenant = broker_tenant()
-    directories = {d.strip().upper() for d in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if d.strip()}
+    directories = directory_domains()
     local = os.environ.get("LOCAL_DOMAIN", "VSPHERE.LOCAL")
     sent = []
     if bearer:
@@ -635,13 +669,14 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
 
 
 def exit_code(record: dict) -> int:
-    """1 when a vCenter refused the client or a read failed; else 3 when a directory account signs in from a client that
-    is not interactive; else 4 when the local administrator does; else 0. A scheduler reads it."""
+    """1 when a vCenter refused the client, a read failed, or the directory domains given named nothing on a vCenter
+    whose list held another provider's sessions; else 3 when a directory account signs in from a client that is not
+    interactive; else 4 when the local administrator does; else 0. A scheduler reads it."""
     vcs = record["vcenters"]
     refused = [v for v in vcs if "exchange" in v
                and not ((v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user"))]
     unread = [v for v in vcs if isinstance(v.get("sessions"), dict) and "error" in v["sessions"]]
-    if refused or unread or not vcs:
+    if refused or unread or unplaced(record) or not vcs:
         return 1
     if record["summary"]["directory_not_interactive"]:
         return 3
@@ -671,8 +706,8 @@ def sessions_of(record: dict) -> dict[str, dict]:
     out = {}
     for v in record.get("vcenters") or []:
         s = v.get("sessions")
-        if not v.get("fingerprint") or not isinstance(s, dict) or "by_class" not in s:
-            continue
+        if not v.get("fingerprint") or not isinstance(s, dict) or "by_class" not in s or names_nothing(s["by_class"]):
+            continue   # a census whose directory domains named nothing on this vCenter is not a read of it
         pairs, names = set(), {}
         for d in s.get("directory") or []:
             if not d.get("fingerprint"):
@@ -696,7 +731,8 @@ def compare(records: list[dict]) -> dict:
     ordered = sorted(records, key=lambda r: r.get("captured") or "")
     reads = [(r.get("captured") or "?", sessions_of(r)) for r in ordered]
     if not all(by_vc for _, by_vc in reads):
-        raise CompareError("a record holds no session census read on any vCenter")
+        raise CompareError("a record holds no session census read on any vCenter (a census whose DIRECTORY_DOMAINS "
+                           "named nothing on a vCenter is not a read of it)")
     vcenters = []
     for fp in sorted({fp for _, by_vc in reads for fp in by_vc}):
         seen = [(when, by_vc[fp]) for when, by_vc in reads if fp in by_vc]
@@ -807,6 +843,11 @@ def main(argv: list[str] | None = None) -> int:
     if os.environ.get("REALM_DOMAIN") and not (os.environ.get("BROKER_TENANT") or os.environ.get("BROKER_REALM")):
         print("note: REALM_DOMAIN is not read here. It is the realm's name, which vcenter-authorization's authz.py takes; "
               "an API client's session carries the broker tenant instead (BROKER_TENANT, default CUSTOMER)", file=sys.stderr)
+    if a.sessions and not directory_domains():
+        print("--sessions needs DIRECTORY_DOMAINS, the directory domains as vCenter spells them: without them every "
+              "directory session reads as another provider's, which the census never flags, so a census of nothing "
+              "would pass", file=sys.stderr)
+        return 2
     if a.sessions and not os.environ.get("VC_USER") and not have_client():
         print("--sessions needs VC_USER and VC_PASSWORD_FILE, or the API client's credential to read as the client",
               file=sys.stderr)

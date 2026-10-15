@@ -18,20 +18,28 @@ token that lasts until it is revoked. This script is that lifecycle, and nothing
 
 The role is named, never numbered: the scope carries urn:vcloud:role:<the role's name, URL-encoded>, the form Broadcom's
 page documents; a scope naming the role's id was refused on the reference estate. An account that already exists is
-refused, never adopted, so a run cannot take over an identity someone else made; a teardown of an account that is not
-there removes nothing and exits 0, so it is safe to re-run.
+refused, never adopted, so a run cannot take over an identity someone else made. The register writes a state file
+(STATE, default service_account.<org>.<name>.state.json, mode 0600: the organization, the account's name and its
+OAuth client id, no secret; keep it beside the record and do not publish it), and --teardown revokes and deletes only
+an account that file records with the same client id, so a mistyped name, or an account someone else made under it,
+is refused before anything is sent. A teardown of an account that is not there removes nothing and exits 0, so it is
+safe to re-run.
 
 Env:  VCFA_HOST                           VCF Automation FQDN (required)
       VCFA_PROVIDER_REFRESH_TOKEN_FILE    a provider API token, traded at /oauth/provider/token for a bearer, or
-      VCFA_PROVIDER_BEARER_FILE           a provider bearer you already hold (either one, mode 0600)
+      VCFA_PROVIDER_BEARER_FILE           a provider bearer you already hold (either one, mode 0600). The reference
+                                          runs sent every call on a provider System Administrator's bearer, and no
+                                          narrower provider role was tried
+      STATE                               the state file (default service_account.<org>.<name>.state.json)
       TLS_VERIFY=false                    only on a self-signed lab CA
       OUT                                 the record (default service_account.json)
 Use:  python3 service_account.py --org ORG --name NAME --role "ROLE NAME" [--token-file PATH] [--execute] [--redact]
       python3 service_account.py --org ORG --name NAME --teardown [--token-file PATH] [--execute] [--redact]
 Exit: 0 the plan printed, or the run held on read-back (the account active, its bearer holding exactly the role, the
       stored token refreshing; or, for a teardown, no account left and a revoked token refused) · 1 a call failed, or
-      the read-back did not hold · 2 a usage error, a refusal (the account exists, the token file exists, a role given
-      as an id), or the record was refused because an estate value survived the scrub
+      the read-back did not hold · 2 a usage error, a refusal (the account exists; for a teardown, it is not one the
+      state file records; the token file exists; a role given as an id), or the record was refused because an estate
+      value survived the scrub
 """
 
 from __future__ import annotations
@@ -218,6 +226,32 @@ def refusals(vcfa: Vcfa, org: str, client_id: str | None, token: str) -> list[di
     return out
 
 
+def state_path(org: str, name: str) -> str:
+    """The state file the register writes and the teardown reads: STATE, or one per organization and account."""
+    safe = re.sub(r"[^A-Za-z0-9._-]", "_", f"{org}.{name}")
+    return os.environ.get("STATE") or f"service_account.{safe}.state.json"
+
+
+def load_state(path: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as f:
+            state = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return state if isinstance(state, dict) else {}
+
+
+def save_state(path: str, state: dict) -> None:
+    _write_0600(path, json.dumps(state, indent=1), new=False)
+    os.chmod(path, 0o600)
+
+
+def owned(state: dict, org: str, name: str, rows: list[dict]) -> bool:
+    """Whether the state file records every account found under this name as one this script registered."""
+    return bool(state.get("tool") == AGENT and state.get("org") == org and state.get("name") == name and rows
+                and all(client_id_of(r) == state.get("client_id") for r in rows))
+
+
 def _write_0600(path: str, value: str, new: bool) -> None:
     flags = os.O_WRONLY | os.O_CREAT | (os.O_EXCL if new else os.O_TRUNC)
     fd = os.open(path, flags, 0o600)
@@ -242,6 +276,9 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     client_id = reg.get("client_id") if isinstance(reg, dict) else None
     if status not in (200, 201) or not client_id:
         return 1
+    save_state(state_path(a.org, a.name), {"tool": AGENT, "org": a.org, "name": a.name, "client_id": client_id,
+                                           "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
+    record["state_file_written"] = True   # before the grant, so an account left part way can still be removed
     rows = accounts(vcfa, urn, a.name) or []
     record["registered"] = shape(rows)
     record["registered"]["id_carries_client_id"] = any(client_id_of(r) == client_id for r in rows)
@@ -302,6 +339,14 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     rows = accounts(vcfa, urn, a.name)
     if rows is None:
         return 1
+    state_file = state_path(a.org, a.name)
+    state = load_state(state_file)
+    if rows and not owned(state, a.org, a.name, rows):
+        record["refused"] = ("this script did not register this account: no state file records it with this client id "
+                             f"({'none read' if not state else 'another account recorded'}). An account made elsewhere "
+                             "is revoked and removed where it was made; for one made here, run from the folder, or with "
+                             "the STATE, its create wrote")
+        return 2
     client_id = next((client_id_of(r) for r in rows if client_id_of(r)), None)
     token = _secret_from(a.token_file) if a.token_file and os.path.exists(a.token_file) and rows else None
     checks: dict[str, list[dict]] = {}
@@ -327,6 +372,9 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
         record["revoked_token"] = checks
     del token
     refused = not any(t["status"] == 200 or t["bearer"] for tries in checks.values() for t in tries)
+    if left == [] and rows:
+        state["removed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        save_state(state_file, state)
     return 0 if left == [] and refused else 1
 
 
@@ -403,6 +451,8 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
     if a.teardown:
         out.append("  then: " + (f"one refresh with the revoked token in {a.token_file}, expected to be refused"
                                  if a.token_file else "no refresh test (no --token-file given)"))
+        out.append("  only for an account the state file records with the same client id; any other is refused before "
+                   "the revoke")
     else:
         out.append(f"  then: the refresh token to {a.token_file or '<--token-file>'} (mode 0600, never printed), the bearer's "
                    "session read for its principal and roles, one refresh with the stored token, and the account read back")

@@ -14,8 +14,8 @@ Read-only by default:
      action, classified by how it behaves for a broker session: reserved group (a VCF role arriving); local, split
      three ways (VCF-managed: svc- and wcp- accounts and solution users, left to VCF; Administrators: the local
      administrator and its group; other: what an operator made, and groups vCenter or another product ships under
-     their own names, each read with its members); directory user, directory group, realm spelling (inert), or
-     another provider's;
+     their own names, each read with its members); directory user, directory group, realm spelling (inert behind
+     an AD/LDAP provider, not measured behind a federated one), or another provider's;
   2. ROLES: the role catalog, and the custom roles whose copies differ between vCenters;
   3. SESSIONS (pyVmomi, optional): who is signed in now, by principal class and client agent. Addresses,
      session keys and login times are never read into the record.
@@ -51,9 +51,12 @@ Environment:
   VC_HOSTS            comma-separated vCenter FQDNs
   VC_USER             an administrator of those vCenters, user@domain
   VC_PASSWORD_FILE    a file holding that password (mode 0600); VC_PASSWORD is read if it is not set
-  REALM_DOMAIN        the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); not the
-                      broker tenant an API client's session carries (CUSTOMER by default)
-  DIRECTORY_DOMAINS   comma-separated directory domains under the broker's identity provider
+  REALM_DOMAIN        required: the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms);
+                      not the broker tenant an API client's session carries (CUSTOMER by default)
+  DIRECTORY_DOMAINS   required: comma-separated directory domains under the broker's identity provider. Without
+                      either, its grants read as another provider's and the census would count no realm-spelled or
+                      directory grant on an estate full of them, so the script refuses to start without both, and
+                      says so on a vCenter where neither names a grant while another provider's grants are there
   LOCAL_DOMAIN        the vCenter's own SSO domain (default VSPHERE.LOCAL); set it where yours is named otherwise,
                       or every local grant reads as another provider's
   TLS_VERIFY          false only on a self-signed lab CA
@@ -207,6 +210,13 @@ def classify(domain, name, realm, directories, local=None):
     if d.lower() in directories:
         return "directory"
     return "another provider"
+
+
+def names_nothing(by_class):
+    """Whether neither the realm's name nor a directory domain names a grant on a vCenter whose list holds another
+    provider's grants: a misspelled domain hides its grants there, as VCF Automation's own grants sit there anyway."""
+    kinds = {k.rsplit(", ", 1)[0] for k in by_class}
+    return "another provider" in kinds and not kinds & {"directory", "realm spelling"}
 
 
 def census(rest, realm, directories):
@@ -487,7 +497,7 @@ def probe_tags(host, admin, subject, d, r):
         made["folder"] = dc.vmFolder.CreateFolder(name)
         obj = {"id": made["folder"]._moId, "type": "Folder"}
         lab = TagLab(rest, name, ["Folder"])
-        # prove the delete path for a global permission before any case, on the realm spelling (inert)
+        # prove the delete path for a global permission before any case, on the realm spelling (inert behind AD/LDAP)
         pid, note = grant_global(rest, r, False, made["roles"]["none"], False)
         rec["globalDeletePath"] = {"created": pid is not None, "deleteStatus": ungrant_global(rest, pid) if pid else None,
                                    "gone": all(p["permission"] != pid for p in permissions(rest))}
@@ -636,6 +646,9 @@ def main():
     user, password = os.environ["VC_USER"], secret("VC_PASSWORD")
     realm = os.environ.get("REALM_DOMAIN", "").strip()
     directories = [x.strip().lower() for x in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if x.strip()]
+    if not realm or not directories:
+        raise SystemExit("REALM_DOMAIN and DIRECTORY_DOMAINS are required: without them a realm-spelled grant and a "
+                         "directory grant both read as another provider's, and the census would count none of either")
     out_dir = os.environ.get("OUT_DIR", os.path.dirname(os.path.abspath(__file__)))
     L = Labels()
     vc_label = {h: L.get("vcenter", h) for h in hosts}
@@ -662,8 +675,13 @@ def main():
                 unsoap(si)
         else:
             row["sessions"] = "not read: pyVmomi is not installed"
+        if names_nothing(row["byClass"]):
+            row["domainsNamedNothing"] = True
         record["vcenters"][vc_label[h]] = row
         print(f"  {vc_label[h]}: {row['permissions']} permissions ({row['global']} global); {row['byClass']}")
+        if row.get("domainsNamedNothing"):
+            print("     NOT PLACED: REALM_DOMAIN and DIRECTORY_DOMAINS name no grant here while grants of another provider "
+                  "are there; check their spelling against the vCenter's own before reading the census")
         if isinstance(row["sessions"], dict):
             print(f"     sessions by class {row['sessions']['byClass']}; local administrator by agent "
                   f"{row['sessions']['localAdministratorByAgent']}")

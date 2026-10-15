@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-15T04:48:55Z",
+ "captured": "2026-10-15T06:34:20Z",
  "mode": "report",
  "tenant": "{{id-1}}",
  "organizations": [
@@ -587,25 +587,7 @@
   {
    "plane": "graph",
    "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "POST",
-   "path": "/users/{{id-36}}/checkMemberGroups",
+   "path": "/groups/{{id-36}}/members",
    "status": 200
   },
   {
@@ -633,48 +615,6 @@
    "status": 200
   },
   {
-   "plane": "vcf-automation",
-   "method": "GET",
-   "path": "/cloudapi/1.0.0/users",
-   "status": 200
-  },
-  {
-   "plane": "vcf-automation",
-   "method": "GET",
-   "path": "/cloudapi/1.0.0/groups",
-   "status": 200
-  },
-  {
-   "plane": "vcf-automation",
-   "method": "GET",
-   "path": "/cloudapi/1.0.0/tokens",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/servicePrincipals",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/applications",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/servicePrincipals/{{id-38}}/appRoleAssignedTo",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/groups",
-   "status": 200
-  },
-  {
    "plane": "graph",
    "method": "GET",
    "path": "/users",
@@ -695,31 +635,7 @@
   {
    "plane": "graph",
    "method": "POST",
-   "path": "/users/{{id-36}}/checkMemberGroups",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "POST",
-   "path": "/users/{{id-37}}/checkMemberGroups",
+   "path": "/users/{{id-38}}/checkMemberGroups",
    "status": 200
   },
   {
@@ -767,25 +683,7 @@
   {
    "plane": "graph",
    "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "POST",
-   "path": "/users/{{id-36}}/checkMemberGroups",
+   "path": "/groups/{{id-40}}/members",
    "status": 200
   },
   {
@@ -833,7 +731,7 @@
   {
    "plane": "graph",
    "method": "POST",
-   "path": "/users/{{id-40}}/checkMemberGroups",
+   "path": "/users/{{id-38}}/checkMemberGroups",
    "status": 200
   },
   {
@@ -881,25 +779,7 @@
   {
    "plane": "graph",
    "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "GET",
-   "path": "/users",
-   "status": 200
-  },
-  {
-   "plane": "graph",
-   "method": "POST",
-   "path": "/users/{{id-36}}/checkMemberGroups",
+   "path": "/groups/{{id-42}}/members",
    "status": 200
   },
   {
@@ -947,7 +827,151 @@
   {
    "plane": "graph",
    "method": "POST",
-   "path": "/users/{{id-42}}/checkMemberGroups",
+   "path": "/users/{{id-38}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-43}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/applications",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/servicePrincipals/{{id-44}}/appRoleAssignedTo",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/groups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/groups/{{id-45}}/members",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-37}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-38}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "POST",
+   "path": "/users/{{id-46}}/checkMemberGroups",
    "status": 200
   }
  ]

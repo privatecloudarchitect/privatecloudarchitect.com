@@ -42,7 +42,8 @@ Checks (pure functions over what was read; each returns {check, state, detail, m
                    (a new organization has no refresh until the first scheduled run: unknown until then)
   keys_held        every key id the provider publishes is among the organization's stored keys
   pkce             usePKCE off for an Entra web app (every sign-in failed with it on)
-  secret_end       the client secret the organization holds: expired fails, inside WARN_DAYS warns
+  secret_end       the client secret the organization holds: expired fails, inside WARN_DAYS warns, and a held secret
+                   that matches none of the app's secrets fails (removed at Entra, or another app's)
   saml_cert_end    the app's active SAML signing certificate: expired fails, inside WARN_DAYS warns
   saml_cert_held   the active certificate is in the organization's stored metadata (else every sign-in fails);
                    a second certificate it does not hold warns (making it active would stop sign-in)
@@ -60,13 +61,22 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded 
       default every organization with OIDC or SAML on, except one signed in through VCF single sign-on and the
       provider's own consumption organization); WARN_DAYS
       (default 30); OUT (default watch.json).
+A read the watch could not make is never a pass. An organization whose reads fail is kept in the run, named and
+counted, whether or not ORGS names it; an app or service principal Graph cannot find for an organization federated to
+the Graph credential's tenant is a failed read, as is a settings read that returns no client secret to match; and a
+credential refused before any organization is read ends the run at exit 3 with no record. The Graph checks are
+skipped by design, and the run says why, only where no Graph credential was given, the provider is not Entra ID, or
+the organization is federated to another Entra tenant than ENTRA_TENANT_ID.
+
 Use:  python3 watch.py                      read, print, write the record
       python3 watch.py --redact             print with placeholders instead of your names (for a shared transcript)
       python3 watch.py --why "<what the user saw>" [--protocol oidc|saml]   the sign-in router; reads nothing
-Exit: 0 every check ok · 1 a warning (an end date inside WARN_DAYS, a refresh interval over 1 h, a gap that is not
-      yet an outage) · 2 a failure that stops sign-in now or at the provider's next roll (a key not held, refresh not
-      succeeding, an expired secret or certificate, a renamed group, PKCE on, a disabled app) · 3 a read failed and
-      nothing failed. --why: 0 a row matched; 1 none did, and it prints the first reads for a message no run showed.
+Exit: 0 every check ok, or skipped for a reason the run prints · 1 a warning (an end date inside WARN_DAYS, a refresh
+      interval over 1 h, a gap that is not yet an outage) · 2 a failure that stops sign-in now or at the provider's
+      next roll (a key not held, refresh not succeeding, an expired secret or certificate, a held secret the app no
+      longer lists, a renamed group, PKCE on, a disabled app) · 3 a read failed and nothing failed (an organization
+      unread, the tenant's app not found, a credential refused). --why: 0 a row matched; 1 none did, and it prints the
+      first reads for a message no run showed.
 """
 
 from __future__ import annotations
@@ -116,8 +126,11 @@ SIGN_IN_ROUTER = [
      "then": "sign in with the organization's local administrator; enable the app again", "teaches": "app-disabled"},
     {"id": "user-disabled", "seen": ["AADSTS50057", "The user account is disabled"], "hints": ["account disabled"],
      "protocol": "any", "refused_by": "provider", "entra_log": "the error AADSTS50057",
-     "look_at": "the user at Entra: disabled. The session it already holds runs to its end, and its API token works until revoked",
-     "then": "treat it as a leaver: disable the user in VCF Automation and revoke its tokens", "teaches": "leaver"},
+     "look_at": "the user at Entra: disabled. Neither that nor revoking its Entra sign-in sessions ends what VCF Automation "
+                "issued: on the run read, the bearer the user held ran to the end of its hour and its API token kept refreshing "
+                "for the 69 minutes read, and Entra's revoke reaches only the tokens Entra issued",
+     "then": "close the account in VCF Automation now, on a provider bearer: leavers.py --close-now --org <org> --user <account> "
+             "in the identity-lifecycle companion plans it, and with --execute revokes its tokens and disables it", "teaches": "leaver"},
     {"id": "mfa", "seen": ["AADSTS50079", "you must enroll in multi-factor authentication", "Let's keep your account secure"],
      "hints": ["mfa", "multi-factor", "authenticator"], "protocol": "any", "refused_by": "conditional-access",
      "entra_log": "an interrupt or a failure",
@@ -277,20 +290,26 @@ def pkce(oauth: dict) -> dict:
 
 
 def secret_end(app: dict, now: datetime, warn_days: int) -> dict:
+    """Judge the secret the organization holds (marked `in_use` by its hint). A held secret that matches none of the
+    app's secrets fails: it is the state a rotation leaves when the old secret is removed before the new one is
+    written, and Entra refuses a secret it does not hold. No other secret stands in for it."""
     creds = [c for c in app.get("passwordCredentials") or [] if when(c.get("endDateTime"))]
-    if not creds:
-        return _result("secret_end", "unknown", "the app lists no client secret")
     held = [c for c in creds if c.get("in_use")]
-    judged = held[0] if held else max(creds, key=lambda c: when(c["endDateTime"]))
+    if not held:
+        listed = f"none of the {len(creds)} secret(s) the app lists" if creds else "no secret: the app lists none"
+        return _result("secret_end", "fail", f"the secret the organization holds matches {listed}; it was removed at Entra "
+                       "or is another app's, and Entra refuses a secret it does not hold: write the app's current secret "
+                       "into the organization", days_left=None, matched=False, listed=len(creds))
+    judged = held[0]
     days = _days(when(judged["endDateTime"]), now)
-    which = "the secret the organization holds" if held else "the latest-ending secret (the one the organization holds could not be matched)"
+    which = "the secret the organization holds"
     others = [c for c in creds if c is not judged and when(c["endDateTime"]) < now]
     tail = f"; {len(others)} other listed secret(s) already expired" if others else ""
     if days < 0:
-        return _result("secret_end", "fail", f"{which} expired {-days} days ago{tail}", days_left=days, matched=bool(held))
+        return _result("secret_end", "fail", f"{which} expired {-days} days ago{tail}", days_left=days, matched=True)
     if days <= warn_days:
-        return _result("secret_end", "warn", f"{which} ends in {days} days: rotate with overlap{tail}", days_left=days, matched=bool(held))
-    return _result("secret_end", "ok", f"{which} ends in {days} days{tail}", days_left=days, matched=bool(held))
+        return _result("secret_end", "warn", f"{which} ends in {days} days: rotate with overlap{tail}", days_left=days, matched=True)
+    return _result("secret_end", "ok", f"{which} ends in {days} days{tail}", days_left=days, matched=True)
 
 
 def _thumb(key_credential: dict) -> str:
@@ -520,8 +539,39 @@ def _skipped(names: tuple[str, ...], why: str) -> list[dict]:
     return [_result(n, "unknown", f"skipped: {why}") for n in names]
 
 
-def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_days: int, seen: set) -> dict:
-    """Read one organization on both sides and run its checks. `seen` collects every estate value read, for the scrub."""
+ENTRA_TENANT_IN = re.compile(r"(?:login\.microsoftonline\.com|sts\.windows\.net)/([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})/")
+
+
+def entra_tenant(protocol: str, oauth: dict, fed: dict) -> str | None:
+    """The Entra tenant an organization is federated to: from the OIDC issuer, or from the issuer in the SAML metadata
+    it holds. None when the provider is not Entra ID."""
+    text = (oauth.get("issuerId") or "") if protocol == "oidc" else (fed.get("samlMetadata") or "") if protocol == "saml" else ""
+    m = ENTRA_TENANT_IN.search(text)
+    return m.group(1).lower() if m else None
+
+
+def graph_skip(protocol: str, tenant: str | None, graph_tenant: str | None) -> str:
+    """Why the Graph checks are skipped by design for this organization, or "" when they must run. A skip is a choice
+    the run prints; anything else that keeps a Graph check from running is a failed read."""
+    if graph_tenant is None:
+        return "no Graph credential given"
+    if tenant is None:
+        return "the provider is not Entra ID"
+    if tenant != graph_tenant.lower():
+        return "the organization is federated to another Entra tenant than ENTRA_TENANT_ID"
+    return ""
+
+
+def kept(result: dict, wanted: list[str]) -> bool:
+    """Whether an organization belongs in the run: every one ORGS names; otherwise every federated one, and every one
+    whose reads failed, since an organization that could not be read cannot be shown to be outside the watch."""
+    return bool(wanted) or result.get("protocol") in ("oidc", "saml", "unread")
+
+
+def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_days: int, seen: set,
+              graph_error: str = "") -> dict:
+    """Read one organization on both sides and run its checks. `seen` collects every estate value read, for the scrub.
+    `graph_error` is set when a Graph credential was given and refused: every Graph check it would have run is unread."""
     uid = org["id"].rsplit(":", 1)[-1]
     seen.update({org["name"], org["id"], uid})
     out = {"org": org["name"], "org_type": "classic" if org.get("isClassicTenant") else "all-apps", "checks": [], "read_errors": []}
@@ -532,6 +582,7 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
         groups = api.pages("/cloudapi/1.0.0/groups", org["id"])
         roles = api.roles(org["id"])
     except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+        out["protocol"] = "unread"   # kept by main(), so a refused read is never a silent pass
         out["read_errors"].append(f"VCF Automation: {type(e).__name__}")
         return out
     for u in users:
@@ -541,7 +592,6 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
     oidc = bool(oauth.get("enabled")) and not oauth.get("vidb")
     saml = bool(fed.get("enabled"))
     out["protocol"] = "oidc" if oidc else "saml" if saml else "none"
-    entra = urllib.parse.urlparse(oauth.get("issuerId") or "").hostname == ENTRA_HOST
     seen.update(v for v in (oauth.get("issuerId"), oauth.get("clientId"), oauth.get("jwksUri"), oauth.get("orgRedirectUri")) if v)
     checks, app, sp = out["checks"], None, None
     if oidc:
@@ -555,21 +605,26 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
         checks.append(pkce(oauth))
     imported = [g["name"] for g in groups if g.get("providerType") == ("OAUTH" if oidc else "SAML")]
     graph_checks = ("secret_end", "app_gate", "group_names") if oidc else ("saml_cert_end", "saml_cert_held", "app_gate", "group_names")
+    skip = graph_skip(out["protocol"], entra_tenant(out["protocol"], oauth, fed),
+                      graph.tenant if graph is not None else (os.environ.get("ENTRA_TENANT_ID") if graph_error else None))
     if not (oidc or saml):
         out["read_errors"].append("neither OIDC nor SAML is on for this organization")
-    elif graph is None:
-        checks += _skipped(graph_checks, "no Graph credential given")
-    elif oidc and not entra:
-        checks += _skipped(graph_checks, "the provider is not Entra ID")
+    elif skip:
+        checks += _skipped(graph_checks, skip)
+    elif graph is None:   # a Graph credential was given and refused: each check it would have run is unread
+        out["read_errors"].append(graph_error)
+        checks += _skipped(graph_checks, "the Graph credential given was refused")
     else:
         try:
             sel = "id,appId,displayName,passwordCredentials,identifierUris"
             if oidc:
                 apps = graph.values("/applications", filter=f"appId eq '{oauth['clientId']}'", select=sel)
+                looked_for = "the organization's client id"
             else:
                 entity = api.sp_entity_id(fed)
                 seen.update([entity] if entity else [])
                 apps = graph.values("/applications", filter=f"identifierUris/any(x:x eq '{entity}')", select=sel) if entity else []
+                looked_for = "the organization's entity id" if entity else "an entity id (the organization's metadata names none)"
             app = apps[0] if apps else None
             if app:
                 for c in app.get("passwordCredentials") or []:
@@ -579,6 +634,10 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
                 sps = graph.values("/servicePrincipals", filter=f"appId eq '{app['appId']}'",
                                    select="id,accountEnabled,appRoleAssignmentRequired,preferredTokenSigningKeyThumbprint,keyCredentials")
                 sp = sps[0] if sps else None
+                if sp is None:
+                    out["read_errors"].append("Graph: the app has no service principal in the tenant")
+            else:   # an app the watch cannot find is a read it could not make, never a pass
+                out["read_errors"].append(f"Graph: no app in the tenant carries {looked_for}")
             if sp is not None:
                 seen.add(sp["id"])
                 rows = graph.values(f"/servicePrincipals/{sp['id']}/appRoleAssignedTo", select="principalDisplayName,principalType")
@@ -587,11 +646,15 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
         except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
             out["read_errors"].append(f"Graph: {type(e).__name__}")
             sp = None
+        held_secret = bool(prefix)
         prefix = ""
         if sp is None:
             checks += _skipped(graph_checks, "the app behind the organization could not be read in Graph")
         else:
-            if oidc:
+            if oidc and not held_secret:
+                out["read_errors"].append("VCF Automation: the organization's settings returned no client secret to match")
+                checks += _skipped(("secret_end",), "the organization's client secret was not in its settings read")
+            elif oidc:
                 checks.append(secret_end(app, now, warn_days))
             else:
                 checks.append(saml_cert_end(sp, now, warn_days))
@@ -677,17 +740,30 @@ def main(argv: list[str]) -> int:
         return 3
     now = datetime.now(timezone.utc)
     warn_days = int(os.environ.get("WARN_DAYS", "30"))
-    api = Vcfa(os.environ["VCFA_HOST"])
-    graph = Graph() if os.environ.get("ENTRA_TENANT_ID") else None
     wanted = [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
+    # A credential refused, or an organization list that cannot be read, ends the run before any check: exit 3, no record.
+    try:
+        api = Vcfa(os.environ["VCFA_HOST"])
+        listed = api.pages("/cloudapi/1.0.0/orgs")
+    except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+        print(f"READ FAILED: VCF Automation, before any organization was read: {type(e).__name__}; exit 3, no record written")
+        return 3
+    if not listed:
+        print("READ FAILED: the organization list came back empty, so the credential sees no organization; exit 3, no record written")
+        return 3
+    graph, graph_error = None, ""
+    if os.environ.get("ENTRA_TENANT_ID"):
+        try:
+            graph = Graph()
+        except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+            graph_error = f"Graph: the token request failed ({type(e).__name__})"
     # By default the provider's own consumption organization is left out: its sign-in settings are the platform's.
-    orgs = [o for o in api.pages("/cloudapi/1.0.0/orgs")
-            if (o["name"] in wanted if wanted else not o.get("isProviderConsumptionOrg"))]
+    orgs = [o for o in listed if (o["name"] in wanted if wanted else not o.get("isProviderConsumptionOrg"))]
     seen = {os.environ.get("ENTRA_TENANT_ID", ""), os.environ.get("ENTRA_CLIENT_ID", "")} - {""}
     results = []
     for o in orgs:
-        r = watch_org(api, graph, o, now, warn_days, seen)
-        if wanted or r.get("protocol") in ("oidc", "saml"):
+        r = watch_org(api, graph, o, now, warn_days, seen, graph_error)
+        if kept(r, wanted):
             results.append(r)
     missing = sorted(set(wanted) - {r["org"] for r in results})
     for m in missing:

@@ -7,9 +7,11 @@ per run, so the same person can carry a different number in each transcript.
 
 ## The report
 
-The run behind `leavers.json`, read-only. Exit 4: nothing is open and nothing went unread, and one federated account
-holds a role granted to it directly, a flag nobody has acknowledged yet. Every federated account was found at Entra
-by its userPrincipalName.
+The run behind `leavers.json`, read-only, by the script as it stands: it reads each gate group's direct members, so
+it makes four calls more than the run in the next section, made earlier the same day before those reads were added,
+and it reached the same decision on every account. Exit 4: nothing is open and nothing went unread, and one federated
+account holds a role granted to it directly, a flag nobody has acknowledged yet. Every federated account was found at
+Entra by its userPrincipalName.
 
 ```
 $ python3 leavers.py --redact
@@ -36,7 +38,7 @@ Leavers · REPORT · 4 organization(s) federated to the tenant, 3 federated else
   totals: keep 7, leaver 3, out of scope 1, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 3, direct role 1, name in use again 0, acknowledged 0, flagged 1
   exit 4: a flag nobody acknowledged: decide it, then acknowledge it with --ack
 
-91 call(s), 0 refused; leavers.json written with every estate value replaced; exit 4
+95 call(s), 0 refused; leavers.json written with every estate value replaced; exit 4
 ```
 
 ## The same report, with the flag acknowledged
@@ -113,9 +115,15 @@ How long each step took, from the disable at Entra (one run):
 - **Leavers in step are the goal.** Each leaver above is disabled and holds no token, so the run changes nothing and
   says `in step`. A leaver still enabled, or still holding a token, reads `would revoke its tokens and disable it`
   and sets the exit code to 1: that is the line a scheduled report exists to catch, and a person runs the close on it.
-- **Each exit code is one state.** 1 an open leaver, 3 a read that failed or an account undetermined, 4 a flag nobody
-  acknowledged, 0 nothing; with `--execute`, 2 a close that did not hold. The first that applies wins, so a flag
-  never hides a lost Graph permission (3) or an open leaver (1).
+- **Each exit code is one state, and every one but 0 is an alert.** 1 an open leaver: run the close. 3 a read that
+  failed or an account undetermined: fix the read before trusting any decision. 4 a flag nobody acknowledged: decide
+  it and acknowledge it until a date. With `--execute`, 2 a close that did not hold: finish it by hand. The first that
+  applies wins, so a flag never hides a lost Graph permission (3) or an open leaver (1).
+- **A direct role is a flag, never a leaver by itself.** An account that passes Entra's gate and holds a role directly
+  reads keep even when no imported group carries it, because VCF Automation refuses only a user with neither; it is
+  flagged `direct-role` for a person to decide. A user found only by `mail` or `otherMails` whose principal name is
+  another name reads undetermined, with the mismatch as its reason, until its organization is declared with
+  `--name-claim <org>=mail`.
 - **Closing an account does not drop its direct roles.** After the close, the throwaway account still holds Service
   Broker User, granted to it by name. A new person later given that name signs in to the same account and holds the
   role, so the report keeps flagging it until someone deletes the account or drops the role. The `direct role

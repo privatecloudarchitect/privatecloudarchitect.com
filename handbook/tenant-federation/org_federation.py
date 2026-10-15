@@ -13,6 +13,21 @@ the organization with a role. This script does both sides in the order that work
                          own build, though a re-run over a finished build was not exercised on the reference estate
   --prove                reads both sides back and checks each setting the build depends on, then prints the
                          browser steps that prove it (a sign-in is a browser protocol; this script does not drive one)
+  --prove --org NAME     an existing organization, built by anyone, proven read-only with no state file: its settings
+                         read back against the plan for the protocol it is federated over, its type and its user key;
+                         every imported group holding roles of its own role list (and each --group ROLE=NAME the role
+                         its type defines); an enabled local user holding its top role. Never touches Entra beyond its
+                         public discovery and keys endpoints, and needs no Graph app, so whether each imported group is
+                         assigned to the app at Entra is left to the federation watch's group_names check
+  --configure --org NAME the provider's side of an existing organization, from what the tenant's administrator handed
+                         over: APP_CLIENT_ID and APP_SECRET_FILE over OIDC (the secret it holds is kept when the app is
+                         the one it holds), METADATA_FILE over SAML. Prints the plan; with --execute it writes the
+                         settings as a round trip (only when a field differs), imports each --group ROLE=NAME with the
+                         role its organization type defines, resolved from the organization's own role list, and reads
+                         every write back. It refuses to switch a federated organization's protocol or user key, and a
+                         named group that already exists under the other protocol or with other roles. Over SAML
+                         without METADATA_FILE it prints the organization's own service-provider identifier and reply
+                         URL for the tenant, and stops. It never touches Entra beyond the public endpoints
   --teardown --execute   deletes what --execute created (only that), purges it from Entra's recycle bin, and reads
                          each object back to confirm nothing is left
   --update               day 2 on an existing organization federated to the tenant (it need not be one this script
@@ -31,7 +46,8 @@ secret VCF Automation returns before anything else sees the response.
 
 Safety: --execute refuses an organization, app or group name that already exists unless this script created it (its
 state file says so), and --teardown deletes only objects that state file records. The state file holds object ids,
-not secrets; keep it beside the record and do not publish it.
+not secrets; keep it beside the record and do not publish it. A real tenant's organization is proven with --prove
+--org and configured with --configure --org, which write nothing to Entra and delete nothing anywhere.
 
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token) or VCFA_PROVIDER_BEARER_FILE (a provider
       bearer you already hold); TLS_VERIFY=false on a self-signed lab CA; ENTRA_TENANT_ID; ENTRA_CLIENT_ID and either
@@ -40,9 +56,12 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token) or VCFA
       SECRET_DAYS (OIDC secret life, default 180); OUT (default federation.json); STATE (default
       org_federation.<ORG>.state.json). --update needs VCFA_HOST, the provider credential, ENTRA_TENANT_ID and ORG
       (the existing organization), NEW_SECRET_FILE for --secret, METADATA_FILE for --metadata; it writes OUT
-      (default update.json)
+      (default update.json). --prove --org and --configure --org need VCFA_HOST, the provider credential and
+      ENTRA_TENANT_ID; --configure also APP_CLIENT_ID and, for a new app, APP_SECRET_FILE (OIDC) or METADATA_FILE
+      (SAML); they write OUT (default prove.json, configure.json)
 Exit: 0 done · 1 a call or a check failed · 2 refused (a name this script did not create; for --update, an
-      organization not federated to ENTRA_TENANT_ID, a change its protocol does not take, or a missing file)
+      organization not federated to ENTRA_TENANT_ID, a change its protocol does not take, or a missing file; for
+      --org, no such organization, a protocol or key switch, a role its type lacks, or a named group held another way)
 """
 
 import argparse
@@ -237,14 +256,16 @@ READ_ONLY_PERMISSIONS = {  # Microsoft Graph application permissions, measured b
     "leavers.py": ["Application.Read.All", "User.Read.All", "GroupMember.Read.All"],
 }
 # The name an account is known by stays the user principal name: the organization names each account by it, and the
-# leaver job (identity-lifecycle's leavers.py) asks Entra for the person behind an account by it as a principal name,
-# so a name claim sourced from another attribute would read every entitled account as nobody Entra knows. Entra sends
-# the principal name in both by default (Microsoft's SAML claims customization page; the reference runs read the SAML
-# name claim equal to the principal name).
+# leaver job (identity-lifecycle's leavers.py) asks Entra for the person behind an account by that name, as a
+# userPrincipalName first, then as a mail address, then among otherMails, so a name claim sourced from an attribute
+# none of the three holds would read every entitled account as nobody Entra knows. Entra sends the principal name in
+# both by default (Microsoft's SAML claims customization page; the reference runs read the SAML name claim equal to the
+# principal name). Microsoft treats that name as one that can change and be reused, not a lasting key, which is why the
+# protocol rule turns on whether a name ever comes back.
 NAME_CLAIM_SAML = (f"The name claim ({CLAIMS}/name) left sourced from user.userprincipalname, Entra's default, because the "
-                   "organization names each account by it and the leaver job looks each account up by it")
+                   "organization names each account by it and the leaver job looks each account up by it first")
 NAME_CLAIM_OIDC = ("preferred_username left as Entra sends it, the user principal name, with no claims mapping over it, "
-                   "because the organization names each account by it and the leaver job looks each account up by it")
+                   "because the organization names each account by it and the leaver job looks each account up by it first")
 
 
 def entra_checklist(protocol, org_type, user_key):
@@ -304,7 +325,10 @@ def organization_checklist(protocol, org_type, user_key):
             "signing keys refreshed hourly with strategy ADD, and PKCE off",
             f"Users keyed on {user_key}, agreed with the tenant's administrator before the first sign-in"
             + (": a renamed user keeps the same account, and usernames read as object ids" if user_key == "oid"
-               else ": readable usernames, and a renamed user gets a second account, so plan a rename as a leaver and a joiner"),
+               else ": readable usernames, chosen only where a person's name never comes back. A renamed user gets a second "
+                    "account, so plan a rename as a leaver and a joiner; and a departed person's name given to someone new "
+                    "reaches the departed person's account with its direct roles, so delete that account before the name "
+                    "returns, or key on oid"),
         ]
     else:
         out += [
@@ -544,6 +568,16 @@ class Vcfa:
         _, data, _ = self.ok("GET", f"/api/admin/org/{uuid_}/settings/{kind}", f"read {kind} settings", accept=VCD_JSON)
         secret = data.pop("clientSecret", None)
         return data, secret
+
+    def pages(self, path, step, tenant=None, accept=CLOUDAPI):
+        """Every page of a cloudapi list."""
+        out, page = [], 1
+        while True:
+            _, data, _ = self.ok("GET", path, step, accept=accept, tenant=tenant, params={"page": page, "pageSize": 128})
+            out += data.get("values") or []
+            if page >= (data.get("pageCount") or 1):
+                return out
+            page += 1
 
     def role(self, org_urn, name):
         _, data, _ = self.ok("GET", "/cloudapi/1.0.0/roles", "find role", tenant=org_urn, params={"filter": f"name=={name}", "pageSize": 10})
@@ -934,7 +968,8 @@ class Run:
         checks["organization exists and is enabled"] = bool(org and org.get("isEnabled"))
         sp_id, group_id = self.state.get("sp_id"), self.state.get("group_id")
         if not (sp_id and group_id):
-            self.step("nothing to prove", "the build did not finish: run --execute again, or --teardown --execute")
+            self.step("nothing to prove", "this script holds no finished build under this name: run --execute again, or "
+                      "--teardown --execute; for an organization it did not build, run --prove --org NAME")
             return False
         sp = g.req("GET", f"/servicePrincipals/{sp_id}?$select=appRoleAssignmentRequired")
         checks["assignment required on the app"] = sp.get("appRoleAssignmentRequired") is True
@@ -1211,20 +1246,426 @@ def update(a):
     return 0 if all(checks.values()) else 1
 
 
+# ── an organization this script did not build: prove it, or configure it ────────────────────────────────────────
+# A real tenant's organization is never built by --execute, which refuses any name it did not create. These two modes
+# take an existing organization by name (--org) and need no state file. --prove --org reads the organization's
+# settings back against the plan, its imported groups and their roles against its own role list, and its local
+# administrator. --configure --org writes the organization's side from what the tenant's administrator handed over
+# (the app's client id and secret over OIDC, its federation metadata over SAML) as a round trip, imports each named
+# group with the role its organization type defines, resolved from the organization's own role list, and reads every
+# write back. Neither calls Entra ID beyond its public discovery and keys endpoints, and neither needs a Graph app.
+
+# The settings each protocol's sign-in depends on: a difference here fails the proof. Every other field the plan sets
+# is reported when it differs, without failing (a console-built organization may hold another clock skew or label).
+REQUIRED = {
+    "oidc": ("enabled", "issuerId", "jwksUri", "scope", "usePKCE", "autoRefreshKey", "keyRefreshStrategy",
+             "keyRefreshFrequencyInHours", "oidcAttributeMapping.subjectAttributeName",
+             "oidcAttributeMapping.emailAttributeName", "oidcAttributeMapping.groupsAttributeName"),
+    "saml": ("enabled", "samlAttributeMapping.userNameAttributeName", "samlAttributeMapping.emailAttributeName",
+             "samlAttributeMapping.groupAttributeName"),
+}
+NOT_COMPARED = ("link", "href", "type", "clientSecret", "oAuthKeyConfigurations", "samlMetadata")
+# Both modes read the organization only. VCF Automation imported a group name no group assigned to the app carried
+# (X-192), and a proof of the organization's side passed it; the federation watch's group_names, which reads the app's
+# assignments through the tenant's read-only app, failed on it. So the Entra side of every group is the watch's to prove.
+ENTRA_SIDE = ("This proves the organization's side. That each imported group is a group assigned to the app at Entra is "
+              "the federation-operations watch's group_names check, through the tenant's read-only app: run it next.")
+ROLE_KEYS = ("member", "auditor", "administrator")
+
+
+def _flat(fields, prefix=""):
+    """A settings body as dotted field names to values, one level into the attribute mappings."""
+    out = {}
+    for k, v in fields.items():
+        if k in NOT_COMPARED:
+            continue
+        if isinstance(v, dict) and k.endswith("AttributeMapping"):
+            out.update(_flat(v, f"{k}."))
+        else:
+            out[prefix + k] = v
+    return out
+
+
+def _same(a, b):
+    if isinstance(a, list) and isinstance(b, list):
+        return sorted(map(str, a)) == sorted(map(str, b))
+    return a == b
+
+
+def against_plan(read, planned, protocol):
+    """Each planned settings field against the organization's read: (failed, differing). A field whose planned value
+    is a placeholder ({{...}}) is the reader's own and is not compared; a required field that differs fails."""
+    want, got = _flat(planned), _flat(read)
+    failed, differing = [], []
+    for name, value in want.items():
+        if "{{" in json.dumps(value):
+            continue
+        if not _same(got.get(name), value):
+            (failed if name in REQUIRED[protocol] else differing).append(name)
+    return failed, differing
+
+
+def settings_changes(current, body):
+    """The dotted names of the fields a settings write changes; the secret and the metadata are counted apart."""
+    now, then = _flat(current), _flat(body)
+    return sorted(k for k, v in then.items() if not _same(now.get(k), v))
+
+
+def parse_groups(pairs):
+    """--group ROLE=NAME, repeated, as {role key: group name}; refuses an unknown role key or a role named twice."""
+    out = {}
+    for pair in pairs or []:
+        role, sep, name = pair.partition("=")
+        role, name = role.strip(), name.strip()
+        if not sep or role not in ROLE_KEYS or not name or role in out:
+            raise ValueError(f"--group takes ROLE=NAME once per role, ROLE one of {', '.join(ROLE_KEYS)}: {pair!r}")
+        out[role] = name
+    return out
+
+
+def group_findings(groups, provider_type, role_names, wanted):
+    """The organization's groups against its own role list and the groups asked for. `wanted` maps a group name to the
+    role name it should hold. Returns check name to pass."""
+    mine = [g for g in groups if g.get("providerType") == provider_type]
+    checks = {f"at least one group imported over {provider_type}": bool(mine)}
+    for g in mine:
+        roles = sorted(r.get("name") for r in g.get("roleEntityRefs") or [])
+        checks[f"imported group {g.get('name')} holds roles of the organization's own list"] = bool(roles) and set(roles) <= set(role_names)
+    for name, role in wanted.items():
+        found = [g for g in groups if g.get("name") == name]
+        roles = sorted(r.get("name") for r in (found[0].get("roleEntityRefs") or [])) if found else []
+        checks[f"group {name} imported over {provider_type} holding {role}"] = (
+            len(found) == 1 and found[0].get("providerType") == provider_type and roles == [role])
+    return checks
+
+
+def local_admin_held(users, top_role):
+    """An enabled local user holding the organization's top role: the way in when the provider refuses it."""
+    return any(u.get("providerType") == "LOCAL" and u.get("enabled")
+               and any(r.get("name") == top_role for r in u.get("roleEntityRefs") or []) for u in users)
+
+
+def switch_refusal(oauth, fed, tenant, protocol, user_key):
+    """Why --configure leaves this organization's sign-in alone, or "": a live organization's protocol or user key is
+    never switched in place (a SAML organization moved to OIDC refused its users; a move to oid split an account), an
+    organization signed in through VCF single sign-on takes no OIDC, and one federated elsewhere is not this tenant's."""
+    oidc_on, saml_on = bool(oauth.get("enabled")) and not oauth.get("vidb"), bool(fed.get("enabled"))
+    now = federated_to(oauth, fed, tenant)
+    if protocol == "oidc" and oauth.get("vidb"):
+        return "the organization signs in through VCF single sign-on, which excludes OIDC in one organization"
+    if (oidc_on or saml_on) and now is None:
+        return "the organization is federated to a provider other than ENTRA_TENANT_ID"
+    if now and now != protocol:
+        return f"the organization is federated over {now.upper()}: move a tenant to another protocol through a new organization"
+    held_key = (oauth.get("oidcAttributeMapping") or {}).get("subjectAttributeName")
+    if now == "oidc" and held_key != user_key:
+        return f"the organization keys its users on {held_key}: move a tenant to another key through a new organization"
+    return ""
+
+
+def sp_metadata_names(xml):
+    """The entity id and HTTP-POST assertion consumer an organization's service-provider metadata names."""
+    entity = re.search(r'entityID="([^"]+)"', xml or "")
+    acs = re.search(r'AssertionConsumerService[^>]*Binding="urn:oasis:names:tc:SAML:2\.0:bindings:HTTP-POST"[^>]*Location="([^"]+)"', xml or "")
+    return (entity.group(1) if entity else None), (acs.group(1) if acs else None)
+
+
+class _Log:
+    """The steps of one run and the record they make, scrubbed, for the two existing-organization modes."""
+
+    def __init__(self, mode, host, org_name, tenant, out_default):
+        self.mode, self.steps, self.t0 = mode, [], time.monotonic()
+        self.out = os.environ.get("OUT", out_default)
+        self.san = Scrubber()
+        for v, ph in ((host, "{{host}}"), (org_name, "{{org}}"), (tenant, "{{tenant-id}}")):
+            self.san.add(v, ph)
+
+    def step(self, name, status, **facts):
+        self.steps.append({"step": name, "status": status, "at_s": round(time.monotonic() - self.t0, 1), **facts})
+        print(f"  {name}: {status}" + (f"  {facts}" if facts else ""), flush=True)
+
+    def write(self, **head):
+        rec = {"mode": self.mode, **head, "captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": self.steps}
+        text = self.san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
+        self.san.check(text)
+        with open(self.out, "w", encoding="utf-8") as f:
+            f.write(text + "\n")
+        print(f"\nrecorded {len(self.steps)} steps to {self.out}; every estate value replaced by a placeholder")
+
+
+def _org_reads(vcfa, org, log):
+    """What both modes read of one organization: its type, roles, settings (the secret dropped), groups and users.
+    Every name read is registered with the record's scrubber before anything is recorded."""
+    urn, uid = org["id"], org["id"].rsplit(":", 1)[-1]
+    groups = vcfa.pages("/cloudapi/1.0.0/groups", "read imported groups", urn, GROUPS_ACCEPT)
+    users = vcfa.pages("/cloudapi/1.0.0/users", "read users", urn)
+    for u in users:  # a user record can carry a password field; it goes the moment it arrives
+        u.pop("password", None)
+        for k in ("username", "email", "fullName", "nameInSource"):
+            log.san.add(u.get(k), "{{user}}")
+    for g in groups:
+        log.san.add(g.get("name"), "{{group}}")
+    oauth = vcfa.settings(uid, "oauth")
+    log.san.add(oauth.get("clientId"), "{{client-id}}")
+    return {"urn": urn, "uid": uid, "org_type": "classic" if org.get("isClassicTenant") else "all-apps",
+            "roles": vcfa.role_names(urn), "oauth": oauth, "fed": vcfa.settings(uid, "federation"),
+            "groups": groups, "users": users}
+
+
+def _discovery(tenant):
+    """Entra's v2.0 discovery document and signing keys for the tenant: public reads, no credential."""
+    url = f"{AUTHORITY}/{tenant}/v2.0/.well-known/openid-configuration"
+    st, _, raw = _send("GET", url, {"Accept": "application/json"}, None, ssl.create_default_context())
+    if st != 200:
+        raise CallError(f"Entra's discovery document answered {st}")
+    disc = json.loads(raw)
+    st, _, raw = _send("GET", disc["jwks_uri"], {"Accept": "application/json"}, None, ssl.create_default_context())
+    if st != 200:
+        raise CallError(f"Entra's keys endpoint answered {st}")
+    return disc, jwks_keys(json.loads(raw))
+
+
+def prove_existing(a):
+    """--prove --org: an existing organization proven read-only, with no state file. Its settings are read back
+    against the plan for the protocol it is federated over, its type and its user key (--user-key, or the key it
+    holds); every imported group must hold roles of the organization's own list, and each --group ROLE=NAME the role
+    its type defines; an enabled local user must hold the top role. A browser makes the sign-in: the steps print last."""
+    host, tenant, org_name = os.environ.get("VCFA_HOST"), os.environ.get("ENTRA_TENANT_ID"), a.org
+    if not (host and tenant and org_name):
+        print("--prove --org needs VCFA_HOST, ENTRA_TENANT_ID and the organization's name")
+        return 2
+    try:
+        wanted_keys = parse_groups(a.group)
+    except ValueError as e:
+        print(f"refused: {e}")
+        return 2
+    log = _Log("prove existing", host, org_name, tenant, "prove.json")
+    vcfa = Vcfa(host)
+    org = vcfa.org(org_name)
+    if org is None:
+        print("refused: no organization by that name")
+        return 2
+    log.san.add(org["id"], "{{org-id}}")
+    for name in wanted_keys.values():
+        log.san.add(name, "{{group}}")
+    checks, proto, org_type = {}, None, None
+    try:
+        r = _org_reads(vcfa, org, log)
+        proto, org_type = federated_to(r["oauth"], r["fed"], tenant), r["org_type"]
+        roles = ROLES[org_type]
+        checks["organization enabled"] = org.get("isEnabled") is True
+        checks["federated to ENTRA_TENANT_ID over OIDC or SAML"] = proto is not None
+        if a.protocol:
+            checks[f"federated over {a.protocol.upper()}, as planned"] = proto == a.protocol
+        if a.org_type:
+            checks[f"a {a.org_type} organization, as planned"] = org_type == a.org_type
+        for k in wanted_keys:
+            checks[f"--group {k}: a role a {org_type} organization has"] = bool(roles.get(k))
+        wanted = {name: roles[k] for k, name in wanted_keys.items() if roles.get(k)}
+        held_key = (r["oauth"].get("oidcAttributeMapping") or {}).get("subjectAttributeName")
+        key = a.user_key or held_key or "oid"
+        failed, differing = [], []
+        if proto == "oidc":
+            disc, keys = _discovery(tenant)
+            planned = oidc_settings({}, disc, [], "{{client-id}}", "{{client-secret}}", key)
+            stored = {k.get("keyId") for k in ((r["oauth"].get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
+            checks["the organization holds every signing key Entra publishes"] = bool(keys) and {k["keyId"] for k in keys} <= stored
+            checks[f"users keyed on {key}" + ("" if a.user_key else ", the key it holds")] = held_key == key
+            failed, differing = against_plan(r["oauth"], planned, "oidc")
+        elif proto == "saml":
+            planned = plan("saml", org_type, None)["settings"]["fields"]
+            checks["the metadata it holds names a signing certificate"] = bool(metadata_certs(r["fed"].get("samlMetadata")))
+            failed, differing = against_plan(r["fed"], planned, "saml")
+        if proto:
+            checks["every setting the sign-in depends on reads as planned"] = not failed
+            checks.update(group_findings(r["groups"], "OAUTH" if proto == "oidc" else "SAML", r["roles"], wanted))
+        checks[f"an enabled local user holds {roles['administrator']}"] = local_admin_held(r["users"], roles["administrator"])
+        log.step("read", "done", protocol=proto, org_type=org_type, user_key=key if proto == "oidc" else None,
+                 imported_groups=len(r["groups"]), roles=len(r["roles"]), failed_fields=failed, differing_fields=differing)
+    except CallError as e:
+        log.step("refused", str(e))
+        log.write(protocol=proto, org_type=org_type, held=False)
+        return 1
+    for name, ok in checks.items():
+        log.step(f"check: {name}", "pass" if ok else "FAIL")
+    print(f"\n{ENTRA_SIDE}\nThen prove it in a browser, at https://<automation-host>/tenant/<org>:")
+    for line in proof_checklist(proto or "oidc"):
+        print(f"  - {line}")
+    log.write(protocol=proto, org_type=org_type, held=all(checks.values()))
+    return 0 if all(checks.values()) else 1
+
+
+def configure_existing(a):
+    """--configure --org: the provider's side of an existing organization, from what the tenant handed over. Plan by
+    default; with --execute, a settings round trip (only when a field differs), the named groups imported with the
+    role the organization type defines, resolved from the organization's own role list, and every write read back.
+    It refuses a protocol or user-key switch on a federated organization, and a named group that exists another way."""
+    host, tenant, org_name = os.environ.get("VCFA_HOST"), os.environ.get("ENTRA_TENANT_ID"), a.org
+    if not (host and tenant and org_name and a.protocol):
+        print("--configure --org needs VCFA_HOST, ENTRA_TENANT_ID, --protocol and the organization's name")
+        return 2
+    try:
+        wanted_keys = parse_groups(a.group)
+    except ValueError as e:
+        print(f"refused: {e}")
+        return 2
+    client_id, new_secret, metadata = os.environ.get("APP_CLIENT_ID"), _read_file("APP_SECRET_FILE"), _read_file("METADATA_FILE")
+    if a.protocol == "oidc" and not client_id:
+        print("refused: --configure --protocol oidc needs APP_CLIENT_ID, the client id of the app the tenant's administrator built")
+        return 2
+    if metadata and (f"sts.windows.net/{tenant}" not in metadata or not metadata_certs(metadata)):
+        print("refused: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
+        return 2
+    key = (a.user_key or "oid") if a.protocol == "oidc" else None
+    log = _Log("configure" if a.execute else "configure plan", host, org_name, tenant, "configure.json")
+    log.san.add(client_id, "{{client-id}}")
+    for name in wanted_keys.values():
+        log.san.add(name, "{{group}}")
+    vcfa = Vcfa(host)
+    org = vcfa.org(org_name)
+    if org is None:
+        print("refused: no organization by that name")
+        return 2
+    log.san.add(org["id"], "{{org-id}}")
+    org_type = None
+    try:
+        r = _org_reads(vcfa, org, log)
+        org_type, roles = r["org_type"], ROLES[r["org_type"]]
+
+        def refuse(why):
+            print(f"refused: {why}")
+            log.step("refused", why)
+            log.write(protocol=a.protocol, org_type=org_type, held=False)
+            return 2
+
+        if a.org_type and a.org_type != org_type:
+            return refuse(f"the organization is a {org_type} organization, not {a.org_type}")
+        why = switch_refusal(r["oauth"], r["fed"], tenant, a.protocol, key)
+        if why:
+            return refuse(why)
+        if a.protocol == "saml" and not metadata:
+            href = next((ln["href"] for ln in r["fed"].get("link") or [] if ln.get("type") == SAML_METADATA), None)
+            if href:
+                _, xml, _ = vcfa.call("GET", "/" + href.split("://", 1)[-1].split("/", 1)[-1], accept=SAML_METADATA)
+                entity, acs = sp_metadata_names(xml if isinstance(xml, str) else "")
+                print(f"Send the tenant's administrator this organization's service-provider metadata: identifier {entity}, "
+                      f"reply URL {acs}; a new organization answers 500 here for its first seconds, so run again if either is None.")
+            return refuse("--configure --protocol saml needs METADATA_FILE, the app's federation metadata from the tenant's administrator")
+        absent = [k for k in wanted_keys if not roles.get(k) or roles[k] not in r["roles"]]
+        if absent:
+            return refuse(f"this {org_type} organization's role list has no role for {', '.join(absent)}")
+        provider_type = "OAUTH" if a.protocol == "oidc" else "SAML"
+        imports, held_ok, clashes = [], [], []
+        for k, name in wanted_keys.items():
+            found = [g for g in r["groups"] if g.get("name") == name]
+            have = sorted(x.get("name") for x in (found[0].get("roleEntityRefs") or [])) if found else []
+            if not found:
+                imports.append((k, name))
+            elif found[0].get("providerType") == provider_type and have == [roles[k]]:
+                held_ok.append(name)
+            else:
+                clashes.append(name)
+        if clashes:
+            return refuse(f"{len(clashes)} named group(s) exist under another protocol or with other roles; change them by hand, "
+                          "because an import of a name the organization holds answered 201 with the group it already had")
+        if a.protocol == "oidc":
+            current, held_secret = vcfa.settings_for_write(r["uid"], "oauth")
+            same_app = current.get("clientId") == client_id
+            secret = new_secret or (held_secret if same_app else None)
+            secret_changes = bool(secret) and secret != held_secret
+            del held_secret
+            if not secret:
+                return refuse("APP_SECRET_FILE is needed: the organization holds no secret for this app")
+            disc, keys = _discovery(tenant)
+            body = oidc_settings(current, disc, keys, client_id, secret, key)
+            changes = settings_changes(current, body) + (["clientSecret"] if secret_changes else [])
+            held_keys = {k.get("keyId") for k in ((current.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
+            if {k["keyId"] for k in keys} != held_keys:
+                changes.append("oAuthKeyConfigurations")
+            planned = oidc_settings({}, disc, [], "{{client-id}}", "{{client-secret}}", key)
+            kind, ctype = "oauth", OAUTH_SETTINGS
+        else:
+            current = vcfa.settings(r["uid"], "federation")
+            body = saml_settings(current, metadata, "Sign in with Entra ID")
+            changes = settings_changes(current, body) + (["samlMetadata"] if current.get("samlMetadata") != metadata else [])
+            planned = plan("saml", org_type, None)["settings"]["fields"]
+            kind, ctype = "federation", FEDERATION_SETTINGS
+        log.step("plan", "read", protocol=a.protocol.upper(), org_type=org_type, user_key=key, settings_to_change=changes,
+                 groups_to_import=[roles[k] for k, _n in imports], groups_already_held=len(held_ok))
+        if imports:
+            print("  each group is imported by the name the tenant's administrator gave; VCF Automation does not check it "
+                  "against Entra, so confirm it is assigned to the app, and run the watch after")
+        if not a.execute:
+            del body
+            print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
+            log.write(protocol=a.protocol, org_type=org_type, held=None)
+            return 0
+        if changes:
+            put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{r['uid']}/settings/{kind}", f"write {a.protocol.upper()} settings",
+                                   body=body, accept=VCD_JSON, ctype=ctype)
+            log.step("settings written as a round trip", put_st, changed=changes)
+        else:
+            log.step("settings already as planned", "nothing written")
+        del body
+        checks = {}
+        if a.protocol == "oidc":
+            back, back_secret = vcfa.settings_for_write(r["uid"], "oauth")
+            checks["the organization holds the app's client id"] = back.get("clientId") == client_id
+            checks["the organization holds the secret it was given"] = back_secret == secret
+            stored = {k.get("keyId") for k in ((back.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
+            checks["the organization holds every signing key Entra publishes"] = {k["keyId"] for k in keys} <= stored
+            del back_secret, secret
+        else:
+            back = vcfa.settings(r["uid"], "federation")
+            checks["the organization holds the metadata's certificates"] = set(metadata_certs(metadata)) <= set(metadata_certs(back.get("samlMetadata")))
+        failed, _differing = against_plan(back, planned, a.protocol)
+        checks["every setting the sign-in depends on reads back as planned"] = not failed
+        for k, name in imports:
+            role_ref = vcfa.role(r["urn"], roles[k])   # resolved by name from this organization's own role list
+            if role_ref is None:
+                raise CallError(f"the role {roles[k]} was not found in the organization's role list")
+            st, made, _ = vcfa.ok("POST", "/cloudapi/1.0.0/groups", "import group", accept=GROUPS_ACCEPT, tenant=r["urn"],
+                                  body=group_import(name, provider_type, role_ref))
+            log.step("group imported with its role", st, role=roles[k], providerType=(made or {}).get("providerType"))
+        rows = vcfa.pages("/cloudapi/1.0.0/groups", "read imported groups back", r["urn"], GROUPS_ACCEPT)
+        wanted = {name: roles[k] for k, name in wanted_keys.items()}
+        checks.update({n: ok for n, ok in group_findings(rows, provider_type, r["roles"], wanted).items() if n.startswith("group ")})
+    except CallError as e:
+        log.step("refused", str(e))
+        log.write(protocol=a.protocol, org_type=org_type, held=False)
+        return 1
+    for name, ok in checks.items():
+        log.step(f"check: {name}", "pass" if ok else "FAIL")
+    log.write(protocol=a.protocol, org_type=org_type, held=all(checks.values()))
+    return 0 if all(checks.values()) else 1
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--protocol", choices=("oidc", "saml"))
     p.add_argument("--org-type", choices=("classic", "all-apps"))
-    p.add_argument("--user-key", choices=("oid", "preferred_username"), default="oid")
+    p.add_argument("--user-key", choices=("oid", "preferred_username"))
     p.add_argument("--execute", action="store_true")
     p.add_argument("--prove", action="store_true")
     p.add_argument("--teardown", action="store_true")
     p.add_argument("--update", action="store_true", help="day 2 on an existing organization (see the docstring)")
+    p.add_argument("--configure", action="store_true", help="the provider's side of an existing organization (see the docstring)")
+    p.add_argument("--org", metavar="NAME", help="an existing organization, for --prove and --configure; needs no state file")
+    p.add_argument("--group", action="append", metavar="ROLE=NAME", help="with --org: a group and its role key, repeated")
     p.add_argument("--key-refresh", type=int, nargs="?", const=1, metavar="HOURS")
     p.add_argument("--keys", action="store_true")
     p.add_argument("--secret", action="store_true")
     p.add_argument("--metadata", action="store_true")
     a = p.parse_args()
+    if a.org or a.configure:
+        if a.update or a.teardown or (a.prove and a.configure) or not (a.prove or a.configure):
+            p.error("--org goes with --prove or --configure, and --configure with --org")
+        if not a.org:
+            p.error("--configure needs --org NAME")
+        return prove_existing(a) if a.prove else configure_existing(a)
+    if a.group:
+        p.error("--group goes with --org")
+    a.user_key = a.user_key or "oid"
     if a.update:
         if a.prove or a.teardown:
             p.error("--update does not combine with --prove or --teardown")

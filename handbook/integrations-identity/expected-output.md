@@ -1,11 +1,12 @@
 # What a run looks like
 
-The reference estate, 2026-10-13 (UTC): three vCenters on 9.1.1 joined to VCF single sign-on, whose broker's identity
-provider is Active Directory over LDAP. Every run on the estate used `--redact`, so the names are placeholders, and each
-record path is shown as the script's default file name. The API clients in them were throwaways, made by
-`api_client.py` for these runs and removed at the end: sections 1, 1a, 3 and 5 are one run at 07:45, section 4 a read
-two minutes later, and section 2 an earlier client at 04:51. The plans and the refusal in sections 1 and 1a send
-nothing, and were run with a stand-in host.
+The reference estate, 2026-10-13 and 2026-10-15 (UTC): three vCenters on 9.1.1 joined to VCF single sign-on, whose
+broker's identity provider is Active Directory over LDAP. Every run on the estate used `--redact`, so the names are
+placeholders, and each record path is shown as the record's file name in this folder. The API clients in them were
+throwaways, made by `api_client.py` for these runs and removed at the end: sections 1, 1a and 5 are one run of
+2026-10-15 at 06:36, section 3 a run of 2026-10-13 at 07:45, section 4 a read two minutes after it, and section 2 an
+earlier client at 04:51. The plans and the refusal in sections 1 and 1a send nothing, and were run with a stand-in
+host.
 
 ## 1. `api_client.py`: the plan, then the client made
 
@@ -32,10 +33,10 @@ $ python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 
 --api-token-ttl 100 is outside the broker's bounds of 1440 to 259200 minutes
 ```
 
-The create on the reference estate, with the shortest lifetimes the broker takes. Exit 0.
+The create on the reference estate, with the shortest API token lifetime the broker takes. Exit 0.
 
 ```
-$ python3 api_client.py --client-id <id> --role vcf_viewer --api-token-ttl 1440 --access-token-ttl 30 \
+$ python3 api_client.py --client-id <id> --role vcf_viewer --api-token-ttl 1440 --access-token-ttl 60 \
     --description <a throwaway> --token-file <path> --execute --redact
 create: API client {{client-1}}
   GET    /ssorealms: HTTP 200
@@ -43,10 +44,11 @@ create: API client {{client-1}}
   POST   /ssorealms/{realm}/api-clients: HTTP 201
   PUT    /ssorealms/{realm}/principals/{client uuid}/roles: HTTP 200
   POST   /ssorealms/{realm}/api-tokens: HTTP 201
+  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
   POST   /ssorealms/{realm}/api-clients/query: HTTP 200
   POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
-  the token traded at the broker: HTTP 200, a SERVICE bearer living 30.0 min
-  read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 1440 min, access 30 min
+  the token traded at the broker: HTTP 200, a SERVICE bearer living 60.0 min
+  read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 1440 min, access 60 min
 exit 0
 
 api_client.json written with every estate value replaced
@@ -54,15 +56,18 @@ api_client.json written with every estate value replaced
 
 - **The query comes before the create.** A client with the id you gave is refused, never adopted.
 - **The token proves itself once.** The broker traded it for a bearer whose principal type is `SERVICE` and which lived
-  30 minutes, the access lifetime asked for. The token is in the file you named, mode 0600; it is in neither the
+  60 minutes, the access lifetime asked for. The token is in the file you named, mode 0600; it is in neither the
   transcript nor the record.
 - **The read-back is the result.** The client, its one role at realm scope, and an active token with both lifetimes as
   asked. Exit 0 means all of it held.
+- **A state file records what the script made.** The create wrote `api_client.<client id>.state.json` (mode 0600: the
+  client's id and uuid and the ids of the tokens it issued). Every later write reads it and refuses a client it does not
+  record; keep it beside the record and do not publish it.
 
-## 1a. `api_client.py --rotate`: a new token, the old one refused
+## 1a. `api_client.py --rotate`, then `--retire-old`: a new token beside the old, then the old one refused
 
-The plan, then the rotation on the same throwaway client, with other lifetimes for the new token so the read-back shows
-which token is left. Exit 0.
+A rotation is two runs, and the integration moves between them. The plans first, then both runs on the same throwaway
+client, with other lifetimes for the new token so the read-back shows which token is which. Exit 0 each.
 
 ```
 $ python3 api_client.py --client-id backup-01 --rotate --api-token-ttl 2880 --access-token-ttl 60
@@ -71,10 +76,8 @@ Rotation plan for API client backup-01 on operations.example.net:
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens
          {"accessTokenTtl": 60, "apiClientId": "backup-01", "apiTokenTtl": 2880, "tokenName": "backup-01-token-<UTC stamp>", "tokenType": "API_CLIENT"}
   POST   /acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)
-  DELETE /api/fleet-management/iam/ssorealms/{realm}/api-tokens/{token id}  (each token the client held before)
-  POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (read back: one token left)
-  then: the new token to <--token-file> (mode 0600, never printed); the old ones are deleted only after the new one trades at the broker
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (read back: the new token active beside the old)
+  then: the new token to <--token-file> (mode 0600, never printed); nothing is deleted: point the integration at the new token, run one job, then --retire-old
 
 plan only: nothing was sent (--execute sends it)
 ```
@@ -87,27 +90,64 @@ rotate: API client {{client-1}}
   POST   /ssorealms/{realm}/api-clients/query: HTTP 200
   POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
   POST   /ssorealms/{realm}/api-tokens: HTTP 201
+  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  the new token traded at the broker: HTTP 200, a SERVICE bearer living 60.0 min
+  signed in as: a person's token
+  in the overlap: 1 token(s) held before, 2 active with the new one
+  the old token at the broker, in the overlap, the old ones kept: HTTP 200, traded
+  read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 1440 min, access 60 min; ACTIVE API 2880 min, access 60 min
+  next: point the integration at the new token, run one job, then --retire-old
+exit 0
+
+api_client_overlap.json written with every estate value replaced
+```
+
+```
+$ python3 api_client.py --client-id backup-01 --retire-old --old-token-file <path>
+Retirement plan for API client backup-01 on operations.example.net:
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)
+  POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token, before the delete)
+  DELETE /api/fleet-management/iam/ssorealms/{realm}/api-tokens/{token id}  (each token older than the newest)
+  POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (read back: one token left)
+  only for a client the state file records, and never on the client's own token; refused while it holds one token, or when its newest is not the one this script issued last
+
+plan only: nothing was sent (--execute sends it)
+```
+
+```
+$ python3 api_client.py --client-id <id> --retire-old --old-token-file <path> --execute --redact
+retire-old: API client {{client-1}}
+  GET    /ssorealms: HTTP 200
   POST   /ssorealms/{realm}/api-clients/query: HTTP 200
   POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
   DELETE /ssorealms/{realm}/api-tokens/{token id}: HTTP 204
   POST   /ssorealms/{realm}/api-clients/query: HTTP 200
   POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
-  the new token traded at the broker: HTTP 200, a SERVICE bearer living 60.0 min
-  in the overlap: 1 token(s) held before, 2 active with the new one
+  signed in as: a person's token
+  held before: 2 token(s); deleted 1, every one older than the newest
   the old token at the broker, before the delete: HTTP 200, traded
   the old token at the broker, after the delete: HTTP 400, refused
   read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 2880 min, access 60 min
 exit 0
 
-api_client_rotate.json written with every estate value replaced
+api_client_retire.json written with every estate value replaced
 ```
 
-- **A client holds two tokens at once.** Once the new token was issued, the client held two active tokens, and the old
-  one still traded at the broker (HTTP 200): that overlap is the window in which an integration switches to the new file.
-- **The old token is refused once it is deleted.** After the delete the broker answered the old token with HTTP 400, and
-  one token was left, with the new lifetimes. The old token's file can then be removed.
+- **A rotation deletes nothing.** Once the new token was issued and proved, the client held two active tokens, and the
+  old one still traded at the broker (HTTP 200): that overlap is the window in which the integration switches to the new
+  file and runs one job on it.
+- **The retirement removes what is older than the newest.** `--retire-old` deleted the one older token; the broker
+  traded it before the delete and answered it with HTTP 400 after, and one token was left, with the new lifetimes. The
+  old token's file can then be removed.
+- **What it refuses, before any delete.** On the same client, `--retire-old` with no state file recording the client
+  exited 2 with `refused: this script did not make this client`, and a second `--retire-old`, with one token left, exited
+  2 with `refused: the client holds one token`. Run on a client's own token, `--retire-old` and `--teardown` refuse too:
+  a second throwaway client, holding VCF Administrator, was refused its teardown that way, with no call that deletes.
 - **Regenerating a token in place gives no overlap.** The fleet API also regenerates a token's value
-  (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`). In the same run, called outside the script, the answer
+  (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`). In a run of 2026-10-13, called outside the script, the answer
   was a token under a new id with a new end date and a new value; the value from before answered HTTP 400 at the broker
   three seconds later, and the new one HTTP 200. An integration reading the old value fails from that moment, so rotate with
   `--rotate` and its overlap, not by regenerating.
@@ -246,6 +286,22 @@ exchange.json written with every estate value replaced; exit 3
   census treats as a person's. Sessions show what is signed in at that moment; a nightly or weekly job is absent between
   runs, so read on several days before you conclude no integration signs in on a directory password.
 
+## 3a. `--sessions` without `DIRECTORY_DOMAINS`: refused before any read
+
+Unset, every directory session would read as another provider's, a class the census never flags, and the run would
+exit 0 on a census that saw nothing it was asked to see. So it refuses to start. Exit 2, nothing read or written (run
+with a stand-in host).
+
+```
+$ python3 vcenter_exchange.py --sessions --redact
+--sessions needs DIRECTORY_DOMAINS, the directory domains as vCenter spells them: without them every directory session reads as another provider's, which the census never flags, so a census of nothing would pass
+```
+
+- **A misspelled domain is a failed read, not a clean one.** On a vCenter whose list holds sessions of another provider
+  and none under the domains given, the census prints `NOT PLACED: DIRECTORY_DOMAINS names nothing on this vCenter`
+  under that vCenter and `FAILED READ` at the end, and exits 1. That path is held by the companion's tests; no run on the
+  reference estate met it, because no session list read there held another provider's sessions.
+
 ## 4. The census with no API client
 
 `VC_USER` set to a directory account and no API client credential: the census alone, as that account. Exit 3. The counts
@@ -275,7 +331,7 @@ exchange.json written with every estate value replaced; exit 3
 
 ## 5. `api_client.py --teardown --execute`
 
-The throwaway removed. Exit 0.
+The throwaway removed, on the operator's own token. Exit 0.
 
 ```
 $ python3 api_client.py --client-id <id> --teardown --execute --redact
@@ -287,6 +343,7 @@ teardown: API client {{client-1}}
   DELETE /ssorealms/{realm}/api-clients/{client id}: HTTP 204
   POST   /ssorealms/{realm}/api-clients/query: HTTP 200
   POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  signed in as: a person's token
   residue: client present False, tokens left 0
 exit 0
 
@@ -295,6 +352,8 @@ api_client_teardown.json written with every estate value replaced
 
 - **The residue read is the result.** After the deletes, both lists were read again: no client, no token. A teardown of a
   client that is not there removes nothing and exits 0, so it is safe to run again.
+- **Signed in as a person.** The run's own bearer is read for who it is; signed in as the client it would remove, the
+  teardown refuses, because nothing would outlive the removal to read the residue.
 
 ## 6. `service_account.py`: the plan, then one VCF Automation service account made
 

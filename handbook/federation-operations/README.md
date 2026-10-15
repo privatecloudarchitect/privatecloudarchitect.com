@@ -35,10 +35,16 @@ Schedule it and read the exit code:
 
 | Exit | Means |
 |---|---|
-| 0 | every check is ok (a check it could not run is reported as unknown, and does not raise the code) |
+| 0 | every check is ok, or skipped for a reason the run prints: no Graph credential given, a provider other than Entra ID, or an organization federated to another Entra tenant than `ENTRA_TENANT_ID` |
 | 1 | a warning: an end date inside `WARN_DAYS`, a refresh interval over one hour, a signing certificate the organization does not yet hold, no local user holding the organization's top role |
-| 2 | a failure that stops sign-in now or at the provider's next roll: a published key not held, refreshes not succeeding, an expired secret or certificate, the active certificate missing from the organization's metadata, a renamed group, PKCE on, a disabled app |
-| 3 | a read failed and nothing failed |
+| 2 | a failure that stops sign-in now or at the provider's next roll: a published key not held, refreshes not succeeding, an expired secret or certificate, a secret the organization holds that the app no longer lists, the active certificate missing from the organization's metadata, a renamed group, PKCE on, a disabled app |
+| 3 | a read failed and nothing failed: an organization whose reads were refused, the tenant's app not found in Graph, a settings read with no secret to match, a Graph credential refused, or a provider credential refused before any organization was read (no record is written then) |
+
+A read the watch could not make never passes. An organization whose reads fail stays in the run and the record,
+named and counted, whether or not `ORGS` names it: with `ORGS` unset, an organization that could not be read cannot
+be shown to be unfederated. The secret check judges only the secret the organization holds, found by its first
+three characters against each secret's `hint`; when that secret matches none on the app, the state a rotation leaves
+when the old secret is removed before the new one is written, the check fails rather than judging another secret.
 
 ## Scope, stated plainly
 
@@ -68,16 +74,19 @@ Schedule it and read the exit code:
   `User.Read.All` and `GroupMember.Read.All`. With `Application.Read.All` alone every Graph check ran; in every set
   without it, none did. In one run holding `Application.Read.All` and `GroupMember.Read.All` the Graph checks were
   skipped with an HTTP error; that run was not repeated and is not explained. The app was deleted and purged.
-- Measured on VCF Automation 9.1 against Entra ID, with a provider bearer, and with a Graph certificate (the
-  reference run) and a Graph client secret (the permission measurement); the provider api-token path was not
-  exercised.
+- Measured on VCF Automation 9.1 against Entra ID, with a provider System Administrator's bearer, and with a Graph
+  certificate (the reference run) and a Graph client secret (the permission measurement); the provider api-token
+  path was not exercised for the watch. No provider identity narrower than an administrator was proven for a
+  scheduled job: a dedicated local user of the System organization could not be made (the organization already held
+  its one local user), and the System organization's existing local user and a directory account granted a provider
+  role were not tried. Hold whatever credential the schedule uses as tier-0.
 
 ## Reading the record
 
 `organizations` holds one entry per organization, named `{{org-1}}` and onward, with its `protocol` and
 `org_type` and a `checks` list. Each check has a `state` (`ok`, `warn`, `fail`, `unknown`), a `detail` sentence
 and a `measure` with its numbers: `interval_h` and `success_age_h` for key refresh, `held`, `published` and
-`missing` for keys, `days_left` and `matched` (whether the organization's own secret was identified) for the
-secret, `days_left` for the SAML certificate, `stored` and `others_not_held` for metadata, `imported`, `assigned`
+`missing` for keys, `days_left` and `matched` (whether the organization's own secret was identified; when it was not, the check fails
+and `days_left` is null) for the secret, `days_left` for the SAML certificate, `stored` and `others_not_held` for metadata, `imported`, `assigned`
 and `unmatched` for group names, `local_admins` and `role` (the top role judged, read from the organization's own role list) for break-glass. `read_errors` names any plane that could not be
 read. `exit` is the code the run returned.

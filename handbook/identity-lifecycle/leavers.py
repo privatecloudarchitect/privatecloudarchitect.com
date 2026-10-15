@@ -13,20 +13,34 @@ is declared by hand, so an organization federated later is covered on the first 
 
 The rule. A federated account is a LEAVER when Entra has no user by its name, that user is disabled, or the user can
 no longer pass both gates a sign-in passes:
-  Entra's gate          when the app requires assignment, the user is assigned to it, directly or through a group
-  VCF Automation's      the sign-in carries a group imported into the organization (a user in none is refused); with
-                        groupMembershipClaims ApplicationGroup the claim carries only groups assigned to the app
-Accounts are matched to Entra by the key the organization names them with, read from its own settings: by name for
-OIDC keyed on preferred_username and for SAML keyed on Entra's name claim, by object id for OIDC keyed on oid. A name
-is looked up by userPrincipalName, then by mail, then by otherMails (a guest's userPrincipalName in the tenant carries
-#EXT#, while the name it signs in with is its own address, held in mail); exactly one Entra user across the three is
-the person, and more than one is undetermined. A name no lookup finds is a leaver only when another federated account
-of the same organization was found: when none was, every account of the organization is undetermined, because the
-name its user key carries is not one the lookups can read. Any other key, or an account whose name does not fit its
-organization's key, is undetermined. Local accounts are out of scope. Two more things are flagged and never acted on:
-a federated account holding a role directly (a reused name inherits it), and an account disabled here whose name an
-enabled, entitled Entra user now holds (if that is a different person, re-enabling the account hands them its roles).
-A flag a person has decided on can be acknowledged until a date with --ack; the report still lists it, as such.
+  Entra's gate          when the app requires assignment, the user is assigned to it, directly or as a DIRECT member
+                        of an assigned group (Entra does not admit a member of a group nested inside one)
+  VCF Automation's      the sign-in carries a group imported into the organization, or the account holds a role
+                        directly (a user with neither is refused); with groupMembershipClaims ApplicationGroup the
+                        claim carries only groups assigned to the app that the user is a direct member of, and with
+                        any other setting the groups it is in through nesting too
+So an account that passes Entra's gate and holds a role directly is KEPT even when no imported group carries it, and
+flagged (direct-role) for a person to decide. Accounts are matched to Entra by the key the organization names them
+with, read from its own settings: by name for OIDC keyed on preferred_username and for SAML keyed on Entra's name
+claim, by object id for OIDC keyed on oid. A name is looked up by userPrincipalName, then by mail, then by
+otherMails; exactly one Entra user across the three is the person, and more than one is undetermined. The user found
+is the person only when the attribute the organization's name claim carries holds the name: userPrincipalName unless
+--name-claim ORG=mail (or otherMails) declares otherwise, because this job cannot read which attribute a claim is
+sourced from. A user found only by another attribute is undetermined, its reason naming the mismatch; declared, a
+guest or an organization whose name claim carries mail resolves by mail. A name no lookup finds is a leaver only when another federated account of the same organization was found:
+when none was, every account of the organization is undetermined, because the name its user key carries is not one
+the lookups can read. Any other key, or an account whose name does not fit its organization's key, is undetermined.
+Local accounts are out of scope. Two more things are flagged and never acted on: a federated account holding a role
+directly (a reused name inherits it, and a close leaves it in place), and an account disabled here whose name an
+enabled, entitled Entra user now holds (if that is a different person, re-enabling the account hands them its
+roles). An enabled account whose name a new person was given reads keep like any entitled account: the user record
+carries no creation time to compare with the Entra user's, so this job cannot tell the two people apart. A flag a
+person has decided on can be acknowledged until a date with --ack; the report still lists it, as such.
+
+The tenant. ENTRA_TENANT_ID may be the tenant's id in any case or one of its domain names; a domain name is resolved
+to the id from the Graph token's tid claim (read in memory, never printed), or else Graph's /organization. An
+organization is federated to the tenant when its issuer or metadata names that id, compared without regard to case.
+A run in which no organization names the tenant exits 3: a wrong tenant reads as nothing to do.
 
 Fail closed. An organization whose gate cannot be read, or an account whose state cannot be read, is reported
 undetermined and never acted on. Entra's directory reads settle after a change, so before acting the script reads
@@ -48,22 +62,33 @@ VCF Automation, as the provider:
                                                               read back: disabled, nothing else changed, no token
 Microsoft Graph (an app permitted to read users, groups, applications and service principals):
   GET /servicePrincipals, /applications, /servicePrincipals/{id}/appRoleAssignedTo, /groups (filtered)
+  GET /groups/{id}/members                                    each gate group's direct members, every page, with no
+                                                              query parameter (the form Graph serves without
+                                                              advanced query parameters)
   GET /users?$filter=userPrincipalName eq '{name}', mail eq '{name}', otherMails/any(m:m eq '{name}')
                                                               each a filter Graph serves without advanced query
                                                               parameters (no ConsistencyLevel header, no $count)
-  POST /users/{id}/checkMemberGroups                          a read: which of the gate's groups the user is in
+  POST /users/{id}/checkMemberGroups                          a read: which of the gate's groups the user is in,
+                                                              nested groups included
+  GET /organization                                           only when ENTRA_TENANT_ID is a domain name and the
+                                                              token carries no tid (it needs Organization.Read.All)
 
 Secrets die where they arrive: the OIDC settings carry the client secret in clear, a token list can carry a token's
 value and a user record a password field; each is deleted from the answer before any function sees it, and the
 record keeps only the fields the allow-lists below name.
 
+Needs Python 3.10 or later and nothing outside the standard library (the `cryptography` package only for a
+certificate credential).
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider API token, traded at /oauth/provider/token) or
       VCFA_PROVIDER_BEARER_FILE (a provider bearer you already hold); TLS_VERIFY=false only on a self-signed lab CA
-      (VCF Automation only; Entra and Graph are always verified); ENTRA_TENANT_ID, ENTRA_CLIENT_ID and
+      (VCF Automation only; Entra and Graph are always verified); ENTRA_TENANT_ID (the id, or a domain name), ENTRA_CLIENT_ID and
       ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the `cryptography` package);
       ORGS (comma list, to read fewer organizations); OUT (default leavers.json)
 Use:  python3 leavers.py                                   report every federated organization, write the record
       python3 leavers.py --redact                          the same, printed with placeholders, to share
+      python3 leavers.py --name-claim ORG=mail             the same, for an organization whose name claim carries mail
+                                                           (repeatable; also userPrincipalName or otherMails): a user
+                                                           found by that attribute is the person
       python3 leavers.py --ack acks.json                   the same, with the flags a person has decided on silenced
                                                            until their date (a JSON list of {"org", "account", "flag",
                                                            "until": "YYYY-MM-DD"}; flag direct-role or
@@ -81,11 +106,12 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       2 with --execute, a close that did not hold on read-back
       1 an open leaver: an account to close (still enabled or holding a token), including one --execute refused
       3 a read failed, or an account is undetermined: nothing is known about what was not read (a credential that
-        could not be obtained is one: nothing is read and nothing is written)
+        could not be obtained is one, a tenant no organization names is one, and so is an error the script did not
+        expect: nothing is read, or nothing is trusted, and nothing is written)
       4 a flag (a direct role, a name in use again) not acknowledged in --ack
       0 nothing open, nothing unread, nothing flagged (with --close-now: the plan printed, or the close held)
-      5 a usage error, an unreadable --ack file, an account --close-now cannot name exactly once, or the record
-        refused because an estate value survived the scrub (nothing is written)
+      5 a usage error, a Python older than 3.10, an unreadable --ack file, an account --close-now cannot name exactly
+        once, or the record refused because an estate value survived the scrub (nothing is written)
 """
 
 from __future__ import annotations
@@ -128,6 +154,14 @@ OBJECT_ID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-
 NAME_LOOKUPS = (("userPrincipalName", "userPrincipalName eq '{}'"), ("mail", "mail eq '{}'"),
                 ("otherMails", "otherMails/any(m:m eq '{}')"))
 NO_SUCH_NAME = "no Entra user has this name"
+NAME_CLAIMS = tuple(how for how, _form in NAME_LOOKUPS)  # what --name-claim may declare an organization's claim carries
+# VCF Automation refuses a federated sign-in that maps to no imported group and holds no direct role (IAM-F11); an
+# account that passes Entra's gate and holds a direct role is the other case, so it is kept, and flagged direct-role.
+DIRECT_ROLE_KEEP = "assigned at Entra and holds a direct role"
+DIRECT_ROLE_KEEP_OPEN = "Entra requires no assignment for the app, and the account holds a direct role"
+NOT_ASSIGNED = "not assigned to the app, directly or through a group"
+NESTED_ONLY = ("assigned to the app only through a group nested inside an assigned one, which Entra does not admit; "
+               "make the user a direct member")
 APPLICATION_GROUP = "ApplicationGroup"
 CONFIRM_READS = 3   # reads that must all say "leaver" before the script acts
 CONFIRM_PAUSE = 10  # seconds between them
@@ -185,9 +219,16 @@ def watched(gate: dict) -> list[str]:
     return sorted(set(gate["assigned_groups"]) | set(gate["imported_ids"]))
 
 
-def decide(user: dict, found: dict | None, member_of: set | None, gate: dict | None) -> tuple[str, str]:
-    """One account, what Entra holds for its name, which watched groups that Entra user is in (None when unread),
-    and the organization's gate: (decision, reason). Decisions: keep, leaver, out of scope, undetermined."""
+def decide(user: dict, found: dict | None, member_of: set | None, gate: dict | None,
+           transitive: set | None = None) -> tuple[str, str]:
+    """One account, what Entra holds for its name, the watched groups that Entra user is a DIRECT member of (None when
+    unread), the organization's gate, and the watched groups it is in through nesting too (None: the same as direct):
+    (decision, reason). Decisions: keep, leaver, out of scope, undetermined.
+
+    Entra's gate reads direct membership, because Entra admits only direct members of an assigned group (IAM-F76).
+    The groups a sign-in carries are the direct ones under ApplicationGroup claims, which leave nested groups out,
+    and the nested ones too under any other claim setting. An account that passes Entra's gate, is carried by no
+    imported group and holds a role directly is kept: VCF Automation refuses only a user with neither (IAM-F11)."""
     if user.get("providerType") not in FEDERATED:
         return "out of scope", f"{user.get('providerType') or 'unknown'} account, not federated"
     if gate is None:
@@ -198,11 +239,16 @@ def decide(user: dict, found: dict | None, member_of: set | None, gate: dict | N
         return "leaver", "the Entra account is disabled"
     if member_of is None:
         return "undetermined", "the user's group membership could not be read"
+    nested = member_of if transitive is None else transitive
+    assigned = set(gate["assigned_groups"])
     entra_gate = (not gate["assignment_required"] or found.get("id") in gate["assigned_users"]
-                  or bool(member_of & set(gate["assigned_groups"])))
+                  or bool(member_of & assigned))
     if not entra_gate:
-        return "leaver", "not assigned to the app, directly or through a group"
-    carried = member_of & set(claim_groups(gate))
+        return "leaver", NESTED_ONLY if nested & assigned else NOT_ASSIGNED
+    reach = member_of if gate["group_claims"] == APPLICATION_GROUP else nested
+    carried = reach & set(claim_groups(gate))
+    if not carried and user.get("roleEntityRefs"):
+        return "keep", DIRECT_ROLE_KEEP if gate["assignment_required"] else DIRECT_ROLE_KEEP_OPEN
     if not carried and gate.get("unresolved"):
         return "undetermined", ("an imported group matches no single Entra group ("
                                 + ", ".join(gate["unresolved"]) + "), so membership through it cannot be read")
@@ -418,6 +464,7 @@ class Graph(Reader):
         with urllib.request.urlopen(req, context=_ctx(True), timeout=60) as r:
             bearer = json.loads(r.read())["access_token"]
         del form
+        self.tid = token_tenant(bearer)
         super().__init__("graph", GRAPH, {"Authorization": f"Bearer {bearer}"}, True, calls)
         del bearer
 
@@ -438,6 +485,34 @@ class Graph(Reader):
         if rows is None:
             raise LookupError(f"Graph refused {path}")
         return rows[0] if len(rows) == 1 else None
+
+
+def token_tenant(bearer: str) -> str | None:
+    """The `tid` claim of a Graph access token, lower case, read in memory and never printed or kept beside the token;
+    None when the token's payload is not readable JSON or carries no tid shaped like a tenant id."""
+    try:
+        part = bearer.split(".")[1]
+        claims = json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+    except (IndexError, ValueError):
+        return None
+    tid = str(claims.get("tid") or "") if isinstance(claims, dict) else ""
+    return tid.lower() if OBJECT_ID.match(tid) else None
+
+
+def resolve_tenant(given: str, graph: Graph) -> tuple[str | None, str]:
+    """The tenant's id in lower case, and how it was had. An id given in any case is taken as it is; a domain name is
+    resolved from the Graph token's tid claim, or else from Graph's /organization (which needs Organization.Read.All).
+    (None, why) when neither gives one: the run then reads nothing, because an organization is matched by this id."""
+    g = given.strip()
+    if OBJECT_ID.match(g):
+        return g.lower(), "ENTRA_TENANT_ID"
+    if getattr(graph, "tid", None):
+        return graph.tid, "the Graph token's tid claim"
+    rows = graph.values("/organization", select="id")
+    if rows and len(rows) == 1 and OBJECT_ID.match(str(rows[0].get("id") or "")):
+        return str(rows[0]["id"]).lower(), "Graph's /organization"
+    return None, ("ENTRA_TENANT_ID is not a tenant id, and neither the Graph token's tid claim nor Graph's /organization "
+                  "(which needs Organization.Read.All) gave the id it names; set ENTRA_TENANT_ID to the tenant's id")
 
 
 def _assertion(tenant: str, client: str) -> str:
@@ -466,8 +541,12 @@ def _assertion(tenant: str, client: str) -> str:
 # ── reading the two planes ───────────────────────────────────────────────────────────────────────────────────────
 def federated_orgs(vcfa: Vcfa, tenant: str, only: list[str]) -> tuple[list[dict], list[dict], int]:
     """The organizations federated to the tenant, found from their own settings; the ones that could not be read;
-    and how many others have OIDC or SAML on toward another provider."""
+    and how many others have OIDC or SAML on toward another provider. The tenant id is compared without regard to
+    case and up to its end, so an id in capitals matches and a longer one never does."""
     found, unreadable, elsewhere = [], [], 0
+    t = re.escape(tenant.strip().lower())
+    oidc_issuer = re.compile(rf"login\.microsoftonline\.com/{t}(?![\w-])", re.I)
+    saml_issuer = re.compile(rf"sts\.windows\.net/{t}(?![\w-])", re.I)
     orgs = vcfa.pages("/cloudapi/1.0.0/orgs")
     if orgs is None:
         return [], [{"org": None, "reason": "the organization list was refused"}], 0
@@ -481,11 +560,10 @@ def federated_orgs(vcfa: Vcfa, tenant: str, only: list[str]) -> tuple[list[dict]
         if not isinstance(oauth, dict) or not isinstance(fed, dict):
             unreadable.append({"org": name, "reason": "its identity settings were refused"})
             continue
-        if oauth.get("enabled") and f"login.microsoftonline.com/{tenant}" in str(oauth.get("issuerId") or "") \
-                and oauth.get("clientId"):
+        if oauth.get("enabled") and oidc_issuer.search(str(oauth.get("issuerId") or "")) and oauth.get("clientId"):
             found.append({"org": name, "urn": urn, "protocol": "OIDC", "app": oauth["clientId"],
                           "key": (oauth.get("oidcAttributeMapping") or {}).get("subjectAttributeName")})
-        elif fed.get("enabled") and f"sts.windows.net/{tenant}" in str(fed.get("samlMetadata") or ""):
+        elif fed.get("enabled") and saml_issuer.search(str(fed.get("samlMetadata") or "")):
             href = next((ln["href"] for ln in fed.get("link") or [] if ln.get("type") == SAML_METADATA), None)
             _s, xml = vcfa.call("GET", "/" + href.split("://", 1)[-1].split("/", 1)[-1], accept=SAML_METADATA) \
                 if href else (None, None)
@@ -526,21 +604,54 @@ def read_gate(graph: Graph, of: dict, groups: list[dict]) -> dict:
         else:              # no Entra group, or several, by that name: a rename or a duplicate, never "nobody is in it"
             unresolved.append(name)
     key = of.get("key")
-    return {"user_key": key, "lookup": "name" if key in BY_NAME else "id" if key in BY_ID else None,
+    gate = {"user_key": key, "lookup": "name" if key in BY_NAME else "id" if key in BY_ID else None,
             "assignment_required": bool(sp.get("appRoleAssignmentRequired")),
             "group_claims": app.get("groupMembershipClaims"),
             "assigned_groups": {a["principalId"]: str(a.get("principalDisplayName")) for a in assigned
                                 if a.get("principalType") == "Group"},
             "assigned_users": {a["principalId"] for a in assigned if a.get("principalType") == "User"},
             "imported": imported, "imported_ids": ids, "unresolved": unresolved}
+    gate["direct"] = direct_members(graph, watched(gate))
+    if gate["direct"] is None:  # refused: who is a direct member is unknown, so nothing is judged
+        raise LookupError("Graph refused a gate group's direct members")
+    return gate
 
 
-def entra_user(graph: Graph, username: str, lookup: str = "name") -> tuple[dict | None, str | None]:
+def direct_members(graph: Graph, groups: list[str]) -> dict[str, set] | None:
+    """Each group's direct members by object id (GET /groups/{id}/members, every page, no query parameter: the
+    plain form Graph serves without advanced query parameters); None when a read was refused."""
+    out = {}
+    for gid in groups:
+        rows = graph.values(f"/groups/{gid}/members")
+        if rows is None:
+            return None
+        out[gid] = {str(r.get("id")) for r in rows}
+    return out
+
+
+def direct_of(gate: dict, user_id: str) -> set:
+    """The watched groups a user is a direct member of, from the gate's read of each group's members."""
+    return {g for g, members in (gate.get("direct") or {}).items() if user_id in members}
+
+
+def carries_name(row: dict, attribute: str, name: str) -> bool:
+    """Whether an Entra user's `attribute` (userPrincipalName, mail, or one of otherMails) is `name`, in any case."""
+    value = row.get(attribute)
+    values = value if isinstance(value, list) else [value]
+    return name.lower() in {str(v).lower() for v in values if v}
+
+
+def entra_user(graph: Graph, username: str, lookup: str = "name",
+               claim: str | None = None) -> tuple[dict | None, str | None]:
     """The Entra user an account names, and how it was found. Under oid, by object id. By name, by userPrincipalName,
     then mail, then otherMails: every lookup is read, and exactly one Entra user across them is the person (the first
     lookup that found it says how). (None, None): no lookup found anyone. A refused read, or more than one user,
-    raises LookupError, so the account is undetermined and never a leaver."""
-    select = "id,userPrincipalName,accountEnabled"
+    raises LookupError, so the account is undetermined and never a leaver.
+
+    `claim` is the attribute the organization's name claim carries, as the operator declared it (--name-claim); the
+    job cannot read it, so undeclared means userPrincipalName. The user found is the person only when that attribute
+    holds the name; otherwise NameMismatchError, undetermined with the mismatch as its reason."""
+    select = "id,userPrincipalName,accountEnabled,mail,otherMails"
     if lookup == "id":
         status, answer = graph.call("GET", f"/users/{urllib.parse.quote(username)}?$select={select}")
         if status == 404:
@@ -561,11 +672,28 @@ def entra_user(graph: Graph, username: str, lookup: str = "name") -> tuple[dict 
         hows = sorted({h for _r, h in found.values()})
         raise LookupError(f"{len(found)} Entra users match this name (by {', '.join(hows)}), so which one signs in "
                           "is not known")
-    return next(iter(found.values())) if found else (None, None)
+    if not found:
+        return None, None
+    row, how = next(iter(found.values()))
+    carried = claim or "userPrincipalName"
+    if how != carried and not carries_name(row, carried, username):
+        if claim:
+            raise NameMismatchError(f"found only by {how}, and the organization's name claim carries {claim}, which on that "
+                                    "Entra user is another name, so it is not the person who signs in under this name")
+        raise NameMismatchError(f"found only by {how}, and that Entra user's userPrincipalName is another name; whether the "
+                                f"organization's name claim carries {how} is not something this job can read: declare it "
+                                f"with --name-claim <org>={how}")
+    return row, how
+
+
+class NameMismatchError(LookupError):
+    """A name found only by mail or otherMails on an Entra user whose principal name differs: undetermined, not a
+    read that failed (the reason says so), and never taken as the person."""
 
 
 def member_of(graph: Graph, user_id: str, groups: list[str]) -> set | None:
-    """Which of the given groups the user is in, transitively (Graph's checkMemberGroups, at most 20 per call)."""
+    """Which of the given groups the user is in, nested groups included (Graph's checkMemberGroups, at most 20 group
+    ids per call). Entra's gate reads direct membership instead (direct_of)."""
     out = set()
     for i in range(0, len(groups), 20):
         _s, answer = graph.call("POST", f"/users/{user_id}/checkMemberGroups", {"groupIds": groups[i:i + 20]})
@@ -584,7 +712,9 @@ class Verdict(tuple):
 
 
 def judge(graph: Graph, user: dict, gate: dict | None) -> Verdict:
-    """Read Entra for one account and apply the rule; a refused read makes it undetermined."""
+    """Read Entra for one account and apply the rule: direct membership from the gate groups' members (read once per
+    organization, in read_gate), membership through nesting from checkMemberGroups. A refused read makes the account
+    undetermined, and so does a name found only by mail or otherMails on a user of another principal name."""
     if user.get("providerType") not in FEDERATED or gate is None:
         return Verdict(*decide(user, None, None, gate))
     lookup = gate.get("lookup")
@@ -594,23 +724,31 @@ def judge(graph: Graph, user: dict, gate: dict | None) -> Verdict:
     if lookup == "id" and not OBJECT_ID.match(str(user.get("username"))):
         return Verdict("undetermined", "the organization is keyed on the object id and this account's name is not one")
     try:
-        found, how = entra_user(graph, user["username"], lookup)
+        found, how = entra_user(graph, user["username"], lookup, gate.get("name_claim"))
+    except NameMismatchError as e:
+        return Verdict("undetermined", str(e))
     except LookupError as e:
         return Verdict("undetermined", f"Entra could not be read for this user: {e}")
-    groups = member_of(graph, found["id"], watched(gate)) if found else set()
-    return Verdict(*decide(user, found, groups, gate), found is not None, how)
+    if not found:
+        return Verdict(*decide(user, None, set(), gate), False, how)
+    nested = member_of(graph, found["id"], watched(gate))
+    if nested is None and gate["group_claims"] != APPLICATION_GROUP:
+        return Verdict("undetermined", "the user's group membership through nested groups could not be read", True, how)
+    return Verdict(*decide(user, found, direct_of(gate, found["id"]), gate, nested), True, how)
 
 
 def confirm(graph: Graph, user: dict, gate: dict, reads: int | None = None, pause: float | None = None,
             sleep=time.sleep) -> tuple[bool, list[str]]:
-    """Read the account's state again `reads` times, `pause` seconds apart; True only when every read says leaver."""
+    """Read the account's state again `reads` times, `pause` seconds apart, the gate groups' direct members read
+    afresh each time; True only when every read says leaver."""
     reads = CONFIRM_READS if reads is None else reads
     pause = CONFIRM_PAUSE if pause is None else pause
     seen = []
     for i in range(reads):
         if i:
             sleep(pause)
-        seen.append(judge(graph, user, gate)[0])
+        direct = direct_members(graph, watched(gate))
+        seen.append("undetermined" if direct is None else judge(graph, user, {**gate, "direct": direct})[0])
     return all(d == "leaver" for d in seen), seen
 
 
@@ -700,17 +838,20 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool) -> dict:
 
 
 def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: bool, act_on: str | None,
-              say=print, max_leavers: int | None = None) -> dict:
+              say=print, max_leavers: int | None = None, name_claims: dict[str, str] | None = None) -> dict:
     """Report every federated organization's leavers; with `execute`, close the confirmed ones of `only`, unless
     the organization's open leavers exceed the guard (leaver_guard), when none is closed."""
     orgs, unreadable, elsewhere = federated_orgs(vcfa, tenant, only)
+    if not orgs and not unreadable:  # a wrong tenant id reads as nothing to do: it is a read that failed (exit 3)
+        unreadable.append({"org": None, "reason": f"no organization names this tenant ({elsewhere} federated "
+                                                  "elsewhere): check ENTRA_TENANT_ID"})
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "execute" if execute else "report", "tenant": tenant, "organizations": [],
               "unreadable": unreadable, "federated_elsewhere": elsewhere, "sent": []}
     say(f"Leavers · {'EXECUTE' if execute else 'REPORT'} · {len(orgs)} organization(s) federated to the tenant"
         + (f", {elsewhere} federated elsewhere (not read)" if elsewhere else ""))
     for u in unreadable:
-        say(f"  {u['org']}: unreadable ({u['reason']})")
+        say(f"  {u['org'] or 'the run'}: unreadable ({u['reason']})")
     for of in orgs:
         users = vcfa.pages("/cloudapi/1.0.0/users", of["urn"])
         groups = vcfa.pages("/cloudapi/1.0.0/groups", of["urn"])
@@ -725,6 +866,9 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
             gate = read_gate(graph, of, groups)
         except LookupError as e:
             gate, entry["gate_error"] = None, str(e)[:160]
+        claim = (name_claims or {}).get(of["org"])
+        if gate is not None and claim:
+            gate["name_claim"] = entry["name_claim"] = claim
         if gate is not None:
             entry["gate"] = {"assignment_required": gate["assignment_required"], "group_claims": gate["group_claims"],
                              "assigned_groups": sorted(gate["assigned_groups"].values()),
@@ -767,9 +911,25 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
                 + (f" -> {row['action']}" if row.get("action") else "")
                 + "".join(f"  FLAG {f.split(':', 1)[0]}" for f in row["flags"]))
         record["organizations"].append(entry)
+    if name_claims:  # a declaration naming no organization read is a typo, or an organization federated elsewhere
+        record["name_claims"] = {"declared": len(name_claims), "unmatched": len(set(name_claims) - {o["org"] for o in orgs})}
     record["summary"] = summary(record)
     record["sent"] = [f"{c['method']} {c['path']}" for c in vcfa.calls if c["method"] in ("PUT", "DELETE")]
     return record
+
+
+def parse_name_claims(values: list[str]) -> dict[str, str]:
+    """--name-claim ORG=ATTRIBUTE, repeatable: the attribute each named organization's name claim carries, one of the
+    attributes the lookups read. Anything else is refused (ValueError), never half read."""
+    out: dict[str, str] = {}
+    for v in values:
+        org, sep, attribute = v.partition("=")
+        if not (sep and org.strip() and attribute.strip() in NAME_CLAIMS):
+            raise ValueError(f"--name-claim {v!r}: write ORG=ATTRIBUTE, the attribute one of {', '.join(NAME_CLAIMS)}")
+        if out.get(org.strip(), attribute.strip()) != attribute.strip():
+            raise ValueError(f"--name-claim names {org.strip()!r} twice with different attributes")
+        out[org.strip()] = attribute.strip()
+    return out
 
 
 def summary(record: dict) -> dict:
@@ -912,7 +1072,7 @@ def report_lines(record: dict) -> list[str]:
     else:
         out = [f"Leavers · {record['mode'].upper()} · {s['organizations']} organization(s) federated to the tenant"
                + (f", {s['federated_elsewhere']} federated elsewhere (not read)" if s["federated_elsewhere"] else "")]
-    out += [f"  {u['org']}: unreadable ({u['reason']})" for u in record.get("unreadable") or []]
+    out += [f"  {u['org'] or 'the run'}: unreadable ({u['reason']})" for u in record.get("unreadable") or []]
     if record.get("refused"):
         out.append(f"  refused: {record['refused']}")
     for o in record["organizations"]:
@@ -1028,6 +1188,20 @@ class _Parser(argparse.ArgumentParser):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5) before anything is read, and an
+    error the script did not expect exits 3, the code for a read that failed, never 1, the code for an open leaver."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("leavers.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
+              "about what it had not read (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str] | None = None) -> int:
     ap = _Parser(description="Report, and on request close, VCF Automation accounts of people who have left at "
                              "Entra ID.")
     ap.add_argument("--execute", action="store_true", help="close the confirmed leavers of the organization --org names")
@@ -1038,6 +1212,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--max-leavers", type=int, metavar="N",
                     help=f"with --execute, refuse an organization with more than N open leavers (default: more than "
                          f"{MAX_LEAVERS} and more than a quarter of its federated accounts)")
+    ap.add_argument("--name-claim", action="append", default=[], metavar="ORG=ATTRIBUTE",
+                    help="the attribute an organization's name claim carries (userPrincipalName, mail or otherMails), "
+                         "which the job cannot read for itself; repeatable. Undeclared means userPrincipalName")
     ap.add_argument("--close-now", action="store_true",
                     help="close the one account --user names in --org now, without asking Entra; plan only without --execute")
     a = ap.parse_args(argv)
@@ -1057,6 +1234,11 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as e:
         print(f"--ack {a.ack}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
         return EXIT_USAGE
+    try:
+        name_claims = parse_name_claims(a.name_claim)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        return EXIT_USAGE
     missing = [k for k in ("VCFA_HOST", "ENTRA_TENANT_ID", "ENTRA_CLIENT_ID") if not os.environ.get(k)]
     if missing:
         print(f"set {', '.join(missing)} (see the header)", file=sys.stderr)
@@ -1066,9 +1248,13 @@ def main(argv: list[str] | None = None) -> int:
         vcfa, graph = Vcfa(os.environ["VCFA_HOST"], calls), Graph(calls)
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
         return _no_credential(e)
+    tenant, why = resolve_tenant(os.environ["ENTRA_TENANT_ID"], graph)
+    if tenant is None:  # nothing can be matched to a tenant that is not known: a read that failed, nothing written
+        print(f"the tenant could not be resolved: {why}", file=sys.stderr)
+        return EXIT_UNREAD
     only = [a.org] if a.execute else [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
-    record = reconcile(vcfa, graph, os.environ["ENTRA_TENANT_ID"], only, a.execute, a.user, say=lambda _m: None,
-                       max_leavers=a.max_leavers)
+    record = reconcile(vcfa, graph, tenant, only, a.execute, a.user, say=lambda _m: None, max_leavers=a.max_leavers,
+                       name_claims=name_claims)
     if a.ack:
         apply_acks(record, acks, record["captured"][:10])  # the run's own UTC date
         record["summary"] = summary(record)

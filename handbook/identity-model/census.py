@@ -14,7 +14,8 @@ each organization signs in.
 --orgs-only reads VCF Automation alone, as the provider: each organization's ways in, on VCFA_HOST and a provider
 credential, with no VCF Operations credential. A VCF Automation provider administrator can run it without the fleet's
 most privileged token. It reads no broker, so an OIDC issuer is called the broker only when its host is in
-BROKER_HOSTS.
+BROKER_HOSTS, which it requires; an organization signing in through VCF single sign-on whose issuer they do not name
+fails the read, because its issuer is a broker by definition.
 
 Fleet IAM, through VCF Operations (/suite-api/api/fleet-management/iam):
   GET  /vidbs                                 the brokers, instance or embedded. Read here, never from the fleet
@@ -53,8 +54,12 @@ Env:  OPS_HOST                 VCF Operations FQDN (required)
       VCFA_HOST                optional, with VCFA_PROVIDER_BEARER_FILE (a provider bearer you already hold) or
                                VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider API token, traded at /oauth/provider/token);
                                with --orgs-only, these alone are required
-      BROKER_HOSTS             optional, comma-separated: the brokers' hosts, so that --orgs-only names an OIDC issuer
-                               on one of them the broker (the full census reads them from the identity plane)
+      BROKER_HOSTS             with --orgs-only, required, comma-separated: every broker's host (the instance broker
+                               and each management vCenter's embedded one), so that an OIDC issuer on one of them
+                               reads as the broker and not as a provider of the organization's own. --orgs-only reads
+                               no broker, so it refuses to start without them, and an organization signing in through
+                               VCF single sign-on whose issuer they do not name fails the read (the full census reads
+                               the brokers from the identity plane)
       FINGERPRINT_KEY_FILE     optional: a secret of your own (mode 0600, kept off any shared disk). With it, each API
                                client carries a keyed fingerprint of its id and name, the same in every record made
                                under that key, so service-accounts' catalog_check.py --census can join the record to
@@ -66,8 +71,10 @@ Env:  OPS_HOST                 VCF Operations FQDN (required)
 Use:  python3 census.py [--redact] [--egress-metadata-url URL]
       python3 census.py --orgs-only [--redact]       VCF Automation's organizations only, on a provider credential
 Exit: 0 recorded, every call answered · 1 a call failed (the record is still written and names the call; a refused
-      fleet read opens the print with NOT READ, so its zero counts are not taken for the estate's) · 2 a usage error,
-      or the record refused because an estate value survived the scrub (nothing is written)
+      fleet read opens the print with NOT READ, so its zero counts are not taken for the estate's), or --orgs-only read
+      an organization signing in through VCF single sign-on whose issuer BROKER_HOSTS does not name, so the brokers
+      given miss at least the one the platform signs in through · 2 a usage error (--orgs-only without BROKER_HOSTS
+      among them), or the record refused because an estate value survived the scrub (nothing is written)
 """
 
 from __future__ import annotations
@@ -695,6 +702,16 @@ def _token_text(t: dict) -> str:
             f"access token {_minutes(t['access_token_ttl_min'])}; {runway(t)}")
 
 
+def unplaced_issuers(s: dict) -> list[str]:
+    """--orgs-only: the organizations that sign in through VCF single sign-on, whose issuer is a broker by definition,
+    with an issuer BROKER_HOSTS does not name. Any one of them means the brokers given miss the platform's own, so an
+    OIDC issuer on a broker may be read as a provider of the organization's own: a failed read, never a clean one. An
+    embedded broker left out is not caught this way, which is why every broker is named."""
+    if not s.get("orgs_only"):
+        return []
+    return [o["name"] for o in s["organizations"] if "vcf-sso" in o["sign_in"] and o["issuer"] != "broker"]
+
+
 def org_report(s: dict) -> list[str]:
     """The organizations block: each organization's type and its ways in."""
     if not s["organizations"]:
@@ -705,6 +722,11 @@ def org_report(s: dict) -> list[str]:
               for o in s["organizations"]]
     if s.get("orgs_only") and not s["brokers"] and any(o["issuer"] == "other" for o in s["organizations"]):
         lines.append("  no broker was read: an OIDC issuer reads broker only when its host is in BROKER_HOSTS")
+    missed = unplaced_issuers(s)
+    if missed:
+        lines.append(f"NOT PLACED: {len(missed)} organization(s) sign in through VCF single sign-on with an issuer "
+                     "BROKER_HOSTS does not name, so the brokers given miss the platform's own and an organization "
+                     "on a broker may read as on a provider of its own; name every broker's host and read again; exit 1")
     return lines
 
 
@@ -883,7 +905,7 @@ def census(egress_url: str | None, ops_token: str | None, vcfa_token: str | None
         vcfa = Reader("vcf-automation", f"https://{os.environ['VCFA_HOST']}", {"Authorization": f"Bearer {vcfa_token}"}, calls)
         record["organizations"] = organizations(vcfa)
         record["summary"] = summary(record)
-        record["exit"] = 1 if failed(calls) else 0
+        record["exit"] = 1 if failed(calls) or unplaced_issuers(record["summary"]) else 0
         return record
     ops = Reader("vcf-operations", f"https://{os.environ['OPS_HOST']}/suite-api", {"Authorization": f"Bearer {ops_token}"}, calls)
     record["fleet"] = fleet(ops)
@@ -955,6 +977,11 @@ def main(argv: list[str] | None = None) -> int:
         if not os.environ.get("VCFA_HOST") or not vcfa_cred:
             print("--orgs-only needs VCFA_HOST and a provider credential (VCFA_PROVIDER_BEARER_FILE or "
                   "VCFA_PROVIDER_REFRESH_TOKEN_FILE); no VCF Operations credential is read", file=sys.stderr)
+            return 2
+        if not given_brokers():
+            print("--orgs-only needs BROKER_HOSTS, every broker's host (the instance broker and each management "
+                  "vCenter's embedded one): it reads no broker, so without them an organization on a broker would read "
+                  "as on a provider of its own, and the census would pass", file=sys.stderr)
             return 2
     elif not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required; "

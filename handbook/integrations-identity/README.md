@@ -13,10 +13,11 @@ password is printed or written.
 | File | What it is |
 |---|---|
 | `vcenter_exchange.py` | The session census and the exchange. Read-only. Writes `exchange.json` with every estate name replaced, and refuses to write a record in which one survived. |
-| `api_client.py` | One API client for one integration: plan it (the default), create it, remove it. Writes `api_client.json` the same way. |
+| `api_client.py` | One API client for one integration: plan it (the default), create it, rotate its token, retire the old one, remove it. Writes `api_client.json` the same way, and a state file you keep and do not publish. |
 | `exchange.json` | The census and the exchange on the reference estate, 2026-10-13, read as an API client. The chapter's plates render it. |
-| `api_client.json`, `api_client_teardown.json` | One throwaway client made and removed on the reference estate, 2026-10-13. |
-| `service_account.py` | One VCF Automation service account for one integration: plan it (the default), create it, revoke and remove it. Writes `service_account.json` the same way. |
+| `api_client.json`, `api_client_overlap.json`, `api_client_retire.json`, `api_client_teardown.json` | One throwaway client made, its token rotated with the old one still trading, the old one retired, and the client removed, on the reference estate, 2026-10-15. |
+| `api_client_rotate.json` | The earlier `--rotate` of 2026-10-13, which deleted the old token in the same run; kept as the register's evidence for the overlap it showed. |
+| `service_account.py` | One VCF Automation service account for one integration: plan it (the default), create it, revoke and remove it. Writes `service_account.json` the same way, and a state file you keep and do not publish. |
 | `service_account.json`, `service_account_teardown.json` | One throwaway service account made, revoked and removed in a throwaway All Apps organization on the reference estate, 2026-10-13. |
 | `expected-output.md` | The transcripts of those runs, with what to read in them. |
 
@@ -28,7 +29,7 @@ The census needs no API client, so it can run before one exists. It reads the se
 export VC_HOSTS=<vcenter-fqdn>[,<another>]
 export VC_USER=<user@domain>                        # an account that may read every session
 export VC_PASSWORD_FILE=/path/to/password           # mode 0600
-export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # as vCenter spells it
+export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # as vCenter spells it; required with --sessions
 export TLS_VERIFY=false                             # only on a self-signed lab CA
 
 python3 vcenter_exchange.py --sessions --redact     # the census, printed with placeholders, for a transcript you will share
@@ -88,8 +89,8 @@ the client's own session when one is opened, and only notes a `REALM_DOMAIN` lef
 | Exit | Means |
 |---|---|
 | 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client and the local administrator signs in from no other client |
-| 1 | a vCenter refused the client, a read failed, or the census's identity could read only its own session |
-| 2 | a usage error, or the record was refused because an estate value survived the scrub; nothing is written |
+| 1 | a vCenter refused the client, a read failed, the census's identity could read only its own session, or on a vCenter `DIRECTORY_DOMAINS` named no session while another provider's sessions were there: the domains name nothing on that vCenter, so the census saw nothing it was asked to see |
+| 2 | a usage error, `--sessions` without `DIRECTORY_DOMAINS` among them, or the record was refused because an estate value survived the scrub; nothing is written |
 | 3 | `--sessions` found a directory account signing in from a client other than the vSphere Client: an integration on a person's or a directory account's password, until its owner says otherwise |
 | 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client, and nothing worse: an account in automated use is not a break-glass account |
 
@@ -150,7 +151,7 @@ Plan first. With no `--execute` it prints every call it would send, with its bod
 
 ```bash
 export OPS_HOST=<vcf-operations-fqdn>
-export OPS_API_TOKEN_FILE=/path/to/ops-api-token    # mode 0600; your own VCF Operations API token, of a user who may manage API clients
+export OPS_API_TOKEN_FILE=/path/to/ops-api-token    # mode 0600; your own VCF Operations API token, never the client's
 export TLS_VERIFY=false                             # only on a self-signed lab CA
 
 python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43200 --access-token-ttl 60
@@ -158,6 +159,8 @@ python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43
     --token-file /path/to/backup-01-token --execute
 python3 api_client.py --client-id backup-01 --rotate --api-token-ttl 43200 --access-token-ttl 60 \
     --token-file /path/to/backup-01-token-new --old-token-file /path/to/backup-01-token --execute   # before the old one ends
+# point the integration at backup-01-token-new and run one job on it, then:
+python3 api_client.py --client-id backup-01 --retire-old --old-token-file /path/to/backup-01-token --execute
 python3 api_client.py --client-id backup-01 --teardown              # the teardown's plan
 python3 api_client.py --client-id backup-01 --teardown --execute    # when the integration retires
 ```
@@ -172,8 +175,9 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `--access-token-ttl MIN` | the lifetime in minutes of each bearer the token yields, 30 to 60 (required to create) |
 | `--token-file PATH` | where the token is written, mode 0600; the file must not exist (required with `--execute`) |
 | `--description TEXT` | the client's description (default `an integration's own identity`) |
-| `--rotate` | issue the client a new token with both lifetimes, prove it, then delete every token it held before (needs both lifetimes and `--token-file`; no `--role`) |
-| `--old-token-file PATH` | with `--rotate`: the token the integration holds now, shown trading before the delete and refused after it |
+| `--rotate` | issue the client a new token with both lifetimes and prove it, deleting nothing (needs both lifetimes and `--token-file`; no `--role`) |
+| `--retire-old` | once the integration runs on the newest token, delete every token of the client older than it, and read back that one is left |
+| `--old-token-file PATH` | with `--rotate`: the token the integration holds now, shown still trading in the overlap; with `--retire-old`: shown trading before the delete and refused after it |
 | `--teardown` | remove the client and its tokens instead of creating them |
 | `--execute` | send the calls; without it the plan is printed |
 | `--redact` | print with placeholders instead of your host and client id |
@@ -185,14 +189,26 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `OPS_BROKER_HOST` | the broker that trades it (`BROKER_HOST` is read when it is unset; default `OPS_HOST`) |
 | `BROKER_TENANT` | the broker tenant, the realm's path segment in the broker's token URL (default `CUSTOMER`; `OPS_REALM`, its earlier name, is still read) |
 | `OPS_BEARER_FILE` | instead of the API token, a bearer you already hold |
+| `STATE` | the state file the create writes and every later write reads (default `api_client.<client id>.state.json`) |
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |
 | `OUT` | the record (default `api_client.json`) |
 
+**The token the writes run on.** Your own: a VCF single sign-on user's API token whose role may manage the fleet's API
+clients. The reference runs sent every write on a user's API token whose user holds one fleet role, VCF Administrator,
+through a group (read 2026-10-15); no narrower role was tried. Never the client's own token: `--retire-old` and
+`--teardown` refuse to run signed in as the client they would change, read from the `azp` claim of the run's own bearer.
+
+**What the script made, and nothing else.** The create writes a state file (mode 0600: the client's id and uuid and the
+ids of the tokens this script issued; no secret). `--rotate`, `--retire-old` and `--teardown` act only on a client that
+file records with the same uuid, so a mistyped id, or a client someone made under that id in the console, is refused
+before anything is sent. Run them from the folder the create ran in, or set `STATE`. A client made in the console is
+rotated and removed in the console.
+
 | Exit | Means |
 |---|---|
-| 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved, one token left and, when given, the old token refused; for a teardown, no client and no token left |
+| 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved and active beside the old ones and, when given, the old token still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no client and no token left |
 | 1 | a call failed, or the read-back did not hold; a create that stopped part way prints where it stopped and the teardown to run before trying again |
-| 2 | a usage error, a refusal before anything is sent (a lifetime outside the bounds, a token file that exists), a client that already exists (refused, never adopted), for a rotation a client that does not exist, or the record was refused because an estate value survived the scrub |
+| 2 | a usage error, a refusal before anything is sent (a lifetime outside the bounds, a token file that exists), a client that already exists (refused, never adopted), for a rotation, a retirement or a teardown a client the state file does not record, a run signed in as the client it would change, a retirement while the client holds one token or whose newest token this script did not issue, or the record was refused because an estate value survived the scrub |
 
 ### What it sends, and in what order
 
@@ -214,17 +230,21 @@ Every path is under `/api/fleet-management/iam` on VCF Operations.
    the status, the bearer's principal type and its lifetime, never the bearer.
 6. The client and its token read back: present, its roles and their scope, the token's status and both lifetimes.
 
-A rotation queries the client and the tokens it holds, and refuses a client that is not there (it never creates
-one). It then issues a new token (`POST /ssorealms/{realm}/api-tokens`, a name stamped with the time, both lifetimes),
-writes it to `--token-file` and trades it at the broker once. With `--old-token-file` it trades the old token too, so
-the record shows both working in the overlap. Only once the new token has traded does it delete each token the client
-held before; with `--old-token-file` it trades the old token again, which must be refused, and it reads back that one
-token is left. If the new token does not trade, the old ones are kept and the run stops with exit 1. Point the
-integration at the new token between the issue and the delete, or run the rotation in two steps: the issue, then the
-delete once the integration has switched.
+A rotation is two runs, with the integration's switch between them. `--rotate` queries the client and the tokens it
+holds, and refuses a client that is not there (it never creates one) or that the state file does not record. It then
+issues a new token (`POST /ssorealms/{realm}/api-tokens`, a name stamped with the time, both lifetimes), writes it to
+`--token-file`, trades it at the broker once and reads back that it is active beside the old ones. It deletes nothing:
+with `--old-token-file` it trades the old token too, so the record shows both working in the overlap. If the new token
+does not trade, nothing is pointed at it and the run stops with exit 1. Point the integration at the new token and run
+one job on it. Then `--retire-old` deletes every token of the client older than its newest, by the fleet's creation
+date, and reads back that one is left; with `--old-token-file` it trades the old token before the delete and again
+after, when it must be refused. It refuses a client holding one token, and a client whose newest token is not the one
+this script issued last, since that may not be the token the integration holds.
 
 A teardown queries the client's tokens and deletes each, deletes the client, then reads both lists again and records
-the residue. A teardown of a client that is not there removes nothing and exits 0, so it is safe to re-run.
+the residue. A teardown of a client that is not there removes nothing and exits 0, so it is safe to re-run. Run it on
+the token of the administrator who made the client: signed in as the client itself, nothing would outlive the removal
+to read the residue, and the script refuses.
 
 ## The VCF Automation service account an integration moves to: `service_account.py`
 
@@ -258,8 +278,14 @@ python3 service_account.py --org tenant-a --name backup-01 --teardown --token-fi
 | `VCFA_HOST` | the VCF Automation FQDN (required to execute) |
 | `VCFA_PROVIDER_REFRESH_TOKEN_FILE` | a provider API token, mode 0600, traded at `/oauth/provider/token` for a bearer |
 | `VCFA_PROVIDER_BEARER_FILE` | instead, a provider bearer you already hold |
+| `STATE` | the state file the create writes and the teardown reads (default `service_account.<org>.<name>.state.json`) |
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |
 | `OUT` | the record (default `service_account.json`) |
+
+**The credential its calls run on.** A provider credential: the reference runs sent every call on a provider bearer
+whose session reads the System organization and the role System Administrator (read 2026-10-15); no narrower provider
+role was tried. The create writes a state file (mode 0600: the organization, the account's name and its OAuth client
+id; no secret), and the teardown revokes and deletes only an account that file records with the same client id.
 
 | Exit | Means |
 |---|---|
@@ -283,9 +309,10 @@ python3 service_account.py --org tenant-a --name backup-01 --teardown --token-fi
    it. When the answer carries a new refresh token, it is written over the stored one.
 8. The account read back: present, its status, its roles and whether rotation is required on every refresh.
 
-A teardown revokes the account's token (`POST /cloudapi/1.0.0/serviceAccounts/{id}/revoke`), deletes the account, reads
-the list until it is empty, and with `--token-file` refreshes once with the revoked token to show it is refused. A
-teardown of an account that is not there removes nothing and exits 0, so it is safe to re-run.
+A teardown first refuses an account the state file does not record. It then revokes the account's token
+(`POST /cloudapi/1.0.0/serviceAccounts/{id}/revoke`), deletes the account, reads the list until it is empty, and with
+`--token-file` refreshes once with the revoked token to show it is refused. A teardown of an account that is not there
+removes nothing and exits 0, so it is safe to re-run.
 
 ## What `vcenter_exchange.py` does, and in what order
 
@@ -308,11 +335,18 @@ Steps 1 to 4 run only when an API client's credential is given.
 
 - `vcenter_exchange.py` is read-only. It opens sessions and closes them, and changes no configuration. The token
   exchanges mint tokens that live minutes and are not stored.
-- `api_client.py` writes only with `--execute`: one client, one role binding, one token, or their removal. A create
-  refuses a client id that exists; a teardown removes the client you name and its tokens, so name only one you made.
+- `api_client.py` writes only with `--execute`: one client, one role binding, one token, a new token, the old tokens'
+  removal, or the client's. A create refuses a client id that exists; every later write acts only on a client its state
+  file records, and `--retire-old` and `--teardown` never on the client the run is signed in as.
 - The lifetime bounds are the ones the broker held a create to on the reference estate, not documented ranges.
-- A rotation was run once, on VCF 9.1.1: the client held two active tokens in the overlap, the old token traded before
-  the delete and was refused after it (HTTP 400). The fleet API's in-place regenerate
+- A rotation was run on VCF 9.1.1 twice. On 2026-10-13 the earlier one-step `--rotate` showed the client holding two
+  active tokens, the old token trading before the delete and refused after it (HTTP 400). On 2026-10-15 the two-step
+  form ran: `--rotate` left two active tokens with the old one still trading and deleted nothing, `--retire-old` then
+  deleted the old token, refused after (HTTP 400), and refused both a client no state file recorded and a client holding
+  one token. The same day a second throwaway client, holding VCF Administrator and run on its own token, was refused its
+  teardown before any delete; made by hand on that client's own bearer, the delete of its only token answered 204, the
+  bearer still listed clients after the delete and then deleted its own client: the bearer outlived its token in that
+  run, which is why the refusal rests on the residue read and not on a measured failure. The fleet API's in-place regenerate
   (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`), called outside the script in the same run, answered a
   token under a new id with a new end date, and the value from before was refused three seconds later: it leaves no
   overlap, so the script does not use it. How long an overlap may last is bounded only by the old token's own end date,
@@ -346,9 +380,10 @@ Steps 1 to 4 run only when an API client's credential is given.
   that read.
 - Measured on VCF 9.1.1 (three vCenters, build 25712839), 2026-10-13: the exchange with an API client holding
   `vcf_viewer`; the census read as that client holding `vcf_administrator`, and once with no API client, as a directory
-  account's password. `api_client.py` ran on a VCF Operations API token held by the estate's administrator; which
-  narrower operator role may manage API clients was not tried, nor `OPS_BEARER_FILE`, nor a broker federated to a
-  cloud provider. `service_account.py` ran on VCF Automation 9.1.1 with a provider bearer, in a throwaway All Apps
+  account's password. `api_client.py` ran on a VCF single sign-on user's API token whose user holds VCF Administrator
+  through a group (read 2026-10-15); which narrower operator role may manage API clients was not tried, nor
+  `OPS_BEARER_FILE`, nor a broker federated to a cloud provider. `service_account.py` ran on VCF Automation 9.1.1 with a provider bearer (the System organization's
+  System Administrator, read 2026-10-15), in a throwaway All Apps
   organization federated to Entra ID, as `Organization User`; a classic organization and
   `VCFA_PROVIDER_REFRESH_TOKEN_FILE` were not tried with it.
 
@@ -366,9 +401,12 @@ request that was not a plain read.
 instance when one was named, and both lifetimes), `calls` (each call's method, templated path and status, and the
 fleet's reason when it refused), `exchange` (the broker's status, the bearer's principal type and lifetime), `readback` and `exit`. A teardown's
 record holds `calls`, `residue` (`client_present`, `tokens_left`) and `exit`. A rotation's record holds `asked` (both
-lifetimes, and whether an old token was given), `calls`, `tokens_before`, `exchange` (the new token at the broker),
-`overlap` (the active tokens once the new one was issued), `old_token_before_delete` and `old_token_after_delete` (the
-old token's status at the broker), `readback` and `exit`.
+lifetimes, and whether an old token was given), `calls`, `signed_in_as` (a person's token, another API client, or the
+client itself; no name), `tokens_before`, `exchange` (the new token at the broker), `overlap` (the active tokens once
+the new one was issued), `old_token_in_overlap` (the old token's status at the broker, the old ones kept), `next`,
+`readback` and `exit`. A retirement's record (`api_client_retire.json`) holds `calls`, `signed_in_as`, `tokens_before`,
+`deleted`, `old_token_before_delete` and `old_token_after_delete`, `readback` and `exit`. `api_client_rotate.json`, the
+earlier one-step form, holds `old_token_before_delete` and `old_token_after_delete` in place of `old_token_in_overlap`.
 
 `service_account.json`: `asked` (the role and its scope), `calls`, `registered` and `readback` (present, status, roles,
 `require_rotation`), `device_grant` (its status, whether a refresh token came back, the bearer's lifetime in seconds),

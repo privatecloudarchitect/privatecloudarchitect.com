@@ -1,0 +1,67 @@
+{
+ "captured": "2026-10-15T06:37:17Z",
+ "mode": "retire-old",
+ "client": "{{client-1}}",
+ "calls": [
+  {
+   "method": "GET",
+   "path": "/ssorealms",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  },
+  {
+   "method": "DELETE",
+   "path": "/ssorealms/{realm}/api-tokens/{token id}",
+   "status": 204
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-clients/query",
+   "status": 200
+  },
+  {
+   "method": "POST",
+   "path": "/ssorealms/{realm}/api-tokens/query",
+   "status": 200
+  }
+ ],
+ "asked": {
+  "old_token_given": true
+ },
+ "signed_in_as": "a person's token",
+ "tokens_before": 2,
+ "old_token_before_delete": {
+  "status": 200
+ },
+ "deleted": 1,
+ "old_token_after_delete": {
+  "status": 400
+ },
+ "readback": {
+  "client_present": true,
+  "roles": [
+   "vcf_viewer"
+  ],
+  "role_scopes": [
+   "SSO_REALM"
+  ],
+  "scope_resources": [],
+  "tokens": [
+   {
+    "status": "ACTIVE",
+    "api_token_ttl_min": 2880,
+    "access_token_ttl_min": 60
+   }
+  ]
+ },
+ "exit": 0
+}

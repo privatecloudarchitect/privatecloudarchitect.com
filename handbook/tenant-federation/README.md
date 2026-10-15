@@ -8,7 +8,7 @@ Entra is reached with a certificate rather than a client secret. No secret or to
 
 | File | What it is |
 |---|---|
-| `org_federation.py` | Plans by default: prints every body each side will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for, and the name claim kept as the user principal name, which the leaver job looks each account up by), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. Writes `federation.json`, and refuses to write a record carrying any estate value. |
+| `org_federation.py` | Plans by default: prints every body each side will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for, and the name claim kept as the user principal name, which the leaver job looks each account up by), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. For a real tenant's organization, which `--execute` refuses, `--prove --org` proves it read-only and `--configure --org` writes the provider's side from what the tenant handed over; neither needs a state file. Writes `federation.json` (or `prove.json`, `configure.json`), and refuses to write a record carrying any estate value. |
 | `federation.json` | That record from the reference estate. The chapter's plates render it. |
 | `update_key_refresh.json`, `update_keys.json`, `update_secret.json`, `update_metadata.json` | The day-2 writer's records, one per kind of write, from a throwaway OIDC organization and a throwaway SAML one on the reference estate. federation-operations' plates render them. |
 | `expected-output.md` | A run's transcript, with what to read in it. |
@@ -47,6 +47,49 @@ estate it ran as an app holding, among other Microsoft Graph application permiss
 `AppRoleAssignment.ReadWrite.All`, `DelegatedPermissionGrant.ReadWrite.All`, `Group.ReadWrite.All`,
 `User.ReadWrite.All` and `Policy.ReadWrite.ApplicationConfiguration`; a smaller set was not tried. Those are
 tenant-wide powers: run it in a tenant made for trials, or as an app you remove afterwards.
+
+## A real organization: configure it, then prove it
+
+`--execute` builds only throwaways: it refuses any organization, app or group it did not create. A real tenant's
+organization is built in two halves. The tenant's administrator builds the Entra app from the workshop's first list
+and hands over its client id and secret (OIDC) or its federation metadata (SAML). You create the organization, then
+write its side with `--configure --org`, and prove it with `--prove --org`. Both take the organization by name and
+need no state file; neither writes to Entra.
+
+```bash
+export VCFA_HOST=<automation-fqdn> VCFA_PROVIDER_BEARER_FILE=<file> ENTRA_TENANT_ID=<tenant-id>
+export APP_CLIENT_ID=<the app's client id> APP_SECRET_FILE=<the secret the tenant handed over, mode 0600>   # OIDC
+# export METADATA_FILE=<the app's federation metadata>                                                     # SAML
+
+python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid \
+    --group member=<group> --group administrator=<group>            # the plan: what changes, what is imported
+python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid \
+    --group member=<group> --group administrator=<group> --execute  # write, import, read every write back
+python3 org_federation.py --prove --org <org> --group member=<group> --group administrator=<group>
+python3 ../federation-operations/watch.py                            # with ORGS=<org>: the Entra side of each group
+```
+
+`--configure` writes the settings as a round trip, only when a field differs, and imports each `--group ROLE=NAME`
+with the role the organization type defines, resolved by name from the organization's own role list. It refuses
+(exit 2) a protocol or user-key switch on an organization already federated, an organization signed in through VCF
+single sign-on (OIDC), a role key the organization type lacks (a classic organization has no auditor), and a named
+group the organization already holds under the other protocol or with other roles. Over SAML without
+`METADATA_FILE` it prints the organization's own service-provider identifier and reply URL for the tenant's
+administrator, and stops. `--prove --org` reads the settings back against the plan for the protocol, type and user key
+the organization holds, every imported group's roles against the organization's own role list, each named group's
+role, and an enabled local user holding the top role, and prints the browser steps. Neither mode can see Entra:
+VCF Automation imported a group name that no group assigned to the app carried, and only the watch's `group_names`
+check, through the tenant's read-only app, failed on it.
+
+On the reference estate (2026-10-15, X-192): a throwaway All Apps OIDC organization keyed on `oid`, built by
+`--execute` and then configured as if someone else had built it. The plan named two changes, the key refresh (moved
+to 24 hours for the run) and a client secret the tenant side added and handed over; `--execute` wrote both in one
+round trip, imported a second group with Organization Administrator, and every check read back; a second run wrote
+nothing; a switch to SAML and a switch to `preferred_username` were refused with nothing written; and `--prove --org`
+passed every check. Run read-only on two standing organizations built earlier by other drivers, `--prove --org`
+failed one OIDC organization on its key refresh (every 24 hours, not one) and one SAML organization on its local
+administrator (none enabled holding Organization Administrator). The throwaway was removed with nothing left.
+`--configure` over SAML and on a classic organization was not run live.
 
 ## Day 2: change an existing organization
 
@@ -105,8 +148,9 @@ build, and `--key-refresh` above one hour is for drills.
 
 ## Scope, stated plainly
 
-- It creates and deletes only what it records in its state file (`org_federation.<ORG>.state.json`, object ids,
-  no secrets): an existing organization, app or group of the same name is refused, never adopted. Keep the state
+- `--execute` and `--teardown` create and delete only what they record in the state file
+  (`org_federation.<ORG>.state.json`, object ids, no secrets): an existing organization, app or group of the same
+  name is refused, never adopted. `--configure --org` and `--prove --org` read no state file and delete nothing. Keep the state
   file beside the record and do not publish it.
 - `--prove` checks configuration on both sides. It does not sign anyone in: a federated sign-in is a browser
   protocol, so the proof that matters (an entitled user holds its group's role, a user in no assigned group is
