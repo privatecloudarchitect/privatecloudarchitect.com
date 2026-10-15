@@ -40,16 +40,23 @@ Surfaces are chosen by which environment variables are set; unset ones are skipp
 Verdict: accepted (status below 400), refused (401 or 403), other. Where the Platform identity chapter states
 an expectation, the row says MATCH or DIFFERS; a DIFFERS row is worth a report, because the chapter's matrix
 is built from exactly these reads. A DIFFERS row is counted on the summary line and does not change the exit: it is
-the chapter's to correct, not a fault on your estate.
+the chapter's to correct, not a fault on your estate. A surface you configured whose own token could not be minted
+(a service JWT, or a VCF Automation refresh-token grant that returned no bearer) has doors nobody read: the run prints
+NOT READ for it and exits 3, never 0.
 
-Exit: 0 every attempted read returned an HTTP status
-      3 a read failed: a transport error stopped one (no status), the broker mint failed, or an error the script
-        did not expect
-      5 a usage error: OPS_HOST or the api-token unset, or a Python older than 3.10
+Use:  python3 doors.py           it takes no argument; --help prints this
+Exit: 0 every door of every surface configured was read and returned an HTTP status
+      3 a read failed: a transport error stopped one (no status), the broker mint failed, a configured surface's own
+        token could not be minted so its doors were not read, or an error the script did not expect
+      5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, a credential file (any NAME_FILE,
+        VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
 run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190).
 """
 
+from __future__ import annotations
+
+import argparse
 import base64
 import json
 import os
@@ -65,7 +72,12 @@ from rtmlib import service_jwt
 
 CLOUDAPI_ACCEPT = "application/json;version=9.1.0"
 ROWS = []
+NOT_READ = []  # each configured surface whose own token could not be minted: its doors were not read
 EXIT_UNREAD, EXIT_USAGE = 3, 5
+# The credential files the run may read. Each is read once before any call, so one that cannot be read is a usage error
+# (exit 5), never an error met halfway through a run.
+SECRET_NAMES = ("VCFA_PASSWORD", "VC_PASSWORD", "SDDC_PASSWORD")
+TOKEN_FILES = ("VCFA_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_REFRESH_TOKEN_FILE")
 
 
 def req(method, url, headers=None, data=None, timeout=60):
@@ -88,6 +100,21 @@ def req(method, url, headers=None, data=None, timeout=60):
         return e.code, body, dict(e.headers)
     except (urllib.error.URLError, OSError, ssl.SSLError) as e:
         return None, f"{type(e).__name__}: {e}", {}
+
+
+def ops_read(method, path, tok, **kw):
+    """opslib.ops, with a transport error returned as no status (a failed read the exit counts), never raised."""
+    try:
+        return ops(method, path, tok, **kw)
+    except (urllib.error.URLError, OSError, ssl.SSLError) as e:
+        print(f"  {path}: no answer ({type(e).__name__})")
+        return None, None
+
+
+def not_read(surface, why):
+    """A configured surface whose doors were not read: printed now, counted on the summary, and exit 3."""
+    NOT_READ.append((surface, why))
+    print(f"  NOT READ: {surface}: {why}; its doors were not read")
 
 
 def verdict(status):
@@ -128,6 +155,7 @@ def vcfa_refresh_grant(host, path, token_file):
     st, data, _ = req("POST", f"https://{host}{path}", {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}, body)
     if st != 200 or not isinstance(data, dict) or not data.get("access_token"):
         print(f"  {path}: HTTP {st}: {str(data)[:160]}")
+        not_read(f"VCF Automation, {path}", f"the refresh-token grant returned no bearer (HTTP {st})")
         return None
     sent = read_file_token(token_file); returned = data.get("refresh_token")
     if returned and returned != sent:
@@ -146,12 +174,39 @@ def rights_count(host, tok):
     return st, n
 
 
-def main():
-    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5), and an error the script did
-    not expect exits 3, the code for a read that failed."""
+class _Parser(argparse.ArgumentParser):
+    """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
+def credentials_readable():
+    """The first credential file named but unreadable, as (variable, error name), or None. Read before any call."""
+    for name in SECRET_NAMES:
+        try:
+            secret(name)
+        except OSError as e:
+            return f"{name}_FILE", type(e).__name__
+    for var in TOKEN_FILES:
+        if os.environ.get(var):
+            try:
+                read_file_token(os.environ[var])
+            except OSError as e:
+                return var, type(e).__name__
+    return None
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The run, with three guards around it: a Python older than 3.10 is refused (exit 5), an argument the script does
+    not take is a usage error (exit 5) before anything is read, and an error the script did not expect exits 3, the
+    code for a read that failed."""
     if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
         print("doors.py needs Python 3.10 or later", file=sys.stderr)
         return EXIT_USAGE
+    _Parser(prog="doors.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args(argv)
     try:
         return _run()
     except Exception as e:  # noqa: BLE001  the last guard: whatever was not expected is not known, so exit 3
@@ -160,6 +215,8 @@ def main():
 
 
 def _run():
+    ROWS.clear()
+    NOT_READ.clear()
     try:
         held = secret("OPS_API_TOKEN")
     except OSError as e:
@@ -168,6 +225,10 @@ def _run():
     if not os.environ.get("OPS_HOST") or not held:
         print("FATAL: OPS_HOST and OPS_API_TOKEN_FILE (or OPS_API_TOKEN) are required: the broker's bearer is the first "
               "door read", file=sys.stderr)
+        return EXIT_USAGE
+    bad = credentials_readable()
+    if bad:
+        print(f"FATAL: {bad[0]} could not be read: {bad[1]}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE
     print("doors.py: one harmless read per pair; tokens minted per run and never printed\n")
     # ---- the broker and the surfaces its bearer reaches, or does not
@@ -179,7 +240,7 @@ def _run():
               "(HTTP 500 on the 9.1.0 run of 2026-09-16): check the token still exists, then its expiry, before the service")
         return EXIT_UNREAD
     print("broker bearer minted from the api-token\n")
-    st, _ = ops("GET", "/api/resources", tok, params={"pageSize": 1})
+    st, _ = ops_read("GET", "/api/resources", tok, params={"pageSize": 1})
     row("VCF Operations", "broker bearer", st, "accepted")
     if os.environ.get("NSX_HOST"):
         st, _, _ = req("GET", f"https://{os.environ['NSX_HOST']}/api/v1/node", {"Authorization": f"Bearer {tok}", "Accept": "application/json"})
@@ -195,8 +256,9 @@ def _run():
             rtm_jwt = service_jwt(tok, "VCF_VODAP")
             st, _, _ = req("GET", rtm, {"Authorization": f"Bearer {rtm_jwt}", "Accept": "application/json"})
             row("Real-Time Metrics", "service JWT (VCF_VODAP)", st, "accepted")
-        except SystemExit as e:
+        except (SystemExit, urllib.error.URLError, OSError) as e:  # rtmlib exits on a refused mint
             print(f"  Real-Time Metrics service JWT: {e}")
+            not_read("Real-Time Metrics, service JWT (VCF_VODAP)", "the service JWT could not be minted")
     else:
         print("  Real-Time Metrics                  skipped: RTM_HOST not set")
     if os.environ.get("FLEET_HOST"):
@@ -207,8 +269,9 @@ def _run():
             fjwt = service_jwt(tok, "VCF_FLEET_LCM")
             st, _, _ = req("GET", fleet, {"Authorization": f"Bearer {fjwt}", "Accept": "application/json"})
             row("Fleet lifecycle, components", "service JWT (VCF_FLEET_LCM)", st, "accepted")
-        except SystemExit as e:
+        except (SystemExit, urllib.error.URLError, OSError) as e:  # rtmlib exits on a refused mint
             print(f"  Fleet lifecycle service JWT: {e}")
+            not_read("Fleet lifecycle, service JWT (VCF_FLEET_LCM)", "the service JWT could not be minted")
         if rtm_jwt:
             st, _, _ = req("GET", fleet, {"Authorization": f"Bearer {rtm_jwt}", "Accept": "application/json"})
             row("Fleet lifecycle, components", "the metrics service's JWT", st, "refused", "audience is per service")
@@ -229,8 +292,9 @@ def _run():
             ljwt = service_jwt(tok, "VCF_OPS_LI")
             st, _, _ = req("GET", f"https://{os.environ['LOGS_HOST']}/api/v2/agent/groups", {"X-JWT-Token": ljwt, "Accept": "application/json"})
             row("Log management", "service JWT (VCF_OPS_LI)", st, "accepted", "sent as X-JWT-Token")
-        except SystemExit as e:
+        except (SystemExit, urllib.error.URLError, OSError) as e:  # rtmlib exits on a refused mint
             print(f"  Log management service JWT: {e}")
+            not_read("Log management, service JWT (VCF_OPS_LI)", "the service JWT could not be minted")
     else:
         print("  Log management                     skipped: LOGS_HOST not set")
     # ---- VCF Automation: three login paths, one principal
@@ -294,7 +358,10 @@ def _run():
     else:
         print("\n  SDDC Manager                         skipped: SDDC_HOST, SDDC_USER, SDDC_PASSWORD_FILE not all set")
     print(f"\n{len(ROWS)} pairs read; {sum(1 for r in ROWS if r[4].startswith('DIFFERS'))} differ from the chapter; {sum(1 for r in ROWS if r[2] is None)} without an answer")
-    return EXIT_UNREAD if any(r[2] is None for r in ROWS) else 0
+    if NOT_READ:
+        print(f"NOT READ: {len(NOT_READ)} configured surface(s) whose own token could not be minted: "
+              + "; ".join(s for s, _ in NOT_READ) + " (exit 3)")
+    return EXIT_UNREAD if NOT_READ or any(r[2] is None for r in ROWS) else 0
 
 
 if __name__ == "__main__":

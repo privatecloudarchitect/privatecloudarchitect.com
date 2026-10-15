@@ -4,8 +4,8 @@ The reference estate, 2026-10-13 and 2026-10-15 (UTC): three vCenters on 9.1.1 j
 broker's identity provider is Active Directory over LDAP. Every run on the estate used `--redact`, so the names are
 placeholders, and each record path is shown as the record's file name in this folder. The API clients in them were
 throwaways, made by `api_client.py` for these runs and removed at the end: sections 1, 1a and 5 are one run of
-2026-10-15 at 06:36, section 3 a run of 2026-10-13 at 07:45, section 4 a read two minutes after it, and section 2 an
-earlier client at 04:51. The plans and the refusal in sections 1 and 1a send nothing, and were run with a stand-in
+2026-10-15 at 06:36, section 3 a run of 2026-10-13 at 07:45, section 4 a read two minutes after it, section 2 an
+earlier client at 04:51, and section 3b a run of 2026-10-15 at 11:25. The plans and the refusal in sections 1 and 1a send nothing, and were run with a stand-in
 host.
 
 **The exit codes were renumbered on 2026-10-15** to the one contract every identity companion keeps: 0 nothing to act
@@ -289,11 +289,12 @@ exchange.json written with every estate value replaced; exit 3
   behind each before you vault it.
 - **One directory account signs in from `vapi-endpoint` on all three vCenters, and is flagged.** It is the directory
   account the reference tooling itself signs in to vCenter with, so it is an integration on a directory password: the
-  very thing this chapter moves to an identity of its own. The census exits 1 until it moves, or until its owner confirms
-  each remaining session is a person's.
+  very thing this chapter moves to an identity of its own. The census exits 1 until it moves; a pair its owner confirms
+  as a person's own is acknowledged with `--ack` (section 3b).
 - **One directory account was at the vSphere Client, `vSphereUI`, and is not flagged.** That agent is the only one the
   census treats as a person's. Sessions show what is signed in at that moment; a nightly or weekly job is absent between
-  runs, so read on several days before you conclude no integration signs in on a directory password.
+  runs, so read more often than your shortest job, across your longest job cycle, and compare the records (section 3b)
+  before you conclude no integration signs in on a directory password.
 
 ## 3a. `--sessions` without `DIRECTORY_DOMAINS`: refused before any read
 
@@ -310,6 +311,103 @@ $ python3 vcenter_exchange.py --sessions --redact
   and none under the domains given, the census prints `NOT PLACED: DIRECTORY_DOMAINS names nothing on this vCenter`
   under that vCenter and `FAILED READ` at the end, and exits 3. That path is held by the companion's tests; no run on the
   reference estate met it, because no session list read there held another provider's sessions.
+
+## 3b. `--ack`, then `--compare` held to a coverage
+
+A run of 2026-10-15 at 11:25 (X-206b) on all three vCenters, as the directory account of section 4. Before the reads it
+opened one SOAP session of its own on each vCenter as that account, with the client agent `PowerCLI`: a stand-in for a
+person on PowerCLI, the case `--ack` exists for. It read three times, the second time with that pair acknowledged until
+the next day, compared the three records twice, and closed its stand-in sessions; read back, none was left.
+
+```
+$ OUT=b.json python3 vcenter_exchange.py --sessions --redact --ack acks.json
+Census read as VC_USER, an account with a password
+vCenter {{host-1}}
+  sessions (317, this census's own left out): directory 1, local administrator 15, local, VCF integration account 254, local, other 47
+    local administrator by agent: VMware vim-java 5, XML-WS Runtime git-revision#50dbfd3 2, vapi-endpoint 8
+    directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e]: PowerCLI 1 (acknowledged until 2026-10-16)
+vCenter {{host-2}}
+  sessions (445, this census's own left out): directory 1, local administrator 5, local, VCF integration account 365, local, other 74
+    local administrator by agent: VMware vim-java 1, XML-WS Runtime git-revision#50dbfd3 3, vAPI 1
+    directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e]: PowerCLI 1 (acknowledged until 2026-10-16)
+vCenter {{host-3}}
+  sessions (298, this census's own left out): directory 1, local, VCF integration account 152, local, other 145
+    directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e]: PowerCLI 1 (acknowledged until 2026-10-16)
+Directory accounts signing in from a client that is not interactive: 0 not acknowledged
+Acknowledged: 1 account(s) on a pair a person decided on; 1 acknowledgement(s), 0 matching no pair read
+WATCH: the local administrator holds 20 session(s) from clients that are not interactive: an account in automated use is not a break-glass account
+
+b.json written with every estate value replaced; exit 4
+```
+
+- **The acknowledged pair is listed, and nothing else is silenced.** Each `PowerCLI` session reads
+  `(acknowledged until 2026-10-16)`, the directory count reads `0 not acknowledged`, and the run exits 4 for the local
+  administrator, the finding left. Read without `--ack`, a minute before and a minute after, the same pair was flagged
+  and the run exited 1.
+
+```
+$ python3 vcenter_exchange.py --compare a.json b.json c.json
+Compared 3 session records on 1 day(s): 2026-10-15
+Coverage: reads in 1 of 24 hours of day (UTC: 11); a span of 0.02 h (0.00 days) from the first read to the last; the largest gap between two reads 1 min
+Asked: reads in 24 hours of day, a span of 7 days, no gap limit
+COVERAGE SHORT: reads in 1 of the 24 hours of day asked; a span of 0.00 day(s) where 7 were asked. A job that runs between two reads is absent from both, so what these records do not show is not known; that is exit 3, unless a finding comes first
+vCenter {{host-2}} [fingerprint 11a82a3adbfef99e], read in 3 of 3 record(s)
+  in every record: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI; local administrator from VMware vim-java; local administrator from XML-WS Runtime git-revision#50dbfd3; local administrator from vAPI
+  came and went: none
+  from a client that is not interactive: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI, seen in 3 record(s): NOT ACKNOWLEDGED
+  from a client that is not interactive: local administrator from VMware vim-java, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from XML-WS Runtime git-revision#50dbfd3, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from vAPI, seen in 3 record(s): a break-glass account in automated use
+vCenter {{host-1}} [fingerprint 492009a5c0b9a01e], read in 3 of 3 record(s)
+  in every record: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI; local administrator from VMware vim-java; local administrator from XML-WS Runtime git-revision#50dbfd3; local administrator from vapi-endpoint
+  came and went: none
+  from a client that is not interactive: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI, seen in 3 record(s): NOT ACKNOWLEDGED
+  from a client that is not interactive: local administrator from VMware vim-java, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from XML-WS Runtime git-revision#50dbfd3, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from vapi-endpoint, seen in 3 record(s): a break-glass account in automated use
+vCenter {{host-3}} [fingerprint 8ae6dbd6036b19fa], read in 3 of 3 record(s)
+  in every record: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI
+  came and went: none
+  from a client that is not interactive: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI, seen in 3 record(s): NOT ACKNOWLEDGED
+
+exit 1
+```
+
+- **Three reads minutes apart cover one hour of day and a span of a minute.** Against the defaults (every hour of day,
+  seven days) the coverage is short, so nothing these records leave out is known. The exit is 1, because a directory
+  pair off the vSphere Client that no acknowledgement covers comes first; without it, the shortfall alone exits 3.
+  `--compare` judges the pair itself, so an acknowledgement given to one census run is not carried into the comparison.
+
+```
+$ python3 vcenter_exchange.py --compare a.json b.json c.json --cover-hours 1 --span-days 0 --ack acks.json
+Compared 3 session records on 1 day(s): 2026-10-15
+Coverage: reads in 1 of 24 hours of day (UTC: 11); a span of 0.02 h (0.00 days) from the first read to the last; the largest gap between two reads 1 min
+Asked: reads in 1 hours of day, a span of 0 days, no gap limit
+vCenter {{host-2}} [fingerprint 11a82a3adbfef99e], read in 3 of 3 record(s)
+  in every record: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI; local administrator from VMware vim-java; local administrator from XML-WS Runtime git-revision#50dbfd3; local administrator from vAPI
+  came and went: none
+  from a client that is not interactive: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI, seen in 3 record(s): acknowledged until 2026-10-16
+  from a client that is not interactive: local administrator from VMware vim-java, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from XML-WS Runtime git-revision#50dbfd3, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from vAPI, seen in 3 record(s): a break-glass account in automated use
+vCenter {{host-1}} [fingerprint 492009a5c0b9a01e], read in 3 of 3 record(s)
+  in every record: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI; local administrator from VMware vim-java; local administrator from XML-WS Runtime git-revision#50dbfd3; local administrator from vapi-endpoint
+  came and went: none
+  from a client that is not interactive: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI, seen in 3 record(s): acknowledged until 2026-10-16
+  from a client that is not interactive: local administrator from VMware vim-java, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from XML-WS Runtime git-revision#50dbfd3, seen in 3 record(s): a break-glass account in automated use
+  from a client that is not interactive: local administrator from vapi-endpoint, seen in 3 record(s): a break-glass account in automated use
+vCenter {{host-3}} [fingerprint 8ae6dbd6036b19fa], read in 3 of 3 record(s)
+  in every record: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI
+  came and went: none
+  from a client that is not interactive: directory {{domain-1}}\{{name-2}} [fingerprint d1598c27948a7c1e] from PowerCLI, seen in 3 record(s): acknowledged until 2026-10-16
+
+exit 4
+```
+
+- **With a coverage the reads meet and the pair acknowledged, what is left is the local administrator,** in automated
+  use on the two management vCenters: exit 4. On a real gate the coverage asked is your own: a gap below your
+  shortest job and a span over your longest cycle.
 
 ## 4. The census with no API client
 

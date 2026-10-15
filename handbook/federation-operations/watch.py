@@ -54,35 +54,55 @@ Checks (pure functions over what was read; each returns {check, state, detail, m
                    organization, Organization Owner in a classic one): the way in when the provider refuses
 
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded at /oauth/provider/token) or
-      VCFA_PROVIDER_BEARER_FILE (a provider bearer you already hold); TLS_VERIFY=false on a self-signed lab CA (applies
-      to VCF Automation and to a non-Entra keys endpoint, never to Entra or Graph); ENTRA_TENANT_ID, ENTRA_CLIENT_ID
+      VCFA_PROVIDER_BEARER_FILE (a provider bearer, minted as platform-identity's plate 04, "Your provider bearer",
+      shows); TLS_VERIFY=false on a self-signed lab CA (applies
+      to VCF Automation and to a non-Entra keys endpoint, never to Entra or Graph); ENTRA_TENANT_ID (the tenant this run
+      covers: its id in any case, or one of its domain names), ENTRA_CLIENT_ID
       and ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the `cryptography` package): the
       tenant's read-only app, which the rollover checks run through; ORGS (comma list; default every organization with
       OIDC or SAML on, except one signed in through VCF single sign-on and the provider's own consumption
       organization); WARN_DAYS (default 30); OUT (default watch.json).
 A read the watch could not make is never a pass, and neither is a check it did not run. An organization whose reads
 fail is kept in the run, named and counted, whether or not ORGS names it; an app or service principal Graph cannot find
-for an organization federated to the Graph credential's tenant is a failed read, as is a settings read that returns no
+for an organization federated to the run's tenant is a failed read, as is a settings read that returns no
 client secret to match; and a credential refused before any organization is read ends the run at exit 3 with no
-record. Without the tenant's read-only app the run is provider-only: it reads the organization's side (key refresh,
-keys held, PKCE, the local administrator) and runs none of the rollover checks (the client secret's end date, the SAML
-certificate's end date and whether the organization holds it, the app's gate, the group names), says so for each
-organization ("rollover checks not run: the tenant's read-only app is owed"), and exits 3. The same holds for an
-organization federated to another Entra tenant than ENTRA_TENANT_ID (that tenant's app is owed: run again with it and
-ORGS naming the organization) and for a provider other than Entra ID, whose side this watch does not read.
+record. Without the tenant's read-only app, and not declared provider-only, the run reads the organization's side (key
+refresh, keys held, PKCE, the local administrator) and runs none of the rollover checks (the client secret's end date,
+the SAML certificate's end date and whether the organization holds it, the app's gate, the group names), says so for
+each organization ("rollover checks not run: the tenant's read-only app is owed"), and exits 3. A provider other than
+Entra ID, whose side this watch does not read, is the same.
+
+One schedule per tenant. A provider with several tenants runs the watch once per Entra tenant, each run with that
+tenant's ENTRA_TENANT_ID and app, and each passing the whole tenant list with --expect-tenants. An organization
+federated to another tenant than the run's is "another tenant's: its own schedule reads it": named in the run, read no
+further, and left out of its exit. An organization federated to a tenant outside --expect-tenants is "uncovered: no
+schedule reads it", and exits 3. A run whose tenant no organization in it names exits 3: a wrong tenant would
+otherwise read as every organization being another tenant's. A domain name is resolved to the tenant's id through
+Entra's public OpenID configuration for that domain; a domain Entra answers names no tenant is a usage error.
+
+A tenant may withhold the read-only app, since its Graph permissions read the whole directory. --provider-only declares
+it: the run takes no Graph credential, judges its exit on the organization's side alone, and lists the rollover checks
+as owed by the tenant (ENTRA_TENANT_ID, if set, names the tenant the run covers). --tenant-attested YYYY-MM-DD gives the
+date of the tenant's last report of its rollover dates (its secrets' and certificates' end dates, its assignment and its
+group names); a report older than --attested-max-days (default 30) warns, in the watch's own code 1. An undeclared run
+without the app still exits 3.
 
 Use:  python3 watch.py                      read, print, write the record
       python3 watch.py --redact             print with placeholders instead of your names (for a shared transcript)
+      python3 watch.py --expect-tenants T1,T2       the full tenant list (ids or domain names); with any run
+      python3 watch.py --provider-only [--tenant-attested YYYY-MM-DD [--attested-max-days N]]
       python3 watch.py --why "<what the user saw>" [--protocol oidc|saml]   the sign-in router; reads nothing
-Exit: 0 every check ran and is ok · 1 a warning (an end date inside WARN_DAYS, a refresh interval over 1 h, a gap that
-      is not yet an outage) · 2 a failure that stops sign-in now or at the provider's next roll (a key not held, refresh
-      not succeeding, an expired secret or certificate, a held secret the app no longer lists, a renamed group, PKCE
-      on, a disabled app) · 3 nothing failed, and a read failed or a result is undetermined: an organization unread,
-      the tenant's app not found, a credential refused, a check that could not judge, the rollover checks not run, or
-      a record that could not be written · 5 a usage error: an unknown or missing argument, a missing or inconsistent
-      environment variable, a credential or key file that cannot be read, a Python older than 3.9. An error the
-      watch did not expect exits 3, never 1. --why: 0 a row matched; 1 none did, and it prints the first reads for a
-      message no run showed.
+Exit: 0 every check this run owns ran and is ok · 1 a warning (an end date inside WARN_DAYS, a refresh interval over
+      1 h, a gap that is not yet an outage, a tenant's report older than --attested-max-days) · 2 a failure that stops
+      sign-in now or at the provider's next roll (a key not held, refresh not succeeding, an expired secret or
+      certificate, a held secret the app no longer lists, a renamed group, PKCE on, a disabled app) · 3 nothing failed,
+      and a read failed or a result is undetermined: an organization unread, the tenant's app not found, a credential
+      refused, a check that could not judge, the rollover checks not run on an undeclared run, an organization no
+      schedule reads, a run whose tenant no organization names, or a record that could not be written · 5 a usage
+      error: an unknown or missing argument, a missing or inconsistent environment variable, a credential or key file
+      that cannot be read, a tenant or date that names nothing, a Python older than 3.9. An error the watch did not
+      expect exits 3, never 1. --why: 0 a row matched; 1 none did, and it prints the first reads for a message no run
+      showed.
 """
 
 from __future__ import annotations
@@ -100,7 +120,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 CLOUDAPI = "application/json;version=9.1.0"
@@ -154,7 +174,7 @@ SIGN_IN_ROUTER = [
     {"id": "oidc-key-missing", "seen": [SSO_FAILED, SSO_FAILURE_URL], "hints": ["signing key", "key roll"],
      "protocol": "oidc", "refused_by": "organization", "entra_log": "a success",
      "look_at": "the organization's stored signing keys against the keys Entra publishes, and the age of its last successful refresh (watch.py: keys_held, key_refresh)",
-     "then": "write Entra's current keys into the organization; sign-in works at the next attempt. Waiting means the next scheduled refresh plus about five minutes",
+     "then": "write Entra's current keys into the organization; sign-in works at the next attempt. Waiting means the next successful refresh, at most the interval plus an hour after the last one, and about five minutes more",
      "teaches": "key-rollover"},
     {"id": "oidc-group-renamed", "seen": [SSO_FAILED, SSO_FAILURE_URL], "hints": ["group renamed", "rename"],
      "protocol": "oidc", "refused_by": "organization", "entra_log": "a success",
@@ -564,8 +584,10 @@ def entra_tenant(protocol: str, oauth: dict, fed: dict) -> str | None:
 
 def graph_skip(protocol: str, tenant: str | None, graph_tenant: str | None) -> str:
     """Why the Graph checks cannot run for this organization, or "" when they must. Whatever the reason, they are not
-    run, and a check not run is never a pass: the organization is marked `not_run` and the run exits 3 (`owed` says
-    what would let them run). Anything else that keeps a Graph check from running is a failed read."""
+    run, and a check not run is never a pass: the organization is marked `not_run` (`owed` says what would let them
+    run), and only a run declared --provider-only leaves that out of its exit. An organization federated to another
+    tenant never reaches here: coverage() names it another tenant's, or uncovered. Anything else that keeps a Graph
+    check from running is a failed read."""
     if tenant is None:
         return "the provider is not Entra ID"
     if graph_tenant is None:
@@ -576,32 +598,119 @@ def graph_skip(protocol: str, tenant: str | None, graph_tenant: str | None) -> s
 
 
 ROLLOVER_NOT_RUN = "rollover checks not run"
+DECLARED = "a declared provider-only run"
 OWED = {
     "no Graph credential given": "the tenant's read-only app is owed",
+    DECLARED: "owed by the tenant: its administrator runs them and reports the dates",
     "the organization is federated to another Entra tenant than ENTRA_TENANT_ID":
-        "that tenant's read-only app is owed: run the watch with it and ORGS naming the organization",
+        "that tenant's read-only app is owed: its own schedule reads it",
     "the provider is not Entra ID":
         "this watch reads the provider's side only on Entra ID: track that provider's secret, certificate and groups "
         "by its own means, or leave the organization out of ORGS",
 }
 
 
-def not_run(checks: tuple[str, ...], why: str) -> dict:
-    """The record of rollover checks the run did not make: which, why, and what is owed for them to run."""
-    return {"checks": list(checks), "why": why, "owed": OWED.get(why, why)}
+def not_run(checks: tuple[str, ...], why: str, declared: bool = False) -> dict:
+    """The record of rollover checks the run did not make: which, why, and what is owed for them to run. `declared` is
+    set on a run declared --provider-only, which owes them to the tenant and leaves them out of its exit."""
+    out = {"checks": list(checks), "why": why, "owed": OWED[DECLARED] if declared else OWED.get(why, why)}
+    if declared:
+        out["declared"] = True
+    return out
 
 
-def provider_only_lines(results: list[dict]) -> list[str]:
-    """What a run that did not make the rollover checks could and could not see, for the end of its output."""
-    missed = [r for r in results if r.get("not_run")]
-    if not missed:
-        return []
-    owed = sorted({r["not_run"]["owed"] for r in missed})
-    cannot = sorted({c for r in missed for c in r["not_run"]["checks"]})
-    return [f"{ROLLOVER_NOT_RUN} on {len(missed)} organization(s): {'; '.join(owed)}",
-            "  read: the organization's side (key_refresh, keys_held, pkce, break_glass)",
-            f"  not read: {', '.join(cannot)} ({', '.join(TENANT_READS[c] for c in cannot if c in TENANT_READS)})",
-            "  a check not run is never a pass: exit 3 until they run"]
+# ── coverage: one schedule per tenant ──────────────────────────────────────────────────────────────────────
+OTHER = "another tenant's: its own schedule reads it"
+UNCOVERED = "uncovered: no schedule reads it"
+TENANT_ID = re.compile(r"^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")
+DOMAIN = re.compile(r"^(?=.{4,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$")
+
+
+class TenantError(Exception):
+    """A tenant named on the command line or in ENTRA_TENANT_ID that names no Entra tenant: a usage error (exit 5)."""
+
+
+def tenant_form(value: str) -> str:
+    """'id', 'domain', or '' for a string that is neither (a usage error before anything is read)."""
+    v = value.strip()
+    return "id" if TENANT_ID.match(v) else "domain" if DOMAIN.match(v) else ""
+
+
+def resolve_tenant(value: str, discover=None) -> str:
+    """The tenant's id in lower case. An id is taken as it is. A domain name is resolved through Entra's public OpenID
+    configuration for it, whose issuer names the tenant's id; Entra answers a domain that names no tenant with an
+    error (TenantError, exit 5). A read that does not answer raises as any read does (exit 3)."""
+    v = value.strip()
+    if TENANT_ID.match(v):
+        return v.lower()
+    if not DOMAIN.match(v):
+        raise TenantError(f"{v!r} is neither a tenant id nor a domain name")
+    fetch = discover or (lambda d: _fetch(f"{ENTRA}/{urllib.parse.quote(d)}/v2.0/.well-known/openid-configuration",
+                                          {"Accept": "application/json"}, True))
+    try:
+        doc = fetch(v)
+    except urllib.error.HTTPError as e:
+        if 400 <= e.code < 500:
+            raise TenantError(f"Entra names no tenant for the domain {v!r} (HTTP {e.code})") from None
+        raise
+    m = ENTRA_TENANT_IN.search((doc.get("issuer") or "") + "/" if isinstance(doc, dict) else "")
+    if not m:
+        raise TenantError(f"Entra's OpenID configuration for {v!r} names no tenant id")
+    return m.group(1).lower()
+
+
+def coverage(tenant: str | None, run_tenant: str | None, expected: set[str] | None) -> str:
+    """Whose schedule reads an organization federated to `tenant`: "" this run's; OTHER another tenant's, which its own
+    schedule reads and which leaves this run's exit alone; UNCOVERED a tenant outside the expected list, which no
+    schedule reads (exit 3). An organization on a provider other than Entra ID, or a run that names no tenant, is this
+    run's, apart from an expected list that leaves its tenant out."""
+    if tenant is None:
+        return ""
+    if expected is not None and tenant not in expected and tenant != run_tenant:
+        return UNCOVERED
+    if run_tenant is not None and tenant != run_tenant:
+        return OTHER
+    return ""
+
+
+def tenant_report(attested: date, today: date, max_days: int) -> dict:
+    """The tenant's last report of its rollover dates, judged by its age: older than max_days warns (exit 1), because
+    the dates it carried may have moved since; it never stands in for a check the run did not make."""
+    age = (today - attested).days
+    if age > max_days:
+        return _result("tenant_report", "warn", f"the tenant's last report of its rollover dates is {age} days old, past "
+                       f"the {max_days}-day limit: ask the tenant's administrator for a new one", age_days=age, max_days=max_days)
+    return _result("tenant_report", "ok", f"the tenant reported its rollover dates {age} days ago, inside the "
+                   f"{max_days}-day limit", age_days=age, max_days=max_days)
+
+
+def provider_only_lines(results: list[dict], attested: dict | None = None) -> list[str]:
+    """What a run that did not make the rollover checks could and could not see, and the organizations it left to
+    another schedule or to none, for the end of its output."""
+    out = []
+    missed = [r for r in results if r.get("not_run") and not r["not_run"].get("declared")]
+    owed = [r for r in results if (r.get("not_run") or {}).get("declared")]
+    for group, head, tail in (
+            (missed, ROLLOVER_NOT_RUN, "  a check not run is never a pass: exit 3 until they run"),
+            (owed, ROLLOVER_NOT_RUN, "  a declared provider-only run: its exit is the organization's "
+                   "side" + (", and the age of the tenant's last report" if attested else
+                             "; give --tenant-attested to hold the tenant's reports to a date"))):
+        if not group:
+            continue
+        why = sorted({r["not_run"]["owed"] for r in group})
+        cannot = sorted({c for r in group for c in r["not_run"]["checks"]})
+        out += [f"{head} on {len(group)} organization(s): {'; '.join(why)}",
+                "  read: the organization's side (key_refresh, keys_held, pkce, break_glass)",
+                f"  not read: {', '.join(cannot)} ({', '.join(TENANT_READS[c] for c in cannot if c in TENANT_READS)})",
+                tail]
+    other = [r for r in results if r.get("coverage") == OTHER]
+    if other:
+        out.append(f"{OTHER}: {len(other)} organization(s) federated to another tenant, left out of this run's exit")
+    lost = [r for r in results if r.get("coverage") == UNCOVERED]
+    if lost:
+        out.append(f"{UNCOVERED}: {len(lost)} organization(s) federated to a tenant outside --expect-tenants; exit 3 "
+                   "until a schedule reads it")
+    return out
 
 
 def kept(result: dict, wanted: list[str]) -> bool:
@@ -611,30 +720,47 @@ def kept(result: dict, wanted: list[str]) -> bool:
 
 
 def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_days: int, seen: set,
-              graph_error: str = "") -> dict:
+              graph_error: str = "", run_tenant: str | None = None, expected: set[str] | None = None,
+              declared: bool = False, attested: dict | None = None) -> dict:
     """Read one organization on both sides and run its checks. `seen` collects every estate value read, for the scrub.
-    `graph_error` is set when a Graph credential was given and refused: every Graph check it would have run is unread."""
+    `graph_error` is set when a Graph credential was given and refused: every Graph check it would have run is unread.
+    `run_tenant` is the tenant the run covers and `expected` the full tenant list (coverage()); `declared` marks a run
+    declared --provider-only, and `attested` the tenant's last report ({date, max_days, today})."""
     uid = org["id"].rsplit(":", 1)[-1]
     seen.update({org["name"], org["id"], uid})
     out = {"org": org["name"], "org_type": "classic" if org.get("isClassicTenant") else "all-apps", "checks": [], "read_errors": []}
     try:
         oauth, prefix = api.oauth(uid)
         fed = api.federation(uid)
+    except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+        out["protocol"] = "unread"   # kept by main(), so a refused read is never a silent pass
+        out["read_errors"].append(f"VCF Automation: {type(e).__name__}")
+        return out
+    oidc = bool(oauth.get("enabled")) and not oauth.get("vidb")
+    saml = bool(fed.get("enabled"))
+    out["protocol"] = "oidc" if oidc else "saml" if saml else "none"
+    seen.update(v for v in (oauth.get("issuerId"), oauth.get("clientId"), oauth.get("jwksUri"), oauth.get("orgRedirectUri")) if v)
+    tenant = entra_tenant(out["protocol"], oauth, fed)
+    if tenant:
+        out["tenant"] = tenant
+        seen.add(tenant)
+    cover = coverage(tenant, run_tenant, expected) if (oidc or saml) else ""
+    if cover:   # another schedule's organization, or none's: named, and read no further
+        out["coverage"] = cover
+        del prefix
+        return out
+    try:
         users = api.users(org["id"])
         groups = api.pages("/cloudapi/1.0.0/groups", org["id"])
         roles = api.roles(org["id"])
     except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
-        out["protocol"] = "unread"   # kept by main(), so a refused read is never a silent pass
-        out["read_errors"].append(f"VCF Automation: {type(e).__name__}")
+        out["read_errors"].append(f"VCF Automation: {type(e).__name__}")   # kept, named, and never a pass
+        del prefix
         return out
     for u in users:
         seen.update(v for v in (u.get("username"), u.get("email"), u.get("fullName"), u.get("nameInSource")) if v)
     for g in groups:
         seen.update(v for v in (g.get("name"), g.get("nameInSource"), g.get("id")) if v)
-    oidc = bool(oauth.get("enabled")) and not oauth.get("vidb")
-    saml = bool(fed.get("enabled"))
-    out["protocol"] = "oidc" if oidc else "saml" if saml else "none"
-    seen.update(v for v in (oauth.get("issuerId"), oauth.get("clientId"), oauth.get("jwksUri"), oauth.get("orgRedirectUri")) if v)
     checks, app, sp = out["checks"], None, None
     if oidc:
         checks.append(key_refresh(oauth, now))
@@ -647,13 +773,15 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
         checks.append(pkce(oauth))
     imported = [g["name"] for g in groups if g.get("providerType") == ("OAUTH" if oidc else "SAML")]
     graph_checks = ("secret_end", "app_gate", "group_names") if oidc else ("saml_cert_end", "saml_cert_held", "app_gate", "group_names")
-    skip = graph_skip(out["protocol"], entra_tenant(out["protocol"], oauth, fed),
-                      graph.tenant if graph is not None else (os.environ.get("ENTRA_TENANT_ID") if graph_error else None))
+    skip = DECLARED if declared else graph_skip(
+        out["protocol"], tenant, graph.tenant if graph is not None else (run_tenant if graph_error else None))
     if not (oidc or saml):
         out["read_errors"].append("neither OIDC nor SAML is on for this organization")
     elif skip:   # not run, so never a pass: the organization carries why, and what would let them run
-        out["not_run"] = not_run(graph_checks, skip)
+        out["not_run"] = not_run(graph_checks, skip, declared)
         checks += _skipped(graph_checks, f"{ROLLOVER_NOT_RUN}: {out['not_run']['owed']} ({skip})")
+        if declared and attested:
+            checks.append(tenant_report(attested["date"], attested["today"], attested["max_days"]))
     elif graph is None:   # a Graph credential was given and refused: each check it would have run is unread
         out["read_errors"].append(graph_error)
         checks += _skipped(graph_checks, "not run: the Graph credential given was refused")
@@ -709,13 +837,32 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
     return out
 
 
-def exit_code(results: list[dict]) -> int:
+def run_errors(results: list[dict], run_tenant: str | None) -> list[str]:
+    """What is wrong with the run as a whole: a run tenant no organization in it names, which would otherwise read as
+    every organization being another tenant's and exit 0 having judged nothing."""
+    if run_tenant is None or not results:
+        return []
+    if any(r.get("tenant") == run_tenant and not r.get("coverage") for r in results):
+        return []
+    if all(r.get("protocol") == "unread" or not r.get("protocol") for r in results):
+        return []   # nothing could be read, which the organizations already say
+    return ["no organization in the run is federated to the run's tenant (ENTRA_TENANT_ID): a wrong tenant would read "
+            "every organization as another tenant's"]
+
+
+def exit_code(results: list[dict], errors: list[str] | tuple = ()) -> int:
     """One code per state, the first that applies: a failure; then a read that failed, a check that could not judge
-    (unknown) or rollover checks not run, none of which is a pass; then a warning; then nothing to act on."""
-    states = [c["state"] for r in results for c in r["checks"]]
+    (unknown) or rollover checks not run on an undeclared run, an organization no schedule reads, or a run error, none
+    of which is a pass; then a warning; then nothing to act on. Another tenant's organization, and the rollover checks
+    a declared --provider-only run owes to the tenant, are left out."""
+    mine = [r for r in results if r.get("coverage") != OTHER]
+    states = [c["state"] for r in mine for c in r["checks"]
+              if not ((r.get("not_run") or {}).get("declared") and c["check"] in r["not_run"]["checks"])]
     if "fail" in states:
         return EXIT_FAIL
-    if "unknown" in states or any(r["read_errors"] or r.get("not_run") for r in results):
+    if ("unknown" in states or errors
+            or any(r["read_errors"] or r.get("coverage") == UNCOVERED
+                   or (r.get("not_run") and not r["not_run"].get("declared")) for r in mine)):
         return EXIT_UNREAD
     return EXIT_WARN if "warn" in states else EXIT_OK
 
@@ -732,8 +879,14 @@ class ScrubError(Exception):
     """The record would carry an estate value, so it is not written."""
 
 
-def placeholders(results: list[dict]) -> dict:
-    return {r["org"]: f"{{{{org-{i}}}}}" for i, r in enumerate(results, 1)}
+def placeholders(results: list[dict], run_tenant: str | None = None) -> dict:
+    """A stable placeholder for each organization, and for each tenant (the run's own first), for the record and
+    for --redact."""
+    names = {r["org"]: f"{{{{org-{i}}}}}" for i, r in enumerate(results, 1)}
+    tenants = [run_tenant] if run_tenant else []
+    tenants += [t for t in dict.fromkeys(r.get("tenant") for r in results) if t and t not in tenants]
+    names.update({t: f"{{{{tenant-{i}}}}}" for i, t in enumerate(tenants, 1)})
+    return names
 
 
 def scrub(text: str, names: dict, seen: set) -> str:
@@ -751,25 +904,36 @@ def scrub(text: str, names: dict, seen: set) -> str:
     return text
 
 
-def record(results: list[dict], warn_days: int, now: datetime, seen: set) -> str:
-    names = placeholders(results)
-    doc = {"captured": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "warn_days": warn_days, "exit": exit_code(results),
-           "organizations": [{**r, "org": names[r["org"]]} for r in results]}
+def record(results: list[dict], warn_days: int, now: datetime, seen: set, run: dict | None = None) -> str:
+    """The run's record: every organization under a placeholder, and the run's own terms (`run`: its mode, its tenant,
+    how many tenants it expects, the tenant's report, and any run error), every estate value replaced."""
+    run = run or {}
+    names = placeholders(results, run.get("tenant"))
+    errors = list(run.get("errors") or [])
+    doc = {"captured": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "warn_days": warn_days, "exit": exit_code(results, errors),
+           "mode": run.get("mode", "with the tenant's app"), "tenant": run.get("tenant"),
+           "expected_tenants": run.get("expected_tenants"), "tenant_attested": run.get("tenant_attested"),
+           "run_errors": errors, "organizations": [{**r, "org": names[r["org"]]} for r in results]}
     return scrub(json.dumps(doc, indent=2, ensure_ascii=False), names, seen | {os.environ.get("VCFA_HOST", "")} - {""})
 
 
-def _print(results: list[dict], names: dict | None) -> None:
+def _print(results: list[dict], names: dict | None, attested: dict | None = None, errors: list[str] | tuple = ()) -> None:
     for r in results:
         label = names[r["org"]] if names else r["org"]
         print(f"\n{label}  ({r.get('protocol', '?')}, {r['org_type']})")
+        if r.get("coverage"):
+            t = r.get("tenant") or ""
+            print(f"  TENANT  {r['coverage']} (tenant {names.get(t, t) if names else t})")
         for c in r["checks"]:
             print(f"  {c['state'].upper():<8}{c['check']:<16}{c['detail']}")
         for e in r["read_errors"]:
             print(f"  READ    {e}")
-    lines = provider_only_lines(results)
+    lines = provider_only_lines(results, attested)
     if lines:
         print("")
         print("\n".join(lines))
+    for e in errors:
+        print(f"\nREAD    {e}")
 
 
 class _Parser(argparse.ArgumentParser):
@@ -781,9 +945,13 @@ class _Parser(argparse.ArgumentParser):
         raise SystemExit(EXIT_USAGE)
 
 
-def usage_problem(env: dict) -> str:
+GRAPH_ENV = ("ENTRA_CLIENT_ID", "ENTRA_CLIENT_SECRET_FILE", "ENTRA_CERT_FILE", "ENTRA_KEY_FILE")
+
+
+def usage_problem(env: dict, provider_only: bool = False) -> str:
     """What is missing or inconsistent in the environment, or "". Checked before any call, so a run that could not
-    have read is a usage error (exit 5), never a read failure or a pass."""
+    have read is a usage error (exit 5), never a read failure or a pass. A run declared --provider-only takes no Graph
+    credential, and its ENTRA_TENANT_ID, if set, only names the tenant it covers."""
     if not env.get("VCFA_HOST"):
         return "set VCFA_HOST"
     if not (env.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE") or env.get("VCFA_PROVIDER_BEARER_FILE")):
@@ -791,18 +959,47 @@ def usage_problem(env: dict) -> str:
     days = env.get("WARN_DAYS", "30")
     if not days.isdigit():
         return f"WARN_DAYS must be a whole number of days, not {days!r}"
-    graph = [k for k in ("ENTRA_CLIENT_ID", "ENTRA_CLIENT_SECRET_FILE", "ENTRA_CERT_FILE", "ENTRA_KEY_FILE") if env.get(k)]
+    graph = [k for k in GRAPH_ENV if env.get(k)]
+    if provider_only and graph:
+        return f"--provider-only takes no Graph credential, and {', '.join(graph)} is set: unset it, or drop --provider-only"
     if graph and not env.get("ENTRA_TENANT_ID"):
         return f"{', '.join(graph)} given without ENTRA_TENANT_ID: set it, or unset them for a provider-only run"
     if env.get("ENTRA_TENANT_ID"):
-        if not env.get("ENTRA_CLIENT_ID"):
-            return "ENTRA_TENANT_ID needs ENTRA_CLIENT_ID, the tenant's read-only app"
-        if not (env.get("ENTRA_CLIENT_SECRET_FILE") or (env.get("ENTRA_CERT_FILE") and env.get("ENTRA_KEY_FILE"))):
+        if not tenant_form(env["ENTRA_TENANT_ID"]):
+            return "ENTRA_TENANT_ID is neither a tenant id nor a domain name"
+        if not provider_only and not env.get("ENTRA_CLIENT_ID"):
+            return "ENTRA_TENANT_ID needs ENTRA_CLIENT_ID, the tenant's read-only app (or declare --provider-only)"
+        if not provider_only and not (env.get("ENTRA_CLIENT_SECRET_FILE") or (env.get("ENTRA_CERT_FILE") and env.get("ENTRA_KEY_FILE"))):
             return "the tenant's read-only app needs ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE"
     for k in ("VCFA_PROVIDER_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_BEARER_FILE", "ENTRA_CLIENT_SECRET_FILE",
               "ENTRA_CERT_FILE", "ENTRA_KEY_FILE"):
         if env.get(k) and not (Path(env[k]).is_file() and os.access(env[k], os.R_OK)):
             return f"{k} names a file that cannot be read"
+    return ""
+
+
+def args_problem(a: argparse.Namespace, today: date) -> str:
+    """What is wrong with the run's own flags, or "": checked before any call, a usage error (exit 5)."""
+    if a.tenant_attested is not None and not a.provider_only:
+        return "--tenant-attested goes with --provider-only: with the tenant's app the watch reads the dates itself"
+    if a.attested_max_days is not None and a.tenant_attested is None:
+        return "--attested-max-days goes with --tenant-attested"
+    if a.tenant_attested is not None:
+        try:
+            d = date.fromisoformat(a.tenant_attested)
+        except ValueError:
+            return f"--tenant-attested takes a date, YYYY-MM-DD, not {a.tenant_attested!r}"
+        if d > today:
+            return f"--tenant-attested {a.tenant_attested} is in the future"
+    if a.attested_max_days is not None and a.attested_max_days < 1:
+        return "--attested-max-days takes a whole number of days, 1 or more"
+    if a.expect_tenants is not None:
+        listed = [t.strip() for t in a.expect_tenants.split(",") if t.strip()]
+        if not listed:
+            return "--expect-tenants needs the tenant list: ids or domain names, comma separated"
+        bad = [t for t in listed if not tenant_form(t)]
+        if bad:
+            return f"--expect-tenants: {', '.join(repr(t) for t in bad)} is neither a tenant id nor a domain name"
     return ""
 
 
@@ -827,6 +1024,14 @@ def _run(argv: list[str]) -> int:
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
     ap.add_argument("--why", metavar="TEXT", help="the sign-in router: what the user saw; reads nothing")
     ap.add_argument("--protocol", choices=("oidc", "saml", "any"), help="with --why: the organization's protocol")
+    ap.add_argument("--expect-tenants", metavar="T1,T2", help="every Entra tenant a schedule covers (ids or domain "
+                    "names); an organization federated to another is uncovered (exit 3)")
+    ap.add_argument("--provider-only", action="store_true", help="declared: no Graph credential; the exit is the "
+                    "organization's side, and the rollover checks are owed by the tenant")
+    ap.add_argument("--tenant-attested", metavar="YYYY-MM-DD", help="with --provider-only: the date of the tenant's "
+                    "last report of its rollover dates")
+    ap.add_argument("--attested-max-days", type=int, metavar="N", help="with --tenant-attested: the report's "
+                    "greatest age before it warns (default 30)")
     a = ap.parse_args(argv)
     if a.why is not None:
         if not a.why.strip():
@@ -844,13 +1049,31 @@ def _run(argv: list[str]) -> int:
         return 0 if rows else 1
     if a.protocol:
         ap.error("--protocol goes with --why")
-    problem = usage_problem(dict(os.environ))
+    now = datetime.now(timezone.utc)
+    problem = usage_problem(dict(os.environ), a.provider_only) or args_problem(a, now.date())
     if problem:
         print(f"{problem} (see the header); nothing was read", file=sys.stderr)
         return EXIT_USAGE
-    now = datetime.now(timezone.utc)
     warn_days = int(os.environ.get("WARN_DAYS", "30"))
     wanted = [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
+    attested = None
+    if a.tenant_attested is not None:
+        attested = {"date": date.fromisoformat(a.tenant_attested), "today": now.date(),
+                    "max_days": a.attested_max_days or 30}
+    # The run's tenant and the tenant list, as ids: a domain Entra names no tenant for is a usage error; a resolution
+    # that does not answer is a read that failed (exit 3, no record).
+    try:
+        run_tenant = resolve_tenant(os.environ["ENTRA_TENANT_ID"]) if os.environ.get("ENTRA_TENANT_ID") else None
+        expected = ({resolve_tenant(t) for t in a.expect_tenants.split(",") if t.strip()}
+                    if a.expect_tenants is not None else None)
+    except TenantError as e:
+        print(f"{e} (see the header); nothing was read", file=sys.stderr)
+        return EXIT_USAGE
+    except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+        print(f"READ FAILED: Entra's OpenID configuration, resolving a tenant's domain name: {type(e).__name__}; exit 3, no record written")
+        return EXIT_UNREAD
+    if expected is not None and run_tenant:
+        expected.add(run_tenant)   # the run's own tenant is always covered: by this run
     # A credential refused, or an organization list that cannot be read, ends the run before any check: exit 3, no record.
     try:
         api = Vcfa(os.environ["VCFA_HOST"])
@@ -862,26 +1085,34 @@ def _run(argv: list[str]) -> int:
         print("READ FAILED: the organization list came back empty, so the credential sees no organization; exit 3, no record written")
         return EXIT_UNREAD
     graph, graph_error = None, ""
-    if os.environ.get("ENTRA_TENANT_ID"):
+    if os.environ.get("ENTRA_TENANT_ID") and not a.provider_only:
         try:
             graph = Graph()
+            graph.tenant = run_tenant   # the id, so a domain given as ENTRA_TENANT_ID still matches an issuer
         except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
             graph_error = f"Graph: the token request failed ({type(e).__name__})"
     # By default the provider's own consumption organization is left out: its sign-in settings are the platform's.
     orgs = [o for o in listed if (o["name"] in wanted if wanted else not o.get("isProviderConsumptionOrg"))]
-    seen = {os.environ.get("ENTRA_TENANT_ID", ""), os.environ.get("ENTRA_CLIENT_ID", "")} - {""}
+    seen = {os.environ.get("ENTRA_TENANT_ID", ""), os.environ.get("ENTRA_CLIENT_ID", ""), run_tenant or ""} | (expected or set())
+    seen -= {""}
     results = []
     for o in orgs:
-        r = watch_org(api, graph, o, now, warn_days, seen, graph_error)
+        r = watch_org(api, graph, o, now, warn_days, seen, graph_error, run_tenant, expected, a.provider_only, attested)
         if kept(r, wanted):
             results.append(r)
     missing = sorted(set(wanted) - {r["org"] for r in results})
     for m in missing:
         results.append({"org": m, "org_type": "?", "checks": [], "read_errors": ["no organization by that name"]})
-    _print(results, placeholders(results) if a.redact else None)
-    code = exit_code(results)
+    errors = run_errors(results, run_tenant)
+    _print(results, placeholders(results, run_tenant) if a.redact else None, attested, errors)
+    code = exit_code(results, errors)
+    run = {"mode": ("provider-only, declared" if a.provider_only else "with the tenant's app" if graph is not None or graph_error
+                    else "provider-only, undeclared"),
+           "tenant": run_tenant, "expected_tenants": len(expected) if expected is not None else None, "errors": errors,
+           "tenant_attested": ({"date": attested["date"].isoformat(), "max_days": attested["max_days"],
+                                "age_days": (attested["today"] - attested["date"]).days} if attested else None)}
     try:
-        text = record(results, warn_days, now, seen)
+        text = record(results, warn_days, now, seen, run)
     except ScrubError as e:   # the result above stands; the record does not, so the run is not on record
         code = code if code == EXIT_FAIL else EXIT_UNREAD
         print(f"\n{len(results)} organization(s); {e}; no record written; exit {code}")

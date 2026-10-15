@@ -51,6 +51,15 @@ SDDC Manager, its own bearer
 exit 0
 ```
 
+A run in which a surface you configured could not mint its own token prints a line for that surface as it happens,
+and one more under the summary line, and exits 3 rather than 0. The recorded run above minted every token, so these
+two lines are the shape the code prints, held by its tests, not a transcript:
+
+```text
+  NOT READ: Log management, service JWT (VCF_OPS_LI): the service JWT could not be minted; its doors were not read
+NOT READ: 1 configured surface(s) whose own token could not be minted: Log management, service JWT (VCF_OPS_LI) (exit 3)
+```
+
 ## claims.py
 
 Three runs: the operator's own api-token (a person), an API client's stored api-token (dead: deleted or rotated

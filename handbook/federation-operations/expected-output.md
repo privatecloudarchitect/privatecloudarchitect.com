@@ -101,3 +101,80 @@ rollover checks not run on 2 organization(s): the tenant's read-only app is owed
 - **The exit is 3, never 0.** Run again on the same two organizations with the tenant's read-only app, the watch read
   every rollover check and exited 1: the OIDC organization's held secret ended in 23.4 days, which the run above had
   no way to see. A scheduler that alerts on any non-zero exit keeps alerting until the app is held.
+
+## Declared provider-only, and one schedule per tenant
+
+The same two organizations, 2026-10-15 (UTC), read-only. A tenant that withholds the read-only app gets a run declared
+`--provider-only`, here with a report of its rollover dates 45 days old against the default 30-day limit. Exit 1: the
+two warnings the organization's side shows, and the stale report; the rollover checks are owed by the tenant and do
+not hold the exit at 3.
+
+```
+$ ENTRA_TENANT_ID=<the tenant's domain> ORGS=<the two organizations> python3 watch.py --redact --provider-only --tenant-attested 2026-08-31
+{{org-1}}  (oidc, all-apps)
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  OK      keys_held       all 6 published keys are held
+  OK      pkce            PKCE is off
+  UNKNOWN secret_end      rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
+  UNKNOWN app_gate        rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
+  UNKNOWN group_names     rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
+  WARN    tenant_report   the tenant's last report of its rollover dates is 45 days old, past the 30-day limit: ask the tenant's administrator for a new one
+  OK      break_glass     1 enabled local user(s) holding Organization Administrator
+
+{{org-2}}  (saml, all-apps)
+  UNKNOWN saml_cert_end   rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
+  UNKNOWN saml_cert_held  rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
+  UNKNOWN app_gate        rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
+  UNKNOWN group_names     rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
+  WARN    tenant_report   the tenant's last report of its rollover dates is 45 days old, past the 30-day limit: ask the tenant's administrator for a new one
+  WARN    break_glass     no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it
+
+rollover checks not run on 2 organization(s): owed by the tenant: its administrator runs them and reports the dates
+  read: the organization's side (key_refresh, keys_held, pkce, break_glass)
+  not read: app_gate, group_names, saml_cert_end, saml_cert_held, secret_end (whether the app requires assignment, the names of the groups assigned to the app, the signing certificate's end date, the app's active signing certificate, the client secret's end date)
+  a declared provider-only run: its exit is the organization's side, and the age of the tenant's last report
+
+2 organization(s); exit 1; record written with every estate value replaced
+```
+
+Run with a tenant that no organization names (an id made up for the run), the watch names both organizations another
+tenant's and leaves them to that tenant's schedule, then exits 3 because its own tenant named nothing:
+
+```
+$ ENTRA_TENANT_ID=<a tenant no organization names> ORGS=<the two organizations> python3 watch.py --redact --provider-only
+{{org-1}}  (oidc, all-apps)
+  TENANT  another tenant's: its own schedule reads it (tenant {{tenant-2}})
+
+{{org-2}}  (saml, all-apps)
+  TENANT  another tenant's: its own schedule reads it (tenant {{tenant-2}})
+
+another tenant's: its own schedule reads it: 2 organization(s) federated to another tenant, left out of this run's exit
+
+READ    no organization in the run is federated to the run's tenant (ENTRA_TENANT_ID): a wrong tenant would read every organization as another tenant's
+
+2 organization(s); exit 3; record written with every estate value replaced
+```
+
+Run with a tenant list that leaves their tenant out, both are uncovered:
+
+```
+$ ORGS=<the two organizations> python3 watch.py --redact --provider-only --expect-tenants <a tenant no organization names>
+{{org-1}}  (oidc, all-apps)
+  TENANT  uncovered: no schedule reads it (tenant {{tenant-1}})
+
+{{org-2}}  (saml, all-apps)
+  TENANT  uncovered: no schedule reads it (tenant {{tenant-1}})
+
+uncovered: no schedule reads it: 2 organization(s) federated to a tenant outside --expect-tenants; exit 3 until a schedule reads it
+
+2 organization(s); exit 3; record written with every estate value replaced
+```
+
+- **One schedule per tenant.** On your estate, each tenant's schedule names its own tenant and passes the whole list.
+  An organization on another tenant then reads `another tenant's` and leaves the exit alone; an organization on a
+  tenant nobody listed reads `uncovered` and exits 3 until a schedule covers it. The lab has one Entra tenant, so an
+  organization on a second real tenant was not run; the other tenant above is an id made up for the run.
+- **A declared run still fails on what it reads.** `--provider-only` moves the rollover checks to the tenant, not the
+  organization's side: a published key not held or refreshes not succeeding still exit 2.
+- **A domain that names no tenant is refused before anything is read**, with exit 5: `Entra names no tenant for the
+  domain <domain> (HTTP 400)`.

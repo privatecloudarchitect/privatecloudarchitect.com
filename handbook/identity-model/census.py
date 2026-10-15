@@ -72,21 +72,22 @@ Use:  python3 census.py [--redact] [--egress-metadata-url URL]
       python3 census.py --orgs-only [--redact]       VCF Automation's organizations only, on a provider credential
 Exit, the first that applies, so a scheduler reads one state from one number:
       0 recorded, every call answered
-      3 a read failed or is not known: a call failed (the record is still written and names the call; a refused fleet
-        read opens the print with NOT READ, so its zero counts are not taken for the estate's), the credential could
+      3 a read failed or is not known: a call failed or answered without what the read needs, such as a vCenter's
+        session POST with no session id (the record is still written and names the call; a refused fleet read opens
+        the print with NOT READ, so its zero counts are not taken for the estate's), the credential could
         not be obtained, --orgs-only read an organization signing in through VCF single sign-on whose issuer
         BROKER_HOSTS does not name (so the brokers given miss at least the one the platform signs in through), or an
         error the script did not expect
-      5 a usage error (a missing credential or host, --orgs-only without BROKER_HOSTS, an unreadable
-        FINGERPRINT_KEY_FILE, a Python older than 3.10), or the record refused because an estate value survived the
-        scrub (nothing is written)
+      5 a usage error (a missing credential or host, a credential file that cannot be read or holds nothing, VC_HOSTS
+        without VC_USER and a password, --orgs-only without BROKER_HOSTS, an unreadable FINGERPRINT_KEY_FILE, a Python
+        older than 3.10), or the record refused because an estate value survived the scrub (nothing is written)
 A tool that reads this record (service-accounts' catalog_check.py --census) takes it as a read only when its exit is
 0, no fleet call failed, and the lines it needs are there.
 
 Before a realm. The fleet read runs on a bearer the broker trades for an API token, and the token is made for an API
 client of a realm or a VCF single sign-on user, so the census as written starts once VCF single sign-on has a realm.
 Before that, read what has no realm to wait for: --orgs-only on a VCF Automation provider credential, and
-vcenter-authorization's authz.py, which runs without REALM_DOMAIN. Whether VCF Operations' own local administrator,
+vcenter-authorization's authz.py, which runs with --no-realm. Whether VCF Operations' own local administrator,
 through /suite-api/api/auth/token/acquire, can read the fleet identity plane was not tried.
 """
 
@@ -289,6 +290,10 @@ def vcfa_pages(vcfa: Reader, path: str) -> list:
     out, page = [], 1
     while True:
         answer = vcfa.call("GET", f"{path}?page={page}&pageSize=128", accept=CLOUDAPI)
+        last = vcfa.calls[-1]
+        if not (isinstance(answer, dict) and isinstance(answer.get("values"), list)) and (last.get("status") or 0) < 400 \
+                and not last.get("error"):
+            last["shape"] = "no values list in the answer"   # a page that lists nothing read nothing: never "no orgs"
         out += items(answer, "values")
         if not isinstance(answer, dict) or page >= (answer.get("pageCount") or 1):
             return out
@@ -335,6 +340,8 @@ def vc_session(host: str, user: str, password: str, calls: list) -> Reader | Non
     basic = base64.b64encode(f"{user}:{password}".encode()).decode()
     sid = vc.call("POST", "/api/session", headers={"Authorization": f"Basic {basic}"})
     if not isinstance(sid, str):
+        if (calls[-1].get("status") or 0) < 400 and not calls[-1].get("error"):
+            calls[-1]["shape"] = "no session id in the answer"   # an answer, but no session: this vCenter is not read
         return None
     vc.headers["vmware-api-session-id"] = sid
     return vc
@@ -946,7 +953,27 @@ def census(egress_url: str | None, ops_token: str | None, vcfa_token: str | None
 
 
 def failed(calls: list[dict]) -> list[dict]:
-    return [c for c in calls if c["status"] is None or c["status"] >= 400]
+    """The calls that did not read: no answer, a refusal, or an answer without what the read needs (`shape`)."""
+    return [c for c in calls if c["status"] is None or c["status"] >= 400 or c.get("shape")]
+
+
+CREDENTIAL_SECRETS = ("OPS_API_TOKEN", "API_TOKEN", "OPS_BEARER", "VCFA_PROVIDER_BEARER", "VCFA_PROVIDER_REFRESH_TOKEN",
+                      "VC_PASSWORD")
+
+
+def credential_problem() -> str | None:
+    """A credential the run was given but cannot use, found before anything is sent: a NAME_FILE that cannot be read
+    or holds nothing, or VC_HOSTS without VC_USER and a password. A usage error (exit 5), never a failed read."""
+    for name in CREDENTIAL_SECRETS:
+        if os.environ.get(f"{name}_FILE"):
+            try:
+                if not _secret(name):
+                    return f"{name}_FILE is empty"
+            except (OSError, UnicodeDecodeError) as e:
+                return f"{name}_FILE could not be read: {type(e).__name__}"
+    if os.environ.get("VC_HOSTS", "").strip() and not (os.environ.get("VC_USER") and _secret("VC_PASSWORD")):
+        return "VC_HOSTS needs VC_USER and VC_PASSWORD_FILE (or VC_PASSWORD)"
+    return None
 
 
 def unread(bad: list[dict]) -> str | None:
@@ -1001,6 +1028,10 @@ def _run(argv: list[str] | None = None) -> int:
     ap.add_argument("--orgs-only", action="store_true",
                     help="read only VCF Automation's organizations, on VCFA_HOST and a provider credential alone")
     a = ap.parse_args(argv)
+    problem = credential_problem()
+    if problem:
+        print(f"{problem}; nothing was sent", file=sys.stderr)
+        return EXIT_USAGE
     if os.environ.get("OPS_REALM") and not os.environ.get("BROKER_TENANT"):
         print("note: OPS_REALM is now BROKER_TENANT (the broker tenant, the realm's path segment at the broker, CUSTOMER by "
               "default, which is not the realm's name); reading OPS_REALM this time.", file=sys.stderr)
@@ -1037,7 +1068,7 @@ def _run(argv: list[str] | None = None) -> int:
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
         print(f"could not obtain a credential: {type(e).__name__} {getattr(e, 'code', '')}".rstrip()
               + ("; if the estate has no realm yet, there is no API client or VCF single sign-on user to make the token "
-                 "for, so read it with --orgs-only and vcenter-authorization's authz.py first" if not a.orgs_only else ""),
+                 "for, so read it with --orgs-only and vcenter-authorization's authz.py --no-realm first" if not a.orgs_only else ""),
               file=sys.stderr)
         return EXIT_UNREAD
     record = census(a.egress_metadata_url, ops_token, vcfa_token, orgs_only=a.orgs_only, key=key)
@@ -1052,7 +1083,7 @@ def _run(argv: list[str] | None = None) -> int:
         print("\n".join(([unread(bad)] if unread(bad) else []) + lines))
         for c, shown_call in zip(bad, failed(shown["calls"])):
             print(f"FAILED {shown_call['plane']} {c['method']} {shown_call['path']}: {c['status'] or ''} "
-                  f"{c.get('error') or ''} {'' if a.redact else c.get('message') or ''}".rstrip())
+                  f"{c.get('error') or c.get('shape') or ''} {'' if a.redact else c.get('message') or ''}".rstrip())
     if left:
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))})",
               file=sys.stderr)

@@ -16,16 +16,21 @@ example a service JWT from the fleet plane's exchange, or the bearer another flo
 Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN_FILE; OPS_BROKER_HOST, the broker that trades the token, when it
        is not OPS_HOST; BROKER_TENANT, OPS_TLS_VERIFY optional)
        JWT_ENV (optional)  name of an env var holding a JWT to decode instead of minting one
+Use:   python3 claims.py          it takes no argument; --help prints this
 Exit:  0 claims printed
-       3 the mint failed (the broker did not trade the api-token for a bearer), or an error the script did not expect
-       5 a usage error: OPS_HOST or the api-token unset, JWT_ENV naming an empty variable or a value that is not a
-         JWT, or a Python older than 3.10
+       3 the mint failed (the broker did not trade the api-token for a bearer, or answered a bearer that is not a JWT),
+         or an error the script did not expect
+       5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, OPS_API_TOKEN_FILE that cannot
+         be read, JWT_ENV naming an empty variable or a value that is not a JWT, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
 run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190); one past its expiry date is
 not tested.
 Never prints a token value.
 """
 
+from __future__ import annotations
+
+import argparse
 import base64
 import json
 import os
@@ -61,12 +66,23 @@ def stamp(epoch):
     return datetime.fromtimestamp(int(epoch), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def main():
-    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5), and an error the script did
-    not expect exits 3, the code for a read that failed."""
+class _Parser(argparse.ArgumentParser):
+    """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The run, with three guards around it: a Python older than 3.10 is refused (exit 5), an argument the script does
+    not take is a usage error (exit 5) before anything is read, and an error the script did not expect exits 3, the
+    code for a read that failed."""
     if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
         print("claims.py needs Python 3.10 or later", file=sys.stderr)
         return EXIT_USAGE
+    _Parser(prog="claims.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args(argv)
     try:
         return _run()
     except Exception as e:  # noqa: BLE001  the last guard: whatever was not expected is not known, so exit 3
@@ -103,8 +119,11 @@ def _run():
     try:
         header, claims = decode(jwt)
     except NotAJwt as e:
-        print(f"FATAL: {e}", file=sys.stderr)
-        return EXIT_USAGE
+        if os.environ.get("JWT_ENV"):  # a value the reader named: the invocation is wrong
+            print(f"FATAL: {e}", file=sys.stderr)
+            return EXIT_USAGE
+        print(f"FATAL: the broker answered a bearer that is {e}: nothing can be read off it (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
     print(f"decoded: {source} ({len(jwt)} characters; value never printed)")
     print(f"header:   alg={header.get('alg')}  typ={header.get('typ')}  kid={'present' if header.get('kid') else 'absent'}")
     print(f"issuer:   {claims.get('iss')}")

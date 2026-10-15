@@ -32,7 +32,7 @@ Exit: 0 every entry complete and not due inside the window, and with --census ev
         list), or an error the script did not expect. It is checked before any entry is printed, and nothing is
         joined, because nothing about the API clients is known
       5 a usage error: an argument this script does not take, a --today that is not a date, a catalog or census file
-        that cannot be read, FINGERPRINT_KEY_FILE unset or unreadable, a census record without fingerprints or made
+        that cannot be read, a catalog that is not one (no JSON object with a credentials list of objects), FINGERPRINT_KEY_FILE unset or unreadable, a census record without fingerprints or made
         under another key, or a Python older than 3.10
 Standard library only; reads its files and FINGERPRINT_KEY_FILE, writes nothing, calls nothing.
 """
@@ -184,6 +184,21 @@ def _census(path: str) -> tuple[dict | None, bytes | None, str | None, int]:
     return record, key, None, 0
 
 
+def catalog_shape(catalog: object) -> str | None:
+    """What makes a file not a catalog: not an object, no `credentials` list, an entry that is not an object, or a
+    `warn_days` that is not a whole number. A usage error (exit 5): the file is the reader's, not a platform read."""
+    if not isinstance(catalog, dict):
+        return "it holds no JSON object"
+    if not isinstance(catalog.get("credentials"), list):
+        return "it carries no credentials list"
+    if not all(isinstance(e, dict) for e in catalog["credentials"]):
+        return "a credentials entry is not an object"
+    warn = catalog.get("warn_days", 30)
+    if isinstance(warn, bool) or not isinstance(warn, int):
+        return "warn_days is not a whole number of days"
+    return None
+
+
 def _args(argv: list[str]) -> tuple[dict, str | None]:
     """The catalog path and the values of --today and --census; any other argument is refused."""
     out: dict = {"path": None, "--today": None, "--census": None}
@@ -232,6 +247,10 @@ def _run(argv: list[str]) -> int:
             catalog = json.load(f)
     except (OSError, ValueError) as e:
         print(f"could not read {path}: {type(e).__name__}", file=sys.stderr)
+        return EXIT_USAGE
+    shape = catalog_shape(catalog)
+    if shape:
+        print(f"{path} is not a catalog: {shape}", file=sys.stderr)
         return EXIT_USAGE
     census, key = None, None
     if a["--census"] is not None:

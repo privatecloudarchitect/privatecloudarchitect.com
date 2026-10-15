@@ -65,6 +65,13 @@ a variable not set, a run on an estate that has a realm read its realm-spelled g
 0 (X-197). Every run prints, on the terminal only, the domains it read as another provider's with their grant counts,
 so a misspelled REALM_DOMAIN or directory domain shows there.
 
+A misspelled realm, caught. A misspelled REALM_DOMAIN moves every realm-spelled grant into another provider's class,
+where nothing flags it, while the directory domains still name their grants. So with REALM_DOMAIN set, a vCenter on
+which the realm names no grant while grants of an unplaced domain are there (a domain in none of DIRECTORY_DOMAINS,
+LOCAL_DOMAIN, REALM_DOMAIN and OTHER_DOMAINS) is a failed read: the run prints NOT PLACED with those domains, on the
+terminal only, records realmNamedNothing, and exits 3. Name in OTHER_DOMAINS the domains you know are another identity
+provider's, and the vCenter is placed (on the reference estate, the workload vCenter that runs a Supervisor held one).
+
 Environment:
   VC_HOSTS            comma-separated vCenter FQDNs (one, with --remove)
   VC_USER             an administrator of those vCenters, user@domain
@@ -78,6 +85,8 @@ Environment:
                       another provider's and the census would count none, so the script refuses to start without it
   LOCAL_DOMAIN        the vCenter's own SSO domain (default VSPHERE.LOCAL); set it where yours is named otherwise,
                       or every local grant reads as another provider's
+  OTHER_DOMAINS       optional: comma-separated domains you know are another identity provider's. Their grants stay
+                      in another provider's class and count as placed, so neither NOT PLACED check stops on them
   TLS_VERIFY          false only on a self-signed lab CA
   TEST_USER, TEST_PASSWORD_FILE, TEST_GROUP, PROBE_VCENTER   for the probes (TEST_USER must not be an administrator)
   TEST_LOCAL_GROUP    optional: a local SSO group holding TEST_GROUP, for the nested case of --probe-grants
@@ -94,8 +103,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         with REALM_DOMAIN set; before a realm there is no such class
       3 a read failed or a result is undetermined: a vCenter refused the session or the permission or role list,
         the session list could not be read, a vCenter on which DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no
-        grant while another provider's grants are there, a probe that could not run its cases, or an error the
-        script did not expect. Nothing is known about what was not read
+        grant while another provider's grants are there, a vCenter on which REALM_DOMAIN names no grant while grants
+        of a domain in none of the domains given are there (a misspelled realm hides its grants there), a probe that
+        could not run its cases, or an error the script did not expect. Nothing is known about what was not read
       0 nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean
         (with --remove: the plan printed, or every named grant removed and nothing else moved)
       5 a usage error, before anything is read: an argument or environment variable missing or wrong, an id --remove
@@ -167,9 +177,15 @@ def ctx():
 
 
 def secret(name):
+    """NAME_FILE's content, or NAME itself. A file named but unreadable is a usage error (exit 5), never a read that
+    failed: nothing has been sent when it is read."""
     path = os.environ.get(name + "_FILE")
     if path:
-        return open(path, encoding="utf-8").read().strip()
+        try:
+            with open(path, encoding="utf-8") as f:
+                return f.read().strip()
+        except (OSError, UnicodeDecodeError) as e:
+            raise UsageError(f"{name}_FILE could not be read: {type(e).__name__}") from None
     return os.environ.get(name, "")
 
 
@@ -194,11 +210,15 @@ class Rest:
         try:
             with urllib.request.urlopen(rq, context=ctx(), timeout=60) as r:
                 raw = r.read()
-                return r.status, (json.loads(raw) if raw else None)
+                status = r.status
         except urllib.error.HTTPError as e:
             return e.code, None
         except (urllib.error.URLError, OSError):
             return None, None
+        try:
+            return status, (json.loads(raw) if raw else None)
+        except ValueError:  # an answer that is not JSON carries nothing the read needs: the caller reads it as unread
+            return status, None
 
     def close(self):
         if self.token:
@@ -302,6 +322,24 @@ def census(rest, realm, directories, perms=None, cat=None):
         "roles": len(cat),
         "customRoles": sum(1 for r in cat.values() if not r.get("system")),
     }, cat
+
+
+def other_domains_declared():
+    """OTHER_DOMAINS, lower-cased: the domains the reader knows are another identity provider's."""
+    return {x.strip().lower() for x in os.environ.get("OTHER_DOMAINS", "").split(",") if x.strip()}
+
+
+def unplaced(others, declared):
+    """Of the domains read as another provider's (domain to grant count), the ones OTHER_DOMAINS does not name."""
+    return {d: n for d, n in others.items() if d.lower() not in declared}
+
+
+def realm_names_nothing(by_class, realm, undeclared):
+    """Whether REALM_DOMAIN is set, names no grant on a vCenter, and grants of an unplaced domain are there: a
+    misspelled realm's grants would sit among them, unflagged, while the directory domains still name theirs. A
+    correct realm on a vCenter with no realm-spelled grant and no unplaced domain is never this (G-410's other half)."""
+    kinds = {k.rsplit(", ", 1)[0] for k in by_class}
+    return bool(realm) and "realm spelling" not in kinds and bool(undeclared)
 
 
 def other_domains(perms, realm, directories):
@@ -877,6 +915,7 @@ def _run(argv=None):
     catalogs = {}
     pyv = have_pyvmomi()
     unread = []
+    declared = other_domains_declared()
     for h in hosts:
         label = vc_label[h]
         rest = Rest(h, user, password)
@@ -910,15 +949,24 @@ def _run(argv=None):
                     unsoap(si)
         else:
             row["sessions"] = "not read: pyVmomi is not installed"
-        if names_nothing(row["byClass"]):
+        others = other_domains(perms, realm, directories)
+        undeclared = unplaced(others, declared)
+        if names_nothing(row["byClass"]) and undeclared:
             row["domainsNamedNothing"] = True
+        elif realm_names_nothing(row["byClass"], realm, undeclared):
+            row["realmNamedNothing"] = True
         record["vcenters"][label] = row
         print(f"  {label}: {row['permissions']} permissions ({row['global']} global); {row['byClass']}")
         if row.get("domainsNamedNothing"):
             print("     NOT PLACED: " + ("REALM_DOMAIN and DIRECTORY_DOMAINS name" if realm else "DIRECTORY_DOMAINS names")
                   + " no grant here while grants of another provider are there; check the spelling against the "
                     "vCenter's own before reading the census (exit 3)")
-        others = other_domains(perms, realm, directories)
+        if row.get("realmNamedNothing"):
+            print("     NOT PLACED: REALM_DOMAIN names no grant here while grants of a domain none of the domains given "
+                  "places are there (printed here only, never recorded): "
+                  + ", ".join(f"{d} {n}" for d, n in undeclared.items())
+                  + ". A misspelled realm hides its grants among them: check REALM_DOMAIN against the realm's name, and "
+                    "name each domain you know is another provider's in OTHER_DOMAINS (exit 3)")
         if others:
             print("     read as another provider's (printed here only, never recorded): "
                   + ", ".join(f"{d} {n}" for d, n in others.items()))
@@ -981,7 +1029,7 @@ def _run(argv=None):
     text = json.dumps(record, indent=1, ensure_ascii=False)
     estate = set(hosts) | {user, local, dom, realm, test_user, os.environ.get("TEST_GROUP", ""), a.supervisor_vm,
                            os.environ.get("TEST_LOCAL_GROUP", ""),
-                           user.partition("@")[0]} | set(directories) | set(L.words())
+                           user.partition("@")[0]} | set(directories) | declared | set(L.words())
     estate |= {h.split(".")[0] for h in hosts}
     for value in sorted({v for v in estate if v and v not in PRODUCT_ROLES | PRODUCT_LOCAL}, key=len, reverse=True):
         if re.search(r"(?<![A-Za-z0-9-])" + re.escape(value) + r"(?![A-Za-z0-9-])", text, re.IGNORECASE):
@@ -1010,14 +1058,16 @@ def probe_residue(rec):
 
 def exit_code(record, realm):
     """The first that applies: 2 a probe left residue, 1 realm-spelled grants read (only with a realm), 3 a vCenter
-    or its session list not read, a vCenter whose domains named no grant, or a probe that could not run; else 0."""
+    or its session list not read, a vCenter whose domains named no grant or whose realm named none beside an unplaced
+    domain, or a probe that could not run; else 0."""
     probes = [record.get(k) for k in ("grantProbe", "tagProbe", "supervisorProbe") if record.get(k) is not None]
     if any(probe_residue(p) for p in probes):
         return EXIT_NOT_HELD
     rows = list((record.get("vcenters") or {}).values())
     if realm and any(n for r in rows for k, n in (r.get("byClass") or {}).items() if k.startswith("realm spelling")):
         return EXIT_REALM
-    unread = (not rows or any("error" in r for r in rows) or any(r.get("domainsNamedNothing") for r in rows)
+    unread = (not rows or any("error" in r for r in rows)
+              or any(r.get("domainsNamedNothing") or r.get("realmNamedNothing") for r in rows)
               or any(isinstance(r.get("sessions"), dict) and "error" in r["sessions"] for r in rows)
               or any(p.get("aborted") for p in probes))
     return EXIT_UNREAD if unread else EXIT_OK

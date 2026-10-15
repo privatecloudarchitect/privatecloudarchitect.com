@@ -20,6 +20,7 @@ export VC_PASSWORD_FILE=/path/to/password          # mode 0600
 export REALM_DOMAIN=<the realm's name>            # once the estate has a realm (before one, run with --no-realm); not CUSTOMER
 export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # required
 export LOCAL_DOMAIN=<your SSO domain>             # only if it is not vsphere.local; otherwise every local grant reads as another provider's
+export OTHER_DOMAINS=<another provider's domain>[,<another>]   # optional: domains you know are another provider's
 export TLS_VERIFY=false                            # only on a self-signed lab CA
 
 python3 authz.py                                   # the census, read-only
@@ -32,6 +33,15 @@ the census would count no directory grant on an estate full of them. On a vCente
 vCenter, records `domainsNamedNothing` and exits 3; check the spelling against the vCenter's own before reading the
 census. Every run also prints, on the terminal only and never in the record, the domains it read as another provider's
 with their grant counts, which is where a misspelled domain shows.
+
+A misspelled `REALM_DOMAIN` is caught the same way. It moves every realm-spelled grant into another provider's class,
+where nothing flags it, while the directory domains still name their own grants. So with `REALM_DOMAIN` set, a vCenter
+on which the realm names no grant while grants of an unplaced domain are there (one in none of `DIRECTORY_DOMAINS`,
+`LOCAL_DOMAIN`, `REALM_DOMAIN` and `OTHER_DOMAINS`) prints `NOT PLACED` with those domains, on the terminal only,
+records `realmNamedNothing`, and exits 3. Check `REALM_DOMAIN` against the realm's name, and name in `OTHER_DOMAINS`
+each domain you know is another identity provider's. On the reference estate, with the realm spelled right and no
+realm-spelled grant left, the workload vCenter that runs a Supervisor needed one such domain named before the run
+exited 0 (X-207).
 
 ### Before the realm exists
 
@@ -75,9 +85,9 @@ The first that applies, so a scheduler reads one state from one number:
 |---|---|---|
 | 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; or a probe that left residue | read the vCenter's permissions before anything else |
 | 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set; before a realm there is no such class) | name them with `--where-realm`, remove them with `--remove` |
-| 3 | a read failed or a result is undetermined: a vCenter refused the session or a list, the session list was not read, the domains named no grant on a vCenter (`NOT PLACED`), a probe could not run, or an error the script did not expect | nothing is known about what was not read: fix the read and run again |
+| 3 | a read failed or a result is undetermined: a vCenter refused the session or a list, the session list was not read, the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain (`NOT PLACED`), a probe could not run, or an error the script did not expect | nothing is known about what was not read: fix the read (or the spelling, or `OTHER_DOMAINS`) and run again |
 | 0 | nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held | nothing |
-| 5 | a usage error, found before anything is read (a missing or wrong argument or variable, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, a Python older than 3.10), or the record refused because an estate value survived the scrub (nothing is written) | fix the invocation |
+| 5 | a usage error, found before anything is read (a missing or wrong argument or variable, a password file it cannot read, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, a Python older than 3.10), or the record refused because an estate value survived the scrub (nothing is written) | fix the invocation |
 
 The probes need a test user that is **not** an administrator, and a directory group it belongs to:
 
@@ -132,9 +142,14 @@ group carries its grant.
   for the length of one case, and remove everything they created; they never replace a permission that
   already exists (vSphere keeps one per principal per object, so a principal that already holds one is
   skipped and recorded as skipped).
-- `--remove` was run once, on one 9.1.1 vCenter, on a grant the run made on a folder it made and removed; the census
-  without `REALM_DOMAIN` was run on an estate that has a realm, not on one without. An estate with no realm yet was
-  not run.
+- `--remove` was run once, on one 9.1.1 vCenter, on a grant the run made on a folder it made and removed. The pre-realm
+  path, which now runs with `--no-realm`, was run (in X-197, as `REALM_DOMAIN` left unset, before a run had to declare
+  it) on an estate that has a realm, not on one without. An estate with no realm yet was not run.
+- A misspelled `REALM_DOMAIN` was run once (X-207), on one management vCenter holding one realm-spelled grant the run
+  made on a folder it made and removed: `NOT PLACED` and exit 3, where the version before this check read the same grant
+  as another provider's and exited 0. Spelled right, across the reference estate's three vCenters, the workload vCenter
+  that runs a Supervisor held 12 grants of one domain no domain given placed, and the run exited 3 until that domain was
+  named in `OTHER_DOMAINS`, then 0. Which product those grants belong to was not read in that run.
 - **The probes' roles are kept, on purpose.** On a vCenter joined to VCF single sign-on, VCF creates a local
   group `vcf_reserved_<role id>` for every role created there, and deleting the role leaves the group behind.
   So the probes use six roles named `authz-probe-<what it holds>`, created the first time they are needed and
@@ -151,7 +166,9 @@ group carries its grant.
 - `vcenters.<vc>.byClass`: permission counts by class and scope (`global` or `object`). A record written before the
   local split carries one `local` class; the shipped `authz.json` is one of those. A vCenter that was not read carries
   only `error`.
-- `realmSpelling`: present when `REALM_DOMAIN` was unset, saying the realm-spelled class was not applicable.
+- `realmSpelling`: present when the run declared `--no-realm`, saying the realm-spelled class was not applicable.
+- `vcenters.<vc>.domainsNamedNothing`, `vcenters.<vc>.realmNamedNothing`: present on a vCenter the run could not place
+  (the domains given named no grant there, or the realm named none beside an unplaced domain); the run exited 3.
 - `exit`: the run's exit code (a record written before the exit table carries none).
 - `vcenters.<vc>.reservedGroupGrants`: grants on `vcf_reserved_*` groups, by the role held (product roles by
   name, custom roles as `a custom role`) and scope. Object-scoped ones are the Supervisor's namespace grants.

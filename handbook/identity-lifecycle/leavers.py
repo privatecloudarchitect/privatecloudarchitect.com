@@ -44,6 +44,18 @@ to the id from the Graph token's tid claim (read in memory, never printed), or e
 organization is federated to the tenant when its issuer or metadata names that id, compared without regard to case.
 A run in which no organization names the tenant exits 3: a wrong tenant reads as nothing to do.
 
+Many tenants. One run reads one tenant, so a provider whose organizations federate to several Entra tenants runs one
+schedule per tenant, each with that tenant's read-only app, and passes every schedule the same full list:
+--expect-tenants T1,T2,... (ids, or domain names: this run's own ENTRA_TENANT_ID is taken as resolved, any other domain
+from Entra's OpenID discovery document, GET https://login.microsoftonline.com/{domain}/v2.0/.well-known/openid-
+configuration, whose issuer names the tenant id, no credential). An organization federated elsewhere is then read by
+its own tenant's schedule when the list names that tenant; one federated to an Entra tenant outside the list, or to
+this tenant in a form the job does not read, is "uncovered: no schedule reads it" and exits 3; one on another provider
+(no Entra tenant in its issuer or metadata) is counted and not read. Without the flag, every organization federated
+elsewhere is counted and not read, and does not change the exit: so a schedule for tenant A can exit 0 while tenant B's
+leavers go unread. A list that leaves out this run's own tenant, or names a domain Entra knows as no tenant, is a usage
+error (exit 5); a discovery read that failed is 3.
+
 Fail closed. An organization whose gate cannot be read, or an account whose state cannot be read, is reported
 undetermined and never acted on. Entra's directory reads settle after a change, so every leaver still enabled or
 holding a token is read again CONFIRM_READS times, CONFIRM_PAUSE seconds apart (all of an organization's in the same
@@ -92,15 +104,23 @@ record keeps only the fields the allow-lists below name.
 Needs Python 3.10 or later and nothing outside the standard library (the `cryptography` package only for a
 certificate credential).
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider API token, traded at /oauth/provider/token) or
-      VCFA_PROVIDER_BEARER_FILE (a provider bearer you already hold); TLS_VERIFY=false only on a self-signed lab CA
+      VCFA_PROVIDER_BEARER_FILE (a provider bearer, below); TLS_VERIFY=false only on a self-signed lab CA
       (VCF Automation only; Entra and Graph are always verified); ENTRA_TENANT_ID (the id, or a domain name), ENTRA_CLIENT_ID and
       ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the `cryptography` package);
       ORGS (comma list, to read fewer organizations); OUT (default leavers.json)
+      VCFA_PROVIDER_BEARER_FILE holds a provider bearer, mode 0600, for an hour (the portal's states an hour; the Basic
+      session's life was not read). Two ways to one, and a close held on each on the reference estate: the provider portal's sign-in (the bearer is what the portal sends as the
+      Authorization header of its /cloudapi/ calls, after "Bearer "; the reference runs made that sign-in by script),
+      and a Basic provider session, POST /cloudapi/1.0.0/sessions/provider with Basic <user>@System, whose response
+      header X-VMWARE-VCLOUD-ACCESS-TOKEN is the bearer. A provider API token was refused the close (403).
 Use:  python3 leavers.py                                   report every federated organization, write the record
       python3 leavers.py --redact                          the same, printed with placeholders, to share
       python3 leavers.py --name-claim ORG=mail             the same, for an organization whose name claim carries mail
                                                            (repeatable; also userPrincipalName or otherMails): a user
                                                            found by that attribute is the person
+      python3 leavers.py --expect-tenants T1,T2            the same, failing (exit 3) on an organization federated to
+                                                           an Entra tenant outside the list: every tenant a schedule
+                                                           runs for, this one among them, the same list on each
       python3 leavers.py --ack acks.json                   the same, with the flags a person has decided on silenced
                                                            until their date (a JSON list of {"org", "account", "flag",
                                                            "until": "YYYY-MM-DD"}; flag direct-role or
@@ -122,12 +142,14 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       1 an open leaver: an account to close (still enabled or holding a token) that three reads agree on, including
         one --execute refused
       3 a read failed, or an account is undetermined (among them a leaver whose reads disagree): nothing is known about
-        what was not read (a credential that could not be obtained is one, a tenant no organization names is one, and
-        so is an error the script did not expect: nothing is read, or nothing is trusted, and nothing is written)
+        what was not read (a credential that could not be obtained is one, a tenant no organization names is one, an
+        organization --expect-tenants leaves uncovered is one, and so is an error the script did not expect: nothing
+        is read, or nothing is trusted, and nothing is written)
       4 a flag (a direct role, a name in use again) not acknowledged in --ack
       0 nothing open, nothing unread, nothing flagged (with --close-now: the plan printed, or the close held)
       5 a usage error, a Python older than 3.10, an unreadable --ack file, a --user that names no account or more than
-        one, or the record refused because an estate value survived the scrub (nothing is written)
+        one, an --expect-tenants list that leaves out this run's tenant or names no tenant, or the record refused
+        because an estate value survived the scrub (nothing is written)
 The contract every identity companion keeps: 0 nothing for a person to act on, 3 a read failed or a result is
 undetermined (never a finding), 5 a usage error; 1, 2 and 4 are this script's own, above; an unexpected error is 3.
 """
@@ -167,6 +189,12 @@ FEDERATED = ("OAUTH", "SAML")
 BY_NAME = {"preferred_username", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"}
 BY_ID = {"oid"}
 OBJECT_ID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+# The Entra tenant an organization federated elsewhere names, in its OIDC issuer or its SAML metadata (either host
+# Entra issues under), read only to say which schedule reads it (--expect-tenants); never compared any looser.
+ENTRA_TENANT_IN = re.compile(r"(?:login\.microsoftonline\.com|sts\.windows\.net)/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-"
+                             r"[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?![\w-])", re.I)
+DOMAIN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)+$")
+UNCOVERED = "uncovered: no schedule reads it"
 # The lookups a name goes through, in order: the filter each sends to /users. Each is a form Microsoft Graph's user
 # resource documents for $filter and serves by default, without the ConsistencyLevel header or $count.
 NAME_LOOKUPS = (("userPrincipalName", "userPrincipalName eq '{}'"), ("mail", "mail eq '{}'"),
@@ -570,10 +598,88 @@ def _assertion(tenant: str, client: str) -> str:
 
 
 # ── reading the two planes ───────────────────────────────────────────────────────────────────────────────────────
-def federated_orgs(vcfa: Vcfa, tenant: str, only: list[str]) -> tuple[list[dict], list[dict], int]:
+def parse_expect_tenants(value: str) -> list[str]:
+    """--expect-tenants T1,T2,...: each a tenant id (in any case) or a domain name, as ENTRA_TENANT_ID may be. Anything
+    else, or an empty list, is refused (ValueError), never half read. Ids come back in lower case, duplicates once."""
+    out: list[str] = []
+    for v in (x.strip() for x in value.split(",")):
+        if not (OBJECT_ID.match(v) or DOMAIN.match(v)):
+            raise ValueError(f"--expect-tenants {value!r}: write a comma list of tenant ids or domain names ({v!r} is neither)")
+        v = v.lower()
+        if v not in out:
+            out.append(v)
+    return out
+
+
+def resolve_expected(values: list[str], tenant: str, given: str, calls: list,
+                     fetch=None) -> tuple[list[str] | None, str, bool]:
+    """Each --expect-tenants value as a tenant id: an id as it is; this run's own ENTRA_TENANT_ID as the tenant the run
+    resolved; any other domain name from Entra's OpenID discovery document for it, whose issuer names the tenant id.
+    Returns (ids, why, usage): ids None when one could not be had, `usage` True when Entra named no such tenant (a
+    bad argument, exit 5) and False when the read itself failed (exit 3). `fetch` is the HTTP read, for tests."""
+    out: list[str] = []
+    for v in values:
+        if OBJECT_ID.match(v):
+            out.append(v.lower())
+            continue
+        if v == given.strip().lower():
+            out.append(tenant)
+            continue
+        rec = {"plane": "entra", "method": "GET", "path": "/<tenant>/v2.0/.well-known/openid-configuration", "status": None}
+        calls.append(rec)
+        status, doc = (fetch or _discovery)(v)
+        rec["status"] = status
+        m = ENTRA_TENANT_IN.search(str((doc or {}).get("issuer") or "")) if isinstance(doc, dict) else None
+        if m:
+            out.append(m.group(1).lower())
+        elif status == 400:
+            return None, f"--expect-tenants names {v}, which Entra knows as no tenant", True
+        else:
+            return None, f"--expect-tenants {v}: Entra's discovery document did not give its tenant id ({status})", False
+    return sorted(set(out)), "", False
+
+
+def _discovery(domain: str) -> tuple[int | None, dict | None]:
+    """Entra's OpenID discovery document for a tenant named by a domain: GET {ENTRA}/{domain}/v2.0/.well-known/
+    openid-configuration, no credential. 400 names no tenant; the issuer carries the tenant id."""
+    url = f"{ENTRA}/{urllib.parse.quote(domain)}/v2.0/.well-known/openid-configuration"
+    try:
+        with urllib.request.urlopen(url, context=_ctx(True), timeout=30) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, None
+    except (urllib.error.URLError, OSError, ValueError):
+        return None, None
+
+
+def coverage(others: list[dict], tenant: str, expected: list[str]) -> tuple[list[dict], list[dict]]:
+    """Who reads each organization federated elsewhere, given every tenant a schedule runs for: the schedule of its
+    own tenant when --expect-tenants names it; no Entra tenant, another provider this job does not read; otherwise
+    nobody, so it is uncovered and unreadable (exit 3). An organization naming this run's tenant in a form the job
+    does not read (an OIDC issuer on sts.windows.net, or no client id) is uncovered too: no schedule reads it."""
+    shown, uncovered = [], []
+    for o in others:
+        t = o.get("tenant")
+        if t is None:
+            read_by = "another provider, not Entra ID: not read by this job"
+        elif t == tenant:
+            read_by = UNCOVERED + " (it names this run's tenant in a form this job does not read)"
+        elif t in expected:
+            read_by = "the schedule for its own tenant"
+        else:
+            read_by = UNCOVERED + " (its Entra tenant is not in --expect-tenants)"
+        shown.append({**o, "read_by": read_by})
+        if read_by.startswith(UNCOVERED):
+            uncovered.append({"org": o["org"], "reason": read_by})
+    return shown, uncovered
+
+
+def federated_orgs(vcfa: Vcfa, tenant: str, only: list[str],
+                   others: list | None = None) -> tuple[list[dict], list[dict], int]:
     """The organizations federated to the tenant, found from their own settings; the ones that could not be read;
-    and how many others have OIDC or SAML on toward another provider. The tenant id is compared without regard to
-    case and up to its end, so an id in capitals matches and a longer one never does."""
+    and how many others have OIDC or SAML on toward another provider (each appended to `others`, when given, with
+    the Entra tenant its issuer or metadata names, or None). The tenant id is compared without regard to case and up
+    to its end, so an id in capitals matches and a longer one never does."""
     found, unreadable, elsewhere = [], [], 0
     t = re.escape(tenant.strip().lower())
     oidc_issuer = re.compile(rf"login\.microsoftonline\.com/{t}(?![\w-])", re.I)
@@ -606,6 +712,11 @@ def federated_orgs(vcfa: Vcfa, tenant: str, only: list[str]) -> tuple[list[dict]
                 unreadable.append({"org": name, "reason": "its SAML service-provider metadata was refused"})
         elif oauth.get("enabled") or fed.get("enabled"):
             elsewhere += 1
+            if others is not None:
+                text = str(oauth.get("issuerId") or "") if oauth.get("enabled") else str(fed.get("samlMetadata") or "")
+                m = ENTRA_TENANT_IN.search(text)
+                others.append({"org": name, "protocol": "OIDC" if oauth.get("enabled") else "SAML",
+                               "tenant": m.group(1).lower() if m else None})
     for n in sorted(set(only) - {o["org"] for o in found} - {u["org"] for u in unreadable}):
         unreadable.append({"org": n, "reason": "not found, or not federated to this tenant"})
     return found, unreadable, elsewhere
@@ -966,19 +1077,26 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
 
 def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: bool, act_on: str | None,
               say=print, max_leavers: int | None = None, name_claims: dict[str, str] | None = None,
-              announce=None) -> dict:
+              announce=None, expect: list[str] | None = None) -> dict:
     """Report every federated organization's leavers, each open one confirmed over CONFIRM_READS reads before it
     counts; with `execute`, close the confirmed ones of `only` (with `act_on`, the one account it selects, announced
-    before anything is sent), unless the organization's open leavers exceed the guard (leaver_guard)."""
-    orgs, unreadable, elsewhere = federated_orgs(vcfa, tenant, only)
+    before anything is sent), unless the organization's open leavers exceed the guard (leaver_guard). With `expect`,
+    every tenant a schedule runs for (ids), an organization federated to an Entra tenant outside it, or to this tenant
+    in a form the job does not read, is uncovered and unreadable (exit 3); without it, it is counted and not read."""
+    others: list[dict] = []
+    orgs, unreadable, elsewhere = federated_orgs(vcfa, tenant, only, others)
     if not orgs and not unreadable:  # a wrong tenant id reads as nothing to do: it is a read that failed (exit 3)
         unreadable.append({"org": None, "reason": f"no organization names this tenant ({elsewhere} federated "
                                                   "elsewhere): check ENTRA_TENANT_ID"})
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "execute" if execute else "report", "tenant": tenant, "organizations": [],
               "unreadable": unreadable, "federated_elsewhere": elsewhere, "sent": []}
+    if expect is not None:
+        record["expected_tenants"] = sorted(expect)
+        record["elsewhere"], uncovered = coverage(others, tenant, expect)
+        unreadable += uncovered
     say(f"Leavers · {'EXECUTE' if execute else 'REPORT'} · {len(orgs)} organization(s) federated to the tenant"
-        + (f", {elsewhere} federated elsewhere (not read)" if elsewhere else ""))
+        + elsewhere_text(record))
     for u in unreadable:
         say(f"  {u['org'] or 'the run'}: unreadable ({u['reason']})")
     for of in orgs:
@@ -1106,6 +1224,11 @@ def summary(record: dict) -> dict:
              name_in_use_again=sum(1 for r in rows if any(f.startswith("name-in-use-again") for f in r["flags"])),
              acknowledged=sum(len(r.get("acknowledged") or []) for r in rows))
     s["flagged"] = sum(len(unacked(r)) for r in rows)  # what exit 4 reads: raised and not acknowledged
+    if "expected_tenants" in record:  # only a run given --expect-tenants says who reads the others
+        shown = record.get("elsewhere") or []
+        s.update(other_tenants=sum(1 for o in shown if o["read_by"] == "the schedule for its own tenant"),
+                 other_provider=sum(1 for o in shown if o.get("tenant") is None),
+                 uncovered=sum(1 for o in shown if o["read_by"].startswith(UNCOVERED)))
     s["per_org"] = [{"org": o["org"], "protocol": o["protocol"], "accounts": len(o["users"]),
                      "federated": sum(1 for r in o["users"] if r.get("providerType") in FEDERATED),
                      "found": sum(1 for r in o["users"] if r.get("found") is True),
@@ -1216,6 +1339,20 @@ def leaks(obj: object, table: dict) -> list[str]:
     return found
 
 
+def elsewhere_text(record: dict) -> str:
+    """The header's account of the organizations federated elsewhere. Without --expect-tenants they are counted and
+    not read; with it, each is read by its own tenant's schedule, belongs to another provider, or is uncovered."""
+    n = record.get("federated_elsewhere") or 0
+    if "expected_tenants" not in record:
+        return f", {n} federated elsewhere (not read)" if n else ""
+    shown = record.get("elsewhere") or []
+    mine = sum(1 for o in shown if o["read_by"] == "the schedule for its own tenant")
+    other = sum(1 for o in shown if o.get("tenant") is None)
+    loose = sum(1 for o in shown if o["read_by"].startswith(UNCOVERED))
+    return (f", {n} federated elsewhere: {mine} to another expected tenant, read by its own schedule; {other} to "
+            f"another provider (not read); {loose} uncovered")
+
+
 def report_lines(record: dict) -> list[str]:
     """The run as the lines it prints, from the record alone (so a redacted record prints the same way)."""
     s = record["summary"]
@@ -1223,7 +1360,7 @@ def report_lines(record: dict) -> list[str]:
         out = [f"Leavers · {record['mode'].upper()} · one named account, closed without asking Entra"]
     else:
         out = [f"Leavers · {record['mode'].upper()} · {s['organizations']} organization(s) federated to the tenant"
-               + (f", {s['federated_elsewhere']} federated elsewhere (not read)" if s["federated_elsewhere"] else "")]
+               + elsewhere_text(record)]
     out += [f"  {u['org'] or 'the run'}: unreadable ({u['reason']})" for u in record.get("unreadable") or []]
     if record.get("user_match"):
         out.append(match_line(record["user_match"]))
@@ -1273,7 +1410,8 @@ def report_lines(record: dict) -> list[str]:
 
 EXIT_MEANS = {0: "nothing open, nothing unread, nothing flagged", EXIT_OPEN: "an open leaver: run the close",
               EXIT_HELD_NOT: "a close did not hold on read-back: read the result",
-              EXIT_UNREAD: "a read failed or an account is undetermined: fix the read, nothing is known about it",
+              EXIT_UNREAD: "a read failed, an account is undetermined, or an organization no schedule reads: fix the "
+                           "read, nothing is known about it",
               EXIT_FLAGGED: "a flag nobody acknowledged: decide it, then acknowledge it with --ack",
               EXIT_USAGE: "not run as asked"}
 
@@ -1391,7 +1529,14 @@ def _run(argv: list[str] | None = None) -> int:
                          "which the job cannot read for itself; repeatable. Undeclared means userPrincipalName")
     ap.add_argument("--close-now", action="store_true",
                     help="close the one account --user names in --org now, without asking Entra; plan only without --execute")
+    ap.add_argument("--expect-tenants", metavar="T1,T2,...",
+                    help="every Entra tenant a schedule of this job runs for (ids or domain names, this run's own "
+                         "among them): an organization federated to any other is uncovered, and the run exits 3")
     a = ap.parse_args(argv)
+    if a.close_now and a.expect_tenants:
+        print("--expect-tenants is for a report or --execute: --close-now reads one named account, not the tenants",
+              file=sys.stderr)
+        return EXIT_USAGE
     if a.close_now:
         return _close_now_main(a)
     if a.execute and not a.org:
@@ -1410,6 +1555,7 @@ def _run(argv: list[str] | None = None) -> int:
         return EXIT_USAGE
     try:
         name_claims = parse_name_claims(a.name_claim)
+        expect_given = parse_expect_tenants(a.expect_tenants) if a.expect_tenants is not None else None
     except ValueError as e:
         print(str(e), file=sys.stderr)
         return EXIT_USAGE
@@ -1426,9 +1572,19 @@ def _run(argv: list[str] | None = None) -> int:
     if tenant is None:  # nothing can be matched to a tenant that is not known: a read that failed, nothing written
         print(f"the tenant could not be resolved: {why}", file=sys.stderr)
         return EXIT_UNREAD
+    expect = None
+    if expect_given is not None:
+        expect, why, usage = resolve_expected(expect_given, tenant, os.environ["ENTRA_TENANT_ID"], calls)
+        if expect is None:  # a name Entra knows as no tenant is a bad argument (5); a read that failed is 3
+            print(why, file=sys.stderr)
+            return EXIT_USAGE if usage else EXIT_UNREAD
+        if tenant not in expect:
+            print("--expect-tenants does not name this run's own tenant (ENTRA_TENANT_ID): pass the full list, the "
+                  "same on every schedule", file=sys.stderr)
+            return EXIT_USAGE
     only = [a.org] if a.execute else [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
     record = reconcile(vcfa, graph, tenant, only, a.execute, a.user, say=lambda _m: None, max_leavers=a.max_leavers,
-                       name_claims=name_claims, announce=_announcer(a.redact))
+                       name_claims=name_claims, announce=_announcer(a.redact), expect=expect)
     if a.ack:
         apply_acks(record, acks, record["captured"][:10])  # the run's own UTC date
         record["summary"] = summary(record)

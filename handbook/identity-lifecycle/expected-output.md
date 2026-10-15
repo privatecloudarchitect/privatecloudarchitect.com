@@ -114,6 +114,51 @@ a report now reads an open leaver three times before it calls it open, which too
 | The token's next refresh is refused (`invalid_grant`) | 55 |
 | A re-run: `in step: already disabled, no token` | 64 |
 
+## The urgent close, on a Basic provider session's bearer
+
+Recorded on 2026-10-15 (VCF Automation 9.1.1.0100). The bearer came from a Basic provider session
+(`POST /cloudapi/1.0.0/sessions/provider`, Basic `<user>@System`, as plate 04 of the platform-identity chapter
+prints it) of a directory account holding System Administrator, and no Graph variable was set. The account was one
+the provider made for the run in a classic OIDC organization, holding no token, so only the disable was exercised.
+
+```
+$ python3 leavers.py --redact --close-now --org <org> --user <account> --execute
+Leavers · CLOSE-NOW · one named account, closed without asking Entra
+  --user {{user-1}} (resolved as given) selects account {{user-1}}
+  {{org-1}}: one account named for --close-now; Entra not asked
+    direct role assignments on federated accounts: {{user-1}} (Organization Member)
+    {{user-1}}: closed on request (named with --close-now; Entra was not asked whether the person has left) -> closed
+      revoked 0 of 0 token(s); read back: enabled False, tokens left 0, other fields changed 0; held True
+  totals: keep 0, leaver 0, out of scope 0, undetermined 0, open leavers 0, refused 0, closed 1, not held 0, in step 0, direct role 0, name in use again 0, acknowledged 0, flagged 0
+  exit 0: nothing open, nothing unread, nothing flagged
+```
+
+The same close named a local account in the same run's first try, and did not hold: the write answered 400 ("You
+must set a password for local users"), the account stayed enabled, and the run exited 2 with `held False (the write
+was refused (400))`. Local accounts are outside the script's scope; disable one on the platform.
+
+## Many tenants
+
+Recorded on 2026-10-15, read-only, on the reference estate's one Entra tenant. With `--expect-tenants` naming every
+tenant a schedule runs for, the header says who reads each organization federated elsewhere. Here the three
+organizations federated elsewhere sign in through another provider, so none is uncovered and the exit is the
+report's own, 4, as without the flag. The same run with the tenant written as its domain name read the same.
+
+```
+$ python3 leavers.py --redact --expect-tenants <this tenant's id>
+Leavers · REPORT · 4 organization(s) federated to the tenant, 3 federated elsewhere: 0 to another expected tenant, read by its own schedule; 3 to another provider (not read); 0 uncovered
+
+$ python3 leavers.py --expect-tenants <another tenant's id>
+--expect-tenants does not name this run's own tenant (ENTRA_TENANT_ID): pass the full list, the same on every schedule
+```
+
+The second command exits 5 and reads no organization. An organization federated to an Entra tenant the list leaves
+out reads like this, and the run exits 3 (from the script's tests: the reference estate has one tenant):
+
+```
+  {{org-5}}: unreadable (uncovered: no schedule reads it (its Entra tenant is not in --expect-tenants))
+```
+
 ## What to read in it
 
 - **Leavers in step are the goal.** Each leaver above is disabled and holds no token, so the run changes nothing and
@@ -143,6 +188,8 @@ a report now reads an open leaver three times before it calls it open, which too
   them any more, so a sign-in would be refused at Entra's gate. Both count, because either stops the next sign-in
   while leaving the account and any token behind.
 - **Federated elsewhere is not read.** Three organizations on the estate sign in through VCF single sign-on, the
-  identity broker, or another provider; they are counted, not judged. Run the script once per Entra tenant.
+  identity broker, or another provider; they are counted, not judged. Run the script once per Entra tenant, and give
+  every schedule the same full `--expect-tenants` list, so an organization on a tenant no schedule reads exits 3
+  instead of passing unread.
 - **The local account is out of scope.** `{{user-1}}` is an organization's local administrator, the way in when the
   provider refuses; its role is direct by nature and is counted apart (`direct_local` in the record), never flagged.

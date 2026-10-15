@@ -43,9 +43,11 @@ python3 vcenter_exchange.py --sessions --redact     # the census, printed with p
 
 The census flags every directory-account session from a client other than the vSphere Client: a REST integration on
 a password (`vAPI`, `curl`, a product's own agent) as much as a vSphere SDK. On the reference estate the vSphere Client's
-sessions read `vSphereUI`, and that is the only agent the census treats as a person's; name others in
-`INTERACTIVE_AGENTS` (comma-separated, versions left off) only for a client people sign in from by hand. A person who
-signs in with PowerCLI is flagged too, and is cleared by confirming who it is.
+sessions read `vSphereUI`, and that is the only agent the census treats as a person's. Name another in
+`INTERACTIVE_AGENTS` (comma-separated, versions left off) only if your vSphere Client's agent reads another name; never
+name a scripting client there, because every account's sessions from it would then pass unflagged, and the run prints a
+note when the variable is set. A person who signs in with PowerCLI is flagged too: once its owner confirms it is that
+person, acknowledge that one pair with `--ack` (below).
 
 The census reads vCenter only. NSX, VCF Operations, the SDDC Manager API and VCF Automation each keep their own
 sign-ins, and it does not read them.
@@ -96,16 +98,20 @@ The exit is the first of these that applies, so a scheduler reads one state from
 
 | Exit | Means | What a person does |
 |---|---|---|
-| 1 | `--sessions` found a directory account signing in from a client other than the vSphere Client: an integration on a person's or a directory account's password, until its owner says otherwise | find its owner (`--where`), and move it to an identity of its own |
+| 1 | `--sessions` found a directory account signing in from a client other than the vSphere Client, a pair no acknowledgement covers: an integration on a person's or a directory account's password, until its owner says otherwise | find its owner (`--where`), and move it to an identity of its own; a person's own pair, once confirmed, goes in `--ack` |
 | 2 | a vCenter answered the API client's exchange, or one of its sessions, and did not take the client | read the client's role and the realm's coverage of that vCenter |
 | 3 | a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read, a census identity that could read only its own session, a vCenter on which `DIRECTORY_DOMAINS` named no session while another provider's sessions were there (the domains name nothing there, so the census saw nothing it was asked to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect | fix the read and run again; nothing is known of what was not read |
 | 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client: an account in automated use is not a break-glass account | find the client (`--where`) and move it |
-| 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client and the local administrator signs in from no other client | nothing |
-| 5 | a usage error, `--sessions` without `DIRECTORY_DOMAINS` among them, a Python older than 3.10, or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
+| 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client or acknowledged, and the local administrator signs in from no other client | nothing |
+| 5 | a usage error (`--sessions` without `DIRECTORY_DOMAINS`, an `--ack` file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, `--ack` without `--sessions`, among them), a Python older than 3.10, or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
 
-The exit reads each session list at one moment. An integration that is not signed in at that moment is not seen, so
-the gate before the broker federates is exit 0 on three or more days, with every remaining directory session owned and
-confirmed as a person.
+The exit reads each session list at one moment, and an integration that is not signed in at that moment is not seen: a
+job that runs at 02:00 for ten minutes is absent from a read at 10:00 on any number of days. So schedule the census more
+often than your shortest job runs, for at least your longest job cycle (a week for a weekly job, a month for a month-end
+one), and let `--compare` hold the records to that coverage (below). The gate before the broker federates is
+`--compare` exiting 0 at the coverage you declared: every vCenter read in every record, no directory account from a
+client other than the vSphere Client unless it is a person's pair acknowledged, and the local administrator in no
+automated use.
 
 ### Whose client is it: `--where`
 
@@ -126,38 +132,91 @@ on the reference estate the two local administrator sessions from the `vAPI` age
 four from the Java and XML-WS agents gave private addresses (one management vCenter, 2026-10-15, one read): a loopback
 address names the vCenter itself, so the client behind those sessions has to be found another way.
 
-### The same sessions across days: `--compare`
+### A person's pair, acknowledged: `--ack`
 
-The chapter asks for the session census read on three or more days, because a job that runs weekly or at night is absent from most reads. Every name in a record is a
-placeholder numbered afresh on each run, so two records cannot be compared on their names. Set `FINGERPRINT_KEY_FILE`
-to a secret of your own (mode 0600, kept off any shared disk, the same file every day): each vCenter and each directory
-account in the record then carries a keyed fingerprint, the same in every record made under that key. Then compare:
+A person who signs in with PowerCLI, or another scripting client, is flagged like any program, because the agent alone
+cannot tell them apart. Once the account's owner confirms that the sessions are that person's own, acknowledge that one
+pair, the account and the agent, until a date:
+
+```json
+[{"account": "<DOMAIN>\\<name>", "agent": "PowerCLI", "until": "2026-12-31", "note": "a person, confirmed by <owner>"}]
+```
+
+```bash
+python3 vcenter_exchange.py --sessions --redact --ack acks.json
+python3 vcenter_exchange.py --compare sessions-*.json --ack acks.json      # needs FINGERPRINT_KEY_FILE, below
+```
+
+Write the account as the census prints it without `--redact` (`DOMAIN\name`, in any case) and the agent as it prints it
+(a version is dropped). An entry with a wildcard, an account without its domain, a field other than `account`, `agent`,
+`until` and `note`, or a date that is not `YYYY-MM-DD` is refused with exit 5, and nothing of the file is read. The pair
+is still listed, marked `acknowledged until` its date; from the day after, it counts again. It covers that account from
+that agent and nothing else: the same account from another agent, or another account from the same agent, is flagged
+as before. The report counts the acknowledgements that matched no pair read, so a stale one can be removed. Do not use
+`INTERACTIVE_AGENTS` for this: it names agents for every account at once.
+
+### The same sessions across your job cycle: `--compare`
+
+The census is a sample: what signs in between two reads is not seen. Read it on a schedule, more often than your
+shortest job runs, across your longest job cycle. Every name in a record is a placeholder numbered afresh on each run,
+so two records cannot be compared on their names. Set `FINGERPRINT_KEY_FILE` to a secret of your own (mode 0600, kept
+off any shared disk, the same file on every read): each vCenter and each directory account in the record then carries a
+keyed fingerprint, the same in every record made under that key. Then compare:
 
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))" > fingerprint.key && chmod 600 fingerprint.key   # once
 export FINGERPRINT_KEY_FILE=$PWD/fingerprint.key
-OUT=sessions-$(date -u +%F).json python3 vcenter_exchange.py --sessions --redact    # on each day
-python3 vcenter_exchange.py --compare sessions-*.json
+OUT=sessions-$(date -u +%FT%H%M).json python3 vcenter_exchange.py --sessions --redact    # on a schedule
+python3 vcenter_exchange.py --compare sessions-*.json --ack acks.json \
+    --cover-hours 24 --span-days 7 --max-gap-minutes 30
 ```
+
+It prints the coverage its records give: the hours of day (UTC) at which a read was taken, the span from the first
+read to the last, and the largest gap between two reads. It holds them to the coverage you ask: `--cover-hours N` (the
+hours of day that must each hold a read, default 24), `--span-days N` (the days from the first read to the last,
+default 7) and `--max-gap-minutes N` (the longest gap allowed between two reads, none by default). A job shorter than
+the largest gap can run unseen between two reads, and a job whose cycle is longer than the span can fall outside it, so
+ask for both: a gap below your shortest job, and a span over your longest cycle. Three reads at 10:00 on three days cover
+one hour of day and a span of two days, and show nothing of a 02:00 backup or a month-end job; `--compare` reports
+them short (exit 3), never as a pass. Hourly reads from one Monday 00:00 to the next cover every hour and the
+seven-day span.
 
 It lists, per vCenter, the sessions (a directory account or the local administrator, with its client agent) present in
 every record, and those that came and went with the dates each was seen. The unit it compares is one account with one
 client agent: several sessions an account holds open from the same agent count once, so on the reference estate's read
 six local administrator sessions from three agents compared as three. A directory account appears by its placeholder
 in the latest record and its fingerprint; a run without `--redact` prints each directory account's fingerprint beside
-its name, which is how you match them. Local accounts other than the administrator, and API clients, are counted in each
-record and not compared.
+its name, which is how you match them. Then it lists every pair from a client other than the vSphere Client seen in any
+record, with how many records it was seen in: a directory account's marked acknowledged until a date or not
+acknowledged, the local administrator's marked as a break-glass account in automated use. Local accounts other than the
+administrator, and API clients, are counted in each record and not compared.
 
 `--compare` first checks what each record read. A vCenter whose census failed in a record (its list not read, only
 the census's own session visible, `DIRECTORY_DOMAINS` naming nothing there, or no fingerprint) is not a read of that
 vCenter, and the report says which record missed it: what came and went there is not known.
 
-| `--compare` exit, the first that applies | Means |
-|---|---|
-| 3 | a vCenter not read in every record, or a record holding no session census read on any vCenter |
-| 1 | compared, every vCenter read in every record, but over fewer than three days |
-| 0 | compared over three or more days, every vCenter read in every record |
-| 5 | fewer than two records, another option beside `--compare`, a record that cannot be read or parsed, records without fingerprints, or records made under two keys |
+| `--compare` exit, the first that applies | Means | What a person does |
+|---|---|---|
+| 1 | a directory account from a client other than the vSphere Client in any record, a pair no acknowledgement covers | find its owner (`--where` on the next read) and move it, or acknowledge a person's pair |
+| 3 | a vCenter not read in every record, a record holding no session census read on any vCenter, or the records short of the coverage asked | read again, more often or for longer; nothing is known of what was not read |
+| 4 | the local administrator from a client other than the vSphere Client in any record | find the client (`--where`) and move it |
+| 0 | every vCenter read in every record, the coverage met, and none of the above | nothing: this is the census's gate before the broker federates |
+| 5 | fewer than two records, an option that is not `--compare`'s, a record that cannot be read or parsed, records without fingerprints, records made under two keys, or `--ack` without `FINGERPRINT_KEY_FILE` or under another key | fix the invocation |
+
+### What the census does not read: vCenter's sign-in events
+
+vCenter's sign-in and sign-out events reach back further than a session list, and the census does not read them. On
+one management vCenter of the reference estate (VCF 9.1.1, build 25712839, 2026-10-15, read-only) the event retention
+read `event.maxAge` 30 with `event.maxAgeEnabled` true, and seven days of sign-in events held four directory accounts,
+each with sign-ins from an agent other than the vSphere Client, while the session list held none of them at that
+moment. Two things kept those events out of the census. A REST session (`POST /api/session`, and the older
+`/rest/com/vmware/cis/session`) left no sign-in event, only a sign-out event once it was closed, under the agent
+`vapi-endpoint` whatever agent the client sent; and of the 96 `VMware vim-java` and `VcApiGw` sign-ins of the three
+accounts that also signed in at the vSphere Client, 92 fell within ten seconds of a `vSphereUI` sign-in of the same
+account. Whether those are the vSphere Client's own sessions was not settled, so a census of the events would flag the people it exists to clear. Until
+it is, read the events by hand when the list leaves a question: the
+[vSphere Web Services API reference for `UserLoginSessionEvent`](https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.event.UserLoginSessionEvent.html)
+describes it as "This event records a user logon", with `userAgent` "The user agent or application".
 
 ## The API client an integration moves to: `api_client.py`
 
@@ -393,17 +452,19 @@ Steps 1 to 4 run only when an API client's credential is given.
   and SDDC Manager were not searched.
 - The census classifies each session by its principal's domain: the broker tenant is an API client, a domain in
   `DIRECTORY_DOMAINS` is a directory account, the vCenter's own SSO domain is a local account (the local administrator
-  apart, and accounts named `svc-` counted as VCF's integration accounts). Each session's client agent is recorded
+  apart, and accounts named `svc-` counted as VCF's integration accounts), any other domain is another provider's, and a
+  principal with no domain is counted apart as one. Each session's client agent is recorded
   without its version. Every agent but `vSphereUI` counts as a program; that rule comes from the agents seen on the
   reference estate's lists, where the one session from the vSphere Client read `vSphereUI`, not from a vendor list, so
   read the agents yourself.
 - No local account is named in the record, because a local account's name can carry estate names; the census counts
   them. Directory accounts and API clients are recorded as placeholders, with their agents.
-- A session list shows what is signed in at the moment of the read. Run it on three or more days, and on a schedule,
-  and `--compare` the records before you conclude that no integration signs in as a person. `--where` and `--compare`
-  were run once on one management vCenter on 2026-10-15: six local administrator sessions placed, the record holding
-  no address, and two keyed reads a minute apart compared (exit 1, one day). No directory session was signed in at
-  that read.
+- A session list shows what is signed in at the moment of the read; the census is a sample, and `--compare` states how
+  much of the clock and the calendar its samples cover. `--where` and `--compare` were first run on one management
+  vCenter on 2026-10-15: six local administrator sessions placed, the record holding no address, and two keyed reads a
+  minute apart compared. Later that day three reads of all three vCenters, minutes apart, compared with the default
+  coverage and reported short of it. A comparison across a full job cycle has not been run, and `--ack` and the
+  coverage options are held by the companion's tests.
 - Measured on VCF 9.1.1 (three vCenters, build 25712839), 2026-10-13: the exchange with an API client holding
   `vcf_viewer`; the census read as that client holding `vcf_administrator`, and once with no API client, as a directory
   account's password. `api_client.py` ran on a VCF single sign-on user's API token whose user holds VCF Administrator
@@ -419,9 +480,12 @@ Steps 1 to 4 run only when an API client's credential is given.
 `client_took_both_sessions` of `vcenters`, `bearer_as_presented` (the statuses seen), `saml_lifetime_s`, `session_users`
 (who the client's sessions were), and with `--sessions` `sessions_read`, `census_only_own_session`, `sessions_by_class`,
 `local_administrator_by_agent`, `local_administrator_not_interactive` (its sessions from clients other than the vSphere
-Client), `directory_principals` and `directory_not_interactive`. `broker_tenant`, when present, records a tenant the
-client's own session named that differed from the one set. `vcenters` holds each vCenter's steps; `sent` names every
-request that was not a plain read.
+Client), `directory_principals` and `directory_not_interactive` (the accounts with a pair from a client other than the
+vSphere Client that no acknowledgement covers); with `--ack`, `directory_acknowledged`. `broker_tenant`, when present, records a tenant the
+client's own session named that differed from the one set. `interactive_agents` is the agent set the run judged by,
+`acks` how many acknowledgements were given and how many matched no pair read. `vcenters` holds each vCenter's steps:
+each directory account carries its `agents`, `not_interactive_agents`, and with `--ack` the pairs `acknowledged` and
+`ack_expired`. `sent` names every request that was not a plain read.
 
 `api_client.json` (and `api_client_instance.json`, the same at one instance's scope): `asked` (the role, its scope, the
 instance when one was named, and both lifetimes), `calls` (each call's method, templated path and status, and the

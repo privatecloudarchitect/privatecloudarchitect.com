@@ -26,10 +26,15 @@ python tokens.py --kubeconfig          # every kubeconfig credential, no token n
 
 Standard library only, except `--kubeconfig`, which needs PyYAML.
 
-Exit code: `0` the token is usable, `1` it is expired or inside the clock-skew margin, `3` nothing could be
-read off it (it is not a JWT) or an error the script did not expect, `5` a usage error (no token given, a file it
-cannot read, PyYAML missing for `--kubeconfig`, a Python older than 3.10). 0, 3 and 5 mean what they mean on every
-identity companion; 1 is this script's own finding.
+| Exit | Means |
+|---|---|
+| 0 | the token is usable; with `--kubeconfig`, every token's expiry was read and none has expired |
+| 1 | it is expired or inside the clock-skew margin; with `--kubeconfig`, any one of them is, and this comes first |
+| 3 | undetermined: it is not a JWT, or it carries no `exp` claim, so nothing here can say when it expires (with `--kubeconfig`, a token like that and none expired); or an error the script did not expect |
+| 5 | a usage error: no token given, a file it cannot read, a kubeconfig it cannot read or that is not one, PyYAML missing for `--kubeconfig`, an argument it does not take, a Python older than 3.10 |
+
+0, 3 and 5 mean what they mean on every identity companion; 1 is this script's own finding. A token with no `exp`
+exits 3 rather than 0, because a token that does not say when it dies is not known to work.
 
 ## What it tells you
 
@@ -56,7 +61,8 @@ Classifies every credential by whether it can renew itself:
   script.
 - **client certificate**: no login at all. These commonly outlive every token around them.
 - **static token**: has an expiry and **nothing renews it**. This is the one that fails an hour
-  after it started working.
+  after it started working. A static token whose expiry cannot be read (opaque, or no `exp` claim)
+  is listed as UNDETERMINED, and the run exits 3 unless another token has already expired.
 
 It reads the file directly rather than shelling out, because `kubectl config view` redacts token
 values and would report nothing at all wrong.

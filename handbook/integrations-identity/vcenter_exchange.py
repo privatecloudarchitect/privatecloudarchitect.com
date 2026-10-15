@@ -32,11 +32,29 @@ last ran a command. They are printed on your terminal only and never written to 
 to a host and its owner there. The client agent alone does not name a product: vim-java, XML-WS and vAPI clients are
 shared by many.
 
---compare RECORD RECORD [...] reads two or more records of --sessions runs, made on different days, and lists the
-sessions (the directory account or the local administrator, with its client agent) present in every record and those
-that came and went. Every name in a record is a placeholder numbered afresh on each run, so the records are joined on
-keyed fingerprints instead: run each census with FINGERPRINT_KEY_FILE set to the same secret, and each vCenter and
-directory principal carries a fingerprint that is the same in every record made under it. It reads files only.
+A session list holds only what is signed in at the moment of the read: a job that runs at 02:00 for ten minutes is
+absent from a read at 10:00, so the reads are held to a coverage (--compare, below). vCenter's sign-in and sign-out
+events (UserLoginSessionEvent, UserLogoutSessionEvent) reach back further, and are not read here: on the reference estate
+(vCenter 9.1.1, X-205) a REST session left no sign-in event, only a sign-out event once it was closed, and the people
+signing in at the vSphere Client had sign-ins from other agents (VMware vim-java, VcApiGw) within seconds of their
+vSphereUI ones, so a census of those events would flag the people it exists to clear until that is settled.
+
+--compare RECORD RECORD [...] reads two or more records of --sessions runs and lists the sessions (the directory account
+or the local administrator, with its client agent) present in every record and those that came and went. Every name in
+a record is a placeholder numbered afresh on each run, so the records are joined on keyed fingerprints instead: run each
+census with FINGERPRINT_KEY_FILE set to the same secret, and each vCenter and directory principal carries a fingerprint
+that is the same in every record made under it. It reads files only. It prints the coverage its records give (the hours
+of day, UTC, at which a read was taken, the span from the first read to the last, and the largest gap between two reads)
+and holds it to the coverage asked: --cover-hours N (default 24, every hour of day), --span-days N (default 7, a weekly
+cycle) and --max-gap-minutes N (unset by default). Read at an interval shorter than your shortest job, across your
+longest job cycle, and ask for exactly that.
+
+--ack FILE (with --sessions, or with --compare) names the (directory account, client agent) pairs a person has decided
+on, each until a date: a person who signs in with PowerCLI, confirmed as that person. An acknowledged pair is still
+listed, as acknowledged; it never silences the same account from another agent, another account, or itself after its
+date. The file is a JSON list of {"account": "DOMAIN\\name" as the census prints it, "agent": the client agent as it
+prints it, "until": "YYYY-MM-DD", "note": optional}; anything else is refused. With --compare it needs
+FINGERPRINT_KEY_FILE, to match each account to its fingerprint.
 
 Env:  BROKER_HOST                 the identity broker that trades the API client's token for a bearer (not needed for a
                                   census as VC_USER alone); OPS_BROKER_HOST, then OPS_HOST, are read when it is unset,
@@ -56,19 +74,21 @@ Env:  BROKER_HOST                 the identity broker that trades the API client
                                   comma-separated. Unset, every directory session would read as another provider's,
                                   which is never flagged, so --sessions refuses to start without it; a vCenter on which
                                   they name no session while another provider's sessions are there is a failed read
-      INTERACTIVE_AGENTS          for --sessions: the client agents a person signs in from, comma-separated, versions
-                                  left off (default vSphereUI, the vSphere Client: the only agent a person's session
-                                  showed on the reference estate's lists)
+      INTERACTIVE_AGENTS          for --sessions: the vSphere Client's agent, if yours reads another name (default
+                                  vSphereUI, the only agent a person's session showed on the reference estate's lists).
+                                  Never name a scripting client here (PowerCLI, an SDK): every account's sessions from it
+                                  would pass unflagged. Acknowledge a person's pair with --ack instead
       LOCAL_DOMAIN                the vCenter's own SSO domain (default VSPHERE.LOCAL)
       FINGERPRINT_KEY_FILE        for --sessions records you will --compare: a secret of your own (mode 0600, kept off
                                   any shared disk), the same file on every run
       TLS_VERIFY=false            only on a self-signed lab CA
       OUT                         the record (default exchange.json)
-Use:  python3 vcenter_exchange.py [--sessions] [--redact]
+Use:  python3 vcenter_exchange.py [--sessions [--ack FILE]] [--redact]
       python3 vcenter_exchange.py --sessions --where      the address and last activity of each session, printed only
-      python3 vcenter_exchange.py --compare A.json B.json C.json
+      python3 vcenter_exchange.py --compare A.json B.json C.json [--ack FILE] [--cover-hours N] [--span-days N]
+                                  [--max-gap-minutes N]
 Exit, the first that applies, so a scheduler reads one state from one number:
-      1 --sessions found a directory account signing in from a client that is not interactive
+      1 --sessions found a directory account signing in from a client that is not interactive, a pair not acknowledged
       2 a vCenter answered the API client's exchange, or one of its sessions, and did not take the client
       3 a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read, a census
         identity that could read only its own session, a vCenter on which DIRECTORY_DOMAINS named no session while
@@ -76,19 +96,22 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect
       4 --sessions found the local administrator signing in from a client that is not interactive
       0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
-        directory-account session is from an interactive client and the local administrator signs in from none other
-      5 a usage error (a missing or bad argument or environment variable, --sessions without DIRECTORY_DOMAINS among
+        directory-account session is from an interactive client or acknowledged, and the local administrator signs in
+        from none other
+      5 a usage error (a missing or bad argument or environment variable, --sessions without DIRECTORY_DOMAINS, an --ack
+        file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, among
         them), a Python older than 3.10, or the record refused because an estate value survived the scrub (nothing is
         written)
-      The exit reads vCenter's session lists at one moment: an integration that is not signed in then is not seen, so
-      read on three or more days, compare the records, and confirm each remaining directory session's owner as a person.
-      --compare checks first that each record read what it is compared on: a vCenter whose census failed in a record
-      (a list not read, only the census's own session, DIRECTORY_DOMAINS naming nothing there, no fingerprint) is not
-      a read of that vCenter. The first that applies: 3 a vCenter not read in every record, or a record holding no
-      session census read on any vCenter · 1 compared, every vCenter read in every record, but over fewer than three
-      days · 0 compared over three or more days with every vCenter read in every record · 5 a usage error: fewer than
-      two records, another option beside --compare, a record that cannot be read or parsed, one without fingerprints,
-      or records made under two keys
+      The exit reads vCenter's session lists at one moment: an integration that is not signed in then is not seen.
+      --compare is the gate across reads. It checks first that each record read what it is compared on: a
+      vCenter whose census failed in a record (a list not read, only the census's own session, DIRECTORY_DOMAINS
+      naming nothing there, no fingerprint) is not a read of that vCenter. The first that applies: 1 a directory
+      account from a client that is not interactive in any record, a pair not acknowledged · 3 a vCenter not read in
+      every record, a record holding no session census read on any vCenter, or the records short of the coverage asked
+      (hours of day, span, largest gap) · 4 the local administrator from a client that is not interactive in any
+      record · 0 none of these · 5 a usage error: fewer than two records, an option that is not --compare's, a record
+      that cannot be read or parsed, one without fingerprints, records made under two keys, or --ack without
+      FINGERPRINT_KEY_FILE or under another key
 """
 
 from __future__ import annotations
@@ -368,6 +391,8 @@ def classify(principal: str, tenant: str, directories: set[str], local: str) -> 
     """The kind of principal a session holds, by how it signs in under VCF single sign-on."""
     domain, _, name = principal.rpartition("\\")
     d = domain.upper()
+    if not d:
+        return "no domain"             # never a directory account, nor another provider's: no domain names it
     if d == tenant.upper():
         return "api client"            # a VCF SSO API client's session reads <broker tenant>\<client id>
     if d in directories:
@@ -393,13 +418,65 @@ def unplaced(record: dict) -> list[str]:
             if isinstance(v.get("sessions"), dict) and "by_class" in v["sessions"] and names_nothing(v["sessions"]["by_class"])]
 
 
+ACK_FIELDS = {"account", "agent", "until", "note"}
+
+
+def load_acks(path: str) -> list[dict]:
+    """The (directory account, client agent) pairs a person has decided on: a JSON list of {"account": "DOMAIN\\name" as
+    the census prints it, "agent": the client agent as it prints it, "until": "YYYY-MM-DD", "note": optional}. Anything
+    else is refused (ValueError), never half read: a silenced pair is one somebody wrote down, and an entry written
+    loosely (a wildcard, an account without its domain, a field misspelled) silences nothing by accident."""
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    if not isinstance(raw, list):
+        raise ValueError("--ack: the file must hold a JSON list")
+    acks = []
+    for i, a in enumerate(raw):
+        if not isinstance(a, dict) or not all(isinstance(a.get(k), str) and a[k].strip() for k in ("account", "agent", "until")):
+            raise ValueError(f"--ack: entry {i} needs account, agent and until")
+        if set(a) - ACK_FIELDS or not isinstance(a.get("note", ""), str):
+            raise ValueError(f"--ack: entry {i} holds a field other than account, agent, until and a note in words")
+        domain, sep, name = a["account"].strip().rpartition("\\")
+        if not sep or not domain.strip() or not name.strip():
+            raise ValueError(f"--ack: entry {i}'s account must be DOMAIN\\name, as the census prints it")
+        if any(c in a["account"] + a["agent"] for c in "*?"):
+            raise ValueError(f"--ack: entry {i} holds a wildcard; an acknowledgement names one account and one agent")
+        until = datetime.strptime(a["until"].strip(), "%Y-%m-%d").strftime("%Y-%m-%d")  # malformed: ValueError
+        acks.append({"account": f"{domain.strip()}\\{name.strip()}", "agent": agent_of(a["agent"]), "until": until})
+    return acks
+
+
+def ack_for(acks: list[dict] | None, account: str, agent: str, fp: str | None = None, key: bytes | None = None) -> str | None:
+    """The latest date to which the acknowledgements cover this exact (account, agent) pair, or None. With a key, the
+    account may be given as its fingerprint (a record's), matched against each acknowledged account's own."""
+    dates = [a["until"] for a in acks or [] if a["agent"].lower() == agent.lower()
+             and ((fp is not None and key is not None and fingerprint(a["account"], key) == fp)
+                  or (fp is None and a["account"].lower() == account.lower()))]
+    return max(dates) if dates else None
+
+
+def flagged_agents(d: dict, allowed: set[str] | None = None) -> list[str]:
+    """A directory principal's client agents that are not interactive and not acknowledged. A record written before
+    acknowledgements existed carries only `not_interactive`; its agents are judged again here."""
+    if "not_interactive_agents" in d:
+        bad = d["not_interactive_agents"]
+    elif d.get("not_interactive"):
+        bad = sorted(ag for ag in d.get("agents") or {} if not interactive(ag, allowed)) or sorted(d.get("agents") or {})
+    else:
+        bad = []
+    acked = {x["agent"].lower() for x in d.get("acknowledged") or []}
+    return [ag for ag in bad if ag.lower() not in acked]
+
+
 def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str,
-           key: bytes | None = None) -> dict:
+           key: bytes | None = None, acks: list[dict] | None = None, today: str | None = None) -> dict:
     """Sessions by class; the local administrator by agent; each directory principal with its agents, flagged when any
-    agent is not interactive, and with a keyed fingerprint when a key is given. No local principal is named, because a
-    local account's name can carry estate values. A session's address and activity never reach the census."""
+    agent is not interactive and that pair is not acknowledged until today or later, and with a keyed fingerprint when
+    a key is given. No local principal is named, because a local account's name can carry estate values. A session's
+    address and activity never reach the census."""
     by_class, admin, dirs, clients = Counter(), Counter(), {}, set()
     allowed = interactive_agents()
+    today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for r in rows:
         if r["key"] == mine:
             continue
@@ -411,14 +488,22 @@ def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str
             dirs.setdefault(r["user"], Counter())[agent] += 1
         elif cls == "api client":
             clients.add(r["user"])
+    directory = []
+    for p, a in sorted(dirs.items()):
+        bad = sorted(ag for ag in a if not interactive(ag, allowed))
+        d = {"principal": p, "agents": dict(sorted(a.items())), "not_interactive": bool(bad), "not_interactive_agents": bad,
+             **({"fingerprint": fingerprint(p, key)} if key else {})}
+        if acks is not None:
+            covered = {ag: ack_for(acks, p, ag) for ag in bad}
+            d["acknowledged"] = [{"agent": ag, "until": u} for ag, u in covered.items() if u and u >= today]
+            expired = [{"agent": ag, "until": u} for ag, u in covered.items() if u and u < today]
+            if expired:
+                d["ack_expired"] = expired
+        directory.append(d)
     return {"sessions": sum(by_class.values()), "by_class": dict(sorted(by_class.items())),
             "local_administrator_by_agent": dict(sorted(admin.items())),
             "local_administrator_not_interactive": sum(n for ag, n in admin.items() if not interactive(ag, allowed)),
-            "directory": [{"principal": p, "agents": dict(sorted(a.items())),
-                           "not_interactive": any(not interactive(ag, allowed) for ag in a),
-                           **({"fingerprint": fingerprint(p, key)} if key else {})}
-                          for p, a in sorted(dirs.items())],
-            "api_clients": len(clients), "own_session_left_out": mine is not None}
+            "directory": directory, "api_clients": len(clients), "own_session_left_out": mine is not None}
 
 
 def where_rows(host: str, rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str) -> list[dict]:
@@ -434,7 +519,7 @@ def where_rows(host: str, rows: list[dict], mine: str | None, tenant: str, direc
 
 
 def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str, key: bytes | None = None,
-               where: list | None = None) -> dict:
+               where: list | None = None, acks: list[dict] | None = None) -> dict:
     """The census from an open session. A list that holds only the census's own session means this identity may not
     read the others, which is reported as such and never as an empty estate. With a where list, the address and last
     activity of each directory and local administrator session go into that list, never into the census."""
@@ -447,29 +532,30 @@ def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str
                     "only_own_session_visible": True, "census_identity": {"user": who}}
         if where is not None:
             where += where_rows(s.url.split("/")[2], rows, mine, tenant, directories, local)
-        return {**census(rows, mine, tenant, directories, local, key), "census_identity": {"user": who}}
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        return {**census(rows, mine, tenant, directories, local, key, acks, today), "census_identity": {"user": who}}
     finally:
         s.logout()
 
 
 def read_sessions(host: str, user: str, password: str, tenant: str, directories: set[str], local: str,
-                  key: bytes | None = None, where: list | None = None) -> dict:
+                  key: bytes | None = None, where: list | None = None, acks: list[dict] | None = None) -> dict:
     """The census as an account that signs in with a password (VC_USER)."""
     s = Soap(host)
     who = s.login(user, password) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, tenant, directories, local, key, where)
+    return _census_of(s, who, tenant, directories, local, key, where, acks)
 
 
 def read_sessions_as_client(host: str, assertion: str, tenant: str, directories: set[str], local: str,
-                            key: bytes | None = None, where: list | None = None) -> dict:
+                            key: bytes | None = None, where: list | None = None, acks: list[dict] | None = None) -> dict:
     """The census as the API client itself: its own SOAP session from a fresh SAML assertion."""
     s = Soap(host)
     who = s.login_by_token(assertion) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, tenant, directories, local, key, where)
+    return _census_of(s, who, tenant, directories, local, key, where, acks)
 
 
 # ── the record ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -480,7 +566,8 @@ def summary(record: dict) -> dict:
     vcs = record.get("vcenters") or []
     took = [v for v in vcs if (v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user")]
     sessions = [v for v in vcs if isinstance(v.get("sessions"), dict) and "by_class" in v["sessions"]]
-    return {
+    allowed = {a.lower() for a in record["interactive_agents"]} if record.get("interactive_agents") else None
+    out = {
         "vcenters": len(vcs),
         "census_as": record.get("census_as"),
         "client_tried": sum(1 for v in vcs if "exchange" in v),
@@ -496,10 +583,14 @@ def summary(record: dict) -> dict:
                                                          for v in sessions), Counter()).items())),
         "directory_principals": sorted({d["principal"] for v in sessions for d in v["sessions"]["directory"]}),
         "directory_not_interactive": sorted({d["principal"] for v in sessions for d in v["sessions"]["directory"]
-                                             if d["not_interactive"]}),
+                                             if flagged_agents(d, allowed)}),
         "local_administrator_not_interactive": sum(v["sessions"].get("local_administrator_not_interactive", 0)
                                                    for v in sessions),
     }
+    if record.get("acks") is not None:   # only a run with --ack carries these, so an older record's summary is unchanged
+        out["directory_acknowledged"] = sorted({d["principal"] for v in sessions for d in v["sessions"]["directory"]
+                                                if d.get("acknowledged")})
+    return out
 
 
 def report(record: dict) -> list[str]:
@@ -528,20 +619,20 @@ def report(record: dict) -> list[str]:
                 lines.append(f"    NOT PLACED: DIRECTORY_DOMAINS names nothing on this vCenter: {s['by_class']['another provider']} "
                              "session(s) read as another provider's and none as a directory account's, so every directory "
                              "session may be hiding there unflagged; set the domains as vCenter spells them and read again")
-            if s["local_administrator_by_agent"]:
-                lines.append("    local administrator by agent: " + ", ".join(f"{a} {n}" for a, n in s["local_administrator_by_agent"].items()))
-            for d in s["directory"]:
-                lines.append(f"    directory {d['principal']}"
-                             + (f" [fingerprint {d['fingerprint']}]" if d.get("fingerprint") else "") + ": "
-                             + ", ".join(f"{a} {n}" for a, n in d["agents"].items())
-                             + ("  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE" if d["not_interactive"] else ""))
+            lines += principal_lines(s, "    ")
         elif isinstance(s, dict):
             lines.append(f"  sessions not read: {s.get('error')}")
     sm = record["summary"]
     if sm["client_tried"]:
         lines.append(f"The client took both sessions on {sm['client_took_both_sessions']} of {sm['vcenters']} vCenter(s)")
     if sm["sessions_read"]:
-        lines.append(f"Directory accounts signing in from a client that is not interactive: {len(sm['directory_not_interactive'])}")
+        lines.append(f"Directory accounts signing in from a client that is not interactive: {len(sm['directory_not_interactive'])}"
+                     + (" not acknowledged" if record.get("acks") is not None else ""))
+        if record.get("acks") is not None:
+            a = record["acks"]
+            lines.append(f"Acknowledged: {len(sm.get('directory_acknowledged') or [])} account(s) on a pair a person decided on; "
+                         f"{a['entries']} acknowledgement(s), {a['unmatched']} matching no pair read"
+                         + (" (remove them from the --ack file when they are no longer needed)" if a["unmatched"] else ""))
         nothing = unplaced(record)
         if nothing:
             lines.append(f"FAILED READ: DIRECTORY_DOMAINS named nothing on {len(nothing)} vCenter(s), so the census saw no directory "
@@ -549,6 +640,25 @@ def report(record: dict) -> list[str]:
         if sm["local_administrator_not_interactive"]:
             lines.append(f"WATCH: the local administrator holds {sm['local_administrator_not_interactive']} session(s) from "
                          "clients that are not interactive: an account in automated use is not a break-glass account")
+    return lines
+
+
+def principal_lines(s: dict, pad: str) -> list[str]:
+    """The local administrator by agent, and each directory principal with its agents: a pair from a client that is not
+    interactive is flagged unless it is acknowledged, and an acknowledgement past its date is said so."""
+    lines = []
+    if s["local_administrator_by_agent"]:
+        lines.append(f"{pad}local administrator by agent: " + ", ".join(f"{a} {n}" for a, n in s["local_administrator_by_agent"].items()))
+    for d in s["directory"]:
+        acked = {x["agent"]: x["until"] for x in d.get("acknowledged") or []}
+        expired = {x["agent"]: x["until"] for x in d.get("ack_expired") or []}
+        flagged = flagged_agents(d)
+        lines.append(f"{pad}directory {d['principal']}"
+                     + (f" [fingerprint {d['fingerprint']}]" if d.get("fingerprint") else "") + ": "
+                     + ", ".join(f"{a} {n}" + (f" (acknowledged until {acked[a]})" if a in acked else "")
+                                 + (f" (acknowledgement ended {expired[a]})" if a in expired else "")
+                                 for a, n in d["agents"].items())
+                     + ("  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE" if flagged else ""))
     return lines
 
 
@@ -631,10 +741,12 @@ def have_client() -> bool:
     return bool(bearer_file() or (broker_host() and api_token()))
 
 
-def run(with_sessions: bool, where: list | None = None, key: bytes | None = None) -> dict:
+def run(with_sessions: bool, where: list | None = None, key: bytes | None = None,
+        acks: list[dict] | None = None) -> dict:
     """The exchange and the census on every vCenter named. With a where list, the address and last activity of each
     directory and local administrator session go into that list and never into the record; with a key, each vCenter
-    and directory principal in the record carries its keyed fingerprint."""
+    and directory principal in the record carries its keyed fingerprint; with acks, the pairs they cover are listed as
+    acknowledged."""
     hosts = [h.strip() for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
     bearer = broker_bearer() if have_client() else None
     census_as = None if not with_sessions else ("password" if os.environ.get("VC_USER") else "client")
@@ -651,8 +763,12 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
         sent.append("per vCenter: a third exchange, and a SOAP session as the client, opened and closed")
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "census_as": census_as,
               "sent": sent, "vcenters": []}
+    if with_sessions:
+        record["interactive_agents"] = sorted(interactive_agents())
     if key and with_sessions:
         record["fingerprint_key_check"] = key_check(key)
+    if with_sessions and acks is not None:
+        record["acks"] = {"entries": len(acks), "unmatched": 0}
     for host in hosts:
         row = {"vcenter": host, **({"fingerprint": fingerprint(host, key)} if key and with_sessions else {})}
         if bearer:
@@ -669,37 +785,47 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
                 tenant = seen
         if census_as == "password":
             row["sessions"] = read_sessions(host, os.environ["VC_USER"], _secret("VC_PASSWORD"), tenant, directories, local,
-                                            key, where)
+                                            key, where, acks)
         elif census_as == "client":
             _, third = exchange(host, bearer)
-            row["sessions"] = (read_sessions_as_client(host, third, tenant, directories, local, key, where) if third
+            row["sessions"] = (read_sessions_as_client(host, third, tenant, directories, local, key, where, acks) if third
                                else {"error": "the exchange for the census's own session failed"})
         record["vcenters"].append(row)
+    if "acks" in record:
+        record["acks"]["unmatched"] = unmatched_acks(record, acks)
     record["summary"] = summary(record)
     record["exit"] = exit_code(record)
     return record
 
 
+def unmatched_acks(record: dict, acks: list[dict]) -> int:
+    """How many acknowledgements matched no pair the run read: counted, never named."""
+    seen = {(d["principal"].lower(), ag.lower()) for v in record.get("vcenters") or [] if isinstance(v.get("sessions"), dict)
+            for d in v["sessions"].get("directory") or [] for ag in d["agents"]}
+    return sum(1 for a in acks if (a["account"].lower(), a["agent"].lower()) not in seen)
+
+
 def exit_code(record: dict) -> int:
-    """The first that applies: 1 a directory account signs in from a client that is not interactive; 2 a vCenter
-    answered the client's exchange or one of its sessions and did not take the client; 3 a read failed or is
-    undetermined (a vCenter that did not answer the exchange, a session list not read or holding only the census's own
-    session, directory domains that named nothing on a vCenter whose list held another provider's sessions, or no
-    vCenter at all); 4 the local administrator signs in from a client that is not interactive; else 0. A scheduler
-    reads it."""
+    """The first that applies: 1 a directory account signs in from a client that is not interactive, a pair nobody
+    acknowledged; 2 a vCenter answered the client's exchange or one of its sessions and did not take the client; 3 a
+    read failed or is undetermined (a vCenter that did not answer the exchange, a session list not read or holding only
+    the census's own session, directory domains that named nothing on a vCenter whose list held another provider's
+    sessions, or no vCenter at all); 4 the local administrator signs in from a client that is not interactive; else 0.
+    A scheduler reads it."""
     vcs = record["vcenters"]
     tried = [v for v in vcs if "exchange" in v]
     silent = [v for v in tried if not (v.get("exchange") or {}).get("status")]   # no answer at all: nothing is known
     refused = [v for v in tried if v not in silent
                and not ((v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user"))]
     unread = [v for v in vcs if isinstance(v.get("sessions"), dict) and "error" in v["sessions"]]
-    if record["summary"]["directory_not_interactive"]:
+    sm = record["summary"]
+    if sm["directory_not_interactive"]:
         return EXIT_DIRECTORY
     if refused:
         return EXIT_REFUSED
     if silent or unread or unplaced(record) or not vcs:
         return EXIT_UNREAD
-    return EXIT_ADMIN if record["summary"]["local_administrator_not_interactive"] else EXIT_OK
+    return EXIT_ADMIN if sm["local_administrator_not_interactive"] else EXIT_OK
 
 
 def where_report(where: list[dict]) -> list[str]:
@@ -714,8 +840,8 @@ def where_report(where: list[dict]) -> list[str]:
     return lines
 
 
-# ── --compare: sessions across dated records ─────────────────────────────────────────────────────────────────────
-EXIT_FEWER_DAYS = 1   # --compare's own 1: every vCenter read in every record, over fewer than three days
+# ── --compare: sessions across dated records, held to the coverage asked ─────────────────────────────────────────
+COVER_HOURS, SPAN_DAYS = 24, 7   # the defaults: a read in every hour of day, across a weekly cycle
 
 
 class CompareError(ValueError):
@@ -731,21 +857,30 @@ def read_of(v: dict) -> bool:
 
 
 def sessions_of(record: dict) -> dict[str, dict]:
-    """Per vCenter fingerprint: its placeholder, and its sessions as (who, agent) pairs, the directory principal by its
-    fingerprint and the local administrator as itself. Only the vCenters the record read are here."""
+    """Per vCenter fingerprint: its placeholder, its sessions as (who, agent) pairs, the directory principal by its
+    fingerprint and the local administrator as itself, and which of those pairs are from a client that is not
+    interactive, as the run that read them judged. Only the vCenters the record read are here."""
     out = {}
+    allowed = {a.lower() for a in record["interactive_agents"]} if record.get("interactive_agents") else None
     for v in record.get("vcenters") or []:
         s = v.get("sessions")
         if not read_of(v):
             continue   # a census that failed, read only itself or whose domains named nothing here is not a read of it
-        pairs, names = set(), {}
+        pairs, names, flagged = set(), {}, set()
         for d in s.get("directory") or []:
             if not d.get("fingerprint"):
                 raise CompareError("a directory principal carries no fingerprint")
             names[d["fingerprint"]] = d["principal"]
-            pairs |= {(f"directory {d['fingerprint']}", a) for a in d["agents"]}
-        pairs |= {("local administrator", a) for a in s.get("local_administrator_by_agent") or {}}
-        out[v["fingerprint"]] = {"vcenter": v["vcenter"], "pairs": pairs, "names": names}
+            who = f"directory {d['fingerprint']}"
+            pairs |= {(who, a) for a in d["agents"]}
+            bad = d["not_interactive_agents"] if "not_interactive_agents" in d else (
+                [a for a in d["agents"] if not interactive(a, allowed)] if d.get("not_interactive") else [])
+            flagged |= {(who, a) for a in bad}
+        for a in s.get("local_administrator_by_agent") or {}:
+            pairs.add(("local administrator", a))
+            if not interactive(a, allowed):
+                flagged.add(("local administrator", a))
+        out[v["fingerprint"]] = {"vcenter": v["vcenter"], "pairs": pairs, "names": names, "flagged": flagged}
     return out
 
 
@@ -754,10 +889,34 @@ def named(record: dict) -> dict[str, str]:
     return {v["fingerprint"]: v.get("vcenter") or "?" for v in record.get("vcenters") or [] if v.get("fingerprint")}
 
 
-def compare(records: list[dict]) -> dict:
-    """Which sessions are present in every record and which came and went, per vCenter, over the records' dates. It
-    first checks what each record read: a vCenter a record did not read is listed with the records that missed it, and
-    a record that read no vCenter is listed too, so the comparison is never taken over reads that did not happen."""
+def coverage(captured: list[str], cover_hours: int = COVER_HOURS, span_days: float = SPAN_DAYS,
+             max_gap: int | None = None) -> dict:
+    """What the reads cover, as a quantity: the hours of day (UTC) at which a read was taken, the span from the first
+    read to the last, and the largest gap between two reads; and each way that falls short of the coverage asked. A job
+    that runs between two reads is absent from both, so a gate over reads is only as wide as what they cover."""
+    when = sorted(datetime.fromisoformat(c.replace("Z", "+00:00")) for c in captured)
+    hours = sorted({w.hour for w in when})
+    span_h = (when[-1] - when[0]).total_seconds() / 3600 if when else 0.0
+    gaps = [(b - a).total_seconds() / 60 for a, b in zip(when, when[1:], strict=False)]
+    largest = round(max(gaps)) if gaps else None
+    short = []
+    if len(hours) < cover_hours:
+        short.append(f"reads in {len(hours)} of the {cover_hours} hours of day asked")
+    if span_h < span_days * 24:
+        short.append(f"a span of {span_h / 24:.2f} day(s) where {span_days:g} were asked")
+    if max_gap is not None and (largest is None or largest > max_gap):
+        short.append(f"a largest gap of {largest} min where at most {max_gap} was asked")
+    return {"hours_of_day_utc": hours, "span_hours": round(span_h, 2), "largest_gap_minutes": largest,
+            "asked": {"cover_hours": cover_hours, "span_days": span_days, "max_gap_minutes": max_gap}, "short": short}
+
+
+def compare(records: list[dict], cover_hours: int = COVER_HOURS, span_days: float = SPAN_DAYS, max_gap: int | None = None,
+            acks: list[dict] | None = None, key: bytes | None = None, today: str | None = None) -> dict:
+    """Which sessions are present in every record and which came and went, per vCenter; which pairs came from a client
+    that is not interactive in any record, and whether a person acknowledged each directory pair; and the coverage the
+    records give against the coverage asked. It first checks what each record read: a vCenter a record did not read is
+    listed with the records that missed it, and a record that read no vCenter is listed too, so the comparison is never
+    taken over reads that did not happen."""
     if len(records) < 2:
         raise CompareError("--compare needs two or more records")
     checks = {r.get("fingerprint_key_check") for r in records}
@@ -765,8 +924,15 @@ def compare(records: list[dict]) -> dict:
         raise CompareError("a record carries no fingerprints: run each --sessions census with FINGERPRINT_KEY_FILE set")
     if len(checks) > 1:
         raise CompareError("the records were fingerprinted under different keys; use one FINGERPRINT_KEY_FILE for all")
-    ordered = sorted(records, key=lambda r: r.get("captured") or "")
-    reads = [(r.get("captured") or "?", sessions_of(r), named(r)) for r in ordered]
+    if acks is not None and (key is None or key_check(key) not in checks):
+        raise CompareError("--ack with --compare needs FINGERPRINT_KEY_FILE, the key the records were fingerprinted under")
+    try:
+        cover = coverage([r["captured"] for r in records], cover_hours, span_days, max_gap)
+    except (KeyError, TypeError, ValueError):
+        raise CompareError("a record carries no capture time it can be placed by") from None
+    today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    ordered = sorted(records, key=lambda r: r["captured"])
+    reads = [(r["captured"], sessions_of(r), named(r)) for r in ordered]
     vcenters = []
     every = sorted({fp for _, by_vc, names in reads for fp in (*by_vc, *names)})
     for fp in every:
@@ -777,13 +943,24 @@ def compare(records: list[dict]) -> dict:
         everyone = set.intersection(*(x["pairs"] for _, x in seen)) if seen else set()
         names = {k: v for _, x in seen for k, v in x["names"].items()}   # the latest record's placeholder wins
         came = sorted((set.union(*(x["pairs"] for _, x in seen)) - everyone)) if seen else []
+        flagged = []
+        for p in sorted(set().union(*(x["flagged"] for _, x in seen)) if seen else set()):
+            f = {"pair": p, "seen": [w for w, x in seen if p in x["flagged"]]}
+            if p[0].startswith("directory "):
+                until = ack_for(acks, "", p[1], fp=p[0].split(" ", 1)[1], key=key)
+                if until and until >= today:
+                    f["acknowledged_until"] = until
+                elif until:
+                    f["ack_expired"] = until
+            flagged.append(f)
         vcenters.append({"fingerprint": fp, "vcenter": label, "read_in": len(seen), "not_read_in": missed,
                          "in_every_record": sorted(everyone),
                          "came_and_went": [{"pair": p, "seen": [w for w, x in seen if p in x["pairs"]]} for p in came],
-                         "names": names})
+                         "not_interactive": flagged, "names": names})
     days = sorted({when[:10] for when, by_vc, _ in reads if by_vc})
     return {"records": len(records), "captured": [w for w, _, _ in reads], "days": days, "vcenters": vcenters,
-            "records_reading_nothing": [w for w, by_vc, _ in reads if not by_vc]}
+            "records_reading_nothing": [w for w, by_vc, _ in reads if not by_vc], "coverage": cover,
+            "acks": None if acks is None else len(acks), "today": today}
 
 
 def _who(pair: tuple[str, str], names: dict) -> str:
@@ -795,17 +972,26 @@ def _who(pair: tuple[str, str], names: dict) -> str:
 
 
 def compare_report(result: dict) -> list[str]:
-    lines = [f"Compared {result['records']} session records on {len(result['days'])} day(s): {', '.join(result['days'])}"]
+    cv = result["coverage"]
+    asked = cv["asked"]
+    lines = [f"Compared {result['records']} session records on {len(result['days'])} day(s): {', '.join(result['days'])}",
+             f"Coverage: reads in {len(cv['hours_of_day_utc'])} of 24 hours of day (UTC: "
+             + (", ".join(f"{h:02d}" for h in cv["hours_of_day_utc"]) or "none") + f"); a span of {cv['span_hours']} h "
+             f"({cv['span_hours'] / 24:.2f} days) from the first read to the last; the largest gap between two reads "
+             + (f"{cv['largest_gap_minutes']} min" if cv["largest_gap_minutes"] is not None else "none"),
+             f"Asked: reads in {asked['cover_hours']} hours of day, a span of {asked['span_days']:g} days, "
+             + (f"no gap over {asked['max_gap_minutes']} min" if asked["max_gap_minutes"] is not None else "no gap limit")]
+    if cv["short"]:
+        lines.append("COVERAGE SHORT: " + "; ".join(cv["short"]) + ". A job that runs between two reads is absent from "
+                     "both, so what these records do not show is not known; that is exit 3, unless a finding comes first")
     for when in result.get("records_reading_nothing") or []:
         lines.append(f"NOT READ: the record of {when} holds no session census read on any vCenter, so it adds nothing to "
-                     "compare; exit 3")
+                     "compare; that is exit 3, unless a finding comes first")
     unread = [v for v in result["vcenters"] if v["read_in"] < result["records"]]
     if unread:
         lines.append(f"NOT READ: {len(unread)} vCenter(s) missing a read in at least one record (a census that failed "
                      "there, read only its own session, or whose DIRECTORY_DOMAINS named nothing there is not a read of "
-                     "it), so what came and went on them is not known; exit 3")
-    if len(result["days"]) < 3:
-        lines.append("FEWER THAN THREE DAYS: a job that runs weekly, or at night, can be absent from every record read")
+                     "it), so what came and went on them is not known; that is exit 3, unless a finding comes first")
     for v in result["vcenters"]:
         lines.append(f"vCenter {v['vcenter']} [fingerprint {v['fingerprint']}], read in {v['read_in']} of "
                      f"{result['records']} record(s)"
@@ -815,18 +1001,33 @@ def compare_report(result: dict) -> list[str]:
             lines.append("  came and went: none")
         for c in v["came_and_went"]:
             lines.append(f"  came and went: {_who(c['pair'], v['names'])}, seen {', '.join(w[:10] for w in c['seen'])}")
+        for f in v.get("not_interactive") or []:
+            if not f["pair"][0].startswith("directory "):
+                state = "a break-glass account in automated use"
+            elif f.get("acknowledged_until"):
+                state = f"acknowledged until {f['acknowledged_until']}"
+            else:
+                state = "NOT ACKNOWLEDGED" + (f" (its acknowledgement ended {f['ack_expired']})" if f.get("ack_expired") else "")
+            lines.append(f"  from a client that is not interactive: {_who(f['pair'], v['names'])}, seen in "
+                         f"{len(f['seen'])} record(s): {state}")
     return lines
 
 
 def compare_exit(result: dict) -> int:
-    """3 when a vCenter is not read in every record or a record read none; else 1 over fewer than three days; else 0."""
+    """The first that applies: 1 a directory account from a client that is not interactive in any record, a pair not
+    acknowledged; 3 a vCenter not read in every record, a record that read none, or the records short of the coverage
+    asked; 4 the local administrator from a client that is not interactive in any record; else 0."""
+    flagged = [f for v in result["vcenters"] for f in v.get("not_interactive") or []]
+    if any(f["pair"][0].startswith("directory ") and not f.get("acknowledged_until") for f in flagged):
+        return EXIT_DIRECTORY
     whole = all(v["read_in"] == result["records"] for v in result["vcenters"])
-    if not whole or result.get("records_reading_nothing") or not result["vcenters"]:
+    if not whole or result.get("records_reading_nothing") or not result["vcenters"] or result["coverage"]["short"]:
         return EXIT_UNREAD
-    return EXIT_OK if len(result["days"]) >= 3 else EXIT_FEWER_DAYS
+    return EXIT_ADMIN if any(f["pair"][0] == "local administrator" for f in flagged) else EXIT_OK
 
 
-def compare_main(paths: list[str]) -> int:
+def compare_main(paths: list[str], cover_hours: int = COVER_HOURS, span_days: float = SPAN_DAYS,
+                 max_gap: int | None = None, ack_path: str | None = None) -> int:
     records = []
     for path in paths:
         try:
@@ -835,8 +1036,15 @@ def compare_main(paths: list[str]) -> int:
         except (OSError, ValueError) as e:
             print(f"could not read {path}: {type(e).__name__}", file=sys.stderr)
             return EXIT_USAGE
+    acks = key = None
+    if ack_path:
+        try:
+            acks, key = load_acks(ack_path), fingerprint_key()
+        except (OSError, ValueError) as e:
+            print(f"--ack {ack_path}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
+            return EXIT_USAGE
     try:
-        result = compare(records)
+        result = compare(records, cover_hours, span_days, max_gap, acks, key)
     except CompareError as e:
         print(f"cannot compare: {e}", file=sys.stderr)
         return EXIT_USAGE
@@ -852,6 +1060,41 @@ def given_values() -> list[tuple[str, str]]:
     out += [(os.environ.get("VC_USER", ""), "name")]
     out += [(d.strip(), "domain") for d in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if d.strip()]
     return [(v, k) for v, k in out if v]
+
+
+def _bounded(kind, low, high, what: str):
+    def parse(text: str):
+        try:
+            value = kind(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"{what}: {text!r} is not a number") from None
+        if not low <= value <= high:
+            raise argparse.ArgumentTypeError(f"{what}: {text} is outside {low} to {high}")
+        return value
+    return parse
+
+
+_hours = _bounded(int, 1, 24, "--cover-hours")
+_span = _bounded(float, 0, 3660, "--span-days")
+_minutes = _bounded(int, 1, 527040, "--max-gap-minutes")
+SECRET_FILES = ("VC_PASSWORD_FILE", "API_TOKEN_FILE", "OPS_API_TOKEN_FILE", "BEARER_FILE", "OPS_BEARER_FILE",
+                "FINGERPRINT_KEY_FILE")
+
+
+def unusable_secret_files() -> list[str]:
+    """The *_FILE variables set to a file that cannot be read or holds nothing: a usage error, found before any call."""
+    bad = []
+    for name in SECRET_FILES:
+        path = os.environ.get(name)
+        if not path:
+            continue
+        try:
+            with open(path, "rb") as f:
+                if not f.read().strip():
+                    bad.append(name)
+        except OSError:
+            bad.append(name)
+    return bad
 
 
 class _Parser(argparse.ArgumentParser):
@@ -885,14 +1128,46 @@ def _run(argv: list[str] | None = None) -> int:
     ap.add_argument("--where", action="store_true",
                     help="with --sessions: print each directory and local administrator session's address and last "
                          "activity, on the terminal only; never with --redact")
+    ap.add_argument("--ack", metavar="FILE",
+                    help="with --sessions or --compare: the (directory account, client agent) pairs a person has decided "
+                         "on, each until a date: a JSON list of {account, agent, until, note}")
     ap.add_argument("--compare", nargs="+", metavar="RECORD",
-                    help="compare two or more --sessions records made on different days; reads files only")
+                    help="compare two or more --sessions records, held to the coverage asked; reads files only")
+    ap.add_argument("--cover-hours", type=_hours, metavar="N",
+                    help=f"with --compare: the hours of day (UTC) that must each hold a read (default {COVER_HOURS})")
+    ap.add_argument("--span-days", type=_span, metavar="N",
+                    help=f"with --compare: the days the reads must span, first to last (default {SPAN_DAYS})")
+    ap.add_argument("--max-gap-minutes", type=_minutes, metavar="N",
+                    help="with --compare: the longest gap allowed between two reads (default: none asked)")
     a = ap.parse_args(argv)
+    compare_only = [o for o, v in (("--cover-hours", a.cover_hours), ("--span-days", a.span_days),
+                                   ("--max-gap-minutes", a.max_gap_minutes)) if v is not None]
     if a.compare:
         if a.sessions or a.where or a.redact:
-            print("--compare reads records only; it takes no other option", file=sys.stderr)
+            print("--compare reads records only; it takes --ack, --cover-hours, --span-days and --max-gap-minutes",
+                  file=sys.stderr)
             return EXIT_USAGE
-        return compare_main(a.compare)
+        return compare_main(a.compare, COVER_HOURS if a.cover_hours is None else a.cover_hours,
+                            SPAN_DAYS if a.span_days is None else a.span_days, a.max_gap_minutes, a.ack)
+    if compare_only:
+        print(f"{', '.join(compare_only)} hold --compare to a coverage, so they need --compare", file=sys.stderr)
+        return EXIT_USAGE
+    if a.ack and not a.sessions:
+        print("--ack judges the session census, so it needs --sessions", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        acks = load_acks(a.ack) if a.ack else None
+    except (OSError, ValueError) as e:
+        print(f"--ack {a.ack}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
+        return EXIT_USAGE
+    bad = unusable_secret_files()
+    if bad:
+        print(f"{', '.join(bad)}: the file named cannot be read, or is empty", file=sys.stderr)
+        return EXIT_USAGE
+    if os.environ.get("INTERACTIVE_AGENTS"):
+        print(f"note: INTERACTIVE_AGENTS names {', '.join(sorted(interactive_agents()))} as the clients a person signs in "
+              "from, so every account's sessions from them pass unflagged; name only the vSphere Client's agent there, "
+              "and acknowledge a person on PowerCLI or a script by its pair with --ack", file=sys.stderr)
     if a.where and a.redact:
         print("--where prints addresses, which --redact exists to hide; run them apart. --where writes nothing of them "
               "to the record either way", file=sys.stderr)
@@ -933,7 +1208,7 @@ def _run(argv: list[str] | None = None) -> int:
         print(f"FINGERPRINT_KEY_FILE could not be read: {type(e).__name__} {e}".rstrip(), file=sys.stderr)
         return EXIT_USAGE
     try:
-        record = run(a.sessions, where, key)
+        record = run(a.sessions, where, key, acks)
     except (RuntimeError, urllib.error.URLError, OSError, ValueError) as e:
         print(f"could not start: {e}", file=sys.stderr)
         return EXIT_UNREAD

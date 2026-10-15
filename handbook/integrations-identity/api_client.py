@@ -67,8 +67,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no
         client and no token left)
       5 a usage error (a missing or bad argument or environment variable, a lifetime outside the bounds, a token file
-        that exists), a Python older than 3.10, or the record refused because an estate value survived the scrub
-        (nothing is written)
+        that exists, with --execute an operator credential file that cannot be read or is empty), a Python older than
+        3.10, or the record refused because an estate value survived the scrub (nothing is written)
 """
 
 from __future__ import annotations
@@ -109,6 +109,19 @@ def _secret(name: str) -> str:
         with open(path, encoding="utf-8") as f:
             return f.read().strip()
     return os.environ.get(name, "")
+
+
+def credential_problem() -> str | None:
+    """With --execute: an operator credential file named but unreadable or empty, found before anything is sent. A
+    usage error (exit 5), never a read that failed."""
+    for name in ("OPS_API_TOKEN", "API_TOKEN", "OPS_BEARER"):
+        if os.environ.get(f"{name}_FILE"):
+            try:
+                if not _secret(name):
+                    return f"{name}_FILE is empty"
+            except (OSError, UnicodeDecodeError) as e:
+                return f"{name}_FILE could not be read: {type(e).__name__}"
+    return None
 
 
 def _send(method: str, url: str, body: object | None = None, headers: dict | None = None,
@@ -793,6 +806,10 @@ def _run(argv: list[str] | None = None) -> int:
         print("\n".join(lines))
         print("\nplan only: nothing was sent (--execute sends it)")
         return EXIT_OK
+    problem = credential_problem()
+    if problem:
+        print(f"{problem}; nothing was sent", file=sys.stderr)
+        return EXIT_USAGE
     if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required", file=sys.stderr)
         return EXIT_USAGE

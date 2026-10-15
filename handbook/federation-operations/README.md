@@ -9,7 +9,7 @@ secret or password is printed or written.
 
 | File | What it is |
 |---|---|
-| `watch.py` | Reads each organization's OIDC or SAML settings, imported groups and local administrators from VCF Automation, the keys the provider publishes, and (optionally) the app behind the organization from Microsoft Graph, then runs nine checks: key refresh, keys held, PKCE, the client secret's end date, the SAML certificate's end date, whether the organization's metadata holds every signing certificate, imported group names against the groups assigned to the app, the app's own gate, and a local user holding the organization's top role (Organization Administrator in an All Apps organization, Organization Owner in a classic one) for the day the provider refuses. `--why` is the sign-in router: what a user saw in, where it was refused and what to read first out. Writes `watch.json`, and refuses to write a record carrying any estate value. |
+| `watch.py` | Reads each organization's OIDC or SAML settings, imported groups and local administrators from VCF Automation, the keys the provider publishes, and (optionally) the app behind the organization from Microsoft Graph, then runs nine checks: key refresh, keys held, PKCE, the client secret's end date, the SAML certificate's end date, whether the organization's metadata holds every signing certificate, imported group names against the groups assigned to the app, the app's own gate, and a local user holding the organization's top role (Organization Administrator in an All Apps organization, Organization Owner in a classic one) for the day the provider refuses; a run declared `--provider-only` with `--tenant-attested` adds a tenth, `tenant_report`, the age of the tenant's last report of its rollover dates. `--expect-tenants` names every tenant a schedule covers. `--why` is the sign-in router: what a user saw in, where it was refused and what to read first out. Writes `watch.json`, and refuses to write a record carrying any estate value. |
 | `watch.json` | That record from the reference estate, 2026-10-12, four throwaway organizations (classic and All Apps, OIDC and SAML). |
 | `watch_passing.json`, `watch_group_renamed.json`, `watch_restored.json` | The watch on one throwaway All Apps organization over OIDC built to pass, 2026-10-13: after its first scheduled key refresh (every check ok but `secret_end`, which warned because the run gave its rotated secret 30 days, inside the 30-day window; exit 1), with the entitled group renamed at Entra (`group_names` fails; exit 2), and with the name restored (exit 1 again). The day-2 writes that set it up are the tenant-federation companion's `update_*.json`. |
 | `expected-output.md` | The transcript of that run, with what to read in it. |
@@ -19,38 +19,55 @@ secret or password is printed or written.
 ```bash
 export VCFA_HOST=<automation-fqdn>
 export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer             # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE
+                                                                    # a bearer: platform-identity's plate 04, "Your provider bearer"
 export TLS_VERIFY=false                                             # only on a self-signed lab CA
-# the rollover checks, through the tenant's read-only app (Microsoft Graph application permission Application.Read.All);
-# without it the run is provider-only and exits 3: rollover checks not run
-export ENTRA_TENANT_ID=<tenant-id> ENTRA_CLIENT_ID=<app-id>
+# the rollover checks, through this tenant's read-only app (Microsoft Graph application permission Application.Read.All)
+export ENTRA_TENANT_ID=<tenant-id or one of its domain names> ENTRA_CLIENT_ID=<app-id>
 export ENTRA_CERT_FILE=/path/to/cert.pem ENTRA_KEY_FILE=/path/to/key.pem   # or ENTRA_CLIENT_SECRET_FILE
 export ORGS=<org>,<org>                                             # optional; default every federated organization
 export WARN_DAYS=30 OUT=watch.json
 
-python3 watch.py            # read, print, record
-python3 watch.py --redact   # the same, printed with placeholders, for a transcript you will share
+python3 watch.py --expect-tenants <tenant>,<tenant>   # read, print, record; the list names every tenant you serve
+python3 watch.py --redact                             # the same, printed with placeholders, for a transcript you will share
 python3 watch.py --why "Your Single Sign-On attempt failed" --protocol oidc
+
+# a tenant that withholds the read-only app: declared, with no Graph credential set
+ENTRA_TENANT_ID=<that tenant> python3 watch.py --provider-only --expect-tenants <tenant>,<tenant> \
+    --tenant-attested <YYYY-MM-DD, the date of the tenant's last report of its rollover dates>
 ```
 
 Schedule it and read the exit code:
 
 | Exit | Means |
 |---|---|
-| 0 | every check ran, on every organization, and every one is ok |
-| 1 | a warning: an end date inside `WARN_DAYS`, a refresh interval over one hour, a signing certificate the organization does not yet hold, no local user holding the organization's top role |
+| 0 | every check this run owns ran, on every organization it covers, and every one is ok |
+| 1 | a warning: an end date inside `WARN_DAYS`, a refresh interval over one hour, a signing certificate the organization does not yet hold, no local user holding the organization's top role, a tenant's report older than `--attested-max-days` |
 | 2 | a failure that stops sign-in now or at the provider's next roll: a published key not held, refreshes not succeeding, an expired secret or certificate, a secret the organization holds that the app no longer lists, the active certificate missing from the organization's metadata, a renamed group, PKCE on, a disabled app |
-| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run (no Graph credential given, so the tenant's read-only app is owed; an organization federated to another Entra tenant than `ENTRA_TENANT_ID`; a provider other than Entra ID), an organization whose reads were refused, the tenant's app not found in Graph, a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh), a provider credential refused before any organization was read, or a record the scrub refused (no record is written in those two cases). An error the watch did not expect exits 3 too, never 1 |
-| 5 | not run as asked: an unknown or missing argument, `--protocol` without `--why`, a missing `VCFA_HOST` or provider credential, a credential or key file that cannot be read, a non-numeric `WARN_DAYS`, an Entra variable without `ENTRA_TENANT_ID` or `ENTRA_TENANT_ID` without the app's id and credential, a Python older than 3.9. Nothing is read |
+| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run on a run not declared `--provider-only` (no Graph credential given, so the tenant's read-only app is owed; a provider other than Entra ID), an organization federated to a tenant outside `--expect-tenants`, a run whose own tenant no organization names, an organization whose reads were refused, the tenant's app not found in Graph, a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh), a provider credential refused before any organization was read, or a record the scrub refused (no record is written in those two cases). An error the watch did not expect exits 3 too, never 1 |
+| 5 | not run as asked: an unknown or missing argument, `--protocol` without `--why`, a missing `VCFA_HOST` or provider credential, a credential or key file that cannot be read, a non-numeric `WARN_DAYS`, an Entra variable without `ENTRA_TENANT_ID` or `ENTRA_TENANT_ID` without the app's id and credential (unless `--provider-only`), a Graph credential with `--provider-only`, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, `--tenant-attested` without `--provider-only` or with a date that is malformed or in the future, a Python older than 3.9. Nothing is read from VCF Automation |
 
 `--why` keeps its own two codes: 0 a row matched, 1 none did (it prints the first reads for a message no run showed).
 
-A provider-only run, without the tenant's read-only app, reads the organization's side alone:
+**One schedule per tenant.** A provider with several Entra tenants runs the watch once per tenant, each run with that
+tenant's `ENTRA_TENANT_ID` and read-only app, and each passing the full tenant list with `--expect-tenants` (ids or
+domain names; a domain is resolved through Entra's public OpenID configuration for it). An organization federated to
+another tenant prints `another tenant's: its own schedule reads it`: it is named, read no further and left out of this
+run's exit, so onboarding a second tenant does not turn the first tenant's schedule red. An organization federated to a
+tenant outside the list prints `uncovered: no schedule reads it` and exits 3, and a run whose own tenant no
+organization names exits 3 too, since a wrong `ENTRA_TENANT_ID` would otherwise read every organization as another
+tenant's and pass.
+
+**Without the tenant's read-only app.** A run with no Graph credential reads the organization's side alone:
 `key_refresh`, `keys_held`, `pkce` and `break_glass`, and runs none of the rollover checks, `secret_end`,
-`saml_cert_end`, `saml_cert_held`, `app_gate` and `group_names`. Each of those prints `rollover checks not run: the
-tenant's read-only app is owed`, the run ends with what it read and what it did not, and it exits 3: a secret that
-ends next week is invisible to it, so its silence is not a pass. A scheduler that alerts on any non-zero exit keeps
-alerting until the tenant's app is held. An estate with organizations on several Entra tenants runs the watch once per
-tenant, each run with that tenant's app and `ORGS` naming its organizations.
+`saml_cert_end`, `saml_cert_held`, `app_gate` and `group_names`. Undeclared, each of those prints `rollover checks not
+run: the tenant's read-only app is owed`, the run ends with what it read and what it did not, and it exits 3 every
+time: a secret that ends next week is invisible to it, so its silence is not a pass. A tenant may withhold the app for
+good, because `User.Read.All` and `GroupMember.Read.All` read its whole directory, and a code that stays 3 teaches
+on-call staff to ignore it. Declare that run with `--provider-only`: it takes no Graph credential, its exit is the
+organization's side (0, 1 or 2 on what it read), and the rollover checks are listed as owed by the tenant, whose
+administrator runs them and reports the dates. `--tenant-attested YYYY-MM-DD` gives the date of the tenant's last
+report of its rollover dates; a report older than `--attested-max-days` (default 30) warns, exit 1. The report is
+optional, and it never stands in for a check the run did not make.
 
 A read the watch could not make never passes. An organization whose reads fail stays in the run and the record,
 named and counted, whether or not `ORGS` names it: with `ORGS` unset, an organization that could not be read cannot
@@ -90,7 +107,9 @@ when the old secret is removed before the new one is written, the check fails ra
   skipped with an HTTP error; that run was not repeated and is not explained. The app was deleted and purged.
 - Measured on VCF Automation 9.1 against Entra ID, with a provider System Administrator's bearer, and with a Graph
   certificate (the reference run) and a Graph client secret (the permission measurement); the provider api-token
-  path was not exercised for the watch. No provider identity narrower than an administrator was proven for a
+  path was not exercised for the watch: it has never run on one. One schedule per tenant and the declared
+  provider-only run were read on 2026-10-15 on two standing organizations of the lab's one Entra tenant, with a run
+  tenant and a tenant list made up for the run; an organization federated to a second real tenant was not run. No provider identity narrower than an administrator was proven for a
   scheduled job: a dedicated local user of the System organization could not be made (the organization already held
   its one local user), and the System organization's existing local user and a directory account granted a provider
   role were not tried. Hold whatever credential the schedule uses as tier-0.
@@ -104,5 +123,11 @@ and a `measure` with its numbers: `interval_h` and `success_age_h` for key refre
 and `days_left` is null) for the secret, `days_left` for the SAML certificate, `stored` and `others_not_held` for metadata, `imported`, `assigned`
 and `unmatched` for group names, `local_admins` and `role` (the top role judged, read from the organization's own role list) for break-glass. `read_errors` names any plane that could not be
 read. `not_run`, where present, names the rollover checks the run did not make for that organization, `why`, and
-what is `owed` for them to run (for a run without a Graph credential, the tenant's read-only app). `exit` is the code
-the run returned.
+what is `owed` for them to run (for a run without a Graph credential, the tenant's read-only app; on a declared
+`--provider-only` run, the tenant, with `declared` set). Each organization federated to Entra carries its `tenant` as
+`{{tenant-1}}` and onward (the run's own first), and `coverage` where this run does not own it: `another tenant's: its
+own schedule reads it`, or `uncovered: no schedule reads it`. A declared run given `--tenant-attested` adds a
+`tenant_report` check with `age_days` and `max_days`. At the top, `mode` is `with the tenant's app`, `provider-only,
+declared` or `provider-only, undeclared`; `tenant` the run's own; `expected_tenants` how many `--expect-tenants`
+named, the run's own included; `tenant_attested` the report's date and age; `run_errors` what is wrong with the run as
+a whole; and `exit` the code the run returned.

@@ -42,12 +42,13 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       1 the run did not hold: a write was refused, or the read-back was not what was asked (the account active, its
         bearer holding exactly the role, the stored token refreshing; for a teardown, no account left and the revoked
         token refused)
-      3 a read failed or is undetermined: the organization or the account list could not be read, the residue could
-        not be read back, the provider's credential was not traded for a bearer, or an error the script did not expect
+      3 a read failed or is undetermined: the organization or the account list could not be read (or answered without
+        its list), the residue could not be read back, the provider's credential was not traded for a bearer, or an
+        error the script did not expect
       0 the plan printed, or the run held on read-back
       5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
-        exists), a Python older than 3.10, or the record refused because an estate value survived the scrub (nothing
-        is written)
+        exists, with --execute a provider credential file that cannot be read or is empty), a Python older than 3.10,
+        or the record refused because an estate value survived the scrub (nothing is written)
 """
 
 from __future__ import annotations
@@ -183,16 +184,22 @@ def org_lookup(vcfa: Vcfa, org: str) -> tuple[int, str | None]:
     """The organization list's status, and the organization's URN when exactly one answers to the name."""
     status, answer = vcfa.call("GET", f"/cloudapi/1.0.0/orgs?filter={urllib.parse.quote('name==' + org)}",
                                "/cloudapi/1.0.0/orgs?filter=name=={org}")
-    rows = (answer or {}).get("values") or [] if isinstance(answer, dict) else []
+    if status == 200 and not (isinstance(answer, dict) and isinstance(answer.get("values"), list)):
+        if isinstance(vcfa.calls[-1], dict):   # an answer that lists nothing is not a read
+            vcfa.calls[-1]["shape"] = "no values list in the answer"
+        return 0, None
+    rows = answer.get("values") if status == 200 else []
     return status, (rows[0].get("id") if status == 200 and len(rows) == 1 else None)
 
 
 def accounts(vcfa: Vcfa, urn: str, name: str) -> list[dict] | None:
     status, answer = vcfa.call("GET", f"/cloudapi/1.0.0/serviceAccounts?filter={urllib.parse.quote('name==' + name)}",
                                "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}", org_urn=urn, accept=ACCOUNTS_ACCEPT)
-    if status != 200 or not isinstance(answer, dict):
+    if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get("values"), list):
+        if status == 200 and isinstance(vcfa.calls[-1], dict):
+            vcfa.calls[-1]["shape"] = "no values list in the answer"
         return None
-    return [a for a in answer.get("values") or [] if a.get("name") == name]
+    return [a for a in answer["values"] if a.get("name") == name]
 
 
 def shape(rows: list[dict]) -> dict:
@@ -483,7 +490,7 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
 def report(record: dict) -> list[str]:
     lines = [f"{record['mode']}: service account {record['name']} in organization {record['org']}"]
     for c in record.get("calls", []):
-        lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}")
+        lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}" + (f" ({c['shape']})" if c.get("shape") else ""))
     for key in ("refused", "partial"):
         if record.get(key):
             lines.append(f"  {'refused' if key == 'refused' else 'stopped part way'}: {record[key]}")
@@ -513,6 +520,18 @@ def report(record: dict) -> list[str]:
                          f"bearer {'issued' if t['bearer'] else 'refused'}" + (f" ({t['error']})" if t.get("error") else ""))
     lines.append(f"exit {record['exit']}")
     return lines
+
+
+def credential_problem() -> str | None:
+    """With --execute: the provider credential file, named but unreadable or empty, found before anything is sent."""
+    for name in ("VCFA_PROVIDER_BEARER_FILE", "VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
+        if os.environ.get(name):
+            try:
+                if not _secret_file(name):
+                    return f"{name} is empty"
+            except (OSError, UnicodeDecodeError) as e:
+                return f"{name} could not be read: {type(e).__name__}"
+    return None
 
 
 def usage_problem(a: argparse.Namespace) -> str | None:
@@ -578,6 +597,10 @@ def _run(argv: list[str] | None = None) -> int:
     if not host or not (os.environ.get("VCFA_PROVIDER_BEARER_FILE") or os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE")):
         print("VCFA_HOST and a provider credential (VCFA_PROVIDER_REFRESH_TOKEN_FILE or VCFA_PROVIDER_BEARER_FILE) are required",
               file=sys.stderr)
+        return EXIT_USAGE
+    problem = credential_problem()
+    if problem:
+        print(f"{problem}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "teardown" if a.teardown else "create", "org": a.org, "name": a.name, "calls": []}

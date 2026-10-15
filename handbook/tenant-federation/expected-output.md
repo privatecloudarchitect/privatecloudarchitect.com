@@ -61,6 +61,37 @@ up to 90 seconds before it counts as a FAIL. On this run the browser proof that 
 to the portal holding Organization User, twice, more than three minutes apart, and refused the other user at Entra with
 `AADSTS50105`.
 
+## A real SAML organization, proven read-only
+
+`--prove --org` on a standing All Apps SAML organization of the reference estate, 2026-10-15 (UTC), built earlier by
+another driver. It sends no write. Exit 1: two checks failed.
+
+```
+$ python3 org_federation.py --prove --org <org>
+  read: done  {'protocol': 'saml', 'org_type': 'all-apps', 'user_key': None, 'imported_groups': 1, 'roles': 5, 'failed_fields': [], 'differing_fields': ['customUiButtonLabel'], 'saml_emails': {'saml_users': 2, 'enabled': 1, 'not_an_address': 1, 'disabled_not_judged': 1}}
+  check: organization enabled: pass
+  check: federated to ENTRA_TENANT_ID over OIDC or SAML: pass
+  check: the metadata it holds names a signing certificate: pass
+  check: every enabled SAML user's stored email is an address, not its NameID: FAIL
+  check: every setting the sign-in depends on reads as planned: pass
+  check: at least one group imported over SAML: pass
+  check: imported group {{group}} holds roles of the organization's own list: pass
+  check: an enabled local user holds Organization Administrator: FAIL
+
+A round trip of a SAML user's record is a write, so --prove sends none. Where it was measured, a record whose stored email was the NameID was refused, and one whose stored email was the address answered 200; this run reads the stored email, and a round trip on this organization was not sent.
+(then what to read on the Entra side and the browser steps, which the transcript leaves out here)
+```
+
+- **The stored email.** Of the two SAML users, the one enabled held its NameID as its email: the state a SAML app
+  without an email claim leaves, and the one in which a round trip of the record was refused. The disabled one held
+  an empty email, which the leaver close leaves when the platform refuses an email, and is not judged. On your
+  organization, a FAIL here means the app sends no email claim (add it, and the next sign-in corrects the user); a
+  pass still sends no round trip, so update one test user's record once yourself.
+- **Before the first SAML sign-in** there is no enabled SAML user to read, so the check is not run and the tool exits
+  3: run `--prove --org` again after the browser sign-ins.
+- **The local administrator** fails on this organization as it did on the earlier read: it has none enabled holding
+  Organization Administrator.
+
 ## Teardown
 
 ```

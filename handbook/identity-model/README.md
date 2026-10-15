@@ -69,8 +69,8 @@ without it. Give `catalog_check.py` the same file.
 | Exit | Means | What a scheduler does |
 |---|---|---|
 | 0 | the record is written and every call answered | nothing |
-| 3 | a read failed or is not known: a call failed (the record is still written and names the call, and the run prints the server's reason; a refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing), the credential could not be obtained, with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name, or an error the script did not expect | fix the read; take no count from this run |
-| 5 | a usage error (a missing host or credential; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10), or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
+| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id (the record is still written and names the call, and the run prints the server's reason; a refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing), the credential could not be obtained, with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name, or an error the script did not expect | fix the read; take no count from this run |
+| 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10), or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
 
 These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
 census judges nothing, so it has no finding code of its own. A tool that reads `census.json`, as
@@ -82,7 +82,7 @@ needs are there.
 The fleet read runs on a bearer the broker trades for an API token, and an API token is made for an API client of a
 realm or for a VCF single sign-on user, so this census starts once VCF single sign-on has a realm. Before that, read
 what does not wait for one: `--orgs-only` above, on a VCF Automation provider credential, and the vcenter-authorization
-companion's `authz.py`, which runs without `REALM_DOMAIN` and reports the realm-spelled class as not applicable.
+companion's `authz.py`, which runs with `--no-realm` and reports the realm-spelled class as not applicable.
 Whether VCF Operations' own local administrator, through `POST /suite-api/api/auth/token/acquire`, can read the fleet
 identity plane was not tried.
 

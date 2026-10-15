@@ -17,12 +17,12 @@ a command or in a console.
 
 Nothing is written anywhere.
 
-Exit: 0 the token is usable (or, with --kubeconfig, no credential has expired)
-      1 a token is expired or inside the clock-skew margin
-      3 nothing could be read off the token: it is not a JWT, so nothing here can say when it expires, or an error
-        the script did not expect
-      5 a usage error: no token given, a --file or kubeconfig that cannot be read, PyYAML missing for --kubeconfig, or
-        a Python older than 3.10
+Exit: 0 the token is usable (or, with --kubeconfig, every token's expiry was read and none has expired)
+      1 a token is expired or inside the clock-skew margin (with --kubeconfig, any one of them: this comes first)
+      3 undetermined: the token is not a JWT, or carries no `exp` claim, so nothing here can say when it expires (with
+        --kubeconfig, a token like that and none expired), or an error the script did not expect
+      5 a usage error: no token given, a --file or kubeconfig that cannot be read or is not one, PyYAML missing for
+        --kubeconfig, an argument it does not take, or a Python older than 3.10
 These are the codes every identity companion uses for 0, 3 and 5; 1 is this script's own finding.
 """
 from __future__ import annotations
@@ -95,7 +95,7 @@ def _fmt(d: dt.timedelta) -> str:
 
 
 def report(claims: dict) -> int:
-    """Print the reading. Returns 0 if the token is usable, 1 if it is not."""
+    """Print the reading. Returns 0 if the token is usable, 1 if it is not, 3 if it carries no `exp` to say."""
     c, who = clocks(claims), identity(claims)
 
     print("Who it says you are")
@@ -115,7 +115,8 @@ def report(claims: dict) -> int:
     if "exp" not in c:
         print("  expires         no exp claim: this token does not say when it dies, so treat")
         print("                  its lifetime as unknown rather than as unlimited")
-        return 0
+        print("\n  UNDETERMINED: nothing here can say whether the next call works (exit 3).")
+        return EXIT_UNREAD
     print(f"  expires at      {c['exp'].isoformat()}")
 
     if c["expired"]:
@@ -139,7 +140,8 @@ def from_kubeconfig() -> int:
     """Every credential in the kubeconfig, and which of them can renew itself.
 
     Reads the file directly rather than shelling out, because `kubectl config view` redacts token
-    values and would silently report nothing at all.
+    values and would silently report nothing at all. 1 when any token has expired; else 3 when any
+    token's expiry cannot be read (opaque, or no `exp`); else 0.
     """
     try:
         import yaml
@@ -148,15 +150,23 @@ def from_kubeconfig() -> int:
     path = os.environ.get("KUBECONFIG") or os.path.expanduser("~/.kube/config")
     if not os.path.exists(path):
         print(f"no kubeconfig at {path}"); return EXIT_USAGE
-    with open(path, encoding="utf-8") as fh:
-        cfg = yaml.safe_load(fh) or {}
+    try:
+        with open(path, encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh) or {}
+    except (OSError, ValueError, yaml.YAMLError) as e:
+        print(f"could not read the kubeconfig at {path}: {type(e).__name__}")
+        return EXIT_USAGE
+    if not isinstance(cfg, dict) or not isinstance(cfg.get("users") or [], list):
+        print(f"{path} is not a kubeconfig: no mapping with a users list")
+        return EXIT_USAGE
     users = cfg.get("users") or []
     if not users:
         print("kubeconfig declares no users"); return 0
-    bad = 0
+    bad = unknown = 0
     print(f"{len(users)} credential(s) in {path}\n")
     for u in users:
-        name, user = u.get("name", "?"), (u.get("user") or {})
+        u = u if isinstance(u, dict) else {}
+        name, user = str(u.get("name", "?")), (u.get("user") if isinstance(u.get("user"), dict) else {})
         if "exec" in user:
             print(f"  {name[:52]:54s} exec plugin, renews itself (it may prompt)")
             continue
@@ -169,11 +179,13 @@ def from_kubeconfig() -> int:
             continue
         claims = decode(tok)
         if not claims:
-            print(f"  {name[:52]:54s} opaque token, no readable expiry")
+            print(f"  {name[:52]:54s} opaque token, no readable expiry: UNDETERMINED")
+            unknown += 1
             continue
         c = clocks(claims)
         if "exp" not in c:
-            print(f"  {name[:52]:54s} no exp claim")
+            print(f"  {name[:52]:54s} no exp claim: UNDETERMINED")
+            unknown += 1
             continue
         state = (f"EXPIRED {_fmt(c['remaining'])} ago" if c["expired"]
                  else f"valid {_fmt(c['remaining'])}")
@@ -183,7 +195,10 @@ def from_kubeconfig() -> int:
     if bad:
         print(f"\n{bad} credential(s) expired. A static token has no exec plugin, so kubectl")
         print("cannot renew it: it fails only when you next use it.")
-    return 1 if bad else 0
+    if unknown:
+        print(f"\n{unknown} token(s) carry no readable expiry: whether they still work is not known here"
+              + ("" if bad else " (exit 3)."))
+    return 1 if bad else (EXIT_UNREAD if unknown else 0)
 
 
 class _Parser(argparse.ArgumentParser):
@@ -224,7 +239,7 @@ def _run(argv: list[str] | None = None) -> int:
         try:
             with open(a.file, encoding="utf-8") as fh:
                 raw = fh.read()
-        except OSError as e:
+        except (OSError, UnicodeDecodeError) as e:
             print(f"could not read {a.file}: {type(e).__name__}")
             return EXIT_USAGE
     else:

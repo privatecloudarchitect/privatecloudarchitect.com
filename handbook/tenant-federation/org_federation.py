@@ -16,7 +16,10 @@ the organization with a role. This script does both sides in the order that work
   --prove --org NAME     an existing organization, built by anyone, proven read-only with no state file: its settings
                          read back against the plan for the protocol it is federated over, its type and its user key;
                          every imported group holding roles of its own role list (and each --group ROLE=NAME the role
-                         its type defines); an enabled local user holding its top role. Never touches Entra beyond its
+                         its type defines); an enabled local user holding its top role; over SAML, every enabled SAML
+                         user's stored email an address rather than its NameID, the state in which a round trip of the
+                         user's record was refused (the round trip itself is a write, which it never sends; with no
+                         enabled SAML user yet that check is not run, and the run exits 3 until one has signed in). Never touches Entra beyond its
                          public discovery and keys endpoints, and needs no Graph app, so whether each imported group is
                          assigned to the app at Entra is left to the federation watch's group_names check
   --configure --org NAME the provider's side of an existing organization, from what the tenant's administrator handed
@@ -50,7 +53,7 @@ not secrets; keep it beside the record and do not publish it. A real tenant's or
 --org and configured with --configure --org, which write nothing to Entra and delete nothing anywhere.
 
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token) or VCFA_PROVIDER_BEARER_FILE (a provider
-      bearer you already hold); TLS_VERIFY=false on a self-signed lab CA; ENTRA_TENANT_ID; ENTRA_CLIENT_ID and either
+      bearer, minted as platform-identity's plate 04, "Your provider bearer", shows); TLS_VERIFY=false on a self-signed lab CA; ENTRA_TENANT_ID; ENTRA_CLIENT_ID and either
       ENTRA_CLIENT_SECRET_FILE or ENTRA_CERT_FILE + ENTRA_KEY_FILE (the certificate form needs the `cryptography`
       package); ORG (the throwaway organization's name); ENTITLED_UPN and UNENTITLED_UPN (your test users);
       SECRET_DAYS (OIDC secret life, default 180); OUT (default federation.json); STATE (default
@@ -63,8 +66,8 @@ Exit: 0 done · 1 a call or a check failed · 2 refused by what it read (a name 
       file to tear down; for --update, an organization not federated to ENTRA_TENANT_ID or a change its protocol does
       not take; for --org, no such organization, a protocol or key switch, a role its type lacks, a named group held
       another way, or SAML with no metadata yet, when it prints what the tenant needs) · 3 a result not known: a
-      credential refused before anything was read, a record the scrub refused to write, or an error it did not
-      expect (never 1) · 5 not run as asked: an unknown, missing or malformed argument, a missing environment variable
+      credential refused before anything was read, a check with nothing to read yet (--prove --org over SAML before
+      any enabled SAML user has signed in), a record the scrub refused to write, or an error it did not expect (never 1) · 5 not run as asked: an unknown, missing or malformed argument, a missing environment variable
       or a file that cannot be read, metadata that is not the tenant's, SECRET_DAYS of a year or more, or a Python
       older than 3.9. Nothing is sent on a 5.
 """
@@ -198,7 +201,8 @@ def oidc_settings(current, discovery, keys, client_id, client_secret, subject_cl
     """The organization's OIDC settings: the GET body with the named fields replaced, so a field this script does
     not know is carried through. PKCE stays off (an Entra web app's code exchange fails with it on); the secret goes
     on every write (VCF Automation refuses a write without it); keys refresh every hour and are added, not replaced,
-    so a rolled Entra key is held within the hour."""
+    so a key Entra rolls is held from the next scheduled refresh: a refresh waits a full interval after the last
+    success and runs on the hour, so at most the interval plus an hour after it."""
     body = {k: v for k, v in current.items() if k not in ("link", "href", "type", "clientSecret")}
     body.update(
         {
@@ -1358,6 +1362,24 @@ def group_findings(groups, provider_type, role_names, wanted):
     return checks
 
 
+EMAIL_ADDRESS = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s.]+$")
+
+
+def saml_emails(users):
+    """Over SAML, each enabled user's stored email against what a round trip of its record needs, as counts:
+    saml_users, enabled, not_an_address (enabled users whose stored email is empty, not an address, or the NameID), and
+    disabled_not_judged. Without an email claim VCF Automation stored a new user's NameID as its email and refused a
+    round trip of the record; with the claim, the address was stored and the round trip answered 200. A disabled
+    account is not judged: the leaver close clears an email the platform refuses (G-316). This reads the stored state
+    only: the round trip itself is a write, and --prove never sends one."""
+    saml = [u for u in users if u.get("providerType") == "SAML"]
+    live = [u for u in saml if u.get("enabled")]
+    bad = [u for u in live
+           if not EMAIL_ADDRESS.match((u.get("email") or "").strip()) or (u.get("email") or "") == (u.get("nameInSource") or "")]
+    return {"saml_users": len(saml), "enabled": len(live), "not_an_address": len(bad),
+            "disabled_not_judged": len(saml) - len(live)}
+
+
 def local_admin_held(users, top_role):
     """An enabled local user holding the organization's top role: the way in when the provider refuses it."""
     return any(u.get("providerType") == "LOCAL" and u.get("enabled")
@@ -1444,6 +1466,12 @@ def _discovery(tenant):
     return disc, jwks_keys(json.loads(raw))
 
 
+SAML_EMAIL_CHECK = "every enabled SAML user's stored email is an address, not its NameID"
+SAML_ROUND_TRIP_NOTE = ("A round trip of a SAML user's record is a write, so --prove sends none. Where it was measured, a "
+                        "record whose stored email was the NameID was refused, and one whose stored email was the address "
+                        "answered 200; this run reads the stored email, and a round trip on this organization was not sent.")
+
+
 def prove_existing(a):
     """--prove --org: an existing organization proven read-only, with no state file. Its settings are read back
     against the plan for the protocol it is federated over, its type and its user key (--user-key, or the key it
@@ -1467,7 +1495,7 @@ def prove_existing(a):
     log.san.add(org["id"], "{{org-id}}")
     for name in wanted_keys.values():
         log.san.add(name, "{{group}}")
-    checks, proto, org_type = {}, None, None
+    checks, proto, org_type, unrun, emails = {}, None, None, [], None
     try:
         r = _org_reads(vcfa, org, log)
         proto, org_type = federated_to(r["oauth"], r["fed"], tenant), r["org_type"]
@@ -1495,23 +1523,40 @@ def prove_existing(a):
             planned = plan("saml", org_type, None)["settings"]["fields"]
             checks["the metadata it holds names a signing certificate"] = bool(metadata_certs(r["fed"].get("samlMetadata")))
             failed, differing = against_plan(r["fed"], planned, "saml")
+            emails = saml_emails(r["users"])
+            if emails["enabled"]:
+                checks[SAML_EMAIL_CHECK] = emails["not_an_address"] == 0
+            else:   # nothing to read yet is not a pass: it runs once a SAML user has signed in
+                unrun.append(f"{SAML_EMAIL_CHECK}: no enabled SAML user has signed in yet; run --prove --org again "
+                             "after the first browser sign-in")
         if proto:
             checks["every setting the sign-in depends on reads as planned"] = not failed
             checks.update(group_findings(r["groups"], "OAUTH" if proto == "oidc" else "SAML", r["roles"], wanted))
         checks[f"an enabled local user holds {roles['administrator']}"] = local_admin_held(r["users"], roles["administrator"])
         log.step("read", "done", protocol=proto, org_type=org_type, user_key=key if proto == "oidc" else None,
-                 imported_groups=len(r["groups"]), roles=len(r["roles"]), failed_fields=failed, differing_fields=differing)
+                 imported_groups=len(r["groups"]), roles=len(r["roles"]), failed_fields=failed, differing_fields=differing,
+                 **({"saml_emails": emails} if emails else {}))
     except CallError as e:
         log.step("refused", str(e))
         log.write(protocol=proto, org_type=org_type, held=False)
         return 1
     for name, ok in checks.items():
         log.step(f"check: {name}", "pass" if ok else "FAIL")
+    for line in unrun:
+        log.step(f"check: {line}", "NOT RUN")
+    if proto == "saml":
+        print(f"\n{SAML_ROUND_TRIP_NOTE}")
     print(f"\n{ENTRA_SIDE}\nThen prove it in a browser, at https://<automation-host>/tenant/<org>:")
     for line in proof_checklist(proto or "oidc"):
         print(f"  - {line}")
-    log.write(protocol=proto, org_type=org_type, held=all(checks.values()))
-    return 0 if all(checks.values()) else 1
+    held = all(checks.values()) and not unrun
+    log.write(protocol=proto, org_type=org_type, held=held, **({"not_run": unrun} if unrun else {}))
+    if not all(checks.values()):
+        return 1
+    if unrun:   # a check that could not run is never a pass
+        print("\nnot run: " + "; ".join(unrun) + " (exit 3)")
+        return EXIT_UNREAD
+    return 0
 
 
 def configure_existing(a):

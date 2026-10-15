@@ -39,7 +39,7 @@ python3 org_federation.py --protocol oidc --org-type all-apps --prove
 python3 org_federation.py --protocol oidc --org-type all-apps --teardown --execute
 ```
 
-A provider bearer lasts an hour, so mint it just before each run. `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused an account write (403) that a provider bearer carried, so give every write here a provider bearer.
+A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused an account write (403) that a provider bearer carried, so give every write here a provider bearer.
 
 ## Exit codes
 
@@ -48,7 +48,7 @@ A provider bearer lasts an hour, so mint it just before each run. `VCFA_PROVIDER
 | 0 | done: the plan printed, or every step and check passed |
 | 1 | a call or a check failed; the record names which |
 | 2 | refused by what it read: a name this script did not create, no state file to tear down, no such organization, an organization not federated to `ENTRA_TENANT_ID`, a change its protocol does not take, a protocol or user-key switch, a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
-| 3 | a result not known: a credential refused before anything was read, a record the scrub refused to write, or an error the script did not expect (never 1) |
+| 3 | a result not known: a credential refused before anything was read, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a record the scrub refused to write, or an error the script did not expect (never 1) |
 | 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`), a missing environment variable or credential, a file that cannot be read, metadata that is not the tenant's or names no signing certificate, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
@@ -70,7 +70,8 @@ prove it with `--prove --org`. Both take the organization by name and
 need no state file; neither writes to Entra.
 
 ```bash
-export VCFA_HOST=<automation-fqdn> VCFA_PROVIDER_BEARER_FILE=<file> ENTRA_TENANT_ID=<tenant-id>
+export VCFA_HOST=<automation-fqdn> ENTRA_TENANT_ID=<tenant-id>
+export VCFA_PROVIDER_BEARER_FILE=<file>    # a provider bearer: platform-identity's plate 04, "Your provider bearer"
 export APP_CLIENT_ID=<the app's client id> APP_SECRET_FILE=<the secret the tenant handed over, mode 0600>   # OIDC
 # export METADATA_FILE=<the app's federation metadata>                                                     # SAML
 
@@ -91,7 +92,12 @@ OIDC, or metadata that is not the tenant's, is a usage error (exit 5) and sends 
 `METADATA_FILE` it prints the organization's own service-provider identifier and reply URL for the tenant's
 administrator, and stops. `--prove --org` reads the settings back against the plan for the protocol, type and user key
 the organization holds, every imported group's roles against the organization's own role list, each named group's
-role, and an enabled local user holding the top role, and prints the browser steps. Neither mode can see Entra:
+role, and an enabled local user holding the top role, and prints the browser steps. Over SAML it also reads every
+SAML user's stored email: an address passes, and the NameID stored as the email fails, the state in which a round trip
+of the user's record was refused. The round trip itself is a write, which `--prove` never sends, so whether one succeeds
+on your organization stays a step a person runs once on a test user. Before any SAML user has signed in there is no
+stored email to read, so the check is not run and the run exits 3: run `--prove --org` again after the first browser
+sign-in. Neither mode can see Entra:
 VCF Automation imported a group name that no group assigned to the app carried, and only the watch's `group_names`
 check, through the tenant's read-only app, failed on it.
 
@@ -113,7 +119,8 @@ body back and reads every changed field back. It never touches Entra: the tenant
 certificates on Entra ID, and this writes what the organization must hold.
 
 ```bash
-export VCFA_HOST=<automation-fqdn> VCFA_PROVIDER_BEARER_FILE=<file> ENTRA_TENANT_ID=<tenant-id>   # a provider bearer, as for --configure
+export VCFA_HOST=<automation-fqdn> ENTRA_TENANT_ID=<tenant-id>
+export VCFA_PROVIDER_BEARER_FILE=<file>    # a provider bearer, as for --configure: platform-identity's plate 04, "Your provider bearer"
 export ORG=<the organization>
 
 python3 org_federation.py --update --key-refresh               # plan: automatic refresh on, strategy ADD, every hour
