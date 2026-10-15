@@ -36,7 +36,8 @@ Local accounts are out of scope. Two more things are flagged and never acted on:
 directly (a reused name reached such a role on an enabled account, and a close leaves it in place), and an account disabled here whose name an
 enabled, entitled Entra user now holds (if that is a different person, re-enabling the account hands them its
 roles). An enabled account whose name a new person was given reads keep like any entitled account: the user record
-carries no creation time to compare with the Entra user's, so this job cannot tell the two people apart. A flag a
+carries no creation time to compare with the Entra user's, and the report does not read the audit trail for one (only
+--close-now's name guard does), so the report cannot tell the two people apart. A flag a
 person has decided on can be acknowledged until a date with --ack; the report still lists it, as such.
 
 The tenant. ENTRA_TENANT_ID may be the tenant's id in any case or one of its domain names; a domain name is resolved
@@ -70,18 +71,38 @@ Naming one account (--user, with --execute or --close-now). The value is compare
 case, and with its id (urn:vcloud:user:...). In an organization keyed on oid each account is named by its person's Entra object id, so a
 value that is not an object id is taken as a principal name and resolved through Graph (GET /users/{principal name},
 which needs User.Read.All), and the account named by that object id is a candidate beside any named by the value
-itself. The match is printed (the name, the object id, the account it selects) before anything is sent; no account,
-or more than one, refuses the run (exit 5), and a resolution Graph refused is a read that failed (exit 3).
+itself. The match is printed (the name, the object id and when that Entra user was created, the account and when it
+was made) before anything is sent; no account, or more than one, refuses the run (exit 5), and a resolution Graph
+refused is a read that failed (exit 3). --execute closes only an account Entra reads as a leaver on three reads, so a
+name resolved to someone else selects an account that reads keep. --close-now asks Entra nothing, so under oid it is
+run by the object id the leaver notice or the last report carries: a name resolves to whoever holds it now, and after
+a reuse that is a new person (G-430). A principal name is taken only with --left-on, the departure date the notice
+gives, and refused (exit 5) when the Entra user holding the name now was created on or after that date, when the
+account it selects was made on or after it, or when that user is newer than the account; when a date the guard needs
+did not read, the run is unread (exit 3). The account's date is its import (first sign-in) or create event in the
+audit trail, the account record carrying none; an account older than the trail's reach is bounded by the trail's
+oldest event. Keyed on a name (preferred_username, SAML), the name is the account's key: the account it selects is the
+one every holder of the name signs in to, so no guard can choose between people and none runs. --close-now refuses,
+at the plan and before any write, an account that is not federated (LOCAL, or anything but OAUTH or SAML): on a local
+account the disable was refused (400) after its tokens had been revoked.
 
 VCF Automation, as the provider:
   GET    /cloudapi/1.0.0/orgs                                 the organizations
   GET    /api/admin/org/{id}/settings/oauth, .../federation   each one's OIDC and SAML settings (and, for SAML, its
                                                               service-provider metadata, for the entity id)
   GET    /cloudapi/1.0.0/users, /groups, /tokens              per organization, in its tenant context
+  GET    /cloudapi/1.0.0/sessions/current, /tokens            on a provider API token: the run's own token record,
+                                                              for its end date (expirationTimeUtc)
+  GET    /cloudapi/1.0.0/auditTrail                           only for --close-now by a principal name under oid: the
+                                                              account's import or create event, else the oldest event
   with --execute, for each confirmed leaver:
+  GET    /cloudapi/1.0.0/users/{id}                           the account, read first: nothing is sent to one that
+                                                              is not federated
   DELETE /cloudapi/1.0.0/tokens/{id}                          each API token the account holds
   PUT    /cloudapi/1.0.0/users/{id}                           the account's full record with enabled false, then
                                                               read back: disabled, nothing else changed, no token
+                                                              (a read-back that did not read is a close that did
+                                                              not hold, never "no token left")
 Microsoft Graph (an app permitted to read users, groups, applications and service principals):
   GET /servicePrincipals, /applications, /servicePrincipals/{id}/appRoleAssignedTo, /groups (filtered)
   GET /groups/{id}/members                                    each gate group's direct members, every page, with no
@@ -94,8 +115,10 @@ Microsoft Graph (an app permitted to read users, groups, applications and servic
                                                               nested groups included
   GET /organization                                           only when ENTRA_TENANT_ID is a domain name and the
                                                               token carries no tid (it needs Organization.Read.All)
-  GET /users/{principal name}?$select=id,userPrincipalName    only for --user in an organization keyed on oid, to
-                                                              find the object id that names the account
+  GET /users/{principal name}?$select=id,userPrincipalName,createdDateTime
+                                                              only for --user in an organization keyed on oid, to
+                                                              find the object id that names the account, and when
+                                                              that Entra user was created
 
 Secrets die where they arrive: the OIDC settings carry the client secret in clear, a token list can carry a token's
 value and a user record a password field; each is deleted from the answer before any function sees it, and the
@@ -107,12 +130,15 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider API token, traded 
       VCFA_PROVIDER_BEARER_FILE (a provider bearer, below); TLS_VERIFY=false only on a self-signed lab CA
       (VCF Automation only; Entra and Graph are always verified); ENTRA_TENANT_ID (the id, or a domain name), ENTRA_CLIENT_ID and
       ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the `cryptography` package);
-      ORGS (comma list, to read fewer organizations); OUT (default leavers.json)
+      ORGS (comma list, to read fewer organizations); OUT (default leavers.json); WARN_DAYS (default 30, the watch's):
+      on a provider API token, the run flags its own token inside this many days of its end; VCFA_PROVIDER_TOKEN_NAME,
+      the name the token was minted with, needed only when the run's user owns more than one REFRESH token
       VCFA_PROVIDER_BEARER_FILE holds a provider bearer, mode 0600, for an hour (the portal's states an hour; the Basic
       session's life was not read). Two ways to one, and a close held on each on the reference estate: the provider portal's sign-in (the bearer is what the portal sends as the
       Authorization header of its /cloudapi/ calls, after "Bearer "; the reference runs made that sign-in by script),
       and a Basic provider session, POST /cloudapi/1.0.0/sessions/provider with Basic <user>@System, whose response
-      header X-VMWARE-VCLOUD-ACCESS-TOKEN is the bearer. A provider API token was refused the close (403).
+      header X-VMWARE-VCLOUD-ACCESS-TOKEN is the bearer. A provider API token was refused the close (403, on a local
+      account; a federated account's close on that token was not run).
 Use:  python3 leavers.py                                   report every federated organization, write the record
       python3 leavers.py --redact                          the same, printed with placeholders, to share
       python3 leavers.py --name-claim ORG=mail             the same, for an organization whose name claim carries mail
@@ -131,25 +157,31 @@ Use:  python3 leavers.py                                   report every federate
                      [--max-leavers N]                     refuse the organization when more than N leavers are open
                                                            (default: more than MAX_LEAVERS and more than a quarter)
       python3 leavers.py --close-now --org NAME --user ACCOUNT [--execute]
-                                                           the urgent close: one named account, closed now without
-                                                           asking Entra whether the person has left; plan only without
-                                                           --execute. Needs no Graph credential, except to resolve a
-                                                           principal name in an organization keyed on oid.
+                                                           the urgent close: one named, federated account, closed now
+                                                           without asking Entra whether the person has left; plan only
+                                                           without --execute. Needs no Graph credential, except to
+                                                           resolve a principal name in an organization keyed on oid,
+                     [--left-on YYYY-MM-DD]                which needs the departure date the leaver notice gives
       ACCOUNT is the account's user name (a principal name, or under oid the object id), a principal name under oid
       (resolved through Graph to the object id), or the account's id (urn:vcloud:user:...).
 Exit, the first that applies, so a scheduler reads one state from one number:
-      2 with --execute, a close that did not hold on read-back
+      2 with --execute, a close that did not hold on read-back, among them a read-back that did not read
       1 an open leaver: an account to close (still enabled or holding a token) that three reads agree on, including
         one --execute refused
       3 a read failed, or an account is undetermined (among them a leaver whose reads disagree): nothing is known about
         what was not read (a credential that could not be obtained is one, a tenant no organization names is one, an
         organization --expect-tenants leaves uncovered is one, and so is an error the script did not expect: nothing
-        is read, or nothing is trusted, and nothing is written)
-      4 a flag (a direct role, a name in use again) not acknowledged in --ack
+        is read, or nothing is trusted, and nothing is written); also the run's own provider API token's end date
+        unread, and a --close-now name guard that could not read a date
+      4 a flag (a direct role, a name in use again) not acknowledged in --ack, or the run's own provider API token
+        inside WARN_DAYS of its end (rotate it; that flag is not acknowledged, the rotation clears it)
       0 nothing open, nothing unread, nothing flagged (with --close-now: the plan printed, or the close held)
       5 a usage error, a Python older than 3.10, an unreadable --ack file, a --user that names no account or more than
-        one, an --expect-tenants list that leaves out this run's tenant or names no tenant, or the record refused
-        because an estate value survived the scrub (nothing is written)
+        one, an --expect-tenants list that leaves out this run's tenant or names no tenant, a bad WARN_DAYS or
+        --left-on, and with --close-now an account that is not federated, or under oid a principal name without
+        --left-on or that the name guard refuses (nothing is sent, nothing is written)
+      A record refused because an estate value survived the scrub is not written, and never hides a finding: the
+      run's code stands when it is 1, 2, 3 or 4, and a run that found nothing exits 3 (the record was not written).
 The contract every identity companion keeps: 0 nothing for a person to act on, 3 a read failed or a result is
 undetermined (never a finding), 5 a usage error; 1, 2 and 4 are this script's own, above; an unexpected error is 3.
 """
@@ -214,6 +246,11 @@ CONFIRM_PAUSE = 10  # seconds between them
 MAX_LEAVERS = 3     # --execute refuses an organization with more open leavers than this and than a quarter of it
 FLAG_KINDS = ("direct-role", "name-in-use-again")
 EXIT_HELD_NOT, EXIT_OPEN, EXIT_UNREAD, EXIT_FLAGGED, EXIT_USAGE = 2, 1, 3, 4, 5
+PAGE_SIZE = 128     # items per page of a cloudapi list; every page is read, and a list without its values is unread
+WARN_DAYS = 30      # the run's own provider API token flags (exit 4) inside this many days of its end; the watch's default
+# An account's creation, as the audit trail records it: a federated account is imported at its first sign-in, a local
+# one created. The account record itself carries no creation time (read 2026-10-15, X-212).
+CREATED_EVENTS = ("com/vmware/vcloud/event/user/import", "com/vmware/vcloud/event/user/create")
 SECRET_KEYS = {"clientSecret", "client_secret", "password", "token", "accessToken", "refreshToken", "secretText",
                "privateKey"}
 
@@ -409,14 +446,15 @@ def apply_acks(record: dict, acks: list[dict], today: str) -> None:
 
 def exit_code(summary: dict, execute: bool) -> int:
     """One state per code, the first that applies: a close that did not hold, an open leaver, a read that failed or
-    an account undetermined, a flag nobody acknowledged, nothing. A flag never hides a failed read or a leaver."""
+    an account undetermined (or the run's own credential's end date unread), a flag nobody acknowledged (or the run's
+    own provider API token inside WARN_DAYS of its end), nothing. A flag never hides a failed read or a leaver."""
     if execute and summary.get("not_held"):
         return EXIT_HELD_NOT
     if summary.get("open_leavers"):
         return EXIT_OPEN
-    if summary.get("undetermined") or summary.get("unreadable"):
+    if summary.get("undetermined") or summary.get("unreadable") or summary.get("credential_unread"):
         return EXIT_UNREAD
-    if summary.get("flagged"):
+    if summary.get("flagged") or summary.get("credential_flagged"):
         return EXIT_FLAGGED
     return 0
 
@@ -481,11 +519,14 @@ class Reader:
 
 
 class Vcfa(Reader):
+    credential = "provider bearer"   # or "provider API token": which one the run holds, for its own end-date check
+
     def __init__(self, host: str, calls: list):
         verify = _lab_verify()
         if os.environ.get("VCFA_PROVIDER_BEARER_FILE"):
             bearer = _secret_file("VCFA_PROVIDER_BEARER_FILE").removeprefix("Bearer ").strip()
         else:
+            self.credential = "provider API token"
             form = urllib.parse.urlencode({"grant_type": "refresh_token",
                                            "refresh_token": _secret_file("VCFA_PROVIDER_REFRESH_TOKEN_FILE")}).encode()
             req = urllib.request.Request(f"https://{host}/oauth/provider/token", data=form, method="POST", headers={
@@ -496,14 +537,17 @@ class Vcfa(Reader):
         del bearer
 
     def pages(self, path: str, org_urn: str | None = None) -> list | None:
-        """Every page of a cloudapi list (pages count from 1); None when a page was refused."""
+        """Every page of a cloudapi list (pages count from 1, PAGE_SIZE items each); None when a page was refused or
+        answered without its list. An empty list still carries `values`, so a 200 without it did not read (G-431)."""
         out, page, hdr = [], 1, ({TENANT_HEADER: org_urn} if org_urn else {})
         while True:
-            status, answer = self.call("GET", f"{path}?page={page}&pageSize=128", accept=TENANT_JSON if org_urn else CLOUDAPI,
-                                       headers=hdr)
-            if not isinstance(answer, dict):
+            _status, answer = self.call("GET", f"{path}?page={page}&pageSize={PAGE_SIZE}",
+                                        accept=TENANT_JSON if org_urn else CLOUDAPI, headers=hdr)
+            if not isinstance(answer, dict) or not isinstance(answer.get("values"), list):
+                if self.calls and self.calls[-1].get("status") == 200:
+                    self.calls[-1]["shape"] = "no values list in the answer"
                 return None
-            out += answer.get("values") or []
+            out += answer["values"]
             if page >= int(answer.get("pageCount") or 1):
                 return out
             page += 1
@@ -931,11 +975,12 @@ def select_account(users: list[dict], given: str, key: str | None, graph: Graph 
                             "principal name can be resolved")
             return m
         m["resolved_by"] = "Graph GET /users/{principal name}"
-        status, answer = graph.call("GET", user_path(given) + "?$select=id,userPrincipalName")
+        status, answer = graph.call("GET", user_path(given) + "?$select=id,userPrincipalName,createdDateTime")
         if status == 404:
             m["entra"] = "no Entra user has this principal name"
         elif isinstance(answer, dict) and OBJECT_ID.match(str(answer.get("id") or "")):
             m["object_id"], m["principal_name"] = str(answer["id"]), answer.get("userPrincipalName")
+            m["entra_created"] = answer.get("createdDateTime")  # whoever holds the name now: the guard reads it
             cands.update({str(u.get("id")): u for u in users
                           if str(u.get("username", "")).lower() == m["object_id"].lower()})
         else:
@@ -957,25 +1002,95 @@ def select_account(users: list[dict], given: str, key: str | None, graph: Graph 
 
 
 def match_line(m: dict) -> str:
-    """The match, as printed before anything is sent: the name given, the object id it resolved to, the account."""
-    how = (f", Entra user {m.get('principal_name')}, object id {m['object_id']}" if m.get("object_id")
+    """The match, as printed before anything is sent: the name given, the object id it resolved to and when that Entra
+    user was created, the account, and when the account was created, as far as each was read."""
+    how = (f", Entra user {m.get('principal_name')}, object id {m['object_id']}, created "
+           f"{m.get('entra_created') or 'not given'}" if m.get("object_id")
            else f", {m['entra']}" if m.get("entra") else "")
-    where = (f" selects account {m['account']}" if m.get("account")
-             else f": refused ({m['refused']})" if m.get("refused") else f": unread ({m.get('unread')})")
+    where = (f" selects account {m['account']}" + (f", created {m['account_created']}" if m.get("account_created") else "")
+             if m.get("account") else "")
+    if m.get("refused"):
+        where += f": refused ({m['refused']})"
+    elif m.get("unread"):
+        where += f": unread ({m['unread']})"
     return f"  --user {m['given']} (resolved {m['resolved_by']}{how}){where}"
 
 
+def _day(stamp: str | None) -> str | None:
+    """The UTC date of an ISO 8601 time stamp (Graph's createdDateTime, the audit trail's timestamp), or None."""
+    return stamp[:10] if isinstance(stamp, str) and re.match(r"\d{4}-\d{2}-\d{2}", stamp) else None
+
+
+def account_created(vcfa: Vcfa, user_id: str) -> dict:
+    """When VCF Automation made an account, from the audit trail: the account's import event (a federated account,
+    at its first sign-in) or create event (a local one). The account record carries no creation time. An account
+    older than the trail's reach has no such event, so the trail's oldest event bounds it: made before then.
+    {"at": stamp} or {"before": stamp}, or {"unread": why} when a read failed (X-212: the trail on the reference
+    estate held every lab account's event and reached back some 39 days)."""
+    flt = f"eventEntity.id=={user_id};(" + ",".join(f"eventType=={e}" for e in CREATED_EVENTS) + ")"
+    q = urllib.parse.urlencode({"filter": flt, "sortAsc": "timestamp", "page": 1, "pageSize": 1})
+    _s, answer = vcfa.call("GET", f"/cloudapi/1.0.0/auditTrail?{q}", accept=CLOUDAPI)
+    if not isinstance(answer, dict) or not isinstance(answer.get("values"), list):
+        return {"unread": f"the audit trail did not answer for the account ({vcfa.calls[-1].get('status')})"}
+    if answer["values"]:
+        return {"at": answer["values"][0].get("timestamp")}
+    q = urllib.parse.urlencode({"sortAsc": "timestamp", "page": 1, "pageSize": 1})
+    _s, oldest = vcfa.call("GET", f"/cloudapi/1.0.0/auditTrail?{q}", accept=CLOUDAPI)
+    if not isinstance(oldest, dict) or not isinstance(oldest.get("values"), list) or not oldest["values"]:
+        return {"unread": f"the audit trail's oldest event did not read ({vcfa.calls[-1].get('status')})"}
+    return {"before": oldest["values"][0].get("timestamp")}
+
+
+def name_guard(m: dict, made: dict, left_on: str | None) -> dict:
+    """Whether a principal name under oid may name the account for an urgent close. Graph resolves a name to whoever
+    holds it now; after a reuse that is a new person, whose own account the name then selects, and a close would lock
+    that person out while the departed person's account stays open (G-430). So the name is taken only beside the
+    departure date the leaver notice gives (--left-on), and refused when the Entra user holding it now was created on
+    or after that date, when the account it selects was made on or after it (someone who signed in after the person
+    left), or when that user is newer than the account (an account made before the organization was keyed on oid,
+    named by the name, which an earlier holder made). {"ok": True}, {"refused": why}, or {"unread": why} when a date
+    the guard needs could not be read: a guard that could not run never passes."""
+    if not left_on:
+        return {"refused": "the organization is keyed on oid: close by the object id the leaver notice or the last report "
+                           "carries; a principal name resolves to whoever holds it now, so it is taken only with "
+                           "--left-on YYYY-MM-DD, the departure date the notice gives"}
+    held = _day(m.get("entra_created"))
+    if held is None:
+        return {"unread": "Graph gave no createdDateTime for the Entra user who holds the name, so the guard could not run"}
+    if made.get("unread"):
+        return {"unread": made["unread"] + ", so the guard could not run"}
+    if held >= left_on:
+        return {"refused": f"the Entra user who holds {m['given']} now was created {held}, on or after the departure on "
+                           f"{left_on}: the name was given to someone after the person left; close by the object id the "
+                           "notice or the last report carries"}
+    made_on, bound = _day(made.get("at")), _day(made.get("before"))
+    if made_on and made_on >= left_on:
+        return {"refused": f"the account was made {made_on}, on or after the departure on {left_on}: it belongs to someone "
+                           "who signed in after the person left; close by the object id the notice or the last report "
+                           "carries"}
+    if (made_on and held > made_on) or (bound and held > bound):
+        return {"refused": f"the account was made {made_on or 'before ' + bound}, before the Entra user who holds the name "
+                           f"now was created ({held}): an earlier holder of the name made it; close by the account's id "
+                           "from the last report"}
+    return {"ok": True}
+
+
 def close(vcfa: Vcfa, urn: str, user: dict, tokens: list[dict]) -> dict:
-    """Revoke the leaver's tokens, then disable the account by a round trip of its full record; read both back.
-    The record must come back unchanged apart from `enabled`; a refused call is recorded and ends this close."""
+    """Read the account, and only when it reads as a federated account revoke its tokens, then disable it by a round
+    trip of its full record; read both back. The record must come back unchanged apart from `enabled`; a refused call
+    ends this close, and a read-back that did not read (refused, or a 200 without its list) is a close that did not
+    hold, naming the read (G-431). Nothing is sent to an account that is not federated: on a local one the disable was
+    refused (400) after its tokens were gone."""
     hdr, out = {TENANT_HEADER: urn}, {"revoked": [], "disabled": False}
-    for t in tokens:
-        status, _a = vcfa.call("DELETE", f"/cloudapi/1.0.0/tokens/{t['id']}", accept=TENANT_JSON, headers=hdr)
-        out["revoked"].append({"name": t.get("name"), "type": t.get("type"), "status": status})
     path = f"/cloudapi/1.0.0/users/{user['id']}"
     _s, before = vcfa.call("GET", path, accept=TENANT_JSON, headers=hdr)
     if not isinstance(before, dict):
-        return {**out, "held": False, "error": "the account could not be read"}
+        return {**out, "held": False, "error": f"the account could not be read ({vcfa.calls[-1].get('status')}); nothing sent"}
+    if before.get("providerType") not in FEDERATED:
+        return {**out, "held": False, "error": f"a {before.get('providerType') or 'unknown'} account, not federated; nothing sent"}
+    for t in tokens:
+        status, _a = vcfa.call("DELETE", f"/cloudapi/1.0.0/tokens/{t['id']}", accept=TENANT_JSON, headers=hdr)
+        out["revoked"].append({"name": t.get("name"), "type": t.get("type"), "status": status})
     allowed = {"enabled"}
     if before.get("enabled") is not False:
         status, _a = vcfa.call("PUT", path, {**before, "enabled": False}, accept=TENANT_JSON, headers=hdr)
@@ -989,11 +1104,17 @@ def close(vcfa: Vcfa, urn: str, user: dict, tokens: list[dict]) -> dict:
             return {**out, "held": False, "error": f"the write was refused ({status})"}
         out["disabled"] = True
     _s, after = vcfa.call("GET", path, accept=TENANT_JSON, headers=hdr)
-    after = after if isinstance(after, dict) else {}
+    if not isinstance(after, dict):
+        out["read_back"] = {"enabled": None, "changed_unasked": None, "tokens_left": None}
+        return {**out, "held": False, "error": f"the account read-back did not read ({vcfa.calls[-1].get('status')})"}
     moved = sorted(k for k in set(before) | set(after) if k not in allowed and before.get(k) != after.get(k))
-    left = [t.get("name") for t in vcfa.pages("/cloudapi/1.0.0/tokens", urn) or []
-            if (t.get("owner") or {}).get("id") == user["id"]]
+    listed = vcfa.pages("/cloudapi/1.0.0/tokens", urn)
+    left = None if listed is None else [t.get("name") for t in listed if (t.get("owner") or {}).get("id") == user["id"]]
     out["read_back"] = {"enabled": after.get("enabled"), "changed_unasked": moved, "tokens_left": left}
+    if left is None:
+        st = vcfa.calls[-1].get("status")
+        return {**out, "held": False, "error": "the token read-back did not read ("
+                + (f"{st}, no token list" if st == 200 else f"{st or 'no answer'}") + "), so no token left is not known"}
     out["held"] = after.get("enabled") is False and not moved and not left \
         and all(r["status"] in (200, 204) for r in out["revoked"])
     return out
@@ -1008,12 +1129,18 @@ def org_key(vcfa: Vcfa, urn: str) -> tuple[bool, str | None]:
     return True, ((oauth.get("oidcAttributeMapping") or {}).get("subjectAttributeName") if oauth.get("enabled") else None)
 
 
-def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph=None, announce=None) -> dict:
+def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph=None, announce=None,
+              left_on: str | None = None) -> dict:
     """The urgent close: one account of one organization, named exactly, closed now without asking Entra whether the
     person has left (they may still be entitled there, so remove them at the provider too). Plan only unless
     `execute`. Reads the organization's accounts and tokens, and touches the named account's tokens and record only.
     The account is chosen by select_account, and the match is announced before anything is sent; a name that selects
     no account or more than one is refused (exit 5), never guessed, and a read that failed stops the run (exit 3).
+    An account that is not federated (providerType LOCAL, or anything but OAUTH or SAML) is refused at the plan, before
+    any write (exit 5). Under oid a principal name passes name_guard first, with `left_on`, the departure date the
+    leaver notice gives: refused (exit 5) on a reused name, unread (exit 3) when a date it needs did not read. Keyed
+    on a name (preferred_username, SAML) the name is the account's key, so the account it selects is the one every
+    holder of the name signs in to and no other person's account can be chosen: no guard runs and no Graph is read.
     `make_graph` gives the Graph reader, made only when a principal name must be resolved under oid."""
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "close-now" if execute else "close-now plan", "organizations": [], "unreadable": [],
@@ -1051,11 +1178,28 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
             return stop(unread=f"the Graph credential could not be obtained ({type(e).__name__})")
     m = select_account(users, account, key, graph)
     record["user_match"] = m
+    user = next((u for u in users if str(u.get("id")) == m.get("id")), None)
+    if user is not None and m.get("object_id"):  # a principal name resolved under oid: the guard reads both dates
+        made = account_created(vcfa, str(user.get("id"))) if left_on else {}
+        if made:
+            m["account_created"] = made.get("at") or (f"before {made['before']}" if made.get("before") else "unread")
+        guard = m["guard"] = name_guard(m, made, left_on)
+        m["left_on"] = left_on
+        if guard.get("refused") or guard.get("unread"):
+            m["refused" if guard.get("refused") else "unread"] = guard.get("refused") or guard.get("unread")
+    elif user is not None:
+        m["guard"] = {"ok": True, "why": ("named by its object id or its account id: no name was resolved" if key in BY_ID
+                                         or OBJECT_ID.match(account) or account.lower().startswith("urn:vcloud:user:")
+                                         else "the organization is not keyed on oid, so the account a name selects is "
+                                              "the one named by it, which every holder of that name signs in to")}
+    if user is not None and user.get("providerType") not in FEDERATED and not m.get("refused") and not m.get("unread"):
+        m["refused"] = (f"account {m['account']} is a {user.get('providerType') or 'unknown'} account: --close-now closes a "
+                        "federated account (OAUTH or SAML), and nothing is sent to any other; close a local account in "
+                        "the organization's own administration")
     if announce:
         announce(match_line(m))
     if m.get("unread") or m.get("refused"):
         return stop(unread=m.get("unread", ""), refused=m.get("refused", ""))
-    user = next(u for u in users if str(u.get("id")) == m["id"])
     mine = [t for t in tokens if (t.get("owner") or {}).get("id") == user.get("id")]
     row = {**keep(user, USER), "tokens": keep(mine, TOKEN), "decision": "closed on request",
            "reason": "named with --close-now; Entra was not asked whether the person has left",
@@ -1073,6 +1217,51 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
     record["summary"] = summary(record)
     record["sent"] = [f"{c['method']} {c['path']}" for c in vcfa.calls if c["method"] in ("PUT", "DELETE")]
     return record
+
+
+def own_credential(vcfa: Vcfa, warn_days: int, now: datetime | None = None, name: str | None = None) -> dict:
+    """The run's own credential and when it ends (G-432). A provider bearer lives an hour from its sign-in, so there is
+    no end date to read. A provider API token ends on the date its token record gives: the run reads its session's user
+    (GET /cloudapi/1.0.0/sessions/current), then the provider's token list (GET /cloudapi/1.0.0/tokens, no tenant
+    context, every page), and takes the one REFRESH token that user owns, or the one named `name`
+    (VCFA_PROVIDER_TOKEN_NAME) when the user owns several. Inside `warn_days` of its end it is flagged (exit 4: mint
+    the successor and rotate); a read that failed, no such token or several, or a record with no end date is unread
+    (exit 3), never a pass. {"kind", "name", "ends", "days_left", "warn_days", "flag" or "unread"}."""
+    out: dict = {"kind": vcfa.credential, "warn_days": warn_days}
+    if vcfa.credential != "provider API token":
+        out["ends"] = "an hour after its sign-in: no end date to read"
+        return out
+    _s, cur = vcfa.call("GET", "/cloudapi/1.0.0/sessions/current", accept=CLOUDAPI)
+    me = ((cur or {}).get("user") or {}).get("id") if isinstance(cur, dict) else None
+    if not me:
+        out["unread"] = f"the run's own session did not read ({vcfa.calls[-1].get('status')}), so its token is not known"
+        return out
+    listed = vcfa.pages("/cloudapi/1.0.0/tokens")
+    if listed is None:
+        out["unread"] = f"the provider's token list did not read ({vcfa.calls[-1].get('status')})"
+        return out
+    mine = [t for t in listed if (t.get("owner") or {}).get("id") == me and t.get("type") == "REFRESH"
+            and (name is None or t.get("name") == name)]
+    if len(mine) != 1:
+        out["unread"] = ((f"{len(mine)} REFRESH tokens belong to the run's user"
+                          + ("" if name else ": set VCFA_PROVIDER_TOKEN_NAME to the name this one was minted with"))
+                         if mine else ("no REFRESH token of the run's user"
+                                       + (f" is named {name}" if name else " is in the provider's token list")))
+        return out
+    tok = mine[0]
+    out["name"], end = tok.get("name"), tok.get("expirationTimeUtc")
+    m = re.match(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]00:?00)?$", str(end or ""))
+    when = datetime.strptime(f"{m.group(1)}T{m.group(2)}", "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc) if m else None
+    if when is None:
+        out["unread"] = "its token record gives no end date, so when it stops is not known"
+        return out
+    now = now or datetime.now(timezone.utc)
+    out["ends"] = when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    out["days_left"] = round((when - now).total_seconds() / 86400, 1)
+    if out["days_left"] <= warn_days:
+        out["flag"] = (f"credential-ends: this run's provider API token ends {out['ends'][:10]}, in {out['days_left']} "
+                       f"days, inside WARN_DAYS ({warn_days}): mint its successor, run once on it, and revoke this one")
+    return out
 
 
 def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: bool, act_on: str | None,
@@ -1224,6 +1413,9 @@ def summary(record: dict) -> dict:
              name_in_use_again=sum(1 for r in rows if any(f.startswith("name-in-use-again") for f in r["flags"])),
              acknowledged=sum(len(r.get("acknowledged") or []) for r in rows))
     s["flagged"] = sum(len(unacked(r)) for r in rows)  # what exit 4 reads: raised and not acknowledged
+    if "credential" in record:  # a report or --execute reads its own credential's end date (G-432)
+        s["credential_unread"] = int(bool(record["credential"].get("unread")))
+        s["credential_flagged"] = int(bool(record["credential"].get("flag")))
     if "expected_tenants" in record:  # only a run given --expect-tenants says who reads the others
         shown = record.get("elsewhere") or []
         s.update(other_tenants=sum(1 for o in shown if o["read_by"] == "the schedule for its own tenant"),
@@ -1393,11 +1585,20 @@ def report_lines(record: dict) -> list[str]:
             res = r.get("result")
             if res:
                 rb = res.get("read_back") or {}
+                left = "unread" if rb.get("tokens_left") is None else len(rb["tokens_left"])
+                moved = "unread" if rb.get("changed_unasked") is None else len(rb["changed_unasked"])
                 out.append(f"      revoked {sum(1 for t in res.get('revoked') or [] if t.get('status') in (200, 204))} of "
                            f"{len(res.get('revoked') or [])} token(s); read back: enabled {rb.get('enabled')}, "
-                           f"tokens left {len(rb.get('tokens_left') or [])}, other fields changed "
-                           f"{len(rb.get('changed_unasked') or [])}; held {res.get('held')}"
+                           f"tokens left {left}, other fields changed {moved}; held {res.get('held')}"
                            + (f" ({res['error']})" if res.get("error") else ""))
+    cred = record.get("credential")
+    if cred:
+        out.append(f"  credential: {cred['kind']}"
+                   + (f" {cred['name']}" if cred.get("name") else "")
+                   + (f": unread ({cred['unread']})" if cred.get("unread")
+                      else f", ends {cred['ends']}" + (f" ({cred['days_left']} days; WARN_DAYS {cred['warn_days']})"
+                                                         if "days_left" in cred else ""))
+                   + ("  FLAG credential-ends" if cred.get("flag") else ""))
     keys = ("keep", "leaver", "out_of_scope", "undetermined", "open_leavers", "refused", "closed", "not_held", "in_step",
             "direct_role", "name_in_use_again", "acknowledged", "flagged")
     out.append("  totals: " + ", ".join(f"{k.replace('_', ' ')} {s.get(k, 0)}" for k in keys))
@@ -1412,7 +1613,8 @@ EXIT_MEANS = {0: "nothing open, nothing unread, nothing flagged", EXIT_OPEN: "an
               EXIT_HELD_NOT: "a close did not hold on read-back: read the result",
               EXIT_UNREAD: "a read failed, an account is undetermined, or an organization no schedule reads: fix the "
                            "read, nothing is known about it",
-              EXIT_FLAGGED: "a flag nobody acknowledged: decide it, then acknowledge it with --ack",
+              EXIT_FLAGGED: "a flag nobody acknowledged, or this run's own API token near its end: decide and --ack "
+                            "the flag; rotate the token",
               EXIT_USAGE: "not run as asked"}
 
 
@@ -1424,7 +1626,9 @@ def given_values() -> list[tuple[str, str]]:
 
 def _write(record: dict, calls: list, redact: bool) -> int:
     """Print the run, scrub the record and write it; refuse to write one in which an estate value survived. A run
-    refused as a usage error (a --user that names no account, or several) is printed and not written."""
+    refused as a usage error (a --user that names no account, or several) is printed and not written. A record refused
+    for a surviving value never masks what the run found: the run's code stands when it is 1, 2 or 4 (or 3), and a
+    run that found nothing exits 3, because the record a later tool reads was not written."""
     record["calls"] = [{k: v for k, v in c.items() if k != "message"} for c in calls]
     table = estate_values(record, given_values())
     clean = scrub(record, table)
@@ -1433,20 +1637,24 @@ def _write(record: dict, calls: list, redact: bool) -> int:
     if not (left and redact):  # a redacted print with a surviving value would print that value
         print("\n".join(report_lines(clean if redact else record)))
         for c in calls:
-            if c["status"] is None or c["status"] >= 400:
+            if c["status"] is None or c["status"] >= 400 or c.get("shape"):
                 where = scrub(c["path"], table) if redact else c["path"]
                 print(f"  FAILED {c['plane']} {c['method']} {where}: {c['status'] or c.get('error') or ''}"
-                      + ("" if redact else f" {c.get('message') or ''}"))
-    if left:
-        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))})",
-              file=sys.stderr)
-        return EXIT_USAGE
+                      + (f" ({c['shape']})" if c.get("shape") else "") + ("" if redact else f" {c.get('message') or ''}"))
     if record.get("refused"):
         print(f"\nnot run as asked; {out} not written; exit {EXIT_USAGE}")
         return EXIT_USAGE
+    if left:
+        code = record["exit"] if record.get("exit") in (EXIT_OPEN, EXIT_HELD_NOT, EXIT_FLAGGED, EXIT_UNREAD) else EXIT_UNREAD
+        why = ("the run's own code stands" if code == record.get("exit")
+               else "the run found nothing to act on, and the record a later tool reads was not written")
+        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))}); "
+              f"exit {code}: {why}", file=sys.stderr)
+        return code
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
-    print(f"\n{len(calls)} call(s), {sum(1 for c in calls if c['status'] is None or c['status'] >= 400)} refused; "
+    failed = sum(1 for c in calls if c["status"] is None or c["status"] >= 400 or c.get("shape"))
+    print(f"\n{len(calls)} call(s), {failed} refused; "
           f"{out} written with every estate value replaced; exit {record['exit']}")
     return record["exit"]
 
@@ -1473,7 +1681,7 @@ def _close_now_main(a: argparse.Namespace) -> int:
         return _no_credential(e)
     graph_set = all(os.environ.get(k) for k in ("ENTRA_TENANT_ID", "ENTRA_CLIENT_ID"))
     record = close_now(vcfa, a.org, a.user, a.execute, make_graph=(lambda: Graph(calls)) if graph_set else None,
-                       announce=_announcer(a.redact))
+                       announce=_announcer(a.redact), left_on=a.left_on)
     record["exit"] = EXIT_USAGE if record.get("refused") else exit_code(record["summary"], a.execute)
     return _write(record, calls, a.redact)
 
@@ -1483,9 +1691,22 @@ def _announcer(redact: bool):
     report printed at the end carries them as placeholders)."""
     if not redact:
         return lambda line: print(line, flush=True)
-    return lambda line: print("  --user: matched (values withheld under --redact; the report below names them as "
-                              "placeholders)" if " selects account " in line else "  --user: " + ("refused" if
-                              ": refused (" in line else "unread") + " (see the report below)", flush=True)
+
+    def say(line: str) -> None:
+        if ": refused (" in line or ": unread (" in line:
+            print(f"  --user: {'refused' if ': refused (' in line else 'unread'} (see the report below)", flush=True)
+        else:
+            print("  --user: matched (values withheld under --redact; the report below names them as placeholders)",
+                  flush=True)
+    return say
+
+
+def _iso_day(value: str) -> str:
+    """A date given as YYYY-MM-DD, as written; anything else is refused (argparse's error, exit 5)."""
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").strftime("%Y-%m-%d")
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a date written YYYY-MM-DD") from None
 
 
 class _Parser(argparse.ArgumentParser):
@@ -1529,10 +1750,17 @@ def _run(argv: list[str] | None = None) -> int:
                          "which the job cannot read for itself; repeatable. Undeclared means userPrincipalName")
     ap.add_argument("--close-now", action="store_true",
                     help="close the one account --user names in --org now, without asking Entra; plan only without --execute")
+    ap.add_argument("--left-on", metavar="YYYY-MM-DD", type=_iso_day,
+                    help="with --close-now, the departure date the leaver notice gives: under oid a principal name is "
+                         "taken only with it, and refused when the Entra user holding the name now, or the account it "
+                         "selects, was made on or after it")
     ap.add_argument("--expect-tenants", metavar="T1,T2,...",
                     help="every Entra tenant a schedule of this job runs for (ids or domain names, this run's own "
                          "among them): an organization federated to any other is uncovered, and the run exits 3")
     a = ap.parse_args(argv)
+    if a.left_on and not a.close_now:
+        print("--left-on is for --close-now: it guards a principal name under oid", file=sys.stderr)
+        return EXIT_USAGE
     if a.close_now and a.expect_tenants:
         print("--expect-tenants is for a report or --execute: --close-now reads one named account, not the tenants",
               file=sys.stderr)
@@ -1563,6 +1791,10 @@ def _run(argv: list[str] | None = None) -> int:
     if missing:
         print(f"set {', '.join(missing)} (see the header)", file=sys.stderr)
         return EXIT_USAGE
+    warn = os.environ.get("WARN_DAYS", str(WARN_DAYS)).strip()
+    if not warn.isdigit():
+        print(f"WARN_DAYS {warn!r}: a whole number of days, 0 or more", file=sys.stderr)
+        return EXIT_USAGE
     calls: list = []
     try:
         vcfa, graph = Vcfa(os.environ["VCFA_HOST"], calls), Graph(calls)
@@ -1587,7 +1819,9 @@ def _run(argv: list[str] | None = None) -> int:
                        name_claims=name_claims, announce=_announcer(a.redact), expect=expect)
     if a.ack:
         apply_acks(record, acks, record["captured"][:10])  # the run's own UTC date
-        record["summary"] = summary(record)
+    if not record.get("refused"):  # the run's own credential: when a provider API token ends (G-432)
+        record["credential"] = own_credential(vcfa, int(warn), name=os.environ.get("VCFA_PROVIDER_TOKEN_NAME") or None)
+    record["summary"] = summary(record)
     record["exit"] = EXIT_USAGE if record.get("refused") else exit_code(record["summary"], a.execute)
     return _write(record, calls, a.redact)
 

@@ -9,7 +9,7 @@ secret or password is printed or written.
 
 | File | What it is |
 |---|---|
-| `watch.py` | Reads each organization's OIDC or SAML settings, imported groups and local administrators from VCF Automation, the keys the provider publishes, and (optionally) the app behind the organization from Microsoft Graph, then runs nine checks: key refresh, keys held, PKCE, the client secret's end date, the SAML certificate's end date, whether the organization's metadata holds every signing certificate, imported group names against the groups assigned to the app, the app's own gate, and a local user holding the organization's top role (Organization Administrator in an All Apps organization, Organization Owner in a classic one) for the day the provider refuses; a run declared `--provider-only` with `--tenant-attested` adds a tenth, `tenant_report`, the age of the tenant's last report of its rollover dates. `--expect-tenants` names every tenant a schedule covers. `--why` is the sign-in router: what a user saw in, where it was refused and what to read first out. Writes `watch.json`, and refuses to write a record carrying any estate value. |
+| `watch.py` | Reads each organization's OIDC or SAML settings, imported groups and local administrators from VCF Automation, the keys the provider publishes, and (optionally) the app behind the organization from Microsoft Graph, then runs nine checks: key refresh, keys held, PKCE, the client secret's end date, the SAML certificate's end date, whether the organization's metadata holds every signing certificate, imported group names against the groups assigned to the app, the app's own gate, and a local user holding the organization's top role (Organization Administrator in an All Apps organization, Organization Owner in a classic one) for the day the provider refuses; a run declared `--provider-only` with `--tenant-attested` adds a tenth, `tenant_report`, the age of the tenant's last report of its rollover dates. On a provider API token the run also checks that token's own end date (`own_token`). `--expect-tenants` names every tenant a schedule covers. `--why` is the sign-in router: what a user saw in, where it was refused and what to read first out. Writes `watch.json`, and refuses to write a record carrying any estate value. |
 | `watch.json` | That record from the reference estate, 2026-10-12, four throwaway organizations (classic and All Apps, OIDC and SAML). |
 | `watch_passing.json`, `watch_group_renamed.json`, `watch_restored.json` | The watch on one throwaway All Apps organization over OIDC built to pass, 2026-10-13: after its first scheduled key refresh (every check ok but `secret_end`, which warned because the run gave its rotated secret 30 days, inside the 30-day window; exit 1), with the entitled group renamed at Entra (`group_names` fails; exit 2), and with the name restored (exit 1 again). The day-2 writes that set it up are the tenant-federation companion's `update_*.json`. |
 | `expected-output.md` | The transcript of that run, with what to read in it. |
@@ -20,6 +20,7 @@ secret or password is printed or written.
 export VCFA_HOST=<automation-fqdn>
 export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer             # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE
                                                                     # a bearer: platform-identity's plate 04, "Your provider bearer"
+export VCFA_PROVIDER_TOKEN_NAME=<the name the token was minted under>  # with a provider API token: which one is the watch's
 export TLS_VERIFY=false                                             # only on a self-signed lab CA
 # the rollover checks, through this tenant's read-only app (Microsoft Graph application permission Application.Read.All)
 export ENTRA_TENANT_ID=<tenant-id or one of its domain names> ENTRA_CLIENT_ID=<app-id>
@@ -40,10 +41,10 @@ Schedule it and read the exit code:
 
 | Exit | Means |
 |---|---|
-| 0 | every check this run owns ran, on every organization it covers, and every one is ok |
-| 1 | a warning: an end date inside `WARN_DAYS`, a refresh interval over one hour, a signing certificate the organization does not yet hold, no local user holding the organization's top role, a tenant's report older than `--attested-max-days` |
+| 0 | every check this run owns ran, on every organization it covers (at least one), and every one is ok, the watch's own provider API token's end date included when it runs on one |
+| 1 | a warning: an end date inside `WARN_DAYS` (the watch's own provider API token's among them), a refresh interval over one hour, a signing certificate the organization does not yet hold, no local user holding the organization's top role, a tenant's report older than `--attested-max-days` |
 | 2 | a failure that stops sign-in now or at the provider's next roll: a published key not held, refreshes not succeeding, an expired secret or certificate, a secret the organization holds that the app no longer lists, the active certificate missing from the organization's metadata, a renamed group, PKCE on, a disabled app |
-| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run on a run not declared `--provider-only` (no Graph credential given, so the tenant's read-only app is owed; a provider other than Entra ID), an organization federated to a tenant outside `--expect-tenants`, a run whose own tenant no organization names, an organization whose reads were refused, the tenant's app not found in Graph, a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh), a provider credential refused before any organization was read, or a record the scrub refused (no record is written in those two cases). An error the watch did not expect exits 3 too, never 1 |
+| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run on a run not declared `--provider-only` (no Graph credential given, so the tenant's read-only app is owed; a provider other than Entra ID), an organization federated to a tenant outside `--expect-tenants`, a run whose own tenant no organization names, a run that judged no organization (a wrong host, the only organization's federation switched off, a credential that lists none it can judge), the watch's own provider API token's end date unread (its token list refused, or no token or several it could single out), an organization whose reads were refused, the tenant's app not found in Graph, a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh), a provider credential refused before any organization was read, or a record the scrub refused (no record is written in those two cases). An error the watch did not expect exits 3 too, never 1 |
 | 5 | not run as asked: an unknown or missing argument, `--protocol` without `--why`, a missing `VCFA_HOST` or provider credential, a credential or key file that cannot be read, a non-numeric `WARN_DAYS`, an Entra variable without `ENTRA_TENANT_ID` or `ENTRA_TENANT_ID` without the app's id and credential (unless `--provider-only`), a Graph credential with `--provider-only`, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, `--tenant-attested` without `--provider-only` or with a date that is malformed or in the future, a Python older than 3.9. Nothing is read from VCF Automation |
 
 `--why` keeps its own two codes: 0 a row matched, 1 none did (it prints the first reads for a message no run showed).
@@ -69,6 +70,22 @@ administrator runs them and reports the dates. `--tenant-attested YYYY-MM-DD` gi
 report of its rollover dates; a report older than `--attested-max-days` (default 30) warns, exit 1. The report is
 optional, and it never stands in for a check the run did not make.
 
+**The watch's own credential.** Scheduled, the watch holds a provider API token (`VCFA_PROVIDER_REFRESH_TOKEN_FILE`),
+which has an end date: the one minted for the reference run ended 90 days after it was made. The watch reads that date
+from the provider's token list (`GET /cloudapi/1.0.0/tokens`, every page): the `REFRESH` token of its own session's
+user, the one named `VCFA_PROVIDER_TOKEN_NAME` when that user holds more than one (set it to the client name the token
+was minted under). Inside `WARN_DAYS` the run warns, exit 1: mint the next token, swap the 0600 file, run the watch once
+on it, then revoke the old one (`DELETE /cloudapi/1.0.0/tokens/{id}`) and read the list back. A token list it could not
+read, or that holds none or several it could single out, leaves the date undetermined, exit 3. Each mint leaves a
+client registration behind, which the API reference read offers no call to delete. On a provider bearer the check does
+not run: a bearer is minted for a run, not held by a schedule.
+
+**A run that judges nothing is never a pass.** By default the watch reads every organization with OIDC or SAML on and
+leaves out the rest. A run that judged none, because `VCFA_HOST` names the wrong estate, because the tenant's only
+organization had its federation switched off, or because the credential lists none it can judge, prints `the run judged
+no organization`, with what it listed and why each was left out, and exits 3. Every list is read page by page, and a
+page that answers without its list is a read that failed, never an empty one.
+
 A read the watch could not make never passes. An organization whose reads fail stays in the run and the record,
 named and counted, whether or not `ORGS` names it: with `ORGS` unset, an organization that could not be read cannot
 be shown to be unfederated. The secret check judges only the secret the organization holds, found by its first
@@ -87,11 +104,14 @@ when the old secret is removed before the new one is written, the check fails ra
   organization federated to another OIDC provider gets the organization-side checks (key refresh, keys held,
   local administrator); the rollover checks run only where the issuer is Entra ID, so such an organization reads
   `not_run` and the run exits 3 (leave it out of `ORGS`, and track that provider's dates by its own means).
-- The key-refresh signal is the age of the last *successful* refresh against the interval. On a 24-hour interval
+- The key-refresh signal is the age of the last *successful* refresh against the interval plus an hour. On a 24-hour interval
   the attempt timestamp moves every hour and the success timestamp once a day, so a difference between them is
   not a failure. On the cycle read (one organization), the refresh ran at the first hourly run a full interval after
-  the last success, and a run 0.4 s short of the interval did not refresh, so a healthy success can be up to an hour
-  older than the interval; the check fails only past that and a quarter hour. `keys_held` checks the outcome directly against the provider's published keys.
+  the last success, and a run 0.4 s short of the interval did not refresh, so a healthy success can be up to the
+  interval plus an hour old. The check fails when the last success is older than the interval plus an hour, counted
+  in whole minutes: every hourly run read recorded its success within the first three seconds of the hour, and a read
+  in those seconds must not fail an organization whose refresh is under way. `keys_held` checks the outcome directly
+  against the provider's published keys.
 - What it cannot see: whether a provider that is unreachable (rather than refusing) would be survived; the claim
   form synchronized Active Directory groups need (not tested); a user's MFA state; Entra's sign-in log, which is
   where `--why` sends you first.
@@ -106,8 +126,10 @@ when the old secret is removed before the new one is written, the check fails ra
   without it, none did. In one run holding `Application.Read.All` and `GroupMember.Read.All` the Graph checks were
   skipped with an HTTP error; that run was not repeated and is not explained. The app was deleted and purged.
 - Measured on VCF Automation 9.1 against Entra ID, with a provider System Administrator's bearer, and with a Graph
-  certificate (the reference run) and a Graph client secret (the permission measurement); the provider api-token
-  path was not exercised for the watch: it has never run on one. One schedule per tenant and the declared
+  certificate (the reference run) and a Graph client secret (the permission measurement). On 2026-10-15 it ran once on
+  a provider API token minted for the run from that bearer, on two standing organizations: no read was refused, every
+  check read the same state as on the bearer, the token's own end date read 90 days out, and the token was revoked after. One
+  schedule per tenant and the declared
   provider-only run were read on 2026-10-15 on two standing organizations of the lab's one Entra tenant, with a run
   tenant and a tenant list made up for the run; an organization federated to a second real tenant was not run. No provider identity narrower than an administrator was proven for a
   scheduled job: a dedicated local user of the System organization could not be made (the organization already held
@@ -129,5 +151,7 @@ what is `owed` for them to run (for a run without a Graph credential, the tenant
 own schedule reads it`, or `uncovered: no schedule reads it`. A declared run given `--tenant-attested` adds a
 `tenant_report` check with `age_days` and `max_days`. At the top, `mode` is `with the tenant's app`, `provider-only,
 declared` or `provider-only, undeclared`; `tenant` the run's own; `expected_tenants` how many `--expect-tenants`
-named, the run's own included; `tenant_attested` the report's date and age; `run_errors` what is wrong with the run as
-a whole; and `exit` the code the run returned.
+named, the run's own included; `tenant_attested` the report's date and age; `credential` the kind the run held and, on a provider API token,
+its `own_token` check (`days_left`, and `candidates` and `listed`, the counts it singled the token out of); `census` what
+the run listed and left out before reading (`listed`, `provider_own`, `off`); `judged` how many organizations it judged;
+`run_errors` what is wrong with the run as a whole; and `exit` the code the run returned.

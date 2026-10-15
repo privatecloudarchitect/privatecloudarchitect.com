@@ -159,6 +159,26 @@ out reads like this, and the run exits 3 (from the script's tests: the reference
   {{org-5}}: unreadable (uncovered: no schedule reads it (its Entra tenant is not in --expect-tenants))
 ```
 
+## The run's own provider API token
+
+The report run read-only on 2026-10-15 at 13:18 UTC on the provider API token the reference estate keeps, a token
+the platform's token list gave an end of 2026-11-04: once with `WARN_DAYS=5`, once at the default 30, and once on a
+provider bearer. Only the lines this part adds are shown; the organizations read as that day's estate stood (five
+organizations, nine accounts kept, three leavers in step, one direct-role flag), so each run exited 4 on that flag.
+
+```
+$ WARN_DAYS=5 python3 leavers.py --redact          # VCFA_PROVIDER_REFRESH_TOKEN_FILE set
+  credential: provider API token {{name-1}}, ends 2026-11-04T22:31:54Z (20.4 days; WARN_DAYS 5)
+$ python3 leavers.py --redact                      # the same token, WARN_DAYS at its default
+  credential: provider API token {{name-1}}, ends 2026-11-04T22:31:54Z (20.4 days; WARN_DAYS 30)  FLAG credential-ends
+$ python3 leavers.py --redact                      # VCFA_PROVIDER_BEARER_FILE set instead
+  credential: provider bearer, ends an hour after its sign-in: no end date to read
+```
+
+An earlier run of the same three, at 13:16 UTC, read the same end and the same flags on the token; its provider
+bearer leg exited 3 with one call refused, which that run's driver counted without naming, and the run above found
+no call refused.
+
 ## What to read in it
 
 - **Leavers in step are the goal.** Each leaver above is disabled and holds no token, so the run changes nothing and
@@ -172,6 +192,13 @@ out reads like this, and the run exits 3 (from the script's tests: the reference
   before trusting any decision. 4 a flag nobody acknowledged: decide
   it and acknowledge it until a date. With `--execute`, 2 a close that did not hold: finish it by hand. The first that
   applies wins, so a flag never hides a lost Graph permission (3) or an open leaver (1).
+- **The `credential:` line is the job's own token.** On a provider API token it gives the end the token record holds
+  and the days left; `FLAG credential-ends` inside `WARN_DAYS` sets 4, and the fix is a rotation, not an
+  acknowledgement. A line reading `unread` sets 3: the job does not know when its own credential stops.
+- **A close reads back what it did, and a read-back that did not read is not a pass.** `held True` needs the account
+  read back disabled with no other field changed and the token list read back with none left; when either read is
+  refused or answers without its list, the line reads `tokens left unread` (or `enabled None`), `held False`, the
+  reason names the read, and the run exits 2.
 - **A direct role is a flag, never a leaver by itself.** An account that passes Entra's gate and holds a role directly
   reads keep even when no imported group carries it, because VCF Automation refuses only a user with neither; it is
   flagged `direct-role` for a person to decide. A user found only by `mail` or `otherMails` whose principal name is

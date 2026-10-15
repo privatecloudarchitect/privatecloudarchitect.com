@@ -30,7 +30,10 @@ the ids of the tokens this script issued, no secret; keep it beside the record a
 someone else made under it, is refused before anything is sent. A client made in the console is rotated and removed
 in the console. None of them acts on the client the run is signed in as, a rotation included: run them on the token of
 the administrator who made the client, never on the client's own. A teardown of a client that is not
-there removes nothing and exits 0, so it is safe to re-run. Lifetimes outside the bounds the broker held on the
+there removes nothing and exits 0, so it is safe to re-run. Every list is read to its end: the realm's API clients and
+its API tokens (people's tokens included) are read page by page, 50 to a page, to the total the fleet states, and a page
+refused, an answer with no list, or pages that end short of their total is a read that failed (exit 3), never a shorter
+list. Lifetimes outside the bounds the broker held on the
 reference estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60) are refused before anything
 is sent.
 
@@ -60,7 +63,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         a rotation included; a retirement while the client holds one token, or whose newest token this script did not
         issue last; or the fleet holds no realm to make a client in
       1 the run did not hold: a write was refused, or the read-back was not what was asked
-      3 a read failed or is undetermined: a list or the realm could not be read, the read-back could not be read, the
+      3 a read failed or is undetermined: a list or the realm could not be read (a page refused, an answer with no list,
+        or pages that end short of the total they state), the read-back could not be read, the
         operator's credential was not traded for a bearer, or an error the script did not expect
       0 the plan printed, or the run held on read-back (the client with its one role and an active token with both
         lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
@@ -208,33 +212,33 @@ def create_bodies(client_id: str, role: str, api_ttl: int, access_ttl: int, desc
 def rotate_calls(client_id: str, api_ttl: int, access_ttl: int) -> list[dict]:
     """A rotation in the order it is sent: a new token issued and proved, and nothing deleted. The old tokens go with
     --retire-old, once the integration runs on the new one."""
-    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)",
+    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)",
              "body": {}},
             {"method": "POST", "path": "/ssorealms/{realm}/api-tokens",
              "body": {"apiClientId": client_id, "tokenName": f"{client_id}-token-<UTC stamp>", "tokenType": "API_CLIENT",
                       "apiTokenTtl": api_ttl, "accessTokenTtl": access_ttl}},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)",
              "body": None},
-            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (read back: the new token active beside the old)", "body": {}}]
+            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (every page; read back: the new token active beside the old)", "body": {}}]
 
 
 def retire_calls() -> list[dict]:
     """A retirement in the order it is sent: every token older than the newest deleted, then the read-back."""
-    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)",
+    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)",
              "body": {}},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token, before the delete)",
              "body": None},
             {"method": "DELETE", "path": "/ssorealms/{realm}/api-tokens/{token id}  (each token older than the newest)", "body": None},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)",
              "body": None},
-            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (read back: one token left)", "body": {}}]
+            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (every page; read back: one token left)", "body": {}}]
 
 
 def teardown_calls(client_id: str) -> list[dict]:
-    return [{"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query", "body": {}},
+    return [{"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (every page)", "body": {}},
             {"method": "DELETE", "path": "/ssorealms/{realm}/api-tokens/{token id}  (each of the client's tokens)", "body": None},
             {"method": "DELETE", "path": f"/ssorealms/{{realm}}/api-clients/{client_id}", "body": None},
-            {"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (residue)", "body": {}}]
+            {"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: residue)", "body": {}}]
 
 
 def bounds_error(api_ttl: int | None, access_ttl: int | None) -> str | None:
@@ -266,19 +270,62 @@ def instances(fleet: Fleet, rid: str) -> dict[str, str] | None:
             if c.get("ssoEntityType") == "VCF_INSTANCE" and c.get("id")}
 
 
+# The fleet's queries take `page` (from 0) and `pageSize` as query parameters, 50 by default (the 9.1.1 specification);
+# a pageSize sent in the body is not read. The token list covers the whole realm, people's tokens included.
+PAGE_SIZE = 50
+MAX_PAGES = 10000
+
+
+def fleet_pages(fleet: Fleet, rid: str, kind: str, key: str) -> list[dict] | None:
+    """Every page of one fleet IAM query (`kind` is api-clients or api-tokens), read until pageInfo.totalCount is
+    reached, or, where an answer carries no total, until a page comes back short. None, never a shorter list, when a
+    page is refused, an answer carries no list under `key`, or the pages end before the total they state: a list read
+    in part is not a list, and a teardown or a retirement that trusted one could leave a token alive."""
+    out: list[dict] = []
+    for page in range(MAX_PAGES):
+        query = f"page={page}&pageSize={PAGE_SIZE}"
+        status, answer = fleet.call("POST", f"/ssorealms/{rid}/{kind}/query?{query}",
+                                    f"/ssorealms/{{realm}}/{kind}/query?{query}", {})
+        if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get(key), list):
+            if status == 200 and fleet.calls and isinstance(fleet.calls[-1], dict):
+                fleet.calls[-1]["shape"] = f"no {key} list in the answer"   # a 200 that lists nothing read nothing
+            return None
+        rows = [r for r in answer[key] if isinstance(r, dict)]
+        out += rows
+        total = (answer.get("pageInfo") or {}).get("totalCount") if isinstance(answer.get("pageInfo"), dict) else None
+        if isinstance(total, int) and not isinstance(total, bool):
+            if len(out) >= total:
+                break
+            if not rows:   # the pages ended before the total they state: the list moved under the read
+                if fleet.calls and isinstance(fleet.calls[-1], dict):
+                    fleet.calls[-1]["shape"] = f"the pages ended at {len(out)} of the {total} the answer states"
+                return None
+        elif len(rows) < PAGE_SIZE:
+            break
+    else:
+        return None
+    seen, unique = set(), []
+    for r in out:   # a row that moved to a later page during the read is counted once
+        ident = r.get("id") or r.get("clientUuid") or r.get("clientId")
+        if ident is None or ident not in seen:
+            unique.append(r)
+            seen.add(ident)
+    return unique
+
+
 def clients(fleet: Fleet, rid: str) -> list[dict] | None:
-    status, answer = fleet.call("POST", f"/ssorealms/{rid}/api-clients/query", "/ssorealms/{realm}/api-clients/query",
-                                {"pageSize": 500})
-    return ((answer or {}).get("apiClients") or []) if status == 200 and isinstance(answer, dict) else None
+    return fleet_pages(fleet, rid, "api-clients", "apiClients")
 
 
 def tokens(fleet: Fleet, rid: str) -> list[dict] | None:
-    status, answer = fleet.call("POST", f"/ssorealms/{rid}/api-tokens/query", "/ssorealms/{realm}/api-tokens/query", {})
-    return ((answer or {}).get("apiTokens") or []) if status == 200 and isinstance(answer, dict) else None
+    return fleet_pages(fleet, rid, "api-tokens", "apiTokens")
 
 
 def mine(rows: list[dict], client_id: str) -> list[dict]:
-    return [r for r in rows if client_id in (r.get("clientId"), r.get("clientName"), r.get("apiClientId"), r.get("principalName"))]
+    """The client's own rows: the client, and its tokens. The token list covers the whole realm, so a person's token
+    (tokenType USER) is never the client's, whatever its principal name reads."""
+    return [r for r in rows if r.get("tokenType") != "USER"
+            and client_id in (r.get("clientId"), r.get("clientName"), r.get("apiClientId"), r.get("principalName"))]
 
 
 def readback(fleet: Fleet, rid: str, client_id: str) -> dict:
@@ -446,7 +493,13 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     record["token_file_written"] = True
     record["exchange"] = prove(token)
     del token
-    state["tokens"] = [t["id"] for t in mine(tokens(fleet, rid) or [], a.client_id) if t.get("id")]
+    after = tokens(fleet, rid)
+    if after is None:   # the token is issued, but which id is its own is not known: never record a guess
+        record["partial"] = ("the client, its role and its token are made and the token is in --token-file, but the "
+                             "token list could not be read after it, so the state file holds no token id and "
+                             "--retire-old will refuse; read it again, or remove the client with --teardown --execute")
+        return EXIT_UNREAD
+    state["tokens"] = [t["id"] for t in mine(after, a.client_id) if t.get("id")]
     save_state(state_file, state)
     record["readback"] = rb = readback(fleet, rid, a.client_id)
     held = (rb.get("client_present") and rb.get("roles") == [a.role] and rb.get("role_scopes") == [scope["scopeType"]]
@@ -491,7 +544,13 @@ def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     record["tokens_before"] = len(before)
     record["exchange"] = prove(token)
     del token
-    new = [t["id"] for t in mine(tokens(fleet, rid) or [], a.client_id) if t.get("id") and t["id"] not in before]
+    after = tokens(fleet, rid)
+    if after is None:   # the new token is issued, but which id is its own is not known: never record a guess
+        record["partial"] = ("the new token is issued and in --token-file, but the token list could not be read after "
+                             "it, so the state file does not record it and --retire-old will refuse; the old tokens are "
+                             "untouched")
+        return EXIT_UNREAD
+    new = [t["id"] for t in mine(after, a.client_id) if t.get("id") and t["id"] not in before]
     if len(new) == 1:
         state["tokens"] = [*state.get("tokens", []), new[0]]
         save_state(state_file, state)
@@ -692,7 +751,8 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
 def report(record: dict) -> list[str]:
     lines = [f"{record['mode']}: API client {record['client']}"]
     for c in record.get("calls", []):
-        lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}" + (f" ({c['message']})" if c.get("message") else ""))
+        lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}" + (f" ({c['message']})" if c.get("message") else "")
+                     + (f" ({c['shape']})" if c.get("shape") else ""))
     if record.get("refused"):
         lines.append(f"  refused: {record['refused']}")
     if record.get("partial"):

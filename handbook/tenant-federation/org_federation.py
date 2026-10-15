@@ -27,8 +27,10 @@ the organization with a role. This script does both sides in the order that work
                          the one it holds), METADATA_FILE over SAML. Prints the plan; with --execute it writes the
                          settings as a round trip (only when a field differs), imports each --group ROLE=NAME with the
                          role its organization type defines, resolved from the organization's own role list, and reads
-                         every write back. It refuses to switch a federated organization's protocol or user key, and a
-                         named group that already exists under the other protocol or with other roles. Over SAML
+                         every write back. It refuses to switch an organization's protocol or user key, judged on what
+                         the organization stores and the users it holds, enabled or not (a federation switched off still
+                         holds its key, its metadata and its users), and a named group that already exists under the
+                         other protocol or with other roles; an organization with nothing stored is configured. Over SAML
                          without METADATA_FILE it prints the organization's own service-provider identifier and reply
                          URL for the tenant, and stops. It never touches Entra beyond the public endpoints
   --teardown --execute   deletes what --execute created (only that), purges it from Entra's recycle bin, and reads
@@ -39,7 +41,8 @@ the organization with a role. This script does both sides in the order that work
                          the write after an emergency roll), --secret (the client secret in NEW_SECRET_FILE, which the
                          tenant's administrator rotated) or --metadata (the SAML metadata in METADATA_FILE), and prints
                          the plan; with --execute it writes the whole body back, with the secret the organization holds
-                         or the new one, and reads every changed field back. It never touches Entra.
+                         or the new one, and reads every changed field back; when the organization already holds what
+                         was asked it writes nothing and says "nothing to change". It never touches Entra.
 
 Writes `federation.json`: the steps, their HTTP statuses, the waits Entra imposed, the setting names stored on
 read-back and any refusal verbatim. Every value from your estate (host, organization, tenant, users, ids) is replaced
@@ -56,18 +59,21 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token) or VCFA
       bearer, minted as platform-identity's plate 04, "Your provider bearer", shows); TLS_VERIFY=false on a self-signed lab CA; ENTRA_TENANT_ID; ENTRA_CLIENT_ID and either
       ENTRA_CLIENT_SECRET_FILE or ENTRA_CERT_FILE + ENTRA_KEY_FILE (the certificate form needs the `cryptography`
       package); ORG (the throwaway organization's name); ENTITLED_UPN and UNENTITLED_UPN (your test users);
-      SECRET_DAYS (OIDC secret life, default 180); OUT (default federation.json); STATE (default
+      APP_NAME (the Entra app it makes, default vcfa-<ORG>); GROUP_NAME (the entitled group it makes, default
+      vcfa-<ORG>-users); SECRET_DAYS (OIDC secret life, default 180); OUT (default federation.json); STATE (default
       org_federation.<ORG>.state.json). --update needs VCFA_HOST, the provider credential, ENTRA_TENANT_ID and ORG
       (the existing organization), NEW_SECRET_FILE for --secret, METADATA_FILE for --metadata; it writes OUT
       (default update.json). --prove --org and --configure --org need VCFA_HOST, the provider credential and
       ENTRA_TENANT_ID; --configure also APP_CLIENT_ID and, for a new app, APP_SECRET_FILE (OIDC) or METADATA_FILE
       (SAML); they write OUT (default prove.json, configure.json)
-Exit: 0 done · 1 a call or a check failed · 2 refused by what it read (a name this script did not create; no state
-      file to tear down; for --update, an organization not federated to ENTRA_TENANT_ID or a change its protocol does
-      not take; for --org, no such organization, a protocol or key switch, a role its type lacks, a named group held
-      another way, or SAML with no metadata yet, when it prints what the tenant needs) · 3 a result not known: a
-      credential refused before anything was read, a check with nothing to read yet (--prove --org over SAML before
-      any enabled SAML user has signed in), a record the scrub refused to write, or an error it did not expect (never 1) · 5 not run as asked: an unknown, missing or malformed argument, a missing environment variable
+Exit: 0 done · 1 a check failed, or a call refused while building, configuring, updating or tearing down · 2 refused
+      by what it read (a name this script did not create; no state file to tear down; for --update, an organization not
+      federated to ENTRA_TENANT_ID or a change its protocol does not take; for --org, no such organization, a protocol or
+      key switch judged on what the organization stores and the users it holds, enabled or not, a role its type lacks,
+      a named group held another way, or SAML with no metadata yet, when it prints what the tenant needs) · 3 a result
+      not known: a credential refused before anything was read, a read a proof could not make (--prove, --prove --org,
+      which only read), a check with nothing to read yet (--prove --org over SAML before any enabled SAML user has
+      signed in), a record the scrub refused to write, or an error it did not expect (never 1) · 5 not run as asked: an unknown, missing or malformed argument, a missing environment variable
       or a file that cannot be read, metadata that is not the tenant's, SECRET_DAYS of a year or more, or a Python
       older than 3.9. Nothing is sent on a 5.
 """
@@ -99,6 +105,7 @@ class ScrubError(Exception):
     """The record would carry an estate value, so it is not written. Exit 3: the run is not on record."""
 
 CLOUDAPI = "application/json;version=9.1.0"
+PAGE_SIZE = 128  # a cloudapi list is read page by page to its pageCount, so a list longer than one page is read whole
 GROUPS_ACCEPT = "application/json;version=10.0.0.0-alpha"  # the version the live group import answered on 9.1
 VCD_JSON = "application/*+json;version=9.1.0"
 OAUTH_SETTINGS = "application/vnd.vmware.admin.organizationOAuthSettings+json;version=9.1.0"
@@ -593,10 +600,13 @@ class Vcfa:
         return data, secret
 
     def pages(self, path, step, tenant=None, accept=CLOUDAPI):
-        """Every page of a cloudapi list."""
+        """Every page of a cloudapi list, to its pageCount; a page refused midway raises (CallError), never a short
+        list. A 200 without its list is a read that did not answer, and raises too."""
         out, page = [], 1
         while True:
-            _, data, _ = self.ok("GET", path, step, accept=accept, tenant=tenant, params={"page": page, "pageSize": 128})
+            _, data, _ = self.ok("GET", path, step, accept=accept, tenant=tenant, params={"page": page, "pageSize": PAGE_SIZE})
+            if not isinstance(data, dict) or "values" not in data:
+                raise CallError(f"{step}: page {page} answered without its list")
             out += data.get("values") or []
             if page >= (data.get("pageCount") or 1):
                 return out
@@ -608,8 +618,7 @@ class Vcfa:
         return {"id": rows[0]["id"], "name": rows[0]["name"]} if rows else None
 
     def role_names(self, org_urn):
-        _, data, _ = self.ok("GET", "/cloudapi/1.0.0/roles", "list roles", tenant=org_urn, params={"pageSize": 128})
-        return sorted(r["name"] for r in data.get("values", []))
+        return sorted(r["name"] for r in self.pages("/cloudapi/1.0.0/roles", "list roles", org_urn))
 
 
 class Graph:
@@ -1213,7 +1222,8 @@ def update(a):
                  key_refresh={"now": [oauth.get("autoRefreshKey"), oauth.get("keyRefreshStrategy"), oauth.get("keyRefreshFrequencyInHours")],
                               "to": [True, "ADD", a.key_refresh]} if a.key_refresh is not None else None,
                  keys={"held": len(held), "published": len(keys), "published_not_held": len(set(k["keyId"] for k in keys) - set(held))} if keys is not None else None,
-                 secret="the organization's secret is replaced by the one in NEW_SECRET_FILE (no value shown)" if a.secret else None)
+                 secret="the organization's secret is replaced by the one in NEW_SECRET_FILE (no value shown)" if a.secret else None,
+                 would_change=oidc_update(oauth, None, a.key_refresh, keys)[1] + (["clientSecret, if it differs from the one held"] if a.secret else []))
             if not a.execute:
                 print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
                 write(proto, None)
@@ -1223,9 +1233,12 @@ def update(a):
             if a.secret and new_secret != held_secret:
                 changed.append("clientSecret")
             del held_secret
-            put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{uid}/settings/oauth", "write OIDC settings", body=body, accept=VCD_JSON, ctype=OAUTH_SETTINGS)
+            if changed:
+                put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{uid}/settings/oauth", "write OIDC settings", body=body, accept=VCD_JSON, ctype=OAUTH_SETTINGS)
+                step("OIDC settings written", put_st, changed=changed)
+            else:   # the organization already holds what was asked: a write would change nothing, so none is sent
+                step("nothing to change", "nothing written", changed=changed)
             del body
-            step("OIDC settings written", put_st, changed=changed)
             back, back_secret = vcfa.settings_for_write(uid, "oauth")
             checks = {}
             if a.key_refresh is not None:
@@ -1247,15 +1260,19 @@ def update(a):
                 return EXIT_USAGE
             step("plan", "read", protocol="SAML", metadata={"certificates_now": len(metadata_certs(fed.get("samlMetadata"))),
                                                              "certificates_new": len(certs),
-                                                             "new_not_held": len(set(certs) - set(metadata_certs(fed.get("samlMetadata"))))})
+                                                             "new_not_held": len(set(certs) - set(metadata_certs(fed.get("samlMetadata"))))},
+                 would_change=["samlMetadata"] if fed.get("samlMetadata") != metadata else [])
             if not a.execute:
                 print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
                 write(proto, None)
                 return 0
             current = vcfa.settings(uid, "federation")
             body, changed = saml_update(current, metadata)
-            put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{uid}/settings/federation", "write SAML settings", body=body, accept=VCD_JSON, ctype=FEDERATION_SETTINGS)
-            step("SAML settings written", put_st, changed=changed)
+            if changed:
+                put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{uid}/settings/federation", "write SAML settings", body=body, accept=VCD_JSON, ctype=FEDERATION_SETTINGS)
+                step("SAML settings written", put_st, changed=changed)
+            else:   # the organization already holds this metadata: nothing is sent
+                step("nothing to change", "nothing written", changed=changed)
             back = vcfa.settings(uid, "federation")
             checks = {"the organization holds the new metadata's certificates": set(certs) <= set(metadata_certs(back.get("samlMetadata"))),
                       "SAML still enabled": back.get("enabled") is True}
@@ -1386,21 +1403,54 @@ def local_admin_held(users, top_role):
                and any(r.get("name") == top_role for r in u.get("roleEntityRefs") or []) for u in users)
 
 
-def switch_refusal(oauth, fed, tenant, protocol, user_key):
-    """Why --configure leaves this organization's sign-in alone, or "": a live organization's protocol or user key is
-    never switched in place (a SAML organization moved to OIDC refused its users; a move to oid split an account), an
-    organization signed in through VCF single sign-on takes no OIDC, and one federated elsewhere is not this tenant's."""
+def switch_refusal(oauth, fed, tenant, protocol, user_key, users=()):
+    """Why --configure leaves this organization's sign-in alone, or "". A protocol or user key is never switched in
+    place (a SAML organization moved to OIDC refused its users; a move to oid split an account), and that is judged on
+    what the organization stores and on the users it holds, whatever `enabled` says: a federation switched off during an
+    incident still holds its key, its metadata and its users, and a write here would switch it on under the run's
+    protocol and key. An organization signed in through VCF single sign-on is that provider's, and one whose stored
+    settings name another provider is not this tenant's. A fresh organization, with nothing stored and no federated
+    user, is configured."""
     oidc_on, saml_on = bool(oauth.get("enabled")) and not oauth.get("vidb"), bool(fed.get("enabled"))
     now = federated_to(oauth, fed, tenant)
-    if protocol == "oidc" and oauth.get("vidb"):
-        return "the organization signs in through VCF single sign-on, which excludes OIDC in one organization"
+    kinds = {u.get("providerType") for u in users or ()}
+    issuer = str(oauth.get("issuerId") or "")
+    held_key = (oauth.get("oidcAttributeMapping") or {}).get("subjectAttributeName")
+    metadata = str(fed.get("samlMetadata") or "")
+    if oauth.get("vidb"):
+        if protocol == "oidc":
+            return "the organization signs in through VCF single sign-on, which excludes OIDC in one organization"
+        return ("the organization signs in through VCF single sign-on, and its users are that provider's: federate a "
+                "tenant directly in a new organization")
     if (oidc_on or saml_on) and now is None:
         return "the organization is federated to a provider other than ENTRA_TENANT_ID"
     if now and now != protocol:
         return f"the organization is federated over {now.upper()}: move a tenant to another protocol through a new organization"
-    held_key = (oauth.get("oidcAttributeMapping") or {}).get("subjectAttributeName")
-    if now == "oidc" and held_key != user_key:
-        return f"the organization keys its users on {held_key}: move a tenant to another key through a new organization"
+    # With neither protocol live (now is None), what the organization stores and the users it holds decide: the write
+    # would switch the federation on under this run's protocol and key.
+    if protocol == "oidc":
+        if now is None:
+            held = [what for what, on in (("SAML metadata", bool(metadata)), ("a SAML entity id", bool(fed.get("samlSPEntityId"))),
+                                          ("SAML users", "SAML" in kinds)) if on]
+            if held:
+                return (f"the organization holds {' and '.join(held)}, enabled or not: move a tenant to another protocol "
+                        "through a new organization")
+            if issuer and f"login.microsoftonline.com/{tenant}" not in issuer:
+                return "the organization holds OIDC settings for a provider other than ENTRA_TENANT_ID, enabled or not"
+        if held_key and held_key != user_key:
+            return (f"the organization keys its users on {held_key} in the OIDC settings it holds, enabled or not: move a "
+                    "tenant to another key through a new organization")
+        if not held_key and (now == "oidc" or "OAUTH" in kinds):
+            return ("the organization holds OIDC users or a live OIDC federation and stores no user key, so the key they "
+                    "were made under cannot be read: move the tenant through a new organization")
+        return ""
+    if now is None:
+        if "OAUTH" in kinds:
+            return ("the organization holds OIDC users, enabled or not, and SAML would refuse them: move a tenant to "
+                    "another protocol through a new organization")
+        other = re.search(r"sts\.windows\.net/([0-9a-fA-F-]{36})/", metadata)
+        if other and other.group(1).lower() != str(tenant).lower():
+            return "the organization holds SAML metadata for a provider other than ENTRA_TENANT_ID, enabled or not"
     return ""
 
 
@@ -1536,10 +1586,11 @@ def prove_existing(a):
         log.step("read", "done", protocol=proto, org_type=org_type, user_key=key if proto == "oidc" else None,
                  imported_groups=len(r["groups"]), roles=len(r["roles"]), failed_fields=failed, differing_fields=differing,
                  **({"saml_emails": emails} if emails else {}))
-    except CallError as e:
-        log.step("refused", str(e))
-        log.write(protocol=proto, org_type=org_type, held=False)
-        return 1
+    except CallError as e:   # a proof only reads, so a read it could not make leaves the result not known: exit 3
+        log.step("read refused", str(e))
+        log.write(protocol=proto, org_type=org_type, held=False, read_failed=True)
+        print(f"\nnot proven: a read was refused ({e}); nothing is known of what it did not read (exit 3)")
+        return EXIT_UNREAD
     for name, ok in checks.items():
         log.step(f"check: {name}", "pass" if ok else "FAIL")
     for line in unrun:
@@ -1563,7 +1614,8 @@ def configure_existing(a):
     """--configure --org: the provider's side of an existing organization, from what the tenant handed over. Plan by
     default; with --execute, a settings round trip (only when a field differs), the named groups imported with the
     role the organization type defines, resolved from the organization's own role list, and every write read back.
-    It refuses a protocol or user-key switch on a federated organization, and a named group that exists another way."""
+    It refuses a protocol or user-key switch, judged on what the organization stores and the users it holds whether or
+    not its federation is switched on, and a named group that exists another way."""
     host, tenant, org_name = os.environ.get("VCFA_HOST"), os.environ.get("ENTRA_TENANT_ID"), a.org
     if not (host and tenant and org_name and a.protocol):
         print("--configure --org needs VCFA_HOST, ENTRA_TENANT_ID, --protocol and the organization's name")
@@ -1604,7 +1656,7 @@ def configure_existing(a):
 
         if a.org_type and a.org_type != org_type:
             return refuse(f"the organization is a {org_type} organization, not {a.org_type}")
-        why = switch_refusal(r["oauth"], r["fed"], tenant, a.protocol, key)
+        why = switch_refusal(r["oauth"], r["fed"], tenant, a.protocol, key, r["users"])
         if why:
             return refuse(why)
         if a.protocol == "saml" and not metadata:
@@ -1803,6 +1855,7 @@ def _run(argv=None):
         raise UsageError(f"SECRET_DAYS must be a whole number of days under a year, not {days!r}")
     run = Run(a)
     vcfa, g = Vcfa(run.host), Graph(run.tenant, run.client)
+    unread = False
     try:
         if a.teardown:
             ok = run.teardown(vcfa, g)
@@ -1814,7 +1867,11 @@ def _run(argv=None):
     except CallError as e:
         run.step("refused", str(e))
         ok = False
+        unread = bool(a.prove and not a.teardown)   # --prove only reads: a refused read is a result not known, exit 3
     run.write()
+    if unread:
+        print("not proven: a read was refused; nothing is known of what it did not read (exit 3)")
+        return EXIT_UNREAD
     return 0 if ok else 1
 
 

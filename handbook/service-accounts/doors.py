@@ -41,13 +41,16 @@ Verdict: accepted (status below 400), refused (401 or 403), other. Where the Pla
 an expectation, the row says MATCH or DIFFERS; a DIFFERS row is worth a report, because the chapter's matrix
 is built from exactly these reads. A DIFFERS row is counted on the summary line and does not change the exit: it is
 the chapter's to correct, not a fault on your estate. A surface you configured whose own token could not be minted
-(a service JWT, or a VCF Automation refresh-token grant that returned no bearer) has doors nobody read: the run prints
-NOT READ for it and exits 3, never 0.
+(a service JWT; a VCF Automation refresh-token grant or session login that returned no bearer; a vCenter session mint
+that returned no session id; an SDDC Manager token mint that returned no token) has doors nobody read: the run prints
+NOT READ for that surface and exits 3, never 0. A refused mint that is itself a row also prints its row: the row says
+what the mint answered, and NOT READ says what that left unread.
 
 Use:  python3 doors.py           it takes no argument; --help prints this
 Exit: 0 every door of every surface configured was read and returned an HTTP status
       3 a read failed: a transport error stopped one (no status), the broker mint failed, a configured surface's own
-        token could not be minted so its doors were not read, or an error the script did not expect
+        token, session or bearer could not be minted so the doors behind it were not read, or an error the script did
+        not expect
       5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, a credential file (any NAME_FILE,
         VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
@@ -321,6 +324,8 @@ def _run():
         if t:
             st, n = rights_count(host, t); counts["Basic session"] = n
             row("VCF Automation, rights", "session bearer", st, "accepted", f"{n} effective rights" if n is not None else "")
+        elif st is not None:
+            not_read("VCF Automation, the Basic session login", f"the session login returned no bearer (HTTP {st})")
     else:
         print("\n  VCF Automation, Basic session login   skipped: VCFA_USER and VCFA_PASSWORD_FILE not set")
     if host and os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
@@ -334,7 +339,8 @@ def _run():
     else:
         print("\n  VCF Automation, provider api-token    skipped: VCFA_PROVIDER_REFRESH_TOKEN_FILE not set")
     if len(counts) > 1:
-        print("\n  the arrival rule, in numbers: " + " · ".join(f"{k}: {v}" for k, v in counts.items()))
+        print("\n  the arrival rule, in numbers: "
+              + " · ".join(f"{k}: {v if v is not None else 'not read'}" for k, v in counts.items()))
     # ---- components with a flow of their own
     if os.environ.get("VC_HOST") and os.environ.get("VC_USER") and secret("VC_PASSWORD"):
         print("\nvCenter, its own session")
@@ -344,6 +350,8 @@ def _run():
         if st and st < 400 and isinstance(sid, str):
             st, _, _ = req("GET", f"https://{os.environ['VC_HOST']}/api/vcenter/datacenter", {"vmware-api-session-id": sid, "Accept": "application/json"})
             row("vCenter API", "session id", st, "accepted")
+        elif st is not None:
+            not_read("vCenter", f"the session mint returned no session id (HTTP {st})")
     else:
         print("\n  vCenter                              skipped: VC_HOST, VC_USER, VC_PASSWORD_FILE not all set")
     if os.environ.get("SDDC_HOST") and os.environ.get("SDDC_USER") and secret("SDDC_PASSWORD"):
@@ -355,6 +363,8 @@ def _run():
         if t:
             st, _, _ = req("GET", f"https://{os.environ['SDDC_HOST']}/v1/sddc-managers", {"Authorization": f"Bearer {t}", "Accept": "application/json"})
             row("SDDC Manager API", "its bearer", st, "accepted")
+        elif st is not None:
+            not_read("SDDC Manager", f"the token mint returned no access token (HTTP {st})")
     else:
         print("\n  SDDC Manager                         skipped: SDDC_HOST, SDDC_USER, SDDC_PASSWORD_FILE not all set")
     print(f"\n{len(ROWS)} pairs read; {sum(1 for r in ROWS if r[4].startswith('DIFFERS'))} differ from the chapter; {sum(1 for r in ROWS if r[2] is None)} without an answer")

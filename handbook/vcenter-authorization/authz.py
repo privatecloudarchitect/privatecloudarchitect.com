@@ -11,11 +11,11 @@ administrator's privilege query reports it as effective.
 Read-only by default:
 
   1. GRANTS: every permission on each vCenter, global and per-object, from the vSphere Automation API's list
-     action, classified by how it behaves for a broker session: reserved group (a VCF role arriving); local, split
-     three ways (VCF-managed: svc- and wcp- accounts and solution users, left to VCF; Administrators: the local
-     administrator and its group; other: what an operator made, and groups vCenter or another product ships under
-     their own names, each read with its members); directory user, directory group, realm spelling (inert behind
-     an AD/LDAP provider, not measured behind a federated one), or another provider's;
+     action, every page of it, classified by how it behaves for a broker session: reserved group (a VCF role
+     arriving); local, split three ways (VCF-managed: svc- and wcp- accounts and solution users, left to VCF;
+     Administrators: the local administrator and its group; other: what an operator made, and groups vCenter or
+     another product ships under their own names, each read with its members); directory user, directory group,
+     realm spelling (inert behind an AD/LDAP provider, not measured behind a federated one), or another provider's;
   2. ROLES: the role catalog, and the custom roles whose copies differ between vCenters;
   3. SESSIONS (pyVmomi, optional): who is signed in now, by principal class and client agent. Addresses,
      session keys and login times are never read into the record.
@@ -72,14 +72,26 @@ LOCAL_DOMAIN, REALM_DOMAIN and OTHER_DOMAINS) is a failed read: the run prints N
 terminal only, records realmNamedNothing, and exits 3. Name in OTHER_DOMAINS the domains you know are another identity
 provider's, and the vCenter is placed (on the reference estate, the workload vCenter that runs a Supervisor held one).
 
+The realm is not the directory domain, refused. The census tests the realm's name before the directory domains and
+another provider's, so a REALM_DOMAIN that names a DIRECTORY_DOMAINS or OTHER_DOMAINS entry would class every working
+grant in that domain realm-spelled: exit 1 would say to remove them, and --remove would accept their ids. So a
+REALM_DOMAIN equal to any of those entries, compared case-insensitively after trimming, is a usage error (exit 5) found
+before anything is read, and so is one equal to LOCAL_DOMAIN, where every grant sorts as local first and no grant could
+ever read realm-spelled.
+
+Paged lists. The permission and role lists are paged: an answer that carries a marker has more after it, and the next
+page is asked for with that marker until an answer carries none. A page refused, or a marker answered twice, is a list
+not read (exit 3). A permission list with no permission in it is too: VC_USER, an administrator, holds one.
+
 Environment:
   VC_HOSTS            comma-separated vCenter FQDNs (one, with --remove)
   VC_USER             an administrator of those vCenters, user@domain
   VC_PASSWORD_FILE    a file holding that password (mode 0600); VC_PASSWORD is read if it is not set
   REALM_DOMAIN        the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); not the
-                      broker tenant an API client's session carries (CUSTOMER by default). Required once the estate
-                      has a realm, and by --where-realm, --remove and the probes; unset, the census reads the estate
-                      as one with no realm yet
+                      broker tenant an API client's session carries (CUSTOMER by default), and never a directory
+                      domain: one equal to a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry is refused (exit 5).
+                      Required once the estate has a realm, and by --where-realm, --remove and the probes; before a
+                      realm, run with --no-realm
   DIRECTORY_DOMAINS   required: comma-separated directory domains under the broker's identity provider (or, before
                       the realm, the vCenter's own directory identity sources). Unset, every directory grant reads as
                       another provider's and the census would count none, so the script refuses to start without it
@@ -101,16 +113,17 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         moved; or a probe that left residue (its folder, its tag category, or a grant of a probe role)
       1 the census read realm-spelled grants: remove them (--where-realm names them, --remove removes them). Only
         with REALM_DOMAIN set; before a realm there is no such class
-      3 a read failed or a result is undetermined: a vCenter refused the session or the permission or role list,
-        the session list could not be read, a vCenter on which DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no
-        grant while another provider's grants are there, a vCenter on which REALM_DOMAIN names no grant while grants
+      3 a read failed or a result is undetermined: a vCenter refused the session or a page of the permission or role
+        list, a permission list with no permission in it, the session list could not be read, a vCenter on which
+        DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no grant while another provider's grants are there, a vCenter on which REALM_DOMAIN names no grant while grants
         of a domain in none of the domains given are there (a misspelled realm hides its grants there), a probe that
         could not run its cases, or an error the script did not expect. Nothing is known about what was not read
       0 nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean
         (with --remove: the plan printed, or every named grant removed and nothing else moved)
-      5 a usage error, before anything is read: an argument or environment variable missing or wrong, an id --remove
-        cannot name as a realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it, a Python
-        older than 3.10; or the record refused because an estate value survived the scrub (nothing is written)
+      5 a usage error, before anything is read: an argument or environment variable missing or wrong, a REALM_DOMAIN
+        that names a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, an id --remove cannot name as a
+        realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it, a Python older than 3.10; or the
+        record refused because an estate value survived the scrub (nothing is written)
 """
 import argparse
 import base64
@@ -226,20 +239,59 @@ class Rest:
             self.token = None
 
 
-def permissions(rest):
-    """Every permission, global and per-object. A GET on the collection answers 404 on vCenter 9.1; the
-    list is the action=list POST with an empty filter, and global ones carry object type GlobalAcl."""
-    st, body = rest.call("POST", "/api/vcenter/authorization/permissions?action=list", {})
-    if st != 200 or not isinstance(body, dict) or not isinstance(body.get("items"), list):
-        raise ReadError(f"the permission list answered {st}")
-    return body["items"]
+# The page size the lists are asked for. None sends no iteration, and vCenter returns "only the first ... that fit in a
+# size defined by the service" (the API's own metadata); a size set here may be lowered by a service policy. Either way
+# every page is read; 1 proves it.
+PAGE_SIZE = None
 
 
-def roles(rest):
-    st, body = rest.call("GET", "/api/vcenter/authorization/roles")
-    if st != 200 or not isinstance(body, dict) or not isinstance(body.get("items"), list):
-        raise ReadError(f"the role list answered {st}")
-    return {str(i["role"]): i["info"] for i in body["items"]}
+def pages(what, ask):
+    """Every item of a paged vSphere Automation list. ``ask(marker)`` sends one request and returns its status and
+    body. An answer whose ``marker`` is set has more items after it, and the next page is asked for with that marker;
+    an answer with no marker has returned the last of them. A page refused, an answer without its items list, or a
+    marker that is not a string or was answered before, is a list not read (ReadError, exit 3)."""
+    out, marker, seen = [], None, set()
+    while True:
+        st, body = ask(marker)
+        page = f" on page {len(seen) + 1}" if seen else ""
+        if st != 200 or not isinstance(body, dict) or not isinstance(body.get("items"), list):
+            raise ReadError(f"the {what} list answered {st}{page}")
+        out += body["items"]
+        marker = body.get("marker")
+        if marker is None or marker == "":
+            return out
+        if not isinstance(marker, str) or marker in seen:
+            raise ReadError(f"the {what} list answered a marker it had answered before, or one that is not a string, "
+                            f"on page {len(seen) + 1}")
+        seen.add(marker)
+
+
+def permissions(rest, page_size=None):
+    """Every permission, global and per-object, every page. A GET on the collection answers 404 on vCenter 9.1; the
+    list is the action=list POST, and global ones carry object type GlobalAcl. The page size and the marker go in the
+    body's ``iterate``. A list with no permission in it read nothing: VC_USER, an administrator, holds one."""
+    size = PAGE_SIZE if page_size is None else page_size
+
+    def ask(marker):
+        it = {k: v for k, v in (("page_size", size), ("marker", marker)) if v}
+        return rest.call("POST", "/api/vcenter/authorization/permissions?action=list", {"iterate": it} if it else {})
+
+    items = pages("permission", ask)
+    if not items:
+        raise ReadError("the permission list answered with no permission in it, though the administrator that read it "
+                        "holds one")
+    return items
+
+
+def roles(rest, page_size=None):
+    """The role catalog, every page: the page size and the marker go in the query."""
+    size = PAGE_SIZE if page_size is None else page_size
+
+    def ask(marker):
+        query = urllib.parse.urlencode([(k, v) for k, v in (("page_size", size), ("marker", marker)) if v])
+        return rest.call("GET", "/api/vcenter/authorization/roles" + (f"?{query}" if query else ""))
+
+    return {str(i["role"]): i["info"] for i in pages("role", ask)}
 
 
 def soap(host, user, password):
@@ -329,6 +381,34 @@ def other_domains_declared():
     return {x.strip().lower() for x in os.environ.get("OTHER_DOMAINS", "").split(",") if x.strip()}
 
 
+REALM_IS = "REALM_DOMAIN is the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms)"
+
+
+def realm_overlap(realm, directories, others=(), local=""):
+    """Why REALM_DOMAIN cannot be read, when it names a domain the run was given as something else; else None.
+    classify() tests the realm before a directory domain or another provider's, so a realm typed as one of them would
+    class every working grant in it realm-spelled: exit 1 would say to remove them and --remove would accept their
+    ids. The local domain is tested first, so a realm typed as it could never class a grant realm-spelled. Compared
+    case-insensitively after trimming; ``local`` empty is VSPHERE.LOCAL, the default."""
+    r = (realm or "").strip()
+    if not r:
+        return None
+    for var, entry in [("DIRECTORY_DOMAINS", d) for d in directories] + [("OTHER_DOMAINS", d) for d in others]:
+        if entry.strip().lower() == r.lower():
+            what = ("a directory domain is the one your directory spells its users and groups in, DOMAIN\\user, which a "
+                    "broker session carries" if var == "DIRECTORY_DOMAINS"
+                    else "OTHER_DOMAINS names the domains you know are another identity provider's")
+            return (f"REALM_DOMAIN ({r}) and {var} ({entry.strip()}) name the same domain. {REALM_IS}; {what}. Read as "
+                    "one, every working grant in that domain would be classed realm-spelled and named for removal. Set "
+                    "REALM_DOMAIN to the realm's name")
+    lo = (local or "").strip()
+    if r.lower() == (lo or "VSPHERE.LOCAL").lower():
+        return (f"REALM_DOMAIN ({r}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same domain. "
+                f"{REALM_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in that domain sorts "
+                "as local and no realm-spelled grant could be found. Set REALM_DOMAIN to the realm's name")
+    return None
+
+
 def unplaced(others, declared):
     """Of the domains read as another provider's (domain to grant count), the ones OTHER_DOMAINS does not name."""
     return {d: n for d, n in others.items() if d.lower() not in declared}
@@ -385,7 +465,11 @@ def grant_key(p):
 def removal_plan(perms, ids, realm, directories):
     """The grants --remove would delete, by id, or the reason it refuses (a usage error: nothing is sent). An id
     that is not on the vCenter, and an id that is not a realm-spelled grant, are refused: this script removes only
-    the class it exists to clean up."""
+    the class it exists to clean up. A realm that names a directory, another provider's or the local domain is refused
+    first: read as the realm, that domain's working grants would pass as realm-spelled."""
+    problem = realm_overlap(realm, directories, sorted(other_domains_declared()), os.environ.get("LOCAL_DOMAIN", ""))
+    if problem:
+        return None, problem
     by_id = {str(p.get("permission")): p for p in perms}
     unknown = [i for i in ids if i not in by_id]
     if unknown:
@@ -861,7 +945,8 @@ def _settings(a):
     hosts = _hosts()
     user, password = os.environ.get("VC_USER", "").strip(), secret("VC_PASSWORD")
     realm = os.environ.get("REALM_DOMAIN", "").strip()
-    directories = [x.strip().lower() for x in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if x.strip()]
+    given = [x.strip() for x in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if x.strip()]
+    directories = [x.lower() for x in given]
     if not hosts or not user or not password:
         raise UsageError("VC_HOSTS, VC_USER and VC_PASSWORD_FILE (or VC_PASSWORD) are required")
     if not directories:
@@ -872,6 +957,10 @@ def _settings(a):
     if not realm and not a.no_realm:
         raise UsageError("REALM_DOMAIN is required, or --no-realm to declare an estate with no realm yet: left to infer "
                          "it from a variable not set, a realm-spelled grant reads as another provider's (X-197)")
+    others = [x.strip() for x in os.environ.get("OTHER_DOMAINS", "").split(",") if x.strip()]
+    overlap = realm_overlap(realm, given, others, os.environ.get("LOCAL_DOMAIN", ""))
+    if overlap:
+        raise UsageError(overlap)
     removing = bool(a.remove)
     if a.execute and not removing:
         raise UsageError("--execute goes with --remove; the census and the probes take no --execute")

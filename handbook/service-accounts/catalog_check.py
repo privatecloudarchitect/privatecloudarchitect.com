@@ -17,10 +17,14 @@ holds alone: an owner, a role, both lifetimes and a rotation date. A client that
 entry has no owner or no next_due, fails; so does one with no role, or a token missing a lifetime; a client holding
 no token, or a token that expires before its entry's next_due, is a warning. Every name in a census record is a
 placeholder, so the join is on keyed fingerprints: run the census with FINGERPRINT_KEY_FILE set, and give this
-script the same file. The join first checks that the census read: a record whose own exit is not 0, that holds a
-failed call to VCF Operations' fleet identity plane, or that carries no API client list (a --orgs-only record reads
-no fleet) is not a read, and the join stops there with exit 3, because a census refused on its API clients would
-otherwise read as an estate with none.
+script the same file. The join first checks that the census read, each check on its own whatever the record's exit
+says. A record is not a read when its own exit is not 0; when a call to VCF Operations' fleet identity plane failed,
+or answered without the list the read needs (census.py marks such a call `shape`); when it carries no API client
+list or no realm list (a --orgs-only record reads no fleet); when it lists no realm, or did not query the API client
+and token lists of every realm it lists; or when an API client line carries no roles or tokens list, or, in a
+fingerprinted record, no fingerprint. The join then stops with exit 3, because a census that did not read its API
+clients would otherwise pass as an estate with none. An empty API client list from a read that passes every check is
+a read: the run says that zero were joined, and why the empty list is the estate's.
 
 Use:  python3 catalog_check.py [CATALOG.json] [--today YYYY-MM-DD] [--census CENSUS.json]
 Exit: 0 every entry complete and not due inside the window, and with --census every API client complete
@@ -28,9 +32,10 @@ Exit: 0 every entry complete and not due inside the window, and with --census ev
         token expiring before its rotation date), and no failure
       2 a failure (a field missing, a date overdue or unreadable, a secret in the file, an API client without an
         owner, a role, both lifetimes or a rotation date)
-      3 the census record is not a read (its exit is not 0, a fleet identity call failed, or it has no API client
-        list), or an error the script did not expect. It is checked before any entry is printed, and nothing is
-        joined, because nothing about the API clients is known
+      3 the census record is not a read (its exit is not 0, a fleet identity call failed or was marked `shape`, it has
+        no API client list or no realm list, a realm's client or token list was not queried, or a client line lacks its
+        roles, tokens or fingerprint), or an error the script did not expect. It is checked before any entry is
+        printed, and nothing is joined, because nothing about the API clients is known
       5 a usage error: an argument this script does not take, a --today that is not a date, a catalog or census file
         that cannot be read, a catalog that is not one (no JSON object with a credentials list of objects), FINGERPRINT_KEY_FILE unset or unreadable, a census record without fingerprints or made
         under another key, or a Python older than 3.10
@@ -43,6 +48,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import sys
 from datetime import date, timedelta
 
@@ -132,29 +138,72 @@ def census_join(catalog: dict, census: dict, key: bytes) -> list[tuple[dict, dic
 
 
 EXIT_UNREAD, EXIT_USAGE = 3, 5
+FLEET = "vcf-operations"
+
+
+def realms_queried(calls: list, kind: str) -> set[str]:
+    """The realms whose `kind` list (api-clients or api-tokens) the census queried: one path segment per realm, every
+    page of one realm's list counted once."""
+    found = set()
+    for c in calls:
+        if isinstance(c, dict) and c.get("plane") == FLEET:
+            m = re.search(rf"/ssorealms/([^/?]+)/{kind}/query(?:\?|$)", str(c.get("path") or ""))
+            if m:
+                found.add(m.group(1))
+    return found
 
 
 def census_unread(record: dict) -> str | None:
     """Why a census record is not a read of the API clients, or None when it is one. A census that was refused its
     fleet reads still writes a record, and its API client list is then empty, so an empty list proves nothing until
-    the run's own exit, its calls and the list itself are checked."""
+    the run's own exit, its calls and the list itself are checked. Each check stands on its own, whatever the record's
+    exit says: a writer that marked a call and still wrote exit 0 is refused all the same."""
     if not isinstance(record, dict):
         return "it is not a census record"
     if record.get("orgs_only"):
         return "it is a --orgs-only record, which reads no fleet and so no API client"
-    if record.get("exit") != 0:
-        return f"the census exited {record.get('exit')!r}, not 0: a read failed, so its counts are not the estate's"
+    code = record.get("exit")
+    if isinstance(code, bool) or code != 0:
+        return f"the census exited {code!r}, not 0: a read failed, so its counts are not the estate's"
     calls = record.get("calls")
     if not isinstance(calls, list):
         return "it carries no list of the calls the census made, so nothing says its fleet reads answered"
-    failed = [c for c in calls if isinstance(c, dict) and c.get("plane") == "vcf-operations"
-              and (not isinstance(c.get("status"), int) or c["status"] >= 400)]
+    fleet = [c for c in calls if isinstance(c, dict) and c.get("plane") == FLEET]
+    failed = [c for c in fleet if isinstance(c.get("status"), bool) or not isinstance(c.get("status"), int)
+              or c["status"] >= 400]
     if failed:
         return f"{len(failed)} of its fleet identity call(s) failed, so an API client it lists none of may be one it did not read"
-    if not any(isinstance(c, dict) and c.get("plane") == "vcf-operations" for c in calls):
+    shaped = [c for c in fleet if c.get("shape")]
+    if shaped:
+        why = "; ".join(sorted({str(c["shape"]) for c in shaped}))
+        return (f"{len(shaped)} of its fleet identity call(s) answered without the list the read needs ({why}), so an "
+                "empty list there is an unread one")
+    if not fleet:
         return "it made no call to the fleet identity plane"
-    if not isinstance((record.get("summary") or {}).get("api_clients"), list):
+    summary = record.get("summary") if isinstance(record.get("summary"), dict) else {}
+    clients = summary.get("api_clients")
+    if not isinstance(clients, list):
         return "it carries no API client list (summary.api_clients)"
+    realms = summary.get("realms")
+    if not isinstance(realms, list):
+        return "it carries no realm list (summary.realms), so nothing says whose API clients it read"
+    if not realms:
+        return "it lists no realm, so it queried no API client list, and a client list it never queried is not an empty one"
+    for kind, what in (("api-clients", "API clients"), ("api-tokens", "API tokens")):
+        queried = len(realms_queried(fleet, kind))
+        if queried < len(realms):
+            return f"it lists {len(realms)} realm(s) and queried the {what} of {queried}, so the rest are unread"
+    for i, c in enumerate(clients, 1):
+        if not isinstance(c, dict):
+            return f"its API client line {i} is not an object"
+        gaps = [k for k in ("roles", "tokens") if not isinstance(c.get(k), list)]
+        if gaps:
+            return (f"its API client line {i} carries no {' and no '.join(gaps)} list, so a role or a token missing from "
+                    "the record would read as one missing from the estate")
+        if not all(isinstance(t, dict) for t in c["tokens"]):
+            return f"its API client line {i} holds a token line that is not an object"
+        if record.get("fingerprint_key_check") and not c.get("fingerprints"):
+            return f"its API client line {i} carries no fingerprint, so no catalog entry could be joined to it"
     return None
 
 
@@ -270,8 +319,15 @@ def _run(argv: list[str]) -> int:
             print(f"        {r}")
     if census is not None:
         joined = census_join(catalog, census, key)
-        print(f"\nAPI clients in the census of {census.get('captured', '?')}: {len(joined)}, joined to the catalog by fingerprint "
-              "(the census read its fleet identity plane with no call refused)\n")
+        realms = len(census["summary"]["realms"])
+        read = (f"the census queried the API client and token lists of its {realms} realm(s), with no call refused or "
+                "answered without its list")
+        if joined:
+            print(f"\nAPI clients in the census of {census.get('captured', '?')}: {len(joined)}, joined to the catalog by "
+                  f"fingerprint ({read})\n")
+        else:
+            print(f"\nAPI clients in the census of {census.get('captured', '?')}: 0, so none is joined to the catalog: {read}, "
+                  "and those lists hold no API client")
         for client, entry, state, reasons in joined:
             worst = max(worst, {"ok": 0, "warn": 1, "fail": 2}[state])
             print(f"  {state:<5} {client.get('name')!s:<24} catalog {(entry or {}).get('name') or '-':<20} "

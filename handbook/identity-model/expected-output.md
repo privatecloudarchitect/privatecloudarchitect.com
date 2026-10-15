@@ -148,6 +148,29 @@ FAILED vcf-operations GET /api/fleet-management/iam/roles: 403 403
 The run above it used a VCF single sign-on user's API token holding VCF Administrator. A role between the two was not
 tried, and neither was an API client holding VCF Administrator.
 
+## An answer without its list
+
+No reference run produced this; the companion's tests hold it. A list read that answers 200 without the list its key
+names read nothing, so it is never counted as an empty list: the call is printed as failed with the key it lacked, the
+print opens with NOT READ, and the run exits 3. Here the API client query answered without `apiClients`, on the test
+fixture's fleet; the lines between are the fixture's and are left out:
+
+```
+$ python3 census.py --redact
+NOT READ: 1 fleet identity read(s) refused or failed; a line below that counts 0 or none is unread, not empty. The credential's role must read the fleet identity plane.
+...
+API clients: 0
+...
+FAILED vcf-operations POST /api/fleet-management/iam/ssorealms/{{id-3}}/api-clients/query: 200 no apiClients list in the answer
+
+12 call(s), 1 failed; census.json written with every estate value replaced
+```
+
+A tool that reads the record takes it as a read only when its exit is 0 and no fleet call failed, so
+`catalog_check.py --census` refuses this one rather than reading it as a realm with no API client. A list of no
+broker, and with `--orgs-only` a list of no organization, fail the same way: the census's own bearer came from a
+broker, and the provider's own System organization is in its list.
+
 ## The same census as an API client holding VCF Administrator
 
 The same day, a throwaway API client holding VCF Administrator at realm scope ran the census on the fleet plane: every

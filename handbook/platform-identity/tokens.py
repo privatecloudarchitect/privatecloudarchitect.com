@@ -10,10 +10,11 @@ out, and the error you get back almost never names one. A platform bearer and th
 minted it run on two different clocks, and knowing which one expired decides whether you re-mint in
 a command or in a console.
 
-    python tokens.py                      read a token from $TOKEN
-    python tokens.py --file t.txt         read it from a file
-    cat t.txt | python tokens.py -        read it from stdin
-    python tokens.py --kubeconfig         every credential in your kubeconfig, no token needed
+    python3 tokens.py -                   read it from stdin: paste it, then Ctrl-D (it stays out of your shell history)
+    python3 tokens.py --file t.txt        read it from a file, mode 0600
+    python3 tokens.py --kubeconfig        every credential in your kubeconfig, no token needed
+    python3 tokens.py                     read a token from $TOKEN, when a tool already set it (typing
+                                          `export TOKEN=...` at a prompt puts the bearer in your shell history)
 
 Nothing is written anywhere.
 
@@ -246,7 +247,7 @@ def _run(argv: list[str] | None = None) -> int:
         raw = os.environ.get("TOKEN", "")
         if not raw:
             ap.print_help()
-            print("\nno token given: set $TOKEN, pass --file, or pipe one with '-'")
+            print("\nno token given: paste or pipe one with '-', pass --file, or set $TOKEN")
             return EXIT_USAGE
 
     raw = raw.strip()

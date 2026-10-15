@@ -73,7 +73,10 @@ Use:  python3 census.py [--redact] [--egress-metadata-url URL]
 Exit, the first that applies, so a scheduler reads one state from one number:
       0 recorded, every call answered
       3 a read failed or is not known: a call failed or answered without what the read needs, such as a vCenter's
-        session POST with no session id (the record is still written and names the call; a refused fleet read opens
+        session POST with no session id, a list read whose answer holds no list (a 200 without its list key is
+        not an empty list), a list of no broker (the census's own bearer came from one) or, as the provider, of no
+        organization (the provider's own System organization is one) (the record is still written and names the
+        call; a refused fleet read opens
         the print with NOT READ, so its zero counts are not taken for the estate's), the credential could
         not be obtained, --orgs-only read an organization signing in through VCF single sign-on whose issuer
         BROKER_HOSTS does not name (so the brokers given miss at least the one the platform signs in through), or an
@@ -180,15 +183,35 @@ def host_of(url: str | None) -> str | None:
     return urllib.parse.urlparse(url).hostname if url else None
 
 
-def items(body: object, key: str | None = None) -> list:
-    """The list in an answer: the answer itself, the list under `key` (a named key is authoritative), or the first."""
+def listed(body: object, key: str | None = None) -> list | None:
+    """The list in an answer, or None when the answer holds none: the answer itself when it is a list, the list under
+    `key` when one is named (a named key is authoritative: another list in the body is not it, and its absence is not
+    an empty list), or with no key the first list in the body."""
     if isinstance(body, list):
         return body
     if isinstance(body, dict):
         if key is not None:
-            return body[key] if isinstance(body.get(key), list) else []
-        return next((v for v in body.values() if isinstance(v, list)), [])
-    return []
+            return body[key] if isinstance(body.get(key), list) else None
+        return next((v for v in body.values() if isinstance(v, list)), None)
+    return None
+
+
+def shape_error(calls: list, why: str) -> None:
+    """Mark the last call as answered without what the read needs, so failed() counts it and the run exits 3. A call
+    that already failed (a refusal, no answer) keeps its own reason."""
+    last = calls[-1] if calls else None
+    if last is not None and (last.get("status") or 0) < 400 and not last.get("error") and not last.get("shape"):
+        last["shape"] = why
+
+
+def items(reader: Reader, body: object, key: str | None = None) -> list:
+    """The list a list read answered. An answer that came back without its list, a 200 missing its list key included,
+    read nothing: the call is marked, the run exits 3, and an empty list here never stands for an empty estate."""
+    got = listed(body, key)
+    if got is None:
+        shape_error(reader.calls, f"no {key} list in the answer" if key else "no list in the answer")
+        return []
+    return got
 
 
 # ── HTTP, standard library only ──────────────────────────────────────────────────────────────────────────────────
@@ -278,7 +301,7 @@ def fleet_pages(ops: Reader, method: str, path: str, key: str, body: object = No
     out, page = [], 0
     while True:
         answer = ops.call(method, f"{path}?page={page}" if page else path, body)
-        got = items(answer, key)
+        got = items(ops, answer, key)
         out += got
         total = (answer.get("pageInfo") or {}).get("totalCount") if isinstance(answer, dict) else None
         if not got or not isinstance(total, int) or len(out) >= total:
@@ -287,14 +310,12 @@ def fleet_pages(ops: Reader, method: str, path: str, key: str, body: object = No
 
 
 def vcfa_pages(vcfa: Reader, path: str) -> list:
+    """Every page of a VCF Automation list: `page` counts from 1, and pageCount says when to stop. A page without its
+    `values` list read nothing, so it is a failed read, never "no organizations"."""
     out, page = [], 1
     while True:
         answer = vcfa.call("GET", f"{path}?page={page}&pageSize=128", accept=CLOUDAPI)
-        last = vcfa.calls[-1]
-        if not (isinstance(answer, dict) and isinstance(answer.get("values"), list)) and (last.get("status") or 0) < 400 \
-                and not last.get("error"):
-            last["shape"] = "no values list in the answer"   # a page that lists nothing read nothing: never "no orgs"
-        out += items(answer, "values")
+        out += items(vcfa, answer, "values")
         if not isinstance(answer, dict) or page >= (answer.get("pageCount") or 1):
             return out
         page += 1
@@ -351,15 +372,19 @@ def vc_session(host: str, user: str, password: str, calls: list) -> Reader | Non
 def brokers(ops: Reader) -> list[dict]:
     """The identity plane's brokers. The fleet inventory lists an appliance; an embedded broker lives inside a
     management vCenter and appears only here."""
-    found = [keep(v, BROKER) for v in items(ops.get(f"{IAM}/vidbs"), "vidbs")]
+    found = [keep(v, BROKER) for v in items(ops, ops.get(f"{IAM}/vidbs"), "vidbs")]
+    if not found:   # the bearer this census reads on came from a broker, so a list of none did not read the plane
+        shape_error(ops.calls, "no broker in the list, where the census's own bearer came from one")
     return sorted(found, key=lambda b: b.get("fqdn") or "")
 
 
 def realms(ops: Reader) -> list[dict]:
     """Each realm in full: the list carries a summary, the realm's own read carries its coverage and issues."""
     out = []
-    for r in items(ops.get(f"{IAM}/ssorealms"), "ssoRealms"):
+    for r in items(ops, ops.get(f"{IAM}/ssorealms"), "ssoRealms"):
         detail = ops.get(f"{IAM}/ssorealms/{r['id']}")
+        if not (isinstance(detail, dict) and detail.get("id")):
+            shape_error(ops.calls, "no realm in the answer")   # the summary is kept; the run says it is not the realm
         out.append(keep(detail if isinstance(detail, dict) and detail.get("id") else r, REALM))
     return sorted(out, key=lambda r: r.get("id") or "")
 
@@ -367,7 +392,9 @@ def realms(ops: Reader) -> list[dict]:
 def provider(ops: Reader, idp_id: str) -> dict:
     """The realm's identity provider. Of a federated provider's URLs only the host is kept."""
     p = ops.get(f"{IAM}/identity-providers/{idp_id}")
-    p = p if isinstance(p, dict) else {"id": idp_id}
+    if not (isinstance(p, dict) and p.get("id")):
+        shape_error(ops.calls, "no provider in the answer")
+        p = {"id": idp_id}
     cfg = p.get("idpConfig") or {}
     out = keep(p, PROVIDER)
     hosts = {"discoveryHost": host_of((cfg.get("oidcConfiguration") or {}).get("discoveryEndpoint")),
@@ -384,12 +411,13 @@ def identity_plane(ops: Reader) -> dict:
 def realm_clients(ops: Reader, realm_id: str) -> dict:
     """What can sign in to a realm without a person: API clients and their tokens, emergency clients, OAuth apps."""
     base = f"{IAM}/ssorealms/{realm_id}"
-    apps = items(ops.get(f"{base}/oauth-apps"), "oauthApps")
+    apps = items(ops, ops.get(f"{base}/oauth-apps"), "oauthApps")
     return {
         "realmId": realm_id,
         "api_clients": [keep(c, API_CLIENT) for c in fleet_pages(ops, "POST", f"{base}/api-clients/query", "apiClients", {})],
         "api_tokens": [keep(t, API_TOKEN) for t in fleet_pages(ops, "POST", f"{base}/api-tokens/query", "apiTokens", {})],
-        "emergency_clients": [keep(e, EMERGENCY) for e in items(ops.get(f"{base}/emergency-clients"), "emergencyClients")],
+        "emergency_clients": [keep(e, EMERGENCY)
+                              for e in items(ops, ops.get(f"{base}/emergency-clients"), "emergencyClients")],
         "oauth_apps": [{**keep(a, ("clientName", "clientId")),
                         "redirectHosts": sorted({h for h in map(host_of, a.get("redirectUrls") or []) if h})}
                        for a in apps],
@@ -400,11 +428,15 @@ def fleet(ops: Reader) -> dict:
     """The whole fleet IAM plane, read once."""
     out = identity_plane(ops)
     out["directories"] = [{"idpId": p["id"], **keep(d, DIRECTORY)} for p in out["providers"]
-                          for d in items(ops.get(f"{IAM}/identity-providers/{p['id']}/ldap-directories"), "ldapDirectories")]
+                          for d in items(ops, ops.get(f"{IAM}/identity-providers/{p['id']}/ldap-directories"),
+                                         "ldapDirectories")]
     out["clients"] = [realm_clients(ops, r["id"]) for r in out["realms"]]
     out["auth_sources"] = [keep(a, AUTH_SOURCE) for a in
-                           items(ops.call("POST", f"{IAM}/components/auth-sources/query", {}), "iamComponentAuthSources")]
+                           items(ops, ops.call("POST", f"{IAM}/components/auth-sources/query", {}),
+                                 "iamComponentAuthSources")]
     settings = ops.get(f"{IAM}/settings")
+    if not isinstance(settings, dict):
+        shape_error(ops.calls, "no settings in the answer")
     out["settings"] = keep(settings, SETTINGS) if isinstance(settings, dict) else None
     out["roles"] = [keep(r, ("roleName", "type")) for r in fleet_pages(ops, "GET", f"{IAM}/roles", "vcfRoles")]
     return out
@@ -421,12 +453,22 @@ def organization(org: dict, ldap: dict, oauth: dict, saml: dict) -> dict:
 
 
 def organizations(vcfa: Reader) -> list[dict]:
-    """Every VCF Automation organization's LDAP, OIDC and SAML settings, read as the provider."""
+    """Every VCF Automation organization's LDAP, OIDC and SAML settings, read as the provider. A list of none read
+    nothing: the provider signs in to its own System organization, which its list held on every run read here, so
+    none is a failed read, never an estate without organizations."""
     out = []
-    for org in vcfa_pages(vcfa, "/cloudapi/1.0.0/orgs"):
+    orgs = vcfa_pages(vcfa, "/cloudapi/1.0.0/orgs")
+    if not orgs:
+        shape_error(vcfa.calls, "no organization in the list, where the provider's own System organization is one")
+    for org in orgs:
         uid = str(org.get("id", "")).rsplit(":", 1)[-1]
-        reads = [vcfa.get(f"/api/admin/org/{uid}/settings/{s}", VCD_JSON) for s in ("ldap", "oauth", "federation")]
-        out.append(organization(org, *[r if isinstance(r, dict) else {} for r in reads]))
+        reads = []
+        for s in ("ldap", "oauth", "federation"):
+            r = vcfa.get(f"/api/admin/org/{uid}/settings/{s}", VCD_JSON)
+            if not isinstance(r, dict):
+                shape_error(vcfa.calls, f"no {s} settings in the answer")
+            reads.append(r if isinstance(r, dict) else {})
+        out.append(organization(org, *reads))
     return out
 
 
@@ -434,7 +476,7 @@ def supervisor_providers(vc: Reader, sid: str) -> list[dict]:
     """A Supervisor's identity providers. The list names each one; its issuer is only in the provider's own read."""
     base = f"/api/vcenter/namespace-management/supervisors/{sid}/identity/providers"
     out = []
-    for i in items(vc.get(base)):
+    for i in items(vc, vc.get(base)):
         d = vc.get(f"{base}/{i.get('provider')}")
         d = d if isinstance(d, dict) else i
         out.append({"display_name": d.get("display_name"), "provider": i.get("provider"),
@@ -446,10 +488,10 @@ def supervisor_providers(vc: Reader, sid: str) -> list[dict]:
 def vcenter(vc: Reader, host: str) -> dict:
     """A vCenter's identity providers, the host each one discovers its issuer at, and each Supervisor's providers."""
     providers = [{**keep(p, VC_PROVIDER), "discoveryHost": host_of((p.get("oidc") or {}).get("discovery_endpoint"))}
-                 for p in items(vc.get("/api/vcenter/identity/providers"))]
+                 for p in items(vc, vc.get("/api/vcenter/identity/providers"))]
     supervisors = [{"supervisor": s.get("supervisor"), "name": (s.get("info") or {}).get("name"),
                     "identity_providers": supervisor_providers(vc, s.get("supervisor"))}
-                   for s in items(vc.get("/api/vcenter/namespace-management/supervisors/summaries"), "items")]
+                   for s in items(vc, vc.get("/api/vcenter/namespace-management/supervisors/summaries"), "items")]
     return {"vcenter": host, "identity_providers": providers, "supervisors": supervisors}
 
 

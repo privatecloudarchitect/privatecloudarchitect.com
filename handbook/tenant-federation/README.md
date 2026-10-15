@@ -46,9 +46,9 @@ A provider bearer lasts an hour, so mint it just before each run, as the platfor
 | Exit | Means |
 |---|---|
 | 0 | done: the plan printed, or every step and check passed |
-| 1 | a call or a check failed; the record names which |
-| 2 | refused by what it read: a name this script did not create, no state file to tear down, no such organization, an organization not federated to `ENTRA_TENANT_ID`, a change its protocol does not take, a protocol or user-key switch, a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
-| 3 | a result not known: a credential refused before anything was read, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a record the scrub refused to write, or an error the script did not expect (never 1) |
+| 1 | a check failed, or a call was refused while building, configuring, updating or tearing down; the record names which |
+| 2 | refused by what it read: a name this script did not create, no state file to tear down, no such organization, an organization not federated to `ENTRA_TENANT_ID`, a change its protocol does not take, a protocol or user-key switch (judged on what the organization stores and the users it holds, enabled or not), a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
+| 3 | a result not known: a credential refused before anything was read, a read a proof could not make (`--prove` and `--prove --org` only read, so a refused read leaves the result unknown), a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a record the scrub refused to write, or an error the script did not expect (never 1) |
 | 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`), a missing environment variable or credential, a file that cannot be read, metadata that is not the tenant's or names no signing certificate, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
@@ -85,9 +85,13 @@ python3 ../federation-operations/watch.py                            # with ORGS
 
 `--configure` writes the settings as a round trip, only when a field differs, and imports each `--group ROLE=NAME`
 with the role the organization type defines, resolved by name from the organization's own role list. It refuses
-(exit 2) a protocol or user-key switch on an organization already federated, an organization signed in through VCF
-single sign-on (OIDC), a role key the organization type lacks (a classic organization has no auditor), and a named
-group the organization already holds under the other protocol or with other roles; a missing `APP_CLIENT_ID` over
+(exit 2) a protocol or user-key switch, judged on what the organization stores and the users it holds whether or not
+its federation is switched on: a federation switched off during an incident still holds its user key, its SAML
+metadata and its OIDC or SAML users, and a write would switch it back on under the run's protocol and key, splitting
+or refusing those users. It also refuses an organization signed in through VCF single sign-on, settings stored for
+a provider other than `ENTRA_TENANT_ID`, a role key the organization type lacks (a classic organization has no
+auditor), and a named group the organization already holds under the other protocol or with other roles. An
+organization with nothing stored and no federated user is configured. A missing `APP_CLIENT_ID` over
 OIDC, or metadata that is not the tenant's, is a usage error (exit 5) and sends nothing. Over SAML without
 `METADATA_FILE` it prints the organization's own service-provider identifier and reply URL for the tenant's
 administrator, and stops. `--prove --org` reads the settings back against the plan for the protocol, type and user key
@@ -114,8 +118,10 @@ administrator (none enabled holding Organization Administrator). The throwaway w
 ## Day 2: change an existing organization
 
 `--update` works on an organization that already exists and is federated to your tenant, whoever built it. It reads
-the organization's settings, changes only the fields you name, prints the plan, and with `--execute` writes the whole
-body back and reads every changed field back. It never touches Entra: the tenant's administrator rotates secrets and
+the organization's settings, changes only the fields you name, prints the plan with the fields it would change, and
+with `--execute` writes the whole body back and reads every changed field back. When the organization already holds
+what you asked for, it writes nothing, records "nothing to change", reads the settings back and exits 0. It never
+touches Entra: the tenant's administrator rotates secrets and
 certificates on Entra ID, and this writes what the organization must hold.
 
 ```bash
@@ -143,8 +149,10 @@ provider publishes were written (all six already held), a secret rotated at Entr
 SAML metadata Entra publishes for the app was written, with the same signing certificate. Every changed field read back
 as written. On OIDC the check compares every settings field except the key-refresh fields, the keys and the secret; on
 SAML it checks only that the organization holds the metadata's certificates and that SAML stayed enabled, so the keys
-and metadata writes were round trips, not repairs. The writer was not run against an organization this script did not
-build, and `--key-refresh` above one hour is for drills.
+and metadata writes were round trips, not repairs. The keys run sent a write that changed nothing (`update_keys.json`
+records `"changed": []`); the writer now sends none in that case and records "nothing to change", which the companion's
+tests hold and no live run has shown yet. The writer was not run against an organization this script did not build, and
+`--key-refresh` above one hour is for drills.
 
 ## What it does, in order
 

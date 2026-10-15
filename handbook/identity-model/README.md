@@ -69,7 +69,7 @@ without it. Give `catalog_check.py` the same file.
 | Exit | Means | What a scheduler does |
 |---|---|---|
 | 0 | the record is written and every call answered | nothing |
-| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id (the record is still written and names the call, and the run prints the server's reason; a refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing), the credential could not be obtained, with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name, or an error the script did not expect | fix the read; take no count from this run |
+| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing), the credential could not be obtained, with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name, or an error the script did not expect | fix the read; take no count from this run |
 | 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10), or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
 
 These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
@@ -92,6 +92,12 @@ identity plane was not tried.
   endpoint, which searches and changes nothing. On each vCenter the script opens a session and closes it. With
   `--orgs-only` it calls VCF Automation only: on the reference estate, 31 reads of ten organizations on a provider
   bearer, with no VCF Operations credential set (2026-10-15, one run).
+- Every list is read to its end: the fleet's page by page until `pageInfo.totalCount`, VCF Automation's until
+  `pageCount`. Forced to a page size of one, the fleet's roles, API clients and API tokens and VCF Automation's
+  organizations each read one entry per call and the same entries as at the default size, none twice (2026-10-15,
+  one run on the reference estate, whose lists are shorter than one default page). An answer that comes back without
+  its list is a failed read (exit 3), never an empty list; on that run every list answer carried its list, the empty
+  ones included.
 - `--egress-metadata-url` sends one request per broker that is not a read: `POST .../iam/saml-metadata/validate`,
   which the contract describes as validating and parsing metadata. The script reads the brokers, realms and
   providers again after the requests and records any difference; on the reference run there was none.

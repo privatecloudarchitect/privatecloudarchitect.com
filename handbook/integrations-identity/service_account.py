@@ -26,7 +26,8 @@ is refused before anything is sent. A teardown of an account that is not there r
 safe to re-run.
 
 Env:  VCFA_HOST                           VCF Automation FQDN (required)
-      VCFA_PROVIDER_BEARER_FILE           a provider bearer you already hold (mode 0600). The reference runs sent every
+      VCFA_PROVIDER_BEARER_FILE           a provider bearer (mode 0600), minted just before the run as the platform-identity
+                                          chapter's plate 04, "Your provider bearer", shows. The reference runs sent every
                                           call on a provider System Administrator's bearer, and no narrower provider
                                           role was tried
       VCFA_PROVIDER_REFRESH_TOKEN_FILE    instead, a provider API token, traded at /oauth/provider/token for a bearer
@@ -35,6 +36,8 @@ Env:  VCFA_HOST                           VCF Automation FQDN (required)
       TLS_VERIFY=false                    only on a self-signed lab CA
       OUT                                 the record (default service_account.json)
 Use:  python3 service_account.py --org ORG --name NAME --role "ROLE NAME" [--token-file PATH] [--execute] [--redact]
+            ROLE NAME is the organization's own role name: its member role is Organization User in an All Apps
+            organization and Organization Member in a classic one (identity-model's census.py --orgs-only prints the type)
       python3 service_account.py --org ORG --name NAME --teardown [--token-file PATH] [--execute] [--redact]
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 refused by this script before any write: the account exists (for a create), or for a teardown it is not one
@@ -42,8 +45,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       1 the run did not hold: a write was refused, or the read-back was not what was asked (the account active, its
         bearer holding exactly the role, the stored token refreshing; for a teardown, no account left and the revoked
         token refused)
-      3 a read failed or is undetermined: the organization or the account list could not be read (or answered without
-        its list), the residue could not be read back, the provider's credential was not traded for a bearer, or an
+      3 a read failed or is undetermined: the organization or the account list could not be read (any page of it, or an
+        answer without its list), the read-back or the residue could not be read back, the provider's credential was not traded for a bearer, or an
         error the script did not expect
       0 the plan printed, or the run held on read-back
       5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
@@ -192,14 +195,26 @@ def org_lookup(vcfa: Vcfa, org: str) -> tuple[int, str | None]:
     return status, (rows[0].get("id") if status == 200 and len(rows) == 1 else None)
 
 
+PAGE_SIZE = 128   # the largest page VCF Automation's cloudapi lists take; pages count from 1, to the answer's pageCount
+
+
 def accounts(vcfa: Vcfa, urn: str, name: str) -> list[dict] | None:
-    status, answer = vcfa.call("GET", f"/cloudapi/1.0.0/serviceAccounts?filter={urllib.parse.quote('name==' + name)}",
-                               "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}", org_urn=urn, accept=ACCOUNTS_ACCEPT)
-    if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get("values"), list):
-        if status == 200 and isinstance(vcfa.calls[-1], dict):
-            vcfa.calls[-1]["shape"] = "no values list in the answer"
-        return None
-    return [a for a in answer["values"] if a.get("name") == name]
+    """The organization's service accounts by that name, every page of the filtered list. None, never a shorter list,
+    when a page is refused or answers with no list: an account on a page not read could be one a teardown leaves."""
+    out: list[dict] = []
+    for page in range(1, 10001):
+        status, answer = vcfa.call(
+            "GET", f"/cloudapi/1.0.0/serviceAccounts?filter={urllib.parse.quote('name==' + name)}&page={page}&pageSize={PAGE_SIZE}",
+            f"/cloudapi/1.0.0/serviceAccounts?filter=name=={{name}}&page={page}&pageSize={PAGE_SIZE}", org_urn=urn,
+            accept=ACCOUNTS_ACCEPT)
+        if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get("values"), list):
+            if status == 200 and isinstance(vcfa.calls[-1], dict):
+                vcfa.calls[-1]["shape"] = "no values list in the answer"
+            return None
+        out += [a for a in answer["values"] if isinstance(a, dict)]
+        if page >= (answer.get("pageCount") or 1):
+            return [a for a in out if a.get("name") == name]
+    return None
 
 
 def shape(rows: list[dict]) -> dict:
@@ -306,9 +321,12 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     save_state(state_path(a.org, a.name), {"tool": AGENT, "org": a.org, "name": a.name, "client_id": client_id,
                                            "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
     record["state_file_written"] = True   # before the grant, so an account left part way can still be removed
-    rows = accounts(vcfa, urn, a.name) or []
-    record["registered"] = shape(rows)
-    record["registered"]["id_carries_client_id"] = any(client_id_of(r) == client_id for r in rows)
+    rows = accounts(vcfa, urn, a.name)
+    if rows is None:   # the register answered; the list that shows it did not, so nothing is said about it
+        record["registered"] = {"error": "the account list could not be read after the register"}
+    else:
+        record["registered"] = shape(rows)
+        record["registered"]["id_carries_client_id"] = any(client_id_of(r) == client_id for r in rows)
     status, device = vcfa.call("POST", f"/oauth/tenant/{a.org}/device_authorization",
                                "/oauth/tenant/{org}/device_authorization", form={"client_id": client_id},
                                accept="application/json", auth=False)
@@ -351,7 +369,11 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
                          "refresh_token_returned": bool(again.get("refresh_token")), "rotated": rotated,
                          "error": again.get("error")}
     del token, again
-    record["readback"] = rb = shape(accounts(vcfa, urn, a.name) or [])
+    rows = accounts(vcfa, urn, a.name)
+    if rows is None:   # a read-back that did not read is not a result: the account's state is not known
+        record["readback"] = {"error": "the account list could not be read back"}
+        return EXIT_UNREAD
+    record["readback"] = rb = shape(rows)
     held = (rb["present"] and rb["status"] == ["ACTIVE"] and rb["roles"] == [a.role]
             and record["session"]["status"] == 200 and record["session"]["roles"] == [a.role]
             and record["refresh"]["status"] == 200 and record["refresh"]["bearer"])
@@ -538,7 +560,8 @@ def usage_problem(a: argparse.Namespace) -> str | None:
     if a.teardown:
         return None
     if not a.role:
-        return "--role is required: the role's name, for example \"Organization User\""
+        return ("--role is required: the role's name, for example \"Organization User\" in an All Apps organization or "
+                "\"Organization Member\" in a classic one")
     if ROLE_ID.match(a.role.strip()):
         return "--role names the role, never its id: a scope naming the role's id was refused on the reference estate"
     if a.execute and not a.token_file:
@@ -575,7 +598,8 @@ def _run(argv: list[str] | None = None) -> int:
     ap = _Parser(description="One VCF Automation service account: plan, create, remove. Plan by default.")
     ap.add_argument("--org", required=True, help="the organization's name")
     ap.add_argument("--name", required=True, help="the service account's name; one per integration")
-    ap.add_argument("--role", help="the one role it holds, by name (for example \"Organization User\")")
+    ap.add_argument("--role", help="the one role it holds, by name: \"Organization User\" in an All Apps organization, "
+                                   "\"Organization Member\" in a classic one")
     ap.add_argument("--token-file", help="where the refresh token is written, mode 0600; it must not exist")
     ap.add_argument("--teardown", action="store_true", help="revoke and remove the account instead")
     ap.add_argument("--execute", action="store_true", help="send the calls; without it the plan is printed")

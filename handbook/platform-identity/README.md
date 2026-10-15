@@ -16,13 +16,14 @@ in a console, and that is the difference between thirty seconds and an afternoon
 ## Running it
 
 ```bash
-export TOKEN='<a bearer you already hold>'
-python tokens.py
-
-python tokens.py --file token.txt      # from a file
-cat token.txt | python tokens.py -     # from stdin
-python tokens.py --kubeconfig          # every kubeconfig credential, no token needed
+python3 tokens.py -                    # paste the bearer, then Ctrl-D: it never reaches your shell history
+python3 tokens.py --file token.txt     # a bearer a pipeline already keeps in a file, mode 0600
+python3 tokens.py --kubeconfig         # every kubeconfig credential, no token needed
+python3 tokens.py                      # reads $TOKEN, if a tool already set it in the environment
 ```
+
+Lead with `-` or `--file`. Typing `export TOKEN=<bearer>` at a prompt writes a live bearer into your shell
+history, where it outlives the session it opens.
 
 Standard library only, except `--kubeconfig`, which needs PyYAML.
 

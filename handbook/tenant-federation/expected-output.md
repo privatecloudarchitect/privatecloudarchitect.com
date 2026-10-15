@@ -92,6 +92,50 @@ A round trip of a SAML user's record is a write, so --prove sends none. Where it
 - **The local administrator** fails on this organization as it did on the earlier read: it has none enabled holding
   Organization Administrator.
 
+## A switched-off federation is not rewritten
+
+`--configure --org` judges a switch on what the organization stores and the users it holds, enabled or not. On an
+organization whose OIDC federation, keyed on `preferred_username`, was switched off, a run keyed on `oid` stops before
+any write (the lines below are the companion's own message, shown by its tests; no live run has made this shape):
+
+```
+$ python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid --execute
+refused: the organization keys its users on preferred_username in the OIDC settings it holds, enabled or not: move a tenant to another key through a new organization
+```
+
+An organization with SAML switched off, its metadata or its SAML users still held, is refused a move to OIDC the same
+way ("the organization holds SAML metadata and SAML users, enabled or not"); an organization with nothing stored and
+no federated user is configured. Exit 2, and nothing is sent.
+
+## Day 2: nothing to change
+
+`--update --execute` reads the organization first. When it already holds what was asked, nothing is written:
+
+```
+$ python3 org_federation.py --update --key-refresh --execute
+  plan: read  {'protocol': 'OIDC', 'key_refresh': {'now': [True, 'ADD', 1], 'to': [True, 'ADD', 1]}, ..., 'would_change': []}
+  nothing to change: nothing written  {'changed': []}
+  check: keys refresh every 1 h, added: pass
+  check: every settings field but the key refresh, the keys and the secret read back unchanged: pass
+```
+
+Exit 0. These lines are the shape the companion's tests hold; the live day-2 runs on the reference estate predate the
+change, and the keys run there sent a write that changed nothing.
+
+## A proof that could not read: exit 3
+
+`--prove` and `--prove --org` only read, so a read the platform or Entra refuses leaves the result unknown, never a
+failed check:
+
+```
+$ python3 org_federation.py --prove --org <org>
+  read refused: read users: HTTP 403: Forbidden
+
+recorded 1 steps to prove.json; every estate value replaced by a placeholder
+
+not proven: a read was refused (read users: HTTP 403: Forbidden); nothing is known of what it did not read (exit 3)
+```
+
 ## Teardown
 
 ```
@@ -122,6 +166,8 @@ $ python3 org_federation.py --protocol oidc --org-type all-apps --execute
 not run: --execute, --prove and --teardown need VCFA_HOST, ORG, ENTRA_TENANT_ID, ENTRA_CLIENT_ID and a provider credential (VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE) (see the header); exit 5
 ```
 
-The exit codes a script around it reads: 0 done, 1 a call or a check failed, 2 refused by what it read (a name it did
-not create, a protocol or key switch, an organization it cannot find), 3 a result not known (a credential refused before
-anything was read, a record the scrub refused, an error it did not expect), 5 not run as asked.
+The exit codes a script around it reads: 0 done, 1 a check failed or a call was refused while building, configuring,
+updating or tearing down, 2 refused by what it read (a name it did not create, a protocol or key switch judged on what
+the organization stores, enabled or not, an organization it cannot find), 3 a result not known (a credential refused
+before anything was read, a read a proof could not make, a record the scrub refused, an error it did not expect), 5 not
+run as asked.

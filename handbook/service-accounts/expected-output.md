@@ -52,12 +52,16 @@ exit 0
 ```
 
 A run in which a surface you configured could not mint its own token prints a line for that surface as it happens,
-and one more under the summary line, and exits 3 rather than 0. The recorded run above minted every token, so these
-two lines are the shape the code prints, held by its tests, not a transcript:
+and one more under the summary line, and exits 3 rather than 0. A vCenter session mint, an SDDC Manager token mint or a
+VCF Automation session login that answers without its session or token is the same case: its own row prints what the
+mint answered, and the `NOT READ` line says the doors behind it were not read. The recorded run above minted every
+token, so these lines are the shape the code prints, held by its tests, not a transcript (here the log service's JWT
+was refused, and the vCenter mint answered 401):
 
 ```text
   NOT READ: Log management, service JWT (VCF_OPS_LI): the service JWT could not be minted; its doors were not read
-NOT READ: 1 configured surface(s) whose own token could not be minted: Log management, service JWT (VCF_OPS_LI) (exit 3)
+  NOT READ: vCenter: the session mint returned no session id (HTTP 401); its doors were not read
+NOT READ: 2 configured surface(s) whose own token could not be minted: Log management, service JWT (VCF_OPS_LI); vCenter (exit 3)
 ```
 
 ## claims.py
@@ -134,3 +138,21 @@ read as an estate with no API client.
 $ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-refused.json --today 2026-10-13
 NOT READ: census-refused.json is not a read of the API clients: the census exited 3, not 0: a read failed, so its counts are not the estate's. Nothing is joined (exit 3)
 ```
+
+Each check stands on its own, whatever exit the record states. A record written as exit 0 over a fleet call that
+answered 200 without its list (the call `census.py` marks `shape`) is refused for that call, and a record whose read
+passes every check but lists no API client is joined as zero. Both are synthetic records, and these lines are the
+shape the code prints, held by its tests:
+
+```text
+$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-shape-exit0.json --today 2026-10-13
+NOT READ: census-shape-exit0.json is not a read of the API clients: 1 of its fleet identity call(s) answered without the list the read needs (no apiClients list in the answer), so an empty list there is an unread one. Nothing is joined (exit 3)
+
+$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-zero.json --today 2026-10-13
+...
+API clients in the census of 2026-10-13T07:41:40Z: 0, so none is joined to the catalog: the census queried the API client and token lists of its 1 realm(s), with no call refused or answered without its list, and those lists hold no API client
+
+exit 1
+```
+
+The second run exits 1 for the example catalog's own warning, not for the census.

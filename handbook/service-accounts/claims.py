@@ -57,9 +57,12 @@ def decode(jwt):
     if len(parts) != 3:
         raise NotAJwt(f"not a JWT (expected three dot-separated parts, got {len(parts)})")
     try:
-        return json.loads(b64url(parts[0])), json.loads(b64url(parts[1]))
+        header, claims = json.loads(b64url(parts[0])), json.loads(b64url(parts[1]))
     except ValueError as e:
         raise NotAJwt(f"not a JWT ({type(e).__name__} decoding its header or claims)") from None
+    if not isinstance(header, dict) or not isinstance(claims, dict):
+        raise NotAJwt("not a JWT (its header and claims must each decode to a JSON object)")
+    return header, claims
 
 
 def stamp(epoch):

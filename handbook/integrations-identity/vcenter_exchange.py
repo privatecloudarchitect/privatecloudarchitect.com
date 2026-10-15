@@ -46,8 +46,8 @@ census with FINGERPRINT_KEY_FILE set to the same secret, and each vCenter and di
 that is the same in every record made under it. It reads files only. It prints the coverage its records give (the hours
 of day, UTC, at which a read was taken, the span from the first read to the last, and the largest gap between two reads)
 and holds it to the coverage asked: --cover-hours N (default 24, every hour of day), --span-days N (default 7, a weekly
-cycle) and --max-gap-minutes N (unset by default). Read at an interval shorter than your shortest job, across your
-longest job cycle, and ask for exactly that.
+cycle) and --max-gap-minutes N (unset by default). Read at intervals shorter than the shortest session a job holds,
+across your longest job cycle, and ask for exactly that.
 
 --ack FILE (with --sessions, or with --compare) names the (directory account, client agent) pairs a person has decided
 on, each until a date: a person who signs in with PowerCLI, confirmed as that person. An acknowledged pair is still
@@ -90,7 +90,8 @@ Use:  python3 vcenter_exchange.py [--sessions [--ack FILE]] [--redact]
 Exit, the first that applies, so a scheduler reads one state from one number:
       1 --sessions found a directory account signing in from a client that is not interactive, a pair not acknowledged
       2 a vCenter answered the API client's exchange, or one of its sessions, and did not take the client
-      3 a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read, a census
+      3 a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty
+        one included: it always holds the census's own session), a census
         identity that could read only its own session, a vCenter on which DIRECTORY_DOMAINS named no session while
         sessions of another provider were there (the domains name nothing there, so the census saw nothing it was asked
         to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect
@@ -527,6 +528,8 @@ def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str
         rows, mine = s.sessions(where=where is not None)
         if s.fault:
             return {"error": s.fault}
+        if not rows:   # the list always holds the census's own session, so an empty one was not read: never zero sessions
+            return {"error": "the session list came back empty, though it always holds this census's own session: not read"}
         if mine and all(r["key"] == mine for r in rows):
             return {"error": "the session list held only this census's own session: this identity cannot read the others",
                     "only_own_session_visible": True, "census_identity": {"user": who}}

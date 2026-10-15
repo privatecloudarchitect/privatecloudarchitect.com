@@ -79,11 +79,11 @@ client, with other lifetimes for the new token so the read-back shows which toke
 ```
 $ python3 api_client.py --client-id backup-01 --rotate --api-token-ttl 2880 --access-token-ttl 60
 Rotation plan for API client backup-01 on operations.example.net:
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens
          {"accessTokenTtl": 60, "apiClientId": "backup-01", "apiTokenTtl": 2880, "tokenName": "backup-01-token-<UTC stamp>", "tokenType": "API_CLIENT"}
   POST   /acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (read back: the new token active beside the old)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (every page; read back: the new token active beside the old)
   then: the new token to <--token-file> (mode 0600, never printed); nothing is deleted: point the integration at the new token, run one job, then --retire-old
 
 plan only: nothing was sent (--execute sends it)
@@ -114,11 +114,11 @@ api_client_overlap.json written with every estate value replaced
 ```
 $ python3 api_client.py --client-id backup-01 --retire-old --old-token-file <path>
 Retirement plan for API client backup-01 on operations.example.net:
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (the client and the tokens it holds)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)
   POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token, before the delete)
   DELETE /api/fleet-management/iam/ssorealms/{realm}/api-tokens/{token id}  (each token older than the newest)
   POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (read back: one token left)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (every page; read back: one token left)
   only for a client the state file records, and never on the client's own token; refused while it holds one token, or when its newest is not the one this script issued last
 
 plan only: nothing was sent (--execute sends it)
@@ -195,6 +195,57 @@ api_client_instance.json written with every estate value replaced
   0 VMs, and the SOAP sign-in was refused ("Permission to perform this operation was denied."). So a
   REST session that opens is not a reach: read what it sees.
 - Torn down after, with no client or token left.
+
+## 1c. Your own token, and every list read to its end
+
+`api_client.py` runs on your own VCF Operations API token, never an integration's: the token of an API client of your own
+holding VCF Administrator, made in the console (**Manage ▸ Fleet Management ▸ Identity & Access ▸ VCF SSO Overview**, the
+broker that holds your realm, **API Access ▸ API Clients ▸ Create**, then against that client **⋮ ▸ Generate API
+Token**), in a file of mode 0600 named in `OPS_API_TOKEN_FILE`. The reference estate, 2026-10-15:
+
+- **The fleet's token call names a client.** Asked for a person's own token, `tokenType` `USER` with no `apiClientId`,
+  by that person, it answered HTTP 400 with `apiClientId` "must not be blank", and made nothing.
+- **An administrator client's token carries the writes.** A client made for the run, holding `vcf_administrator`, its
+  token set to 1,440 and 30 minutes, traded for a bearer that lived 30 minutes. On that token the script made another
+  throwaway client and removed it, below; then the administrator client was removed on the token that made it. No
+  client and no token was left.
+- **Every list is read to its end.** The calls now name their page. The fleet's default page is 50, and asked for 500 it
+  answered with 50; a page of one at a time read the same clients and tokens as one page.
+
+The create and the teardown on the administrator client's token, `--redact`, as the script printed them:
+
+```
+create: API client {{client-1}}
+  GET    /ssorealms: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-clients: HTTP 201
+  PUT    /ssorealms/{realm}/principals/{client uuid}/roles: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens: HTTP 201
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
+  the token traded at the broker: HTTP 200, a SERVICE bearer living 30.0 min
+  read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 1440 min, access 30 min
+exit 0
+```
+
+```
+teardown: API client {{client-1}}
+  GET    /ssorealms: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  DELETE /ssorealms/{realm}/api-tokens/{token id}: HTTP 204
+  DELETE /ssorealms/{realm}/api-clients/{client id}: HTTP 204
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
+  signed in as: another API client
+  residue: client present False, tokens left 0
+exit 0
+```
+
+- **Signed in as another API client.** The run was on the administrator client's token, not the client it removed, so
+  the teardown went ahead. Run on the removed client's own token, it is refused before any delete (section 5).
+- **The transcripts above it predate the paging,** and show each query's path without its page.
 
 ## 2. `vcenter_exchange.py --sessions` as a client, holding `vcf_viewer`
 
@@ -293,8 +344,8 @@ exchange.json written with every estate value replaced; exit 3
   as a person's own is acknowledged with `--ack` (section 3b).
 - **One directory account was at the vSphere Client, `vSphereUI`, and is not flagged.** That agent is the only one the
   census treats as a person's. Sessions show what is signed in at that moment; a nightly or weekly job is absent between
-  runs, so read more often than your shortest job, across your longest job cycle, and compare the records (section 3b)
-  before you conclude no integration signs in on a directory password.
+  runs, so read at intervals shorter than the shortest session a job holds, across your longest job cycle, and compare
+  the records (section 3b) before you conclude no integration signs in on a directory password.
 
 ## 3a. `--sessions` without `DIRECTORY_DOMAINS`: refused before any read
 
@@ -406,8 +457,8 @@ exit 4
 ```
 
 - **With a coverage the reads meet and the pair acknowledged, what is left is the local administrator,** in automated
-  use on the two management vCenters: exit 4. On a real gate the coverage asked is your own: a gap below your
-  shortest job and a span over your longest cycle.
+  use on the two management vCenters: exit 4. On a real gate the coverage asked is your own: a gap below the
+  shortest session a job holds and a span over your longest cycle.
 
 ## 4. The census with no API client
 

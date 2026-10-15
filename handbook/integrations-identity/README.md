@@ -100,15 +100,15 @@ The exit is the first of these that applies, so a scheduler reads one state from
 |---|---|---|
 | 1 | `--sessions` found a directory account signing in from a client other than the vSphere Client, a pair no acknowledgement covers: an integration on a person's or a directory account's password, until its owner says otherwise | find its owner (`--where`), and move it to an identity of its own; a person's own pair, once confirmed, goes in `--ack` |
 | 2 | a vCenter answered the API client's exchange, or one of its sessions, and did not take the client | read the client's role and the realm's coverage of that vCenter |
-| 3 | a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read, a census identity that could read only its own session, a vCenter on which `DIRECTORY_DOMAINS` named no session while another provider's sessions were there (the domains name nothing there, so the census saw nothing it was asked to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect | fix the read and run again; nothing is known of what was not read |
+| 3 | a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty one included, since it always holds the census's own session), a census identity that could read only its own session, a vCenter on which `DIRECTORY_DOMAINS` named no session while another provider's sessions were there (the domains name nothing there, so the census saw nothing it was asked to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect | fix the read and run again; nothing is known of what was not read |
 | 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client: an account in automated use is not a break-glass account | find the client (`--where`) and move it |
 | 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client or acknowledged, and the local administrator signs in from no other client | nothing |
 | 5 | a usage error (`--sessions` without `DIRECTORY_DOMAINS`, an `--ack` file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, `--ack` without `--sessions`, among them), a Python older than 3.10, or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
 
 The exit reads each session list at one moment, and an integration that is not signed in at that moment is not seen: a
-job that runs at 02:00 for ten minutes is absent from a read at 10:00 on any number of days. So schedule the census more
-often than your shortest job runs, for at least your longest job cycle (a week for a weekly job, a month for a month-end
-one), and let `--compare` hold the records to that coverage (below). The gate before the broker federates is
+job that runs at 02:00 for ten minutes is absent from a read at 10:00 on any number of days. So schedule the census at
+intervals shorter than the shortest session a job holds (a job signed in for ten minutes needs a read at least every ten
+minutes), for at least your longest job cycle (a week for a weekly job, a month for a month-end one), and let `--compare` hold the records to that coverage (below). The gate before the broker federates is
 `--compare` exiting 0 at the coverage you declared: every vCenter read in every record, no directory account from a
 client other than the vSphere Client unless it is a person's pair acknowledged, and the local administrator in no
 automated use.
@@ -157,8 +157,8 @@ as before. The report counts the acknowledgements that matched no pair read, so 
 
 ### The same sessions across your job cycle: `--compare`
 
-The census is a sample: what signs in between two reads is not seen. Read it on a schedule, more often than your
-shortest job runs, across your longest job cycle. Every name in a record is a placeholder numbered afresh on each run,
+The census is a sample: what signs in between two reads is not seen. Read it on a schedule, at intervals shorter than
+the shortest session a job holds, across your longest job cycle. Every name in a record is a placeholder numbered afresh on each run,
 so two records cannot be compared on their names. Set `FINGERPRINT_KEY_FILE` to a secret of your own (mode 0600, kept
 off any shared disk, the same file on every read): each vCenter and each directory account in the record then carries a
 keyed fingerprint, the same in every record made under that key. Then compare:
@@ -176,7 +176,7 @@ read to the last, and the largest gap between two reads. It holds them to the co
 hours of day that must each hold a read, default 24), `--span-days N` (the days from the first read to the last,
 default 7) and `--max-gap-minutes N` (the longest gap allowed between two reads, none by default). A job shorter than
 the largest gap can run unseen between two reads, and a job whose cycle is longer than the span can fall outside it, so
-ask for both: a gap below your shortest job, and a span over your longest cycle. Three reads at 10:00 on three days cover
+ask for both: a gap below the shortest session a job holds, and a span over your longest cycle. Three reads at 10:00 on three days cover
 one hour of day and a span of two days, and show nothing of a 02:00 backup or a month-end job; `--compare` reports
 them short (exit 3), never as a pass. Hourly reads from one Monday 00:00 to the next cover every hour and the
 seven-day span.
@@ -267,15 +267,35 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |
 | `OUT` | the record (default `api_client.json`) |
 
-**The token the writes run on.** Your own: a VCF single sign-on user's API token whose role may manage the fleet's API
-clients. The reference runs sent every write on a user's API token whose user holds one fleet role, VCF Administrator,
-through a group (read 2026-10-15); no narrower role was tried. Never the client's own token: every write after the
+**The token the writes run on.** Your own, never an integration's, and tier-0: an API token whose role may manage the
+fleet's API clients. Make it in the console as the token of an API client of your own holding VCF Administrator, the
+path Broadcom's page "Create an API Client and Generate an API Token" (VCF 9.1) gives: **Manage ▸ Fleet Management ▸
+Identity & Access ▸ VCF SSO Overview**, the broker that holds your realm, **API Access ▸ API Clients ▸ Create** with the
+role VCF Administrator, then against that client **⋮ ▸ Generate API Token**, with both lifetimes set; copy it into a
+file of mode 0600 before you continue, since the page says it cannot be retrieved afterwards. The integrations-identity
+chapter's plate 04, "Your VCF Operations API token", walks it
+([privatecloudarchitect.com/handbook/integrations-identity](https://privatecloudarchitect.com/handbook/integrations-identity)).
+Over the API the call is `POST /ssorealms/{realm}/api-tokens`, and it makes a token for an existing API client, named in
+`apiClientId`: asked on 2026-10-15 for a person's own token (`tokenType` `USER`, no client) by that person, it answered
+HTTP 400, `apiClientId` "must not be blank", and no page read documents a person making a VCF Operations token of their
+own. On the same day an administrator client made for the run, its token set to one day and 30 minutes, traded for a
+bearer that lived 30 minutes and carried this script's create and teardown of another client, each exit 0, nothing left.
+The earlier reference runs sent every write on a VCF single sign-on user's API token whose user holds one fleet role, VCF
+Administrator, through a group (read 2026-10-15); no narrower role was tried. Never the client's own token: every write after the
 create, `--rotate` as much as `--retire-old` and `--teardown`, refuses to run signed in as the client it would change,
 read from the `azp` claim of the run's own bearer, and refuses a bearer it cannot read as a JWT.
 
 **A dead token.** When the broker stops trading a token, check that the token still exists, then its expiry, before the
 service. A deleted API token is refused at the broker, not with 401: HTTP 500 on VCF 9.1.0 (2026-09-16, the
 service-accounts companion's run), HTTP 400 for a deleted API client token on 9.1.1 (2026-10-13 and 2026-10-15).
+
+**Every list read to its end.** The fleet's queries take `page` and `pageSize` as query parameters, 50 to a page by
+default (the 9.1.1 specification); a `pageSize` sent in the body is not read, and asked for 500 to a page on 2026-10-15
+the fleet answered with 50. The token list holds every token in the realm, people's included. So every list is read page
+by page to the total the fleet states: on 2026-10-15 a page of one at a time read the same clients and tokens as one
+page. A page refused, an answer with no list, or pages that end short of their total is a read that failed (exit 3), and
+nothing is deleted on it; a person's token (`tokenType` `USER`) is never counted as the client's, whatever its principal
+name reads.
 
 **What the script made, and nothing else.** The create writes a state file (mode 0600: the client's id and uuid and the
 ids of the tokens this script issued; no secret). `--rotate`, `--retire-old` and `--teardown` act only on a client that
@@ -288,7 +308,7 @@ rotated and removed in the console.
 | 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved and active beside the old ones and, when given, the old token still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no client and no token left |
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
 | 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; a run signed in as the client it would change, or on a bearer it cannot read, for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; or a fleet with no realm to make a client in |
-| 3 | a read failed or is undetermined: a list or the realm not read, the read-back not read, your token not traded for a bearer, or an error the script did not expect |
+| 3 | a read failed or is undetermined: a list or the realm not read (a page refused, an answer with no list, or pages that end short of the total they state), the read-back not read, a token issued whose id the list read after it could not name, your token not traded for a bearer, or an error the script did not expect |
 | 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists), a Python older than 3.10, or the record refused because an estate value survived the scrub; nothing is written |
 
 ### What it sends, and in what order
@@ -336,8 +356,8 @@ id; the script refuses an id.
 
 ```bash
 export VCFA_HOST=<vcf-automation-fqdn>
-export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer   # mode 0600; a provider System Administrator's bearer, as the
-                                                            # reference runs used
+export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer   # mode 0600; a provider bearer: platform-identity's plate 04,
+                                                            # "Your provider bearer", the credential the reference runs used
 export TLS_VERIFY=false                                     # only on a self-signed lab CA
 
 python3 service_account.py --org tenant-a --name backup-01 --role "Organization User"
@@ -350,7 +370,7 @@ python3 service_account.py --org tenant-a --name backup-01 --teardown --token-fi
 |---|---|
 | `--org ORG` | the organization's name (required) |
 | `--name NAME` | the service account's name; one per integration (required) |
-| `--role "ROLE NAME"` | the one role it holds, by name, for example `Organization User` in an All Apps organization or `Organization Member` in a classic one (required to create) |
+| `--role "ROLE NAME"` | the one role it holds, by name: the member role is `Organization User` in an All Apps organization and `Organization Member` in a classic one, so read the organization's type first (the Organizations line of the identity-model companion's `census.py --orgs-only` prints `all-apps` or `classic` for each) (required to create) |
 | `--token-file PATH` | where the refresh token is written, mode 0600; the file must not exist (required with `--execute` to create). With `--teardown`, the token to refresh once after the revoke, to show it is refused |
 | `--teardown` | revoke the account's token and delete the account instead |
 | `--execute` | send the calls; without it the plan is printed |
@@ -359,7 +379,7 @@ python3 service_account.py --org tenant-a --name backup-01 --teardown --token-fi
 | Env | Meaning |
 |---|---|
 | `VCFA_HOST` | the VCF Automation FQDN (required to execute) |
-| `VCFA_PROVIDER_BEARER_FILE` | a provider bearer you already hold, mode 0600: the credential every reference run used |
+| `VCFA_PROVIDER_BEARER_FILE` | a provider bearer, mode 0600, minted just before the run as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)): the credential every reference run used |
 | `VCFA_PROVIDER_REFRESH_TOKEN_FILE` | instead, a provider API token, mode 0600, traded at `/oauth/provider/token` for a bearer; untried for these writes (how to mint one is platform-identity's plate 04) |
 | `STATE` | the state file the create writes and the teardown reads (default `service_account.<org>.<name>.state.json`) |
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |
@@ -375,7 +395,7 @@ id; no secret), and the teardown revokes and deletes only an account that file r
 | 0 | the plan printed; or the run held on read-back: the account active, its bearer's session holding exactly the role, the stored token refreshing; or, for a teardown, no account left and the revoked token refused |
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
 | 2 | refused by this script before any write: an account that already exists (refused, never adopted), for a teardown an account the state file does not record, or no organization by that name |
-| 3 | a read failed or is undetermined: the organization or the account list not read, the residue not read back, the provider's credential not traded for a bearer, or an error the script did not expect |
+| 3 | a read failed or is undetermined: the organization or the account list not read (any of its pages), the read-back not read, the residue not read back, the provider's credential not traded for a bearer, or an error the script did not expect |
 | 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists), a Python older than 3.10, or the record refused because an estate value survived the scrub; nothing is written |
 
 ### What it sends, and in what order

@@ -2,7 +2,9 @@
 
 The reference estate, 2026-10-12 (UTC), four throwaway organizations: an All Apps and a classic organization over
 OIDC, and one of each over SAML, all federated to one Entra ID tenant. Run with `--redact`, so the names are
-placeholders. Exit 1: warnings, nothing broken now.
+placeholders. Exit 1: warnings, nothing broken now. Each transcript on this page is a run of the date it gives; the
+lines this version prints differently (the `read:` line of a run without the tenant's app, the closing count of
+organizations judged, and the line for a run that judged none) are shown as it prints them now.
 
 ```
 $ ORGS=<the four organizations> python3 watch.py --redact
@@ -38,7 +40,7 @@ $ ORGS=<the four organizations> python3 watch.py --redact
   OK      group_names     every imported group (1) is assigned to the app by that name
   WARN    break_glass     no enabled local user holds Organization Owner: when the provider refuses the organization, nobody can sign in to it
 
-4 organization(s); exit 1; record written with every estate value replaced
+4 organization(s), 4 judged; exit 1; record written with every estate value replaced
 ```
 
 ## What to read in it
@@ -87,11 +89,11 @@ $ ORGS=<the two organizations> python3 watch.py --redact
   WARN    break_glass     no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it
 
 rollover checks not run on 2 organization(s): the tenant's read-only app is owed
-  read: the organization's side (key_refresh, keys_held, pkce, break_glass)
+  read: the organization's side, key_refresh, keys_held, pkce, break_glass (OIDC); break_glass (SAML)
   not read: app_gate, group_names, saml_cert_end, saml_cert_held, secret_end (whether the app requires assignment, the names of the groups assigned to the app, the signing certificate's end date, the app's active signing certificate, the client secret's end date)
   a check not run is never a pass: exit 3 until they run
 
-2 organization(s); exit 3; record written with every estate value replaced
+2 organization(s), 2 judged; exit 3; record written with every estate value replaced
 ```
 
 - **It reads the organization's side and says what it did not read.** `key_refresh`, `keys_held`, `pkce` and
@@ -130,11 +132,11 @@ $ ENTRA_TENANT_ID=<the tenant's domain> ORGS=<the two organizations> python3 wat
   WARN    break_glass     no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it
 
 rollover checks not run on 2 organization(s): owed by the tenant: its administrator runs them and reports the dates
-  read: the organization's side (key_refresh, keys_held, pkce, break_glass)
+  read: the organization's side, key_refresh, keys_held, pkce, break_glass (OIDC); break_glass (SAML)
   not read: app_gate, group_names, saml_cert_end, saml_cert_held, secret_end (whether the app requires assignment, the names of the groups assigned to the app, the signing certificate's end date, the app's active signing certificate, the client secret's end date)
   a declared provider-only run: its exit is the organization's side, and the age of the tenant's last report
 
-2 organization(s); exit 1; record written with every estate value replaced
+2 organization(s), 2 judged; exit 1; record written with every estate value replaced
 ```
 
 Run with a tenant that no organization names (an id made up for the run), the watch names both organizations another
@@ -152,7 +154,9 @@ another tenant's: its own schedule reads it: 2 organization(s) federated to anot
 
 READ    no organization in the run is federated to the run's tenant (ENTRA_TENANT_ID): a wrong tenant would read every organization as another tenant's
 
-2 organization(s); exit 3; record written with every estate value replaced
+READ    the run judged no organization (<n> listed; 2 another tenant's): check VCFA_HOST, the credential and ORGS; a run that judges nothing is never a pass
+
+2 organization(s), 0 judged; exit 3; record written with every estate value replaced
 ```
 
 Run with a tenant list that leaves their tenant out, both are uncovered:
@@ -167,7 +171,9 @@ $ ORGS=<the two organizations> python3 watch.py --redact --provider-only --expec
 
 uncovered: no schedule reads it: 2 organization(s) federated to a tenant outside --expect-tenants; exit 3 until a schedule reads it
 
-2 organization(s); exit 3; record written with every estate value replaced
+READ    the run judged no organization (<n> listed; 2 uncovered): check VCFA_HOST, the credential and ORGS; a run that judges nothing is never a pass
+
+2 organization(s), 0 judged; exit 3; record written with every estate value replaced
 ```
 
 - **One schedule per tenant.** On your estate, each tenant's schedule names its own tenant and passes the whole list.
@@ -178,3 +184,56 @@ uncovered: no schedule reads it: 2 organization(s) federated to a tenant outside
   organization's side: a published key not held or refreshes not succeeding still exit 2.
 - **A domain that names no tenant is refused before anything is read**, with exit 5: `Entra names no tenant for the
   domain <domain> (HTTP 400)`.
+
+## On a provider API token, the credential a schedule holds
+
+The same two organizations, 2026-10-15 (UTC), read with the tenant's read-only app on a provider API token minted for
+the run (`VCFA_PROVIDER_REFRESH_TOKEN_FILE`, with `VCFA_PROVIDER_TOKEN_NAME` naming it), then revoked. Exit 1, on the
+same three warnings the same run gave on a provider bearer:
+
+```
+$ VCFA_PROVIDER_REFRESH_TOKEN_FILE=<the token, mode 0600> VCFA_PROVIDER_TOKEN_NAME=<its name> ORGS=<the two organizations> python3 watch.py --redact
+
+the watch's own credential
+  OK      own_token       the watch's own provider API token ends in 90.0 days
+
+{{org-1}}  (oidc, all-apps)
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  OK      keys_held       all 6 published keys are held
+  OK      pkce            PKCE is off
+  WARN    secret_end      the secret the organization holds ends in 23.2 days: rotate with overlap
+  OK      app_gate        the app is enabled and requires assignment
+  OK      group_names     every imported group (1) is assigned to the app by that name
+  OK      break_glass     1 enabled local user(s) holding Organization Administrator
+
+{{org-2}}  (saml, all-apps)
+  OK      saml_cert_end   the active signing certificate ends in 358.2 days
+  OK      saml_cert_held  the organization's metadata holds every signing certificate on the app
+  OK      app_gate        the app is enabled and requires assignment
+  OK      group_names     every imported group (1) is assigned to the app by that name
+  WARN    break_glass     no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it
+
+2 organization(s), 2 judged; exit 1; record written with every estate value replaced
+```
+
+- **The token carried every read.** No read was refused, and each check read the same state as on the provider
+  bearer in the run that followed. The token was minted the way platform-identity's chapter shows (`/oauth/provider/register`,
+  then the jwt-bearer exchange) and revoked after the run; its refresh then answered 400 `invalid_grant`. The client
+  registration the mint made stays: the API reference read offers no call to delete it.
+- **`own_token` is the token's end date, 90 days after it was minted.** Inside `WARN_DAYS` (30 by default) it warns,
+  exit 1: mint the next token, swap the 0600 file, run the watch once on it, revoke the old one. Run again without
+  `VCFA_PROVIDER_TOKEN_NAME`, the watch read the same end date. Set the name all the same: a user that holds two refresh
+  tokens, during a rotation for example, leaves the end date undetermined without it (exit 3).
+
+## A run that judges nothing
+
+The shape the companion's tests hold, not a run on the reference estate: `VCFA_HOST` names an estate whose
+organizations have no federation switched on, or the tenant's only organization had its federation switched off.
+
+```
+$ python3 watch.py --redact
+
+READ    the run judged no organization (2 listed; 2 with neither OIDC nor SAML on (federation switched off, or signed in through VCF single sign-on), left out): check VCFA_HOST, the credential and ORGS; a run that judges nothing is never a pass
+
+0 organization(s), 0 judged; exit 3; record written with every estate value replaced
+```

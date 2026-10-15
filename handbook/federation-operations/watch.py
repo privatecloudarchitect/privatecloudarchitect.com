@@ -31,14 +31,16 @@ The key-refresh signal is the age of `lastKeySuccessfulRefresh` against `keyRefr
 difference between it and `lastKeyRefreshAttempt`. On a 24-hour interval the attempt timestamp moves every hour while
 the success timestamp moves once a day, so the two differ on a healthy organization (read on two organizations,
 2026-10-12). On the cycle read, the refresh ran at the first hourly run a full interval after the last success (a run
-0.4 s short of the interval did not refresh), so a healthy success can be up to an hour older than the interval; older
-than that, refreshes are not succeeding. `keys_held` checks the outcome
+0.4 s short of the interval did not refresh), so a healthy success can be up to the interval plus an hour old; older
+than the interval plus an hour, refreshes are not succeeding. The age is counted in whole minutes: every hourly run
+read recorded its success within the first three seconds of the hour, and a read in those seconds must not fail an
+organization whose refresh is under way. `keys_held` checks the outcome
 directly: a key Entra publishes and the organization does not hold fails every sign-in signed with it, and the
 unknown key triggers no refresh, so sign-in stays down until a scheduled refresh or a write puts the key back.
 
 Checks (pure functions over what was read; each returns {check, state, detail, measure}):
   key_refresh      automatic refresh on, strategy ADD, interval at most 1 h, last success not older than the interval
-                   plus the hour the schedule can take (and a quarter hour of slack)
+                   plus an hour, in whole minutes
                    (a new organization has no refresh until the first scheduled run: unknown until then)
   keys_held        every key id the provider publishes is among the organization's stored keys
   pkce             usePKCE off for an Entra web app (every sign-in failed with it on)
@@ -52,10 +54,17 @@ Checks (pure functions over what was read; each returns {check, state, detail, m
   app_gate         the app is enabled, and requires assignment (the first of the two gates)
   break_glass      an enabled local user holds the organization's top role (Organization Administrator in an All Apps
                    organization, Organization Owner in a classic one): the way in when the provider refuses
+And one for the run (own_token), on a provider API token only: the end date of the watch's own token, read from the
+provider's token list (GET /cloudapi/1.0.0/tokens, every page): the REFRESH token of the session's own user, named by
+VCFA_PROVIDER_TOKEN_NAME where the user holds more than one. Inside WARN_DAYS it warns (exit 1): mint the next token,
+swap the file, run the watch once on it, then revoke the old one. A token list that could not be read, or that names no
+token or several, leaves the end date undetermined (exit 3). On a provider bearer the check does not run: a bearer is
+minted for a run, not held by a schedule.
 
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded at /oauth/provider/token) or
       VCFA_PROVIDER_BEARER_FILE (a provider bearer, minted as platform-identity's plate 04, "Your provider bearer",
-      shows); TLS_VERIFY=false on a self-signed lab CA (applies
+      shows); VCFA_PROVIDER_TOKEN_NAME (optional: the name the provider API token was minted under, the client name
+      it was registered with); TLS_VERIFY=false on a self-signed lab CA (applies
       to VCF Automation and to a non-Entra keys endpoint, never to Entra or Graph); ENTRA_TENANT_ID (the tenant this run
       covers: its id in any case, or one of its domain names), ENTRA_CLIENT_ID
       and ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the `cryptography` package): the
@@ -65,9 +74,12 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded 
 A read the watch could not make is never a pass, and neither is a check it did not run. An organization whose reads
 fail is kept in the run, named and counted, whether or not ORGS names it; an app or service principal Graph cannot find
 for an organization federated to the run's tenant is a failed read, as is a settings read that returns no
-client secret to match; and a credential refused before any organization is read ends the run at exit 3 with no
-record. Without the tenant's read-only app, and not declared provider-only, the run reads the organization's side (key
-refresh, keys held, PKCE, the local administrator) and runs none of the rollover checks (the client secret's end date,
+client secret to match; a credential refused before any organization is read ends the run at exit 3 with no
+record; and a run that judges no organization (a wrong host, the tenant's only organization with its federation
+switched off, a credential that lists none it can judge) exits 3 and says what it listed and why it judged none of
+them. Without the tenant's read-only app, and not declared provider-only, the run reads the organization's side (key
+refresh, keys held and PKCE over OIDC, the local administrator over either protocol) and runs none of the rollover
+checks (the client secret's end date,
 the SAML certificate's end date and whether the organization holds it, the app's gate, the group names), says so for
 each organization ("rollover checks not run: the tenant's read-only app is owed"), and exits 3. A provider other than
 Entra ID, whose side this watch does not read, is the same.
@@ -92,13 +104,15 @@ Use:  python3 watch.py                      read, print, write the record
       python3 watch.py --expect-tenants T1,T2       the full tenant list (ids or domain names); with any run
       python3 watch.py --provider-only [--tenant-attested YYYY-MM-DD [--attested-max-days N]]
       python3 watch.py --why "<what the user saw>" [--protocol oidc|saml]   the sign-in router; reads nothing
-Exit: 0 every check this run owns ran and is ok · 1 a warning (an end date inside WARN_DAYS, a refresh interval over
-      1 h, a gap that is not yet an outage, a tenant's report older than --attested-max-days) · 2 a failure that stops
+Exit: 0 every check this run owns ran and is ok, on at least one organization · 1 a warning (an end date inside
+      WARN_DAYS, the watch's own provider API token's among them, a refresh interval over 1 h, a gap that is not yet an
+      outage, a tenant's report older than --attested-max-days) · 2 a failure that stops
       sign-in now or at the provider's next roll (a key not held, refresh not succeeding, an expired secret or
       certificate, a held secret the app no longer lists, a renamed group, PKCE on, a disabled app) · 3 nothing failed,
       and a read failed or a result is undetermined: an organization unread, the tenant's app not found, a credential
       refused, a check that could not judge, the rollover checks not run on an undeclared run, an organization no
-      schedule reads, a run whose tenant no organization names, or a record that could not be written · 5 a usage
+      schedule reads, a run whose tenant no organization names, a run that judged no organization, the watch's own
+      token's end date unread, or a record that could not be written · 5 a usage
       error: an unknown or missing argument, a missing or inconsistent environment variable, a credential or key file
       that cannot be read, a tenant or date that names nothing, a Python older than 3.9. An error the watch did not
       expect exits 3, never 1. --why: 0 a row matched; 1 none did, and it prints the first reads for a message no run
@@ -131,7 +145,10 @@ ENTRA = "https://login.microsoftonline.com"
 ENTRA_HOST = "login.microsoftonline.com"
 # On the cycle read (one organization, 2026-10-12) the refresh ran at the first hourly run a full interval after the
 # last success, and a run 0.4 s short did not: on schedule, a success's age reaches the interval plus up to an hour.
-REFRESH_GRACE = timedelta(hours=1, minutes=15)
+# Past the interval plus an hour, counted in whole minutes, refreshes are not succeeding (IAM-F86).
+REFRESH_GRACE = timedelta(hours=1)
+# Every list is read page by page; a page of this size is the most the platform was asked for at once.
+PAGE_SIZE = 128
 SECRET_KEYS = ("clientSecret", "password", "secretText", "hint", "privateKey")
 ORDER = {"ok": 0, "unknown": 0, "warn": 1, "fail": 2}
 # One code per state a scheduler acts on (the identity companions' shared contract): 0 nothing to act on, 1 a warning,
@@ -290,8 +307,10 @@ def key_refresh(oauth: dict, now: datetime) -> dict:
         return _result("key_refresh", "unknown", "no scheduled refresh yet; the first runs on the hour", interval_h=hours, success_age_h=None)
     if success is None:
         return _result("key_refresh", "fail", "refreshes have run and none has succeeded", interval_h=hours, success_age_h=None)
-    if hours and now - success > timedelta(hours=hours) + REFRESH_GRACE:
-        return _result("key_refresh", "fail", f"the last successful refresh is {age} h old against a {hours} h interval: refreshes are not succeeding", interval_h=hours, success_age_h=age)
+    whole_minutes = int((now - success).total_seconds() // 60)
+    if hours and whole_minutes > (timedelta(hours=hours) + REFRESH_GRACE).total_seconds() // 60:
+        return _result("key_refresh", "fail", f"the last successful refresh is {age} h old, past its {hours} h interval "
+                       "plus an hour: refreshes are not succeeding", interval_h=hours, success_age_h=age)
     notes, state = [], "ok"
     if oauth.get("keyRefreshStrategy") != "ADD":
         notes.append(f"strategy {oauth.get('keyRefreshStrategy')}, not ADD")
@@ -419,6 +438,37 @@ def break_glass(users: list[dict], role: str = "Organization Administrator") -> 
     return _result("break_glass", "warn", f"no enabled local user holds {role}: when the provider refuses the organization, nobody can sign in to it", local_admins=0, role=role)
 
 
+ROTATE = "mint the next token, swap the file, run the watch once on it, then revoke this one"
+
+
+def own_token(tokens: list[dict], user_id: str, name: str | None, now: datetime, warn_days: int) -> dict:
+    """The watch's own provider API token, judged by its end date: the REFRESH token in the provider's token list that
+    belongs to the session's own user, and carries `name` when one is given. None of them, or several, is undetermined
+    (exit 3), never a pass: the end date of a token the run cannot single out is not known."""
+    mine = [t for t in tokens if t.get("type") == "REFRESH" and (t.get("owner") or {}).get("id") == user_id]
+    if name:
+        mine = [t for t in mine if t.get("name") == name]
+    if len(mine) != 1:
+        which = "named VCFA_PROVIDER_TOKEN_NAME " if name else ""
+        why = (f"{len(mine)} refresh tokens {which}belong to this credential's user: name the watch's own with "
+               "VCFA_PROVIDER_TOKEN_NAME" if mine else f"no refresh token {which}of this credential's user is in the "
+               "provider's token list")
+        return _result("own_token", "unknown", f"the watch's own token's end date is not known: {why}",
+                       candidates=len(mine), listed=len(tokens))
+    end = when(mine[0].get("expirationTimeUtc"))
+    counts = {"candidates": 1, "listed": len(tokens)}
+    if end is None:
+        return _result("own_token", "unknown", "the watch's own token's record carries no end date it could read", **counts)
+    days = _days(end, now)
+    if days < 0:
+        return _result("own_token", "fail", f"the watch's own provider API token reads expired {-days} days ago: {ROTATE}",
+                       days_left=days, **counts)
+    if days <= warn_days:
+        return _result("own_token", "warn", f"the watch's own provider API token ends in {days} days: {ROTATE}",
+                       days_left=days, **counts)
+    return _result("own_token", "ok", f"the watch's own provider API token ends in {days} days", days_left=days, **counts)
+
+
 # ── reading ────────────────────────────────────────────────────────────────────────────────────────────────
 def _ctx(verify: bool) -> ssl.SSLContext:
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
@@ -460,11 +510,14 @@ class Vcfa:
     def __init__(self, host: str):
         self.host, self.verify = host, _lab_verify()
         if os.environ.get("VCFA_PROVIDER_BEARER_FILE"):
+            self.kind = "provider bearer"
             self._bearer = _secret_file("VCFA_PROVIDER_BEARER_FILE").removeprefix("Bearer ").strip()
         else:
+            self.kind = "provider API token"
             form = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": _secret_file("VCFA_PROVIDER_REFRESH_TOKEN_FILE")}).encode()
             r = _fetch(f"https://{host}/oauth/provider/token", {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}, self.verify, form, "POST")
             self._bearer = r["access_token"]
+            del form, r
 
     def get(self, path: str, accept: str = CLOUDAPI, org_id: str | None = None):
         h = {"Authorization": f"Bearer {self._bearer}", "Accept": accept}
@@ -473,13 +526,30 @@ class Vcfa:
         return _fetch(f"https://{self.host}{path}", h, self.verify)
 
     def pages(self, path: str, org_id: str | None = None) -> list[dict]:
+        """Every page of a cloudapi list. A page that answers without its `values` list is a read that did not happen
+        (ValueError, exit 3), never an empty one."""
         out, page = [], 1
         while True:
-            r = self.get(f"{path}{'&' if '?' in path else '?'}page={page}&pageSize=128", org_id=org_id)
-            out += r.get("values") or []
+            r = self.get(f"{path}{'&' if '?' in path else '?'}page={page}&pageSize={PAGE_SIZE}", org_id=org_id)
+            if not isinstance(r, dict) or not isinstance(r.get("values"), list):
+                raise ValueError(f"page {page} of {path.split('?')[0]} came back without its list")
+            out += r["values"]
             if page >= (r.get("pageCount") or 1):
                 return out
             page += 1
+
+    def session_user(self) -> str:
+        """The user id of the session this credential opened."""
+        return self.get("/cloudapi/1.0.0/sessions/current")["user"]["id"]
+
+    def tokens(self) -> list[dict]:
+        """The provider's token list, every page. A token value never travels in this list for a refresh token; any
+        secret-bearing field is deleted on arrival all the same."""
+        rows = self.pages("/cloudapi/1.0.0/tokens")
+        for t in rows:
+            t.pop("token", None)
+        _strip(rows)
+        return rows
 
     def oauth(self, uid: str) -> tuple[dict, str]:
         """The org's OIDC settings with the client secret destroyed; returns the secret's first three characters
@@ -548,9 +618,11 @@ class Graph:
     def values(self, path: str, **query: str) -> list[dict]:
         qs = urllib.parse.urlencode({f"${k}": v for k, v in query.items()}, quote_via=urllib.parse.quote)
         url, out = f"{GRAPH}{path}" + (f"?{qs}" if qs else ""), []
-        while url:
+        while url:   # every page, by Graph's next link; a page without its list is a read that did not happen
             r = _fetch(url, {"Authorization": f"Bearer {self._bearer}", "Accept": "application/json"}, True)
-            out += r.get("value") or []
+            if not isinstance(r, dict) or not isinstance(r.get("value"), list):
+                raise ValueError(f"a page of {path} came back without its list")
+            out += r["value"]
             url = r.get("@odata.nextLink")
         return out
 
@@ -684,6 +756,20 @@ def tenant_report(attested: date, today: date, max_days: int) -> dict:
                    f"{max_days}-day limit", age_days=age, max_days=max_days)
 
 
+def side_read(group: list[dict]) -> str:
+    """The organization-side checks that ran, by protocol, in the order they run: an OIDC organization's key refresh,
+    keys and PKCE, and the local administrator under either protocol. Only what ran is named."""
+    order = ("key_refresh", "keys_held", "pkce", "break_glass")
+    parts = []
+    for proto in ("oidc", "saml", None):
+        ran = {c["check"] for r in group if r.get("protocol") == proto
+               for c in r.get("checks") or [] if c["check"] in order and c["check"] not in r["not_run"]["checks"]}
+        if ran:
+            names = ", ".join(c for c in order if c in ran)
+            parts.append(f"{names} ({proto.upper()})" if proto else names)
+    return "; ".join(parts) if parts else "no check ran"
+
+
 def provider_only_lines(results: list[dict], attested: dict | None = None) -> list[str]:
     """What a run that did not make the rollover checks could and could not see, and the organizations it left to
     another schedule or to none, for the end of its output."""
@@ -700,7 +786,7 @@ def provider_only_lines(results: list[dict], attested: dict | None = None) -> li
         why = sorted({r["not_run"]["owed"] for r in group})
         cannot = sorted({c for r in group for c in r["not_run"]["checks"]})
         out += [f"{head} on {len(group)} organization(s): {'; '.join(why)}",
-                "  read: the organization's side (key_refresh, keys_held, pkce, break_glass)",
+                f"  read: the organization's side, {side_read(group)}",
                 f"  not read: {', '.join(cannot)} ({', '.join(TENANT_READS[c] for c in cannot if c in TENANT_READS)})",
                 tail]
     other = [r for r in results if r.get("coverage") == OTHER]
@@ -715,7 +801,8 @@ def provider_only_lines(results: list[dict], attested: dict | None = None) -> li
 
 def kept(result: dict, wanted: list[str]) -> bool:
     """Whether an organization belongs in the run: every one ORGS names; otherwise every federated one, and every one
-    whose reads failed, since an organization that could not be read cannot be shown to be outside the watch."""
+    whose reads failed, since an organization that could not be read cannot be shown to be outside the watch. One left
+    out is counted in the run's census, and a run that keeps none it can judge exits 3 (run_errors)."""
     return bool(wanted) or result.get("protocol") in ("oidc", "saml", "unread")
 
 
@@ -837,27 +924,55 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
     return out
 
 
-def run_errors(results: list[dict], run_tenant: str | None) -> list[str]:
-    """What is wrong with the run as a whole: a run tenant no organization in it names, which would otherwise read as
-    every organization being another tenant's and exit 0 having judged nothing."""
-    if run_tenant is None or not results:
-        return []
-    if any(r.get("tenant") == run_tenant and not r.get("coverage") for r in results):
-        return []
-    if all(r.get("protocol") == "unread" or not r.get("protocol") for r in results):
-        return []   # nothing could be read, which the organizations already say
-    return ["no organization in the run is federated to the run's tenant (ENTRA_TENANT_ID): a wrong tenant would read "
-            "every organization as another tenant's"]
+def judged(result: dict) -> bool:
+    """Whether the run judged this organization: read, federated over OIDC or SAML, this run's own, and checked."""
+    return (result.get("protocol") in ("oidc", "saml") and not result.get("coverage")
+            and bool(result.get("checks")))
 
 
-def exit_code(results: list[dict], errors: list[str] | tuple = ()) -> int:
+NONE_JUDGED = "the run judged no organization"
+
+
+def run_errors(results: list[dict], run_tenant: str | None, census: dict | None = None) -> list[str]:
+    """What is wrong with the run as a whole. A run tenant no organization in it names, which would otherwise read as
+    every organization being another tenant's; and a run that judged no organization, which would otherwise exit 0
+    having judged nothing (a wrong host, the tenant's only organization with its federation off, a credential that
+    lists none it can judge). `census` is what the run listed and left out before reading: {listed, provider_own,
+    off}, where `off` is an organization with neither OIDC nor SAML on, left out when ORGS does not name it."""
+    out = []
+    if run_tenant is not None and results and not any(r.get("tenant") == run_tenant and not r.get("coverage") for r in results) \
+            and not all(r.get("protocol") == "unread" or not r.get("protocol") for r in results):
+        out.append("no organization in the run is federated to the run's tenant (ENTRA_TENANT_ID): a wrong tenant would "
+                   "read every organization as another tenant's")
+    if not any(judged(r) for r in results):
+        c = census or {}
+        parts = [f"{c['listed']} listed"] if c.get("listed") is not None else []
+        counts = (("off", "with neither OIDC nor SAML on (federation switched off, or signed in through VCF single "
+                   "sign-on), left out"),
+                  ("provider_own", "the provider's own, left out"))
+        parts += [f"{c[k]} {what}" for k, what in counts if c.get(k)]
+        named = (("another tenant's", sum(1 for r in results if r.get("coverage") == OTHER)),
+                 ("uncovered", sum(1 for r in results if r.get("coverage") == UNCOVERED)),
+                 ("not read", sum(1 for r in results if r.get("protocol") == "unread"
+                                   or (r.get("read_errors") and not r.get("checks")))),
+                 ("named in ORGS with neither OIDC nor SAML on", sum(1 for r in results if r.get("protocol") == "none")))
+        parts += [f"{n} {what}" for what, n in named if n]
+        out.append(f"{NONE_JUDGED} ({'; '.join(parts) or 'nothing listed'}): check VCFA_HOST, the credential and ORGS; "
+                   "a run that judges nothing is never a pass")
+    return out
+
+
+def exit_code(results: list[dict], errors: list[str] | tuple = (), own: dict | None = None) -> int:
     """One code per state, the first that applies: a failure; then a read that failed, a check that could not judge
-    (unknown) or rollover checks not run on an undeclared run, an organization no schedule reads, or a run error, none
-    of which is a pass; then a warning; then nothing to act on. Another tenant's organization, and the rollover checks
-    a declared --provider-only run owes to the tenant, are left out."""
+    (unknown) or rollover checks not run on an undeclared run, an organization no schedule reads, or a run error (a run
+    that judged no organization among them), none of which is a pass; then a warning; then nothing to act on. Another
+    tenant's organization, and the rollover checks a declared --provider-only run owes to the tenant, are left out.
+    `own` is the run's check of its own provider API token, which counts like any other check."""
     mine = [r for r in results if r.get("coverage") != OTHER]
     states = [c["state"] for r in mine for c in r["checks"]
               if not ((r.get("not_run") or {}).get("declared") and c["check"] in r["not_run"]["checks"])]
+    if own:
+        states.append(own["state"])
     if "fail" in states:
         return EXIT_FAIL
     if ("unknown" in states or errors
@@ -910,14 +1025,21 @@ def record(results: list[dict], warn_days: int, now: datetime, seen: set, run: d
     run = run or {}
     names = placeholders(results, run.get("tenant"))
     errors = list(run.get("errors") or [])
-    doc = {"captured": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "warn_days": warn_days, "exit": exit_code(results, errors),
+    credential = run.get("credential") or {}
+    doc = {"captured": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "warn_days": warn_days,
+           "exit": exit_code(results, errors, credential.get("check")),
            "mode": run.get("mode", "with the tenant's app"), "tenant": run.get("tenant"),
            "expected_tenants": run.get("expected_tenants"), "tenant_attested": run.get("tenant_attested"),
+           "credential": credential or None, "census": run.get("census"),
+           "judged": sum(1 for r in results if judged(r)),
            "run_errors": errors, "organizations": [{**r, "org": names[r["org"]]} for r in results]}
     return scrub(json.dumps(doc, indent=2, ensure_ascii=False), names, seen | {os.environ.get("VCFA_HOST", "")} - {""})
 
 
-def _print(results: list[dict], names: dict | None, attested: dict | None = None, errors: list[str] | tuple = ()) -> None:
+def _print(results: list[dict], names: dict | None, attested: dict | None = None, errors: list[str] | tuple = (),
+           own: dict | None = None) -> None:
+    if own:
+        print(f"\nthe watch's own credential\n  {own['state'].upper():<8}{own['check']:<16}{own['detail']}")
     for r in results:
         label = names[r["org"]] if names else r["org"]
         print(f"\n{label}  ({r.get('protocol', '?')}, {r['org_type']})")
@@ -1084,6 +1206,16 @@ def _run(argv: list[str]) -> int:
     if not listed:
         print("READ FAILED: the organization list came back empty, so the credential sees no organization; exit 3, no record written")
         return EXIT_UNREAD
+    # The watch's own credential: a provider API token has an end date, read from the provider's token list; a read
+    # that fails leaves it undetermined (exit 3) and the run goes on to the organizations.
+    own = None
+    if api.kind == "provider API token":
+        try:
+            own = own_token(api.tokens(), api.session_user(), os.environ.get("VCFA_PROVIDER_TOKEN_NAME", "").strip() or None,
+                            now, warn_days)
+        except (urllib.error.URLError, OSError, ValueError, KeyError, TypeError) as e:
+            own = _result("own_token", "unknown", f"the watch's own token's end date is not known: the token list could "
+                          f"not be read ({type(e).__name__})")
     graph, graph_error = None, ""
     if os.environ.get("ENTRA_TENANT_ID") and not a.provider_only:
         try:
@@ -1095,20 +1227,24 @@ def _run(argv: list[str]) -> int:
     orgs = [o for o in listed if (o["name"] in wanted if wanted else not o.get("isProviderConsumptionOrg"))]
     seen = {os.environ.get("ENTRA_TENANT_ID", ""), os.environ.get("ENTRA_CLIENT_ID", ""), run_tenant or ""} | (expected or set())
     seen -= {""}
-    results = []
+    results, off = [], 0
     for o in orgs:
         r = watch_org(api, graph, o, now, warn_days, seen, graph_error, run_tenant, expected, a.provider_only, attested)
         if kept(r, wanted):
             results.append(r)
+        else:
+            off += 1
     missing = sorted(set(wanted) - {r["org"] for r in results})
     for m in missing:
         results.append({"org": m, "org_type": "?", "checks": [], "read_errors": ["no organization by that name"]})
-    errors = run_errors(results, run_tenant)
-    _print(results, placeholders(results, run_tenant) if a.redact else None, attested, errors)
-    code = exit_code(results, errors)
+    census = {"listed": len(listed), "provider_own": 0 if wanted else len(listed) - len(orgs), "off": off}
+    errors = run_errors(results, run_tenant, census)
+    _print(results, placeholders(results, run_tenant) if a.redact else None, attested, errors, own)
+    code = exit_code(results, errors, own)
     run = {"mode": ("provider-only, declared" if a.provider_only else "with the tenant's app" if graph is not None or graph_error
                     else "provider-only, undeclared"),
            "tenant": run_tenant, "expected_tenants": len(expected) if expected is not None else None, "errors": errors,
+           "census": census, "credential": {"kind": api.kind, "check": own},
            "tenant_attested": ({"date": attested["date"].isoformat(), "max_days": attested["max_days"],
                                 "age_days": (attested["today"] - attested["date"]).days} if attested else None)}
     try:
@@ -1119,7 +1255,8 @@ def _run(argv: list[str]) -> int:
         return code
     with open(os.environ.get("OUT", "watch.json"), "w", encoding="utf-8") as f:
         f.write(text + "\n")
-    print(f"\n{len(results)} organization(s); exit {code}; record written with every estate value replaced")
+    print(f"\n{len(results)} organization(s), {sum(1 for r in results if judged(r))} judged; exit {code}; record written "
+          "with every estate value replaced")
     return code
 
 
