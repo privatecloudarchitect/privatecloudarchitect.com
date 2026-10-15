@@ -1,0 +1,201 @@
+{
+ "external_storage": [],
+ "filters": [],
+ "findings": [
+  {
+   "finding": "shard budget: 700 per replica at size small over 2 active partitions, at most 350 days each; more replicas add disk, not shard days",
+   "level": "INFO"
+  },
+  {
+   "finding": "the store holds 4 whole days at full volume, from 2026-10-11, plus today; 7,507,804 events are stamped earlier (a partial day, or lines a source sent late)",
+   "level": "INFO"
+  },
+  {
+   "finding": "partition 'Audit Records': oldest timestamp 2026-10-09T23:39:24Z, retention no time limit; a late line moves that timestamp, so read the depth above",
+   "level": "INFO"
+  },
+  {
+   "finding": "partition 'Audit Records' has no archive: nothing it holds outlives retention or capacity",
+   "level": "INFO"
+  },
+  {
+   "finding": "partition 'Default': oldest timestamp 2026-10-06T19:55:16Z, retention no time limit; a late line moves that timestamp, so read the depth above",
+   "level": "INFO"
+  },
+  {
+   "finding": "partition 'Default' has no archive: nothing it holds outlives retention or capacity",
+   "level": "INFO"
+  },
+  {
+   "finding": "no external storage is defined, so no partition can archive",
+   "level": "INFO"
+  },
+  {
+   "finding": "last 24 hours: 116,446,480 events, 71% with no application name",
+   "level": "INFO"
+  }
+ ],
+ "forwarders": [],
+ "masks": [],
+ "partitions": [
+  {
+   "archive": false,
+   "built_in": true,
+   "condition": "auditid exists; __auditrecordonly exists",
+   "created": "2026-06-09T02:05:46Z",
+   "enabled": true,
+   "events": 34475011,
+   "name": "Audit Records",
+   "oldest_event": "2026-10-09T23:39:24Z",
+   "oldest_event_age_days": 5.85,
+   "order": 0,
+   "retention_days": 0.0,
+   "size_reported": 38257345837
+  },
+  {
+   "archive": false,
+   "built_in": true,
+   "condition": "catch-all",
+   "created": "2026-06-09T02:05:45Z",
+   "enabled": true,
+   "events": 536454491,
+   "name": "Default",
+   "oldest_event": "2026-10-06T19:55:16Z",
+   "oldest_event_age_days": 9.01,
+   "order": 1000,
+   "retention_days": 0.0,
+   "size_reported": 275386300040
+  }
+ ],
+ "read_at": "2026-10-15T20:09:55Z",
+ "version": "9.1.1.0.25679624",
+ "volume": {
+  "depth": {
+   "busiest_day": 117121794,
+   "events_before": 7507804,
+   "first_full_day": "2026-10-11",
+   "full_days": 4
+  },
+  "events_per_day": [
+   {
+    "day": "2026-10-15",
+    "events": 98164460
+   },
+   {
+    "day": "2026-10-14",
+    "events": 116807489
+   },
+   {
+    "day": "2026-10-13",
+    "events": 117121794
+   },
+   {
+    "day": "2026-10-12",
+    "events": 116451512
+   },
+   {
+    "day": "2026-10-11",
+    "events": 114878924
+   },
+   {
+    "day": "2026-10-10",
+    "events": 7426383
+   },
+   {
+    "day": "2026-10-09",
+    "events": 80784
+   },
+   {
+    "day": "2026-10-08",
+    "events": 288
+   },
+   {
+    "day": "2026-10-07",
+    "events": 295
+   },
+   {
+    "day": "2026-10-06",
+    "events": 54
+   }
+  ],
+  "last_24h": 116446480,
+  "last_24h_with_appname": 33511511,
+  "top_applications_24h": [
+   {
+    "appname": "crx-cli",
+    "events": 9449095,
+    "share": 0.0811
+   },
+   {
+    "appname": "envoy-access",
+    "events": 9416820,
+    "share": 0.0809
+   },
+   {
+    "appname": "Hostd",
+    "events": 2785663,
+    "share": 0.0239
+   },
+   {
+    "appname": "nsxdavim",
+    "events": 2761394,
+    "share": 0.0237
+   },
+   {
+    "appname": "localcli",
+    "events": 1069639,
+    "share": 0.0092
+   },
+   {
+    "appname": "cfgAgent",
+    "events": 915021,
+    "share": 0.0079
+   },
+   {
+    "appname": "vsansystem",
+    "events": 911631,
+    "share": 0.0078
+   },
+   {
+    "appname": "nsx-exporter",
+    "events": 866270,
+    "share": 0.0074
+   },
+   {
+    "appname": "nsx-opsagent",
+    "events": 763683,
+    "share": 0.0066
+   },
+   {
+    "appname": "nsx-sha",
+    "events": 597684,
+    "share": 0.0051
+   },
+   {
+    "appname": "Vpxa",
+    "events": 579607,
+    "share": 0.005
+   },
+   {
+    "appname": "vmkernel",
+    "events": 335633,
+    "share": 0.0029
+   },
+   {
+    "appname": "nsx-scx-nsx-security-services-infravisor-agent",
+    "events": 291358,
+    "share": 0.0025
+   },
+   {
+    "appname": "Fdm",
+    "events": 254422,
+    "share": 0.0022
+   },
+   {
+    "appname": "vmkwarning",
+    "events": 210146,
+    "share": 0.0018
+   }
+  ]
+ }
+}

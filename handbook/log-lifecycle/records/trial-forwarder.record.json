@@ -1,0 +1,17 @@
+{
+ "answer": {
+  "errorCode": "TEST_ERROR",
+  "errorDetails": null,
+  "errorMessage": "Connect timed out"
+ },
+ "destination": "{{destination-1}}:514",
+ "kind": "forwarder",
+ "protocol": "SYSLOG",
+ "read_at": "2026-10-15T19:51:27Z",
+ "span_s": 120,
+ "status": 400,
+ "step_s": 15,
+ "tls": false,
+ "transport": "TCP",
+ "version": "9.1.1.0.25679624"
+}
