@@ -1,11 +1,12 @@
 {
- "captured": "2026-10-13T03:05:35Z",
+ "captured": "2026-10-15T04:48:55Z",
  "mode": "report",
  "tenant": "{{id-1}}",
  "organizations": [
   {
    "org": "{{org-1}}",
    "protocol": "OIDC",
+   "user_key": "preferred_username",
    "users": [
     {
      "id": "{{id-3}}",
@@ -16,6 +17,7 @@
      "tokens": [],
      "decision": "out of scope",
      "reason": "LOCAL account, not federated",
+     "found": null,
      "direct_roles": [
       "Organization Administrator"
      ],
@@ -33,10 +35,12 @@
      "tokens": [],
      "decision": "keep",
      "reason": "entitled through {{group-1}}",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization User"
      ],
+     "matched_by": "userPrincipalName",
      "flags": []
     },
     {
@@ -48,10 +52,12 @@
      "tokens": [],
      "decision": "leaver",
      "reason": "not assigned to the app, directly or through a group",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization User"
      ],
+     "matched_by": "userPrincipalName",
      "flags": [],
      "action": "in step: already disabled, no token"
     }
@@ -70,11 +76,19 @@
      "{{group-1}}"
     ],
     "unresolved": []
+   },
+   "leaver_guard": {
+    "open": 0,
+    "federated": 2,
+    "limit": "more than 3 and more than a quarter of the federated accounts",
+    "exceeded": false,
+    "why": ""
    }
   },
   {
    "org": "{{org-2}}",
    "protocol": "SAML",
+   "user_key": "http://{{host-3}}/ws/2005/05/identity/claims/name",
    "users": [
     {
      "id": "{{id-6}}",
@@ -85,10 +99,12 @@
      "tokens": [],
      "decision": "keep",
      "reason": "entitled through {{group-2}}",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization User"
      ],
+     "matched_by": "userPrincipalName",
      "flags": []
     },
     {
@@ -100,10 +116,12 @@
      "tokens": [],
      "decision": "leaver",
      "reason": "not assigned to the app, directly or through a group",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization User"
      ],
+     "matched_by": "userPrincipalName",
      "flags": [],
      "action": "in step: already disabled, no token"
     }
@@ -122,11 +140,19 @@
      "{{group-2}}"
     ],
     "unresolved": []
+   },
+   "leaver_guard": {
+    "open": 0,
+    "federated": 2,
+    "limit": "more than 3 and more than a quarter of the federated accounts",
+    "exceeded": false,
+    "why": ""
    }
   },
   {
    "org": "{{org-3}}",
    "protocol": "OIDC",
+   "user_key": "preferred_username",
    "users": [
     {
      "id": "{{id-8}}",
@@ -137,10 +163,12 @@
      "tokens": [],
      "decision": "keep",
      "reason": "entitled through {{group-3}}",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization Member"
      ],
+     "matched_by": "userPrincipalName",
      "flags": []
     },
     {
@@ -152,10 +180,12 @@
      "tokens": [],
      "decision": "keep",
      "reason": "entitled through {{group-3}}",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization Member"
      ],
+     "matched_by": "userPrincipalName",
      "flags": []
     },
     {
@@ -167,6 +197,7 @@
      "tokens": [],
      "decision": "leaver",
      "reason": "the Entra account is disabled",
+     "found": true,
      "direct_roles": [
       "Service Broker User"
      ],
@@ -174,6 +205,7 @@
       "Organization Member",
       "Service Broker User"
      ],
+     "matched_by": "userPrincipalName",
      "flags": [
       "direct-role: a person later given this name holds these roles at the first sign-in"
      ],
@@ -194,11 +226,19 @@
      "{{group-3}}"
     ],
     "unresolved": []
+   },
+   "leaver_guard": {
+    "open": 0,
+    "federated": 3,
+    "limit": "more than 3 and more than a quarter of the federated accounts",
+    "exceeded": false,
+    "why": ""
    }
   },
   {
    "org": "{{org-4}}",
    "protocol": "SAML",
+   "user_key": "http://{{host-3}}/ws/2005/05/identity/claims/name",
    "users": [
     {
      "id": "{{id-11}}",
@@ -209,10 +249,12 @@
      "tokens": [],
      "decision": "keep",
      "reason": "entitled through {{group-4}}",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization Member"
      ],
+     "matched_by": "userPrincipalName",
      "flags": []
     },
     {
@@ -224,10 +266,12 @@
      "tokens": [],
      "decision": "keep",
      "reason": "entitled through {{group-4}}",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization Member"
      ],
+     "matched_by": "userPrincipalName",
      "flags": []
     },
     {
@@ -239,10 +283,12 @@
      "tokens": [],
      "decision": "keep",
      "reason": "entitled through {{group-4}}",
+     "found": true,
      "direct_roles": [],
      "effective_roles": [
       "Organization Member"
      ],
+     "matched_by": "userPrincipalName",
      "flags": []
     }
    ],
@@ -260,6 +306,13 @@
      "{{group-4}}"
     ],
     "unresolved": []
+   },
+   "leaver_guard": {
+    "open": 0,
+    "federated": 3,
+    "limit": "more than 3 and more than a quarter of the federated accounts",
+    "exceeded": false,
+    "why": ""
    }
   }
  ],
@@ -275,11 +328,13 @@
   "federated_elsewhere": 3,
   "unreadable": 0,
   "open_leavers": 0,
+  "refused": 0,
   "closed": 0,
   "not_held": 0,
   "in_step": 3,
   "direct_role": 1,
   "name_in_use_again": 0,
+  "acknowledged": 0,
   "flagged": 1,
   "per_org": [
    {
@@ -287,9 +342,11 @@
     "protocol": "OIDC",
     "accounts": 3,
     "federated": 2,
+    "found": 2,
     "keep": 1,
     "leaver": 1,
     "open": 0,
+    "guard_exceeded": false,
     "flagged": 0,
     "direct_federated": [],
     "direct_local": 1
@@ -299,9 +356,11 @@
     "protocol": "SAML",
     "accounts": 2,
     "federated": 2,
+    "found": 2,
     "keep": 1,
     "leaver": 1,
     "open": 0,
+    "guard_exceeded": false,
     "flagged": 0,
     "direct_federated": [],
     "direct_local": 0
@@ -311,9 +370,11 @@
     "protocol": "OIDC",
     "accounts": 3,
     "federated": 3,
+    "found": 3,
     "keep": 2,
     "leaver": 1,
     "open": 0,
+    "guard_exceeded": false,
     "flagged": 1,
     "direct_federated": [
      {
@@ -330,15 +391,18 @@
     "protocol": "SAML",
     "accounts": 3,
     "federated": 3,
+    "found": 3,
     "keep": 3,
     "leaver": 0,
     "open": 0,
+    "guard_exceeded": false,
     "flagged": 0,
     "direct_federated": [],
     "direct_local": 0
    }
   ]
  },
+ "exit": 4,
  "calls": [
   {
    "plane": "vcf-automation",
@@ -528,8 +592,32 @@
   },
   {
    "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
    "method": "POST",
    "path": "/users/{{id-36}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
    "status": 200
   },
   {
@@ -594,8 +682,32 @@
   },
   {
    "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
    "method": "POST",
    "path": "/users/{{id-36}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
    "status": 200
   },
   {
@@ -660,6 +772,18 @@
   },
   {
    "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
    "method": "POST",
    "path": "/users/{{id-36}}/checkMemberGroups",
    "status": 200
@@ -672,8 +796,32 @@
   },
   {
    "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
    "method": "POST",
    "path": "/users/{{id-37}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
    "status": 200
   },
   {
@@ -738,8 +886,32 @@
   },
   {
    "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
    "method": "POST",
    "path": "/users/{{id-36}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
    "status": 200
   },
   {
@@ -762,10 +934,21 @@
   },
   {
    "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
+   "method": "GET",
+   "path": "/users",
+   "status": 200
+  },
+  {
+   "plane": "graph",
    "method": "POST",
    "path": "/users/{{id-42}}/checkMemberGroups",
    "status": 200
   }
- ],
- "exit": 1
+ ]
 }

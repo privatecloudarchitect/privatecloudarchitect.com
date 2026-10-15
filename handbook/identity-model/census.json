@@ -999,7 +999,11 @@
       "principal": "{{name-9}}",
       "status": "ACTIVE",
       "api_token_ttl_min": 259200,
-      "access_token_ttl_min": 60
+      "access_token_ttl_min": 60,
+      "expires": "2027-01-24",
+      "days_left": 103,
+      "last_used": "2026-07-29",
+      "days_since_used": 75
      }
     ]
    },
@@ -1014,7 +1018,11 @@
       "principal": "{{name-11}}",
       "status": "ACTIVE",
       "api_token_ttl_min": 259200,
-      "access_token_ttl_min": 60
+      "access_token_ttl_min": 60,
+      "expires": "2027-04-01",
+      "days_left": 170,
+      "last_used": "2026-10-13",
+      "days_since_used": 0
      }
     ]
    },
@@ -1032,7 +1040,11 @@
     "principal": "{{name-1}}",
     "status": "ACTIVE",
     "api_token_ttl_min": 259200,
-    "access_token_ttl_min": 60
+    "access_token_ttl_min": 60,
+    "expires": "2027-02-03",
+    "days_left": 113,
+    "last_used": "2026-10-13",
+    "days_since_used": 0
    }
   ],
   "settings": {
@@ -1168,6 +1180,7 @@
    }
   ],
   "broker_tenant": "CUSTOMER",
+  "orgs_only": false,
   "egress": null
  },
  "exit": 0

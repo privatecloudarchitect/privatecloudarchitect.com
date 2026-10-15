@@ -16,18 +16,26 @@ no longer pass both gates a sign-in passes:
   Entra's gate          when the app requires assignment, the user is assigned to it, directly or through a group
   VCF Automation's      the sign-in carries a group imported into the organization (a user in none is refused); with
                         groupMembershipClaims ApplicationGroup the claim carries only groups assigned to the app
-Accounts are matched to Entra by the key the organization names them with, read from its own settings: by principal
-name for OIDC keyed on preferred_username and for SAML keyed on Entra's name claim, by object id for OIDC keyed on oid.
-Any other key, or an account whose name does not fit its organization's key, is undetermined. Local accounts are out
-of scope. Two more things are flagged and never acted on: a federated account holding a role directly (a reused
-name inherits it), and an account disabled here whose name an enabled, entitled Entra user now holds (if that is a
-different person, re-enabling the account hands them its roles).
+Accounts are matched to Entra by the key the organization names them with, read from its own settings: by name for
+OIDC keyed on preferred_username and for SAML keyed on Entra's name claim, by object id for OIDC keyed on oid. A name
+is looked up by userPrincipalName, then by mail, then by otherMails (a guest's userPrincipalName in the tenant carries
+#EXT#, while the name it signs in with is its own address, held in mail); exactly one Entra user across the three is
+the person, and more than one is undetermined. A name no lookup finds is a leaver only when another federated account
+of the same organization was found: when none was, every account of the organization is undetermined, because the
+name its user key carries is not one the lookups can read. Any other key, or an account whose name does not fit its
+organization's key, is undetermined. Local accounts are out of scope. Two more things are flagged and never acted on:
+a federated account holding a role directly (a reused name inherits it), and an account disabled here whose name an
+enabled, entitled Entra user now holds (if that is a different person, re-enabling the account hands them its roles).
+A flag a person has decided on can be acknowledged until a date with --ack; the report still lists it, as such.
 
 Fail closed. An organization whose gate cannot be read, or an account whose state cannot be read, is reported
 undetermined and never acted on. Entra's directory reads settle after a change, so before acting the script reads
 a leaver again CONFIRM_READS times, CONFIRM_PAUSE seconds apart, and acts only when every read agrees; otherwise the
 account is left for the next run. Acting needs a named organization (--org): the script never acts on every
-organization it can see. A leaver already disabled with no token is in step, so a re-run changes nothing.
+organization it can see. And it refuses an organization whose open leavers exceed a share no ordinary week produces
+(more than MAX_LEAVERS and more than a quarter of its federated accounts, or more than --max-leavers N), closing none
+of them and saying why: a wrong lookup reads everyone as gone. A leaver already disabled with no token is in step, so
+a re-run changes nothing.
 
 VCF Automation, as the provider:
   GET    /cloudapi/1.0.0/orgs                                 the organizations
@@ -39,7 +47,10 @@ VCF Automation, as the provider:
   PUT    /cloudapi/1.0.0/users/{id}                           the account's full record with enabled false, then
                                                               read back: disabled, nothing else changed, no token
 Microsoft Graph (an app permitted to read users, groups, applications and service principals):
-  GET /servicePrincipals, /applications, /servicePrincipals/{id}/appRoleAssignedTo, /groups, /users (filtered)
+  GET /servicePrincipals, /applications, /servicePrincipals/{id}/appRoleAssignedTo, /groups (filtered)
+  GET /users?$filter=userPrincipalName eq '{name}', mail eq '{name}', otherMails/any(m:m eq '{name}')
+                                                              each a filter Graph serves without advanced query
+                                                              parameters (no ConsistencyLevel header, no $count)
   POST /users/{id}/checkMemberGroups                          a read: which of the gate's groups the user is in
 
 Secrets die where they arrive: the OIDC settings carry the client secret in clear, a token list can carry a token's
@@ -53,17 +64,28 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider API token, traded 
       ORGS (comma list, to read fewer organizations); OUT (default leavers.json)
 Use:  python3 leavers.py                                   report every federated organization, write the record
       python3 leavers.py --redact                          the same, printed with placeholders, to share
+      python3 leavers.py --ack acks.json                   the same, with the flags a person has decided on silenced
+                                                           until their date (a JSON list of {"org", "account", "flag",
+                                                           "until": "YYYY-MM-DD"}; flag direct-role or
+                                                           name-in-use-again); the report lists them as acknowledged
       python3 leavers.py --execute --org NAME [--user UPN] close the confirmed leavers of one organization (with
                                                            --user, only that account; every account is still read)
+                     [--max-leavers N]                     refuse the organization when more than N leavers are open
+                                                           (default: more than MAX_LEAVERS and more than a quarter)
       python3 leavers.py --close-now --org NAME --user ACCOUNT [--execute]
                                                            the urgent close: one named account (its user name, a
                                                            principal name or an object id), closed now without asking
                                                            Entra whether the person has left; plan only without
                                                            --execute. Needs no Graph credential.
-Exit: 0 nothing open and nothing flagged (with --close-now: the plan printed, or the close held) · 1 an open leaver
-      to close, or a flag (a direct role, a name in use again) · 2 with --execute, a close that did not hold on
-      read-back · 3 a read failed and nothing worse · 4 a usage error, an account --close-now cannot name exactly
-      once, or the record refused because an estate value survived the scrub (nothing is written)
+Exit, the first that applies, so a scheduler reads one state from one number:
+      2 with --execute, a close that did not hold on read-back
+      1 an open leaver: an account to close (still enabled or holding a token), including one --execute refused
+      3 a read failed, or an account is undetermined: nothing is known about what was not read (a credential that
+        could not be obtained is one: nothing is read and nothing is written)
+      4 a flag (a direct role, a name in use again) not acknowledged in --ack
+      0 nothing open, nothing unread, nothing flagged (with --close-now: the plan printed, or the close held)
+      5 a usage error, an unreadable --ack file, an account --close-now cannot name exactly once, or the record
+        refused because an estate value survived the scrub (nothing is written)
 """
 
 from __future__ import annotations
@@ -83,6 +105,7 @@ import urllib.request
 import uuid
 from collections import Counter
 from datetime import datetime, timezone
+from pathlib import Path
 
 CLOUDAPI = "application/json;version=9.1.0"
 TENANT_JSON = "application/json;version=10.0.0.0-alpha"  # the version the platform's own user writes were proven with
@@ -100,9 +123,17 @@ FEDERATED = ("OAUTH", "SAML")
 BY_NAME = {"preferred_username", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"}
 BY_ID = {"oid"}
 OBJECT_ID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+# The lookups a name goes through, in order: the filter each sends to /users. Each is a form Microsoft Graph's user
+# resource documents for $filter and serves by default, without the ConsistencyLevel header or $count.
+NAME_LOOKUPS = (("userPrincipalName", "userPrincipalName eq '{}'"), ("mail", "mail eq '{}'"),
+                ("otherMails", "otherMails/any(m:m eq '{}')"))
+NO_SUCH_NAME = "no Entra user has this name"
 APPLICATION_GROUP = "ApplicationGroup"
 CONFIRM_READS = 3   # reads that must all say "leaver" before the script acts
 CONFIRM_PAUSE = 10  # seconds between them
+MAX_LEAVERS = 3     # --execute refuses an organization with more open leavers than this and than a quarter of it
+FLAG_KINDS = ("direct-role", "name-in-use-again")
+EXIT_HELD_NOT, EXIT_OPEN, EXIT_UNREAD, EXIT_FLAGGED, EXIT_USAGE = 2, 1, 3, 4, 5
 SECRET_KEYS = {"clientSecret", "client_secret", "password", "token", "accessToken", "refreshToken", "secretText",
                "privateKey"}
 
@@ -161,8 +192,8 @@ def decide(user: dict, found: dict | None, member_of: set | None, gate: dict | N
         return "out of scope", f"{user.get('providerType') or 'unknown'} account, not federated"
     if gate is None:
         return "undetermined", "the organization's gate could not be read"
-    if found is None:
-        return "leaver", "no Entra user has this name"
+    if found is None:  # a leaver only while another account of the organization was found (unfound_guard)
+        return "leaver", NO_SUCH_NAME
     if found.get("accountEnabled") is False:
         return "leaver", "the Entra account is disabled"
     if member_of is None:
@@ -204,13 +235,84 @@ def action(user: dict, decision: str, tokens: list, execute: bool, act_on: str |
     return "confirm"
 
 
+def unfound_guard(rows: list[dict], key: str | None) -> int:
+    """A name no lookup finds is a leaver only when another federated account of the organization was found. When
+    none was, the organization's names are not ones the lookups read (a name claim sourced from another attribute),
+    so every such leaver becomes undetermined. Each row carries `found` (True, False, or None when not looked up);
+    returns how many rows it changed."""
+    federated = [r for r in rows if r.get("providerType") in FEDERATED]
+    if any(r.get("found") is True for r in federated):
+        return 0
+    changed = 0
+    for r in federated:
+        if r["decision"] == "leaver" and r["reason"] == NO_SUCH_NAME:
+            r["decision"], changed = "undetermined", changed + 1
+            r["reason"] = (f"no federated account of this organization matched an Entra user by userPrincipalName, mail "
+                           f"or otherMails, so the name its user key ({key or 'not set'}) carries is not one this job "
+                           "reads; no account of it is judged a leaver")
+    return changed
+
+
+def leaver_guard(open_leavers: int, federated: int, max_leavers: int | None = None) -> dict:
+    """Whether --execute refuses the organization: more open leavers than --max-leavers, or by default more than
+    MAX_LEAVERS and more than a quarter of its federated accounts. A share that size is a wrong lookup more often
+    than a bad week, and closing it would lock out the people still there."""
+    if max_leavers is not None:
+        exceeded, limit = open_leavers > max_leavers, f"more than {max_leavers} (--max-leavers)"
+    else:
+        exceeded = open_leavers > MAX_LEAVERS and open_leavers * 4 > federated
+        limit = f"more than {MAX_LEAVERS} and more than a quarter of the federated accounts"
+    return {"open": open_leavers, "federated": federated, "limit": limit, "exceeded": exceeded,
+            "why": (f"{open_leavers} open leavers of {federated} federated accounts is {limit}: closing none; read "
+                    "why so many read gone (a name claim from another attribute, a lookup refused), then close them "
+                    "by name or rerun with --max-leavers") if exceeded else ""}
+
+
+def load_acks(path: str) -> list[dict]:
+    """The flags a person has decided on: a JSON list of {"org", "account", "flag", "until": "YYYY-MM-DD"}. Anything
+    else is refused (ValueError), never half read: a silenced flag must be one somebody wrote down."""
+    acks = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(acks, list):
+        raise ValueError("--ack: the file must hold a JSON list")
+    for i, a in enumerate(acks):
+        if not isinstance(a, dict) or not all(isinstance(a.get(k), str) and a.get(k) for k in ("org", "account", "flag", "until")):
+            raise ValueError(f"--ack: entry {i} needs org, account, flag and until")
+        if a["flag"] not in FLAG_KINDS:
+            raise ValueError(f"--ack: entry {i} names flag {a['flag']!r}; the flags are {', '.join(FLAG_KINDS)}")
+        a["until"] = datetime.strptime(a["until"], "%Y-%m-%d").strftime("%Y-%m-%d")  # malformed: ValueError
+    return acks
+
+
+def apply_acks(record: dict, acks: list[dict], today: str) -> None:
+    """Mark each flag an acknowledgement covers (same organization, account and flag, `until` today or later) on its
+    row as `acknowledged`; an expired one leaves the flag counting. Counts what matched nothing, never names it."""
+    used = set()
+    for o in record["organizations"]:
+        for r in o["users"]:
+            for f in r.get("flags") or []:
+                kind = f.split(":", 1)[0]
+                for i, a in enumerate(acks):
+                    if a["org"] == o["org"] and a["account"].lower() == str(r.get("username", "")).lower() \
+                            and a["flag"] == kind:
+                        used.add(i)
+                        if a["until"] >= today:
+                            r.setdefault("acknowledged", []).append({"flag": kind, "until": a["until"]})
+                        else:
+                            r.setdefault("ack_expired", []).append({"flag": kind, "until": a["until"]})
+    record["acks"] = {"entries": len(acks), "unmatched": len(acks) - len(used)}
+
+
 def exit_code(summary: dict, execute: bool) -> int:
+    """One state per code, the first that applies: a close that did not hold, an open leaver, a read that failed or
+    an account undetermined, a flag nobody acknowledged, nothing. A flag never hides a failed read or a leaver."""
     if execute and summary.get("not_held"):
-        return 2
-    if summary.get("open_leavers") or summary.get("flagged"):
-        return 1
+        return EXIT_HELD_NOT
+    if summary.get("open_leavers"):
+        return EXIT_OPEN
     if summary.get("undetermined") or summary.get("unreadable"):
-        return 3
+        return EXIT_UNREAD
+    if summary.get("flagged"):
+        return EXIT_FLAGGED
     return 0
 
 
@@ -433,18 +535,33 @@ def read_gate(graph: Graph, of: dict, groups: list[dict]) -> dict:
             "imported": imported, "imported_ids": ids, "unresolved": unresolved}
 
 
-def entra_user(graph: Graph, username: str, lookup: str = "name") -> dict | None:
-    """The Entra user an account names: by principal name, or by object id where the organization is keyed on oid.
-    None means Entra holds no such user; a refused read raises, so the account is undetermined."""
+def entra_user(graph: Graph, username: str, lookup: str = "name") -> tuple[dict | None, str | None]:
+    """The Entra user an account names, and how it was found. Under oid, by object id. By name, by userPrincipalName,
+    then mail, then otherMails: every lookup is read, and exactly one Entra user across them is the person (the first
+    lookup that found it says how). (None, None): no lookup found anyone. A refused read, or more than one user,
+    raises LookupError, so the account is undetermined and never a leaver."""
     select = "id,userPrincipalName,accountEnabled"
     if lookup == "id":
         status, answer = graph.call("GET", f"/users/{urllib.parse.quote(username)}?$select={select}")
         if status == 404:
-            return None
+            return None, None
         if not isinstance(answer, dict) or not answer.get("id"):
             raise LookupError("Graph refused /users/{id}")
-        return answer
-    return graph.one("/users", f"userPrincipalName eq '{username}'", select)
+        return answer, "id"
+    if "'" in username:  # a quote would end the filter's string; such a name is never guessed at
+        raise LookupError("a name holding a single quote is not looked up")
+    found: dict[str, tuple[dict, str]] = {}
+    for how, form in NAME_LOOKUPS:
+        rows = graph.values("/users", filter=form.format(username), select=select)
+        if rows is None:
+            raise LookupError(f"Graph refused the {how} lookup")
+        for row in rows:
+            found.setdefault(str(row.get("id")), (row, how))
+    if len(found) > 1:
+        hows = sorted({h for _r, h in found.values()})
+        raise LookupError(f"{len(found)} Entra users match this name (by {', '.join(hows)}), so which one signs in "
+                          "is not known")
+    return next(iter(found.values())) if found else (None, None)
 
 
 def member_of(graph: Graph, user_id: str, groups: list[str]) -> set | None:
@@ -458,22 +575,30 @@ def member_of(graph: Graph, user_id: str, groups: list[str]) -> set | None:
     return out
 
 
-def judge(graph: Graph, user: dict, gate: dict | None) -> tuple[str, str]:
+class Verdict(tuple):
+    """(decision, reason, found, matched_by): found is True when Entra holds the account's user, False when no lookup
+    found one, None when none was made; matched_by names the lookup that found it."""
+
+    def __new__(cls, decision: str, reason: str, found: bool | None = None, matched_by: str | None = None):
+        return super().__new__(cls, (decision, reason, found, matched_by))
+
+
+def judge(graph: Graph, user: dict, gate: dict | None) -> Verdict:
     """Read Entra for one account and apply the rule; a refused read makes it undetermined."""
     if user.get("providerType") not in FEDERATED or gate is None:
-        return decide(user, None, None, gate)
+        return Verdict(*decide(user, None, None, gate))
     lookup = gate.get("lookup")
     if lookup is None:
-        return "undetermined", (f"the organization's user key ({gate.get('user_key') or 'not set'}) is not one this job "
-                                "matches to Entra, so no account of it is judged")
+        return Verdict("undetermined", f"the organization's user key ({gate.get('user_key') or 'not set'}) is not one "
+                                       "this job matches to Entra, so no account of it is judged")
     if lookup == "id" and not OBJECT_ID.match(str(user.get("username"))):
-        return "undetermined", "the organization is keyed on the object id and this account's name is not one"
+        return Verdict("undetermined", "the organization is keyed on the object id and this account's name is not one")
     try:
-        found = entra_user(graph, user["username"], lookup)
-    except LookupError:
-        return "undetermined", "Entra could not be read for this user"
+        found, how = entra_user(graph, user["username"], lookup)
+    except LookupError as e:
+        return Verdict("undetermined", f"Entra could not be read for this user: {e}")
     groups = member_of(graph, found["id"], watched(gate)) if found else set()
-    return decide(user, found, groups, gate)
+    return Verdict(*decide(user, found, groups, gate), found is not None, how)
 
 
 def confirm(graph: Graph, user: dict, gate: dict, reads: int | None = None, pause: float | None = None,
@@ -575,8 +700,9 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool) -> dict:
 
 
 def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: bool, act_on: str | None,
-              say=print) -> dict:
-    """Report every federated organization's leavers; with `execute`, close the confirmed ones of `only`."""
+              say=print, max_leavers: int | None = None) -> dict:
+    """Report every federated organization's leavers; with `execute`, close the confirmed ones of `only`, unless
+    the organization's open leavers exceed the guard (leaver_guard), when none is closed."""
     orgs, unreadable, elsewhere = federated_orgs(vcfa, tenant, only)
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "execute" if execute else "report", "tenant": tenant, "organizations": [],
@@ -606,26 +732,39 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
                              "claimable": sorted(claim_groups(gate).values()), "unresolved": gate["unresolved"]}
         say(f"  {of['org']} ({of['protocol']}): {len(users)} account(s), {len(tokens)} token(s); gate "
             + (", ".join(entry["gate"]["claimable"]) or "no claimable group" if gate else f"UNREAD ({entry['gate_error']})"))
-        for user in users:
-            decision, reason = judge(graph, user, gate)
-            mine = [t for t in tokens if (t.get("owner") or {}).get("id") == user.get("id")]
-            row = {**keep(user, USER), "tokens": keep(mine, TOKEN), "decision": decision, "reason": reason,
-                   "direct_roles": sorted(str(r.get("name")) for r in user.get("roleEntityRefs") or []),
-                   "effective_roles": sorted(str(r.get("name")) for r in user.get("effectiveRoleEntityRefs") or []),
-                   "flags": flags(user, decision)}
-            todo = action(user, decision, mine, execute, act_on)
-            if todo == "confirm":
+        mine = {u.get("id"): [t for t in tokens if (t.get("owner") or {}).get("id") == u.get("id")] for u in users}
+        for user in users:  # judge every account first: the guards below read the organization as a whole
+            v = judge(graph, user, gate)
+            row = {**keep(user, USER), "tokens": keep(mine[user.get("id")], TOKEN), "decision": v[0], "reason": v[1],
+                   "found": v[2], "direct_roles": sorted(str(r.get("name")) for r in user.get("roleEntityRefs") or []),
+                   "effective_roles": sorted(str(r.get("name")) for r in user.get("effectiveRoleEntityRefs") or [])}
+            if v[3]:
+                row["matched_by"] = v[3]
+            entry["users"].append(row)
+        unfound_guard(entry["users"], of.get("key"))
+        todo = {}
+        for user, row in zip(users, entry["users"], strict=True):
+            row["flags"] = flags(user, row["decision"])
+            todo[user.get("id")] = action(user, row["decision"], mine[user.get("id")], execute, act_on)
+        federated = sum(1 for u in users if u.get("providerType") in FEDERATED)
+        entry["leaver_guard"] = leaver_guard(sum(1 for t in todo.values() if t and not t.startswith("in step")),
+                                             federated, max_leavers)
+        for user, row in zip(users, entry["users"], strict=True):
+            t = todo[user.get("id")]
+            if t == "confirm" and entry["leaver_guard"]["exceeded"]:
+                row["action"] = "refused: " + entry["leaver_guard"]["why"]
+            elif t == "confirm":
                 confirmed, reads = confirm(graph, user, gate)
                 row["confirm_reads"] = reads
                 if not confirmed:
                     row["action"] = "not confirmed: Entra's reads disagree; left for the next run"
                 else:
                     row["action"] = "closed"
-                    row["result"] = close(vcfa, of["urn"], user, mine)
-            elif todo:
-                row["action"] = todo
-            entry["users"].append(row)
-            say(f"    {user.get('username')}: {decision} ({reason})" + (f" -> {row['action']}" if row.get("action") else "")
+                    row["result"] = close(vcfa, of["urn"], user, mine[user.get("id")])
+            elif t:
+                row["action"] = t
+            say(f"    {user.get('username')}: {row['decision']} ({row['reason']})"
+                + (f" -> {row['action']}" if row.get("action") else "")
                 + "".join(f"  FLAG {f.split(':', 1)[0]}" for f in row["flags"]))
         record["organizations"].append(entry)
     record["summary"] = summary(record)
@@ -636,24 +775,34 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
 def summary(record: dict) -> dict:
     """The counts a scheduler and a reader act on, by organization and in total."""
     rows = [r for o in record["organizations"] for r in o["users"]]
+    is_open = ("would", "not confirmed", "refused")
+
+    def unacked(r: dict) -> list[str]:
+        acked = {a["flag"] for a in r.get("acknowledged") or []}
+        return [f for f in r["flags"] if f.split(":", 1)[0] not in acked]
+
     s = {k.replace(" ", "_"): sum(1 for r in rows if r["decision"] == k)
          for k in ("keep", "leaver", "out of scope", "undetermined")}
     s.update(organizations=len(record["organizations"]), federated_elsewhere=record.get("federated_elsewhere", 0),
              unreadable=len(record.get("unreadable") or []) + sum(1 for o in record["organizations"]
                                                                    if o.get("error") or o.get("gate_error")),
-             open_leavers=sum(1 for r in rows if str(r.get("action", "")).startswith(("would", "not confirmed"))),
+             open_leavers=sum(1 for r in rows if str(r.get("action", "")).startswith(is_open)),
+             refused=sum(1 for r in rows if str(r.get("action", "")).startswith("refused")),
              closed=sum(1 for r in rows if r.get("action") == "closed"),
              not_held=sum(1 for r in rows if r.get("action") == "closed" and not (r.get("result") or {}).get("held")),
              in_step=sum(1 for r in rows if str(r.get("action", "")).startswith("in step")),
              direct_role=sum(1 for r in rows if any(f.startswith("direct-role") for f in r["flags"])),
-             name_in_use_again=sum(1 for r in rows if any(f.startswith("name-in-use-again") for f in r["flags"])))
-    s["flagged"] = s["direct_role"] + s["name_in_use_again"]
+             name_in_use_again=sum(1 for r in rows if any(f.startswith("name-in-use-again") for f in r["flags"])),
+             acknowledged=sum(len(r.get("acknowledged") or []) for r in rows))
+    s["flagged"] = sum(len(unacked(r)) for r in rows)  # what exit 4 reads: raised and not acknowledged
     s["per_org"] = [{"org": o["org"], "protocol": o["protocol"], "accounts": len(o["users"]),
                      "federated": sum(1 for r in o["users"] if r.get("providerType") in FEDERATED),
+                     "found": sum(1 for r in o["users"] if r.get("found") is True),
                      "keep": sum(1 for r in o["users"] if r["decision"] == "keep"),
                      "leaver": sum(1 for r in o["users"] if r["decision"] == "leaver"),
-                     "open": sum(1 for r in o["users"] if str(r.get("action", "")).startswith(("would", "not confirmed"))),
-                     "flagged": sum(1 for r in o["users"] if r["flags"]),
+                     "open": sum(1 for r in o["users"] if str(r.get("action", "")).startswith(is_open)),
+                     "guard_exceeded": bool((o.get("leaver_guard") or {}).get("exceeded")),
+                     "flagged": sum(1 for r in o["users"] if unacked(r)),
                      "direct_federated": [{"user": r.get("username"), "roles": r["direct_roles"]} for r in o["users"]
                                           if r.get("providerType") in FEDERATED and r["direct_roles"]],
                      "direct_local": sum(1 for r in o["users"] if r.get("providerType") not in FEDERATED and r["direct_roles"])}
@@ -776,12 +925,18 @@ def report_lines(record: dict) -> list[str]:
         direct = [f"{r.get('username')} ({', '.join(r['direct_roles'])})" for r in o["users"]
                   if r.get("providerType") in FEDERATED and r["direct_roles"]]
         out.append("    direct role assignments on federated accounts: " + ("; ".join(direct) if direct else "none"))
+        guard = o.get("leaver_guard") or {}
+        if guard.get("exceeded"):
+            out.append(f"    --execute refuses this organization: {guard['why']}")
         for r in o["users"]:
             ends = sorted(t["expirationTimeUtc"][:10] for t in r.get("tokens") or [] if t.get("expirationTimeUtc"))
             held = (f"; {len(r['tokens'])} token(s)" + (f", the last ending {ends[-1]}" if ends else "")) if r.get("tokens") else ""
-            out.append(f"    {r.get('username')}: {r['decision']} ({r['reason']}{held})"
+            how = f"; found by {r['matched_by']}" if r.get("matched_by") not in (None, "userPrincipalName", "id") else ""
+            acked = {a["flag"]: a["until"] for a in r.get("acknowledged") or []}
+            out.append(f"    {r.get('username')}: {r['decision']} ({r['reason']}{how}{held})"
                        + (f" -> {r['action']}" if r.get("action") else "")
-                       + "".join(f"  FLAG {f.split(':', 1)[0]}" for f in r["flags"]))
+                       + "".join(f"  FLAG {k}" + (f" (acknowledged until {acked[k]})" if k in acked else "")
+                                 for k in (f.split(":", 1)[0] for f in r["flags"])))
             res = r.get("result")
             if res:
                 rb = res.get("read_back") or {}
@@ -790,10 +945,21 @@ def report_lines(record: dict) -> list[str]:
                            f"tokens left {len(rb.get('tokens_left') or [])}, other fields changed "
                            f"{len(rb.get('changed_unasked') or [])}; held {res.get('held')}"
                            + (f" ({res['error']})" if res.get("error") else ""))
-    keys = ("keep", "leaver", "out_of_scope", "undetermined", "open_leavers", "closed", "not_held", "in_step",
-            "direct_role", "name_in_use_again")
+    keys = ("keep", "leaver", "out_of_scope", "undetermined", "open_leavers", "refused", "closed", "not_held", "in_step",
+            "direct_role", "name_in_use_again", "acknowledged", "flagged")
     out.append("  totals: " + ", ".join(f"{k.replace('_', ' ')} {s.get(k, 0)}" for k in keys))
+    if (record.get("acks") or {}).get("unmatched"):
+        out.append(f"  acknowledgements matching no flag: {record['acks']['unmatched']} (remove them from the --ack file)")
+    if "exit" in record:
+        out.append(f"  exit {record['exit']}: {EXIT_MEANS.get(record['exit'], '')}")
     return out
+
+
+EXIT_MEANS = {0: "nothing open, nothing unread, nothing flagged", EXIT_OPEN: "an open leaver: run the close",
+              EXIT_HELD_NOT: "a close did not hold on read-back: read the result",
+              EXIT_UNREAD: "a read failed or an account is undetermined: fix the read, nothing is known about it",
+              EXIT_FLAGGED: "a flag nobody acknowledged: decide it, then acknowledge it with --ack",
+              EXIT_USAGE: "not run as asked"}
 
 
 def given_values() -> list[tuple[str, str]]:
@@ -819,7 +985,7 @@ def _write(record: dict, calls: list, redact: bool) -> int:
     if left:
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))})",
               file=sys.stderr)
-        return 4
+        return EXIT_USAGE
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{len(calls)} call(s), {sum(1 for c in calls if c['status'] is None or c['status'] >= 400)} refused; "
@@ -827,32 +993,51 @@ def _write(record: dict, calls: list, redact: bool) -> int:
     return record["exit"]
 
 
+def _no_credential(e: Exception) -> int:
+    """A credential that could not be obtained is a read that failed: nothing was read, so nothing is known (exit 3),
+    and nothing is written. The message names the error's kind and phrase, never a secret."""
+    why = getattr(e, "reason", "") or getattr(e, "code", "")
+    print(f"could not obtain a credential: {type(e).__name__} {str(why)[:160]}".rstrip(), file=sys.stderr)
+    return EXIT_UNREAD
+
+
 def _close_now_main(a: argparse.Namespace) -> int:
     if not (a.org and a.user):
         print("--close-now needs --org and --user: it closes exactly one named account", file=sys.stderr)
-        return 4
+        return EXIT_USAGE
     if not os.environ.get("VCFA_HOST"):
         print("set VCFA_HOST (see the header); --close-now needs no Graph credential", file=sys.stderr)
-        return 4
+        return EXIT_USAGE
     calls: list = []
     try:
         vcfa = Vcfa(os.environ["VCFA_HOST"], calls)
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
-        why = getattr(e, "reason", "") or getattr(e, "code", "")
-        print(f"could not obtain a credential: {type(e).__name__} {str(why)[:160]}".rstrip(), file=sys.stderr)
-        return 4
+        return _no_credential(e)
     record = close_now(vcfa, a.org, a.user, a.execute)
-    record["exit"] = 4 if record.get("refused") else exit_code(record["summary"], a.execute)
+    record["exit"] = EXIT_USAGE if record.get("refused") else exit_code(record["summary"], a.execute)
     return _write(record, calls, a.redact)
 
 
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a usage error, the code this script gives a close that did not hold; it exits 5 here."""
+
+    def error(self, message: str):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Report, and on request close, VCF Automation accounts of people who "
-                                             "have left at Entra ID.")
+    ap = _Parser(description="Report, and on request close, VCF Automation accounts of people who have left at "
+                             "Entra ID.")
     ap.add_argument("--execute", action="store_true", help="close the confirmed leavers of the organization --org names")
     ap.add_argument("--org", help="the one organization --execute acts on")
     ap.add_argument("--user", help="with --execute, act on this account only (every account is still read)")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
+    ap.add_argument("--ack", metavar="FILE", help="acknowledged flags: a JSON list of {org, account, flag, until}")
+    ap.add_argument("--max-leavers", type=int, metavar="N",
+                    help=f"with --execute, refuse an organization with more than N open leavers (default: more than "
+                         f"{MAX_LEAVERS} and more than a quarter of its federated accounts)")
     ap.add_argument("--close-now", action="store_true",
                     help="close the one account --user names in --org now, without asking Entra; plan only without --execute")
     a = ap.parse_args(argv)
@@ -860,23 +1045,33 @@ def main(argv: list[str] | None = None) -> int:
         return _close_now_main(a)
     if a.execute and not a.org:
         print("--execute needs --org: the script never acts on every organization it can see", file=sys.stderr)
-        return 4
+        return EXIT_USAGE
     if (a.org or a.user) and not a.execute:
         print("--org and --user choose what --execute acts on; to read fewer organizations set ORGS", file=sys.stderr)
-        return 4
+        return EXIT_USAGE
+    if a.max_leavers is not None and (a.max_leavers < 0 or not a.execute):
+        print("--max-leavers takes a number of 0 or more, and only with --execute", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        acks = load_acks(a.ack) if a.ack else []
+    except (OSError, ValueError) as e:
+        print(f"--ack {a.ack}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
+        return EXIT_USAGE
     missing = [k for k in ("VCFA_HOST", "ENTRA_TENANT_ID", "ENTRA_CLIENT_ID") if not os.environ.get(k)]
     if missing:
         print(f"set {', '.join(missing)} (see the header)", file=sys.stderr)
-        return 4
+        return EXIT_USAGE
     calls: list = []
     try:
         vcfa, graph = Vcfa(os.environ["VCFA_HOST"], calls), Graph(calls)
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
-        why = getattr(e, "reason", "") or getattr(e, "code", "")  # an HTTP phrase or a network error, never a secret
-        print(f"could not obtain a credential: {type(e).__name__} {str(why)[:160]}".rstrip(), file=sys.stderr)
-        return 4
+        return _no_credential(e)
     only = [a.org] if a.execute else [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
-    record = reconcile(vcfa, graph, os.environ["ENTRA_TENANT_ID"], only, a.execute, a.user, say=lambda _m: None)
+    record = reconcile(vcfa, graph, os.environ["ENTRA_TENANT_ID"], only, a.execute, a.user, say=lambda _m: None,
+                       max_leavers=a.max_leavers)
+    if a.ack:
+        apply_acks(record, acks, record["captured"][:10])  # the run's own UTC date
+        record["summary"] = summary(record)
     record["exit"] = exit_code(record["summary"], a.execute)
     return _write(record, calls, a.redact)
 

@@ -228,8 +228,8 @@ exchange.json written with every estate value replaced; exit 3
   about 299 seconds. Make the exchange just before the session, not ahead of time.
 - **Both sessions are the client itself.** The REST session (the assertion in a `SIGN` header) and the SOAP session
   (`LoginByToken`) both read `CUSTOMER\{{client-1}}`: the broker tenant and the client's id. That is how a machine identity
-  shows in a session census. The broker tenant is not the realm's name, the spelling a vCenter grant is accepted in and
-  applies to nobody.
+  shows in a session census. The broker tenant is not the realm's name, the spelling a vCenter grant is accepted in and,
+  behind an AD/LDAP provider, applies to nobody.
 - **The role decided what the census could see.** Holding `vcf_viewer` the client saw only itself; holding
   `vcf_administrator` it read every list. A role between the two was not tried.
 - **Most sessions are VCF's own.** VCF's integration accounts (local, named `svc-`) and other local accounts (solution

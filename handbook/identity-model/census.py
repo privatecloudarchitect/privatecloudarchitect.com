@@ -7,8 +7,14 @@ way in. This script reads each piece from the API that answers for it, so every 
 against that API, and prints the lines a reader should be able to explain: which brokers exist and of which kind,
 which realm covers which instances, the provider's type and protocol, each directory's protocol and port, the two
 ways a vCenter grant can spell a principal (a bound directory's domain, which a broker session carries, and the
-realm's name, which a grant accepts and nobody signs in as), whether an emergency client exists, the API clients and
-their tokens' lifetimes, and how each organization signs in.
+realm's name, which a grant accepts and, behind an AD/LDAP provider, applied to nobody), whether an emergency client exists, the API clients and
+their tokens' lifetimes with each token's runway (its days left, and when it was last exchanged for a bearer), and how
+each organization signs in.
+
+--orgs-only reads VCF Automation alone, as the provider: each organization's ways in, on VCFA_HOST and a provider
+credential, with no VCF Operations credential. A VCF Automation provider administrator can run it without the fleet's
+most privileged token. It reads no broker, so an OIDC issuer is called the broker only when its host is in
+BROKER_HOSTS.
 
 Fleet IAM, through VCF Operations (/suite-api/api/fleet-management/iam):
   GET  /vidbs                                 the brokers, instance or embedded. Read here, never from the fleet
@@ -44,12 +50,21 @@ Env:  OPS_HOST                 VCF Operations FQDN (required)
                                (the broker tenant, the realm's path segment at the broker; default CUSTOMER; it was
                                OPS_REALM, still read when BROKER_TENANT is unset, with a notice)
       OPS_BEARER_FILE          instead, a bearer you already hold (it lives an hour unless the fleet says otherwise)
-      VCFA_HOST                optional, with VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE
+      VCFA_HOST                optional, with VCFA_PROVIDER_BEARER_FILE (a provider bearer you already hold) or
+                               VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider API token, traded at /oauth/provider/token);
+                               with --orgs-only, these alone are required
+      BROKER_HOSTS             optional, comma-separated: the brokers' hosts, so that --orgs-only names an OIDC issuer
+                               on one of them the broker (the full census reads them from the identity plane)
+      FINGERPRINT_KEY_FILE     optional: a secret of your own (mode 0600, kept off any shared disk). With it, each API
+                               client carries a keyed fingerprint of its id and name, the same in every record made
+                               under that key, so service-accounts' catalog_check.py --census can join the record to
+                               your catalog although every name in it is a placeholder
       VC_HOSTS                 optional, comma-separated, with VC_USER (user@domain) and VC_PASSWORD_FILE (mode
                                0600; VC_PASSWORD is read if it is unset)
       TLS_VERIFY=false         only on a self-signed lab CA (the metadata URL is fetched by the broker, not here)
       OUT                      the record (default census.json)
 Use:  python3 census.py [--redact] [--egress-metadata-url URL]
+      python3 census.py --orgs-only [--redact]       VCF Automation's organizations only, on a provider credential
 Exit: 0 recorded, every call answered · 1 a call failed (the record is still written and names the call; a refused
       fleet read opens the print with NOT READ, so its zero counts are not taken for the estate's) · 2 a usage error,
       or the record refused because an estate value survived the scrub (nothing is written)
@@ -59,6 +74,8 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -166,6 +183,29 @@ def _secret(name: str) -> str:
     return os.environ.get(name, "")
 
 
+def fingerprint_key() -> bytes | None:
+    """The secret in FINGERPRINT_KEY_FILE, or None when it is unset."""
+    path = os.environ.get("FINGERPRINT_KEY_FILE")
+    if not path:
+        return None
+    with open(path, "rb") as f:
+        key = f.read().strip()
+    if not key:
+        raise ValueError("FINGERPRINT_KEY_FILE is empty")
+    return key
+
+
+def fingerprint(value: str, key: bytes) -> str:
+    """A name's keyed fingerprint: the same under one key in every record, and nothing without the key. Case and
+    surrounding space are ignored, as a catalog may spell a client either way."""
+    return hmac.new(key, value.strip().lower().encode(), hashlib.sha256).hexdigest()[:16]
+
+
+def key_check(key: bytes) -> str:
+    """A short value that says which key fingerprinted a record, so records made under two keys are never joined."""
+    return fingerprint("fingerprint key check", key)[:8]
+
+
 class Reader:
     """One plane's API under one credential. Every call is recorded with its answer, a refusal included; secrets are
     deleted from each body as it arrives; nothing raises."""
@@ -246,7 +286,8 @@ def _form(url: str, fields: dict) -> dict:
 def broker_tenant() -> str:
     """The broker tenant: the realm's path segment at the broker (/acs/t/<tenant>/), CUSTOMER unless set. It is not the
     realm's name. On the reference estate an API client's vCenter session carried it as its domain, CUSTOMER\\<client id>
-    (X-141), while a grant spelled with the realm's name applied to nobody (the 2026-10-06 grant probe)."""
+    (X-141), while a grant spelled with the realm's name applied to nobody behind an AD/LDAP provider (the 2026-10-06
+    grant probe)."""
     return os.environ.get("BROKER_TENANT") or os.environ.get("OPS_REALM") or "CUSTOMER"
 
 
@@ -467,21 +508,49 @@ def directory_lines(p: dict, synced: list[dict]) -> list[dict]:
     return out
 
 
-def token_line(t: dict) -> dict:
-    """A token's two lifetimes, in minutes: the API token's own, and that of each bearer traded for it."""
+DAY_MS = 86_400_000
+
+
+def _day(ms: object) -> str | None:
+    """An epoch-milliseconds date, as the fleet API gives it, as YYYY-MM-DD in UTC."""
+    if not isinstance(ms, int) or ms <= 0:
+        return None
+    return datetime.fromtimestamp(ms / 1000, timezone.utc).strftime("%Y-%m-%d")
+
+
+def captured_ms(record: dict) -> int | None:
+    """The moment of the read, in epoch milliseconds: a token's runway is counted from it, so a record reads the same
+    on any later day."""
+    try:
+        return int(datetime.strptime(record["captured"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp() * 1000)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def token_line(t: dict, now: int | None = None) -> dict:
+    """A token's two lifetimes, in minutes (the API token's own, and that of each bearer traded for it), and its
+    runway at the read: the date it expires and the days left, the date it was last exchanged for a bearer and the
+    days since. The fleet API dates both in epoch milliseconds."""
+    exp, used = t.get("expirationDate"), t.get("lastUsedDate")
+    known = isinstance(now, int)
     return {"name": t.get("tokenName"), "principal": t.get("principalName"), "status": t.get("tokenStatus"),
-            "api_token_ttl_min": t.get("apiTokenTtl"), "access_token_ttl_min": t.get("accessTokenTtl")}
+            "api_token_ttl_min": t.get("apiTokenTtl"), "access_token_ttl_min": t.get("accessTokenTtl"),
+            "expires": _day(exp), "days_left": (exp - now) // DAY_MS if known and _day(exp) else None,
+            "last_used": _day(used), "days_since_used": (now - used) // DAY_MS if known and _day(used) else None}
 
 
-def client_lines(c: dict) -> list[dict]:
-    """Each API client with its roles and the tokens issued to it."""
+def client_lines(c: dict, now: int | None = None) -> list[dict]:
+    """Each API client with its roles and the tokens issued to it, and its keyed fingerprints when the read had a key."""
     out = []
     for a in c.get("api_clients") or []:
         ids = (a.get("clientId"), a.get("clientUuid"))
         mine = [t for t in c.get("api_tokens") or [] if t.get("tokenType") == "API_CLIENT"
                 and (t.get("apiClientId") in ids or t.get("principalName") == a.get("clientId"))]
-        out.append({"name": a.get("clientName") or a.get("clientId"),
-                    "roles": [r.get("roleName") for r in a.get("roles") or []], "tokens": [token_line(t) for t in mine]})
+        line = {"name": a.get("clientName") or a.get("clientId"),
+                "roles": [r.get("roleName") for r in a.get("roles") or []], "tokens": [token_line(t, now) for t in mine]}
+        if a.get("fingerprints"):
+            line["fingerprints"] = a["fingerprints"]
+        out.append(line)
     return out
 
 
@@ -546,18 +615,21 @@ def summary(record: dict) -> dict:
     clients = f.get("clients") or []
     tokens = [t for c in clients for t in c.get("api_tokens") or []]
     egress_read = record.get("egress")
+    now = captured_ms(record)
+    given = set(record.get("broker_hosts_given") or [])
     return {
         "brokers": broker_lines(f),
         "realms": realm_lines(f),
         "providers": provider_lines(f),
         "directories": [d for p in f.get("providers") or [] for d in directory_lines(p, f.get("directories") or [])],
         "emergency_clients": [e for c in clients for e in emergency_lines(c)],
-        "api_clients": [a for c in clients for a in client_lines(c)],
-        "user_tokens": [token_line(t) for t in tokens if t.get("tokenType") == "USER"],
+        "api_clients": [a for c in clients for a in client_lines(c, now)],
+        "user_tokens": [token_line(t, now) for t in tokens if t.get("tokenType") == "USER"],
         "settings": settings_line(f.get("settings") or {}),
-        "organizations": org_lines(record.get("organizations") or [], set(kinds)),
+        "organizations": org_lines(record.get("organizations") or [], set(kinds) | given),
         "vcenters": vcenter_lines(record.get("vcenters") or [], kinds),
         "broker_tenant": record.get("broker_tenant"),
+        "orgs_only": bool(record.get("orgs_only")),
         "egress": None if not egress_read else {
             "reached": [{"broker": r.get("broker"), "status": r.get("status")} for r in egress_read["results"]],
             "unchanged": egress_read["unchanged"]},
@@ -578,13 +650,18 @@ def spelled(value: str | None) -> str:
 
 def spellings(s: dict) -> str | None:
     """The two ways to spell a principal in a vCenter grant under this estate's realm: each bound directory's domain,
-    which a broker session carries, and the realm's name, which a grant accepts and nobody signs in as."""
+    which a broker session carries, and the realm's name, which a grant accepts and nobody signs in as. A realm-spelled
+    grant was measured inert behind an AD/LDAP provider only, so the line says which this estate's provider is."""
     if not s["realms"]:
         return None
     bound = sorted({x for d in s["directories"] if d["host"] for x in d["domains"] if x})
+    providers = s.get("providers") or []
+    directory = bool(providers) and all(p.get("protocol") == "LDAP_BIND" for p in providers)
+    realm = ("the realm's name, inert behind an AD/LDAP provider" if directory
+             else "the realm's name; measured inert behind an AD/LDAP provider only, not behind this one")
     return "vCenter grant spellings: " + "; ".join(
         [f"{spelled(x)}\\<name> (directory)" for x in bound]
-        + [f"{spelled(r['name'])}\\<name> (the realm's name, inert)" for r in s["realms"]])
+        + [f"{spelled(r['name'])}\\<name> ({realm})" for r in s["realms"]])
 
 
 def client_session(s: dict) -> str | None:
@@ -595,9 +672,40 @@ def client_session(s: dict) -> str | None:
             "(the broker tenant, not the realm's name)")
 
 
+def runway(t: dict) -> str:
+    """A token's runway at the read: the days left to its expiry, and how long since it was last exchanged."""
+    if t.get("expires") is None:
+        left = "expiry not read"
+    elif t["days_left"] is None:
+        left = f"expires {t['expires']}"
+    else:
+        left = (f"expires {t['expires']}, {t['days_left']} d left" if t["days_left"] >= 0
+                else f"EXPIRED {t['expires']}, {-t['days_left']} d ago")
+    if t.get("last_used") is None:
+        used = "never exchanged"
+    elif t["days_since_used"] is None:
+        used = f"last used {t['last_used']}"
+    else:
+        used = f"last used {t['last_used']}, {t['days_since_used']} d before the read"
+    return f"{left}; {used}"
+
+
 def _token_text(t: dict) -> str:
     return (f"token {t['name']} {t['status']}: API token {_minutes(t['api_token_ttl_min'])}, "
-            f"access token {_minutes(t['access_token_ttl_min'])}")
+            f"access token {_minutes(t['access_token_ttl_min'])}; {runway(t)}")
+
+
+def org_report(s: dict) -> list[str]:
+    """The organizations block: each organization's type and its ways in."""
+    if not s["organizations"]:
+        return []
+    lines = [f"Organizations: {len(s['organizations'])}"]
+    lines += [f"  {o['name']}  {o['type']}{', provider consumption' if o['provider_consumption'] else ''}: "
+              f"{', '.join(o['sign_in'])}" + (f" (issuer: {o['issuer']})" if o["issuer"] else "")
+              for o in s["organizations"]]
+    if s.get("orgs_only") and not s["brokers"] and any(o["issuer"] == "other" for o in s["organizations"]):
+        lines.append("  no broker was read: an OIDC issuer reads broker only when its host is in BROKER_HOSTS")
+    return lines
 
 
 def report(s: dict) -> list[str]:
@@ -633,11 +741,7 @@ def report(s: dict) -> list[str]:
     lines.append(f"Fleet settings: access token {_minutes(st['access_token_ttl_min'])}, API token "
                  f"{_minutes(st['api_token_ttl_min'])}, retention {_minutes(st['api_token_retention_min'])}, "
                  f"all-users group {'on' if st['all_users_group'] else 'off'}")
-    if s["organizations"]:
-        lines.append(f"Organizations: {len(s['organizations'])}")
-        lines += [f"  {o['name']}  {o['type']}{', provider consumption' if o['provider_consumption'] else ''}: "
-                  f"{', '.join(o['sign_in'])}" + (f" (issuer: {o['issuer']})" if o["issuer"] else "")
-                  for o in s["organizations"]]
+    lines += org_report(s)
     for v in s["vcenters"]:
         through = f"{v['through']} ({v['broker_kind']})" if v["through"] else "no default provider"
         sups = "; ".join(f"Supervisor {x['name']}: {', '.join(i or '?' for i in x['issuers']) or 'no provider'}"
@@ -670,7 +774,7 @@ FIELDS = {"fqdn": "host", "host": "host", "domainControllerHost": "host", "ldapH
           "name": "name", "displayName": "name", "display_name": "name", "clientName": "name", "clientId": "name",
           "apiClientId": "name", "tokenName": "name", "principalName": "name", "certificateName": "name",
           "domains": "domain", "defaultDomain": "domain", "domain_names": "domain", "baseDn": "dn", "bindDn": "dn",
-          "roleName": "role", "broker_tenant": "name"}
+          "roleName": "role", "broker_tenant": "name", "broker_hosts_given": "host"}
 PATTERNS = [("id", re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")),
             ("host", re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}\b", re.I)),
             ("ip", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
@@ -758,13 +862,34 @@ def leaks(obj: object, table: dict) -> list[str]:
 
 
 # ── the run ──────────────────────────────────────────────────────────────────────────────────────────────────────
-def census(egress_url: str | None, ops_token: str, vcfa_token: str | None) -> dict:
-    """Read every plane the environment names; the egress check, when asked, runs straight after the fleet read."""
+def fingerprint_clients(fleet_read: dict, key: bytes) -> None:
+    """Give each API client the keyed fingerprints of its id and its name, in place, before the scrub replaces both."""
+    for c in fleet_read.get("clients") or []:
+        for a in c.get("api_clients") or []:
+            names = [str(a[k]) for k in ("clientId", "clientName") if a.get(k)]
+            a["fingerprints"] = sorted({fingerprint(n, key) for n in names})
+
+
+def census(egress_url: str | None, ops_token: str | None, vcfa_token: str | None, orgs_only: bool = False,
+           key: bytes | None = None) -> dict:
+    """Read every plane the environment names; the egress check, when asked, runs straight after the fleet read. With
+    orgs_only, VCF Automation alone is read, on the provider credential, and no other plane is called."""
     calls: list = []
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "sent": [], "fleet": {},
               "organizations": [], "vcenters": [], "egress": None, "calls": calls, "broker_tenant": broker_tenant()}
+    if orgs_only:
+        record["orgs_only"] = True
+        record["broker_hosts_given"] = given_brokers()
+        vcfa = Reader("vcf-automation", f"https://{os.environ['VCFA_HOST']}", {"Authorization": f"Bearer {vcfa_token}"}, calls)
+        record["organizations"] = organizations(vcfa)
+        record["summary"] = summary(record)
+        record["exit"] = 1 if failed(calls) else 0
+        return record
     ops = Reader("vcf-operations", f"https://{os.environ['OPS_HOST']}/suite-api", {"Authorization": f"Bearer {ops_token}"}, calls)
     record["fleet"] = fleet(ops)
+    if key:
+        fingerprint_clients(record["fleet"], key)
+        record["fingerprint_key_check"] = key_check(key)
     if egress_url:
         record["sent"].append("POST /suite-api/api/fleet-management/iam/saml-metadata/validate, once per broker")
         record["egress"] = reach(ops, record["fleet"], egress_url)
@@ -796,9 +921,14 @@ def unread(bad: list[dict]) -> str | None:
             "not empty. The credential's role must read the fleet identity plane.") if n else None
 
 
+def given_brokers() -> list[str]:
+    """The brokers' hosts the reader named in BROKER_HOSTS, for --orgs-only, which reads no broker itself."""
+    return sorted({h.strip().lower() for h in os.environ.get("BROKER_HOSTS", "").split(",") if h.strip()})
+
+
 def given_values(egress_url: str | None) -> list[tuple[str, str]]:
     hosts = [os.environ.get(k, "") for k in ("OPS_HOST", "OPS_BROKER_HOST", "BROKER_HOST", "VCFA_HOST")]
-    hosts += os.environ.get("VC_HOSTS", "").split(",")
+    hosts += os.environ.get("VC_HOSTS", "").split(",") + os.environ.get("BROKER_HOSTS", "").split(",")
     out = [(h.strip(), "host") for h in hosts if h.strip()]
     out += [(os.environ.get("VC_USER", ""), "name")] + ([(egress_url, "metadata-url")] if egress_url else [])
     return [(v, k) for v, k in out if v]
@@ -809,22 +939,37 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
     ap.add_argument("--egress-metadata-url", metavar="URL",
                     help="ask each broker to fetch this SAML metadata URL (sends one request per broker)")
+    ap.add_argument("--orgs-only", action="store_true",
+                    help="read only VCF Automation's organizations, on VCFA_HOST and a provider credential alone")
     a = ap.parse_args(argv)
     if os.environ.get("OPS_REALM") and not os.environ.get("BROKER_TENANT"):
         print("note: OPS_REALM is now BROKER_TENANT (the broker tenant, the realm's path segment at the broker, CUSTOMER by "
               "default, which is not the realm's name); reading OPS_REALM this time.", file=sys.stderr)
-    if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
-        print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required", file=sys.stderr)
+    vcfa_cred = bool(os.environ.get("VCFA_PROVIDER_BEARER_FILE") or os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE")
+                     or _secret("VCFA_PROVIDER_REFRESH_TOKEN"))
+    if a.orgs_only:
+        if a.egress_metadata_url:
+            print("--orgs-only reads VCF Automation alone; --egress-metadata-url asks the brokers, so the two do not combine",
+                  file=sys.stderr)
+            return 2
+        if not os.environ.get("VCFA_HOST") or not vcfa_cred:
+            print("--orgs-only needs VCFA_HOST and a provider credential (VCFA_PROVIDER_BEARER_FILE or "
+                  "VCFA_PROVIDER_REFRESH_TOKEN_FILE); no VCF Operations credential is read", file=sys.stderr)
+            return 2
+    elif not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
+        print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required; "
+              "--orgs-only reads the organizations on a VCF Automation provider credential alone", file=sys.stderr)
         return 2
     if a.egress_metadata_url:
         print("--egress-metadata-url: each broker will be asked to fetch the URL; this sends a request per broker")
     try:
-        ops_token = ops_bearer()
+        key = None if a.orgs_only else fingerprint_key()
+        ops_token = None if a.orgs_only else ops_bearer()
         vcfa_token = vcfa_bearer(os.environ["VCFA_HOST"]) if os.environ.get("VCFA_HOST") else None
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
         print(f"could not obtain a credential: {type(e).__name__} {getattr(e, 'code', '')}".rstrip(), file=sys.stderr)
         return 1
-    record = census(a.egress_metadata_url, ops_token, vcfa_token)
+    record = census(a.egress_metadata_url, ops_token, vcfa_token, orgs_only=a.orgs_only, key=key)
     bad = failed(record["calls"])
     table = estate_values(record, given_values(a.egress_metadata_url))
     clean = scrub({**record, "calls": [{k: v for k, v in c.items() if k != "message"} for c in record["calls"]]}, table)
@@ -832,7 +977,8 @@ def main(argv: list[str] | None = None) -> int:
     out = os.environ.get("OUT", "census.json")
     if not (left and a.redact):  # a redacted print with a surviving value would print that value
         shown = clean if a.redact else record
-        print("\n".join(([unread(bad)] if unread(bad) else []) + report(shown["summary"])))
+        lines = org_report(shown["summary"]) or ["Organizations: none read"] if a.orgs_only else report(shown["summary"])
+        print("\n".join(([unread(bad)] if unread(bad) else []) + lines))
         for c, shown_call in zip(bad, failed(shown["calls"])):
             print(f"FAILED {shown_call['plane']} {c['method']} {shown_call['path']}: {c['status'] or ''} "
                   f"{c.get('error') or ''} {'' if a.redact else c.get('message') or ''}".rstrip())

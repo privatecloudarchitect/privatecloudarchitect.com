@@ -9,7 +9,7 @@ these reads, so a row that differs on your estate is worth a report.
 | Script | What it answers | Exit |
 |---|---|---|
 | `claims.py` | What does the bearer my api-token exchanges for say about its holder? Issuer, audience, the principal claims (a person shows up as user@realm with an email claim; a machine identity as a client id), scopes, and the lifetime read off the token itself. Any other JWT can be decoded through `JWT_ENV`. | 0 printed · 2 the mint failed |
-| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. | 0 every entry complete · 1 a warning · 2 a failure · 3 the file could not be read |
+| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. With `--census`, it also reads the record the identity-model companion's `census.py` writes and checks every API client in it for an owner, a role, both lifetimes and a rotation date, which neither file holds alone. | 0 every entry complete · 1 a warning · 2 a failure · 3 a file could not be read, the census record carries no fingerprints or was made under another key, or an argument it does not take |
 | `doors.py` | Which token does each surface accept? One harmless read per pair: the broker's bearer against VCF Operations, NSX, and the fleet plane's services; the per-service JWTs; VCF Automation's three login paths with the count of effective rights each carries (the arrival rule in numbers); vCenter's and SDDC Manager's own flows. Rows say MATCH or DIFFERS against the chapter's matrix. | 0 every pair answered · 1 a transport error · 2 the broker mint failed |
 
 `opslib.py` holds the broker exchange (the api-token flow the Platform identity chapter teaches); `rtmlib.py`
@@ -43,7 +43,19 @@ python3 doors.py
 # the catalog check needs no credential and no network
 cp credentials.example.json credentials.json       # then one entry per credential your automation holds
 python3 catalog_check.py credentials.json
+
+# every API client the identity-model census read, joined to the catalog
+export FINGERPRINT_KEY_FILE=<a secret of your own, mode 0600>   # the same file census.py ran with
+python3 catalog_check.py credentials.json --census census.json
 ```
+
+The census record names every API client by a placeholder, so the join is on keyed fingerprints: `census.py` run
+with `FINGERPRINT_KEY_FILE` set gives each client the fingerprint of its client id and of its name, and the check
+computes the same for each catalog entry's `api_client` (or its `name`, when that is the client's). Make the key once,
+for example `python3 -c "import secrets; print(secrets.token_hex(32))" > key && chmod 600 key`, keep it off any shared
+disk, and use the same file for every run you will join. A client no entry names fails, as does one whose entry has no
+owner or no `next_due`, one holding no role, and a token missing a lifetime; a client with no token, and a token that
+expires before its entry's `next_due`, are warnings.
 
 Every password and token is read from `NAME_FILE`, a file of mode 0600, when it is set. The value itself in `NAME`
 (`OPS_API_TOKEN`, `VC_PASSWORD` and the rest) still works, but it lands in the shell's history and the process list,
@@ -61,8 +73,10 @@ so keep it for a throwaway credential.
   platform answers with a different value than it was sent; on the reference estate it never did.
 - An api-token that was deleted or rotated away answers HTTP 500 at the broker, not 401; one past its expiry date
   is not tested. Both scripts say so when it happens.
-- `catalog_check.py` reads metadata you keep and was run on the example catalog only; it never reads a backend,
-  so it cannot tell whether the value in the vault still works. That is what `claims.py` and `doors.py` are for.
+- `catalog_check.py` reads metadata you keep and was run on the example catalog; it never reads a backend, so it
+  cannot tell whether the value in the vault still works. That is what `claims.py` and `doors.py` are for. Its
+  `--census` join was run once on the reference estate's census record, with a scratch catalog naming one client: that
+  client joined, and the three no entry named failed (2026-10-15).
 
 ## Reading the output
 

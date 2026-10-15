@@ -4,8 +4,9 @@
 Once vCenter signs people in through the VCF identity broker, two authorization planes apply at once: the
 vCenter's own permissions, and the VCF roles assigned in VCF Operations, which arrive in vCenter as global
 permissions on local groups named ``vcf_reserved_<role id>``. A broker session carries the directory's name
-for the user (``DOMAIN\\user``), so a permission spelled with the realm's name applies to nobody, even
-though vCenter accepts it and an administrator's privilege query reports it as effective.
+for the user (``DOMAIN\\user``), so a permission spelled with the realm's name applied to nobody behind a broker
+backed by AD/LDAP (behind a federated provider it was not measured), even though vCenter accepts it and an
+administrator's privilege query reports it as effective.
 
 Read-only by default:
 

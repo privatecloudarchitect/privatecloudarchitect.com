@@ -79,7 +79,8 @@ own names win. When it falls back to `OPS_API_TOKEN_FILE` it prints a note, beca
 **The broker tenant is not the realm's name.** The broker tenant is the realm's path segment in the broker's token URL,
 `CUSTOMER` unless your broker says otherwise, and an API client's vCenter session carries it as its domain:
 `CUSTOMER\<client id>`. The realm's name is the broker realm as the fleet identity plane names it, and a vCenter grant
-spelled with it in capitals applies to nobody; that is the string `REALM_DOMAIN` takes in vcenter-authorization's
+spelled with it in capitals applied to nobody behind an AD/LDAP provider (behind a federated provider it was not
+measured); that is the string `REALM_DOMAIN` takes in vcenter-authorization's
 `authz.py`. This script reads `BROKER_TENANT` (`BROKER_REALM`, its earlier name, is still read), takes the tenant from
 the client's own session when one is opened, and only notes a `REALM_DOMAIN` left in the shell. Whether a grant spelled
 `CUSTOMER\<name>` applies to anyone was not tested.
@@ -93,8 +94,55 @@ the client's own session when one is opened, and only notes a `REALM_DOMAIN` lef
 | 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client, and nothing worse: an account in automated use is not a break-glass account |
 
 The exit reads each session list at one moment. An integration that is not signed in at that moment is not seen, so
-the gate before the broker federates is exit 0 on several days, with every remaining directory session owned and
+the gate before the broker federates is exit 0 on three or more days, with every remaining directory session owned and
 confirmed as a person.
+
+### Whose client is it: `--where`
+
+The client agent alone does not name a product: `VMware vim-java`, `XML-WS Runtime` and `vAPI` are shared by many.
+`--where` (with `--sessions`) also prints, for each directory and local administrator session, the two `UserSession`
+properties that lead to its client: `ipAddress`, where it came from, and `lastActiveTime`, when it last ran a command.
+Resolve each address to a host, and the host to its owner, while the session is still there.
+
+```bash
+python3 vcenter_exchange.py --sessions --where      # never with --redact: --where exists to print what --redact hides
+```
+
+The addresses and times are printed on your terminal only and are never written to `exchange.json`, so a record you
+share carries none of them. Two things the address cannot do. The
+[vSphere Web Services API reference for `UserSession`](https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.UserSession.html)
+describes `ipAddress` as "The client identity. It could be IP address, or pipe name depended on client binding". And
+on the reference estate the two local administrator sessions from the `vAPI` agent gave a loopback address, while the
+four from the Java and XML-WS agents gave private addresses (one management vCenter, 2026-10-15, one read): a loopback
+address names the vCenter itself, so the client behind those sessions has to be found another way.
+
+### The same sessions across days: `--compare`
+
+The chapter asks for the session census read on three or more days, because a job that runs weekly or at night is absent from most reads. Every name in a record is a
+placeholder numbered afresh on each run, so two records cannot be compared on their names. Set `FINGERPRINT_KEY_FILE`
+to a secret of your own (mode 0600, kept off any shared disk, the same file every day): each vCenter and each directory
+account in the record then carries a keyed fingerprint, the same in every record made under that key. Then compare:
+
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))" > fingerprint.key && chmod 600 fingerprint.key   # once
+export FINGERPRINT_KEY_FILE=$PWD/fingerprint.key
+OUT=sessions-$(date -u +%F).json python3 vcenter_exchange.py --sessions --redact    # on each day
+python3 vcenter_exchange.py --compare sessions-*.json
+```
+
+It lists, per vCenter, the sessions (a directory account or the local administrator, with its client agent) present in
+every record, and those that came and went with the dates each was seen. The unit it compares is one account with one
+client agent: several sessions an account holds open from the same agent count once, so on the reference estate's read
+six local administrator sessions from three agents compared as three. A directory account appears by its placeholder
+in the latest record and its fingerprint; a run without `--redact` prints each directory account's fingerprint beside
+its name, which is how you match them. Local accounts other than the administrator, and API clients, are counted in each
+record and not compared.
+
+| `--compare` exit | Means |
+|---|---|
+| 0 | compared over three or more days, every vCenter in every record |
+| 1 | compared, but over fewer than three days, or with a vCenter missing from a record |
+| 2 | fewer than two records, a record that cannot be read or holds no session census, records without fingerprints, or records made under two keys |
 
 ## The API client an integration moves to: `api_client.py`
 
@@ -291,8 +339,11 @@ Steps 1 to 4 run only when an API client's credential is given.
   read the agents yourself.
 - No local account is named in the record, because a local account's name can carry estate names; the census counts
   them. Directory accounts and API clients are recorded as placeholders, with their agents.
-- A session list shows what is signed in at the moment of the read. Run it on several days, and on a schedule, before
-  you conclude that no integration signs in as a person.
+- A session list shows what is signed in at the moment of the read. Run it on three or more days, and on a schedule,
+  and `--compare` the records before you conclude that no integration signs in as a person. `--where` and `--compare`
+  were run once on one management vCenter on 2026-10-15: six local administrator sessions placed, the record holding
+  no address, and two keyed reads a minute apart compared (exit 1, one day). No directory session was signed in at
+  that read.
 - Measured on VCF 9.1.1 (three vCenters, build 25712839), 2026-10-13: the exchange with an API client holding
   `vcf_viewer`; the census read as that client holding `vcf_administrator`, and once with no API client, as a directory
   account's password. `api_client.py` ran on a VCF Operations API token held by the estate's administrator; which

@@ -17,15 +17,15 @@ Brokers, from the identity plane: 3 (2 embedded, 1 instance)
 Realm {{host-2}} on the instance broker {{host-2}}: covers 2 VCF instance(s) ({{name-2}}, {{name-3}}), 10 component(s); issues: none
 Provider {{name-5}}: type ADLDAP, protocol LDAP_BIND, provisioning LDAP
   directory ad ({{domain-1}}): LDAP port 389 to {{host-7}}; sync COMPLETED, 14 users, 6 groups
-vCenter grant spellings: {{domain-1}}\<name> (directory); {{host-2}}\<name> (the realm's name, inert)
+vCenter grant spellings: {{domain-1}}\<name> (directory); {{host-2}}\<name> (the realm's name, inert behind an AD/LDAP provider)
 API client sessions in vCenter: CUSTOMER\<client id> (the broker tenant, not the realm's name)
 Emergency client: none
 API clients: 4
   {{name-8}}: roles sddc_admin, vcf_administrator, {{role-1}}; no token
-  {{name-10}}: roles vcf_administrator; token {{name-16}} ACTIVE: API token 259200 min (180 d), access token 60 min
-  {{name-12}}: roles vcf_viewer; token {{name-17}} ACTIVE: API token 259200 min (180 d), access token 60 min
+  {{name-10}}: roles vcf_administrator; token {{name-16}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-01-24, 103 d left; last used 2026-07-29, 75 d before the read
+  {{name-12}}: roles vcf_viewer; token {{name-17}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-04-01, 170 d left; last used 2026-10-13, 0 d before the read
   {{name-14}}: roles vcf_administrator; no token
-User API token of {{name-1}}: token {{name-15}} ACTIVE: API token 259200 min (180 d), access token 60 min
+User API token of {{name-1}}: token {{name-15}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-02-03, 113 d left; last used 2026-10-13, 0 d before the read
 Fleet settings: access token 60 min, API token 259200 min (180 d), retention 43200 min (30 d), all-users group off
 Organizations: 10
   {{org-1}}  all-apps: ldap-system
@@ -55,6 +55,29 @@ $ python3 census.py --redact --egress-metadata-url https://login.microsoftonline
 Egress (each broker fetched the metadata URL): {{host-4}} 200, {{host-5}} 200, {{host-2}} 200; identity plane unchanged
 ```
 
+Only the organizations, as the provider, on 2026-10-15: `--orgs-only` on a provider bearer, with `BROKER_HOSTS`
+naming the instance broker and the two management vCenters, whose embedded brokers the full census lists. No VCF
+Operations credential was set, and every call went to VCF Automation. Named only the instance broker, the same run
+read the provider consumption organization as `oidc (issuer: other)`: its issuer is on an embedded broker.
+
+```
+$ python3 census.py --orgs-only --redact
+Organizations: 10
+  {{org-1}}  all-apps: ldap-system
+  {{org-2}}  classic: ldap-system
+  {{org-3}}  all-apps: oidc (issuer: entra)
+  {{org-4}}  all-apps: saml
+  {{org-5}}  classic: oidc (issuer: entra)
+  {{org-6}}  classic: saml
+  {{org-7}}  all-apps: ldap-system
+  {{org-8}}  all-apps, provider consumption: oidc-broker, ldap-system (issuer: broker)
+  System  all-apps: vcf-sso, ldap-system (issuer: broker)
+  {{org-9}}  classic: oidc, ldap-system (issuer: other)
+  no broker was read: an OIDC issuer reads broker only when its host is in BROKER_HOSTS
+
+31 call(s), 0 failed; census.json written with every estate value replaced
+```
+
 ## What to read in it
 
 - **Three brokers, one realm.** The identity plane lists two embedded brokers and one instance broker. The
@@ -69,7 +92,8 @@ Egress (each broker fetched the metadata URL): {{host-4}} 200, {{host-5}} 200, {
   389, not `LDAPS`. That is the line to raise with the directory's owner.
 - **Two spellings for one person in a vCenter grant.** `{{domain-1}}\<name>` is the directory's domain in capitals,
   the name a broker session carries in vCenter, and a grant spelled that way applies. `{{host-2}}\<name>` is the
-  realm's name in capitals: vCenter accepts a grant spelled that way and it applies to nobody. Grant the first;
+  realm's name in capitals: vCenter accepts a grant spelled that way, and behind an AD/LDAP provider, the kind this
+  estate has, it applied to nobody; behind a federated provider it was not measured. Grant the first;
   `authz.py` in the vcenter-authorization companion finds grants spelled the second way.
 - **A third string, the broker tenant.** `CUSTOMER\<client id>` is how an API client's own session reads in vCenter:
   the broker tenant, the realm's path segment at the broker (`BROKER_TENANT`, CUSTOMER by default). It is not the
@@ -81,6 +105,11 @@ Egress (each broker fetched the metadata URL): {{host-4}} 200, {{host-5}} 200, {
 - **Machine identities and their lifetimes.** Four API clients; two hold an active token, each living 180 days and
   traded for a bearer that lives an hour. One person also holds an API token of the same lifetimes. The fleet
   settings hold the same two values.
+- **Each token's runway.** Every token line ends with its expiry and the days left, then the date it was last
+  exchanged for a bearer, both counted from the moment of the read, so the record reads the same on any later day.
+  One client holding VCF Administrator had last exchanged its token 75 days before the read, and two clients hold
+  no token at all: both are questions for the client's owner, since a client whose function retired is deleted. A
+  token whose expiry falls before the rotation date in your catalog is the one to rotate first.
 - **Each organization chooses its own way in.** Three sign in only through VCF Automation's system LDAP
   (`ldap-system`); two federate over OIDC to Entra ID and two over SAML; one federates over OIDC to another
   provider (`issuer: other`) and also takes the system LDAP. The provider's `System` organization signs in

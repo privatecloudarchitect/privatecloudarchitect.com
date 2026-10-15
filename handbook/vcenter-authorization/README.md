@@ -43,8 +43,8 @@ group carries its grant.
 
 1. **Which grants apply to a broker session.** A broker session carries the directory's name for the user
    (`DOMAIN\user`). A grant on that name, or on a directory group the user is in, applies. A grant spelled with
-   the realm's name is accepted by vCenter, reported as effective by an administrator's privilege query, and
-   applies to nobody. The realm's name is not the broker tenant (`CUSTOMER` by default) that an API client's
+   the realm's name is accepted by vCenter, reported as effective by an administrator's privilege query, and,
+   behind a broker backed by AD/LDAP, applies to nobody; behind a federated provider it was not measured. The realm's name is not the broker tenant (`CUSTOMER` by default) that an API client's
    session carries as `CUSTOMER\<client id>`; whether a grant spelled `CUSTOMER\<name>` applies to anyone was not
    tested. `--probe-grants` measures this on your vCenter with a one-privilege role on a
    throwaway folder: vCenter's own check, an actual subfolder create, and a REST read.

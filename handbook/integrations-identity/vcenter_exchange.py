@@ -22,8 +22,21 @@ Manager API and VCF Automation are not read.
   5. --sessions                  SessionManager.sessionList, read as VC_USER or, without it, as the client's own
                                  session; the census's own session left out
 
-It opens sessions and closes them, and changes no configuration. No token, assertion, password, address, session
-key or login time is printed or recorded.
+It opens sessions and closes them, and changes no configuration. No token, assertion, password, session key or login
+time is printed or recorded. No address is recorded, and none is printed unless --where asks.
+
+--where (with --sessions, never with --redact) also prints, for each directory and local administrator session, the
+two UserSession properties that lead to its client: ipAddress, the client's identity ("It could be IP address, or pipe
+name depended on client binding", in the vSphere Web Services API reference), and lastActiveTime, when the session
+last ran a command. They are printed on your terminal only and never written to the record, so resolve each address
+to a host and its owner there. The client agent alone does not name a product: vim-java, XML-WS and vAPI clients are
+shared by many.
+
+--compare RECORD RECORD [...] reads two or more records of --sessions runs, made on different days, and lists the
+sessions (the directory account or the local administrator, with its client agent) present in every record and those
+that came and went. Every name in a record is a placeholder numbered afresh on each run, so the records are joined on
+keyed fingerprints instead: run each census with FINGERPRINT_KEY_FILE set to the same secret, and each vCenter and
+directory principal carries a fingerprint that is the same in every record made under it. It reads files only.
 
 Env:  BROKER_HOST                 the identity broker that trades the API client's token for a bearer (not needed for a
                                   census as VC_USER alone); OPS_BROKER_HOST, then OPS_HOST, are read when it is unset,
@@ -44,9 +57,13 @@ Env:  BROKER_HOST                 the identity broker that trades the API client
                                   left off (default vSphereUI, the vSphere Client: the only agent a person's session
                                   showed on the reference estate's lists)
       LOCAL_DOMAIN                the vCenter's own SSO domain (default VSPHERE.LOCAL)
+      FINGERPRINT_KEY_FILE        for --sessions records you will --compare: a secret of your own (mode 0600, kept off
+                                  any shared disk), the same file on every run
       TLS_VERIFY=false            only on a self-signed lab CA
       OUT                         the record (default exchange.json)
 Use:  python3 vcenter_exchange.py [--sessions] [--redact]
+      python3 vcenter_exchange.py --sessions --where      the address and last activity of each session, printed only
+      python3 vcenter_exchange.py --compare A.json B.json C.json
 Exit: 0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
       directory-account session is from an interactive client and the local administrator signs in from none other
       · 1 a vCenter refused the client, a read failed, or the census identity could read only its own session · 2 a
@@ -54,7 +71,10 @@ Exit: 0 every vCenter took the client through both sessions (when a client is gi
       directory account signing in from a client that is not interactive · 4 --sessions found the local administrator
       signing in from a client that is not interactive, and nothing above it
       The exit reads vCenter's session lists at one moment: an integration that is not signed in then is not seen, so
-      read on several days, and confirm each remaining directory session's owner as a person.
+      read on three or more days, compare the records, and confirm each remaining directory session's owner as a person.
+      --compare: 0 compared over three or more days with every vCenter in every record · 1 compared, but over fewer
+      than three days or with a vCenter missing from a record · 2 a usage error: fewer than two records, a record that
+      cannot be read, holds no session census or no fingerprints, or records made under two keys
 """
 
 from __future__ import annotations
@@ -62,6 +82,8 @@ from __future__ import annotations
 import argparse
 import base64
 import gzip
+import hashlib
+import hmac
 import http.cookiejar
 import json
 import os
@@ -131,6 +153,28 @@ def api_token() -> str:
 
 def bearer_file() -> str:
     return os.environ.get("BEARER_FILE") or os.environ.get("OPS_BEARER_FILE", "")
+
+
+def fingerprint_key() -> bytes | None:
+    """The secret in FINGERPRINT_KEY_FILE, or None when it is unset."""
+    path = os.environ.get("FINGERPRINT_KEY_FILE")
+    if not path:
+        return None
+    with open(path, "rb") as f:
+        key = f.read().strip()
+    if not key:
+        raise ValueError("FINGERPRINT_KEY_FILE is empty")
+    return key
+
+
+def fingerprint(value: str, key: bytes) -> str:
+    """A name's keyed fingerprint: the same under one key in every record, and nothing without the key."""
+    return hmac.new(key, value.strip().lower().encode(), hashlib.sha256).hexdigest()[:16]
+
+
+def key_check(key: bytes) -> str:
+    """A short value that says which key fingerprinted a record, so records made under two keys are never joined."""
+    return fingerprint("fingerprint key check", key)[:8]
 
 
 def _open(req: urllib.request.Request, opener=None, timeout: int = 60) -> tuple[int, bytes]:
@@ -252,9 +296,10 @@ class Soap:
                       f"<userName>{esc(user)}</userName><password>{esc(password)}</password></Login>")
         return r.findtext(f"{{{VIM}}}returnval/{{{VIM}}}userName") if r is not None else None
 
-    def sessions(self) -> tuple[list[dict], str | None]:
+    def sessions(self, where: bool = False) -> tuple[list[dict], str | None]:
         """Every session's principal and client agent, and this session's key so the census can leave itself out.
-        Keys stay in memory; addresses and login times are never read."""
+        Keys stay in memory. With where, each session's ipAddress and lastActiveTime are read too, for the terminal
+        only; login times are never read."""
         r = self.call(f'<RetrievePropertiesEx xmlns="{VIM}"><_this type="PropertyCollector">{self.property_collector}'
                       '</_this><specSet><propSet><type>SessionManager</type><all>false</all><pathSet>sessionList</pathSet>'
                       "<pathSet>currentSession</pathSet></propSet><objectSet><obj type=\"SessionManager\">"
@@ -271,8 +316,12 @@ class Soap:
                 mine = val.findtext(f"{{{VIM}}}key")
             elif name == "sessionList":
                 for s in val.findall(f"{{{VIM}}}UserSession"):
-                    rows.append({"key": s.findtext(f"{{{VIM}}}key"), "user": s.findtext(f"{{{VIM}}}userName") or "",
-                                 "agent": s.findtext(f"{{{VIM}}}userAgent") or ""})
+                    row = {"key": s.findtext(f"{{{VIM}}}key"), "user": s.findtext(f"{{{VIM}}}userName") or "",
+                           "agent": s.findtext(f"{{{VIM}}}userAgent") or ""}
+                    if where:
+                        row["address"] = s.findtext(f"{{{VIM}}}ipAddress") or ""
+                        row["last_active"] = s.findtext(f"{{{VIM}}}lastActiveTime") or ""
+                    rows.append(row)
         return rows, mine
 
     def logout(self) -> None:
@@ -311,9 +360,11 @@ def classify(principal: str, tenant: str, directories: set[str], local: str) -> 
     return "another provider"
 
 
-def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str) -> dict:
+def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str,
+           key: bytes | None = None) -> dict:
     """Sessions by class; the local administrator by agent; each directory principal with its agents, flagged when any
-    agent is not interactive. No local principal is named, because a local account's name can carry estate values."""
+    agent is not interactive, and with a keyed fingerprint when a key is given. No local principal is named, because a
+    local account's name can carry estate values. A session's address and activity never reach the census."""
     by_class, admin, dirs, clients = Counter(), Counter(), {}, set()
     allowed = interactive_agents()
     for r in rows:
@@ -331,42 +382,61 @@ def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str
             "local_administrator_by_agent": dict(sorted(admin.items())),
             "local_administrator_not_interactive": sum(n for ag, n in admin.items() if not interactive(ag, allowed)),
             "directory": [{"principal": p, "agents": dict(sorted(a.items())),
-                           "not_interactive": any(not interactive(ag, allowed) for ag in a)}
+                           "not_interactive": any(not interactive(ag, allowed) for ag in a),
+                           **({"fingerprint": fingerprint(p, key)} if key else {})}
                           for p, a in sorted(dirs.items())],
             "api_clients": len(clients), "own_session_left_out": mine is not None}
 
 
-def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str) -> dict:
+def where_rows(host: str, rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str) -> list[dict]:
+    """Each directory and local administrator session with its address and last activity, for the terminal only: the
+    sessions whose owner the census asks you to name."""
+    out = []
+    for r in rows:
+        cls = classify(r["user"], tenant, directories, local)
+        if r["key"] != mine and cls in ("directory", "local administrator"):
+            out.append({"vcenter": host, "class": cls, "user": r["user"], "agent": agent_of(r["agent"]),
+                        "address": r.get("address") or "", "last_active": r.get("last_active") or ""})
+    return sorted(out, key=lambda w: (w["class"], w["user"].lower(), w["agent"], w["last_active"]))
+
+
+def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str, key: bytes | None = None,
+               where: list | None = None) -> dict:
     """The census from an open session. A list that holds only the census's own session means this identity may not
-    read the others, which is reported as such and never as an empty estate."""
+    read the others, which is reported as such and never as an empty estate. With a where list, the address and last
+    activity of each directory and local administrator session go into that list, never into the census."""
     try:
-        rows, mine = s.sessions()
+        rows, mine = s.sessions(where=where is not None)
         if s.fault:
             return {"error": s.fault}
         if mine and all(r["key"] == mine for r in rows):
             return {"error": "the session list held only this census's own session: this identity cannot read the others",
                     "only_own_session_visible": True, "census_identity": {"user": who}}
-        return {**census(rows, mine, tenant, directories, local), "census_identity": {"user": who}}
+        if where is not None:
+            where += where_rows(s.url.split("/")[2], rows, mine, tenant, directories, local)
+        return {**census(rows, mine, tenant, directories, local, key), "census_identity": {"user": who}}
     finally:
         s.logout()
 
 
-def read_sessions(host: str, user: str, password: str, tenant: str, directories: set[str], local: str) -> dict:
+def read_sessions(host: str, user: str, password: str, tenant: str, directories: set[str], local: str,
+                  key: bytes | None = None, where: list | None = None) -> dict:
     """The census as an account that signs in with a password (VC_USER)."""
     s = Soap(host)
     who = s.login(user, password) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, tenant, directories, local)
+    return _census_of(s, who, tenant, directories, local, key, where)
 
 
-def read_sessions_as_client(host: str, assertion: str, tenant: str, directories: set[str], local: str) -> dict:
+def read_sessions_as_client(host: str, assertion: str, tenant: str, directories: set[str], local: str,
+                            key: bytes | None = None, where: list | None = None) -> dict:
     """The census as the API client itself: its own SOAP session from a fresh SAML assertion."""
     s = Soap(host)
     who = s.login_by_token(assertion) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, tenant, directories, local)
+    return _census_of(s, who, tenant, directories, local, key, where)
 
 
 # ── the record ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -424,7 +494,9 @@ def report(record: dict) -> list[str]:
             if s["local_administrator_by_agent"]:
                 lines.append("    local administrator by agent: " + ", ".join(f"{a} {n}" for a, n in s["local_administrator_by_agent"].items()))
             for d in s["directory"]:
-                lines.append(f"    directory {d['principal']}: " + ", ".join(f"{a} {n}" for a, n in d["agents"].items())
+                lines.append(f"    directory {d['principal']}"
+                             + (f" [fingerprint {d['fingerprint']}]" if d.get("fingerprint") else "") + ": "
+                             + ", ".join(f"{a} {n}" for a, n in d["agents"].items())
                              + ("  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE" if d["not_interactive"] else ""))
         elif isinstance(s, dict):
             lines.append(f"  sessions not read: {s.get('error')}")
@@ -513,7 +585,10 @@ def have_client() -> bool:
     return bool(bearer_file() or (broker_host() and api_token()))
 
 
-def run(with_sessions: bool) -> dict:
+def run(with_sessions: bool, where: list | None = None, key: bytes | None = None) -> dict:
+    """The exchange and the census on every vCenter named. With a where list, the address and last activity of each
+    directory and local administrator session go into that list and never into the record; with a key, each vCenter
+    and directory principal in the record carries its keyed fingerprint."""
     hosts = [h.strip() for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
     bearer = broker_bearer() if have_client() else None
     census_as = None if not with_sessions else ("password" if os.environ.get("VC_USER") else "client")
@@ -530,8 +605,10 @@ def run(with_sessions: bool) -> dict:
         sent.append("per vCenter: a third exchange, and a SOAP session as the client, opened and closed")
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "census_as": census_as,
               "sent": sent, "vcenters": []}
+    if key and with_sessions:
+        record["fingerprint_key_check"] = key_check(key)
     for host in hosts:
-        row = {"vcenter": host}
+        row = {"vcenter": host, **({"fingerprint": fingerprint(host, key)} if key and with_sessions else {})}
         if bearer:
             status, _ = _open(urllib.request.Request(f"https://{host}/api/vcenter/datacenter",
                                                      headers={"Authorization": f"Bearer {bearer}", "User-Agent": AGENT}))
@@ -545,10 +622,11 @@ def run(with_sessions: bool) -> dict:
                 record["broker_tenant"] = {"set": tenant, "read_from_client_session": seen}
                 tenant = seen
         if census_as == "password":
-            row["sessions"] = read_sessions(host, os.environ["VC_USER"], _secret("VC_PASSWORD"), tenant, directories, local)
+            row["sessions"] = read_sessions(host, os.environ["VC_USER"], _secret("VC_PASSWORD"), tenant, directories, local,
+                                            key, where)
         elif census_as == "client":
             _, third = exchange(host, bearer)
-            row["sessions"] = (read_sessions_as_client(host, third, tenant, directories, local) if third
+            row["sessions"] = (read_sessions_as_client(host, third, tenant, directories, local, key, where) if third
                                else {"error": "the exchange for the census's own session failed"})
         record["vcenters"].append(row)
     record["summary"] = summary(record)
@@ -570,6 +648,117 @@ def exit_code(record: dict) -> int:
     return 4 if record["summary"]["local_administrator_not_interactive"] else 0
 
 
+def where_report(where: list[dict]) -> list[str]:
+    """The --where lines: printed on the terminal, never recorded."""
+    if not where:
+        return ["Where: no directory or local administrator session to place"]
+    lines = ["Where each directory and local administrator session comes from (printed here only, never recorded; "
+             "resolve each address to a host and its owner):"]
+    for w in where:
+        lines.append(f"  {w['vcenter']}  {w['class']} {w['user']} from {w['agent']}: address {w['address'] or 'none given'}, "
+                     f"last active {w['last_active'] or 'not given'}")
+    return lines
+
+
+# ── --compare: sessions across dated records ─────────────────────────────────────────────────────────────────────
+class CompareError(ValueError):
+    """A set of records that cannot be compared: the reason is printed and the exit is 2."""
+
+
+def sessions_of(record: dict) -> dict[str, dict]:
+    """Per vCenter fingerprint: its placeholder, and its sessions as (who, agent) pairs, the directory principal by its
+    fingerprint and the local administrator as itself."""
+    out = {}
+    for v in record.get("vcenters") or []:
+        s = v.get("sessions")
+        if not v.get("fingerprint") or not isinstance(s, dict) or "by_class" not in s:
+            continue
+        pairs, names = set(), {}
+        for d in s.get("directory") or []:
+            if not d.get("fingerprint"):
+                raise CompareError("a directory principal carries no fingerprint")
+            names[d["fingerprint"]] = d["principal"]
+            pairs |= {(f"directory {d['fingerprint']}", a) for a in d["agents"]}
+        pairs |= {("local administrator", a) for a in s.get("local_administrator_by_agent") or {}}
+        out[v["fingerprint"]] = {"vcenter": v["vcenter"], "pairs": pairs, "names": names}
+    return out
+
+
+def compare(records: list[dict]) -> dict:
+    """Which sessions are present in every record and which came and went, per vCenter, over the records' dates."""
+    if len(records) < 2:
+        raise CompareError("--compare needs two or more records")
+    checks = {r.get("fingerprint_key_check") for r in records}
+    if None in checks:
+        raise CompareError("a record carries no fingerprints: run each --sessions census with FINGERPRINT_KEY_FILE set")
+    if len(checks) > 1:
+        raise CompareError("the records were fingerprinted under different keys; use one FINGERPRINT_KEY_FILE for all")
+    ordered = sorted(records, key=lambda r: r.get("captured") or "")
+    reads = [(r.get("captured") or "?", sessions_of(r)) for r in ordered]
+    if not all(by_vc for _, by_vc in reads):
+        raise CompareError("a record holds no session census read on any vCenter")
+    vcenters = []
+    for fp in sorted({fp for _, by_vc in reads for fp in by_vc}):
+        seen = [(when, by_vc[fp]) for when, by_vc in reads if fp in by_vc]
+        everyone = set.intersection(*(x["pairs"] for _, x in seen))
+        names = {k: v for _, x in seen for k, v in x["names"].items()}   # the latest record's placeholder wins
+        came = sorted((set.union(*(x["pairs"] for _, x in seen)) - everyone))
+        vcenters.append({"fingerprint": fp, "vcenter": seen[-1][1]["vcenter"], "read_in": len(seen),
+                         "in_every_record": sorted(everyone),
+                         "came_and_went": [{"pair": p, "seen": [w for w, x in seen if p in x["pairs"]]} for p in came],
+                         "names": names})
+    days = sorted({when[:10] for when, _ in reads})
+    return {"records": len(records), "captured": [w for w, _ in reads], "days": days, "vcenters": vcenters}
+
+
+def _who(pair: tuple[str, str], names: dict) -> str:
+    kind, agent = pair
+    if kind.startswith("directory "):
+        fp = kind.split(" ", 1)[1]
+        return f"directory {names.get(fp, '?')} [fingerprint {fp}] from {agent}"
+    return f"{kind} from {agent}"
+
+
+def compare_report(result: dict) -> list[str]:
+    lines = [f"Compared {result['records']} session records on {len(result['days'])} day(s): {', '.join(result['days'])}"]
+    if len(result["days"]) < 3:
+        lines.append("FEWER THAN THREE DAYS: a job that runs weekly, or at night, can be absent from every record read")
+    for v in result["vcenters"]:
+        lines.append(f"vCenter {v['vcenter']} [fingerprint {v['fingerprint']}], read in {v['read_in']} of "
+                     f"{result['records']} record(s)")
+        lines.append("  in every record: " + ("; ".join(_who(p, v["names"]) for p in v["in_every_record"]) or "none"))
+        if not v["came_and_went"]:
+            lines.append("  came and went: none")
+        for c in v["came_and_went"]:
+            lines.append(f"  came and went: {_who(c['pair'], v['names'])}, seen {', '.join(w[:10] for w in c['seen'])}")
+    return lines
+
+
+def compare_exit(result: dict) -> int:
+    whole = all(v["read_in"] == result["records"] for v in result["vcenters"])
+    return 0 if len(result["days"]) >= 3 and whole else 1
+
+
+def compare_main(paths: list[str]) -> int:
+    records = []
+    for path in paths:
+        try:
+            with open(path, encoding="utf-8") as f:
+                records.append(json.load(f))
+        except (OSError, ValueError) as e:
+            print(f"could not read {path}: {type(e).__name__}", file=sys.stderr)
+            return 2
+    try:
+        result = compare(records)
+    except CompareError as e:
+        print(f"cannot compare: {e}", file=sys.stderr)
+        return 2
+    print("\n".join(compare_report(result)))
+    code = compare_exit(result)
+    print(f"\nexit {code}")
+    return code
+
+
 def given_values() -> list[tuple[str, str]]:
     out = [(h.strip(), "host") for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
     out += [(os.environ.get(k, ""), "host") for k in ("BROKER_HOST", "OPS_BROKER_HOST", "OPS_HOST")]
@@ -583,7 +772,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--sessions", action="store_true",
                     help="read each vCenter's session list: as VC_USER when it is set, otherwise as the API client")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
+    ap.add_argument("--where", action="store_true",
+                    help="with --sessions: print each directory and local administrator session's address and last "
+                         "activity, on the terminal only; never with --redact")
+    ap.add_argument("--compare", nargs="+", metavar="RECORD",
+                    help="compare two or more --sessions records made on different days; reads files only")
     a = ap.parse_args(argv)
+    if a.compare:
+        if a.sessions or a.where or a.redact:
+            print("--compare reads records only; it takes no other option", file=sys.stderr)
+            return 2
+        return compare_main(a.compare)
+    if a.where and a.redact:
+        print("--where prints addresses, which --redact exists to hide; run them apart. --where writes nothing of them "
+              "to the record either way", file=sys.stderr)
+        return 2
+    if a.where and not a.sessions:
+        print("--where reads the session list, so it needs --sessions", file=sys.stderr)
+        return 2
     if not os.environ.get("VC_HOSTS"):
         print("VC_HOSTS is required", file=sys.stderr)
         return 2
@@ -605,9 +811,11 @@ def main(argv: list[str] | None = None) -> int:
         print("--sessions needs VC_USER and VC_PASSWORD_FILE, or the API client's credential to read as the client",
               file=sys.stderr)
         return 2
+    where: list | None = [] if a.where else None
     try:
-        record = run(a.sessions)
-    except (RuntimeError, urllib.error.URLError, OSError) as e:
+        key = fingerprint_key() if a.sessions else None
+        record = run(a.sessions, where, key)
+    except (RuntimeError, urllib.error.URLError, OSError, ValueError) as e:
         print(f"could not start: {e}", file=sys.stderr)
         return 1
     table = estate_values(record, given_values())
@@ -617,6 +825,8 @@ def main(argv: list[str] | None = None) -> int:
     out = os.environ.get("OUT", "exchange.json")
     if not (left and a.redact):  # a redacted print with a surviving value would print that value
         print("\n".join(report(clean if a.redact else record)))
+    if where is not None:
+        print("\n".join(where_report(where)))
     if left:
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub", file=sys.stderr)
         return 2

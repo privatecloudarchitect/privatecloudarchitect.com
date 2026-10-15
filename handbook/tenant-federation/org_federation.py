@@ -236,6 +236,15 @@ READ_ONLY_PERMISSIONS = {  # Microsoft Graph application permissions, measured b
     "watch.py": ["Application.Read.All"],
     "leavers.py": ["Application.Read.All", "User.Read.All", "GroupMember.Read.All"],
 }
+# The name an account is known by stays the user principal name: the organization names each account by it, and the
+# leaver job (identity-lifecycle's leavers.py) asks Entra for the person behind an account by it as a principal name,
+# so a name claim sourced from another attribute would read every entitled account as nobody Entra knows. Entra sends
+# the principal name in both by default (Microsoft's SAML claims customization page; the reference runs read the SAML
+# name claim equal to the principal name).
+NAME_CLAIM_SAML = (f"The name claim ({CLAIMS}/name) left sourced from user.userprincipalname, Entra's default, because the "
+                   "organization names each account by it and the leaver job looks each account up by it")
+NAME_CLAIM_OIDC = ("preferred_username left as Entra sends it, the user principal name, with no claims mapping over it, "
+                   "because the organization names each account by it and the leaver job looks each account up by it")
 
 
 def entra_checklist(protocol, org_type, user_key):
@@ -257,11 +266,15 @@ def entra_checklist(protocol, org_type, user_key):
             "A client secret that ends in under 12 months, handed to the provider for the organization's settings, its end "
             "date tracked, rotated with overlap",
         ]
+        if user_key == "preferred_username":
+            out.append(NAME_CLAIM_OIDC)
     else:
         out += [
             "An enterprise app from the Custom template, single sign-on mode SAML, identifier and reply URL taken from "
-            "the organization's own service-provider metadata",
+            "the organization's own service-provider metadata, which the provider fetches and sends once the organization "
+            "exists",
             "An emailaddress claim from the user's mail, added before any user signs in",
+            NAME_CLAIM_SAML,
             "The signing certificate's expiry notices sent to a monitored mailbox",
         ]
     watch, leavers = READ_ONLY_PERMISSIONS["watch.py"], READ_ONLY_PERMISSIONS["leavers.py"]
@@ -271,6 +284,14 @@ def entra_checklist(protocol, org_type, user_key):
         "job; none of them grants a write"
     )
     return out
+
+
+# Over SAML the tenant's app is built from the organization's own service-provider metadata, so the provider's first
+# step comes before the tenant's: the order _sp_metadata() follows on --execute, retrying while a new organization's
+# metadata answers 500.
+SP_METADATA_STEP = ("First, once the organization reads back, its own service-provider metadata fetched from the link in "
+                    "its federation settings, retried while a new organization still answers 500 in its first seconds, and "
+                    "sent to the tenant's administrator, whose app takes its identifier and reply URL from it")
 
 
 def organization_checklist(protocol, org_type, user_key):
@@ -287,6 +308,7 @@ def organization_checklist(protocol, org_type, user_key):
         ]
     else:
         out += [
+            SP_METADATA_STEP,
             "The settings written as a round trip with the app's federation metadata from the tenant's administrator",
         ]
     out += [

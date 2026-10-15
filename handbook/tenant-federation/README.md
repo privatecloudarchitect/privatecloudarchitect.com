@@ -8,7 +8,7 @@ Entra is reached with a certificate rather than a client secret. No secret or to
 
 | File | What it is |
 |---|---|
-| `org_federation.py` | Plans by default: prints every body each side will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. Writes `federation.json`, and refuses to write a record carrying any estate value. |
+| `org_federation.py` | Plans by default: prints every body each side will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for, and the name claim kept as the user principal name, which the leaver job looks each account up by), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. Writes `federation.json`, and refuses to write a record carrying any estate value. |
 | `federation.json` | That record from the reference estate. The chapter's plates render it. |
 | `update_key_refresh.json`, `update_keys.json`, `update_secret.json`, `update_metadata.json` | The day-2 writer's records, one per kind of write, from a throwaway OIDC organization and a throwaway SAML one on the reference estate. federation-operations' plates render them. |
 | `expected-output.md` | A run's transcript, with what to read in it. |
@@ -92,7 +92,10 @@ build, and `--key-refresh` above one hour is for drills.
    `openid profile email`, and a client secret that ends in under a year (`SECRET_DAYS`, default 180), held until
    Entra accepts it. SAML: an enterprise app from the Custom template with the organization's own entity id and
    assertion consumer, the same groups claim, a signing certificate, and an email claim set before anyone signs
-   in.
+   in. The entity id and assertion consumer come from the organization's service-provider metadata, which a new
+   organization served only after its first seconds (HTTP 500 until then), so the script reads it until it answers;
+   on a real tenant that makes the provider's fetch the first step of the hand-off, sent to the tenant's
+   administrator before the app is built.
 4. **The group as the app's only assignment**, and the entitled test user as a direct member.
 5. **The organization's settings by round trip**: read, change the named fields, write back, read again. OIDC:
    Entra's discovery document and signing keys, PKCE off, keys refreshed every hour and added rather than replaced,
