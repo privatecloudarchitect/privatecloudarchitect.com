@@ -8,8 +8,8 @@ these reads, so a row that differs on your estate is worth a report.
 
 | Script | What it answers | Exit |
 |---|---|---|
-| `claims.py` | What does the bearer my api-token exchanges for say about its holder? Issuer, audience, the principal claims (a person shows up as user@realm with an email claim; a machine identity as a client id), scopes, and the lifetime read off the token itself. Any other JWT can be decoded through `JWT_ENV`. | 0 printed · 3 the mint failed, or the broker answered a bearer that is not a JWT · 5 a usage error: an argument it does not take, the credential unset or its file unreadable, a `JWT_ENV` value that is not a JWT |
-| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. With `--census`, it also reads the record the identity-model companion's `census.py` writes and checks every API client in it for an owner, a role, both lifetimes and a rotation date, which neither file holds alone. | 0 every entry complete · 1 a warning · 2 a failure · 3 the census record is not a read (its exit is not 0; a fleet identity call failed or answered without its list; it lists no realm, or did not query every realm's API client and token lists; or a line the join reads is missing) · 5 a usage error: an argument it does not take, a file it cannot read, a catalog that is not one (no object with a `credentials` list), the key unset, or a record without fingerprints or made under another key |
+| `claims.py` | What does the bearer my api-token exchanges for say about its holder? Issuer, audience, the principal (the broker's `prn_type`: `USER` a person, `SERVICE` a machine identity; without it, a person's claim such as an email or a user name names a person), scopes, and the lifetime read off the token itself. Any other JWT can be decoded through `JWT_ENV`. | 0 printed, the principal a PERSON or a CLIENT · 3 the mint failed, the broker answered a bearer that is not a JWT, or the principal is not determined (no `prn_type` and no person's claim, or a `prn_type` other than `USER` or `SERVICE`) · 5 a usage error: an argument it does not take, the credential unset or its file unreadable, a `JWT_ENV` value that is not a JWT |
+| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. With `--census`, it also reads the record the identity-model companion's `census.py` writes and checks every API client in it for an owner, a role, both lifetimes and a rotation date, which neither file holds alone. | The worst state, in this order: 2 a failure (with `--census`, a client holding a token `EXPIRED`, `REVOKED` or past its end date among them) · 3 the census record is not a read (its exit is not 0; a fleet identity call failed or answered without its list; it lists no realm, did not query every realm's API client and token lists, or does not state them read to their total; or a line the join reads is missing), or a joined client holds a token whose state or end date the record does not carry · 1 a warning · 0 every entry complete · 5 a usage error: an argument it does not take, a file it cannot read, a catalog that is not one (no object with a `credentials` list), the key unset, or a record without fingerprints or made under another key |
 | `doors.py` | Which token does each surface accept? One harmless read per pair: the broker's bearer against VCF Operations, NSX, and the fleet plane's services; the per-service JWTs; VCF Automation's three login paths with the count of effective rights each carries (the arrival rule in numbers); vCenter's and SDDC Manager's own flows. Rows say MATCH or DIFFERS against the chapter's matrix. | 0 every door of every surface you configured answered · 3 a transport error, the broker mint failed, or a surface you configured whose own token could not be minted (`NOT READ`) · 5 a usage error: an argument it does not take, `OPS_HOST` or the api-token unset, a credential file it cannot read |
 
 Every script exits on one contract shared by the identity companions: 0 nothing for a person to act on, 3 a read
@@ -31,6 +31,10 @@ record's exit says. It refuses, with exit 3 and `NOT READ` before any entry is p
   (`census.py` marks that call `shape`, as it does a 200 whose list key is missing);
 - that carries no API client list or no realm list (a `--orgs-only` run reads no fleet), lists no realm, or did not
   query the API client and the API token lists of every realm it lists;
+- whose last page of a realm's API client or API token list does not state that the list was read whole: `census.py`
+  records on each page the total the answer stated and the distinct entries read (`listed`), and the two must be equal.
+  A record an earlier `census.py` wrote carries no such numbers and is refused: run `census.py` again;
+- whose API client lines are not the clients its reads listed;
 - whose API client lines lack the roles or tokens list the check judges, or, in a fingerprinted record, the
   fingerprint the join is made on.
 
@@ -80,8 +84,10 @@ with `FINGERPRINT_KEY_FILE` set gives each client the fingerprint of its client 
 computes the same for each catalog entry's `api_client` (or its `name`, when that is the client's). Make the key once,
 for example `python3 -c "import secrets; print(secrets.token_hex(32))" > key && chmod 600 key`, keep it off any shared
 disk, and use the same file for every run you will join. A client no entry names fails, as does one whose entry has no
-owner or no `next_due`, one holding no role, and a token missing a lifetime; a client with no token, and a token that
-expires before its entry's `next_due`, are warnings.
+owner or no `next_due`, one holding no role, a token missing a lifetime, and a token `EXPIRED`, `REVOKED` or past its
+end date; a client with no token, and a token that expires before its entry's `next_due`, are warnings. A token whose
+state (anything but `ACTIVE`, `EXPIRED` or `REVOKED`) or end date the record does not carry is not judged: its client
+prints `unread`, and the run exits 3 unless a failure (exit 2) comes first, so a warning never hides it.
 
 Every password and token is read from `NAME_FILE`, a file of mode 0600, when it is set. The value itself in `NAME`
 (`OPS_API_TOKEN`, `VC_PASSWORD` and the rest) still works, but it lands in the shell's history and the process list,
@@ -103,13 +109,18 @@ so keep it for a throwaway credential.
 - `catalog_check.py` reads metadata you keep and was run on the example catalog; it never reads a backend, so it
   cannot tell whether the value in the vault still works. That is what `claims.py` and `doors.py` are for. Its
   `--census` join was run once on the reference estate's census record, with a scratch catalog naming one client: that
-  client joined, and the three no entry named failed (2026-10-15). Its refusals of a census that did not read, and its
-  zero-client line, were run on synthetic records and are held by its tests.
+  client joined, and the three no entry named failed (2026-10-15). That record predates the list totals the join now
+  requires, so the same record is refused today until `census.py` is run again. Its refusals of a census that did not
+  read, its token states and its zero-client line were run on synthetic records and on records `census.py`'s own code
+  wrote from a fake fleet, a page of one entry at a time past fifty included, and are held by its tests.
 
 ## Reading the output
 
 - `claims.py` prints `principal: a PERSON` when the bearer names someone (a pipeline holding that token dies with
-  their account) and `principal: a CLIENT` when it names a machine identity, the shape automation should hold.
+  their account) and `principal: a CLIENT` when it names a machine identity, the shape automation should hold; each
+  with the claims that decided it. The broker's bearer states `prn_type` (`USER` for a person's api-token and
+  `SERVICE` for an API client's, read on the reference estate). A JWT whose claims decide neither prints
+  `principal: not determined` and exits 3: the absence of a person's claim is not a machine.
 - `doors.py` prints one row per pair. `accepted` is a status below 400, `refused` is 401 or 403. `MATCH` and
   `DIFFERS` compare the row with the chapter's matrix; `DIFFERS` is a finding to report, because the matrix is
   built from these reads and grows by them.

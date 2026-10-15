@@ -12,9 +12,16 @@ assertion or password is printed or written.
 
 **One exit contract.** Every identity companion exits 0 when there is nothing for a person to act on, 3 when a read
 failed or a result is undetermined (an error a script did not expect is one, never a finding), and 5 on a usage error
-(a missing or bad argument or environment variable, a Python older than 3.10) or a record refused because an estate value
-survived its scrub. The other codes are each script's own, in its table below. The codes were renumbered on
-2026-10-15: a record written before then carries the old code in its `exit` field.
+(a missing or bad argument or environment variable, a Python older than 3.10). A record refused because an estate
+value survived its scrub is not written and never changes the run's code: a finding, a refusal or a failed read keeps
+its own code, and a run that found nothing, or whose writes held, exits 3, because the record a later reader checks
+was not written. The other codes are each script's own, in its table below. The codes were renumbered on 2026-10-15: a
+record written before then carries the old code in its `exit` field.
+
+**Every list read whole.** A list is complete only when the items it returns, counted once each by id, reach the total
+its answer states. A page refused, an answer without its list or its total, a total that changes between pages, a page
+that adds nothing new, or pages that end before the total, is a list not read (exit 3), never a shorter or an empty
+one, and nothing is written to the platform on it.
 
 | File | What it is |
 |---|---|
@@ -35,7 +42,8 @@ The census needs no API client, so it can run before one exists. It reads the se
 export VC_HOSTS=<vcenter-fqdn>[,<another>]
 export VC_USER=<user@domain>                        # an account that may read every session
 export VC_PASSWORD_FILE=/path/to/password           # mode 0600
-export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # as vCenter spells it; required with --sessions
+export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # as vCenter spells it, every directory; required
+export OTHER_DOMAINS=<another provider's domain>[,...]    # optional: domains you know are another identity provider's
 export TLS_VERIFY=false                             # only on a self-signed lab CA
 
 python3 vcenter_exchange.py --sessions --redact     # the census, printed with placeholders, for a transcript you will share
@@ -48,6 +56,14 @@ sessions read `vSphereUI`, and that is the only agent the census treats as a per
 name a scripting client there, because every account's sessions from it would then pass unflagged, and the run prints a
 note when the variable is set. A person who signs in with PowerCLI is flagged too: once its owner confirms it is that
 person, acknowledge that one pair with `--ack` (below).
+
+Every session is placed, or the read fails. A session in a domain that none of `DIRECTORY_DOMAINS`, `OTHER_DOMAINS`,
+`LOCAL_DOMAIN` (default `VSPHERE.LOCAL`) and the broker tenant names is NOT PLACED, and the census exits 3: it could
+be a second directory whose integrations sign in on a password, which the census would otherwise never flag. The
+domains it could not place are printed on your terminal, never written to the record (under `--redact`, counted only).
+Name each one in `DIRECTORY_DOMAINS` if it is a directory whose accounts sign in here, or in `OTHER_DOMAINS` (the name
+and meaning `vcenter-authorization/authz.py` takes) if it is another identity provider's, whose sessions are then placed
+and never flagged. A domain in both lists is refused (exit 5).
 
 The census reads vCenter only. NSX, VCF Operations, the SDDC Manager API and VCF Automation each keep their own
 sign-ins, and it does not read them.
@@ -100,10 +116,10 @@ The exit is the first of these that applies, so a scheduler reads one state from
 |---|---|---|
 | 1 | `--sessions` found a directory account signing in from a client other than the vSphere Client, a pair no acknowledgement covers: an integration on a person's or a directory account's password, until its owner says otherwise | find its owner (`--where`), and move it to an identity of its own; a person's own pair, once confirmed, goes in `--ack` |
 | 2 | a vCenter answered the API client's exchange, or one of its sessions, and did not take the client | read the client's role and the realm's coverage of that vCenter |
-| 3 | a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty one included, since it always holds the census's own session), a census identity that could read only its own session, a vCenter on which `DIRECTORY_DOMAINS` named no session while another provider's sessions were there (the domains name nothing there, so the census saw nothing it was asked to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect | fix the read and run again; nothing is known of what was not read |
+| 3 | a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty one included, since it always holds the census's own session), a census identity that could read only its own session, a session NOT PLACED (in a domain neither `DIRECTORY_DOMAINS` nor `OTHER_DOMAINS` names, so it was not judged), no vCenter read, a credential the broker did not trade, or an error the script did not expect | fix the read and run again; for NOT PLACED, name each domain printed on the terminal in one of the two lists; nothing is known of what was not read |
 | 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client: an account in automated use is not a break-glass account | find the client (`--where`) and move it |
 | 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client or acknowledged, and the local administrator signs in from no other client | nothing |
-| 5 | a usage error (`--sessions` without `DIRECTORY_DOMAINS`, an `--ack` file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, `--ack` without `--sessions`, among them), a Python older than 3.10, or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
+| 5 | a usage error (`--sessions` without `DIRECTORY_DOMAINS`, a domain in both `DIRECTORY_DOMAINS` and `OTHER_DOMAINS`, an `--ack` file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, `--ack` without `--sessions`, among them), or a Python older than 3.10; nothing is written | fix the invocation |
 
 The exit reads each session list at one moment, and an integration that is not signed in at that moment is not seen: a
 job that runs at 02:00 for ten minutes is absent from a read at 10:00 on any number of days. So schedule the census at
@@ -166,7 +182,7 @@ keyed fingerprint, the same in every record made under that key. Then compare:
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))" > fingerprint.key && chmod 600 fingerprint.key   # once
 export FINGERPRINT_KEY_FILE=$PWD/fingerprint.key
-OUT=sessions-$(date -u +%FT%H%M).json python3 vcenter_exchange.py --sessions --redact    # on a schedule
+OUT=sessions-$(date -u +%FT%H%M).json python3 vcenter_exchange.py --sessions --redact    # on a schedule; in a crontab line, write each % as \%
 python3 vcenter_exchange.py --compare sessions-*.json --ack acks.json \
     --cover-hours 24 --span-days 7 --max-gap-minutes 30
 ```
@@ -192,8 +208,10 @@ acknowledged, the local administrator's marked as a break-glass account in autom
 administrator, and API clients, are counted in each record and not compared.
 
 `--compare` first checks what each record read. A vCenter whose census failed in a record (its list not read, only
-the census's own session visible, `DIRECTORY_DOMAINS` naming nothing there, or no fingerprint) is not a read of that
-vCenter, and the report says which record missed it: what came and went there is not known.
+the census's own session visible, a session not placed, or no fingerprint) is not a read of that vCenter, and the report
+says which record missed it: what came and went there is not known. So a second directory nobody listed never lets the
+gate before federating exit 0. A record written before `OTHER_DOMAINS` existed (no `other_domains_declared` field) is
+judged by the rule it was written under: its directory domains naming no session while another provider's were there.
 
 | `--compare` exit, the first that applies | Means | What a person does |
 |---|---|---|
@@ -225,8 +243,9 @@ Plan first. With no `--execute` it prints every call it would send, with its bod
 ```bash
 export OPS_HOST=<vcf-operations-fqdn>
 export OPS_BROKER_HOST=<identity-broker-fqdn>       # the broker that trades your token; unset, OPS_HOST is tried
-export OPS_API_TOKEN_FILE=/path/to/ops-api-token    # mode 0600; your own VCF Operations API token, never the client's
+export OPS_API_TOKEN_FILE=~/.vcf/ops-api-token     # mode 0600, outside this clone; your own token, never the client's
 export TLS_VERIFY=false                             # only on a self-signed lab CA
+# a fleet with more than one realm: add --realm <its name or id> to every run below (exit 5 without it)
 
 python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43200 --access-token-ttl 60
 python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43200 --access-token-ttl 60 \
@@ -245,6 +264,7 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `--role ROLE` | the one VCF role the client holds, for example `vcf_viewer` (required to create) |
 | `--scope realm\|instance` | where the role applies: the whole realm (the default), or one VCF instance with `--instance` |
 | `--instance NAME` | with `--scope instance`: the VCF instance's name as the realm's coverage names it; a name the realm does not cover is refused before any write |
+| `--realm REALM` | the realm to act in, by its name or its id as `GET /ssorealms` lists them; required when the fleet holds more than one realm, and the realm the create recorded for every later run |
 | `--api-token-ttl MIN` | the API token's lifetime in minutes, 1,440 to 259,200 (required to create) |
 | `--access-token-ttl MIN` | the lifetime in minutes of each bearer the token yields, 30 to 60 (required to create) |
 | `--token-file PATH` | where the token is written, mode 0600; the file must not exist (required with `--execute`) |
@@ -272,7 +292,8 @@ fleet's API clients. Make it in the console as the token of an API client of you
 path Broadcom's page "Create an API Client and Generate an API Token" (VCF 9.1) gives: **Manage ▸ Fleet Management ▸
 Identity & Access ▸ VCF SSO Overview**, the broker that holds your realm, **API Access ▸ API Clients ▸ Create** with the
 role VCF Administrator, then against that client **⋮ ▸ Generate API Token**, with both lifetimes set; copy it into a
-file of mode 0600 before you continue, since the page says it cannot be retrieved afterwards. The integrations-identity
+file of mode 0600, outside this clone (`~/.vcf/ops-api-token` above; the repository's `.gitignore` also ignores the
+file names the chapters use), before you continue, since the page says it cannot be retrieved afterwards. The integrations-identity
 chapter's plate 04, "Your VCF Operations API token", walks it
 ([privatecloudarchitect.com/handbook/integrations-identity](https://privatecloudarchitect.com/handbook/integrations-identity)).
 Over the API the call is `POST /ssorealms/{realm}/api-tokens`, and it makes a token for an existing API client, named in
@@ -289,34 +310,44 @@ read from the `azp` claim of the run's own bearer, and refuses a bearer it canno
 service. A deleted API token is refused at the broker, not with 401: HTTP 500 on VCF 9.1.0 (2026-09-16, the
 service-accounts companion's run), HTTP 400 for a deleted API client token on 9.1.1 (2026-10-13 and 2026-10-15).
 
-**Every list read to its end.** The fleet's queries take `page` and `pageSize` as query parameters, 50 to a page by
+**Every list read whole.** The fleet's queries take `page` and `pageSize` as query parameters, 50 to a page by
 default (the 9.1.1 specification); a `pageSize` sent in the body is not read, and asked for 500 to a page on 2026-10-15
 the fleet answered with 50. The token list holds every token in the realm, people's included. So every list is read page
-by page to the total the fleet states: on 2026-10-15 a page of one at a time read the same clients and tokens as one
-page. A page refused, an answer with no list, or pages that end short of their total is a read that failed (exit 3), and
-nothing is deleted on it; a person's token (`tokenType` `USER`) is never counted as the client's, whatever its principal
-name reads.
+by page until its items, counted once each by id, reach the total the answer states (`pageInfo.totalCount`): on
+2026-10-15 a page of one at a time read the same clients and tokens as one page. A page refused, an answer without its
+list or its total, a total that changes between pages, a page that adds nothing new (a fleet that answered every page
+with the same first 50 of 120 would read 50), or pages that end before the total, is a read that failed (exit 3), and
+nothing is created or deleted on it; a person's token (`tokenType` `USER`) is never counted as the client's, whatever
+its principal name reads.
 
-**What the script made, and nothing else.** The create writes a state file (mode 0600: the client's id and uuid and the
-ids of the tokens this script issued; no secret). `--rotate`, `--retire-old` and `--teardown` act only on a client that
-file records with the same uuid, so a mistyped id, or a client someone made under that id in the console, is refused
-before anything is sent. Run them from the folder the create ran in, or set `STATE`. A client made in the console is
+**One realm, named.** Every run acts in one realm, and the plan and the record name it. With `--realm` the run acts in
+the realm of that name or id; without it, in the fleet's only realm. A fleet of more than one realm with no `--realm`,
+or a `--realm` that names none of the fleet's realms or more than one, is refused (exit 5) once the realm list is read,
+with nothing else sent, so a client is never made, or a role bound, in a realm nobody chose. The report names the realm
+when the fleet holds more than one.
+
+**What the script made, and nothing else.** The create writes a state file (mode 0600: the client's id and uuid, the
+realm it was made in, and the ids of the tokens this script issued; no secret). `--rotate`, `--retire-old` and
+`--teardown` act only on a client that file records with the same uuid, in the realm it records, so a mistyped id, a
+client someone made under that id in the console, or a run that reads another realm (where a teardown would find
+nothing and report the client gone), is refused before anything is sent. Run them from the folder the create ran in, or set `STATE`. A client made in the console is
 rotated and removed in the console.
 
 | Exit | Means |
 |---|---|
 | 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved and active beside the old ones and, when given, the old token still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no client and no token left |
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
-| 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; a run signed in as the client it would change, or on a bearer it cannot read, for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; or a fleet with no realm to make a client in |
-| 3 | a read failed or is undetermined: a list or the realm not read (a page refused, an answer with no list, or pages that end short of the total they state), the read-back not read, a token issued whose id the list read after it could not name, your token not traded for a bearer, or an error the script did not expect |
-| 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists), a Python older than 3.10, or the record refused because an estate value survived the scrub; nothing is written |
+| 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; a run signed in as the client it would change, or on a bearer it cannot read, for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; a state file that records the client in another realm than the run reads; or a fleet with no realm to make a client in |
+| 3 | a read failed or is undetermined: a list or the realm list not read whole (a page refused, an answer without its list or its total, a total that changed between pages, a page that added nothing new, or pages that end before the total they state), the read-back not read, a token issued whose id the list read after it could not name, your token not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
+| 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists, a fleet of more than one realm with no `--realm`, a `--realm` that names none of its realms or more than one), or a Python older than 3.10; nothing is written |
 
 ### What it sends, and in what order
 
 Every path is under `/api/fleet-management/iam` on VCF Operations.
 
-1. `GET /ssorealms`: the realm's id. Then a query of the realm's API clients; a client with the id you gave is refused,
-   so a run cannot take over an identity someone else made.
+1. `GET /ssorealms`: the realm to act in, the one `--realm` names or the fleet's only realm (more than one, with no
+   `--realm`, is refused, exit 5). Then a query of the realm's API clients, read whole; a client with the id you gave
+   is refused, so a run cannot take over an identity someone else made.
 2. `POST /ssorealms/{realm}/api-clients` with `clientId`, `clientName` and `clientDescription`.
 3. `PUT /ssorealms/{realm}/principals/{client uuid}/roles`: one role, `scopeType` `SSO_REALM`, or with `--scope instance`
    `VCF_INSTANCE` with the instance's id, read first from `GET /ssorealms/{realm}`'s coverage. The fleet takes only these
@@ -395,14 +426,19 @@ id; no secret), and the teardown revokes and deletes only an account that file r
 | 0 | the plan printed; or the run held on read-back: the account active, its bearer's session holding exactly the role, the stored token refreshing; or, for a teardown, no account left and the revoked token refused |
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
 | 2 | refused by this script before any write: an account that already exists (refused, never adopted), for a teardown an account the state file does not record, or no organization by that name |
-| 3 | a read failed or is undetermined: the organization or the account list not read (any of its pages), the read-back not read, the residue not read back, the provider's credential not traded for a bearer, or an error the script did not expect |
-| 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists), a Python older than 3.10, or the record refused because an estate value survived the scrub; nothing is written |
+| 3 | a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer without its list or its `resultTotal`, a total that changed between pages, a page that added nothing new, or pages that end before the total), the read-back not read, the residue not read back, the provider's credential not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
+| 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists), or a Python older than 3.10; nothing is written |
+
+**Every list read whole.** The organization list and the account list are read page by page, 128 to a page, until
+their items, counted once each by id, reach the total the answer states (`resultTotal`). A list not read whole is exit
+3: a create registers nothing on it, and a teardown revokes and deletes nothing, so an account on a page that was never
+read is not left behind under an exit 0.
 
 ### What it sends, and in what order
 
-1. `GET /cloudapi/1.0.0/orgs` filtered by name: the organization's id, which every organization-scoped call carries in
-   `X-VMWARE-VCLOUD-TENANT-CONTEXT`. Then the organization's service accounts filtered by name; one with the name you
-   gave is refused.
+1. `GET /cloudapi/1.0.0/orgs` filtered by name, read whole: the organization's id, which every organization-scoped call
+   carries in `X-VMWARE-VCLOUD-TENANT-CONTEXT`. Then the organization's service accounts filtered by name, read whole;
+   one with the name you gave is refused.
 2. `POST /oauth/tenant/{org}/register` with `client_name`, a new `software_id`, `software_version` and `scope`
    `urn:vcloud:role:<the role's name, URL-encoded>`.
 3. `POST /oauth/tenant/{org}/device_authorization` with the new `client_id`: a device code and a user code.
@@ -414,7 +450,8 @@ id; no secret), and the teardown revokes and deletes only an account that file r
    it. When the answer carries a new refresh token, it is written over the stored one.
 8. The account read back: present, its status, its roles and whether rotation is required on every refresh.
 
-A teardown first refuses an account the state file does not record. It then revokes the account's token
+A teardown first reads the account list whole and refuses an account the state file does not record. It then revokes
+the account's token
 (`POST /cloudapi/1.0.0/serviceAccounts/{id}/revoke`), deletes the account, reads the list until it is empty, and with
 `--token-file` refreshes once with the revoked token to show it is refused. A teardown of an account that is not there
 removes nothing and exits 0, so it is safe to re-run.
@@ -472,8 +509,9 @@ Steps 1 to 4 run only when an API client's credential is given.
   and SDDC Manager were not searched.
 - The census classifies each session by its principal's domain: the broker tenant is an API client, a domain in
   `DIRECTORY_DOMAINS` is a directory account, the vCenter's own SSO domain is a local account (the local administrator
-  apart, and accounts named `svc-` counted as VCF's integration accounts), any other domain is another provider's, and a
-  principal with no domain is counted apart as one. Each session's client agent is recorded
+  apart, and accounts named `svc-` counted as VCF's integration accounts), a domain in `OTHER_DOMAINS` is another
+  provider's, any other domain is not placed (the read fails, exit 3), and a principal with no domain is counted apart
+  as one. Each session's client agent is recorded
   without its version. Every agent but `vSphereUI` counts as a program; that rule comes from the agents seen on the
   reference estate's lists, where the one session from the vSphere Client read `vSphereUI`, not from a vendor list, so
   read the agents yourself.
@@ -503,12 +541,16 @@ Steps 1 to 4 run only when an API client's credential is given.
 Client), `directory_principals` and `directory_not_interactive` (the accounts with a pair from a client other than the
 vSphere Client that no acknowledgement covers); with `--ack`, `directory_acknowledged`. `broker_tenant`, when present, records a tenant the
 client's own session named that differed from the one set. `interactive_agents` is the agent set the run judged by,
-`acks` how many acknowledgements were given and how many matched no pair read. `vcenters` holds each vCenter's steps:
+`acks` how many acknowledgements were given and how many matched no pair read. `other_domains_declared` counts the
+domains `OTHER_DOMAINS` named (never the names) and marks a record judged by the placement rule; a vCenter's
+`by_class` counts its sessions `not placed`, whose domains are printed on the terminal and never recorded. `vcenters`
+holds each vCenter's steps:
 each directory account carries its `agents`, `not_interactive_agents`, and with `--ack` the pairs `acknowledged` and
 `ack_expired`. `sent` names every request that was not a plain read.
 
 `api_client.json` (and `api_client_instance.json`, the same at one instance's scope): `asked` (the role, its scope, the
-instance when one was named, and both lifetimes), `calls` (each call's method, templated path and status, and the
+instance when one was named, and both lifetimes), `realm` (the realm the run acted in, a placeholder) and
+`realms_in_fleet` (the committed records predate both fields), `calls` (each call's method, templated path and status, and the
 fleet's reason when it refused), `exchange` (the broker's status, the bearer's principal type and lifetime), `readback` and `exit`. A teardown's
 record holds `calls`, `residue` (`client_present`, `tokens_left`) and `exit`. A rotation's record holds `asked` (both
 lifetimes, and whether an old token was given), `calls`, `signed_in_as` (a person's token, another API client, or the

@@ -74,18 +74,22 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       0 recorded, every call answered
       3 a read failed or is not known: a call failed or answered without what the read needs, such as a vCenter's
         session POST with no session id, a list read whose answer holds no list (a 200 without its list key is
-        not an empty list), a list of no broker (the census's own bearer came from one) or, as the provider, of no
+        not an empty list), a paged list not read whole (no stated total, a page empty or short before the total, a
+        total that changed between pages), an organization listed without isClassicTenant (its type prints "type not
+        read"), a list of no broker (the census's own bearer came from one) or, as the provider, of no
         organization (the provider's own System organization is one) (the record is still written and names the
-        call; a refused fleet read opens
-        the print with NOT READ, so its zero counts are not taken for the estate's), the credential could
+        call; a fleet read refused or read in part opens
+        the print with NOT READ, so its counts are not taken for the estate's), the credential could
         not be obtained, --orgs-only read an organization signing in through VCF single sign-on whose issuer
-        BROKER_HOSTS does not name (so the brokers given miss at least the one the platform signs in through), or an
-        error the script did not expect
+        BROKER_HOSTS does not name (so the brokers given miss at least the one the platform signs in through), the
+        record refused because an estate value survived the scrub (nothing is written, so a tool that reads the
+        record has nothing to read), or an error the script did not expect
       5 a usage error (a missing credential or host, a credential file that cannot be read or holds nothing, VC_HOSTS
         without VC_USER and a password, --orgs-only without BROKER_HOSTS, an unreadable FINGERPRINT_KEY_FILE, a Python
-        older than 3.10), or the record refused because an estate value survived the scrub (nothing is written)
+        older than 3.10), found before anything is sent
 A tool that reads this record (service-accounts' catalog_check.py --census) takes it as a read only when its exit is
-0, no fleet call failed, and the lines it needs are there.
+0, no fleet call failed, each paged list's last call states it was read whole (`listed`: the stated total and the
+distinct entries read, equal), and the lines it needs are there.
 
 Before a realm. The fleet read runs on a bearer the broker trades for an API token, and the token is made for an API
 client of a realm or a VCF single sign-on user, so the census as written starts once VCF single sign-on has a realm.
@@ -296,29 +300,86 @@ def _message(e: urllib.error.HTTPError) -> str:
         return ""
 
 
-def fleet_pages(ops: Reader, method: str, path: str, key: str, body: object = None) -> list:
-    """Every page of a fleet IAM list: `page` counts from 0, and pageInfo.totalCount says when to stop."""
-    out, page = [], 0
-    while True:
-        answer = ops.call(method, f"{path}?page={page}" if page else path, body)
-        got = items(ops, answer, key)
-        out += got
-        total = (answer.get("pageInfo") or {}).get("totalCount") if isinstance(answer, dict) else None
-        if not got or not isinstance(total, int) or len(out) >= total:
+# A list is complete only when it is read whole: pages are read until the count of DISTINCT entries (by id, a duplicate
+# removed) equals the total the answer states. An answer without its list or without a stated total, a page that comes
+# back empty or short before the total is reached, a page that adds nothing new, and a total that changes between pages
+# are an unread list: the call is marked (`shape`), so the run exits 3 and the record names it, and the entries read so
+# far never stand for the whole list. The same pager, written the same way, is in each identity companion that pages.
+FLEET_PAGE_SIZE = 50    # the fleet's queries take page (from 0) and pageSize in the query; 50 by default (9.1.1)
+VCFA_PAGE_SIZE = 128    # VCF Automation's cloudapi lists take page (from 1) and pageSize; 128 is the largest page
+MAX_PAGES = 10000
+IDS = ("id", "clientUuid", "clientId", "roleName")
+
+
+def ident(row: object) -> str:
+    """An entry's identity for counting distinct entries: its id, or, for an entry that carries none, the entry."""
+    if isinstance(row, dict):
+        for k in IDS:
+            if row.get(k) not in (None, ""):
+                return f"{k}:{row[k]}"
+    return json.dumps(row, sort_keys=True, default=str)
+
+
+def read_whole(reader: Reader, ask, key: str, total_of, size_of, size: int) -> list:
+    """Every page of one list, read to the total its answer states. `ask(page_index)` makes one call and returns the
+    answer; `total_of` and `size_of` read the stated total and the page size the answer was served at. Each page call
+    carries `listed`, the stated total and the distinct entries read so far, so a tool reading the record can check
+    that the list was read whole; an unread list marks its last call `shape` and returns what was read."""
+    out, seen, total = [], set(), None
+    for i in range(MAX_PAGES):
+        answer = ask(i)
+        rows = listed(answer, key)
+        if rows is None:
+            shape_error(reader.calls, f"no {key} list in the answer")
             return out
-        page += 1
+        stated = total_of(answer)
+        if isinstance(stated, bool) or not isinstance(stated, int) or stated < 0:
+            shape_error(reader.calls, f"no stated total in the answer, so the {key} list cannot be known whole")
+            return out
+        if total is not None and stated != total:
+            shape_error(reader.calls, f"the stated total changed between pages, {total} then {stated}: the {key} list "
+                                      "moved under the read")
+            return out
+        total, before = stated, len(out)
+        for row in rows:
+            k = ident(row)
+            if k not in seen:
+                seen.add(k)
+                out.append(row)
+        reader.calls[-1]["listed"] = {"total": total, "distinct": len(out)}
+        if len(out) == total:
+            return out
+        if len(out) > total:
+            shape_error(reader.calls, f"{len(out)} distinct {key} entries against a stated total of {total}: the list "
+                                      "moved under the read")
+            return out
+        served = size_of(answer)
+        served = served if isinstance(served, int) and not isinstance(served, bool) and served > 0 else size
+        if not rows or len(out) == before or len(rows) < served:
+            shape_error(reader.calls, f"the pages ended at {len(out)} of the {total} {key} entries the answer states")
+            return out
+    shape_error(reader.calls, f"the {key} list did not end within {MAX_PAGES} pages")
+    return out
+
+
+def fleet_pages(ops: Reader, method: str, path: str, key: str, body: object = None) -> list:
+    """Every page of a fleet IAM list, read whole: `page` counts from 0, and pageInfo.totalCount is the total."""
+    def info(answer: object) -> dict:
+        pi = answer.get("pageInfo") if isinstance(answer, dict) else None
+        return pi if isinstance(pi, dict) else {}
+
+    return read_whole(ops, lambda i: ops.call(method, f"{path}?page={i}&pageSize={FLEET_PAGE_SIZE}", body), key,
+                      lambda a: info(a).get("totalCount"), lambda a: info(a).get("pageSize"), FLEET_PAGE_SIZE)
 
 
 def vcfa_pages(vcfa: Reader, path: str) -> list:
-    """Every page of a VCF Automation list: `page` counts from 1, and pageCount says when to stop. A page without its
-    `values` list read nothing, so it is a failed read, never "no organizations"."""
-    out, page = [], 1
-    while True:
-        answer = vcfa.call("GET", f"{path}?page={page}&pageSize=128", accept=CLOUDAPI)
-        out += items(vcfa, answer, "values")
-        if not isinstance(answer, dict) or page >= (answer.get("pageCount") or 1):
-            return out
-        page += 1
+    """Every page of a VCF Automation list, read whole: `page` counts from 1, and resultTotal is the total. A page
+    without its `values` list read nothing, so it is a failed read, never "no organizations"."""
+    def field(answer: object, k: str) -> object:
+        return answer.get(k) if isinstance(answer, dict) else None
+
+    return read_whole(vcfa, lambda i: vcfa.call("GET", f"{path}?page={i + 1}&pageSize={VCFA_PAGE_SIZE}", accept=CLOUDAPI),
+                      "values", lambda a: field(a, "resultTotal"), lambda a: field(a, "pageSize"), VCFA_PAGE_SIZE)
 
 
 # ── credentials ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -445,7 +506,8 @@ def fleet(ops: Reader) -> dict:
 def organization(org: dict, ldap: dict, oauth: dict, saml: dict) -> dict:
     """One organization's ways in, from its own three settings reads. Of the OIDC issuer only the host is kept."""
     custom = ldap.get("customOrgLdapSettings") or {}
-    return {"name": org.get("name"), "id": org.get("id"), "classic": org.get("isClassicTenant"),
+    classic = org.get("isClassicTenant")
+    return {"name": org.get("name"), "id": org.get("id"), "classic": classic if isinstance(classic, bool) else None,
             "providerConsumption": bool(org.get("isProviderConsumptionOrg")), "enabled": org.get("isEnabled"),
             "ldapMode": ldap.get("orgLdapMode"), "ldapHost": custom.get("hostName"), "ldapPort": custom.get("port"),
             "ldapSsl": custom.get("isSsl"), "oidc": bool(oauth.get("enabled")), "oidcVidb": bool(oauth.get("vidb")),
@@ -460,6 +522,9 @@ def organizations(vcfa: Reader) -> list[dict]:
     orgs = vcfa_pages(vcfa, "/cloudapi/1.0.0/orgs")
     if not orgs:
         shape_error(vcfa.calls, "no organization in the list, where the provider's own System organization is one")
+    untyped = sum(1 for o in orgs if not isinstance(o.get("isClassicTenant"), bool))
+    if untyped:   # the type decides which ways in and roles apply: an entry without it is printed "type not read"
+        shape_error(vcfa.calls, f"{untyped} organization(s) in the list without isClassicTenant, so their type is not read")
     for org in orgs:
         uid = str(org.get("id", "")).rsplit(":", 1)[-1]
         reads = []
@@ -658,9 +723,15 @@ def issuer_kind(org: dict, broker_hosts: set) -> str | None:
     return "broker" if host in broker_hosts else "entra" if host == "login.microsoftonline.com" else "other"
 
 
+def org_type(classic: object) -> str:
+    """An organization's type from VCF Automation's isClassicTenant: classic when true, All Apps when false, and not
+    read when the list entry carried no such flag (the run then exits 3: an absent flag is not All Apps)."""
+    return "classic" if classic is True else "all-apps" if classic is False else "type not read"
+
+
 def org_lines(orgs: list[dict], broker_hosts: set) -> list[dict]:
     """Each organization's type and its ways in."""
-    return [{"name": o.get("name"), "type": "classic" if o.get("classic") else "all-apps",
+    return [{"name": o.get("name"), "type": org_type(o.get("classic")),
              "provider_consumption": o.get("providerConsumption"), "sign_in": sign_in(o, broker_hosts),
              "issuer": issuer_kind(o, broker_hosts)} for o in orgs]
 
@@ -1019,11 +1090,16 @@ def credential_problem() -> str | None:
 
 
 def unread(bad: list[dict]) -> str | None:
-    """A refused fleet read leaves its lines counting nothing: 0 brokers, no emergency client. Said first, so a count
-    is never read as the estate's when the identity plane did not answer."""
-    n = sum(1 for c in bad if c.get("plane") == "vcf-operations")
-    return (f"NOT READ: {n} fleet identity read(s) refused or failed; a line below that counts 0 or none is unread, "
-            "not empty. The credential's role must read the fleet identity plane.") if n else None
+    """A refused fleet read leaves its lines counting nothing (0 brokers, no emergency client), and a list read in part
+    counts only its first pages. Said first, so a count is never read as the estate's when the identity plane did not
+    answer it whole. The role sentence is printed only when a read was refused."""
+    fleet = [c for c in bad if c.get("plane") == "vcf-operations"]
+    if not fleet:
+        return None
+    refused = any(c.get("status") in (401, 403) for c in fleet)
+    return (f"NOT READ: {len(fleet)} fleet identity read(s) refused, failed or read in part; a line below that counts "
+            "from one is unread, not the estate's (the FAILED lines name each)."
+            + (" The credential's role must read the fleet identity plane." if refused else ""))
 
 
 def given_brokers() -> list[str]:
@@ -1126,10 +1202,10 @@ def _run(argv: list[str] | None = None) -> int:
         for c, shown_call in zip(bad, failed(shown["calls"])):
             print(f"FAILED {shown_call['plane']} {c['method']} {shown_call['path']}: {c['status'] or ''} "
                   f"{c.get('error') or c.get('shape') or ''} {'' if a.redact else c.get('message') or ''}".rstrip())
-    if left:
-        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))})",
-              file=sys.stderr)
-        return EXIT_USAGE
+    if left:   # not a usage error: the run read, and its record could not be written, so nothing is known from it
+        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))}); "
+              f"{out} not written, exit {EXIT_UNREAD}: a tool that reads the record has nothing to read", file=sys.stderr)
+        return EXIT_UNREAD
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{len(record['calls'])} call(s), {len(bad)} failed; {out} written with every estate value replaced")

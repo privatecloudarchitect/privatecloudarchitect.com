@@ -112,6 +112,19 @@ other claims present: acct, auth_time, authorization_details, prn_type
 exit 0
 ```
 
+The three runs were also recorded before claims.py decided the principal by the broker's `prn_type`. Run today,
+`prn_type` prints with the principal claims and the principal line names the claim that decided it: for a person's
+api-token the broker states `USER` (read on the reference estate), and for an API client's `SERVICE`, whose `prn` also
+has the form `<id>@CUSTOMER`, so the `@` in a `prn` no longer decides anything. A JWT whose claims carry neither
+`prn_type` nor a person's claim is not read as a machine. These lines are the shape the code prints, held by its tests:
+
+```text
+principal: a CLIENT (prn_type SERVICE): a machine identity, the shape automation should hold
+
+principal: not determined (no prn_type claim and no person's claim; a claim that is absent names no machine)
+NOT DETERMINED: the claims do not say whether a person or a machine holds this bearer (exit 3)
+```
+
 ## catalog_check.py
 
 The example catalog, read with a fixed date so the run is reproducible. One entry falls due inside the 30-day window,
@@ -150,9 +163,30 @@ NOT READ: census-shape-exit0.json is not a read of the API clients: 1 of its fle
 
 $ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-zero.json --today 2026-10-13
 ...
-API clients in the census of 2026-10-13T07:41:40Z: 0, so none is joined to the catalog: the census queried the API client and token lists of its 1 realm(s), with no call refused or answered without its list, and those lists hold no API client
+API clients in the census of 2026-10-13T07:41:40Z: 0, so none is joined to the catalog: the census read the API client and token lists of its 1 realm(s) to the totals they state, with no call refused or answered without its list, and those lists hold no API client
 
 exit 1
 ```
 
 The second run exits 1 for the example catalog's own warning, not for the census.
+
+A record is a read only when it says its lists were read whole. `census.py` records on each page of a paged list the
+total the answer stated and the distinct entries read (`listed`); the join refuses a record whose last page of a
+realm's API client or token list does not carry them, or carries fewer read than stated. A record an earlier
+`census.py` wrote, the reference estate's committed one among them, carries none, so run `census.py` again. A joined client is
+judged on its tokens' state and end date too: `EXPIRED`, `REVOKED` or an end date past is a failure, and a state or end
+date the record does not carry is not judged (exit 3). These lines are the shape the code prints, held by its tests:
+
+```text
+$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-before-totals.json --today 2026-10-13
+NOT READ: census-before-totals.json is not a read of the API clients: its API client list of realm {{id-6}} does not state that it was read whole (no `listed` total on its last page; an earlier census.py did not record it), so a short read would pass as the whole list: run census.py again. Nothing is joined (exit 3)
+
+$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-unread-token.json --today 2026-10-13
+...
+  unread {{name-7}}               catalog ci-inventory-read    roles vcf_viewer
+        token {{name-9}}: its end date was not read, so neither its runway nor its rotation can be judged
+
+NOT READ: a token's state or end date was not in the census record, so that client is not judged (exit 3)
+
+exit 3
+```

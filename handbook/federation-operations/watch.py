@@ -45,7 +45,8 @@ Checks (pure functions over what was read; each returns {check, state, detail, m
   keys_held        every key id the provider publishes is among the organization's stored keys
   pkce             usePKCE off for an Entra web app (every sign-in failed with it on)
   secret_end       the client secret the organization holds: expired fails, inside WARN_DAYS warns, and a held secret
-                   that matches none of the app's secrets fails (removed at Entra, or another app's)
+                   that matches none of the app's secrets fails (removed at Entra, or another app's); where several
+                   share its hint, each is judged and the first to end stands
   saml_cert_end    the app's active SAML signing certificate: expired fails, inside WARN_DAYS warns
   saml_cert_held   the active certificate is in the organization's stored metadata (else every sign-in fails);
                    a second certificate it does not hold warns (making it active would stop sign-in)
@@ -56,10 +57,11 @@ Checks (pure functions over what was read; each returns {check, state, detail, m
                    organization, Organization Owner in a classic one): the way in when the provider refuses
 And one for the run (own_token), on a provider API token only: the end date of the watch's own token, read from the
 provider's token list (GET /cloudapi/1.0.0/tokens, every page): the REFRESH token of the session's own user, named by
-VCFA_PROVIDER_TOKEN_NAME where the user holds more than one. Inside WARN_DAYS it warns (exit 1): mint the next token,
-swap the file, run the watch once on it, then revoke the old one. A token list that could not be read, or that names no
-token or several, leaves the end date undetermined (exit 3). On a provider bearer the check does not run: a bearer is
-minted for a run, not held by a schedule.
+VCFA_PROVIDER_TOKEN_NAME where the user holds more than one. Inside WARN_DAYS it warns (exit 1): mint the next token
+under a new name, set VCFA_PROVIDER_TOKEN_NAME to it (the user now holds two) and swap the file, run the watch once on
+it, then revoke the old one. A token list that could not be read, or that names no token or several, leaves the end
+date undetermined (exit 3). On a provider bearer the check does not run: a bearer is minted for a run, not held by a
+schedule.
 
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded at /oauth/provider/token) or
       VCFA_PROVIDER_BEARER_FILE (a provider bearer, minted as platform-identity's plate 04, "Your provider bearer",
@@ -71,7 +73,10 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded 
       tenant's read-only app, which the rollover checks run through; ORGS (comma list; default every organization with
       OIDC or SAML on, except one signed in through VCF single sign-on and the provider's own consumption
       organization); WARN_DAYS (default 30); OUT (default watch.json).
-A read the watch could not make is never a pass, and neither is a check it did not run. An organization whose reads
+A read the watch could not make is never a pass, and neither is a check it did not run. Every VCF Automation list is
+read until its distinct items reach the total the answer states, and a Graph list to its last next link; a list not read
+whole is a read that failed. An organization with neither OIDC nor SAML on is left out unless ORGS names it, and printed
+as left out. An organization whose reads
 fail is kept in the run, named and counted, whether or not ORGS names it; an app or service principal Graph cannot find
 for an organization federated to the run's tenant is a failed read, as is a settings read that returns no
 client secret to match; a credential refused before any organization is read ends the run at exit 3 with no
@@ -178,7 +183,9 @@ SIGN_IN_ROUTER = [
                 "issued: on the run read, the bearer the user held ran to the end of its hour and its API token kept refreshing "
                 "for the 69 minutes read, and Entra's revoke reaches only the tokens Entra issued",
      "then": "close the account in VCF Automation now, on a provider bearer: leavers.py --close-now --org <org> --user <account> "
-             "in the identity-lifecycle companion plans it, and with --execute revokes its tokens and disables it", "teaches": "leaver"},
+             "in the identity-lifecycle companion plans it, and with --execute revokes its tokens and disables it. Under oid "
+             "the account is the person's object id, from the tenant's dated leaver notice; a principal name given with "
+             "--left-on, the notice's departure date, is resolved to it in the plan", "teaches": "leaver"},
     {"id": "mfa", "seen": ["AADSTS50079", "you must enroll in multi-factor authentication", "Let's keep your account secure"],
      "hints": ["mfa", "multi-factor", "authenticator"], "protocol": "any", "refused_by": "conditional-access",
      "entra_log": "an interrupt or a failure",
@@ -316,7 +323,8 @@ def key_refresh(oauth: dict, now: datetime) -> dict:
         notes.append(f"strategy {oauth.get('keyRefreshStrategy')}, not ADD")
         state = "warn"
     if not hours or hours > 1:
-        notes.append(f"refresh every {hours} h: an emergency roll at the provider stops sign-in for up to that long; set 1 h")
+        notes.append(f"refresh every {hours} h: an emergency roll at the provider stops sign-in for up to the interval plus "
+                     f"an hour ({hours + 1 if isinstance(hours, int) else '?'} h); set 1 h")
         state = "warn"
     return _result("key_refresh", state, "; ".join(notes) or f"refreshes every {hours} h, strategy ADD, last success on schedule", interval_h=hours, success_age_h=age)
 
@@ -342,7 +350,9 @@ def pkce(oauth: dict) -> dict:
 def secret_end(app: dict, now: datetime, warn_days: int) -> dict:
     """Judge the secret the organization holds (marked `in_use` by its hint). A held secret that matches none of the
     app's secrets fails: it is the state a rotation leaves when the old secret is removed before the new one is
-    written, and Entra refuses a secret it does not hold. No other secret stands in for it."""
+    written, and Entra refuses a secret it does not hold. No other secret stands in for it. When several of the app's
+    secrets share the hint, which one the organization holds cannot be told, so each is judged and the earliest end
+    stands: a pass on the later one could hide the one in use."""
     creds = [c for c in app.get("passwordCredentials") or [] if when(c.get("endDateTime"))]
     held = [c for c in creds if c.get("in_use")]
     if not held:
@@ -350,16 +360,18 @@ def secret_end(app: dict, now: datetime, warn_days: int) -> dict:
         return _result("secret_end", "fail", f"the secret the organization holds matches {listed}; it was removed at Entra "
                        "or is another app's, and Entra refuses a secret it does not hold: write the app's current secret "
                        "into the organization", days_left=None, matched=False, listed=len(creds))
-    judged = held[0]
+    judged = min(held, key=lambda c: when(c["endDateTime"]))
     days = _days(when(judged["endDateTime"]), now)
-    which = "the secret the organization holds"
-    others = [c for c in creds if c is not judged and when(c["endDateTime"]) < now]
+    which = ("the secret the organization holds" if len(held) == 1 else
+             f"of the {len(held)} secrets that share the hint of the one the organization holds, the first to end,")
+    others = [c for c in creds if not c.get("in_use") and when(c["endDateTime"]) < now]
     tail = f"; {len(others)} other listed secret(s) already expired" if others else ""
+    shared = {"sharing_hint": len(held)} if len(held) > 1 else {}
     if days < 0:
-        return _result("secret_end", "fail", f"{which} expired {-days} days ago{tail}", days_left=days, matched=True)
+        return _result("secret_end", "fail", f"{which} expired {-days} days ago{tail}", days_left=days, matched=True, **shared)
     if days <= warn_days:
-        return _result("secret_end", "warn", f"{which} ends in {days} days: rotate with overlap{tail}", days_left=days, matched=True)
-    return _result("secret_end", "ok", f"{which} ends in {days} days{tail}", days_left=days, matched=True)
+        return _result("secret_end", "warn", f"{which} ends in {days} days: rotate with overlap{tail}", days_left=days, matched=True, **shared)
+    return _result("secret_end", "ok", f"{which} ends in {days} days{tail}", days_left=days, matched=True, **shared)
 
 
 def _thumb(key_credential: dict) -> str:
@@ -438,7 +450,9 @@ def break_glass(users: list[dict], role: str = "Organization Administrator") -> 
     return _result("break_glass", "warn", f"no enabled local user holds {role}: when the provider refuses the organization, nobody can sign in to it", local_admins=0, role=role)
 
 
-ROTATE = "mint the next token, swap the file, run the watch once on it, then revoke this one"
+# During a rotation the token's user owns two refresh tokens, so the variable picks the one the watch runs on.
+ROTATE = ("mint the next token under a new name, set VCFA_PROVIDER_TOKEN_NAME to that name and swap the file, run the "
+          "watch once on it, then revoke this one")
 
 
 def own_token(tokens: list[dict], user_id: str, name: str | None, now: datetime, warn_days: int) -> dict:
@@ -501,6 +515,51 @@ def _strip(obj: object) -> bool:
     return found
 
 
+class ReadError(ValueError):
+    """A list not read whole: what it would have shown is not known (exit 3), never a short or an empty list."""
+
+
+MAX_PAGES = 10000
+
+
+def whole_list(fetch, what: str) -> list[dict]:
+    """Every item of a VCF Automation cloudapi list, read page by page (fetch(page), pages counted from 1) until the
+    count of distinct items, by id, equals the total the answer states (resultTotal). A list is read whole or not at
+    all: an answer without its list or without a stated total, a page that comes back empty or short before the total
+    is reached, pages that end (pageCount) short of it, or a total that changes between pages, is a list not read
+    (ReadError, exit 3), never a short or an empty one."""
+    seen: set = set()
+    out: list[dict] = []
+    total, size = None, None
+    for page in range(1, MAX_PAGES + 1):
+        data = fetch(page)
+        if not isinstance(data, dict) or not isinstance(data.get("values"), list):
+            raise ReadError(f"{what}: page {page} came back without its list")
+        stated = data.get("resultTotal")
+        if isinstance(stated, bool) or not isinstance(stated, int):
+            raise ReadError(f"{what}: page {page} states no total, so a short list could not be told from a whole one")
+        if total is None:
+            total = stated
+        elif stated != total:
+            raise ReadError(f"{what}: the stated total moved from {total} to {stated} between pages")
+        rows = data["values"]
+        for row in rows:   # a row that moved to a later page during the read is counted once
+            ident = row.get("id") if isinstance(row, dict) and row.get("id") else json.dumps(row, sort_keys=True)
+            if ident not in seen:
+                seen.add(ident)
+                out.append(row)
+        if len(out) == total:
+            return out
+        if len(out) > total:
+            raise ReadError(f"{what}: {len(out)} distinct items against the {total} the answer states")
+        if size is None:   # the page size the platform answers with, which can be less than the size asked for
+            size = data.get("pageSize") if isinstance(data.get("pageSize"), int) and data.get("pageSize") > 0 else len(rows)
+        count = data.get("pageCount")
+        if not rows or len(rows) < size or (isinstance(count, int) and page >= count):
+            raise ReadError(f"{what}: the pages ended at {len(out)} of the {total} items the answer states")
+    raise ReadError(f"{what}: more than {MAX_PAGES} pages")
+
+
 def _secret_file(name: str) -> str:
     with open(os.environ[name], encoding="utf-8") as f:
         return f.read().strip()
@@ -526,17 +585,12 @@ class Vcfa:
         return _fetch(f"https://{self.host}{path}", h, self.verify)
 
     def pages(self, path: str, org_id: str | None = None) -> list[dict]:
-        """Every page of a cloudapi list. A page that answers without its `values` list is a read that did not happen
-        (ValueError, exit 3), never an empty one."""
-        out, page = [], 1
-        while True:
-            r = self.get(f"{path}{'&' if '?' in path else '?'}page={page}&pageSize={PAGE_SIZE}", org_id=org_id)
-            if not isinstance(r, dict) or not isinstance(r.get("values"), list):
-                raise ValueError(f"page {page} of {path.split('?')[0]} came back without its list")
-            out += r["values"]
-            if page >= (r.get("pageCount") or 1):
-                return out
-            page += 1
+        """Every item of a cloudapi list, read whole (whole_list): a page that answers without its list or its stated
+        total, or pages that end short of that total, are a read that did not happen (ReadError, exit 3), never a
+        short or an empty list."""
+        sep = "&" if "?" in path else "?"
+        return whole_list(lambda page: self.get(f"{path}{sep}page={page}&pageSize={PAGE_SIZE}", org_id=org_id),
+                          path.split("?")[0])
 
     def session_user(self) -> str:
         """The user id of the session this credential opened."""
@@ -1036,8 +1090,14 @@ def record(results: list[dict], warn_days: int, now: datetime, seen: set, run: d
     return scrub(json.dumps(doc, indent=2, ensure_ascii=False), names, seen | {os.environ.get("VCFA_HOST", "")} - {""})
 
 
+LEFT_OUT = ("neither OIDC nor SAML is on (federation switched off, or signed in through VCF single sign-on): left out "
+            "and not judged; name it in ORGS to read it")
+
+
 def _print(results: list[dict], names: dict | None, attested: dict | None = None, errors: list[str] | tuple = (),
-           own: dict | None = None) -> None:
+           own: dict | None = None, off: list[dict] | tuple = ()) -> None:
+    """The run on stdout: the watch's own credential, each organization judged or kept, each one left out because its
+    federation is off (named here, counted in the record's census), then the run's own lines."""
     if own:
         print(f"\nthe watch's own credential\n  {own['state'].upper():<8}{own['check']:<16}{own['detail']}")
     for r in results:
@@ -1050,6 +1110,9 @@ def _print(results: list[dict], names: dict | None, attested: dict | None = None
             print(f"  {c['state'].upper():<8}{c['check']:<16}{c['detail']}")
         for e in r["read_errors"]:
             print(f"  READ    {e}")
+    for i, r in enumerate(off, 1):
+        label = "{{off-" + str(i) + "}}" if names is not None else r["org"]
+        print(f"\n{label}  (off, {r['org_type']})\n  OFF     {LEFT_OUT}")
     lines = provider_only_lines(results, attested)
     if lines:
         print("")
@@ -1227,19 +1290,19 @@ def _run(argv: list[str]) -> int:
     orgs = [o for o in listed if (o["name"] in wanted if wanted else not o.get("isProviderConsumptionOrg"))]
     seen = {os.environ.get("ENTRA_TENANT_ID", ""), os.environ.get("ENTRA_CLIENT_ID", ""), run_tenant or ""} | (expected or set())
     seen -= {""}
-    results, off = [], 0
+    results, off = [], []
     for o in orgs:
         r = watch_org(api, graph, o, now, warn_days, seen, graph_error, run_tenant, expected, a.provider_only, attested)
         if kept(r, wanted):
             results.append(r)
         else:
-            off += 1
+            off.append(r)   # federation off: named on stdout, counted in the record
     missing = sorted(set(wanted) - {r["org"] for r in results})
     for m in missing:
         results.append({"org": m, "org_type": "?", "checks": [], "read_errors": ["no organization by that name"]})
-    census = {"listed": len(listed), "provider_own": 0 if wanted else len(listed) - len(orgs), "off": off}
+    census = {"listed": len(listed), "provider_own": 0 if wanted else len(listed) - len(orgs), "off": len(off)}
     errors = run_errors(results, run_tenant, census)
-    _print(results, placeholders(results, run_tenant) if a.redact else None, attested, errors, own)
+    _print(results, placeholders(results, run_tenant) if a.redact else None, attested, errors, own, off)
     code = exit_code(results, errors, own)
     run = {"mode": ("provider-only, declared" if a.provider_only else "with the tenant's app" if graph is not None or graph_error
                     else "provider-only, undeclared"),

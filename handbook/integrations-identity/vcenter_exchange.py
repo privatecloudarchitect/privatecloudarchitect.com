@@ -25,8 +25,8 @@ Manager API and VCF Automation are not read.
 It opens sessions and closes them, and changes no configuration. No token, assertion, password, session key or login
 time is printed or recorded. No address is recorded, and none is printed unless --where asks.
 
---where (with --sessions, never with --redact) also prints, for each directory and local administrator session, the
-two UserSession properties that lead to its client: ipAddress, the client's identity ("It could be IP address, or pipe
+--where (with --sessions, never with --redact) also prints, for each directory, local administrator and unplaced
+session, the two UserSession properties that lead to its client: ipAddress, the client's identity ("It could be IP address, or pipe
 name depended on client binding", in the vSphere Web Services API reference), and lastActiveTime, when the session
 last ran a command. They are printed on your terminal only and never written to the record, so resolve each address
 to a host and its owner there. The client agent alone does not name a product: vim-java, XML-WS and vAPI clients are
@@ -71,9 +71,14 @@ Env:  BROKER_HOST                 the identity broker that trades the API client
       VC_USER, VC_PASSWORD_FILE   for --sessions as an account: one that may read the session list, user@domain (mode
                                   0600; VC_PASSWORD is read if it is unset); leave both unset to read as the API client
       DIRECTORY_DOMAINS           for --sessions, required: the directory domains as vCenter spells them,
-                                  comma-separated. Unset, every directory session would read as another provider's,
-                                  which is never flagged, so --sessions refuses to start without it; a vCenter on which
-                                  they name no session while another provider's sessions are there is a failed read
+                                  comma-separated, every directory whose accounts sign in to these vCenters. Unset,
+                                  no directory session would be judged, so --sessions refuses to start without it
+      OTHER_DOMAINS               for --sessions, optional: comma-separated domains you know are another identity
+                                  provider's (authz.py's name and meaning). Their sessions are placed, as another
+                                  provider's, and never flagged. A session in a domain that is none of these, the
+                                  directory domains, LOCAL_DOMAIN and the broker tenant is NOT PLACED, and the read
+                                  fails (exit 3): it could be a second directory's integration on a password. A domain
+                                  in both lists is refused (exit 5)
       INTERACTIVE_AGENTS          for --sessions: the vSphere Client's agent, if yours reads another name (default
                                   vSphereUI, the only agent a person's session showed on the reference estate's lists).
                                   Never name a scripting client here (PowerCLI, an SDK): every account's sessions from it
@@ -92,21 +97,24 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       2 a vCenter answered the API client's exchange, or one of its sessions, and did not take the client
       3 a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty
         one included: it always holds the census's own session), a census
-        identity that could read only its own session, a vCenter on which DIRECTORY_DOMAINS named no session while
-        sessions of another provider were there (the domains name nothing there, so the census saw nothing it was asked
-        to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect
+        identity that could read only its own session, a session NOT PLACED (in a domain neither DIRECTORY_DOMAINS nor
+        OTHER_DOMAINS names, so it was not judged), no vCenter read, a credential the broker did not trade, or an error
+        the script did not expect
       4 --sessions found the local administrator signing in from a client that is not interactive
       0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
         directory-account session is from an interactive client or acknowledged, and the local administrator signs in
         from none other
-      5 a usage error (a missing or bad argument or environment variable, --sessions without DIRECTORY_DOMAINS, an --ack
-        file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, among
-        them), a Python older than 3.10, or the record refused because an estate value survived the scrub (nothing is
-        written)
+      5 a usage error (a missing or bad argument or environment variable, --sessions without DIRECTORY_DOMAINS, a
+        domain in both DIRECTORY_DOMAINS and OTHER_DOMAINS, an --ack file that cannot be read or breaks its format, a
+        credential file named that cannot be read or is empty, among them), or a Python older than 3.10; nothing is
+        written
+      A record refused because an estate value survived the scrub is not written, and never hides the run's result:
+      the run's code stands when it is 1, 2, 3 or 4, and a run that found nothing exits 3 (the record a later --compare
+      reads was not written).
       The exit reads vCenter's session lists at one moment: an integration that is not signed in then is not seen.
       --compare is the gate across reads. It checks first that each record read what it is compared on: a
-      vCenter whose census failed in a record (a list not read, only the census's own session, DIRECTORY_DOMAINS
-      naming nothing there, no fingerprint) is not a read of that vCenter. The first that applies: 1 a directory
+      vCenter whose census failed in a record (a list not read, only the census's own session, a session not placed,
+      no fingerprint) is not a read of that vCenter. The first that applies: 1 a directory
       account from a client that is not interactive in any record, a pair not acknowledged · 3 a vCenter not read in
       every record, a record holding no session census read on any vCenter, or the records short of the coverage asked
       (hours of day, span, largest gap) · 4 the local administrator from a client that is not interactive in any
@@ -388,8 +396,18 @@ def agent_of(raw: str) -> str:
     return " ".join(name.split())[:60] or "(none)"
 
 
-def classify(principal: str, tenant: str, directories: set[str], local: str) -> str:
-    """The kind of principal a session holds, by how it signs in under VCF single sign-on."""
+NOT_PLACED = "not placed"
+
+
+def other_domains() -> set[str]:
+    """OTHER_DOMAINS, upper-cased: the domains the reader knows are another identity provider's (authz.py's name and
+    meaning). Their sessions are placed, as another provider's, and never flagged."""
+    return {d.strip().upper() for d in os.environ.get("OTHER_DOMAINS", "").split(",") if d.strip()}
+
+
+def classify(principal: str, tenant: str, directories: set[str], local: str, others: set[str] = frozenset()) -> str:
+    """The kind of principal a session holds, by how it signs in under VCF single sign-on; a domain none of these
+    names is not placed."""
     domain, _, name = principal.rpartition("\\")
     d = domain.upper()
     if not d:
@@ -402,21 +420,27 @@ def classify(principal: str, tenant: str, directories: set[str], local: str) -> 
         if name.lower() == "administrator":
             return "local administrator"
         return "local, VCF integration account" if name.lower().startswith("svc-") else "local, other"
-    return "another provider"
+    if d in {o.upper() for o in others}:
+        return "another provider"      # declared in OTHER_DOMAINS: placed, and never flagged
+    return NOT_PLACED
 
 
-def names_nothing(by_class: dict) -> bool:
-    """Whether the directory domains given name nothing on a vCenter: no session read as a directory account's while
-    sessions of another provider are there. Every directory session then hides as another provider's, which the census
-    never flags, so the read is a failed one, never a clean one (the local classes and the API clients do not depend on
-    the domains given)."""
+def placement_failed(by_class: dict, declared: bool = True) -> bool:
+    """Whether a vCenter's census left a session unplaced, a failed read (exit 3): a domain neither DIRECTORY_DOMAINS nor
+    OTHER_DOMAINS names could be a second directory, or a misspelled one, whose integrations on a password nothing would
+    flag. A record made before OTHER_DOMAINS (declared False) failed when no directory session stood beside another
+    provider's."""
+    if declared:
+        return bool(by_class.get(NOT_PLACED))
     return not by_class.get("directory") and bool(by_class.get("another provider"))
 
 
 def unplaced(record: dict) -> list[str]:
-    """The vCenters whose census the directory domains given named nothing on."""
+    """The vCenters whose census left a session unplaced."""
+    declared = "other_domains_declared" in record
     return [v["vcenter"] for v in record.get("vcenters") or []
-            if isinstance(v.get("sessions"), dict) and "by_class" in v["sessions"] and names_nothing(v["sessions"]["by_class"])]
+            if isinstance(v.get("sessions"), dict) and "by_class" in v["sessions"]
+            and placement_failed(v["sessions"]["by_class"], declared)]
 
 
 ACK_FIELDS = {"account", "agent", "until", "note"}
@@ -470,19 +494,23 @@ def flagged_agents(d: dict, allowed: set[str] | None = None) -> list[str]:
 
 
 def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str,
-           key: bytes | None = None, acks: list[dict] | None = None, today: str | None = None) -> dict:
+           key: bytes | None = None, acks: list[dict] | None = None, today: str | None = None,
+           others: set[str] = frozenset()) -> dict:
     """Sessions by class; the local administrator by agent; each directory principal with its agents, flagged when any
     agent is not interactive and that pair is not acknowledged until today or later, and with a keyed fingerprint when
     a key is given. No local principal is named, because a local account's name can carry estate values. A session's
-    address and activity never reach the census."""
-    by_class, admin, dirs, clients = Counter(), Counter(), {}, set()
+    address and activity never reach the census. The domains of sessions not placed are counted under
+    `_not_placed_domains`, which run() takes out before the record is made: printed on the terminal, never recorded."""
+    by_class, admin, dirs, clients, loose = Counter(), Counter(), {}, set(), Counter()
     allowed = interactive_agents()
     today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for r in rows:
         if r["key"] == mine:
             continue
-        cls, agent = classify(r["user"], tenant, directories, local), agent_of(r["agent"])
+        cls, agent = classify(r["user"], tenant, directories, local, others), agent_of(r["agent"])
         by_class[cls] += 1
+        if cls == NOT_PLACED:
+            loose[r["user"].rpartition("\\")[0]] += 1
         if cls == "local administrator":
             admin[agent] += 1
         elif cls == "directory":
@@ -501,26 +529,30 @@ def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str
             if expired:
                 d["ack_expired"] = expired
         directory.append(d)
-    return {"sessions": sum(by_class.values()), "by_class": dict(sorted(by_class.items())),
-            "local_administrator_by_agent": dict(sorted(admin.items())),
-            "local_administrator_not_interactive": sum(n for ag, n in admin.items() if not interactive(ag, allowed)),
-            "directory": directory, "api_clients": len(clients), "own_session_left_out": mine is not None}
+    out = {"sessions": sum(by_class.values()), "by_class": dict(sorted(by_class.items())),
+           "local_administrator_by_agent": dict(sorted(admin.items())),
+           "local_administrator_not_interactive": sum(n for ag, n in admin.items() if not interactive(ag, allowed)),
+           "directory": directory, "api_clients": len(clients), "own_session_left_out": mine is not None}
+    if loose:
+        out["_not_placed_domains"] = dict(sorted(loose.items()))
+    return out
 
 
-def where_rows(host: str, rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str) -> list[dict]:
-    """Each directory and local administrator session with its address and last activity, for the terminal only: the
-    sessions whose owner the census asks you to name."""
+def where_rows(host: str, rows: list[dict], mine: str | None, tenant: str, directories: set[str], local: str,
+               others: set[str] = frozenset()) -> list[dict]:
+    """Each directory, local administrator and unplaced session with its address and last activity, for the terminal
+    only: the sessions whose owner the census asks you to name."""
     out = []
     for r in rows:
-        cls = classify(r["user"], tenant, directories, local)
-        if r["key"] != mine and cls in ("directory", "local administrator"):
+        cls = classify(r["user"], tenant, directories, local, others)
+        if r["key"] != mine and cls in ("directory", "local administrator", NOT_PLACED):
             out.append({"vcenter": host, "class": cls, "user": r["user"], "agent": agent_of(r["agent"]),
                         "address": r.get("address") or "", "last_active": r.get("last_active") or ""})
     return sorted(out, key=lambda w: (w["class"], w["user"].lower(), w["agent"], w["last_active"]))
 
 
 def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str, key: bytes | None = None,
-               where: list | None = None, acks: list[dict] | None = None) -> dict:
+               where: list | None = None, acks: list[dict] | None = None, others: set[str] = frozenset()) -> dict:
     """The census from an open session. A list that holds only the census's own session means this identity may not
     read the others, which is reported as such and never as an empty estate. With a where list, the address and last
     activity of each directory and local administrator session go into that list, never into the census."""
@@ -534,31 +566,33 @@ def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str
             return {"error": "the session list held only this census's own session: this identity cannot read the others",
                     "only_own_session_visible": True, "census_identity": {"user": who}}
         if where is not None:
-            where += where_rows(s.url.split("/")[2], rows, mine, tenant, directories, local)
+            where += where_rows(s.url.split("/")[2], rows, mine, tenant, directories, local, others)
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        return {**census(rows, mine, tenant, directories, local, key, acks, today), "census_identity": {"user": who}}
+        return {**census(rows, mine, tenant, directories, local, key, acks, today, others), "census_identity": {"user": who}}
     finally:
         s.logout()
 
 
 def read_sessions(host: str, user: str, password: str, tenant: str, directories: set[str], local: str,
-                  key: bytes | None = None, where: list | None = None, acks: list[dict] | None = None) -> dict:
+                  key: bytes | None = None, where: list | None = None, acks: list[dict] | None = None,
+                  others: set[str] = frozenset()) -> dict:
     """The census as an account that signs in with a password (VC_USER)."""
     s = Soap(host)
     who = s.login(user, password) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, tenant, directories, local, key, where, acks)
+    return _census_of(s, who, tenant, directories, local, key, where, acks, others)
 
 
 def read_sessions_as_client(host: str, assertion: str, tenant: str, directories: set[str], local: str,
-                            key: bytes | None = None, where: list | None = None, acks: list[dict] | None = None) -> dict:
+                            key: bytes | None = None, where: list | None = None, acks: list[dict] | None = None,
+                            others: set[str] = frozenset()) -> dict:
     """The census as the API client itself: its own SOAP session from a fresh SAML assertion."""
     s = Soap(host)
     who = s.login_by_token(assertion) if s.session_manager else None
     if not who:
         return {"error": s.fault or f"HTTP {s.status}"}
-    return _census_of(s, who, tenant, directories, local, key, where, acks)
+    return _census_of(s, who, tenant, directories, local, key, where, acks, others)
 
 
 # ── the record ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -598,6 +632,7 @@ def summary(record: dict) -> dict:
 
 def report(record: dict) -> list[str]:
     lines = []
+    declared = "other_domains_declared" in record
     if record.get("census_as"):
         lines.append("Census read as " + ("the API client's own session" if record["census_as"] == "client"
                                           else "VC_USER, an account with a password"))
@@ -618,7 +653,12 @@ def report(record: dict) -> list[str]:
         if isinstance(s, dict) and "by_class" in s:
             lines.append(f"  sessions ({s['sessions']}, this census's own left out): "
                          + ", ".join(f"{k} {n}" for k, n in s["by_class"].items()))
-            if names_nothing(s["by_class"]):
+            if declared and placement_failed(s["by_class"]):
+                lines.append(f"    NOT PLACED: {s['by_class'][NOT_PLACED]} session(s) in a domain neither DIRECTORY_DOMAINS nor "
+                             "OTHER_DOMAINS names: a second directory's integration on a password would sit there unflagged; "
+                             "name each such domain in DIRECTORY_DOMAINS, or in OTHER_DOMAINS if it is another identity "
+                             "provider's, and read again (exit 3)")
+            elif not declared and placement_failed(s["by_class"], False):
                 lines.append(f"    NOT PLACED: DIRECTORY_DOMAINS names nothing on this vCenter: {s['by_class']['another provider']} "
                              "session(s) read as another provider's and none as a directory account's, so every directory "
                              "session may be hiding there unflagged; set the domains as vCenter spells them and read again")
@@ -638,7 +678,9 @@ def report(record: dict) -> list[str]:
                          + (" (remove them from the --ack file when they are no longer needed)" if a["unmatched"] else ""))
         nothing = unplaced(record)
         if nothing:
-            lines.append(f"FAILED READ: DIRECTORY_DOMAINS named nothing on {len(nothing)} vCenter(s), so the census saw no directory "
+            lines.append(f"FAILED READ: sessions not placed on {len(nothing)} vCenter(s), in a domain the census was not given, "
+                         "so a directory session there was not judged; exit 3" if declared else
+                         f"FAILED READ: DIRECTORY_DOMAINS named nothing on {len(nothing)} vCenter(s), so the census saw no directory "
                          "session it was asked to see there; exit 3")
         if sm["local_administrator_not_interactive"]:
             lines.append(f"WATCH: the local administrator holds {sm['local_administrator_not_interactive']} session(s) from "
@@ -745,16 +787,17 @@ def have_client() -> bool:
 
 
 def run(with_sessions: bool, where: list | None = None, key: bytes | None = None,
-        acks: list[dict] | None = None) -> dict:
+        acks: list[dict] | None = None, loose: dict | None = None) -> dict:
     """The exchange and the census on every vCenter named. With a where list, the address and last activity of each
-    directory and local administrator session go into that list and never into the record; with a key, each vCenter
-    and directory principal in the record carries its keyed fingerprint; with acks, the pairs they cover are listed as
-    acknowledged."""
+    directory, local administrator and unplaced session go into that list and never into the record; with a key, each
+    vCenter and directory principal in the record carries its keyed fingerprint; with acks, the pairs they cover are
+    listed as acknowledged; with a loose dict, the domains of the sessions not placed go into it, by vCenter, and never
+    into the record."""
     hosts = [h.strip() for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
     bearer = broker_bearer() if have_client() else None
     census_as = None if not with_sessions else ("password" if os.environ.get("VC_USER") else "client")
     tenant = broker_tenant()
-    directories = directory_domains()
+    directories, others = directory_domains(), other_domains()
     local = os.environ.get("LOCAL_DOMAIN", "VSPHERE.LOCAL")
     sent = []
     if bearer:
@@ -768,6 +811,7 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
               "sent": sent, "vcenters": []}
     if with_sessions:
         record["interactive_agents"] = sorted(interactive_agents())
+        record["other_domains_declared"] = len(others)   # a count, never the names; its presence marks the placement rule
     if key and with_sessions:
         record["fingerprint_key_check"] = key_check(key)
     if with_sessions and acks is not None:
@@ -788,11 +832,14 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
                 tenant = seen
         if census_as == "password":
             row["sessions"] = read_sessions(host, os.environ["VC_USER"], _secret("VC_PASSWORD"), tenant, directories, local,
-                                            key, where, acks)
+                                            key, where, acks, others)
         elif census_as == "client":
             _, third = exchange(host, bearer)
-            row["sessions"] = (read_sessions_as_client(host, third, tenant, directories, local, key, where, acks) if third
-                               else {"error": "the exchange for the census's own session failed"})
+            row["sessions"] = (read_sessions_as_client(host, third, tenant, directories, local, key, where, acks, others)
+                               if third else {"error": "the exchange for the census's own session failed"})
+        domains = row["sessions"].pop("_not_placed_domains", None) if isinstance(row.get("sessions"), dict) else None
+        if domains and loose is not None:
+            loose[host] = domains
         record["vcenters"].append(row)
     if "acks" in record:
         record["acks"]["unmatched"] = unmatched_acks(record, acks)
@@ -812,8 +859,8 @@ def exit_code(record: dict) -> int:
     """The first that applies: 1 a directory account signs in from a client that is not interactive, a pair nobody
     acknowledged; 2 a vCenter answered the client's exchange or one of its sessions and did not take the client; 3 a
     read failed or is undetermined (a vCenter that did not answer the exchange, a session list not read or holding only
-    the census's own session, directory domains that named nothing on a vCenter whose list held another provider's
-    sessions, or no vCenter at all); 4 the local administrator signs in from a client that is not interactive; else 0.
+    the census's own session, a session in a domain neither DIRECTORY_DOMAINS nor OTHER_DOMAINS names, or no vCenter
+    at all); 4 the local administrator signs in from a client that is not interactive; else 0.
     A scheduler reads it."""
     vcs = record["vcenters"]
     tried = [v for v in vcs if "exchange" in v]
@@ -829,6 +876,20 @@ def exit_code(record: dict) -> int:
     if silent or unread or unplaced(record) or not vcs:
         return EXIT_UNREAD
     return EXIT_ADMIN if sm["local_administrator_not_interactive"] else EXIT_OK
+
+
+def loose_report(loose: dict, redact: bool) -> list[str]:
+    """The domains of the sessions not placed, by vCenter: printed on the terminal, never recorded, and under --redact
+    counted only, so a shared transcript names none of them."""
+    if redact:
+        n = len({d.upper() for doms in loose.values() for d in doms})
+        return [f"NOT PLACED: {n} domain(s) the census was not given (names withheld under --redact; run without it, on "
+                "your own terminal, to see them)"]
+    lines = ["NOT PLACED, the domains the census was not given (printed here only, never recorded): name each in "
+             "DIRECTORY_DOMAINS, or in OTHER_DOMAINS if it is another identity provider's"]
+    for host, doms in loose.items():
+        lines.append(f"  {host}: " + ", ".join(f"{d} {n}" for d, n in doms.items()))
+    return lines
 
 
 def where_report(where: list[dict]) -> list[str]:
@@ -851,12 +912,12 @@ class CompareError(ValueError):
     """A set of records that cannot be compared as given: the reason is printed and the exit is 5."""
 
 
-def read_of(v: dict) -> bool:
+def read_of(v: dict, declared: bool = True) -> bool:
     """Whether a record's row for one vCenter is a read of its sessions: a census that answered, read more than its own
-    session, and placed its directory domains, under a fingerprint. Anything else is not a read of that vCenter."""
+    session, and placed every session it read, under a fingerprint. Anything else is not a read of that vCenter."""
     s = v.get("sessions")
     return bool(v.get("fingerprint")) and isinstance(s, dict) and "by_class" in s and "error" not in s \
-        and not names_nothing(s["by_class"])
+        and not placement_failed(s["by_class"], declared)
 
 
 def sessions_of(record: dict) -> dict[str, dict]:
@@ -865,10 +926,11 @@ def sessions_of(record: dict) -> dict[str, dict]:
     interactive, as the run that read them judged. Only the vCenters the record read are here."""
     out = {}
     allowed = {a.lower() for a in record["interactive_agents"]} if record.get("interactive_agents") else None
+    declared = "other_domains_declared" in record
     for v in record.get("vcenters") or []:
         s = v.get("sessions")
-        if not read_of(v):
-            continue   # a census that failed, read only itself or whose domains named nothing here is not a read of it
+        if not read_of(v, declared):
+            continue   # a census that failed, read only itself or left a session unplaced here is not a read of it
         pairs, names, flagged = set(), {}, set()
         for d in s.get("directory") or []:
             if not d.get("fingerprint"):
@@ -993,7 +1055,7 @@ def compare_report(result: dict) -> list[str]:
     unread = [v for v in result["vcenters"] if v["read_in"] < result["records"]]
     if unread:
         lines.append(f"NOT READ: {len(unread)} vCenter(s) missing a read in at least one record (a census that failed "
-                     "there, read only its own session, or whose DIRECTORY_DOMAINS named nothing there is not a read of "
+                     "there, read only its own session, or left a session unplaced there is not a read of "
                      "it), so what came and went on them is not known; that is exit 3, unless a finding comes first")
     for v in result["vcenters"]:
         lines.append(f"vCenter {v['vcenter']} [fingerprint {v['fingerprint']}], read in {v['read_in']} of "
@@ -1061,7 +1123,8 @@ def given_values() -> list[tuple[str, str]]:
     out = [(h.strip(), "host") for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
     out += [(os.environ.get(k, ""), "host") for k in ("BROKER_HOST", "OPS_BROKER_HOST", "OPS_HOST")]
     out += [(os.environ.get("VC_USER", ""), "name")]
-    out += [(d.strip(), "domain") for d in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if d.strip()]
+    out += [(d.strip(), "domain") for v in ("DIRECTORY_DOMAINS", "OTHER_DOMAINS")
+            for d in os.environ.get(v, "").split(",") if d.strip()]
     return [(v, k) for v, k in out if v]
 
 
@@ -1196,22 +1259,28 @@ def _run(argv: list[str] | None = None) -> int:
         print("note: REALM_DOMAIN is not read here. It is the realm's name, which vcenter-authorization's authz.py takes; "
               "an API client's session carries the broker tenant instead (BROKER_TENANT, default CUSTOMER)", file=sys.stderr)
     if a.sessions and not directory_domains():
-        print("--sessions needs DIRECTORY_DOMAINS, the directory domains as vCenter spells them: without them every "
-              "directory session reads as another provider's, which the census never flags, so a census of nothing "
-              "would pass", file=sys.stderr)
+        print("--sessions needs DIRECTORY_DOMAINS, the directory domains as vCenter spells them: without them no "
+              "directory session would be judged, so a census of nothing would pass", file=sys.stderr)
+        return EXIT_USAGE
+    both = sorted(directory_domains() & other_domains())
+    if a.sessions and both:
+        print(f"DIRECTORY_DOMAINS and OTHER_DOMAINS both name {', '.join(both)}: a domain is your directory's, whose "
+              "sessions the census judges, or another identity provider's, which it never flags; name it in one",
+              file=sys.stderr)
         return EXIT_USAGE
     if a.sessions and not os.environ.get("VC_USER") and not have_client():
         print("--sessions needs VC_USER and VC_PASSWORD_FILE, or the API client's credential to read as the client",
               file=sys.stderr)
         return EXIT_USAGE
     where: list | None = [] if a.where else None
+    loose: dict = {}
     try:
         key = fingerprint_key() if a.sessions else None
     except (OSError, ValueError) as e:
         print(f"FINGERPRINT_KEY_FILE could not be read: {type(e).__name__} {e}".rstrip(), file=sys.stderr)
         return EXIT_USAGE
     try:
-        record = run(a.sessions, where, key, acks)
+        record = run(a.sessions, where, key, acks, loose)
     except (RuntimeError, urllib.error.URLError, OSError, ValueError) as e:
         print(f"could not start: {e}", file=sys.stderr)
         return EXIT_UNREAD
@@ -1224,9 +1293,15 @@ def _run(argv: list[str] | None = None) -> int:
         print("\n".join(report(clean if a.redact else record)))
     if where is not None:
         print("\n".join(where_report(where)))
+    if loose:
+        print("\n".join(loose_report(loose, a.redact)))
     if left:
-        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub", file=sys.stderr)
-        return EXIT_USAGE
+        code = record["exit"] if record["exit"] in (EXIT_DIRECTORY, EXIT_REFUSED, EXIT_UNREAD, EXIT_ADMIN) else EXIT_UNREAD
+        why = ("the run's own code stands" if code == record["exit"]
+               else "the run found nothing to act on, and the record a later --compare reads was not written")
+        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub; {out} not written; exit {code}: "
+              f"{why}", file=sys.stderr)
+        return code
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{out} written with every estate value replaced; exit {record['exit']}")

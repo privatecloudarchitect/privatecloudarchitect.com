@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """authz.py: who may do what in vCenter under VCF single sign-on, read the way a broker session reads it.
 
-Once vCenter signs people in through the VCF identity broker, two authorization planes apply at once: the
+On the vCenters read, already joined to the VCF identity broker, two authorization planes applied side by side: the
 vCenter's own permissions, and the VCF roles assigned in VCF Operations, which arrive in vCenter as global
-permissions on local groups named ``vcf_reserved_<role id>``. A broker session carries the directory's name
+permissions on local groups named ``vcf_reserved_<role id>`` (the join itself was not tested, so take this census
+before a join and prove a sample with sign-ins after it). A broker session carries the directory's name
 for the user (``DOMAIN\\user``), so a permission spelled with the realm's name applied to nobody behind a broker
 backed by AD/LDAP (behind a federated provider it was not measured), even though vCenter accepts it and an
 administrator's privilege query reports it as effective.
@@ -58,6 +59,15 @@ The realm-spelled grants, named and removed. The census counts them and never na
                    vCenter and an id that is not a realm-spelled grant: any other grant is removed where it was made.
                    It writes no record; what it removed is on the terminal.
 
+--remove trusts the domains you declare. A directory left out of DIRECTORY_DOMAINS and typed as REALM_DOMAIN reads as
+the realm, so its working grants would read realm-spelled. Two guards stand before anything is sent. A realm equal to a
+domain you named is refused (exit 5, below). And --remove reads who is signed in on that vCenter first (pyVmomi): a
+broker session carries the directory's name, so a live session spelled in REALM_DOMAIN shows that domain is one people
+sign in with, and a grant in it may apply to them. The removal is then refused, plan and --execute alike, with nothing
+sent (exit 3), as it is when the session list cannot be read whole (one that does not hold the session that read it).
+A directory nobody from is signed in to at that moment passes both, so --remove runs only with OTHER_DOMAINS stated,
+empty when there is none (export OTHER_DOMAINS=), as your declaration that DIRECTORY_DOMAINS names every directory.
+
 Before a realm exists. Run the census before the broker takes the realm, so the grants are inventoried while the
 boundary is decided: declare it with --no-realm, and the realm-spelled class is reported as not applicable and nothing
 is flagged for it. A run with neither REALM_DOMAIN nor --no-realm is refused (exit 5): left to infer "no realm" from
@@ -97,8 +107,9 @@ Environment:
                       another provider's and the census would count none, so the script refuses to start without it
   LOCAL_DOMAIN        the vCenter's own SSO domain (default VSPHERE.LOCAL); set it where yours is named otherwise,
                       or every local grant reads as another provider's
-  OTHER_DOMAINS       optional: comma-separated domains you know are another identity provider's. Their grants stay
-                      in another provider's class and count as placed, so neither NOT PLACED check stops on them
+  OTHER_DOMAINS       comma-separated domains you know are another identity provider's. Their grants stay in another
+                      provider's class and count as placed, so neither NOT PLACED check stops on them. Optional for
+                      the census; --remove needs it stated, empty when there is none
   TLS_VERIFY          false only on a self-signed lab CA
   TEST_USER, TEST_PASSWORD_FILE, TEST_GROUP, PROBE_VCENTER   for the probes (TEST_USER must not be an administrator)
   TEST_LOCAL_GROUP    optional: a local SSO group holding TEST_GROUP, for the nested case of --probe-grants
@@ -112,18 +123,22 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       2 a removal (--remove --execute) that did not hold on read-back: a named grant still there, or another grant
         moved; or a probe that left residue (its folder, its tag category, or a grant of a probe role)
       1 the census read realm-spelled grants: remove them (--where-realm names them, --remove removes them). Only
-        with REALM_DOMAIN set; before a realm there is no such class
+        with REALM_DOMAIN set, and never while a live session is spelled in it (that is 3); before a realm there is
+        no such class
       3 a read failed or a result is undetermined: a vCenter refused the session or a page of the permission or role
-        list, a permission list with no permission in it, the session list could not be read, a vCenter on which
+        list, a permission list with no permission in it, the session list could not be read whole, a vCenter on which
         DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no grant while another provider's grants are there, a vCenter on which REALM_DOMAIN names no grant while grants
-        of a domain in none of the domains given are there (a misspelled realm hides its grants there), a probe that
-        could not run its cases, or an error the script did not expect. Nothing is known about what was not read
+        of a domain in none of the domains given are there (a misspelled realm hides its grants there), a live session
+        spelled in REALM_DOMAIN (a domain people sign in with, so a grant spelled in it may apply to them; with
+        --remove, nothing is sent), a probe that could not run its cases, or an error the script did not expect. Nothing is
+        known about what was not read
       0 nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean
         (with --remove: the plan printed, or every named grant removed and nothing else moved)
       5 a usage error, before anything is read: an argument or environment variable missing or wrong, a REALM_DOMAIN
-        that names a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, an id --remove cannot name as a
-        realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it, a Python older than 3.10; or the
-        record refused because an estate value survived the scrub (nothing is written)
+        that names a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, --remove without OTHER_DOMAINS stated,
+        an id --remove cannot name as a realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it
+        (--remove among them), a Python older than 3.10; or the record refused because an estate value survived the
+        scrub (nothing is written)
 """
 import argparse
 import base64
@@ -513,10 +528,45 @@ def drift(catalogs, L):
     return out
 
 
+def session_list(si):
+    """Every live session on one vCenter. The list must hold the session that read it, or it is not the whole list: a
+    refusal, or a list without that session, is a read that failed (ReadError, exit 3)."""
+    try:
+        sm = si.content.sessionManager
+        own, listed = sm.currentSession, list(sm.sessionList or [])
+    except Exception as e:  # a refusal of either read: nothing is known of who is signed in
+        raise ReadError(f"the session list was not read: {type(e).__name__}") from None
+    if own is None or own.key not in {s.key for s in listed}:
+        raise ReadError("the session list does not hold the session that read it, so it is not the whole list")
+    return listed
+
+
+def realm_sessions(names, realm):
+    """The live sessions spelled in REALM_DOMAIN. A broker session carries the directory's name for the user
+    (DOMAIN\\user), so a session spelled in REALM_DOMAIN shows that domain is one people sign in with: a directory left
+    out of DIRECTORY_DOMAINS and typed as the realm, or a realm whose grants can apply. Either way a grant spelled in
+    it may apply to them."""
+    r = (realm or "").strip().lower()
+    return [n for n in names if r and str(n).rpartition("\\")[0].strip().lower() == r]
+
+
+def session_names(host, user, password):
+    """Who is signed in on one vCenter now, as vCenter spells each session's name (DOMAIN\\name), read whole: what
+    --remove checks before it acts. A session that cannot be opened, or a list not read whole, is ReadError (exit 3)."""
+    try:
+        si = soap(host, user, password)
+    except Exception as e:
+        raise ReadError(f"the session list was not read: {type(e).__name__}") from None
+    try:
+        return [str(s.userName) for s in session_list(si)]
+    finally:
+        unsoap(si)
+
+
 def sessions(si, realm, directories):
     by_class = collections.Counter()
     admin_agents = collections.Counter()
-    for s in si.content.sessionManager.sessionList or []:
+    for s in session_list(si):
         domain, _, name = str(s.userName).rpartition("\\")
         cls = classify(domain, name, realm, directories)
         by_class[cls] += 1
@@ -973,6 +1023,13 @@ def _settings(a):
     if (removing or a.where_realm) and not realm:
         raise UsageError("--where-realm and --remove name realm-spelled grants, so they need REALM_DOMAIN, the "
                          "realm's name as vCenter spells it")
+    if removing and "OTHER_DOMAINS" not in os.environ:
+        raise UsageError("--remove trusts the domains you declare: a directory left out of DIRECTORY_DOMAINS and typed "
+                         "as REALM_DOMAIN reads as the realm, and its working grants would pass for removal. Name every "
+                         "directory in DIRECTORY_DOMAINS, and state OTHER_DOMAINS, every other provider's domain, empty "
+                         "when there is none (export OTHER_DOMAINS=)")
+    if removing and not have_pyvmomi():
+        raise UsageError("--remove reads who is signed in on the vCenter before it acts, which needs pyVmomi")
     probing = a.probe_grants or a.probe_tags or a.supervisor_vm
     test_user = os.environ.get("TEST_USER", "")
     if (probing or a.remove_probe_roles) and not have_pyvmomi():
@@ -1034,10 +1091,16 @@ def _run(argv=None):
                 try:
                     row["version"] = f"{si.content.about.version} build {si.content.about.build}"
                     row["sessions"] = sessions(si, realm, directories)
+                except ReadError as e:
+                    row["sessions"] = {"error": str(e)}
                 finally:
                     unsoap(si)
         else:
             row["sessions"] = "not read: pyVmomi is not installed"
+        signed_in = (row["sessions"].get("byClass") or {}).get("realm spelling", 0) \
+            if realm and isinstance(row["sessions"], dict) else 0
+        if signed_in:
+            row["realmSignedIn"] = True
         others = other_domains(perms, realm, directories)
         undeclared = unplaced(others, declared)
         if names_nothing(row["byClass"]) and undeclared:
@@ -1056,6 +1119,11 @@ def _run(argv=None):
                   + ", ".join(f"{d} {n}" for d, n in undeclared.items())
                   + ". A misspelled realm hides its grants among them: check REALM_DOMAIN against the realm's name, and "
                     "name each domain you know is another provider's in OTHER_DOMAINS (exit 3)")
+        if row.get("realmSignedIn"):
+            print(f"     NOT PLACED: {signed_in} live session(s) here are spelled in REALM_DOMAIN. A broker session "
+                  "carries the directory's name, so REALM_DOMAIN names a domain people sign in with, and a grant "
+                  "spelled in it may apply to them: check REALM_DOMAIN against the realm's name, and name every "
+                  "directory in DIRECTORY_DOMAINS (exit 3)")
         if others:
             print("     read as another provider's (printed here only, never recorded): "
                   + ", ".join(f"{d} {n}" for d, n in others.items()))
@@ -1146,16 +1214,19 @@ def probe_residue(rec):
 
 
 def exit_code(record, realm):
-    """The first that applies: 2 a probe left residue, 1 realm-spelled grants read (only with a realm), 3 a vCenter
-    or its session list not read, a vCenter whose domains named no grant or whose realm named none beside an unplaced
-    domain, or a probe that could not run; else 0."""
+    """The first that applies: 2 a probe left residue, 1 realm-spelled grants read (only with a realm, and none while
+    a live session is spelled in it), 3 a vCenter or its session list not read, a vCenter whose domains named no grant
+    or whose realm named none beside an unplaced domain, a live session spelled in the realm (a grant spelled in it
+    may then apply to someone, so the realm-spelled grants are no finding), or a probe that could not run; else 0."""
     probes = [record.get(k) for k in ("grantProbe", "tagProbe", "supervisorProbe") if record.get(k) is not None]
     if any(probe_residue(p) for p in probes):
         return EXIT_NOT_HELD
     rows = list((record.get("vcenters") or {}).values())
-    if realm and any(n for r in rows for k, n in (r.get("byClass") or {}).items() if k.startswith("realm spelling")):
+    signed_in = any(r.get("realmSignedIn") for r in rows)
+    if realm and not signed_in and any(n for r in rows for k, n in (r.get("byClass") or {}).items()
+                                       if k.startswith("realm spelling")):
         return EXIT_REALM
-    unread = (not rows or any("error" in r for r in rows)
+    unread = (not rows or signed_in or any("error" in r for r in rows)
               or any(r.get("domainsNamedNothing") or r.get("realmNamedNothing") for r in rows)
               or any(isinstance(r.get("sessions"), dict) and "error" in r["sessions"] for r in rows)
               or any(p.get("aborted") for p in probes))
@@ -1179,7 +1250,26 @@ def _remove(host, user, password, realm, directories, ids, execute):
         if problem:
             print(f"refused, nothing sent: {problem} (exit 5)", file=sys.stderr)
             return EXIT_USAGE
-        print(f"authz.py --remove on {host}: {len(plan)} realm-spelled grant(s), printed here only")
+        try:
+            names = session_names(host, user, password)
+        except ReadError as e:
+            print(f"{host}: NOT READ: {e}; --remove acts only once it has read who is signed in, so nothing was sent "
+                  "(exit 3)", file=sys.stderr)
+            return EXIT_UNREAD
+        signed = realm_sessions(names, realm)
+        if signed:
+            users = {n.rpartition("\\")[2].strip().lower() for n in signed}
+            used = [p for p in plan if str(p["info"]["principal"].get("type", "")).upper() == "USER"
+                    and str(p["info"]["principal"].get("name", "")).strip().lower() in users]
+            print(f"refused, nothing sent: {len(signed)} live session(s) on {host} are spelled in REALM_DOMAIN "
+                  f"({realm})" + (f", and {len(used)} of the grants named here are made to a user signed in now"
+                                  if used else "")
+                  + ". A broker session carries the directory's name, so this domain is one people sign in with, and "
+                    "a grant spelled in it may apply to them. Check REALM_DOMAIN against the realm's name, and name every "
+                    "directory in DIRECTORY_DOMAINS (exit 3)", file=sys.stderr)
+            return EXIT_UNREAD
+        print(f"authz.py --remove on {host}: {len(plan)} realm-spelled grant(s), printed here only; no live session "
+              "is spelled in REALM_DOMAIN")
         for p in plan:
             print(f"  {grant_line(p, cat)}")
             print(f"    DELETE /api/vcenter/authorization/permissions/{p['permission']}")

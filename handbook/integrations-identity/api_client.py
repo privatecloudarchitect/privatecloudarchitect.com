@@ -24,18 +24,27 @@ Operations' fleet identity API, and nothing else:
   --teardown --execute        deletes the client's tokens and the client, then reads both lists again for residue
 
 A client that already exists is refused, never adopted, so a run cannot take over an identity someone else made. The
-create writes a state file (STATE, default api_client.<client id>.state.json, mode 0600: the client's id and uuid and
-the ids of the tokens this script issued, no secret; keep it beside the record and do not publish it), and --rotate,
---retire-old and --teardown act only on a client that file records with the same uuid, so a mistyped id, or a client
-someone else made under it, is refused before anything is sent. A client made in the console is rotated and removed
-in the console. None of them acts on the client the run is signed in as, a rotation included: run them on the token of
-the administrator who made the client, never on the client's own. A teardown of a client that is not
-there removes nothing and exits 0, so it is safe to re-run. Every list is read to its end: the realm's API clients and
-its API tokens (people's tokens included) are read page by page, 50 to a page, to the total the fleet states, and a page
-refused, an answer with no list, or pages that end short of their total is a read that failed (exit 3), never a shorter
-list. Lifetimes outside the bounds the broker held on the
-reference estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60) are refused before anything
-is sent.
+create writes a state file (STATE, default api_client.<client id>.state.json, mode 0600: the client's id and uuid, the
+realm it was made in and the ids of the tokens this script issued, no secret; keep it beside the record and do not
+publish it), and --rotate, --retire-old and --teardown act only on a client that file records with the same uuid, in
+the realm it records, so a mistyped id, a client someone else made under it, or a run that reads another realm is
+refused before anything is sent. A client made in the console is rotated and removed in the console. None of them acts
+on the client the run is signed in as, a rotation included: run them on the token of the administrator who made the
+client, never on the client's own. A teardown of a client that is not there removes nothing and exits 0, so it is safe
+to re-run.
+
+One realm, named. Every run acts in one realm, and the plan and the record name it. With --realm (its name or its id,
+as GET /ssorealms lists them) the run acts in that realm; without it, in the fleet's only realm. A fleet holding more
+than one realm, with no --realm, and a --realm that names none of the fleet's realms or more than one, are refused
+(exit 5) after the realm list is read and before anything else is sent, so a client is never made, or a role never
+bound, in a realm nobody chose.
+
+Every list is read to its end: the realm's API clients and its API tokens (people's tokens included) are read page by
+page, 50 to a page, until the items counted once each (by id) reach the total the fleet states (pageInfo.totalCount). A
+page refused, an answer with no list or no total, a total that changes between pages, a page that adds nothing new, or
+pages that end before the total is reached, is a read that failed (exit 3), never a shorter list, and a run that could
+not read a list whole sends no write that rests on it. Lifetimes outside the bounds the broker held on the reference
+estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60) are refused before anything is sent.
 
 Env:  OPS_HOST                 VCF Operations FQDN (required)
       OPS_API_TOKEN_FILE       an API token of a user whose fleet role may manage the fleet's API clients: the
@@ -50,29 +59,34 @@ Env:  OPS_HOST                 VCF Operations FQDN (required)
       TLS_VERIFY=false         only on a self-signed lab CA
       OUT                      the record (default api_client.json)
 Use:  python3 api_client.py --client-id ID --role ROLE --api-token-ttl MIN --access-token-ttl MIN [--token-file PATH]
-                            [--scope instance --instance NAME] [--execute] [--redact]
+                            [--scope instance --instance NAME] [--realm REALM] [--execute] [--redact]
       python3 api_client.py --client-id ID --rotate --api-token-ttl MIN --access-token-ttl MIN --token-file NEW
-                            [--old-token-file OLD] [--execute] [--redact]
-      python3 api_client.py --client-id ID --retire-old [--old-token-file OLD] [--execute] [--redact]
-      python3 api_client.py --client-id ID --teardown [--execute] [--redact]
+                            [--old-token-file OLD] [--realm REALM] [--execute] [--redact]
+      python3 api_client.py --client-id ID --retire-old [--old-token-file OLD] [--realm REALM] [--execute] [--redact]
+      python3 api_client.py --client-id ID --teardown [--realm REALM] [--execute] [--redact]
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 refused by this script before any write: the client exists (for a create); no state file records the client
-        with this uuid (for a rotation, a retirement or a teardown), or there is no client by that id (for a rotation or
-        a retirement); the run is
+        with this uuid (for a rotation, a retirement or a teardown), the state file records it in another realm, or
+        there is no client by that id (for a rotation or a retirement); the run is
         signed in as the client, or its bearer is not a JWT this script can read, for every write after the create,
         a rotation included; a retirement while the client holds one token, or whose newest token this script did not
         issue last; or the fleet holds no realm to make a client in
       1 the run did not hold: a write was refused, or the read-back was not what was asked
-      3 a read failed or is undetermined: a list or the realm could not be read (a page refused, an answer with no list,
-        or pages that end short of the total they state), the read-back could not be read, the
-        operator's credential was not traded for a bearer, or an error the script did not expect
+      3 a read failed or is undetermined: a list or the realm list could not be read (a page refused, an answer with no
+        list or no total, a total that changed between pages, a page that added nothing new, or pages that end before
+        the total they state), the read-back could not be read, the operator's credential was not traded for a bearer,
+        or an error the script did not expect
       0 the plan printed, or the run held on read-back (the client with its one role and an active token with both
         lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
         still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no
         client and no token left)
       5 a usage error (a missing or bad argument or environment variable, a lifetime outside the bounds, a token file
-        that exists, with --execute an operator credential file that cannot be read or is empty), a Python older than
-        3.10, or the record refused because an estate value survived the scrub (nothing is written)
+        that exists, with --execute an operator credential file that cannot be read or is empty, a fleet holding more
+        than one realm with no --realm, a --realm that names none of the fleet's realms or more than one), or a Python
+        older than 3.10; nothing is written
+      A record refused because an estate value survived the scrub is not written, and never hides the run's result:
+      the run's code stands when it is 1, 2 or 3, and a run that held exits 3 (its write was made; the record was not
+      written).
 """
 
 from __future__ import annotations
@@ -212,33 +226,33 @@ def create_bodies(client_id: str, role: str, api_ttl: int, access_ttl: int, desc
 def rotate_calls(client_id: str, api_ttl: int, access_ttl: int) -> list[dict]:
     """A rotation in the order it is sent: a new token issued and proved, and nothing deleted. The old tokens go with
     --retire-old, once the integration runs on the new one."""
-    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)",
+    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query, ?page=N&pageSize=50 to the stated total: the client and the tokens it holds",
              "body": {}},
             {"method": "POST", "path": "/ssorealms/{realm}/api-tokens",
              "body": {"apiClientId": client_id, "tokenName": f"{client_id}-token-<UTC stamp>", "tokenType": "API_CLIENT",
                       "apiTokenTtl": api_ttl, "accessTokenTtl": access_ttl}},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)",
              "body": None},
-            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (every page; read back: the new token active beside the old)", "body": {}}]
+            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query, every page; read back: the new token active beside the old", "body": {}}]
 
 
 def retire_calls() -> list[dict]:
     """A retirement in the order it is sent: every token older than the newest deleted, then the read-back."""
-    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)",
+    return [{"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query, ?page=N&pageSize=50 to the stated total: the client and the tokens it holds",
              "body": {}},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token, before the delete)",
              "body": None},
             {"method": "DELETE", "path": "/ssorealms/{realm}/api-tokens/{token id}  (each token older than the newest)", "body": None},
             {"method": "POST", "path": "/acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)",
              "body": None},
-            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (every page; read back: one token left)", "body": {}}]
+            {"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query, every page; read back: one token left", "body": {}}]
 
 
 def teardown_calls(client_id: str) -> list[dict]:
-    return [{"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query  (every page)", "body": {}},
+    return [{"method": "POST", "path": "/ssorealms/{realm}/api-tokens/query and api-clients/query, ?page=N&pageSize=50 to the stated total", "body": {}},
             {"method": "DELETE", "path": "/ssorealms/{realm}/api-tokens/{token id}  (each of the client's tokens)", "body": None},
             {"method": "DELETE", "path": f"/ssorealms/{{realm}}/api-clients/{client_id}", "body": None},
-            {"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: residue)", "body": {}}]
+            {"method": "POST", "path": "/ssorealms/{realm}/api-clients/query and api-tokens/query, every page: residue", "body": {}}]
 
 
 def bounds_error(api_ttl: int | None, access_ttl: int | None) -> str | None:
@@ -252,13 +266,60 @@ def bounds_error(api_ttl: int | None, access_ttl: int | None) -> str | None:
 
 
 # ── the reads every run makes ────────────────────────────────────────────────────────────────────────────────────
-def realm_id(fleet: Fleet) -> str | None:
-    """The realm's id; "" when the fleet answered and holds no realm; None when the read failed."""
+def _shape(fleet: Fleet, why: str) -> None:
+    """Mark the last call's record with why its answer was not a read, so the report says what was short."""
+    if fleet.calls and isinstance(fleet.calls[-1], dict):
+        fleet.calls[-1]["shape"] = why
+
+
+def realm_list(fleet: Fleet) -> list[dict] | None:
+    """The fleet's realms, each with its id and its name; [] when the fleet answered and holds none; None when the read
+    failed: a refused answer, an answer without its ssoRealms list, or a realm without an id."""
     status, answer = fleet.call("GET", "/ssorealms", "/ssorealms")
-    if status != 200 or not isinstance(answer, dict):
+    if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get("ssoRealms"), list):
+        if status == 200:
+            _shape(fleet, "no ssoRealms list in the answer")
         return None
-    realms = answer.get("ssoRealms") or []
-    return str(realms[0].get("id") or "") if realms else ""
+    realms = [{"id": str(r.get("id") or ""), "name": str(r.get("name") or "")} for r in answer["ssoRealms"]
+              if isinstance(r, dict)]
+    if len(realms) != len(answer["ssoRealms"]) or any(not r["id"] for r in realms):
+        _shape(fleet, "a realm without an id")
+        return None
+    return realms
+
+
+def choose_realm(realms: list[dict], asked: str | None) -> tuple[dict | None, str | None]:
+    """The one realm a run acts in, and None; or None and why no realm can be chosen (a usage error, exit 5). With
+    --realm, the realm whose name or id it gives, compared without case after trimming; without it, the fleet's only
+    realm. A fleet of more than one realm with no --realm is refused, so nothing is made in a realm nobody chose."""
+    held = ", ".join(r["name"] or r["id"] for r in realms)
+    if asked and asked.strip():
+        want = asked.strip().lower()
+        hits = [r for r in realms if want in (r["name"].lower(), r["id"].lower())]
+        if len(hits) == 1:
+            return hits[0], None
+        if not hits:
+            return None, f"--realm {asked.strip()} names none of the fleet's realms ({held})"
+        return None, f"--realm {asked.strip()} names {len(hits)} realms by that name; give its id ({held})"
+    if len(realms) == 1:
+        return realms[0], None
+    return None, (f"the fleet holds {len(realms)} realms ({held}); name the one to act in with --realm, by its name or "
+                  "its id")
+
+
+def realm_words(realm: dict) -> str:
+    """How the plan, the report and the record name a realm: its name, or its id when it has none."""
+    return realm.get("name") or realm.get("id") or ""
+
+
+def realm_refusal(state: dict, realm: dict) -> str | None:
+    """Why a rotation, a retirement or a teardown is refused before anything is sent: the state file records the client
+    in another realm than the one this run reads, where a teardown would find nothing and report the client gone."""
+    made_in = state.get("realm_id")
+    if made_in and made_in != realm.get("id"):
+        return (f"the state file records this client in realm {state.get('realm') or made_in}, and this run reads realm "
+                f"{realm_words(realm)}: run it with --realm naming the realm the client was made in")
+    return None
 
 
 def instances(fleet: Fleet, rid: str) -> dict[str, str] | None:
@@ -276,41 +337,55 @@ PAGE_SIZE = 50
 MAX_PAGES = 10000
 
 
+def _item_id(row: dict) -> str | None:
+    """What a row is counted once by: a token's id, a client's uuid, or its client id."""
+    ident = row.get("id") or row.get("clientUuid") or row.get("clientId")
+    return str(ident) if ident else None
+
+
 def fleet_pages(fleet: Fleet, rid: str, kind: str, key: str) -> list[dict] | None:
-    """Every page of one fleet IAM query (`kind` is api-clients or api-tokens), read until pageInfo.totalCount is
-    reached, or, where an answer carries no total, until a page comes back short. None, never a shorter list, when a
-    page is refused, an answer carries no list under `key`, or the pages end before the total they state: a list read
-    in part is not a list, and a teardown or a retirement that trusted one could leave a token alive."""
-    out: list[dict] = []
+    """Every page of one fleet IAM query (`kind` is api-clients or api-tokens), read until the items counted once each,
+    by id, reach the total the answer states (pageInfo.totalCount). None, never a shorter list, when a page is refused,
+    an answer carries no list under `key` or no total, the total changes between pages, an item carries no id, a page
+    adds no item not already read, more distinct items come back than the total states, or a page comes back empty or
+    short before the total is reached: a list read in part is not a list, and a teardown or a retirement that trusted
+    one could leave a token alive. A row repeated on a later page (the list moved under the read) is counted once."""
+    found: dict[str, dict] = {}
+    total: int | None = None
     for page in range(MAX_PAGES):
         query = f"page={page}&pageSize={PAGE_SIZE}"
         status, answer = fleet.call("POST", f"/ssorealms/{rid}/{kind}/query?{query}",
                                     f"/ssorealms/{{realm}}/{kind}/query?{query}", {})
         if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get(key), list):
-            if status == 200 and fleet.calls and isinstance(fleet.calls[-1], dict):
-                fleet.calls[-1]["shape"] = f"no {key} list in the answer"   # a 200 that lists nothing read nothing
+            if status == 200:   # a 200 that lists nothing read nothing
+                _shape(fleet, f"no {key} list in the answer")
             return None
-        rows = [r for r in answer[key] if isinstance(r, dict)]
-        out += rows
-        total = (answer.get("pageInfo") or {}).get("totalCount") if isinstance(answer.get("pageInfo"), dict) else None
-        if isinstance(total, int) and not isinstance(total, bool):
-            if len(out) >= total:
-                break
-            if not rows:   # the pages ended before the total they state: the list moved under the read
-                if fleet.calls and isinstance(fleet.calls[-1], dict):
-                    fleet.calls[-1]["shape"] = f"the pages ended at {len(out)} of the {total} the answer states"
-                return None
-        elif len(rows) < PAGE_SIZE:
-            break
-    else:
-        return None
-    seen, unique = set(), []
-    for r in out:   # a row that moved to a later page during the read is counted once
-        ident = r.get("id") or r.get("clientUuid") or r.get("clientId")
-        if ident is None or ident not in seen:
-            unique.append(r)
-            seen.add(ident)
-    return unique
+        info = answer.get("pageInfo")
+        stated = info.get("totalCount") if isinstance(info, dict) else None
+        if not isinstance(stated, int) or isinstance(stated, bool) or stated < 0:
+            _shape(fleet, "no total in the answer (pageInfo.totalCount), so the list cannot be known whole")
+            return None
+        if total is not None and stated != total:
+            _shape(fleet, f"the total moved from {total} to {stated} between pages")
+            return None
+        total = stated
+        rows = answer[key]
+        if any(not isinstance(r, dict) or not _item_id(r) for r in rows):
+            _shape(fleet, "an item without an id, which cannot be counted once")
+            return None
+        before = len(found)
+        for r in rows:
+            found.setdefault(_item_id(r), r)
+        if len(found) == total:
+            return list(found.values())
+        if len(found) > total:
+            _shape(fleet, f"{len(found)} distinct items where the answer states {total}")
+            return None
+        if len(rows) < PAGE_SIZE or len(found) == before:
+            _shape(fleet, f"the pages ended at {len(found)} of the {total} the answer states")
+            return None
+    _shape(fleet, f"more than {MAX_PAGES} pages")
+    return None
 
 
 def clients(fleet: Fleet, rid: str) -> list[dict] | None:
@@ -473,7 +548,7 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
         return EXIT_NOT_HELD
     uuid = answer.get("clientUuid") or answer.get("id") or answer.get("uuid")
     state_file = state_path(a.client_id)
-    state = {"tool": AGENT, "client_id": a.client_id, "client_uuid": uuid,
+    state = {"tool": AGENT, "client_id": a.client_id, "client_uuid": uuid, "realm_id": rid, "realm": record.get("realm"),
              "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "tokens": []}
     save_state(state_file, state)   # before the role and the token, so a client left part way can still be removed
     record["state_file_written"] = True
@@ -729,7 +804,10 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
         scope = (instance_scope(f"<id of {a.instance}, from the realm's coverage>", a.instance) if a.scope == "instance"
                  else REALM_SCOPE)
         calls, kind = create_bodies(a.client_id, a.role, a.api_token_ttl, a.access_token_ttl, a.description, scope), "Create"
-    out = [f"{kind} plan for API client {a.client_id} on {os.environ.get('OPS_HOST', '<OPS_HOST>')}:"]
+    out = [f"{kind} plan for API client {a.client_id} on {os.environ.get('OPS_HOST', '<OPS_HOST>')}:",
+           (f"  in realm {a.realm.strip()}, the one --realm names (refused, exit 5, if no realm or more than one answers "
+            "to it)" if a.realm and a.realm.strip()
+            else "  in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)")]
     for c in calls:
         out.append(f"  {c['method']:6} {c['path'] if c['path'].startswith('/acs') else IAM + c['path']}")
         if c.get("body"):
@@ -749,7 +827,9 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
 
 
 def report(record: dict) -> list[str]:
-    lines = [f"{record['mode']}: API client {record['client']}"]
+    lines = [f"{record['mode']}: API client {record['client']}"
+             + (f" in realm {record['realm']}, one of the fleet's {record['realms_in_fleet']}"
+                if record.get("realm") and (record.get("realms_in_fleet") or 0) > 1 else "")]
     for c in record.get("calls", []):
         lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}" + (f" ({c['message']})" if c.get("message") else "")
                      + (f" ({c['shape']})" if c.get("shape") else ""))
@@ -821,6 +901,8 @@ def _run(argv: list[str] | None = None) -> int:
     ap.add_argument("--scope", choices=("realm", "instance"), default="realm",
                     help="where the role applies: the whole realm (default), or one VCF instance with --instance")
     ap.add_argument("--instance", help="with --scope instance: the VCF instance's name, as the realm's coverage names it")
+    ap.add_argument("--realm", help="the realm to act in, by its name or its id as GET /ssorealms lists them; required "
+                                    "when the fleet holds more than one realm")
     ap.add_argument("--api-token-ttl", type=int, help="the API token's lifetime in minutes (1440 to 259200)")
     ap.add_argument("--access-token-ttl", type=int, help="the lifetime in minutes of each bearer it yields (30 to 60)")
     ap.add_argument("--token-file", help="where the token is written, mode 0600; it must not exist")
@@ -858,10 +940,14 @@ def _run(argv: list[str] | None = None) -> int:
         if problem:
             print(problem, file=sys.stderr)
             return EXIT_USAGE
+    if a.realm is not None and not a.realm.strip():
+        print("--realm is empty: give the realm's name or its id, as GET /ssorealms lists them", file=sys.stderr)
+        return EXIT_USAGE
     if not a.execute:
         lines = plan_lines(a)
-        if a.redact:   # the plan carries the host and the client id you gave; a shared transcript carries neither
-            given = [(os.environ.get("OPS_HOST", ""), "host"), (a.client_id, "client"), (a.instance or "", "instance")]
+        if a.redact:   # the plan carries the host, the client id and the realm you gave; a shared transcript none
+            given = [(os.environ.get("OPS_HOST", ""), "host"), (a.client_id, "client"), (a.instance or "", "instance"),
+                     ((a.realm or "").strip(), "realm")]
             lines = scrub(lines, estate_values({"plan": lines}, [(v, k) for v, k in given if v]))
         print("\n".join(lines))
         print("\nplan only: nothing was sent (--execute sends it)")
@@ -891,28 +977,54 @@ def _run(argv: list[str] | None = None) -> int:
     except (RuntimeError, urllib.error.URLError, OSError) as e:
         print(f"could not start: {e}", file=sys.stderr)
         return EXIT_UNREAD
-    rid = realm_id(fleet)
-    if rid is None:
+    realms = realm_list(fleet)
+    realm, made_in = None, {}
+    if realms is None:
         record["exit"] = EXIT_UNREAD
-    elif not rid:
+    elif not realms:
         record["refused"] = ("the fleet holds no realm: an API client lives in a realm, so there is nothing to make it "
                              "in until VCF single sign-on has one")
         record["exit"] = EXIT_REFUSED
     else:
-        record["exit"] = (teardown(fleet, rid, a.client_id, record) if a.teardown
-                          else retire_old(fleet, rid, a, record) if a.retire_old
-                          else rotate(fleet, rid, a, record) if a.rotate else create(fleet, rid, a, record))
+        realm, problem = choose_realm(realms, a.realm)
+        if problem:   # read the realm list, sent nothing else: a usage error, and no record
+            if a.redact:   # a shared transcript names no realm
+                names = [(r["name"], "realm") for r in realms] + [((a.realm or "").strip(), "realm")]
+                problem = scrub(problem, estate_values({"m": problem}, [(v, k) for v, k in names if v]))
+            print(f"{problem}; nothing else was sent and nothing is written (exit {EXIT_USAGE})", file=sys.stderr)
+            return EXIT_USAGE
+        record["realm"], record["realms_in_fleet"] = realm_words(realm), len(realms)
+        made_in = {} if mode == "create" else load_state(state_path(a.client_id))
+        refused = realm_refusal(made_in, realm) if made_in else None
+        if refused:
+            record["refused"], record["exit"] = refused, EXIT_REFUSED
+        else:
+            rid = realm["id"]
+            record["exit"] = (teardown(fleet, rid, a.client_id, record) if a.teardown
+                              else retire_old(fleet, rid, a, record) if a.retire_old
+                              else rotate(fleet, rid, a, record) if a.rotate else create(fleet, rid, a, record))
     given = ([(os.environ.get(k, ""), "host") for k in ("OPS_HOST", "OPS_BROKER_HOST", "BROKER_HOST")] + [(a.client_id, "client")]
-             + [(a.instance or "", "instance")])
+             + [(a.instance or "", "instance"), ((a.realm or "").strip(), "realm")]
+             + ([(realm["name"], "realm")] if realm else []) + [(str(made_in.get("realm") or ""), "realm")])
+    return write_record(record, given, a.redact, os.environ.get("OUT", "api_client.json"))
+
+
+def write_record(record: dict, given: list[tuple[str, str]], redact: bool, out: str) -> int:
+    """Print the run, scrub the record and write it; refuse to write one in which an estate value survived. A record
+    refused for a surviving value never hides what the run did: its code stands when it is 1, 2 or 3, and a run that
+    held exits 3, because its write was made and the record that shows it was not written."""
     table = estate_values(record, [(v, k) for v, k in given if v])
     clean = scrub(record, table)
     left = leaks(clean, table)
-    out = os.environ.get("OUT", "api_client.json")
-    if not (left and a.redact):
-        print("\n".join(report(clean if a.redact else record)))
+    if not (left and redact):   # a redacted print with a surviving value would print that value
+        print("\n".join(report(clean if redact else record)))
     if left:
-        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub", file=sys.stderr)
-        return EXIT_USAGE
+        code = record["exit"] if record["exit"] in (EXIT_NOT_HELD, EXIT_REFUSED, EXIT_UNREAD) else EXIT_UNREAD
+        why = ("the run's own code stands" if code == record["exit"]
+               else "the run held and its writes were made, but the record that shows them was not written")
+        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub; {out} not written; exit {code}: "
+              f"{why}", file=sys.stderr)
+        return code
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{out} written with every estate value replaced")

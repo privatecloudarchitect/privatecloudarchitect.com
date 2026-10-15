@@ -126,8 +126,10 @@ Organizations: 10
 The same script, the same day, on the API token of an API client holding VCF Viewer, with the fleet plane only. Every
 fleet identity read answered 403, so the script prints NOT READ and the refused reads before any line that counts. It
 exited 1 on that run, the code a failed read then had; since 2026-10-15 a failed read exits 3, as on every identity
-companion. Without that first line the counts below it would read as an estate with no broker and no emergency client,
-and a tool that reads the record (`catalog_check.py --census`) refuses it for its exit and its failed calls.
+companion, the NOT READ line also counts a list read in part and names the role only when a read was refused, and a
+paged list's path carries its page and page size. Without that first line the counts below it would read as an estate
+with no broker and no emergency client, and a tool that reads the record (`catalog_check.py --census`) refuses it for
+its exit and its failed calls. The lines are kept as they were recorded.
 
 ```
 $ python3 census.py --redact
@@ -157,11 +159,11 @@ fixture's fleet; the lines between are the fixture's and are left out:
 
 ```
 $ python3 census.py --redact
-NOT READ: 1 fleet identity read(s) refused or failed; a line below that counts 0 or none is unread, not empty. The credential's role must read the fleet identity plane.
+NOT READ: 1 fleet identity read(s) refused, failed or read in part; a line below that counts from one is unread, not the estate's (the FAILED lines name each).
 ...
 API clients: 0
 ...
-FAILED vcf-operations POST /api/fleet-management/iam/ssorealms/{{id-3}}/api-clients/query: 200 no apiClients list in the answer
+FAILED vcf-operations POST /api/fleet-management/iam/ssorealms/{{id-3}}/api-clients/query?page=0&pageSize=50: 200 no apiClients list in the answer
 
 12 call(s), 1 failed; census.json written with every estate value replaced
 ```
@@ -170,6 +172,27 @@ A tool that reads the record takes it as a read only when its exit is 0 and no f
 `catalog_check.py --census` refuses this one rather than reading it as a realm with no API client. A list of no
 broker, and with `--orgs-only` a list of no organization, fail the same way: the census's own bearer came from a
 broker, and the provider's own System organization is in its list.
+
+## A list read in part
+
+No reference run produced this either; the tests hold it. A paged list is read until its distinct entries equal the
+total the answer states. Here the fleet stated 120 API clients and its second page came back empty, so the census
+counts what it read, says the list is not the estate's, and exits 3; an answer with no stated total, a short page
+before the total, a page of entries already read and a total that changes between pages are refused the same way.
+An organization listed without `isClassicTenant` prints `type not read` in place of its type, and its list call is
+marked, so the run exits 3 there too:
+
+```
+$ python3 census.py --redact
+NOT READ: 1 fleet identity read(s) refused, failed or read in part; a line below that counts from one is unread, not the estate's (the FAILED lines name each).
+...
+API clients: 50
+...
+  {{org-1}}  type not read: ldap-system
+...
+FAILED vcf-operations POST /api/fleet-management/iam/ssorealms/{{id-3}}/api-clients/query?page=1&pageSize=50: 200 the pages ended at 50 of the 120 apiClients entries the answer states
+FAILED vcf-automation GET /cloudapi/1.0.0/orgs?page=1&pageSize=128: 200 1 organization(s) in the list without isClassicTenant, so their type is not read
+```
 
 ## The same census as an API client holding VCF Administrator
 

@@ -9,7 +9,7 @@ written.
 | File | What it is |
 |---|---|
 | `census.py` | Reads the brokers from the identity plane (never the fleet inventory), each realm and the VCF instances it covers, the realm's identity provider and its directories with protocol and port, the two ways a vCenter grant can spell a principal (the directory's domain and the realm's name, each in capitals) and the third string an API client's session carries (the broker tenant), the API clients with their tokens' lifetimes and each token's runway (its days left, and when it was last exchanged for a bearer), the emergency clients, the fleet's token settings and roles, each VCF Automation organization's ways in, and the broker each vCenter signs in through. `--orgs-only` reads only the organizations, on a VCF Automation provider credential alone. `--egress-metadata-url` asks each broker to fetch a SAML metadata URL itself, proving or refuting its reach to a cloud identity provider. Writes `census.json`, and refuses to write a record carrying any estate value. |
-| `census.json` | That record from the reference estate, 2026-10-13. |
+| `census.json` | That record from the reference estate, 2026-10-13. It predates the list totals each page call now records (`listed`), so `catalog_check.py --census` refuses it; a record from `census.py` as it stands joins. |
 | `expected-output.md` | The transcript of that run, with what to read in it, and a run whose credential could not read the fleet identity plane. |
 
 ## Run it
@@ -69,13 +69,13 @@ without it. Give `catalog_check.py` the same file.
 | Exit | Means | What a scheduler does |
 |---|---|---|
 | 0 | the record is written and every call answered | nothing |
-| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing), the credential could not be obtained, with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name, or an error the script did not expect | fix the read; take no count from this run |
-| 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10), or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
+| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); or an error the script did not expect | fix the read; take no count from this run |
+| 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10); nothing is written | fix the invocation |
 
 These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
 census judges nothing, so it has no finding code of its own. A tool that reads `census.json`, as
-`catalog_check.py --census` does, takes it as a read only when its `exit` is 0, no fleet call failed and the lines it
-needs are there.
+`catalog_check.py --census` does, takes it as a read only when its `exit` is 0, no fleet call failed, each paged
+list's last call states it was read whole (`listed`) and the lines it needs are there.
 
 ### Before your estate has a realm
 
@@ -92,12 +92,18 @@ identity plane was not tried.
   endpoint, which searches and changes nothing. On each vCenter the script opens a session and closes it. With
   `--orgs-only` it calls VCF Automation only: on the reference estate, 31 reads of ten organizations on a provider
   bearer, with no VCF Operations credential set (2026-10-15, one run).
-- Every list is read to its end: the fleet's page by page until `pageInfo.totalCount`, VCF Automation's until
-  `pageCount`. Forced to a page size of one, the fleet's roles, API clients and API tokens and VCF Automation's
-  organizations each read one entry per call and the same entries as at the default size, none twice (2026-10-15,
-  one run on the reference estate, whose lists are shorter than one default page). An answer that comes back without
-  its list is a failed read (exit 3), never an empty list; on that run every list answer carried its list, the empty
-  ones included.
+- A list is complete only when it is read whole: the fleet's roles, API clients and API tokens page by page (page
+  from 0, `pageSize` in the query) and VCF Automation's organizations (page from 1), until the count of distinct
+  entries, a duplicate counted once by its id, equals the total the answer states (`pageInfo.totalCount`,
+  `resultTotal`). An answer without its list or without a stated total, a page that comes back empty or short before
+  the total, a page that adds no new entry, and a total that changes between pages are an unread list: the call is
+  marked, the run exits 3, and what was read so far never stands for the list. Each page call in the record carries
+  `listed`, the total stated and the distinct entries read, so a tool that reads the record can check the list was
+  read whole. Forced to a page size of one, the fleet's three lists and the organizations each read one entry per
+  call and the same entries as at the default size, none twice (2026-10-15, one run on the reference estate, whose
+  lists are shorter than one default page, made before the distinct count and the `listed` numbers were added);
+  more than a page, the shapes above and a page the server serves smaller than asked are held by the tests. On that
+  run every list answer carried its list, the empty ones included.
 - `--egress-metadata-url` sends one request per broker that is not a read: `POST .../iam/saml-metadata/validate`,
   which the contract describes as validating and parsing metadata. The script reads the brokers, realms and
   providers again after the requests and records any difference; on the reference run there was none.
@@ -143,11 +149,14 @@ the realm's name), `emergency_clients`
 in minutes, and its runway: `expires` and `days_left`, `last_used` and `days_since_used`, counted from `captured`,
 the moment of the read, so the record reads the same on any later day; `last_used` is the API's `lastUsedDate`, the
 date the token was last exchanged for a bearer; and `fingerprints` when the run had `FINGERPRINT_KEY_FILE`), `user_tokens` (API tokens held by people), `settings` (the fleet's token lifetimes in minutes),
-`organizations` (`type`, `sign_in`, and the `issuer` of an OIDC organization: `broker`, `entra` or `other`;
+`organizations` (`type`: `classic` or `all-apps` from `isClassicTenant`, or `type not read` when the list entry
+carried no such flag; `sign_in`; and the `issuer` of an OIDC organization: `broker`, `entra` or `other`;
 with `--orgs-only`, `broker` only for a host in `BROKER_HOSTS`),
 `vcenters` (the host each vCenter's default provider discovers its issuer at, and that host's broker kind), and
 `egress` when the option ran. `fleet`, `organizations` and `vcenters` hold what each plane answered, in the API's
-own field names; `calls` holds every request with its status; `sent` names every request that was not a read.
+own field names; `calls` holds every request with its status, a paged list's pages with `listed` (the total the
+answer stated and the distinct entries read so far) and a call that did not read with `shape`, the reason; `sent`
+names every request that was not a read.
 Every estate value is a placeholder: `{{host-N}}`, `{{id-N}}`, `{{name-N}}`, `{{org-N}}`, `{{domain-N}}`,
 `{{dn-N}}`, `{{role-N}}` (a custom role), `{{metadata-url-N}}`. The same value keeps the same placeholder
 throughout, so a realm named after its broker reads as that broker's host.

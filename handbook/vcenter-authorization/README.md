@@ -4,7 +4,7 @@ Companion to the chapter
 ([privatecloudarchitect.com/handbook/vcenter-authorization](https://privatecloudarchitect.com/handbook/vcenter-authorization)):
 one script that reads every permission on your vCenters and classifies it by how it behaves for someone
 signed in through the VCF identity broker, and three opt-in probes that settle the questions a read cannot.
-Standard library Python 3.10 or later, plus pyVmomi for the session read and the probes.
+Standard library Python 3.10 or later, plus pyVmomi for the session read, `--remove` and the probes.
 
 | File | What it is |
 |---|---|
@@ -20,7 +20,7 @@ export VC_PASSWORD_FILE=/path/to/password          # mode 0600
 export REALM_DOMAIN=<the realm's name>            # once the estate has a realm (before one, run with --no-realm); never a directory domain, nor CUSTOMER
 export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # required
 export LOCAL_DOMAIN=<your SSO domain>             # only if it is not vsphere.local; otherwise every local grant reads as another provider's
-export OTHER_DOMAINS=<another provider's domain>[,<another>]   # optional: domains you know are another provider's
+export OTHER_DOMAINS=<another provider's domain>[,<another>]   # domains you know are another provider's; optional for the census, stated (empty allowed) for --remove
 export TLS_VERIFY=false                            # only on a self-signed lab CA
 
 python3 authz.py                                   # the census, read-only
@@ -79,6 +79,7 @@ realm-spelled grant as another provider's and exited 0 (X-197).
 ```bash
 python3 authz.py --where-realm                     # each realm-spelled grant: permission id, principal, object, role, scope
 export VC_HOSTS=<the one vCenter that holds them>
+export OTHER_DOMAINS=<every other provider's domain, or nothing>   # stated: --remove trusts DIRECTORY_DOMAINS to name every directory
 python3 authz.py --remove <id>[,<id>...]           # the plan: each grant and the DELETE it would send; nothing is sent
 python3 authz.py --remove <id>[,<id>...] --execute # one DELETE per id, then the list read back
 ```
@@ -87,10 +88,19 @@ python3 authz.py --remove <id>[,<id>...] --execute # one DELETE per id, then the
 time and only on realm-spelled grants: it refuses, before anything is sent, an id that vCenter does not hold and an id
 that is not a realm-spelled grant (remove any other grant where it was made). With `--execute` it holds when every named
 grant is gone and no other grant moved on the read-back; a second run with the same ids is refused, because the ids are
-gone, so it is safe to repeat. It writes no record. Expected output, with the names replaced:
+gone, so it is safe to repeat. It writes no record.
+
+`--remove` trusts the domains you declare. A directory you left out of `DIRECTORY_DOMAINS` and typed as `REALM_DOMAIN`
+reads as the realm, so its working grants would read realm-spelled. Two guards stand before anything is sent: a
+`REALM_DOMAIN` equal to a domain you named is refused (exit 5), and `--remove` reads who is signed in on that vCenter
+first. A broker session carries the directory's name, so a live session spelled in `REALM_DOMAIN` shows that domain is
+one people sign in with, and a grant in it may apply to them: the removal is refused, plan and `--execute` alike, with
+nothing sent (exit 3), as it is when the session list cannot be read whole. A directory nobody from is signed in to at
+that moment passes both, so `--remove` runs only with `OTHER_DOMAINS` stated, empty when there is none, as your
+declaration that `DIRECTORY_DOMAINS` names every directory. Expected output, with the names replaced:
 
 ```text
-authz.py --remove on <vcenter>: 1 realm-spelled grant(s), printed here only
+authz.py --remove on <vcenter>: 1 realm-spelled grant(s), printed here only; no live session is spelled in REALM_DOMAIN
   permission <permission-id>: <realm>\<account> (USER) on Folder <folder-moid>, role NoAccess, object, not propagating
     DELETE /api/vcenter/authorization/permissions/<permission-id>
   DELETE <permission-id>: HTTP 204
@@ -106,10 +116,10 @@ The first that applies, so a scheduler reads one state from one number:
 | Exit | Means | Do |
 |---|---|---|
 | 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; or a probe that left residue | read the vCenter's permissions before anything else |
-| 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set; before a realm there is no such class) | name them with `--where-realm`, remove them with `--remove` |
-| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a permission list held no permission, the session list was not read, the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain (`NOT PLACED`), a probe could not run, or an error the script did not expect | nothing is known about what was not read: fix the read (or the spelling, or `OTHER_DOMAINS`) and run again |
+| 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, and never while a live session is spelled in it; before a realm there is no such class) | name them with `--where-realm`, remove them with `--remove` |
+| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a permission list held no permission, the session list was not read whole, the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run, or an error the script did not expect | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
 | 0 | nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held | nothing |
-| 5 | a usage error, found before anything is read (a missing or wrong argument or variable, a password file it cannot read, a `REALM_DOMAIN` equal to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, a Python older than 3.10), or the record refused because an estate value survived the scrub (nothing is written) | fix the invocation |
+| 5 | a usage error, found before anything is read (a missing or wrong argument or variable, a password file it cannot read, a `REALM_DOMAIN` equal to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, `--remove` among them, a Python older than 3.10), or the record refused because an estate value survived the scrub (nothing is written) | fix the invocation |
 
 The probes need a test user that is **not** an administrator, and a directory group it belongs to:
 
@@ -160,10 +170,12 @@ group carries its grant.
 ## Scope, stated plainly
 
 - The census is read-only. `--remove --execute` deletes only the realm-spelled grants you name by id, on one vCenter,
-  and reads the list back. The probes create a folder, a tag category and a tag, grant roles on those objects
-  for the length of one case, and remove everything they created; they never replace a permission that
-  already exists (vSphere keeps one per principal per object, so a principal that already holds one is
-  skipped and recorded as skipped).
+  and reads the list back. The probes need a test user that is not an administrator. `--probe-grants` and
+  `--probe-tags` create a folder (and a tag category and tag) and grant roles on them for the length of one case;
+  `--supervisor-vm` attaches a throwaway tag to the VM you name and tries grants on it as the administrator, removing
+  any it is given. Each removes every grant and object it made except the six probe roles, kept on purpose (below),
+  and never replaces a permission that already exists (vSphere keeps one per principal per object, so a principal
+  that already holds one is skipped and recorded as skipped).
 - `--remove` was run once, on one 9.1.1 vCenter, on a grant the run made on a folder it made and removed. The pre-realm
   path, which now runs with `--no-realm`, was run (in X-197, as `REALM_DOMAIN` left unset, before a run had to declare
   it) on an estate that has a realm, not on one without. An estate with no realm yet was not run.
@@ -173,7 +185,8 @@ group carries its grant.
   that runs a Supervisor held 12 grants of one domain no domain given placed, and the run exited 3 until that domain was
   named in `OTHER_DOMAINS`, then 0. Which product those grants belong to was not read in that run.
 - The refusal of a realm typed as a directory, another provider's or the local domain is the script's code and its
-  tests; no run was made with one.
+  tests; no run was made with one. So are `--remove`'s session guard and the census's `realmSignedIn`: no run was made
+  with a live session spelled in the realm, and the record's session read holds none.
 - Paging: each vCenter's own API metadata (vSphere API 9.0.0.0 onward) defines both lists as paged. A call that sets no
   iteration returns "only the first permissions that fit in a size defined by the service" (the role list reads the
   same), and a page size the client sets may be lowered by a service policy. On 2026-10-15, on the reference estate's
@@ -197,8 +210,9 @@ group carries its grant.
   local split carries one `local` class; the shipped `authz.json` is one of those. A vCenter that was not read carries
   only `error`.
 - `realmSpelling`: present when the run declared `--no-realm`, saying the realm-spelled class was not applicable.
-- `vcenters.<vc>.domainsNamedNothing`, `vcenters.<vc>.realmNamedNothing`: present on a vCenter the run could not place
-  (the domains given named no grant there, or the realm named none beside an unplaced domain); the run exited 3.
+- `vcenters.<vc>.domainsNamedNothing`, `vcenters.<vc>.realmNamedNothing`, `vcenters.<vc>.realmSignedIn`: present on a
+  vCenter the run could not place (the domains given named no grant there, the realm named none beside an unplaced
+  domain, or a live session there is spelled in the realm); the run exited 3.
 - `exit`: the run's exit code (a record written before the exit table carries none).
 - `vcenters.<vc>.reservedGroupGrants`: grants on `vcf_reserved_*` groups, by the role held (product roles by
   name, custom roles as `a custom role`) and scope. Object-scoped ones are the Supervisor's namespace grants.

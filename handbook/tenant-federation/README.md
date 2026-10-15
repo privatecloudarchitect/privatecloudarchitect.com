@@ -39,17 +39,17 @@ python3 org_federation.py --protocol oidc --org-type all-apps --prove
 python3 org_federation.py --protocol oidc --org-type all-apps --teardown --execute
 ```
 
-A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused an account write (403) that a provider bearer carried, so give every write here a provider bearer.
+A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused an account write (403) that a provider bearer carried, so give every write here a provider bearer. With both files set, the script uses the bearer.
 
 ## Exit codes
 
 | Exit | Means |
 |---|---|
 | 0 | done: the plan printed, or every step and check passed |
-| 1 | a check failed, or a call was refused while building, configuring, updating or tearing down; the record names which |
-| 2 | refused by what it read: a name this script did not create, no state file to tear down, no such organization, an organization not federated to `ENTRA_TENANT_ID`, a change its protocol does not take, a protocol or user-key switch (judged on what the organization stores and the users it holds, enabled or not), a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
-| 3 | a result not known: a credential refused before anything was read, a read a proof could not make (`--prove` and `--prove --org` only read, so a refused read leaves the result unknown), a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a record the scrub refused to write, or an error the script did not expect (never 1) |
-| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`), a missing environment variable or credential, a file that cannot be read, metadata that is not the tenant's or names no signing certificate, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
+| 1 | a check failed, or a write was refused while building, configuring, updating or tearing down; the record names which |
+| 2 | refused by what it read, with nothing sent: a name this script did not create, no state file to tear down, no such organization, an organization not federated to `ENTRA_TENANT_ID`, a change its protocol does not take, a switch of protocol, OIDC user key or SAML user-name claim (judged on what the organization stores and the users it holds, enabled or not), a settings write to a switched-off federation without `--enable`, a client secret Entra refused, a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
+| 3 | a result not known: a credential refused before anything was read, a read refused or a list not read to its end in any mode (`--prove` and `--prove --org` only read), Entra out of reach when asked about a new secret, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a record the scrub refused to write, or an error the script did not expect (never 1) |
+| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`), a missing environment variable or credential, a file that cannot be read, metadata that is not the tenant's or names no signing certificate, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
 assignments and permission grants, and groups, and sets a service principal's claims policy. On the reference
@@ -75,24 +75,38 @@ export VCFA_PROVIDER_BEARER_FILE=<file>    # a provider bearer: platform-identit
 export APP_CLIENT_ID=<the app's client id> APP_SECRET_FILE=<the secret the tenant handed over, mode 0600>   # OIDC
 # export METADATA_FILE=<the app's federation metadata>                                                     # SAML
 
-python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid \
-    --group member=<group> --group administrator=<group>            # the plan: what changes, what is imported
-python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid \
+python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid --enable \
+    --group member=<group> --group administrator=<group>            # the plan: each change, old -> new
+python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid --enable \
     --group member=<group> --group administrator=<group> --execute  # write, import, read every write back
 python3 org_federation.py --prove --org <org> --group member=<group> --group administrator=<group>
-python3 ../federation-operations/watch.py                            # with ORGS=<org>: the Entra side of each group
+export ENTRA_CLIENT_ID=<the tenant's read-only app> ENTRA_CLIENT_SECRET_FILE=<its secret, mode 0600>
+ORGS=<org> python3 ../federation-operations/watch.py                 # the Entra side of each imported group
 ```
 
 `--configure` writes the settings as a round trip, only when a field differs, and imports each `--group ROLE=NAME`
-with the role the organization type defines, resolved by name from the organization's own role list. It refuses
-(exit 2) a protocol or user-key switch, judged on what the organization stores and the users it holds whether or not
-its federation is switched on: a federation switched off during an incident still holds its user key, its SAML
-metadata and its OIDC or SAML users, and a write would switch it back on under the run's protocol and key, splitting
-or refusing those users. It also refuses an organization signed in through VCF single sign-on, settings stored for
-a provider other than `ENTRA_TENANT_ID`, a role key the organization type lacks (a classic organization has no
-auditor), and a named group the organization already holds under the other protocol or with other roles. An
-organization with nothing stored and no federated user is configured. A missing `APP_CLIENT_ID` over
-OIDC, or metadata that is not the tenant's, is a usage error (exit 5) and sends nothing. Over SAML without
+with the role the organization type defines, resolved by name from the organization's own role list. Its plan prints
+each changing field as `old -> new`, the values a rollback writes back by hand (the secret is never shown). Without
+`--user-key` it keeps the OIDC key the organization holds. It refuses (exit 2, nothing sent):
+
+- a switch of protocol, OIDC user key or SAML user-name claim under the users it keys, judged on what the organization
+  stores and the users it holds whether or not its federation is switched on. Over SAML a returning user is matched on
+  its user name, taken from the claim the organization's mapping names: a console-built organization that maps
+  another claim and holds SAML users is refused, since the write would refuse each user whose two values differ; with
+  no SAML user yet, the claim is written and the plan shows the old one;
+- a settings write to a federation that is switched off, unless `--enable` is given, which the plan shows as
+  `enabled: off -> on`. Without `--enable` a run writes no settings to it, so importing a group alone (the repair of a
+  renamed group) leaves the federation off. An organization that was never federated is switched off too, so its
+  first configuration takes `--enable`;
+- a new client secret Entra does not accept: before anything is written, the plan asks Entra's token endpoint for a
+  token with it, and a refusal is named (a Secret ID pasted where the Value belongs is named as such);
+- an organization signed in through VCF single sign-on, settings stored for a provider other than `ENTRA_TENANT_ID`, a
+  role key the organization type lacks (a classic organization has no auditor), and a named group the organization
+  already holds under the other protocol or with other roles.
+
+A missing `APP_CLIENT_ID` over OIDC, or metadata that is not the tenant's, is a usage error (exit 5) and sends
+nothing. Every list it reads (users, groups, roles) is read until its distinct items reach the total the platform
+states; a list read short is exit 3, never a short list. Over SAML without
 `METADATA_FILE` it prints the organization's own service-provider identifier and reply URL for the tenant's
 administrator, and stops. `--prove --org` reads the settings back against the plan for the protocol, type and user key
 the organization holds, every imported group's roles against the organization's own role list, each named group's
@@ -113,7 +127,10 @@ nothing; a switch to SAML and a switch to `preferred_username` were refused with
 passed every check. Run read-only on two standing organizations built earlier by other drivers, `--prove --org`
 failed one OIDC organization on its key refresh (every 24 hours, not one) and one SAML organization on its local
 administrator (none enabled holding Organization Administrator). The throwaway was removed with nothing left.
-`--configure` over SAML and on a classic organization was not run live.
+`--configure` over SAML and on a classic organization was not run live, and neither were `--enable`, the SAML
+user-name claim refusal, the secret check or a group import into a switched-off federation: the companion's tests hold
+them. Whether VCF Automation takes a group import while the organization's federation is switched off was not run; with
+only SAML on, it refused (403) an OIDC import of a name the organization held over SAML.
 
 ## Day 2: change an existing organization
 
@@ -121,8 +138,9 @@ administrator (none enabled holding Organization Administrator). The throwaway w
 the organization's settings, changes only the fields you name, prints the plan with the fields it would change, and
 with `--execute` writes the whole body back and reads every changed field back. When the organization already holds
 what you asked for, it writes nothing, records "nothing to change", reads the settings back and exits 0. It never
-touches Entra: the tenant's administrator rotates secrets and
-certificates on Entra ID, and this writes what the organization must hold.
+writes to Entra: the tenant's administrator rotates secrets and certificates on Entra ID, and this writes what the
+organization must hold. With `--secret` it first asks Entra's token endpoint for a token with the new secret, plan
+included, and a secret Entra refuses is not written (exit 2, nothing sent); Entra out of reach is exit 3.
 
 ```bash
 export VCFA_HOST=<automation-fqdn> ENTRA_TENANT_ID=<tenant-id>

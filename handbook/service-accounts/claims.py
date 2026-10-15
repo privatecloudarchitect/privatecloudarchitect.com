@@ -6,7 +6,9 @@ chapter teaches), then decodes the bearer's claims without verifying them (the d
 verification is the platform's job) and prints what the token says about its holder:
 
   issuer and audience         who minted it and for whom
-  the principal claims        a client id and no username, email, or user id claim is a machine; a person shows up as user@realm
+  the principal               prn_type, where the broker states it: USER a person, SERVICE a machine (an API client);
+                              without it, a person's claim (a user name, an email, a user id) names a person, and a
+                              token with neither is not determined (exit 3), never read as a machine
   issued at, expires at       the bearer's own lifetime, read off the token rather than assumed
   scopes and realm            what the mint was narrowed to
 
@@ -17,9 +19,10 @@ Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN_FILE; OPS_BROKER_HOST, the
        is not OPS_HOST; BROKER_TENANT, OPS_TLS_VERIFY optional)
        JWT_ENV (optional)  name of an env var holding a JWT to decode instead of minting one
 Use:   python3 claims.py          it takes no argument; --help prints this
-Exit:  0 claims printed
+Exit:  0 claims printed, the principal a PERSON or a CLIENT
        3 the mint failed (the broker did not trade the api-token for a bearer, or answered a bearer that is not a JWT),
-         or an error the script did not expect
+         the principal is not determined (no prn_type and no person's claim, or a prn_type other than USER or
+         SERVICE), or an error the script did not expect
        5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, OPS_API_TOKEN_FILE that cannot
          be read, JWT_ENV naming an empty variable or a value that is not a JWT, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
@@ -39,7 +42,7 @@ from datetime import datetime, timezone
 
 EXIT_UNREAD, EXIT_USAGE = 3, 5
 
-PRINCIPAL_KEYS = ("sub", "prn", "azp", "client_id", "cid")
+PRINCIPAL_KEYS = ("sub", "prn", "prn_type", "azp", "client_id", "cid")
 PERSON_KEYS = ("preferred_username", "username", "upn", "email", "eml", "user_id", "name", "user_name", "given_name")
 SCOPE_KEYS = ("scp", "scope", "scopes")
 
@@ -63,6 +66,23 @@ def decode(jwt):
     if not isinstance(header, dict) or not isinstance(claims, dict):
         raise NotAJwt("not a JWT (its header and claims must each decode to a JSON object)")
     return header, claims
+
+
+def principal_kind(claims):
+    """PERSON, CLIENT or None (not determined), and why. The broker's prn_type decides (USER a person's api-token,
+    SERVICE an API client's); without it a person's claim names a person, and an absent claim names nobody. A prn of
+    the form id@tenant decides nothing: an API client's bearer carried one too."""
+    person = [k for k in PERSON_KEYS if claims.get(k)]
+    held = claims.get("prn_type")
+    if isinstance(held, str) and held.upper() == "USER":
+        return "PERSON", ", ".join(["prn_type USER", *person])
+    if isinstance(held, str) and held.upper() == "SERVICE":
+        return "CLIENT", "prn_type SERVICE" + (f"; it also carries {', '.join(person)}" if person else "")
+    if held is not None:
+        return None, f"prn_type {held!r}, which names neither USER nor SERVICE"
+    if person:
+        return "PERSON", ", ".join(person)
+    return None, "no prn_type claim and no person's claim; a claim that is absent names no machine"
 
 
 def stamp(epoch):
@@ -135,14 +155,13 @@ def _run():
     for k in PRINCIPAL_KEYS:
         if k in claims:
             print(f"{k + ':':<10}{claims[k]}")
-    person = [k for k in PERSON_KEYS if claims.get(k)]
-    prn = str(claims.get("prn") or "")
-    if "@" in prn and prn not in person:
-        person.append("prn is user@realm")
-    if person:
-        print(f"principal: a PERSON ({', '.join(person)}): this bearer carries that person's rights, and a pipeline holding it dies with their account")
+    kind, why = principal_kind(claims)
+    if kind == "PERSON":
+        print(f"principal: a PERSON ({why}): this bearer carries that person's rights, and a pipeline holding it dies with their account")
+    elif kind == "CLIENT":
+        print(f"principal: a CLIENT ({why}): a machine identity, the shape automation should hold")
     else:
-        print("principal: a CLIENT (no username, email, or user id claim; prn is a client id): a machine identity, the shape automation should hold")
+        print(f"principal: not determined ({why})")
     for k in SCOPE_KEYS:
         if k in claims:
             print(f"{k + ':':<10}{claims[k]}")
@@ -161,6 +180,9 @@ def _run():
     other = sorted(k for k in claims if k not in PRINCIPAL_KEYS + PERSON_KEYS + SCOPE_KEYS + ("iss", "aud", "iat", "exp", "nbf", "jti", "realm", "tenant", "org", "tid", "context_name"))
     if other:
         print(f"other claims present: {', '.join(other)}")
+    if kind is None:
+        print("NOT DETERMINED: the claims do not say whether a person or a machine holds this bearer (exit 3)")
+        return EXIT_UNREAD
     return 0
 
 

@@ -29,9 +29,9 @@ Standard library only, except `--kubeconfig`, which needs PyYAML.
 
 | Exit | Means |
 |---|---|
-| 0 | the token is usable; with `--kubeconfig`, every token's expiry was read and none has expired |
-| 1 | it is expired or inside the clock-skew margin; with `--kubeconfig`, any one of them is, and this comes first |
-| 3 | undetermined: it is not a JWT, or it carries no `exp` claim, so nothing here can say when it expires (with `--kubeconfig`, a token like that and none expired); or an error the script did not expect |
+| 0 | the token is usable; with `--kubeconfig`, every credential was judged and none has run out: an exec plugin renews itself, and each token's, token file's and client certificate's end date was read |
+| 1 | it is expired or inside the clock-skew margin; with `--kubeconfig`, any credential has run out, and this comes first |
+| 3 | undetermined: it is not a JWT, or it carries no `exp` claim, so nothing here can say when it expires; with `--kubeconfig`, and none run out, a credential it could not judge, which it names (an opaque token, a certificate or token file it could not read, an auth-provider entry, a user name and password, an entry with none of these), or a kubeconfig that declares no users; or an error the script did not expect |
 | 5 | a usage error: no token given, a file it cannot read, a kubeconfig it cannot read or that is not one, PyYAML missing for `--kubeconfig`, an argument it does not take, a Python older than 3.10 |
 
 0, 3 and 5 mean what they mean on every identity companion; 1 is this script's own finding. A token with no `exp`
@@ -56,14 +56,20 @@ credential you are about to use rather than merely inspect.
 
 ## `--kubeconfig`
 
-Classifies every credential by whether it can renew itself:
+Classifies every credential by whether it can renew itself, and reads the end of each one that cannot:
 
 - **exec plugin**: renews itself, possibly by prompting, which is fine at a terminal and a hang in a
   script.
-- **client certificate**: no login at all. These commonly outlive every token around them.
-- **static token**: has an expiry and **nothing renews it**. This is the one that fails an hour
-  after it started working. A static token whose expiry cannot be read (opaque, or no `exp` claim)
-  is listed as UNDETERMINED, and the run exits 3 unless another token has already expired.
+- **client certificate**: no login at all, and an end date of its own: the run reads the certificate's
+  `notAfter` (from `client-certificate-data`, or the file `client-certificate` names) and says how long it has.
+  It reads the date only; it does not say the certificate is trusted.
+- **static token**, inline or in a `tokenFile`: has an expiry and **nothing renews it**. This is the one that fails
+  an hour after it started working.
+
+A credential whose end cannot be read is listed as UNDETERMINED and named again under `NOT JUDGED`: an opaque token,
+a token with no `exp` claim, a certificate or token file it cannot read, an `auth-provider` entry, a user name and
+password, or an entry with none of these. The run then exits 3 unless another credential has already run out, and a
+kubeconfig that declares no users exits 3 as well: a run that judged nothing has nothing to pass.
 
 It reads the file directly rather than shelling out, because `kubectl config view` redacts token
 values and would report nothing at all wrong.

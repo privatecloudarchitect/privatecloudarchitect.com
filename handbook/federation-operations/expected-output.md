@@ -4,12 +4,13 @@ The reference estate, 2026-10-12 (UTC), four throwaway organizations: an All App
 OIDC, and one of each over SAML, all federated to one Entra ID tenant. Run with `--redact`, so the names are
 placeholders. Exit 1: warnings, nothing broken now. Each transcript on this page is a run of the date it gives; the
 lines this version prints differently (the `read:` line of a run without the tenant's app, the closing count of
-organizations judged, and the line for a run that judged none) are shown as it prints them now.
+organizations judged, the line for a run that judged none, the `key_refresh` warning's bound, and an organization left
+out because its federation is off) are shown as it prints them now.
 
 ```
 $ ORGS=<the four organizations> python3 watch.py --redact
 {{org-1}}  (oidc, all-apps)
-  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
   OK      keys_held       all 6 published keys are held
   OK      pkce            PKCE is off
   WARN    secret_end      the secret the organization holds ends in 26.0 days: rotate with overlap
@@ -25,7 +26,7 @@ $ ORGS=<the four organizations> python3 watch.py --redact
   WARN    break_glass     no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it
 
 {{org-3}}  (oidc, classic)
-  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
   OK      keys_held       all 6 published keys are held
   OK      pkce            PKCE is off
   WARN    secret_end      the secret the organization holds ends in 23.2 days: rotate with overlap; 1 other listed secret(s) already expired
@@ -47,7 +48,8 @@ $ ORGS=<the four organizations> python3 watch.py --redact
 
 - **`key_refresh` warns on both OIDC organizations.** They refresh Entra's keys every 24 hours, the interval they
   were built with. Every key Entra publishes is held today (`keys_held`), so sign-in works; but when Entra rolls a
-  key in an emergency, sign-in stops until the next refresh, which on this setting can be a day away. The chapter's
+  key in an emergency, sign-in stops until the next successful refresh, at most the interval plus an hour after the
+  last one: a day and an hour on this setting. The chapter's
   practice is one hour with strategy ADD. The run was taken minutes after an hourly refresh attempt that left one
   organization's last success a full day old; that is on schedule (the refresh waits until a full interval has
   passed, and the next hourly run did refresh it), so the check warns on the interval and does not fail on the age.
@@ -73,7 +75,7 @@ SAML. Exit 3: the rollover checks were not run, which is never a pass.
 ```
 $ ORGS=<the two organizations> python3 watch.py --redact
 {{org-1}}  (oidc, all-apps)
-  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
   OK      keys_held       all 6 published keys are held
   OK      pkce            PKCE is off
   UNKNOWN secret_end      rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
@@ -114,7 +116,7 @@ not hold the exit at 3.
 ```
 $ ENTRA_TENANT_ID=<the tenant's domain> ORGS=<the two organizations> python3 watch.py --redact --provider-only --tenant-attested 2026-08-31
 {{org-1}}  (oidc, all-apps)
-  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
   OK      keys_held       all 6 published keys are held
   OK      pkce            PKCE is off
   UNKNOWN secret_end      rollover checks not run: owed by the tenant: its administrator runs them and reports the dates (a declared provider-only run)
@@ -198,7 +200,7 @@ the watch's own credential
   OK      own_token       the watch's own provider API token ends in 90.0 days
 
 {{org-1}}  (oidc, all-apps)
-  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
   OK      keys_held       all 6 published keys are held
   OK      pkce            PKCE is off
   WARN    secret_end      the secret the organization holds ends in 23.2 days: rotate with overlap
@@ -220,10 +222,11 @@ the watch's own credential
   bearer in the run that followed. The token was minted the way platform-identity's chapter shows (`/oauth/provider/register`,
   then the jwt-bearer exchange) and revoked after the run; its refresh then answered 400 `invalid_grant`. The client
   registration the mint made stays: the API reference read offers no call to delete it.
-- **`own_token` is the token's end date, 90 days after it was minted.** Inside `WARN_DAYS` (30 by default) it warns,
-  exit 1: mint the next token, swap the 0600 file, run the watch once on it, revoke the old one. Run again without
-  `VCFA_PROVIDER_TOKEN_NAME`, the watch read the same end date. Set the name all the same: a user that holds two refresh
-  tokens, during a rotation for example, leaves the end date undetermined without it (exit 3).
+- **`own_token` is the token's end date, read from the provider's token list (90 days after it was minted on the reference run).** Inside `WARN_DAYS` (30 by default) it warns,
+  exit 1: mint the next token under a new name, set `VCFA_PROVIDER_TOKEN_NAME` to that name and swap the 0600 file, run
+  the watch once on it, revoke the old one. Run again without `VCFA_PROVIDER_TOKEN_NAME`, the watch read the same end
+  date. Set the name all the same: during a rotation the user holds two refresh tokens, and without the name the end
+  date is undetermined (exit 3).
 
 ## A run that judges nothing
 
@@ -233,7 +236,16 @@ organizations have no federation switched on, or the tenant's only organization 
 ```
 $ python3 watch.py --redact
 
+{{off-1}}  (off, all-apps)
+  OFF     neither OIDC nor SAML is on (federation switched off, or signed in through VCF single sign-on): left out and not judged; name it in ORGS to read it
+
+{{off-2}}  (off, all-apps)
+  OFF     neither OIDC nor SAML is on (federation switched off, or signed in through VCF single sign-on): left out and not judged; name it in ORGS to read it
+
 READ    the run judged no organization (2 listed; 2 with neither OIDC nor SAML on (federation switched off, or signed in through VCF single sign-on), left out): check VCFA_HOST, the credential and ORGS; a run that judges nothing is never a pass
 
 0 organization(s), 0 judged; exit 3; record written with every estate value replaced
 ```
+
+An organization left out this way is printed as `OFF` in every run, beside the organizations that were judged, so a
+federation switched off during an incident is never silent: without `--redact` it carries its name.

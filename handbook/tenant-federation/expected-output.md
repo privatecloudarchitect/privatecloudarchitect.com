@@ -92,20 +92,79 @@ A round trip of a SAML user's record is a write, so --prove sends none. Where it
 - **The local administrator** fails on this organization as it did on the earlier read: it has none enabled holding
   Organization Administrator.
 
-## A switched-off federation is not rewritten
+## A switched-off federation stays off, and keeps its key
 
 `--configure --org` judges a switch on what the organization stores and the users it holds, enabled or not. On an
 organization whose OIDC federation, keyed on `preferred_username`, was switched off, a run keyed on `oid` stops before
-any write (the lines below are the companion's own message, shown by its tests; no live run has made this shape):
+any write. The transcripts in this section are the companion's own output on the shapes its tests hold; no live run
+has made them.
 
 ```
 $ python3 org_federation.py --configure --org <org> --protocol oidc --user-key oid --execute
-refused: the organization keys its users on preferred_username in the OIDC settings it holds, enabled or not: move a tenant to another key through a new organization
+refused: the organization keys its users on preferred_username in the OIDC settings it holds, enabled or not: run --configure with --user-key preferred_username, or without --user-key, to keep it; a move to another key goes through a new organization
 ```
 
 An organization with SAML switched off, its metadata or its SAML users still held, is refused a move to OIDC the same
-way ("the organization holds SAML metadata and SAML users, enabled or not"); an organization with nothing stored and
-no federated user is configured. Exit 2, and nothing is sent.
+way ("the organization holds SAML metadata and SAML users, enabled or not"). Exit 2, and nothing is sent.
+
+A switched-off federation is also never switched back on by accident. Without `--enable`, a run writes no settings to
+it. Importing a renamed group's new name, the repair federation-operations teaches, sends the import alone:
+
+```
+$ python3 org_federation.py --configure --org <org> --protocol oidc --group member=<the new name> --execute
+  plan: read  {'protocol': 'OIDC', 'org_type': 'all-apps', 'user_key': 'oid, the key it holds', 'settings_to_change': [], 'groups_to_import': ['Organization User'], 'groups_already_held': 0}
+  ...
+  settings left as stored: nothing to change, and the federation stays switched off: nothing written
+  group imported with its role: 201  {'role': 'Organization User', 'providerType': 'OAUTH'}
+```
+
+When a setting differs, the run is refused until `--enable` is given, and the plan then shows the switch:
+
+```
+$ python3 org_federation.py --configure --org <org> --protocol oidc --execute
+  plan: read  {..., 'settings_to_change': ['maxClockSkew'], ...}
+    maxClockSkew: 300 -> 60
+refused: the organization's OIDC federation is switched off (enabled: off), and this run would write its settings (maxClockSkew): add --enable to write them and switch it on (enabled: off -> on). Without --enable, --configure writes no settings to a switched-off federation, so an import alone leaves it off
+
+$ python3 org_federation.py --configure --org <org> --protocol oidc --enable
+  plan: read  {..., 'settings_to_change': ['enabled', 'maxClockSkew'], ...}
+    enabled: off -> on
+    maxClockSkew: 300 -> 60
+```
+
+Each line under the plan is a field the write changes, as `old -> new`: the values a rollback writes back by hand.
+
+## A SAML organization's user-name claim
+
+Over SAML the organization matches a returning user on its user name, from the claim its mapping names. A console-built
+organization that maps another claim and holds SAML users is refused, enabled or not:
+
+```
+$ METADATA_FILE=<the app's metadata> python3 org_federation.py --configure --org <org> --protocol saml --execute
+refused: the organization matches its SAML users on the user-name claim http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn, enabled or not, and this run would write http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name: a returning user whose two values differ would be refused. --update --metadata changes the metadata alone; a move to another claim goes through a new organization
+```
+
+With no SAML user yet, the claim is written, and the plan keeps the old one on record:
+
+```
+  plan: read  {'protocol': 'SAML', 'org_type': 'all-apps', 'user_key': None, 'settings_to_change': ['samlAttributeMapping.userNameAttributeName'], ...}
+    samlAttributeMapping.userNameAttributeName: http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn -> http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name
+```
+
+`--prove --org` judges such an organization's claim as held, as it judges an OIDC organization's key, so it does not
+fail the organization on the claim its users are matched on.
+
+## A secret Entra refuses is not written
+
+A new client secret (`APP_SECRET_FILE`, or `NEW_SECRET_FILE` for `--update --secret`) is proven at Entra's token
+endpoint before anything is written, in the plan too. A Secret ID pasted where the Value belongs:
+
+```
+refused: the secret in APP_SECRET_FILE was not written: Entra refused it (AADSTS7000215), and it is shaped like a Secret ID, a GUID, not the secret's Value: ask the tenant's administrator for the Value, which Entra shows once, when the secret is added. Nothing was sent to VCF Automation
+```
+
+Exit 2. A secret Entra refuses with the same code for another reason is asked again for up to two minutes, since Entra
+refused a secret it had just added for some seconds; Entra out of reach is exit 3, and nothing is written either way.
 
 ## Day 2: nothing to change
 
@@ -166,8 +225,9 @@ $ python3 org_federation.py --protocol oidc --org-type all-apps --execute
 not run: --execute, --prove and --teardown need VCFA_HOST, ORG, ENTRA_TENANT_ID, ENTRA_CLIENT_ID and a provider credential (VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE) (see the header); exit 5
 ```
 
-The exit codes a script around it reads: 0 done, 1 a check failed or a call was refused while building, configuring,
-updating or tearing down, 2 refused by what it read (a name it did not create, a protocol or key switch judged on what
-the organization stores, enabled or not, an organization it cannot find), 3 a result not known (a credential refused
-before anything was read, a read a proof could not make, a record the scrub refused, an error it did not expect), 5 not
-run as asked.
+The exit codes a script around it reads: 0 done, 1 a check failed or a write was refused while building, configuring,
+updating or tearing down, 2 refused by what it read, with nothing sent (a name it did not create, a protocol, key or
+SAML user-name claim switch judged on what the organization stores, enabled or not, a settings write to a switched-off
+federation without `--enable`, a secret Entra refused, an organization it cannot find), 3 a result not known (a
+credential refused before anything was read, a read refused or a list not read to its end, Entra out of reach, a record
+the scrub refused, an error it did not expect), 5 not run as asked.

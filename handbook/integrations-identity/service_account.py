@@ -25,6 +25,12 @@ an account that file records with the same client id, so a mistyped name, or an 
 is refused before anything is sent. A teardown of an account that is not there removes nothing and exits 0, so it is
 safe to re-run.
 
+Every list is read whole: the organization list and the account list are read page by page until the items counted
+once each (by id) reach the total the answer states (resultTotal). A page refused, an answer with no values list or no
+total, a total that changes between pages, a page that adds nothing new, or pages that end before the total is reached,
+is a list not read (exit 3), never a shorter or an empty one: a teardown that could not read the whole list revokes and
+deletes nothing, and a create that could not read it registers nothing.
+
 Env:  VCFA_HOST                           VCF Automation FQDN (required)
       VCFA_PROVIDER_BEARER_FILE           a provider bearer (mode 0600), minted just before the run as the platform-identity
                                           chapter's plate 04, "Your provider bearer", shows. The reference runs sent every
@@ -45,13 +51,17 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       1 the run did not hold: a write was refused, or the read-back was not what was asked (the account active, its
         bearer holding exactly the role, the stored token refreshing; for a teardown, no account left and the revoked
         token refused)
-      3 a read failed or is undetermined: the organization or the account list could not be read (any page of it, or an
-        answer without its list), the read-back or the residue could not be read back, the provider's credential was not traded for a bearer, or an
-        error the script did not expect
+      3 a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer
+        without its list or its total, a total that changed between pages, a page that added nothing new, or pages
+        that end before the total they state), the read-back or the residue could not be read back, the provider's
+        credential was not traded for a bearer, or an error the script did not expect
       0 the plan printed, or the run held on read-back
       5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
-        exists, with --execute a provider credential file that cannot be read or is empty), a Python older than 3.10,
-        or the record refused because an estate value survived the scrub (nothing is written)
+        exists, with --execute a provider credential file that cannot be read or is empty), or a Python older than
+        3.10; nothing is written
+      A record refused because an estate value survived the scrub is not written, and never hides the run's result:
+      the run's code stands when it is 1, 2 or 3, and a run that held exits 3 (its writes were made; the record was not
+      written).
 """
 
 from __future__ import annotations
@@ -161,8 +171,8 @@ def register_body(name: str, role: str, software_id: str = "<a new UUID>") -> di
 
 def create_calls(name: str, role: str) -> list[dict]:
     return [
-        {"method": "GET", "path": "/cloudapi/1.0.0/orgs?filter=name=={org}", "body": None},
-        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}  (in the organization: refused if present)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=128  (every page, to the stated total)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=128  (in the organization, every page: refused if present)", "body": None},
         {"method": "POST", "path": "/oauth/tenant/{org}/register", "body": register_body(name, role)},
         {"method": "POST", "path": "/oauth/tenant/{org}/device_authorization", "body": {"client_id": "<from the register>"}},
         {"method": "POST", "path": "/cloudapi/1.0.0/deviceLookup/grant  (in the organization)", "body": {"userCode": "<from the device authorization>"}},
@@ -173,48 +183,87 @@ def create_calls(name: str, role: str) -> list[dict]:
 
 def teardown_calls() -> list[dict]:
     return [
-        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}  (in the organization)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=128, then serviceAccounts?filter=name=={name}  (every page, to the stated total)", "body": None},
         {"method": "POST", "path": "/cloudapi/1.0.0/serviceAccounts/{id}/revoke", "body": {}},
         {"method": "POST", "path": "/oauth/tenant/{org}/token  (refresh grant with the revoked token, with and without client_id)", "body": None},
         {"method": "DELETE", "path": "/cloudapi/1.0.0/serviceAccounts/{id}", "body": None},
-        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}  (residue, until it is empty)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=128  (residue, until it is read empty)", "body": None},
         {"method": "POST", "path": "/oauth/tenant/{org}/token  (the same refresh grant again, after the delete)", "body": None},
     ]
 
 
 # ── the reads every run makes ────────────────────────────────────────────────────────────────────────────────────
+PAGE_SIZE = 128   # the largest page VCF Automation's cloudapi lists take; pages count from 1
+MAX_PAGES = 10000
+
+
+def _shape(vcfa: Vcfa, why: str) -> None:
+    """Mark the last call's record with why its answer was not a read, so the report says what was short."""
+    if vcfa.calls and isinstance(vcfa.calls[-1], dict):
+        vcfa.calls[-1]["shape"] = why
+
+
+def vcfa_pages(vcfa: Vcfa, path: str, shown: str, org_urn: str | None = None,
+               accept: str = CLOUDAPI) -> list[dict] | None:
+    """Every page of one VCF Automation cloudapi list, read until the items counted once each, by id, reach the total
+    the answer states (resultTotal). None, never a shorter list, when a page is refused, an answer carries no `values`
+    list or no total, the total changes between pages, an item carries no id, a page adds no item not already read,
+    more distinct items come back than the total states, or a page comes back empty or short before the total is
+    reached: a list read in part is not a list, and a teardown that trusted one could leave an account alive. A row
+    repeated on a later page (the list moved under the read) is counted once."""
+    found: dict[str, dict] = {}
+    total: int | None = None
+    sep = "&" if "?" in path else "?"
+    for page in range(1, MAX_PAGES + 1):
+        query = f"page={page}&pageSize={PAGE_SIZE}"
+        status, answer = vcfa.call("GET", f"{path}{sep}{query}", f"{shown}{sep}{query}", org_urn=org_urn, accept=accept)
+        if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get("values"), list):
+            if status == 200:   # a 200 that lists nothing read nothing
+                _shape(vcfa, "no values list in the answer")
+            return None
+        stated = answer.get("resultTotal")
+        if not isinstance(stated, int) or isinstance(stated, bool) or stated < 0:
+            _shape(vcfa, "no total in the answer (resultTotal), so the list cannot be known whole")
+            return None
+        if total is not None and stated != total:
+            _shape(vcfa, f"the total moved from {total} to {stated} between pages")
+            return None
+        total = stated
+        rows = answer["values"]
+        if any(not isinstance(r, dict) or not r.get("id") for r in rows):
+            _shape(vcfa, "an item without an id, which cannot be counted once")
+            return None
+        before = len(found)
+        for r in rows:
+            found.setdefault(str(r["id"]), r)
+        if len(found) == total:
+            return list(found.values())
+        if len(found) > total:
+            _shape(vcfa, f"{len(found)} distinct items where the answer states {total}")
+            return None
+        if len(rows) < PAGE_SIZE or len(found) == before:
+            _shape(vcfa, f"the pages ended at {len(found)} of the {total} the answer states")
+            return None
+    _shape(vcfa, f"more than {MAX_PAGES} pages")
+    return None
+
+
 def org_lookup(vcfa: Vcfa, org: str) -> tuple[int, str | None]:
-    """The organization list's status, and the organization's URN when exactly one answers to the name."""
-    status, answer = vcfa.call("GET", f"/cloudapi/1.0.0/orgs?filter={urllib.parse.quote('name==' + org)}",
-                               "/cloudapi/1.0.0/orgs?filter=name=={org}")
-    if status == 200 and not (isinstance(answer, dict) and isinstance(answer.get("values"), list)):
-        if isinstance(vcfa.calls[-1], dict):   # an answer that lists nothing is not a read
-            vcfa.calls[-1]["shape"] = "no values list in the answer"
+    """200 and the organization's URN when exactly one answers to the name; 200 and None when the list, read whole,
+    holds no such organization (or more than one); 0 and None when the list was not read whole."""
+    rows = vcfa_pages(vcfa, f"/cloudapi/1.0.0/orgs?filter={urllib.parse.quote('name==' + org)}",
+                      "/cloudapi/1.0.0/orgs?filter=name=={org}")
+    if rows is None:
         return 0, None
-    rows = answer.get("values") if status == 200 else []
-    return status, (rows[0].get("id") if status == 200 and len(rows) == 1 else None)
-
-
-PAGE_SIZE = 128   # the largest page VCF Automation's cloudapi lists take; pages count from 1, to the answer's pageCount
+    return 200, (str(rows[0]["id"]) if len(rows) == 1 else None)
 
 
 def accounts(vcfa: Vcfa, urn: str, name: str) -> list[dict] | None:
-    """The organization's service accounts by that name, every page of the filtered list. None, never a shorter list,
-    when a page is refused or answers with no list: an account on a page not read could be one a teardown leaves."""
-    out: list[dict] = []
-    for page in range(1, 10001):
-        status, answer = vcfa.call(
-            "GET", f"/cloudapi/1.0.0/serviceAccounts?filter={urllib.parse.quote('name==' + name)}&page={page}&pageSize={PAGE_SIZE}",
-            f"/cloudapi/1.0.0/serviceAccounts?filter=name=={{name}}&page={page}&pageSize={PAGE_SIZE}", org_urn=urn,
-            accept=ACCOUNTS_ACCEPT)
-        if status != 200 or not isinstance(answer, dict) or not isinstance(answer.get("values"), list):
-            if status == 200 and isinstance(vcfa.calls[-1], dict):
-                vcfa.calls[-1]["shape"] = "no values list in the answer"
-            return None
-        out += [a for a in answer["values"] if isinstance(a, dict)]
-        if page >= (answer.get("pageCount") or 1):
-            return [a for a in out if a.get("name") == name]
-    return None
+    """The organization's service accounts by that name, from the filtered list read whole. None, never a shorter
+    list, when the list was not read whole: an account on a page not read could be one a teardown leaves."""
+    rows = vcfa_pages(vcfa, f"/cloudapi/1.0.0/serviceAccounts?filter={urllib.parse.quote('name==' + name)}",
+                      "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}", org_urn=urn, accept=ACCOUNTS_ACCEPT)
+    return None if rows is None else [a for a in rows if a.get("name") == name]
 
 
 def shape(rows: list[dict]) -> dict:
@@ -636,15 +685,25 @@ def _run(argv: list[str] | None = None) -> int:
         print(f"could not start: {e}", file=sys.stderr)
         return EXIT_UNREAD
     record["exit"] = teardown(vcfa, a, record) if a.teardown else create(vcfa, a, record)
+    return write_record(record, given, a.redact, os.environ.get("OUT", "service_account.json"))
+
+
+def write_record(record: dict, given: list[tuple[str, str]], redact: bool, out: str) -> int:
+    """Print the run, scrub the record and write it; refuse to write one in which an estate value survived. A record
+    refused for a surviving value never hides what the run did: its code stands when it is 1, 2 or 3, and a run that
+    held exits 3, because its writes were made and the record that shows them was not written."""
     table = estate_values(record, [(v, k) for v, k in given if v])
     clean = scrub(record, table)
     left = leaks(clean, table)
-    out = os.environ.get("OUT", "service_account.json")
-    if not (left and a.redact):
-        print("\n".join(report(clean if a.redact else record)))
+    if not (left and redact):   # a redacted print with a surviving value would print that value
+        print("\n".join(report(clean if redact else record)))
     if left:
-        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub", file=sys.stderr)
-        return EXIT_USAGE
+        code = record["exit"] if record["exit"] in (EXIT_NOT_HELD, EXIT_REFUSED, EXIT_UNREAD) else EXIT_UNREAD
+        why = ("the run's own code stands" if code == record["exit"]
+               else "the run held and its writes were made, but the record that shows them was not written")
+        print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub; {out} not written; exit {code}: "
+              f"{why}", file=sys.stderr)
+        return code
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{out} written with every estate value replaced")

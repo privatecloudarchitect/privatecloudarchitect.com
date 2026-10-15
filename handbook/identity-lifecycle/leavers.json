@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-15T08:32:54Z",
+ "captured": "2026-10-15T17:45:30Z",
  "mode": "report",
  "tenant": "{{id-1}}",
  "organizations": [
@@ -319,6 +319,23 @@
  "unreadable": [],
  "federated_elsewhere": 3,
  "sent": [],
+ "switched_off": [
+  {
+   "org": "{{org-5}}",
+   "enabled_federated": 0,
+   "federated_tokens": 0
+  },
+  {
+   "org": "{{org-6}}",
+   "enabled_federated": 0,
+   "federated_tokens": 0
+  },
+  {
+   "org": "{{org-7}}",
+   "enabled_federated": 0,
+   "federated_tokens": 0
+  }
+ ],
  "summary": {
   "keep": 7,
   "leaver": 3,
@@ -336,6 +353,10 @@
   "name_in_use_again": 0,
   "acknowledged": 0,
   "flagged": 1,
+  "credential_unread": 0,
+  "credential_flagged": 1,
+  "switched_off": 3,
+  "switched_off_unjudged": 0,
   "per_org": [
    {
     "org": "{{org-1}}",
@@ -401,6 +422,14 @@
     "direct_local": 0
    }
   ]
+ },
+ "credential": {
+  "kind": "provider API token",
+  "warn_days": 30,
+  "name": "{{name-1}}",
+  "ends": "2026-11-04T22:31:54Z",
+  "days_left": 20.2,
+  "flag": "credential-ends: this run's provider API token ends 2026-11-04, in 20.2 days, inside WARN_DAYS (30): mint its successor, point VCFA_PROVIDER_REFRESH_TOKEN_FILE at its file and VCFA_PROVIDER_TOKEN_NAME at its name (the user owns both until the old one goes), run once on it, and revoke this one"
  },
  "exit": 4,
  "calls": [
@@ -540,6 +569,42 @@
    "plane": "vcf-automation",
    "method": "GET",
    "path": "/api/admin/org/{{id-34}}/settings/federation",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
    "status": 200
   },
   {
@@ -972,6 +1037,18 @@
    "plane": "graph",
    "method": "POST",
    "path": "/users/{{id-46}}/checkMemberGroups",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/sessions/current",
+   "status": 200
+  },
+  {
+   "plane": "vcf-automation",
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
    "status": 200
   }
  ]

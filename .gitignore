@@ -3,3 +3,16 @@ __pycache__/
 .DS_Store
 # companion state files (a client or organization a run created; no secret, but the operator's own)
 *.state.json
+# credentials the handbook's pages and READMEs write as files (mode 0600): keep them outside the clone; git ignores
+# these names in case one lands inside it anyway
+ops-api-token
+*-api-token
+refresh-token
+*-refresh-token
+*-token
+*-token-new
+*.token
+bearer
+*-bearer
+*-bearer-header
+fingerprint.key

@@ -21,6 +21,7 @@ With no `--execute` it prints every call and body and sends nothing. Exit 0.
 ```
 $ python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43200 --access-token-ttl 60
 Create plan for API client backup-01 on operations.example.net:
+  in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients
          {"clientDescription": "an integration's own identity", "clientId": "backup-01", "clientName": "backup-01"}
   PUT    /api/fleet-management/iam/ssorealms/{realm}/principals/{client uuid}/roles
@@ -79,11 +80,12 @@ client, with other lifetimes for the new token so the read-back shows which toke
 ```
 $ python3 api_client.py --client-id backup-01 --rotate --api-token-ttl 2880 --access-token-ttl 60
 Rotation plan for API client backup-01 on operations.example.net:
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)
+  in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query, ?page=N&pageSize=50 to the stated total: the client and the tokens it holds
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens
          {"accessTokenTtl": 60, "apiClientId": "backup-01", "apiTokenTtl": 2880, "tokenName": "backup-01-token-<UTC stamp>", "tokenType": "API_CLIENT"}
   POST   /acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (every page; read back: the new token active beside the old)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query, every page; read back: the new token active beside the old
   then: the new token to <--token-file> (mode 0600, never printed); nothing is deleted: point the integration at the new token, run one job, then --retire-old
 
 plan only: nothing was sent (--execute sends it)
@@ -114,11 +116,12 @@ api_client_overlap.json written with every estate value replaced
 ```
 $ python3 api_client.py --client-id backup-01 --retire-old --old-token-file <path>
 Retirement plan for API client backup-01 on operations.example.net:
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query  (every page: the client and the tokens it holds)
+  in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query, ?page=N&pageSize=50 to the stated total: the client and the tokens it holds
   POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token, before the delete)
   DELETE /api/fleet-management/iam/ssorealms/{realm}/api-tokens/{token id}  (each token older than the newest)
   POST   /acs/t/{broker tenant}/token at the broker  (with --old-token-file: the old token again, expected refused)
-  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query  (every page; read back: one token left)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query, every page; read back: one token left
   only for a client the state file records, and never on the client's own token; refused while it holds one token, or when its newest is not the one this script issued last
 
 plan only: nothing was sent (--execute sends it)
@@ -201,7 +204,7 @@ api_client_instance.json written with every estate value replaced
 `api_client.py` runs on your own VCF Operations API token, never an integration's: the token of an API client of your own
 holding VCF Administrator, made in the console (**Manage ▸ Fleet Management ▸ Identity & Access ▸ VCF SSO Overview**, the
 broker that holds your realm, **API Access ▸ API Clients ▸ Create**, then against that client **⋮ ▸ Generate API
-Token**), in a file of mode 0600 named in `OPS_API_TOKEN_FILE`. The reference estate, 2026-10-15:
+Token**), in a file of mode 0600 outside this clone, named in `OPS_API_TOKEN_FILE`. The reference estate, 2026-10-15:
 
 - **The fleet's token call names a client.** Asked for a person's own token, `tokenType` `USER` with no `apiClientId`,
   by that person, it answered HTTP 400 with `apiClientId` "must not be blank", and made nothing.
@@ -209,8 +212,10 @@ Token**), in a file of mode 0600 named in `OPS_API_TOKEN_FILE`. The reference es
   token set to 1,440 and 30 minutes, traded for a bearer that lived 30 minutes. On that token the script made another
   throwaway client and removed it, below; then the administrator client was removed on the token that made it. No
   client and no token was left.
-- **Every list is read to its end.** The calls now name their page. The fleet's default page is 50, and asked for 500 it
-  answered with 50; a page of one at a time read the same clients and tokens as one page.
+- **Every list is read whole.** The calls name their page. The fleet's default page is 50, and asked for 500 it
+  answered with 50; a page of one at a time read the same clients and tokens as one page. A list counts as read only
+  when its items, counted once each by id, reach the total the answer states; otherwise the run exits 3 and writes
+  nothing on it.
 
 The create and the teardown on the administrator client's token, `--redact`, as the script printed them:
 
@@ -245,7 +250,8 @@ exit 0
 
 - **Signed in as another API client.** The run was on the administrator client's token, not the client it removed, so
   the teardown went ahead. Run on the removed client's own token, it is refused before any delete (section 5).
-- **The transcripts above it predate the paging,** and show each query's path without its page.
+- **The transcripts above it predate the paging,** and show each query's path without its page. They also predate the
+  realm line: a run on a fleet of more than one realm names, on its first line, the realm `--realm` chose.
 
 ## 2. `vcenter_exchange.py --sessions` as a client, holding `vcf_viewer`
 
@@ -349,19 +355,22 @@ exchange.json written with every estate value replaced; exit 3
 
 ## 3a. `--sessions` without `DIRECTORY_DOMAINS`: refused before any read
 
-Unset, every directory session would read as another provider's, a class the census never flags, and the run would
-exit 0 on a census that saw nothing it was asked to see. So it refuses to start: a usage error, exit 5 (2 before
-2026-10-15), nothing read or written (run with a stand-in host).
+Unset, no directory session would be judged, and the run would pass a census that saw nothing it was asked to see.
+So it refuses to start: a usage error, exit 5 (2 before 2026-10-15), nothing read or written (run with a stand-in
+host).
 
 ```
 $ python3 vcenter_exchange.py --sessions --redact
---sessions needs DIRECTORY_DOMAINS, the directory domains as vCenter spells them: without them every directory session reads as another provider's, which the census never flags, so a census of nothing would pass
+--sessions needs DIRECTORY_DOMAINS, the directory domains as vCenter spells them: without them no directory session would be judged, so a census of nothing would pass
 ```
 
-- **A misspelled domain is a failed read, not a clean one.** On a vCenter whose list holds sessions of another provider
-  and none under the domains given, the census prints `NOT PLACED: DIRECTORY_DOMAINS names nothing on this vCenter`
-  under that vCenter and `FAILED READ` at the end, and exits 3. That path is held by the companion's tests; no run on the
-  reference estate met it, because no session list read there held another provider's sessions.
+- **Every session placed, or a failed read.** A session in a domain that none of `DIRECTORY_DOMAINS`, `OTHER_DOMAINS`,
+  `LOCAL_DOMAIN` and the broker tenant names is not placed: a misspelled directory domain, or a second directory
+  nobody listed. The census prints `NOT PLACED: <n> session(s) in a domain neither DIRECTORY_DOMAINS nor OTHER_DOMAINS
+  names` under that vCenter, `FAILED READ: sessions not placed on <n> vCenter(s)` at the end, and the domains on the
+  terminal only (counted, under `--redact`), and exits 3; `--compare` does not count that vCenter as read. Name each
+  domain in `DIRECTORY_DOMAINS`, or in `OTHER_DOMAINS` if it is another identity provider's. That path is held by the
+  companion's tests; no run on the reference estate met it, because every session read there was placed.
 
 ## 3b. `--ack`, then `--compare` held to a coverage
 
@@ -517,12 +526,14 @@ api_client_teardown.json written with every estate value replaced
 ## 6. `service_account.py`: the plan, then one VCF Automation service account made
 
 The same shape as `api_client.py`, in VCF Automation: a throwaway account in a throwaway All Apps organization,
-2026-10-13, VCF Automation 9.1.1, run with a provider bearer (the third run, 07:04Z).
+2026-10-13, VCF Automation 9.1.1, run with a provider bearer (the third run, 07:04Z). The plan is today's; the run and
+the teardown in section 7 predate the paged reads, so each list line there shows its path without
+`&page=N&pageSize=128`, which the script now sends page after page until the items reach the stated `resultTotal`.
 
 ```text
 Create plan for service account {{client-1}} in organization {{org-1}} on {{host-1}}:
-  GET    /cloudapi/1.0.0/orgs?filter=name=={org}
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}  (in the organization: refused if present)
+  GET    /cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=128  (every page, to the stated total)
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=128  (in the organization, every page: refused if present)
   POST   /oauth/tenant/{org}/register
          {"client_name": "{{client-1}}", "scope": "urn:vcloud:role:Organization%20User", "software_id": "<a new UUID>", "software_version": "1.0"}
   POST   /oauth/tenant/{org}/device_authorization

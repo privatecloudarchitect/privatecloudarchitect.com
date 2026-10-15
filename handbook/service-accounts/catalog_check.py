@@ -14,28 +14,36 @@ name is not that. Start from credentials.example.json beside this script.
 --census CENSUS.json joins the catalog to a record written by identity-model's census.py, which reads every API
 client with its roles and its tokens' two lifetimes. Each API client in the record is checked for what neither file
 holds alone: an owner, a role, both lifetimes and a rotation date. A client that no catalog entry names, or whose
-entry has no owner or no next_due, fails; so does one with no role, or a token missing a lifetime; a client holding
-no token, or a token that expires before its entry's next_due, is a warning. Every name in a census record is a
+entry has no owner or no next_due, fails; so does one with no role, a token missing a lifetime, a token EXPIRED or
+REVOKED, or a token whose end date has passed; a client holding no token, or a token that expires before its entry's
+next_due, is a warning. A token whose state (anything but ACTIVE, EXPIRED or REVOKED) or end date the record does not
+carry is not judged: its client reads `unread`, and the run exits 3. Every name in a census record is a
 placeholder, so the join is on keyed fingerprints: run the census with FINGERPRINT_KEY_FILE set, and give this
 script the same file. The join first checks that the census read, each check on its own whatever the record's exit
 says. A record is not a read when its own exit is not 0; when a call to VCF Operations' fleet identity plane failed,
 or answered without the list the read needs (census.py marks such a call `shape`); when it carries no API client
 list or no realm list (a --orgs-only record reads no fleet); when it lists no realm, or did not query the API client
-and token lists of every realm it lists; or when an API client line carries no roles or tokens list, or, in a
+and token lists of every realm it lists; when the last page of a realm's API client or token list does not state
+that the list was read whole (census.py records the stated total and the distinct entries read, `listed`, on each
+page; a record an earlier census.py wrote carries none) or states fewer entries read than its total; when its API client
+lines are not the clients its reads listed; or when an API client line carries no roles or tokens list, or, in a
 fingerprinted record, no fingerprint. The join then stops with exit 3, because a census that did not read its API
 clients would otherwise pass as an estate with none. An empty API client list from a read that passes every check is
 a read: the run says that zero were joined, and why the empty list is the estate's.
 
 Use:  python3 catalog_check.py [CATALOG.json] [--today YYYY-MM-DD] [--census CENSUS.json]
-Exit: 0 every entry complete and not due inside the window, and with --census every API client complete
-      1 a warning (due inside the window, a next-due date later than the cadence allows, a client with no token, or a
-        token expiring before its rotation date), and no failure
+Exit, the worst state in this order, so a warning never hides a client the run could not judge:
       2 a failure (a field missing, a date overdue or unreadable, a secret in the file, an API client without an
-        owner, a role, both lifetimes or a rotation date)
+        owner, a role, both lifetimes or a rotation date, or holding a token EXPIRED, REVOKED or past its end date)
       3 the census record is not a read (its exit is not 0, a fleet identity call failed or was marked `shape`, it has
-        no API client list or no realm list, a realm's client or token list was not queried, or a client line lacks its
-        roles, tokens or fingerprint), or an error the script did not expect. It is checked before any entry is
-        printed, and nothing is joined, because nothing about the API clients is known
+        no API client list or no realm list, a realm's client or token list was not queried or does not state it was
+        read whole, its client lines are not the clients its reads listed, or a client line lacks its roles, tokens or
+        fingerprint), checked before any entry is printed, with nothing joined, because nothing about the API clients
+        is known; or a joined client holds a token whose state or end date the record does not carry, so that client
+        is not judged; or an error the script did not expect
+      1 a warning (due inside the window, a next-due date later than the cadence allows, a client with no token, or a
+        token expiring before its rotation date), and nothing above
+      0 every entry complete and not due inside the window, and with --census every API client complete
       5 a usage error: an argument this script does not take, a --today that is not a date, a catalog or census file
         that cannot be read, a catalog that is not one (no JSON object with a credentials list of objects), FINGERPRINT_KEY_FILE unset or unreadable, a census record without fingerprints or made
         under another key, or a Python older than 3.10
@@ -98,10 +106,16 @@ def key_check(key: bytes) -> str:
     return fingerprint("fingerprint key check", key)[:8]
 
 
-def client_check(client: dict, entry: dict | None) -> tuple[str, list[str]]:
+LIVE = "ACTIVE"
+ENDED = {"EXPIRED", "REVOKED"}   # a token in either state no longer signs anything in: a finding, never a pass
+
+
+def client_check(client: dict, entry: dict | None, today: date | None = None) -> tuple[str, list[str]]:
     """One API client from the census, with the catalog entry that names it (or none): an owner, a role, both
-    lifetimes and a rotation date, and whether its token outlives the rotation date."""
-    fail, warn = [], []
+    lifetimes and a rotation date, each token's state and end date, and whether its token outlives the rotation date.
+    A token whose end date or state the census did not read is not judged: the client reads `unread` (exit 3)."""
+    today = today or date.today()
+    fail, warn, unread = [], [], []
     if entry is None:
         fail.append("no catalog entry names this client, so it has no owner and no rotation date")
     else:
@@ -112,18 +126,30 @@ def client_check(client: dict, entry: dict | None) -> tuple[str, list[str]]:
     tokens = client.get("tokens") or []
     if not tokens:
         warn.append("holds no token, so no lifetime to read: nothing signs in as it until one is issued")
+    due = _date(entry.get("next_due")) if entry else None
     for t in tokens:
+        name = t.get("name")
         missing = [k for k in ("api_token_ttl_min", "access_token_ttl_min") if not isinstance(t.get(k), int)]
         if missing:
-            fail.append(f"token {t.get('name')} has no {' or '.join(missing)}")
-        due = _date(entry.get("next_due")) if entry else None
+            fail.append(f"token {name} has no {' or '.join(missing)}")
+        status = str(t.get("status") or "").upper()
+        if status in ENDED:
+            fail.append(f"token {name} is {status}: it signs nothing in; issue its replacement, then delete it")
+        elif status != LIVE:
+            unread.append(f"token {name}: its state was not read ({t.get('status')!r}), so whether it still signs in is not known")
         expires = _date(t.get("expires"))
-        if due is not None and expires is not None and expires < due:
-            warn.append(f"token {t.get('name')} expires {expires.isoformat()}, before the rotation date {due.isoformat()}")
-    return ("fail" if fail else "warn" if warn else "ok"), fail + warn
+        if expires is None:
+            unread.append(f"token {name}: its end date was not read, so neither its runway nor its rotation can be judged")
+        elif expires < today:
+            fail.append(f"token {name} ended {expires.isoformat()}, before {today.isoformat()}: issue its replacement")
+        elif due is not None and expires < due:
+            warn.append(f"token {name} expires {expires.isoformat()}, before the rotation date {due.isoformat()}")
+    state = "fail" if fail else "unread" if unread else "warn" if warn else "ok"
+    return state, fail + unread + warn
 
 
-def census_join(catalog: dict, census: dict, key: bytes) -> list[tuple[dict, dict | None, str, list[str]]]:
+def census_join(catalog: dict, census: dict, key: bytes,
+                today: date | None = None) -> list[tuple[dict, dict | None, str, list[str]]]:
     """Each API client in the census record with the catalog entry whose api_client (or name) fingerprints to it."""
     by_fp = {}
     for e in catalog.get("credentials") or []:
@@ -133,12 +159,16 @@ def census_join(catalog: dict, census: dict, key: bytes) -> list[tuple[dict, dic
     out = []
     for client in (census.get("summary") or {}).get("api_clients") or []:
         entry = next((by_fp[f] for f in client.get("fingerprints") or [] if f in by_fp), None)
-        out.append((client, entry, *client_check(client, entry)))
+        out.append((client, entry, *client_check(client, entry, today)))
     return out
 
 
 EXIT_UNREAD, EXIT_USAGE = 3, 5
 FLEET = "vcf-operations"
+# The run's exit is its worst state, in this order: a failure (2) comes first, then a client not judged (3), so a
+# warning (1) never hides a token the run could not read.
+RANK = {"ok": 0, "warn": 1, "unread": 2, "fail": 3}
+EXIT = {"ok": 0, "warn": 1, "unread": EXIT_UNREAD, "fail": 2}
 
 
 def realms_queried(calls: list, kind: str) -> set[str]:
@@ -151,6 +181,18 @@ def realms_queried(calls: list, kind: str) -> set[str]:
             if m:
                 found.add(m.group(1))
     return found
+
+
+def last_pages(calls: list, kind: str) -> dict[str, dict]:
+    """Each realm's last page call of its `kind` list: census.py records on it the total the answer stated and the
+    distinct entries read (`listed`), equal only when the list was read whole."""
+    last: dict[str, dict] = {}
+    for c in calls:
+        if isinstance(c, dict) and c.get("plane") == FLEET:
+            m = re.search(rf"/ssorealms/([^/?]+)/{kind}/query(?:\?|$)", str(c.get("path") or ""))
+            if m:
+                last[m.group(1)] = c
+    return last
 
 
 def census_unread(record: dict) -> str | None:
@@ -193,6 +235,23 @@ def census_unread(record: dict) -> str | None:
         queried = len(realms_queried(fleet, kind))
         if queried < len(realms):
             return f"it lists {len(realms)} realm(s) and queried the {what} of {queried}, so the rest are unread"
+    read_clients = 0
+    for kind, what in (("api-clients", "API client"), ("api-tokens", "API token")):
+        for realm, last in last_pages(fleet, kind).items():
+            whole = last.get("listed")
+            total = whole.get("total") if isinstance(whole, dict) else None
+            distinct = whole.get("distinct") if isinstance(whole, dict) else None
+            if not all(isinstance(n, int) and not isinstance(n, bool) for n in (total, distinct)):
+                return (f"its {what} list of realm {realm} does not state that it was read whole (no `listed` total on its "
+                        "last page; an earlier census.py did not record it), so a short read would pass "
+                        "as the whole list: run census.py again")
+            if distinct != total:
+                return (f"its {what} list of realm {realm} was read to {distinct} of the {total} entries it states, so "
+                        "the rest are unread")
+            read_clients += distinct if kind == "api-clients" else 0
+    if read_clients != len(clients):
+        return (f"it carries {len(clients)} API client line(s) where its reads listed {read_clients}, so the record does "
+                "not hold what was read")
     for i, c in enumerate(clients, 1):
         if not isinstance(c, dict):
             return f"its API client line {i} is not an object"
@@ -309,19 +368,19 @@ def _run(argv: list[str]) -> int:
             return code
     warn_days = int(catalog.get("warn_days", 30))
     entries = catalog.get("credentials") or []
-    worst = 0
+    worst = "ok"
     print(f"catalog_check.py: {len(entries)} credential(s) in {path}, read on {today.isoformat()}, warning window {warn_days} days\n")
     for e in entries:
         state, reasons = check(e, today, warn_days)
-        worst = max(worst, {"ok": 0, "warn": 1, "fail": 2}[state])
+        worst = max(worst, state, key=RANK.__getitem__)
         print(f"  {state:<5} {str(e.get('name', '<no name>')):<24} owner {e.get('owner') or '-':<16} due {e.get('next_due') or '-'}")
         for r in reasons:
             print(f"        {r}")
     if census is not None:
-        joined = census_join(catalog, census, key)
+        joined = census_join(catalog, census, key, today)
         realms = len(census["summary"]["realms"])
-        read = (f"the census queried the API client and token lists of its {realms} realm(s), with no call refused or "
-                "answered without its list")
+        read = (f"the census read the API client and token lists of its {realms} realm(s) to the totals they state, with no "
+                "call refused or answered without its list")
         if joined:
             print(f"\nAPI clients in the census of {census.get('captured', '?')}: {len(joined)}, joined to the catalog by "
                   f"fingerprint ({read})\n")
@@ -329,13 +388,15 @@ def _run(argv: list[str]) -> int:
             print(f"\nAPI clients in the census of {census.get('captured', '?')}: 0, so none is joined to the catalog: {read}, "
                   "and those lists hold no API client")
         for client, entry, state, reasons in joined:
-            worst = max(worst, {"ok": 0, "warn": 1, "fail": 2}[state])
+            worst = max(worst, state, key=RANK.__getitem__)
             print(f"  {state:<5} {client.get('name')!s:<24} catalog {(entry or {}).get('name') or '-':<20} "
                   f"roles {', '.join(client.get('roles') or []) or '-'}")
             for r in reasons:
                 print(f"        {r}")
-    print(f"\nexit {worst}")
-    return worst
+    if worst == "unread":
+        print("\nNOT READ: a token's state or end date was not in the census record, so that client is not judged (exit 3)")
+    print(f"\nexit {EXIT[worst]}")
+    return EXIT[worst]
 
 
 if __name__ == "__main__":

@@ -12,16 +12,21 @@ a command or in a console.
 
     python3 tokens.py -                   read it from stdin: paste it, then Ctrl-D (it stays out of your shell history)
     python3 tokens.py --file t.txt        read it from a file, mode 0600
-    python3 tokens.py --kubeconfig        every credential in your kubeconfig, no token needed
+    python3 tokens.py --kubeconfig        every credential in your kubeconfig, no token needed; it reads each token's,
+                                          token file's and client certificate's end date, and names what it cannot judge
     python3 tokens.py                     read a token from $TOKEN, when a tool already set it (typing
                                           `export TOKEN=...` at a prompt puts the bearer in your shell history)
 
 Nothing is written anywhere.
 
-Exit: 0 the token is usable (or, with --kubeconfig, every token's expiry was read and none has expired)
-      1 a token is expired or inside the clock-skew margin (with --kubeconfig, any one of them: this comes first)
+Exit: 0 the token is usable (or, with --kubeconfig, every credential was judged and none has run out: an exec plugin
+        renews itself, and each token's, token file's and client certificate's end date was read)
+      1 a token is expired or inside the clock-skew margin (with --kubeconfig, any credential has run out: this comes
+        first)
       3 undetermined: the token is not a JWT, or carries no `exp` claim, so nothing here can say when it expires (with
-        --kubeconfig, a token like that and none expired), or an error the script did not expect
+        --kubeconfig, and none run out: a credential it could not judge, which it names, such as an opaque token, a
+        certificate or token file it could not read, an auth-provider, a user name and password, or an entry with
+        none of these; or a kubeconfig that declares no users), or an error the script did not expect
       5 a usage error: no token given, a --file or kubeconfig that cannot be read or is not one, PyYAML missing for
         --kubeconfig, an argument it does not take, or a Python older than 3.10
 These are the codes every identity companion uses for 0, 3 and 5; 1 is this script's own finding.
@@ -137,12 +142,53 @@ def report(claims: dict) -> int:
     return 0
 
 
+def _der(data: bytes, i: int) -> tuple[int, int, int, int]:
+    """One DER element at i: its tag, where its content starts, its length, and where the next element starts."""
+    tag, n = data[i], data[i + 1]
+    i += 2
+    if n & 0x80:
+        width = n & 0x7F
+        n = int.from_bytes(data[i:i + width], "big")
+        i += width
+    return tag, i, n, i + n
+
+
+def cert_end(pem: bytes) -> dt.datetime | None:
+    """The notAfter of the first certificate in a PEM, read from its DER without a crypto library; None when it is
+    not one. Only the date is read: nothing here says the certificate is trusted."""
+    try:
+        text = pem.decode("ascii")
+        body = text.split("-----BEGIN CERTIFICATE-----", 1)[1].split("-----END CERTIFICATE-----", 1)[0]
+        der = base64.b64decode("".join(body.split()))
+        _, cert, _, _ = _der(der, 0)                    # Certificate
+        _, i, _, _ = _der(der, cert)                    # tbsCertificate
+        tag, _, _, nxt = _der(der, i)
+        i = nxt if tag == 0xA0 else i                   # [0] version, when present
+        for _ in range(3):                              # serialNumber, signature, issuer
+            i = _der(der, i)[3]
+        tag, v, _, _ = _der(der, i)                     # validity
+        if tag != 0x30:
+            return None
+        tag, at, n, _ = _der(der, _der(der, v)[3])      # notAfter, after notBefore
+        stamp = der[at:at + n].decode("ascii")
+        if tag == 0x17:                                 # UTCTime, YYMMDDHHMMSSZ
+            yy = int(stamp[:2])
+            stamp = f"{1900 + yy if yy >= 50 else 2000 + yy}{stamp[2:]}"
+        elif tag != 0x18:                               # GeneralizedTime, YYYYMMDDHHMMSSZ
+            return None
+        return dt.datetime.strptime(stamp[:14], "%Y%m%d%H%M%S").replace(tzinfo=dt.timezone.utc)
+    except (IndexError, ValueError, UnicodeDecodeError):
+        return None
+
+
 def from_kubeconfig() -> int:
-    """Every credential in the kubeconfig, and which of them can renew itself.
+    """Every credential in the kubeconfig: whether it renews itself, and when the ones that do not run out.
 
     Reads the file directly rather than shelling out, because `kubectl config view` redacts token
-    values and would silently report nothing at all. 1 when any token has expired; else 3 when any
-    token's expiry cannot be read (opaque, or no `exp`); else 0.
+    values and would silently report nothing at all. A credential is judged when it renews itself (an exec
+    plugin) or its end date was read (a token, a token file, a client certificate). 1 when any has run out; else 3
+    when any was not judged (an opaque token, no `exp`, a certificate or file it could not read, an auth-provider,
+    a user name and password, an entry with none of these) or the file declares no users at all; else 0.
     """
     try:
         import yaml
@@ -162,9 +208,21 @@ def from_kubeconfig() -> int:
         return EXIT_USAGE
     users = cfg.get("users") or []
     if not users:
-        print("kubeconfig declares no users"); return 0
-    bad = unknown = 0
+        print(f"{path} declares no users, so no credential was judged (exit 3)")
+        return EXIT_UNREAD
+    here = os.path.dirname(os.path.abspath(path))
+    bad, unjudged = 0, []
     print(f"{len(users)} credential(s) in {path}\n")
+
+    def read(ref: object) -> bytes | None:   # a file a kubeconfig names, relative to the kubeconfig's own folder
+        if not isinstance(ref, str) or not ref:
+            return None
+        try:
+            with open(os.path.join(here, os.path.expanduser(ref)), "rb") as fh:
+                return fh.read()
+        except OSError:
+            return None
+
     for u in users:
         u = u if isinstance(u, dict) else {}
         name, user = str(u.get("name", "?")), (u.get("user") if isinstance(u.get("user"), dict) else {})
@@ -172,21 +230,45 @@ def from_kubeconfig() -> int:
             print(f"  {name[:52]:54s} exec plugin, renews itself (it may prompt)")
             continue
         if user.get("client-certificate-data") or user.get("client-certificate"):
-            print(f"  {name[:52]:54s} client certificate, no login needed")
+            data = user.get("client-certificate-data")
+            try:
+                pem = base64.b64decode(data) if isinstance(data, str) and data else read(user.get("client-certificate"))
+            except ValueError:
+                pem = None
+            end = cert_end(pem) if pem else None
+            if end is None:
+                print(f"  {name[:52]:54s} client certificate, its end date not read: UNDETERMINED")
+                unjudged.append(name)
+                continue
+            left = end - dt.datetime.now(dt.timezone.utc)
+            print(f"  {name[:52]:54s} client certificate, " + (f"EXPIRED {_fmt(left)} ago" if left.total_seconds() <= 0
+                                                                 else f"valid {_fmt(left)}, to {end.date().isoformat()}"))
+            bad += 1 if left.total_seconds() <= 0 else 0
             continue
-        tok = user.get("token")
+        tok, where = user.get("token"), "token"
+        if not (isinstance(tok, str) and tok) and user.get("tokenFile"):
+            raw = read(user.get("tokenFile"))
+            tok, where = (raw.decode("utf-8", "replace").strip() if raw else None), "token file"
+            if not tok:
+                print(f"  {name[:52]:54s} token file that could not be read: UNDETERMINED")
+                unjudged.append(name)
+                continue
         if not isinstance(tok, str) or not tok:
-            print(f"  {name[:52]:54s} no token, no certificate, no exec plugin")
+            kind = ("auth-provider, whose expiry is not read here" if "auth-provider" in user
+                    else "a user name and password, which state no end" if user.get("username") or user.get("password")
+                    else "no token, no certificate, no exec plugin")
+            print(f"  {name[:52]:54s} {kind}: UNDETERMINED")
+            unjudged.append(name)
             continue
         claims = decode(tok)
         if not claims:
-            print(f"  {name[:52]:54s} opaque token, no readable expiry: UNDETERMINED")
-            unknown += 1
+            print(f"  {name[:52]:54s} opaque {where}, no readable expiry: UNDETERMINED")
+            unjudged.append(name)
             continue
         c = clocks(claims)
         if "exp" not in c:
-            print(f"  {name[:52]:54s} no exp claim: UNDETERMINED")
-            unknown += 1
+            print(f"  {name[:52]:54s} {where} with no exp claim: UNDETERMINED")
+            unjudged.append(name)
             continue
         state = (f"EXPIRED {_fmt(c['remaining'])} ago" if c["expired"]
                  else f"valid {_fmt(c['remaining'])}")
@@ -194,12 +276,12 @@ def from_kubeconfig() -> int:
         print(f"  {name[:52]:54s} {state}{life}")
         bad += 1 if c["expired"] else 0
     if bad:
-        print(f"\n{bad} credential(s) expired. A static token has no exec plugin, so kubectl")
+        print(f"\n{bad} credential(s) expired. A static token or certificate has no exec plugin, so kubectl")
         print("cannot renew it: it fails only when you next use it.")
-    if unknown:
-        print(f"\n{unknown} token(s) carry no readable expiry: whether they still work is not known here"
-              + ("" if bad else " (exit 3)."))
-    return 1 if bad else (EXIT_UNREAD if unknown else 0)
+    if unjudged:
+        print(f"\nNOT JUDGED: {len(unjudged)} credential(s) whose end this run could not read: {', '.join(n[:52] for n in unjudged)}; "
+              "whether they still work is not known here" + ("" if bad else " (exit 3)."))
+    return 1 if bad else (EXIT_UNREAD if unjudged else 0)
 
 
 class _Parser(argparse.ArgumentParser):
