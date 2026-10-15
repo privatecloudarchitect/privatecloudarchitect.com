@@ -80,3 +80,17 @@ Deleting the app also soft-deletes its service principal, so three objects go to
 bin can refuse a purge for some seconds after the delete (21 seconds for the service principal here, 21 for an app on
 another run); the script asks again until it is done. `residue check: none` means every object reads back as gone,
 from the active directory and from the bin. A `LEFT` lists what remains; run the teardown again.
+
+## Not run as asked: exit 5, nothing sent
+
+Every mode that talks to VCF Automation or Entra checks its arguments and its environment before the first call.
+Run without them, it names what is missing and exits 5:
+
+```
+$ python3 org_federation.py --protocol oidc --org-type all-apps --execute
+not run: --execute, --prove and --teardown need VCFA_HOST, ORG, ENTRA_TENANT_ID, ENTRA_CLIENT_ID and a provider credential (VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE) (see the header); exit 5
+```
+
+The exit codes a script around it reads: 0 done, 1 a call or a check failed, 2 refused by what it read (a name it did
+not create, a protocol or key switch, an organization it cannot find), 3 a result not known (a credential refused before
+anything was read, a record the scrub refused, an error it did not expect), 5 not run as asked.

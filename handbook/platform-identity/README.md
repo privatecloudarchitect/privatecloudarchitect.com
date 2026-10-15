@@ -26,8 +26,10 @@ python tokens.py --kubeconfig          # every kubeconfig credential, no token n
 
 Standard library only, except `--kubeconfig`, which needs PyYAML.
 
-Exit code: `0` the token is usable, `1` it is expired or inside the clock-skew margin, `2` nothing
-could be read.
+Exit code: `0` the token is usable, `1` it is expired or inside the clock-skew margin, `3` nothing could be
+read off it (it is not a JWT) or an error the script did not expect, `5` a usage error (no token given, a file it
+cannot read, PyYAML missing for `--kubeconfig`, a Python older than 3.10). 0, 3 and 5 mean what they mean on every
+identity companion; 1 is this script's own finding.
 
 ## What it tells you
 

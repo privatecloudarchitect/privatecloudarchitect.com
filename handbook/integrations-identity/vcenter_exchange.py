@@ -67,21 +67,28 @@ Env:  BROKER_HOST                 the identity broker that trades the API client
 Use:  python3 vcenter_exchange.py [--sessions] [--redact]
       python3 vcenter_exchange.py --sessions --where      the address and last activity of each session, printed only
       python3 vcenter_exchange.py --compare A.json B.json C.json
-Exit: 0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
-      directory-account session is from an interactive client and the local administrator signs in from none other
-      · 1 a vCenter refused the client, a read failed, the census identity could read only its own session, or on a
-      vCenter DIRECTORY_DOMAINS named no session while sessions of another provider were there (the domains name
-      nothing on this vCenter, so the census saw nothing it was asked to see) · 2 a usage error (--sessions without
-      DIRECTORY_DOMAINS among them), or the record was refused because an estate value survived the scrub · 3
-      --sessions found a directory account signing in from a client that is not interactive · 4 --sessions found the
-      local administrator signing in from a client that is not interactive, and nothing above it
+Exit, the first that applies, so a scheduler reads one state from one number:
+      1 --sessions found a directory account signing in from a client that is not interactive
+      2 a vCenter answered the API client's exchange, or one of its sessions, and did not take the client
+      3 a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read, a census
+        identity that could read only its own session, a vCenter on which DIRECTORY_DOMAINS named no session while
+        sessions of another provider were there (the domains name nothing there, so the census saw nothing it was asked
+        to see), no vCenter read, a credential the broker did not trade, or an error the script did not expect
+      4 --sessions found the local administrator signing in from a client that is not interactive
+      0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
+        directory-account session is from an interactive client and the local administrator signs in from none other
+      5 a usage error (a missing or bad argument or environment variable, --sessions without DIRECTORY_DOMAINS among
+        them), a Python older than 3.10, or the record refused because an estate value survived the scrub (nothing is
+        written)
       The exit reads vCenter's session lists at one moment: an integration that is not signed in then is not seen, so
       read on three or more days, compare the records, and confirm each remaining directory session's owner as a person.
-      --compare: 0 compared over three or more days with every vCenter in every record · 1 compared, but over fewer
-      than three days or with a vCenter missing from a record (a census whose DIRECTORY_DOMAINS named nothing on a
-      vCenter is not a read of it) · 2 a usage error: fewer than two records, a record that cannot be read, holds no
-      session census (or only censuses whose DIRECTORY_DOMAINS named nothing) or no fingerprints, or records made
-      under two keys
+      --compare checks first that each record read what it is compared on: a vCenter whose census failed in a record
+      (a list not read, only the census's own session, DIRECTORY_DOMAINS naming nothing there, no fingerprint) is not
+      a read of that vCenter. The first that applies: 3 a vCenter not read in every record, or a record holding no
+      session census read on any vCenter · 1 compared, every vCenter read in every record, but over fewer than three
+      days · 0 compared over three or more days with every vCenter read in every record · 5 a usage error: fewer than
+      two records, another option beside --compare, a record that cannot be read or parsed, one without fingerprints,
+      or records made under two keys
 """
 
 from __future__ import annotations
@@ -116,6 +123,10 @@ VIM = "urn:vim25"
 # treated as an integration: a REST client (vAPI, curl, a product's own agent) on a password as much as an SDK. On the
 # reference estate a person's session at the vSphere Client read vSphereUI and nothing else (X-142, one session).
 INTERACTIVE_AGENTS = ("vSphereUI",)
+# One exit contract for every identity companion: 0 nothing to act on, 3 a read failed or is undetermined, 5 a usage
+# error; 1, 2 and 4 are this script's own (a directory account off the vSphere Client, the client refused, the local
+# administrator off it).
+EXIT_OK, EXIT_DIRECTORY, EXIT_REFUSED, EXIT_UNREAD, EXIT_ADMIN, EXIT_USAGE = 0, 1, 2, 3, 4, 5
 
 
 def interactive_agents() -> set[str]:
@@ -215,7 +226,8 @@ def broker_bearer() -> str:
     status, answer = _form(f"https://{broker_host()}/acs/t/{broker_tenant()}/token",
                            {"grant_type": API_TOKEN_GRANT, "api_token": api_token()})
     if status != 200 or "access_token" not in answer:
-        # a deleted or rotated API token answers 500 here, not 401: check the token still exists before its expiry
+        # a deleted API token is refused here, not with 401: HTTP 500 on 9.1.0 (2026-09-16), HTTP 400 for a deleted API
+        # client token on 9.1.1 (X-153, X-190); check the token still exists, then its expiry, before the service
         raise RuntimeError(f"the broker did not trade the API token for a bearer (HTTP {status})")
     return answer["access_token"]
 
@@ -533,7 +545,7 @@ def report(record: dict) -> list[str]:
         nothing = unplaced(record)
         if nothing:
             lines.append(f"FAILED READ: DIRECTORY_DOMAINS named nothing on {len(nothing)} vCenter(s), so the census saw no directory "
-                         "session it was asked to see there; exit 1")
+                         "session it was asked to see there; exit 3")
         if sm["local_administrator_not_interactive"]:
             lines.append(f"WATCH: the local administrator holds {sm['local_administrator_not_interactive']} session(s) from "
                          "clients that are not interactive: an account in automated use is not a break-glass account")
@@ -669,18 +681,25 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
 
 
 def exit_code(record: dict) -> int:
-    """1 when a vCenter refused the client, a read failed, or the directory domains given named nothing on a vCenter
-    whose list held another provider's sessions; else 3 when a directory account signs in from a client that is not
-    interactive; else 4 when the local administrator does; else 0. A scheduler reads it."""
+    """The first that applies: 1 a directory account signs in from a client that is not interactive; 2 a vCenter
+    answered the client's exchange or one of its sessions and did not take the client; 3 a read failed or is
+    undetermined (a vCenter that did not answer the exchange, a session list not read or holding only the census's own
+    session, directory domains that named nothing on a vCenter whose list held another provider's sessions, or no
+    vCenter at all); 4 the local administrator signs in from a client that is not interactive; else 0. A scheduler
+    reads it."""
     vcs = record["vcenters"]
-    refused = [v for v in vcs if "exchange" in v
+    tried = [v for v in vcs if "exchange" in v]
+    silent = [v for v in tried if not (v.get("exchange") or {}).get("status")]   # no answer at all: nothing is known
+    refused = [v for v in tried if v not in silent
                and not ((v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user"))]
     unread = [v for v in vcs if isinstance(v.get("sessions"), dict) and "error" in v["sessions"]]
-    if refused or unread or unplaced(record) or not vcs:
-        return 1
     if record["summary"]["directory_not_interactive"]:
-        return 3
-    return 4 if record["summary"]["local_administrator_not_interactive"] else 0
+        return EXIT_DIRECTORY
+    if refused:
+        return EXIT_REFUSED
+    if silent or unread or unplaced(record) or not vcs:
+        return EXIT_UNREAD
+    return EXIT_ADMIN if record["summary"]["local_administrator_not_interactive"] else EXIT_OK
 
 
 def where_report(where: list[dict]) -> list[str]:
@@ -696,18 +715,29 @@ def where_report(where: list[dict]) -> list[str]:
 
 
 # ── --compare: sessions across dated records ─────────────────────────────────────────────────────────────────────
+EXIT_FEWER_DAYS = 1   # --compare's own 1: every vCenter read in every record, over fewer than three days
+
+
 class CompareError(ValueError):
-    """A set of records that cannot be compared: the reason is printed and the exit is 2."""
+    """A set of records that cannot be compared as given: the reason is printed and the exit is 5."""
+
+
+def read_of(v: dict) -> bool:
+    """Whether a record's row for one vCenter is a read of its sessions: a census that answered, read more than its own
+    session, and placed its directory domains, under a fingerprint. Anything else is not a read of that vCenter."""
+    s = v.get("sessions")
+    return bool(v.get("fingerprint")) and isinstance(s, dict) and "by_class" in s and "error" not in s \
+        and not names_nothing(s["by_class"])
 
 
 def sessions_of(record: dict) -> dict[str, dict]:
     """Per vCenter fingerprint: its placeholder, and its sessions as (who, agent) pairs, the directory principal by its
-    fingerprint and the local administrator as itself."""
+    fingerprint and the local administrator as itself. Only the vCenters the record read are here."""
     out = {}
     for v in record.get("vcenters") or []:
         s = v.get("sessions")
-        if not v.get("fingerprint") or not isinstance(s, dict) or "by_class" not in s or names_nothing(s["by_class"]):
-            continue   # a census whose directory domains named nothing on this vCenter is not a read of it
+        if not read_of(v):
+            continue   # a census that failed, read only itself or whose domains named nothing here is not a read of it
         pairs, names = set(), {}
         for d in s.get("directory") or []:
             if not d.get("fingerprint"):
@@ -719,8 +749,15 @@ def sessions_of(record: dict) -> dict[str, dict]:
     return out
 
 
+def named(record: dict) -> dict[str, str]:
+    """Every vCenter a record names under a fingerprint, read or not, with its placeholder."""
+    return {v["fingerprint"]: v.get("vcenter") or "?" for v in record.get("vcenters") or [] if v.get("fingerprint")}
+
+
 def compare(records: list[dict]) -> dict:
-    """Which sessions are present in every record and which came and went, per vCenter, over the records' dates."""
+    """Which sessions are present in every record and which came and went, per vCenter, over the records' dates. It
+    first checks what each record read: a vCenter a record did not read is listed with the records that missed it, and
+    a record that read no vCenter is listed too, so the comparison is never taken over reads that did not happen."""
     if len(records) < 2:
         raise CompareError("--compare needs two or more records")
     checks = {r.get("fingerprint_key_check") for r in records}
@@ -729,22 +766,24 @@ def compare(records: list[dict]) -> dict:
     if len(checks) > 1:
         raise CompareError("the records were fingerprinted under different keys; use one FINGERPRINT_KEY_FILE for all")
     ordered = sorted(records, key=lambda r: r.get("captured") or "")
-    reads = [(r.get("captured") or "?", sessions_of(r)) for r in ordered]
-    if not all(by_vc for _, by_vc in reads):
-        raise CompareError("a record holds no session census read on any vCenter (a census whose DIRECTORY_DOMAINS "
-                           "named nothing on a vCenter is not a read of it)")
+    reads = [(r.get("captured") or "?", sessions_of(r), named(r)) for r in ordered]
     vcenters = []
-    for fp in sorted({fp for _, by_vc in reads for fp in by_vc}):
-        seen = [(when, by_vc[fp]) for when, by_vc in reads if fp in by_vc]
-        everyone = set.intersection(*(x["pairs"] for _, x in seen))
+    every = sorted({fp for _, by_vc, names in reads for fp in (*by_vc, *names)})
+    for fp in every:
+        seen = [(when, by_vc[fp]) for when, by_vc, _ in reads if fp in by_vc]
+        missed = [when for when, by_vc, _ in reads if fp not in by_vc]
+        label = next((by_vc[fp]["vcenter"] for _, by_vc, _ in reversed(reads) if fp in by_vc), None) \
+            or next(nm[fp] for _, _, nm in reversed(reads) if fp in nm)
+        everyone = set.intersection(*(x["pairs"] for _, x in seen)) if seen else set()
         names = {k: v for _, x in seen for k, v in x["names"].items()}   # the latest record's placeholder wins
-        came = sorted((set.union(*(x["pairs"] for _, x in seen)) - everyone))
-        vcenters.append({"fingerprint": fp, "vcenter": seen[-1][1]["vcenter"], "read_in": len(seen),
+        came = sorted((set.union(*(x["pairs"] for _, x in seen)) - everyone)) if seen else []
+        vcenters.append({"fingerprint": fp, "vcenter": label, "read_in": len(seen), "not_read_in": missed,
                          "in_every_record": sorted(everyone),
                          "came_and_went": [{"pair": p, "seen": [w for w, x in seen if p in x["pairs"]]} for p in came],
                          "names": names})
-    days = sorted({when[:10] for when, _ in reads})
-    return {"records": len(records), "captured": [w for w, _ in reads], "days": days, "vcenters": vcenters}
+    days = sorted({when[:10] for when, by_vc, _ in reads if by_vc})
+    return {"records": len(records), "captured": [w for w, _, _ in reads], "days": days, "vcenters": vcenters,
+            "records_reading_nothing": [w for w, by_vc, _ in reads if not by_vc]}
 
 
 def _who(pair: tuple[str, str], names: dict) -> str:
@@ -757,11 +796,20 @@ def _who(pair: tuple[str, str], names: dict) -> str:
 
 def compare_report(result: dict) -> list[str]:
     lines = [f"Compared {result['records']} session records on {len(result['days'])} day(s): {', '.join(result['days'])}"]
+    for when in result.get("records_reading_nothing") or []:
+        lines.append(f"NOT READ: the record of {when} holds no session census read on any vCenter, so it adds nothing to "
+                     "compare; exit 3")
+    unread = [v for v in result["vcenters"] if v["read_in"] < result["records"]]
+    if unread:
+        lines.append(f"NOT READ: {len(unread)} vCenter(s) missing a read in at least one record (a census that failed "
+                     "there, read only its own session, or whose DIRECTORY_DOMAINS named nothing there is not a read of "
+                     "it), so what came and went on them is not known; exit 3")
     if len(result["days"]) < 3:
         lines.append("FEWER THAN THREE DAYS: a job that runs weekly, or at night, can be absent from every record read")
     for v in result["vcenters"]:
         lines.append(f"vCenter {v['vcenter']} [fingerprint {v['fingerprint']}], read in {v['read_in']} of "
-                     f"{result['records']} record(s)")
+                     f"{result['records']} record(s)"
+                     + (f"; not read in the record(s) of {', '.join(v.get('not_read_in') or [])}" if v.get("not_read_in") else ""))
         lines.append("  in every record: " + ("; ".join(_who(p, v["names"]) for p in v["in_every_record"]) or "none"))
         if not v["came_and_went"]:
             lines.append("  came and went: none")
@@ -771,8 +819,11 @@ def compare_report(result: dict) -> list[str]:
 
 
 def compare_exit(result: dict) -> int:
+    """3 when a vCenter is not read in every record or a record read none; else 1 over fewer than three days; else 0."""
     whole = all(v["read_in"] == result["records"] for v in result["vcenters"])
-    return 0 if len(result["days"]) >= 3 and whole else 1
+    if not whole or result.get("records_reading_nothing") or not result["vcenters"]:
+        return EXIT_UNREAD
+    return EXIT_OK if len(result["days"]) >= 3 else EXIT_FEWER_DAYS
 
 
 def compare_main(paths: list[str]) -> int:
@@ -783,12 +834,12 @@ def compare_main(paths: list[str]) -> int:
                 records.append(json.load(f))
         except (OSError, ValueError) as e:
             print(f"could not read {path}: {type(e).__name__}", file=sys.stderr)
-            return 2
+            return EXIT_USAGE
     try:
         result = compare(records)
     except CompareError as e:
         print(f"cannot compare: {e}", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     print("\n".join(compare_report(result)))
     code = compare_exit(result)
     print(f"\nexit {code}")
@@ -803,8 +854,31 @@ def given_values() -> list[tuple[str, str]]:
     return [(v, k) for v, k in out if v]
 
 
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a usage error, the code this script gives a refused client; it exits 5 here."""
+
+    def error(self, message: str):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="A VCF SSO API client into vCenter, and who else signs in there. Read-only.")
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5) before anything is read, and
+    an error the script did not expect exits 3, the code for a read that failed, never 1, the code for a finding."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("vcenter_exchange.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
+              "about what it had not read (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str] | None = None) -> int:
+    ap = _Parser(description="A VCF SSO API client into vCenter, and who else signs in there. Read-only.")
     ap.add_argument("--sessions", action="store_true",
                     help="read each vCenter's session list: as VC_USER when it is set, otherwise as the API client")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
@@ -817,29 +891,29 @@ def main(argv: list[str] | None = None) -> int:
     if a.compare:
         if a.sessions or a.where or a.redact:
             print("--compare reads records only; it takes no other option", file=sys.stderr)
-            return 2
+            return EXIT_USAGE
         return compare_main(a.compare)
     if a.where and a.redact:
         print("--where prints addresses, which --redact exists to hide; run them apart. --where writes nothing of them "
               "to the record either way", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if a.where and not a.sessions:
         print("--where reads the session list, so it needs --sessions", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if not os.environ.get("VC_HOSTS"):
         print("VC_HOSTS is required", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if not a.sessions and not have_client():
         print("the exchange needs the API client's credential (BROKER_HOST with API_TOKEN_FILE, or BEARER_FILE; "
               "OPS_BROKER_HOST or OPS_HOST, OPS_API_TOKEN_FILE and OPS_BEARER_FILE are read in their place); "
               "--sessions alone needs only VC_USER", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if have_client() and not bearer_file() and not _secret("API_TOKEN"):
         print("note: API_TOKEN_FILE is unset; reading OPS_API_TOKEN_FILE, so the exchange and a census without VC_USER "
               "run as whoever holds that token", file=sys.stderr)
     if a.sessions and os.environ.get("VC_USER") and not _secret("VC_PASSWORD"):
         print("--sessions as VC_USER needs VC_PASSWORD_FILE", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if os.environ.get("REALM_DOMAIN") and not (os.environ.get("BROKER_TENANT") or os.environ.get("BROKER_REALM")):
         print("note: REALM_DOMAIN is not read here. It is the realm's name, which vcenter-authorization's authz.py takes; "
               "an API client's session carries the broker tenant instead (BROKER_TENANT, default CUSTOMER)", file=sys.stderr)
@@ -847,18 +921,22 @@ def main(argv: list[str] | None = None) -> int:
         print("--sessions needs DIRECTORY_DOMAINS, the directory domains as vCenter spells them: without them every "
               "directory session reads as another provider's, which the census never flags, so a census of nothing "
               "would pass", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if a.sessions and not os.environ.get("VC_USER") and not have_client():
         print("--sessions needs VC_USER and VC_PASSWORD_FILE, or the API client's credential to read as the client",
               file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     where: list | None = [] if a.where else None
     try:
         key = fingerprint_key() if a.sessions else None
+    except (OSError, ValueError) as e:
+        print(f"FINGERPRINT_KEY_FILE could not be read: {type(e).__name__} {e}".rstrip(), file=sys.stderr)
+        return EXIT_USAGE
+    try:
         record = run(a.sessions, where, key)
     except (RuntimeError, urllib.error.URLError, OSError, ValueError) as e:
         print(f"could not start: {e}", file=sys.stderr)
-        return 1
+        return EXIT_UNREAD
     table = estate_values(record, given_values())
     clean = scrub(record, table)
     clean["summary"] = summary(clean)
@@ -870,7 +948,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(where_report(where)))
     if left:
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{out} written with every estate value replaced; exit {record['exit']}")

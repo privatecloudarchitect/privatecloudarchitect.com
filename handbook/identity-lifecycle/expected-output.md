@@ -9,9 +9,11 @@ per run, so the same person can carry a different number in each transcript.
 
 The run behind `leavers.json`, read-only, by the script as it stands: it reads each gate group's direct members, so
 it makes four calls more than the run in the next section, made earlier the same day before those reads were added,
-and it reached the same decision on every account. Exit 4: nothing is open and nothing went unread, and one federated
-account holds a role granted to it directly, a flag nobody has acknowledged yet. Every federated account was found at
-Entra by its userPrincipalName.
+and it reached the same decision on every account. It confirms every open leaver over three reads before it counts
+one; none was open, so no account was read again and the printed lines are those of the version before, which took
+30.7 s to this run's 30.2 s. Exit 4: nothing is open and nothing went unread, and one federated account holds a role
+granted to it directly, a flag nobody has acknowledged yet. Every federated account was found at Entra by its
+userPrincipalName.
 
 ```
 $ python3 leavers.py --redact
@@ -85,7 +87,7 @@ signed in once in a browser (which created its VCF Automation account), given an
 and given a role directly (Service Broker User); then its Entra account was disabled.
 
 ```
-$ python3 leavers.py --redact --execute --org <org> --user <upn>
+$ python3 leavers.py --redact --execute --org <org> --user <account>
 Leavers · EXECUTE · 1 organization(s) federated to the tenant
   {{org-1}} (OIDC): 3 account(s); gate {{group-1}}
     direct role assignments on federated accounts: {{user-3}} (Service Broker User)
@@ -101,7 +103,9 @@ The record's entry for that account: three reads, ten seconds apart, all `leaver
 the account's record written back with `enabled` false; read back, the account disabled, no other field changed and
 no token left. Its `sent` lists exactly those two writes.
 
-How long each step took, from the disable at Entra (one run):
+How long each step took, from the disable at Entra (one run, by the version before a report confirmed its leavers;
+a report now reads an open leaver three times before it calls it open, which took 22 to 23 s on the reference estate,
+2026-10-15):
 
 | Step | Seconds after the disable |
 |---|---|
@@ -113,10 +117,14 @@ How long each step took, from the disable at Entra (one run):
 ## What to read in it
 
 - **Leavers in step are the goal.** Each leaver above is disabled and holds no token, so the run changes nothing and
-  says `in step`. A leaver still enabled, or still holding a token, reads `would revoke its tokens and disable it`
-  and sets the exit code to 1: that is the line a scheduled report exists to catch, and a person runs the close on it.
-- **Each exit code is one state, and every one but 0 is an alert.** 1 an open leaver: run the close. 3 a read that
-  failed or an account undetermined: fix the read before trusting any decision. 4 a flag nobody acknowledged: decide
+  says `in step`. A leaver still enabled, or still holding a token, is read three times more, ten seconds apart;
+  when every read agrees it reads `would revoke its tokens and disable it` and sets the exit code to 1: that is the
+  line a scheduled report exists to catch, and a person runs the close on it. When the reads disagree, as Entra's do
+  for seconds after a change, it reads undetermined (`Entra's reads disagree: ...`) and sets 3, and the next run
+  reads it again.
+- **Each exit code is one state, and every one but 0 is an alert.** 1 an open leaver, three reads agreeing: run the
+  close. 3 a read that failed or an account undetermined, a leaver whose reads disagreed among them: fix the read
+  before trusting any decision. 4 a flag nobody acknowledged: decide
   it and acknowledge it until a date. With `--execute`, 2 a close that did not hold: finish it by hand. The first that
   applies wins, so a flag never hides a lost Graph permission (3) or an open leaver (1).
 - **A direct role is a flag, never a leaver by itself.** An account that passes Entra's gate and holds a role directly
@@ -125,9 +133,11 @@ How long each step took, from the disable at Entra (one run):
   another name reads undetermined, with the mismatch as its reason, until its organization is declared with
   `--name-claim <org>=mail`.
 - **Closing an account does not drop its direct roles.** After the close, the throwaway account still holds Service
-  Broker User, granted to it by name. A new person later given that name signs in to the same account and holds the
-  role, so the report keeps flagging it until someone deletes the account or drops the role. The `direct role
-  assignments` line in every organization is the check that roles arrive only through groups: it should read `none`.
+  Broker User, granted to it by name. A new person given a departed person's name reached the account and its direct
+  role while the account was enabled (over SAML and over OIDC keyed on `preferred_username`); whether this disabled
+  account would turn that person away was not run. So the report keeps flagging it until someone drops the role or
+  deletes the account. The `direct role assignments` line in every organization is the check that roles arrive only
+  through groups: it should read `none`.
 - **Two kinds of leaver.** The account in `{{org-3}}` left at Entra (its Entra account is disabled). The two accounts
   in `{{org-1}}` and `{{org-2}}` still exist and are enabled at Entra, but no group assigned to those apps carries
   them any more, so a sign-in would be refused at Entra's gate. Both count, because either stops the next sign-in

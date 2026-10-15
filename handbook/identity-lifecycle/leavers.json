@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-15T06:34:20Z",
+ "captured": "2026-10-15T08:32:54Z",
  "mode": "report",
  "tenant": "{{id-1}}",
  "organizations": [
@@ -207,7 +207,7 @@
      ],
      "matched_by": "userPrincipalName",
      "flags": [
-      "direct-role: a person later given this name holds these roles at the first sign-in"
+      "direct-role: granted to the account by name, so a person later given this name holds them: shown for an enabled account over SAML and OIDC keyed on preferred_username, not run for a disabled one"
      ],
      "action": "in step: already disabled, no token"
     }

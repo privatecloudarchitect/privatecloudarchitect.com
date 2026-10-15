@@ -8,6 +8,12 @@ throwaways, made by `api_client.py` for these runs and removed at the end: secti
 earlier client at 04:51. The plans and the refusal in sections 1 and 1a send nothing, and were run with a stand-in
 host.
 
+**The exit codes were renumbered on 2026-10-15** to the one contract every identity companion keeps: 0 nothing to act
+on, 3 a read failed or is undetermined, 5 a usage error; the other codes are each script's own (the README's tables).
+Each transcript below keeps the `exit` its run printed. Where today's code differs, the line above the transcript says
+both: the session censuses of 2026-10-13 printed 1 for a failed read (3 now) and 3 for a directory account off the
+vSphere Client (1 now), and a refusal before anything is sent for a bad argument was 2 (5 now).
+
 ## 1. `api_client.py`: the plan, then the client made
 
 With no `--execute` it prints every call and body and sends nothing. Exit 0.
@@ -26,7 +32,8 @@ Create plan for API client backup-01 on operations.example.net:
 plan only: nothing was sent (--execute sends it)
 ```
 
-A lifetime outside the broker's bounds is refused before anything is sent. Exit 2.
+A lifetime outside the broker's bounds is refused before anything is sent: a usage error, exit 5 (2 before
+2026-10-15).
 
 ```
 $ python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 100 --access-token-ttl 60
@@ -144,8 +151,9 @@ api_client_retire.json written with every estate value replaced
   old token's file can then be removed.
 - **What it refuses, before any delete.** On the same client, `--retire-old` with no state file recording the client
   exited 2 with `refused: this script did not make this client`, and a second `--retire-old`, with one token left, exited
-  2 with `refused: the client holds one token`. Run on a client's own token, `--retire-old` and `--teardown` refuse too:
-  a second throwaway client, holding VCF Administrator, was refused its teardown that way, with no call that deletes.
+  2 with `refused: the client holds one token`. Run on a client's own token, every write after the create refuses too
+  (`--rotate` included, since 2026-10-15, held by the companion's tests): a second throwaway client, holding VCF
+  Administrator, was refused its teardown that way, with no call that deletes.
 - **Regenerating a token in place gives no overlap.** The fleet API also regenerates a token's value
   (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`). In a run of 2026-10-13, called outside the script, the answer
   was a token under a new id with a new end date and a new value; the value from before answered HTTP 400 at the broker
@@ -191,7 +199,7 @@ api_client_instance.json written with every estate value replaced
 ## 2. `vcenter_exchange.py --sessions` as a client, holding `vcf_viewer`
 
 An earlier throwaway client (X-142, 04:51), `VC_USER` unset, so the census read the session lists as the client's own
-session. Exit 1.
+session. It printed exit 1, the failed read's code then; the same read exits 3 now.
 
 ```
 $ python3 vcenter_exchange.py --sessions --redact
@@ -220,13 +228,14 @@ exchange.json written with every estate value replaced; exit 1
 ```
 
 - **A list that holds only the census's own session is a failed read.** Minutes later the same lists held 275 to 354
-  sessions each; a list of one means this identity may not see the others. The census prints that the read was narrowed and exits 1, rather than
-  reporting an estate with nobody signed in.
+  sessions each; a list of one means this identity may not see the others. The census prints that the read was narrowed and exits 3, a
+  read that failed, rather than reporting an estate with nobody signed in.
 
 ## 3. That client rebound to `vcf_administrator`
 
-Section 1a's client, its role changed to `vcf_administrator` at realm scope, as X-142 found the census needs. Exit 3.
-This is the run in `exchange.json`.
+Section 1a's client, its role changed to `vcf_administrator` at realm scope, as X-142 found the census needs. It
+printed exit 3, then the code for a directory account off the vSphere Client; the same read exits 1 now. This is the
+run in `exchange.json`.
 
 ```
 $ python3 vcenter_exchange.py --sessions --redact
@@ -280,7 +289,7 @@ exchange.json written with every estate value replaced; exit 3
   behind each before you vault it.
 - **One directory account signs in from `vapi-endpoint` on all three vCenters, and is flagged.** It is the directory
   account the reference tooling itself signs in to vCenter with, so it is an integration on a directory password: the
-  very thing this chapter moves to an identity of its own. The census exits 3 until it moves, or until its owner confirms
+  very thing this chapter moves to an identity of its own. The census exits 1 until it moves, or until its owner confirms
   each remaining session is a person's.
 - **One directory account was at the vSphere Client, `vSphereUI`, and is not flagged.** That agent is the only one the
   census treats as a person's. Sessions show what is signed in at that moment; a nightly or weekly job is absent between
@@ -289,8 +298,8 @@ exchange.json written with every estate value replaced; exit 3
 ## 3a. `--sessions` without `DIRECTORY_DOMAINS`: refused before any read
 
 Unset, every directory session would read as another provider's, a class the census never flags, and the run would
-exit 0 on a census that saw nothing it was asked to see. So it refuses to start. Exit 2, nothing read or written (run
-with a stand-in host).
+exit 0 on a census that saw nothing it was asked to see. So it refuses to start: a usage error, exit 5 (2 before
+2026-10-15), nothing read or written (run with a stand-in host).
 
 ```
 $ python3 vcenter_exchange.py --sessions --redact
@@ -299,12 +308,13 @@ $ python3 vcenter_exchange.py --sessions --redact
 
 - **A misspelled domain is a failed read, not a clean one.** On a vCenter whose list holds sessions of another provider
   and none under the domains given, the census prints `NOT PLACED: DIRECTORY_DOMAINS names nothing on this vCenter`
-  under that vCenter and `FAILED READ` at the end, and exits 1. That path is held by the companion's tests; no run on the
+  under that vCenter and `FAILED READ` at the end, and exits 3. That path is held by the companion's tests; no run on the
   reference estate met it, because no session list read there held another provider's sessions.
 
 ## 4. The census with no API client
 
-`VC_USER` set to a directory account and no API client credential: the census alone, as that account. Exit 3. The counts
+`VC_USER` set to a directory account and no API client credential: the census alone, as that account. It printed exit
+3, then the code for a directory account off the vSphere Client; the same read exits 1 now. The counts
 differ from run 3 by a few sessions, read minutes apart. The account it reads as is the one run 3 flagged: its own
 session is left out, its other sessions are not.
 

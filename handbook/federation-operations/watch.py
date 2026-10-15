@@ -55,32 +55,39 @@ Checks (pure functions over what was read; each returns {check, state, detail, m
 
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded at /oauth/provider/token) or
       VCFA_PROVIDER_BEARER_FILE (a provider bearer you already hold); TLS_VERIFY=false on a self-signed lab CA (applies
-      to VCF Automation and to a non-Entra keys endpoint, never to Entra or Graph); optional ENTRA_TENANT_ID,
-      ENTRA_CLIENT_ID and ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the
-      `cryptography` package): without them the Graph checks are skipped and the run says which; ORGS (comma list;
-      default every organization with OIDC or SAML on, except one signed in through VCF single sign-on and the
-      provider's own consumption organization); WARN_DAYS
-      (default 30); OUT (default watch.json).
-A read the watch could not make is never a pass. An organization whose reads fail is kept in the run, named and
-counted, whether or not ORGS names it; an app or service principal Graph cannot find for an organization federated to
-the Graph credential's tenant is a failed read, as is a settings read that returns no client secret to match; and a
-credential refused before any organization is read ends the run at exit 3 with no record. The Graph checks are
-skipped by design, and the run says why, only where no Graph credential was given, the provider is not Entra ID, or
-the organization is federated to another Entra tenant than ENTRA_TENANT_ID.
+      to VCF Automation and to a non-Entra keys endpoint, never to Entra or Graph); ENTRA_TENANT_ID, ENTRA_CLIENT_ID
+      and ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the `cryptography` package): the
+      tenant's read-only app, which the rollover checks run through; ORGS (comma list; default every organization with
+      OIDC or SAML on, except one signed in through VCF single sign-on and the provider's own consumption
+      organization); WARN_DAYS (default 30); OUT (default watch.json).
+A read the watch could not make is never a pass, and neither is a check it did not run. An organization whose reads
+fail is kept in the run, named and counted, whether or not ORGS names it; an app or service principal Graph cannot find
+for an organization federated to the Graph credential's tenant is a failed read, as is a settings read that returns no
+client secret to match; and a credential refused before any organization is read ends the run at exit 3 with no
+record. Without the tenant's read-only app the run is provider-only: it reads the organization's side (key refresh,
+keys held, PKCE, the local administrator) and runs none of the rollover checks (the client secret's end date, the SAML
+certificate's end date and whether the organization holds it, the app's gate, the group names), says so for each
+organization ("rollover checks not run: the tenant's read-only app is owed"), and exits 3. The same holds for an
+organization federated to another Entra tenant than ENTRA_TENANT_ID (that tenant's app is owed: run again with it and
+ORGS naming the organization) and for a provider other than Entra ID, whose side this watch does not read.
 
 Use:  python3 watch.py                      read, print, write the record
       python3 watch.py --redact             print with placeholders instead of your names (for a shared transcript)
       python3 watch.py --why "<what the user saw>" [--protocol oidc|saml]   the sign-in router; reads nothing
-Exit: 0 every check ok, or skipped for a reason the run prints · 1 a warning (an end date inside WARN_DAYS, a refresh
-      interval over 1 h, a gap that is not yet an outage) · 2 a failure that stops sign-in now or at the provider's
-      next roll (a key not held, refresh not succeeding, an expired secret or certificate, a held secret the app no
-      longer lists, a renamed group, PKCE on, a disabled app) · 3 a read failed and nothing failed (an organization
-      unread, the tenant's app not found, a credential refused). --why: 0 a row matched; 1 none did, and it prints the
-      first reads for a message no run showed.
+Exit: 0 every check ran and is ok · 1 a warning (an end date inside WARN_DAYS, a refresh interval over 1 h, a gap that
+      is not yet an outage) · 2 a failure that stops sign-in now or at the provider's next roll (a key not held, refresh
+      not succeeding, an expired secret or certificate, a held secret the app no longer lists, a renamed group, PKCE
+      on, a disabled app) · 3 nothing failed, and a read failed or a result is undetermined: an organization unread,
+      the tenant's app not found, a credential refused, a check that could not judge, the rollover checks not run, or
+      a record that could not be written · 5 a usage error: an unknown or missing argument, a missing or inconsistent
+      environment variable, a credential or key file that cannot be read, a Python older than 3.9. An error the
+      watch did not expect exits 3, never 1. --why: 0 a row matched; 1 none did, and it prints the first reads for a
+      message no run showed.
 """
 
 from __future__ import annotations
 
+import argparse
 import base64
 import hashlib
 import json
@@ -94,6 +101,7 @@ import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 CLOUDAPI = "application/json;version=9.1.0"
 VCD_JSON = "application/*+json;version=9.1.0"
@@ -106,6 +114,9 @@ ENTRA_HOST = "login.microsoftonline.com"
 REFRESH_GRACE = timedelta(hours=1, minutes=15)
 SECRET_KEYS = ("clientSecret", "password", "secretText", "hint", "privateKey")
 ORDER = {"ok": 0, "unknown": 0, "warn": 1, "fail": 2}
+# One code per state a scheduler acts on (the identity companions' shared contract): 0 nothing to act on, 1 a warning,
+# 2 a failure, 3 a read failed or a result is undetermined (never a finding), 5 not run as asked.
+EXIT_OK, EXIT_WARN, EXIT_FAIL, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
 
 
 # ── the sign-in router: what a user saw, where it was refused, what to read first ────────────────────────────
@@ -536,7 +547,8 @@ def metadata_thumbprints(xml: str) -> list[str]:
 
 
 def _skipped(names: tuple[str, ...], why: str) -> list[dict]:
-    return [_result(n, "unknown", f"skipped: {why}") for n in names]
+    """Each named check as not judged, with the reason; `unknown` is never a pass (exit_code)."""
+    return [_result(n, "unknown", why) for n in names]
 
 
 ENTRA_TENANT_IN = re.compile(r"(?:login\.microsoftonline\.com|sts\.windows\.net)/([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})/")
@@ -551,15 +563,45 @@ def entra_tenant(protocol: str, oauth: dict, fed: dict) -> str | None:
 
 
 def graph_skip(protocol: str, tenant: str | None, graph_tenant: str | None) -> str:
-    """Why the Graph checks are skipped by design for this organization, or "" when they must run. A skip is a choice
-    the run prints; anything else that keeps a Graph check from running is a failed read."""
-    if graph_tenant is None:
-        return "no Graph credential given"
+    """Why the Graph checks cannot run for this organization, or "" when they must. Whatever the reason, they are not
+    run, and a check not run is never a pass: the organization is marked `not_run` and the run exits 3 (`owed` says
+    what would let them run). Anything else that keeps a Graph check from running is a failed read."""
     if tenant is None:
         return "the provider is not Entra ID"
+    if graph_tenant is None:
+        return "no Graph credential given"
     if tenant != graph_tenant.lower():
         return "the organization is federated to another Entra tenant than ENTRA_TENANT_ID"
     return ""
+
+
+ROLLOVER_NOT_RUN = "rollover checks not run"
+OWED = {
+    "no Graph credential given": "the tenant's read-only app is owed",
+    "the organization is federated to another Entra tenant than ENTRA_TENANT_ID":
+        "that tenant's read-only app is owed: run the watch with it and ORGS naming the organization",
+    "the provider is not Entra ID":
+        "this watch reads the provider's side only on Entra ID: track that provider's secret, certificate and groups "
+        "by its own means, or leave the organization out of ORGS",
+}
+
+
+def not_run(checks: tuple[str, ...], why: str) -> dict:
+    """The record of rollover checks the run did not make: which, why, and what is owed for them to run."""
+    return {"checks": list(checks), "why": why, "owed": OWED.get(why, why)}
+
+
+def provider_only_lines(results: list[dict]) -> list[str]:
+    """What a run that did not make the rollover checks could and could not see, for the end of its output."""
+    missed = [r for r in results if r.get("not_run")]
+    if not missed:
+        return []
+    owed = sorted({r["not_run"]["owed"] for r in missed})
+    cannot = sorted({c for r in missed for c in r["not_run"]["checks"]})
+    return [f"{ROLLOVER_NOT_RUN} on {len(missed)} organization(s): {'; '.join(owed)}",
+            "  read: the organization's side (key_refresh, keys_held, pkce, break_glass)",
+            f"  not read: {', '.join(cannot)} ({', '.join(TENANT_READS[c] for c in cannot if c in TENANT_READS)})",
+            "  a check not run is never a pass: exit 3 until they run"]
 
 
 def kept(result: dict, wanted: list[str]) -> bool:
@@ -609,11 +651,12 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
                       graph.tenant if graph is not None else (os.environ.get("ENTRA_TENANT_ID") if graph_error else None))
     if not (oidc or saml):
         out["read_errors"].append("neither OIDC nor SAML is on for this organization")
-    elif skip:
-        checks += _skipped(graph_checks, skip)
+    elif skip:   # not run, so never a pass: the organization carries why, and what would let them run
+        out["not_run"] = not_run(graph_checks, skip)
+        checks += _skipped(graph_checks, f"{ROLLOVER_NOT_RUN}: {out['not_run']['owed']} ({skip})")
     elif graph is None:   # a Graph credential was given and refused: each check it would have run is unread
         out["read_errors"].append(graph_error)
-        checks += _skipped(graph_checks, "the Graph credential given was refused")
+        checks += _skipped(graph_checks, "not run: the Graph credential given was refused")
     else:
         try:
             sel = "id,appId,displayName,passwordCredentials,identifierUris"
@@ -649,11 +692,11 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
         held_secret = bool(prefix)
         prefix = ""
         if sp is None:
-            checks += _skipped(graph_checks, "the app behind the organization could not be read in Graph")
+            checks += _skipped(graph_checks, "not run: the app behind the organization could not be read in Graph")
         else:
             if oidc and not held_secret:
                 out["read_errors"].append("VCF Automation: the organization's settings returned no client secret to match")
-                checks += _skipped(("secret_end",), "the organization's client secret was not in its settings read")
+                checks += _skipped(("secret_end",), "not run: the organization's client secret was not in its settings read")
             elif oidc:
                 checks.append(secret_end(app, now, warn_days))
             else:
@@ -667,12 +710,14 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
 
 
 def exit_code(results: list[dict]) -> int:
+    """One code per state, the first that applies: a failure; then a read that failed, a check that could not judge
+    (unknown) or rollover checks not run, none of which is a pass; then a warning; then nothing to act on."""
     states = [c["state"] for r in results for c in r["checks"]]
     if "fail" in states:
-        return 2
-    if any(r["read_errors"] for r in results):
-        return 3
-    return 1 if "warn" in states else 0
+        return EXIT_FAIL
+    if "unknown" in states or any(r["read_errors"] or r.get("not_run") for r in results):
+        return EXIT_UNREAD
+    return EXIT_WARN if "warn" in states else EXIT_OK
 
 
 # ── the record contract ────────────────────────────────────────────────────────────────────────────────────
@@ -681,6 +726,10 @@ UUIDISH = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{
 RESERVED = {"Organization Administrator", "Organization User", "Organization Member", "Organization Auditor", "Organization Owner",
             "Administrator", "administrator", "admin", "System", "OAUTH", "SAML", "LOCAL"}
 HOSTISH = re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}\b", re.I)
+
+
+class ScrubError(Exception):
+    """The record would carry an estate value, so it is not written."""
 
 
 def placeholders(results: list[dict]) -> dict:
@@ -698,7 +747,7 @@ def scrub(text: str, names: dict, seen: set) -> str:
         text = rx.sub(lambda m: table[m.group(0)], text)
     left = [v for v in seen if v and v in text] + UUIDISH.findall(text) + HOSTISH.findall(text)
     if left:
-        raise SystemExit(f"refusing to write: {len(left)} estate value(s) survived the scrub")
+        raise ScrubError(f"refusing to write: {len(left)} estate value(s) survived the scrub")
     return text
 
 
@@ -717,13 +766,72 @@ def _print(results: list[dict], names: dict | None) -> None:
             print(f"  {c['state'].upper():<8}{c['check']:<16}{c['detail']}")
         for e in r["read_errors"]:
             print(f"  READ    {e}")
+    lines = provider_only_lines(results)
+    if lines:
+        print("")
+        print("\n".join(lines))
 
 
-def main(argv: list[str]) -> int:
-    if "--why" in argv:
-        seen = argv[argv.index("--why") + 1] if len(argv) > argv.index("--why") + 1 else ""
-        proto = argv[argv.index("--protocol") + 1] if "--protocol" in argv else "any"
-        rows = route(seen, proto)
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a usage error, the code this script gives a failure; it exits 5 here."""
+
+    def error(self, message: str):  # type: ignore[override]
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
+def usage_problem(env: dict) -> str:
+    """What is missing or inconsistent in the environment, or "". Checked before any call, so a run that could not
+    have read is a usage error (exit 5), never a read failure or a pass."""
+    if not env.get("VCFA_HOST"):
+        return "set VCFA_HOST"
+    if not (env.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE") or env.get("VCFA_PROVIDER_BEARER_FILE")):
+        return "set VCFA_PROVIDER_REFRESH_TOKEN_FILE or VCFA_PROVIDER_BEARER_FILE"
+    days = env.get("WARN_DAYS", "30")
+    if not days.isdigit():
+        return f"WARN_DAYS must be a whole number of days, not {days!r}"
+    graph = [k for k in ("ENTRA_CLIENT_ID", "ENTRA_CLIENT_SECRET_FILE", "ENTRA_CERT_FILE", "ENTRA_KEY_FILE") if env.get(k)]
+    if graph and not env.get("ENTRA_TENANT_ID"):
+        return f"{', '.join(graph)} given without ENTRA_TENANT_ID: set it, or unset them for a provider-only run"
+    if env.get("ENTRA_TENANT_ID"):
+        if not env.get("ENTRA_CLIENT_ID"):
+            return "ENTRA_TENANT_ID needs ENTRA_CLIENT_ID, the tenant's read-only app"
+        if not (env.get("ENTRA_CLIENT_SECRET_FILE") or (env.get("ENTRA_CERT_FILE") and env.get("ENTRA_KEY_FILE"))):
+            return "the tenant's read-only app needs ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE"
+    for k in ("VCFA_PROVIDER_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_BEARER_FILE", "ENTRA_CLIENT_SECRET_FILE",
+              "ENTRA_CERT_FILE", "ENTRA_KEY_FILE"):
+        if env.get(k) and not (Path(env[k]).is_file() and os.access(env[k], os.R_OK)):
+            return f"{k} names a file that cannot be read"
+    return ""
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The run, with two guards around it: a Python older than 3.9 is refused (exit 5) before anything is read, and an
+    error the watch did not expect exits 3, the code for a result not known, never 1, the code for a warning."""
+    if sys.version_info < (3, 9):  # noqa: UP036  the script is run by readers on their own Python
+        print("watch.py needs Python 3.9 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(sys.argv[1:] if argv is None else argv)
+    except SystemExit as e:  # the parser's own exits: 5 on a usage error, 0 after --help
+        return e.code if isinstance(e.code, int) else EXIT_USAGE
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}; nothing is known about what it had "
+              "not read (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str]) -> int:
+    ap = _Parser(prog="watch.py", description="Will each federated VCF Automation organization keep signing in?")
+    ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
+    ap.add_argument("--why", metavar="TEXT", help="the sign-in router: what the user saw; reads nothing")
+    ap.add_argument("--protocol", choices=("oidc", "saml", "any"), help="with --why: the organization's protocol")
+    a = ap.parse_args(argv)
+    if a.why is not None:
+        if not a.why.strip():
+            ap.error("--why needs what the user saw")
+        rows = route(a.why, a.protocol or "any")
         for r in rows:
             print(f"\n{r['id']}: refused by {r['refused_by']}; Entra's sign-in log shows {r['entra_log']}")
             print(f"  look at: {r['look_at']}\n  then:    {r['then']}")
@@ -734,10 +842,12 @@ def main(argv: list[str]) -> int:
             print(f"\nNo row matches; read these first. Entra's sign-in log shows {r['entra_log']}")
             print(f"  look at: {r['look_at']}\n  then:    {r['then']}")
         return 0 if rows else 1
-    unknown = [a for a in argv if a not in ("--redact",)]
-    if unknown:
-        print(f"unknown argument(s): {' '.join(unknown)}", file=sys.stderr)
-        return 3
+    if a.protocol:
+        ap.error("--protocol goes with --why")
+    problem = usage_problem(dict(os.environ))
+    if problem:
+        print(f"{problem} (see the header); nothing was read", file=sys.stderr)
+        return EXIT_USAGE
     now = datetime.now(timezone.utc)
     warn_days = int(os.environ.get("WARN_DAYS", "30"))
     wanted = [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
@@ -747,10 +857,10 @@ def main(argv: list[str]) -> int:
         listed = api.pages("/cloudapi/1.0.0/orgs")
     except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
         print(f"READ FAILED: VCF Automation, before any organization was read: {type(e).__name__}; exit 3, no record written")
-        return 3
+        return EXIT_UNREAD
     if not listed:
         print("READ FAILED: the organization list came back empty, so the credential sees no organization; exit 3, no record written")
-        return 3
+        return EXIT_UNREAD
     graph, graph_error = None, ""
     if os.environ.get("ENTRA_TENANT_ID"):
         try:
@@ -768,14 +878,19 @@ def main(argv: list[str]) -> int:
     missing = sorted(set(wanted) - {r["org"] for r in results})
     for m in missing:
         results.append({"org": m, "org_type": "?", "checks": [], "read_errors": ["no organization by that name"]})
-    _print(results, placeholders(results) if "--redact" in argv else None)
-    text = record(results, warn_days, now, seen)
+    _print(results, placeholders(results) if a.redact else None)
+    code = exit_code(results)
+    try:
+        text = record(results, warn_days, now, seen)
+    except ScrubError as e:   # the result above stands; the record does not, so the run is not on record
+        code = code if code == EXIT_FAIL else EXIT_UNREAD
+        print(f"\n{len(results)} organization(s); {e}; no record written; exit {code}")
+        return code
     with open(os.environ.get("OUT", "watch.json"), "w", encoding="utf-8") as f:
         f.write(text + "\n")
-    code = exit_code(results)
     print(f"\n{len(results)} organization(s); exit {code}; record written with every estate value replaced")
     return code
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main())

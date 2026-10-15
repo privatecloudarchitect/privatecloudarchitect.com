@@ -8,9 +8,21 @@ these reads, so a row that differs on your estate is worth a report.
 
 | Script | What it answers | Exit |
 |---|---|---|
-| `claims.py` | What does the bearer my api-token exchanges for say about its holder? Issuer, audience, the principal claims (a person shows up as user@realm with an email claim; a machine identity as a client id), scopes, and the lifetime read off the token itself. Any other JWT can be decoded through `JWT_ENV`. | 0 printed · 2 the mint failed |
-| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. With `--census`, it also reads the record the identity-model companion's `census.py` writes and checks every API client in it for an owner, a role, both lifetimes and a rotation date, which neither file holds alone. | 0 every entry complete · 1 a warning · 2 a failure · 3 a file could not be read, the census record carries no fingerprints or was made under another key, or an argument it does not take |
-| `doors.py` | Which token does each surface accept? One harmless read per pair: the broker's bearer against VCF Operations, NSX, and the fleet plane's services; the per-service JWTs; VCF Automation's three login paths with the count of effective rights each carries (the arrival rule in numbers); vCenter's and SDDC Manager's own flows. Rows say MATCH or DIFFERS against the chapter's matrix. | 0 every pair answered · 1 a transport error · 2 the broker mint failed |
+| `claims.py` | What does the bearer my api-token exchanges for say about its holder? Issuer, audience, the principal claims (a person shows up as user@realm with an email claim; a machine identity as a client id), scopes, and the lifetime read off the token itself. Any other JWT can be decoded through `JWT_ENV`. | 0 printed · 3 the mint failed · 5 a usage error |
+| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. With `--census`, it also reads the record the identity-model companion's `census.py` writes and checks every API client in it for an owner, a role, both lifetimes and a rotation date, which neither file holds alone. | 0 every entry complete · 1 a warning · 2 a failure · 3 the census record is not a read (its exit is not 0, a fleet identity call failed, or it has no API client list) · 5 a usage error: an argument it does not take, a file it cannot read, the key unset, or a record without fingerprints or made under another key |
+| `doors.py` | Which token does each surface accept? One harmless read per pair: the broker's bearer against VCF Operations, NSX, and the fleet plane's services; the per-service JWTs; VCF Automation's three login paths with the count of effective rights each carries (the arrival rule in numbers); vCenter's and SDDC Manager's own flows. Rows say MATCH or DIFFERS against the chapter's matrix. | 0 every pair answered · 3 a transport error or the broker mint failed · 5 a usage error |
+
+Every script exits on one contract shared by the identity companions: 0 nothing for a person to act on, 3 a read
+that failed or a result that is not known (an error a script did not expect is one, never 1 or 2), 5 a usage error
+(a Python older than 3.10 among them); 1 and 2 keep the meanings in the table. A `DIFFERS` row from `doors.py` is
+counted on its summary line and leaves the exit alone, because it is the chapter's to correct, not a fault on your
+estate.
+
+`--census` reads another tool's record, so it first checks that the census read: a record whose own exit is not 0,
+that holds a failed call to the fleet identity plane, or that carries no API client list (a `--orgs-only` run reads no
+fleet) is refused with exit 3 and `NOT READ`, before any entry is printed. A census refused its fleet reads still
+writes a record, with an API client list that is empty, and without that check it would pass as an estate with no
+client.
 
 `opslib.py` holds the broker exchange (the api-token flow the Platform identity chapter teaches); `rtmlib.py`
 holds the per-service JWT exchange the fleet plane's services require. Both are the same files the
@@ -71,8 +83,9 @@ so keep it for a throwaway credential.
   OAuth bearer's: the difference is the identity-management delta the chapter calls the arrival rule.
 - Read-only against the platform. The one file the script writes is the refresh-token file, and only when the
   platform answers with a different value than it was sent; on the reference estate it never did.
-- An api-token that was deleted or rotated away answers HTTP 500 at the broker, not 401; one past its expiry date
-  is not tested. Both scripts say so when it happens.
+- A deleted or rotated api-token is refused at the broker, and not with 401: with HTTP 500 on the 9.1.0 run of
+  2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (2026-10-13 and 2026-10-15). One past its expiry
+  date is not tested. Both scripts say so when it happens, and exit 3.
 - `catalog_check.py` reads metadata you keep and was run on the example catalog; it never reads a backend, so it
   cannot tell whether the value in the vault still works. That is what `claims.py` and `doors.py` are for. Its
   `--census` join was run once on the reference estate's census record, with a scratch catalog naming one client: that

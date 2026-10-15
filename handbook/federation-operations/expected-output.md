@@ -61,3 +61,43 @@ $ ORGS=<the four organizations> python3 watch.py --redact
   app, a blocked service principal) leaves nobody able to sign in.
 - **Nothing failed.** On your estate a `fail` is the line to act on today: a published key not held, refreshes not
   succeeding, an expired secret or certificate, a renamed group, PKCE on, or a disabled app.
+
+## Without the tenant's read-only app
+
+The same watch run on the provider's credential alone, with no `ENTRA_*` variable set: the reference estate,
+2026-10-15 (UTC), two standing All Apps organizations federated to the lab's Entra tenant, one over OIDC and one over
+SAML. Exit 3: the rollover checks were not run, which is never a pass.
+
+```
+$ ORGS=<the two organizations> python3 watch.py --redact
+{{org-1}}  (oidc, all-apps)
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h
+  OK      keys_held       all 6 published keys are held
+  OK      pkce            PKCE is off
+  UNKNOWN secret_end      rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
+  UNKNOWN app_gate        rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
+  UNKNOWN group_names     rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
+  OK      break_glass     1 enabled local user(s) holding Organization Administrator
+
+{{org-2}}  (saml, all-apps)
+  UNKNOWN saml_cert_end   rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
+  UNKNOWN saml_cert_held  rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
+  UNKNOWN app_gate        rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
+  UNKNOWN group_names     rollover checks not run: the tenant's read-only app is owed (no Graph credential given)
+  WARN    break_glass     no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it
+
+rollover checks not run on 2 organization(s): the tenant's read-only app is owed
+  read: the organization's side (key_refresh, keys_held, pkce, break_glass)
+  not read: app_gate, group_names, saml_cert_end, saml_cert_held, secret_end (whether the app requires assignment, the names of the groups assigned to the app, the signing certificate's end date, the app's active signing certificate, the client secret's end date)
+  a check not run is never a pass: exit 3 until they run
+
+2 organization(s); exit 3; record written with every estate value replaced
+```
+
+- **It reads the organization's side and says what it did not read.** `key_refresh`, `keys_held`, `pkce` and
+  `break_glass` need only the provider's credential. The rollover checks, the client secret's and the SAML
+  certificate's end dates, whether the organization holds the active certificate, the app's gate and the group names,
+  live in the tenant's directory, so each reads `UNKNOWN` with the reason and what is owed.
+- **The exit is 3, never 0.** Run again on the same two organizations with the tenant's read-only app, the watch read
+  every rollover check and exited 1: the OIDC organization's held secret ended in 23.4 days, which the run above had
+  no way to see. A scheduler that alerts on any non-zero exit keeps alerting until the app is held.

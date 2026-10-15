@@ -47,16 +47,35 @@ the vCenter's SSO administrator.
                    itself a tag role on the VM (every role it grants itself carries ModifyPermissions, so an
                    accepted grant stays removable). Choose a VM you own.
 
+The realm-spelled grants, named and removed. The census counts them and never names them in the record.
+  --where-realm    with the census: each realm-spelled grant's permission id, principal, object, role and scope,
+                   printed on your terminal only and never written to the record, so you can name the ones to remove
+  --remove ID[,ID...] [--execute]
+                   on the one vCenter VC_HOSTS names: the realm-spelled grants with those permission ids. Without
+                   --execute it prints each grant and the DELETE it would send, and sends nothing. With --execute it
+                   sends one DELETE per id, then reads the permission list again: the run holds when every named id
+                   is gone and no other grant moved. It refuses, before anything is sent, an id that is not on that
+                   vCenter and an id that is not a realm-spelled grant: any other grant is removed where it was made.
+                   It writes no record; what it removed is on the terminal.
+
+Before a realm exists. Run the census before the broker takes the realm, so the grants are inventoried while the
+boundary is decided: declare it with --no-realm, and the realm-spelled class is reported as not applicable and nothing
+is flagged for it. A run with neither REALM_DOMAIN nor --no-realm is refused (exit 5): left to infer "no realm" from
+a variable not set, a run on an estate that has a realm read its realm-spelled grant as another provider's and exited
+0 (X-197). Every run prints, on the terminal only, the domains it read as another provider's with their grant counts,
+so a misspelled REALM_DOMAIN or directory domain shows there.
+
 Environment:
-  VC_HOSTS            comma-separated vCenter FQDNs
+  VC_HOSTS            comma-separated vCenter FQDNs (one, with --remove)
   VC_USER             an administrator of those vCenters, user@domain
   VC_PASSWORD_FILE    a file holding that password (mode 0600); VC_PASSWORD is read if it is not set
-  REALM_DOMAIN        required: the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms);
-                      not the broker tenant an API client's session carries (CUSTOMER by default)
-  DIRECTORY_DOMAINS   required: comma-separated directory domains under the broker's identity provider. Without
-                      either, its grants read as another provider's and the census would count no realm-spelled or
-                      directory grant on an estate full of them, so the script refuses to start without both, and
-                      says so on a vCenter where neither names a grant while another provider's grants are there
+  REALM_DOMAIN        the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); not the
+                      broker tenant an API client's session carries (CUSTOMER by default). Required once the estate
+                      has a realm, and by --where-realm, --remove and the probes; unset, the census reads the estate
+                      as one with no realm yet
+  DIRECTORY_DOMAINS   required: comma-separated directory domains under the broker's identity provider (or, before
+                      the realm, the vCenter's own directory identity sources). Unset, every directory grant reads as
+                      another provider's and the census would count none, so the script refuses to start without it
   LOCAL_DOMAIN        the vCenter's own SSO domain (default VSPHERE.LOCAL); set it where yours is named otherwise,
                       or every local grant reads as another provider's
   TLS_VERIFY          false only on a self-signed lab CA
@@ -65,7 +84,23 @@ Environment:
   SUPERVISOR_VCENTER  the vCenter for --supervisor-vm (default PROBE_VCENTER)
   OUT_DIR             where authz.json is written (default: this folder)
 
-Run:  python3 authz.py [--probe-grants] [--probe-tags] [--supervisor-vm NAME]
+Run:  python3 authz.py [--where-realm] [--probe-grants] [--probe-tags] [--supervisor-vm NAME]
+      python3 authz.py --remove ID[,ID...] [--execute]
+      Python 3.10 or later.
+Exit, the first that applies, so a scheduler reads one state from one number:
+      2 a removal (--remove --execute) that did not hold on read-back: a named grant still there, or another grant
+        moved; or a probe that left residue (its folder, its tag category, or a grant of a probe role)
+      1 the census read realm-spelled grants: remove them (--where-realm names them, --remove removes them). Only
+        with REALM_DOMAIN set; before a realm there is no such class
+      3 a read failed or a result is undetermined: a vCenter refused the session or the permission or role list,
+        the session list could not be read, a vCenter on which DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no
+        grant while another provider's grants are there, a probe that could not run its cases, or an error the
+        script did not expect. Nothing is known about what was not read
+      0 nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean
+        (with --remove: the plan printed, or every named grant removed and nothing else moved)
+      5 a usage error, before anything is read: an argument or environment variable missing or wrong, an id --remove
+        cannot name as a realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it, a Python
+        older than 3.10; or the record refused because an estate value survived the scrub (nothing is written)
 """
 import argparse
 import base64
@@ -101,6 +136,27 @@ PRODUCT_ROLES = {
     "SupervisorAdministrator", "vSpherePodAdministrator", "VMOperatorController", "ObservabilityOperator",
 }
 PRODUCT_LOCAL = {"Administrator", "Administrators"}
+
+# The exit codes, one state each (the docstring's table).
+EXIT_OK, EXIT_REALM, EXIT_NOT_HELD, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
+NO_REALM = "not applicable: --no-realm, an estate with no realm yet"
+
+
+class ReadError(Exception):
+    """A read or a step the run needed did not answer: the result is undetermined (exit 3)."""
+
+
+class UsageError(Exception):
+    """An argument or environment variable the run cannot work with, found before anything is changed (exit 5)."""
+
+
+class _Parser(argparse.ArgumentParser):
+    """argparse with its usage errors on exit 5, the code for a usage error, not argparse's own 2."""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
 
 
 # ---------------------------------------------------------------- plumbing
@@ -154,15 +210,15 @@ def permissions(rest):
     """Every permission, global and per-object. A GET on the collection answers 404 on vCenter 9.1; the
     list is the action=list POST with an empty filter, and global ones carry object type GlobalAcl."""
     st, body = rest.call("POST", "/api/vcenter/authorization/permissions?action=list", {})
-    if st != 200:
-        raise SystemExit(f"permission list answered {st}")
+    if st != 200 or not isinstance(body, dict) or not isinstance(body.get("items"), list):
+        raise ReadError(f"the permission list answered {st}")
     return body["items"]
 
 
 def roles(rest):
     st, body = rest.call("GET", "/api/vcenter/authorization/roles")
-    if st != 200:
-        raise SystemExit(f"role list answered {st}")
+    if st != 200 or not isinstance(body, dict) or not isinstance(body.get("items"), list):
+        raise ReadError(f"the role list answered {st}")
     return {str(i["role"]): i["info"] for i in body["items"]}
 
 
@@ -219,8 +275,11 @@ def names_nothing(by_class):
     return "another provider" in kinds and not kinds & {"directory", "realm spelling"}
 
 
-def census(rest, realm, directories):
-    perms, cat = permissions(rest), roles(rest)
+def census(rest, realm, directories, perms=None, cat=None):
+    """Every grant counted by class and scope, with the role catalog. The lists are read here unless the caller
+    has read them already; no principal is named."""
+    perms = permissions(rest) if perms is None else perms
+    cat = roles(rest) if cat is None else cat
     by = collections.Counter()
     directory_kinds = collections.Counter()
     reserved_named = collections.Counter()
@@ -243,6 +302,77 @@ def census(rest, realm, directories):
         "roles": len(cat),
         "customRoles": sum(1 for r in cat.values() if not r.get("system")),
     }, cat
+
+
+def other_domains(perms, realm, directories):
+    """The domains whose grants read as another provider's, with their counts: printed on the terminal only, so a
+    misspelled REALM_DOMAIN or directory domain shows among them. A domain is an estate value; the record never
+    carries this."""
+    out = collections.Counter()
+    for p in perms:
+        who = p["info"]["principal"]
+        if classify(who["domain"], who["name"], realm, directories) == "another provider":
+            out[who["domain"]] += 1
+    return dict(sorted(out.items(), key=lambda kv: (-kv[1], kv[0].lower())))
+
+
+def realm_grants(perms, realm, directories):
+    """The realm-spelled grants, each with its permission id: the ones --where-realm names and --remove may remove.
+    Empty without a realm."""
+    if not realm:
+        return []
+    return [p for p in perms
+            if classify(p["info"]["principal"]["domain"], p["info"]["principal"]["name"], realm, directories)
+            == "realm spelling"]
+
+
+def grant_line(p, cat):
+    """One grant as the terminal shows it: its id, principal, object, role and scope. Never recorded."""
+    info, who = p["info"], p["info"]["principal"]
+    role = cat.get(str(info["role"]), {}).get("name") or str(info["role"])
+    scope = "global" if info["object"]["type"] == "GlobalAcl" else "object"
+    return (f"permission {p['permission']}: {who['domain']}\\{who['name']} ({who.get('type', '?')}) on "
+            f"{info['object']['type']} {info['object']['id']}, role {role}, {scope}, "
+            f"{'propagating' if info.get('propagating') else 'not propagating'}")
+
+
+def grant_key(p):
+    """What makes a grant the same grant on a second read: its id and every field it carries."""
+    info, who = p["info"], p["info"]["principal"]
+    return (str(p.get("permission")), str(who.get("domain", "")).upper(), str(who.get("name", "")).lower(),
+            str(who.get("type", "")), info["object"]["type"], str(info["object"]["id"]), str(info["role"]),
+            bool(info.get("propagating")))
+
+
+def removal_plan(perms, ids, realm, directories):
+    """The grants --remove would delete, by id, or the reason it refuses (a usage error: nothing is sent). An id
+    that is not on the vCenter, and an id that is not a realm-spelled grant, are refused: this script removes only
+    the class it exists to clean up."""
+    by_id = {str(p.get("permission")): p for p in perms}
+    unknown = [i for i in ids if i not in by_id]
+    if unknown:
+        return None, f"no grant on this vCenter has the id {', '.join(unknown)}; read the ids with --where-realm"
+    realm_ids = {str(p.get("permission")) for p in realm_grants(perms, realm, directories)}
+    other = [i for i in ids if i not in realm_ids]
+    if other:
+        return None, (f"{', '.join(other)} {'is' if len(other) == 1 else 'are'} not a realm-spelled grant; this script "
+                      "removes only those, and any other grant is removed where it was made")
+    return [by_id[i] for i in ids], None
+
+
+def remove_grants(rest, ids, before):
+    """Send one DELETE per id, read the list back, and say whether the removal held: every named id gone, and every
+    other grant as it was."""
+    others_before = {str(p.get("permission")): grant_key(p) for p in before if str(p.get("permission")) not in ids}
+    sent = []
+    for i in ids:
+        st, _ = rest.call("DELETE", "/api/vcenter/authorization/permissions/" + urllib.parse.quote(i, safe=""))
+        sent.append({"id": i, "status": st})
+    after = permissions(rest)
+    left = sorted({str(p.get("permission")) for p in after} & set(ids))
+    others_after = {str(p.get("permission")): grant_key(p) for p in after if str(p.get("permission")) not in ids}
+    moved = sum(1 for k in set(others_before) | set(others_after) if others_before.get(k) != others_after.get(k))
+    return {"sent": sent, "still_there": left, "other_grants_moved": moved, "held": not left and moved == 0}
 
 
 def drift(catalogs, L):
@@ -420,10 +550,13 @@ class TagLab:
         st, self.cat = rest.call("POST", "/api/cis/tagging/category", {
             "name": name, "description": "authz.py probe (throwaway)", "cardinality": "SINGLE",
             "associable_types": types})
-        assert st in (200, 201), f"category create answered {st}"
+        if st not in (200, 201):
+            raise ReadError(f"the probe's tag category create answered {st}")
         st, self.tag = rest.call("POST", "/api/cis/tagging/tag",
                                  {"name": name, "description": "throwaway", "category_id": self.cat})
-        assert st in (200, 201), f"tag create answered {st}"
+        if st not in (200, 201):
+            rest.call("DELETE", "/api/cis/tagging/category/" + urllib.parse.quote(self.cat, safe=""))
+            raise ReadError(f"the probe's tag create answered {st}; its category was deleted")
 
     def path(self):
         return "/api/cis/tagging/tag-association/" + urllib.parse.quote(self.tag, safe="")
@@ -567,7 +700,7 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
         found = [v for v in view.view if v.name == vm_name]
         view.Destroy()
         if len(found) != 1:
-            raise SystemExit(f"{len(found)} VMs carry that name")
+            raise UsageError(f"--supervisor-vm names {len(found)} VMs on that vCenter, not one")
         vm = found[0]
         rec["managedBy"] = vm.config.managedBy.extensionKey if vm.config.managedBy else None
         obj = {"id": vm._moId, "type": "VirtualMachine"}
@@ -633,62 +766,176 @@ class Labels:
         return [r for m in self.maps.values() for r in m]
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+def _hosts():
+    return [h.strip() for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
+
+
+def _ids(values):
+    """The permission ids --remove names, from one or more comma-separated values, in order and once each."""
+    out = []
+    for v in values or []:
+        for i in v.split(","):
+            if i.strip() and i.strip() not in out:
+                out.append(i.strip())
+    return out
+
+
+def _parser():
+    ap = _Parser(description=__doc__.split("\n")[0])
     ap.add_argument("--probe-grants", action="store_true")
     ap.add_argument("--probe-tags", action="store_true")
     ap.add_argument("--supervisor-vm", default="")
     ap.add_argument("--remove-probe-roles", action="store_true",
                     help="remove the authz-probe-* roles from every vCenter in VC_HOSTS and report the groups left")
-    a = ap.parse_args()
+    ap.add_argument("--no-realm", action="store_true",
+                    help="declare an estate with no realm yet; without it, REALM_DOMAIN is required")
+    ap.add_argument("--where-realm", action="store_true",
+                    help="with the census: print each realm-spelled grant's id, principal, object, role and scope on "
+                         "the terminal only, never in the record")
+    ap.add_argument("--remove", action="append", metavar="ID[,ID...]",
+                    help="the realm-spelled grants to remove, by permission id, on the one vCenter VC_HOSTS names; "
+                         "plan only without --execute")
+    ap.add_argument("--execute", action="store_true", help="with --remove: send the DELETEs and read the list back")
+    return ap
 
-    hosts = [h.strip() for h in os.environ["VC_HOSTS"].split(",") if h.strip()]
-    user, password = os.environ["VC_USER"], secret("VC_PASSWORD")
+
+def main(argv=None):
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5) before anything is read, and
+    an error the script did not expect exits 3, the code for a read that failed, never 1, the code for a finding."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("authz.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except SystemExit as e:  # argparse: --help exits 0, a usage error exits 5 through _Parser.error
+        return e.code if isinstance(e.code, int) else EXIT_USAGE
+    except UsageError as e:
+        print(f"{e} (exit 5)", file=sys.stderr)
+        return EXIT_USAGE
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
+              "about what it had not read (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _settings(a):
+    """The environment the run reads, checked before anything is read: a usage error raises UsageError."""
+    hosts = _hosts()
+    user, password = os.environ.get("VC_USER", "").strip(), secret("VC_PASSWORD")
     realm = os.environ.get("REALM_DOMAIN", "").strip()
     directories = [x.strip().lower() for x in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if x.strip()]
-    if not realm or not directories:
-        raise SystemExit("REALM_DOMAIN and DIRECTORY_DOMAINS are required: without them a realm-spelled grant and a "
-                         "directory grant both read as another provider's, and the census would count none of either")
+    if not hosts or not user or not password:
+        raise UsageError("VC_HOSTS, VC_USER and VC_PASSWORD_FILE (or VC_PASSWORD) are required")
+    if not directories:
+        raise UsageError("DIRECTORY_DOMAINS is required: without it every directory grant reads as another provider's, "
+                         "and the census would count none of them")
+    if realm and a.no_realm:
+        raise UsageError("REALM_DOMAIN and --no-realm contradict each other: set the one that is true of the estate")
+    if not realm and not a.no_realm:
+        raise UsageError("REALM_DOMAIN is required, or --no-realm to declare an estate with no realm yet: left to infer "
+                         "it from a variable not set, a realm-spelled grant reads as another provider's (X-197)")
+    removing = bool(a.remove)
+    if a.execute and not removing:
+        raise UsageError("--execute goes with --remove; the census and the probes take no --execute")
+    if removing and (a.where_realm or a.probe_grants or a.probe_tags or a.supervisor_vm or a.remove_probe_roles):
+        raise UsageError("--remove is a run of its own: it takes only --execute")
+    if removing and len(hosts) != 1:
+        raise UsageError("--remove acts on one vCenter: set VC_HOSTS to the one whose grant ids you name")
+    if removing and not _ids(a.remove):
+        raise UsageError("--remove takes one or more permission ids")
+    if (removing or a.where_realm) and not realm:
+        raise UsageError("--where-realm and --remove name realm-spelled grants, so they need REALM_DOMAIN, the "
+                         "realm's name as vCenter spells it")
+    probing = a.probe_grants or a.probe_tags or a.supervisor_vm
+    test_user = os.environ.get("TEST_USER", "")
+    if (probing or a.remove_probe_roles) and not have_pyvmomi():
+        raise UsageError("the probes and --remove-probe-roles need pyVmomi")
+    if probing:
+        local, _, dom = test_user.partition("@")
+        if not (local and dom and realm and secret("TEST_PASSWORD")):
+            raise UsageError("the probes need TEST_USER (user@domain), TEST_PASSWORD_FILE and REALM_DOMAIN")
+        if a.probe_grants and not os.environ.get("TEST_GROUP", "").strip():
+            raise UsageError("--probe-grants needs TEST_GROUP, a directory group TEST_USER is in")
+    return hosts, user, password, realm, directories
+
+
+def _run(argv=None):
+    a = _parser().parse_args(argv)
+    hosts, user, password, realm, directories = _settings(a)
+    if a.remove:
+        return _remove(hosts[0], user, password, realm, directories, _ids(a.remove), a.execute)
     out_dir = os.environ.get("OUT_DIR", os.path.dirname(os.path.abspath(__file__)))
     L = Labels()
     vc_label = {h: L.get("vcenter", h) for h in hosts}
 
     print("authz.py: vCenter authorization under VCF single sign-on, read the way a broker session reads it\n")
+    if not realm:
+        print("  --no-realm: an estate with no realm yet, so the realm-spelled class is not applicable.\n")
     record = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "vcenters": {}}
+    if not realm:
+        record["realmSpelling"] = NO_REALM
     catalogs = {}
     pyv = have_pyvmomi()
+    unread = []
     for h in hosts:
+        label = vc_label[h]
         rest = Rest(h, user, password)
         if rest.token is None:
-            raise SystemExit("the vSphere Automation API refused the session")
+            record["vcenters"][label] = {"error": "the vSphere Automation API refused the session"}
+            unread.append(label)
+            print(f"  {label}: NOT READ: the vSphere Automation API refused the session")
+            continue
         try:
-            row, cat = census(rest, realm, directories)
+            perms, cat = permissions(rest), roles(rest)
+            row, cat = census(rest, realm, directories, perms, cat)
+        except ReadError as e:
+            record["vcenters"][label] = {"error": str(e)}
+            unread.append(label)
+            print(f"  {label}: NOT READ: {e}")
+            continue
         finally:
             rest.close()
-        catalogs[vc_label[h]] = cat
+        catalogs[label] = cat
         if pyv:
-            si = soap(h, user, password)
             try:
-                row["version"] = f"{si.content.about.version} build {si.content.about.build}"
-                row["sessions"] = sessions(si, realm, directories)
-            finally:
-                unsoap(si)
+                si = soap(h, user, password)
+            except Exception as e:  # the session read is part of the census: a refusal is a read that failed
+                row["sessions"] = {"error": f"the session list was not read: {type(e).__name__}"}
+                si = None
+            if si is not None:
+                try:
+                    row["version"] = f"{si.content.about.version} build {si.content.about.build}"
+                    row["sessions"] = sessions(si, realm, directories)
+                finally:
+                    unsoap(si)
         else:
             row["sessions"] = "not read: pyVmomi is not installed"
         if names_nothing(row["byClass"]):
             row["domainsNamedNothing"] = True
-        record["vcenters"][vc_label[h]] = row
-        print(f"  {vc_label[h]}: {row['permissions']} permissions ({row['global']} global); {row['byClass']}")
+        record["vcenters"][label] = row
+        print(f"  {label}: {row['permissions']} permissions ({row['global']} global); {row['byClass']}")
         if row.get("domainsNamedNothing"):
-            print("     NOT PLACED: REALM_DOMAIN and DIRECTORY_DOMAINS name no grant here while grants of another provider "
-                  "are there; check their spelling against the vCenter's own before reading the census")
-        if isinstance(row["sessions"], dict):
+            print("     NOT PLACED: " + ("REALM_DOMAIN and DIRECTORY_DOMAINS name" if realm else "DIRECTORY_DOMAINS names")
+                  + " no grant here while grants of another provider are there; check the spelling against the "
+                    "vCenter's own before reading the census (exit 3)")
+        others = other_domains(perms, realm, directories)
+        if others:
+            print("     read as another provider's (printed here only, never recorded): "
+                  + ", ".join(f"{d} {n}" for d, n in others.items()))
+        if not realm:
+            print(f"     realm spelling: {NO_REALM}")
+        if a.where_realm:
+            found = realm_grants(perms, realm, directories)
+            print(f"     realm-spelled grants (printed here only, never recorded): {len(found) or 'none'}")
+            for p in found:
+                print(f"       {grant_line(p, cat)}")
+        if isinstance(row["sessions"], dict) and "error" in row["sessions"]:
+            print(f"     sessions NOT READ: {row['sessions']['error']}")
+        elif isinstance(row["sessions"], dict):
             print(f"     sessions by class {row['sessions']['byClass']}; local administrator by agent "
                   f"{row['sessions']['localAdministratorByAgent']}")
     record["roleDrift"] = drift(catalogs, L)
     if a.remove_probe_roles:
-        if not pyv:
-            raise SystemExit("removing the probe roles needs pyVmomi")
         record["probeRoleTeardown"] = {}
         for h in hosts:
             si = soap(h, user, password)
@@ -703,11 +950,6 @@ def main():
     test_user = os.environ.get("TEST_USER", "")
     subject = (test_user, secret("TEST_PASSWORD"))
     local, _, dom = test_user.partition("@")
-    if a.probe_grants or a.probe_tags or a.supervisor_vm:
-        if not pyv:
-            raise SystemExit("the probes need pyVmomi")
-        if not (test_user and realm and dom):
-            raise SystemExit("the probes need TEST_USER (user@domain), TEST_PASSWORD_FILE and REALM_DOMAIN")
     d_user, r_user = f"{dom.upper()}\\{local}", f"{realm.upper()}\\{local}"
     if a.probe_grants:
         group = os.environ["TEST_GROUP"]
@@ -735,6 +977,7 @@ def main():
         print(f"\n  supervisor probe: {json.dumps(record['supervisorProbe']['identities'])}")
         print(f"     grant attempts: {[(g['attempt'], g['result']) for g in record['supervisorProbe']['grantAttempts']]}")
 
+    record["exit"] = code = exit_code(record, realm)
     text = json.dumps(record, indent=1, ensure_ascii=False)
     estate = set(hosts) | {user, local, dom, realm, test_user, os.environ.get("TEST_GROUP", ""), a.supervisor_vm,
                            os.environ.get("TEST_LOCAL_GROUP", ""),
@@ -743,13 +986,84 @@ def main():
     for value in sorted({v for v in estate if v and v not in PRODUCT_ROLES | PRODUCT_LOCAL}, key=len, reverse=True):
         if re.search(r"(?<![A-Za-z0-9-])" + re.escape(value) + r"(?![A-Za-z0-9-])", text, re.IGNORECASE):
             shape = re.sub(r"[A-Za-z]", "a", re.sub(r"[0-9]", "9", value))
-            raise SystemExit(f"FATAL: an estate value ({len(value)} characters, shape {shape}) reached the record")
-    for s in (password, subject[1]):
-        assert not s or s not in text, "a password reached the record"
+            print(f"refusing to write authz.json: an estate value ({len(value)} characters, shape {shape}) reached the "
+                  "record; nothing is written (exit 5)", file=sys.stderr)
+            return EXIT_USAGE
+    if any(s and s in text for s in (password, subject[1])):
+        print("refusing to write authz.json: a password reached the record; nothing is written (exit 5)", file=sys.stderr)
+        return EXIT_USAGE
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "authz.json"), "w", encoding="utf-8") as f:
         f.write(text + "\n")
     print("\nwrote authz.json: counts, classes and outcomes, with every estate name replaced")
+    if unread:
+        print(f"NOT READ: {len(unread)} vCenter(s); nothing is known about their grants")
+    print(f"exit {code}")
+    return code
+
+
+def probe_residue(rec):
+    """Whether a probe left something behind: its folder, its tag category, or a grant of a probe role."""
+    res = (rec or {}).get("residue") or {}
+    return bool(res.get("folder") or res.get("category") or res.get("grantsOfProbeRoles"))
+
+
+def exit_code(record, realm):
+    """The first that applies: 2 a probe left residue, 1 realm-spelled grants read (only with a realm), 3 a vCenter
+    or its session list not read, a vCenter whose domains named no grant, or a probe that could not run; else 0."""
+    probes = [record.get(k) for k in ("grantProbe", "tagProbe", "supervisorProbe") if record.get(k) is not None]
+    if any(probe_residue(p) for p in probes):
+        return EXIT_NOT_HELD
+    rows = list((record.get("vcenters") or {}).values())
+    if realm and any(n for r in rows for k, n in (r.get("byClass") or {}).items() if k.startswith("realm spelling")):
+        return EXIT_REALM
+    unread = (not rows or any("error" in r for r in rows) or any(r.get("domainsNamedNothing") for r in rows)
+              or any(isinstance(r.get("sessions"), dict) and "error" in r["sessions"] for r in rows)
+              or any(p.get("aborted") for p in probes))
+    return EXIT_UNREAD if unread else EXIT_OK
+
+
+def _remove(host, user, password, realm, directories, ids, execute):
+    """--remove: plan, or with --execute send, one DELETE per named realm-spelled grant on one vCenter, then read the
+    list back. Writes no record; every line is on the terminal."""
+    rest = Rest(host, user, password)
+    if rest.token is None:
+        print(f"{host}: NOT READ: the vSphere Automation API refused the session (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+    try:
+        try:
+            before, cat = permissions(rest), roles(rest)
+        except ReadError as e:
+            print(f"{host}: NOT READ: {e} (exit 3)", file=sys.stderr)
+            return EXIT_UNREAD
+        plan, problem = removal_plan(before, ids, realm, directories)
+        if problem:
+            print(f"refused, nothing sent: {problem} (exit 5)", file=sys.stderr)
+            return EXIT_USAGE
+        print(f"authz.py --remove on {host}: {len(plan)} realm-spelled grant(s), printed here only")
+        for p in plan:
+            print(f"  {grant_line(p, cat)}")
+            print(f"    DELETE /api/vcenter/authorization/permissions/{p['permission']}")
+        if not execute:
+            print("\nplan only: nothing was sent (--execute sends it)\nexit 0")
+            return EXIT_OK
+        try:
+            result = remove_grants(rest, ids, before)
+        except ReadError as e:
+            print(f"the DELETEs were sent and the list could not be read back: {e}; nothing is known of what they did "
+                  "(exit 3)", file=sys.stderr)
+            return EXIT_UNREAD
+    finally:
+        rest.close()
+    for s in result["sent"]:
+        print(f"  DELETE {s['id']}: HTTP {s['status']}")
+    print(f"read back: {len(ids) - len(result['still_there'])} of {len(ids)} named grant(s) gone"
+          + (f"; still there: {', '.join(result['still_there'])}" if result["still_there"] else "")
+          + f"; other grants moved: {result['other_grants_moved']}")
+    code = EXIT_OK if result["held"] else EXIT_NOT_HELD
+    print(("held: every named grant is gone and no other grant moved" if result["held"]
+           else "NOT HELD: read the list again before anything else") + f"\nexit {code}")
+    return code
 
 
 if __name__ == "__main__":

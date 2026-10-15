@@ -17,14 +17,23 @@ holds alone: an owner, a role, both lifetimes and a rotation date. A client that
 entry has no owner or no next_due, fails; so does one with no role, or a token missing a lifetime; a client holding
 no token, or a token that expires before its entry's next_due, is a warning. Every name in a census record is a
 placeholder, so the join is on keyed fingerprints: run the census with FINGERPRINT_KEY_FILE set, and give this
-script the same file.
+script the same file. The join first checks that the census read: a record whose own exit is not 0, that holds a
+failed call to VCF Operations' fleet identity plane, or that carries no API client list (a --orgs-only record reads
+no fleet) is not a read, and the join stops there with exit 3, because a census refused on its API clients would
+otherwise read as an estate with none.
 
 Use:  python3 catalog_check.py [CATALOG.json] [--today YYYY-MM-DD] [--census CENSUS.json]
-Exit: 0 every entry complete and not due inside the window, and with --census every API client complete · 1 a
-      warning (due inside the window, a next-due date later than the cadence allows, a client with no token, or a
-      token expiring before its rotation date) · 2 a failure (a field missing, a date overdue or unreadable, a secret
-      in the file, an API client without an owner, a role, both lifetimes or a rotation date) · 3 a file could not be
-      read, a census record without fingerprints or made under another key, or an argument this script does not take
+Exit: 0 every entry complete and not due inside the window, and with --census every API client complete
+      1 a warning (due inside the window, a next-due date later than the cadence allows, a client with no token, or a
+        token expiring before its rotation date), and no failure
+      2 a failure (a field missing, a date overdue or unreadable, a secret in the file, an API client without an
+        owner, a role, both lifetimes or a rotation date)
+      3 the census record is not a read (its exit is not 0, a fleet identity call failed, or it has no API client
+        list), or an error the script did not expect. It is checked before any entry is printed, and nothing is
+        joined, because nothing about the API clients is known
+      5 a usage error: an argument this script does not take, a --today that is not a date, a catalog or census file
+        that cannot be read, FINGERPRINT_KEY_FILE unset or unreadable, a census record without fingerprints or made
+        under another key, or a Python older than 3.10
 Standard library only; reads its files and FINGERPRINT_KEY_FILE, writes nothing, calls nothing.
 """
 
@@ -122,26 +131,57 @@ def census_join(catalog: dict, census: dict, key: bytes) -> list[tuple[dict, dic
     return out
 
 
-def _census(path: str) -> tuple[dict | None, bytes | None, str | None]:
-    """The census record and the key, or the reason the join cannot run."""
+EXIT_UNREAD, EXIT_USAGE = 3, 5
+
+
+def census_unread(record: dict) -> str | None:
+    """Why a census record is not a read of the API clients, or None when it is one. A census that was refused its
+    fleet reads still writes a record, and its API client list is then empty, so an empty list proves nothing until
+    the run's own exit, its calls and the list itself are checked."""
+    if not isinstance(record, dict):
+        return "it is not a census record"
+    if record.get("orgs_only"):
+        return "it is a --orgs-only record, which reads no fleet and so no API client"
+    if record.get("exit") != 0:
+        return f"the census exited {record.get('exit')!r}, not 0: a read failed, so its counts are not the estate's"
+    calls = record.get("calls")
+    if not isinstance(calls, list):
+        return "it carries no list of the calls the census made, so nothing says its fleet reads answered"
+    failed = [c for c in calls if isinstance(c, dict) and c.get("plane") == "vcf-operations"
+              and (not isinstance(c.get("status"), int) or c["status"] >= 400)]
+    if failed:
+        return f"{len(failed)} of its fleet identity call(s) failed, so an API client it lists none of may be one it did not read"
+    if not any(isinstance(c, dict) and c.get("plane") == "vcf-operations" for c in calls):
+        return "it made no call to the fleet identity plane"
+    if not isinstance((record.get("summary") or {}).get("api_clients"), list):
+        return "it carries no API client list (summary.api_clients)"
+    return None
+
+
+def _census(path: str) -> tuple[dict | None, bytes | None, str | None, int]:
+    """The census record and the key, or the reason the join cannot run and its exit: 5 for what the operator gave
+    (a file, the key), 3 for a record that is not a read."""
     try:
         with open(path, encoding="utf-8") as f:
             record = json.load(f)
     except (OSError, ValueError) as e:
-        return None, None, f"could not read {path}: {type(e).__name__}"
+        return None, None, f"could not read {path}: {type(e).__name__}", EXIT_USAGE
     key_path = os.environ.get("FINGERPRINT_KEY_FILE")
     if not key_path:
-        return None, None, "--census needs FINGERPRINT_KEY_FILE, the same file the census ran with"
+        return None, None, "--census needs FINGERPRINT_KEY_FILE, the same file the census ran with", EXIT_USAGE
     try:
         with open(key_path, "rb") as f:
             key = f.read().strip()
     except OSError as e:
-        return None, None, f"could not read FINGERPRINT_KEY_FILE: {type(e).__name__}"
+        return None, None, f"could not read FINGERPRINT_KEY_FILE: {type(e).__name__}", EXIT_USAGE
+    unread = census_unread(record)
+    if unread:
+        return None, None, f"NOT READ: {path} is not a read of the API clients: {unread}. Nothing is joined (exit 3)", EXIT_UNREAD
     if not record.get("fingerprint_key_check"):
-        return None, None, f"{path} carries no fingerprints: run census.py with FINGERPRINT_KEY_FILE set"
+        return None, None, f"{path} carries no fingerprints: run census.py with FINGERPRINT_KEY_FILE set", EXIT_USAGE
     if not key or record["fingerprint_key_check"] != key_check(key):
-        return None, None, f"{path} was fingerprinted under another key than FINGERPRINT_KEY_FILE"
-    return record, key, None
+        return None, None, f"{path} was fingerprinted under another key than FINGERPRINT_KEY_FILE", EXIT_USAGE
+    return record, key, None, 0
 
 
 def _args(argv: list[str]) -> tuple[dict, str | None]:
@@ -162,30 +202,43 @@ def _args(argv: list[str]) -> tuple[dict, str | None]:
 
 
 def main(argv: list[str]) -> int:
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5) before anything is read, and an
+    error the script did not expect exits 3, never 1 or 2, which are findings."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("catalog_check.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]} (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str]) -> int:
     a, problem = _args(argv)
     if problem:
         print(f"{problem}; use: catalog_check.py [CATALOG.json] [--today YYYY-MM-DD] [--census CENSUS.json]", file=sys.stderr)
-        return 3
+        return EXIT_USAGE
     path = a["path"] or "credentials.json"
     today = date.today()
     if a["--today"] is not None:
         parsed = _date(a["--today"])
         if parsed is None:
             print("--today takes a date, YYYY-MM-DD", file=sys.stderr)
-            return 3
+            return EXIT_USAGE
         today = parsed
     try:
         with open(path, encoding="utf-8") as f:
             catalog = json.load(f)
     except (OSError, ValueError) as e:
         print(f"could not read {path}: {type(e).__name__}", file=sys.stderr)
-        return 3
+        return EXIT_USAGE
     census, key = None, None
     if a["--census"] is not None:
-        census, key, problem = _census(a["--census"])
+        census, key, problem, code = _census(a["--census"])
         if problem:
             print(problem, file=sys.stderr)
-            return 3
+            return code
     warn_days = int(catalog.get("warn_days", 30))
     entries = catalog.get("credentials") or []
     worst = 0
@@ -198,7 +251,8 @@ def main(argv: list[str]) -> int:
             print(f"        {r}")
     if census is not None:
         joined = census_join(catalog, census, key)
-        print(f"\nAPI clients in the census of {census.get('captured', '?')}: {len(joined)}, joined to the catalog by fingerprint\n")
+        print(f"\nAPI clients in the census of {census.get('captured', '?')}: {len(joined)}, joined to the catalog by fingerprint "
+              "(the census read its fleet identity plane with no call refused)\n")
         for client, entry, state, reasons in joined:
             worst = max(worst, {"ok": 0, "warn": 1, "fail": 2}[state])
             print(f"  {state:<5} {client.get('name')!s:<24} catalog {(entry or {}).get('name') or '-':<20} "

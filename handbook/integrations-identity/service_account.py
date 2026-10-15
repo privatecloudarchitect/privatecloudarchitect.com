@@ -26,20 +26,28 @@ is refused before anything is sent. A teardown of an account that is not there r
 safe to re-run.
 
 Env:  VCFA_HOST                           VCF Automation FQDN (required)
-      VCFA_PROVIDER_REFRESH_TOKEN_FILE    a provider API token, traded at /oauth/provider/token for a bearer, or
-      VCFA_PROVIDER_BEARER_FILE           a provider bearer you already hold (either one, mode 0600). The reference
-                                          runs sent every call on a provider System Administrator's bearer, and no
-                                          narrower provider role was tried
+      VCFA_PROVIDER_BEARER_FILE           a provider bearer you already hold (mode 0600). The reference runs sent every
+                                          call on a provider System Administrator's bearer, and no narrower provider
+                                          role was tried
+      VCFA_PROVIDER_REFRESH_TOKEN_FILE    instead, a provider API token, traded at /oauth/provider/token for a bearer
+                                          (mode 0600). Untried for these writes: no reference run sent them on one
       STATE                               the state file (default service_account.<org>.<name>.state.json)
       TLS_VERIFY=false                    only on a self-signed lab CA
       OUT                                 the record (default service_account.json)
 Use:  python3 service_account.py --org ORG --name NAME --role "ROLE NAME" [--token-file PATH] [--execute] [--redact]
       python3 service_account.py --org ORG --name NAME --teardown [--token-file PATH] [--execute] [--redact]
-Exit: 0 the plan printed, or the run held on read-back (the account active, its bearer holding exactly the role, the
-      stored token refreshing; or, for a teardown, no account left and a revoked token refused) · 1 a call failed, or
-      the read-back did not hold · 2 a usage error, a refusal (the account exists; for a teardown, it is not one the
-      state file records; the token file exists; a role given as an id), or the record was refused because an estate
-      value survived the scrub
+Exit, the first that applies, so a scheduler reads one state from one number:
+      2 refused by this script before any write: the account exists (for a create), or for a teardown it is not one
+        the state file records; or no organization answers to that name
+      1 the run did not hold: a write was refused, or the read-back was not what was asked (the account active, its
+        bearer holding exactly the role, the stored token refreshing; for a teardown, no account left and the revoked
+        token refused)
+      3 a read failed or is undetermined: the organization or the account list could not be read, the residue could
+        not be read back, the provider's credential was not traded for a bearer, or an error the script did not expect
+      0 the plan printed, or the run held on read-back
+      5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
+        exists), a Python older than 3.10, or the record refused because an estate value survived the scrub (nothing
+        is written)
 """
 
 from __future__ import annotations
@@ -64,6 +72,9 @@ ACCOUNTS_ACCEPT = "application/json;version=10.0.0.0-alpha"  # the version the s
 TENANT_HEADER = "X-VMWARE-VCLOUD-TENANT-CONTEXT"
 DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code"
 ROLE_ID = re.compile(r"(?i)^(?:urn:vcloud:role:)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+# One exit contract for every identity companion: 0 nothing to act on, 3 a read failed or is undetermined, 5 a usage
+# error; 1 and 2 are this script's own (the run did not hold; refused before any write).
+EXIT_OK, EXIT_NOT_HELD, EXIT_REFUSED, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
 POLL_SECONDS, POLL_LIMIT = 5, 12   # the device-code grant is polled until the grant lands, at most a minute
 GONE_SECONDS, GONE_LIMIT = 3, 20   # a deleted account leaves the list within a minute on the reference estate
 
@@ -168,11 +179,12 @@ def teardown_calls() -> list[dict]:
 
 
 # ── the reads every run makes ────────────────────────────────────────────────────────────────────────────────────
-def org_urn(vcfa: Vcfa, org: str) -> str | None:
+def org_lookup(vcfa: Vcfa, org: str) -> tuple[int, str | None]:
+    """The organization list's status, and the organization's URN when exactly one answers to the name."""
     status, answer = vcfa.call("GET", f"/cloudapi/1.0.0/orgs?filter={urllib.parse.quote('name==' + org)}",
                                "/cloudapi/1.0.0/orgs?filter=name=={org}")
     rows = (answer or {}).get("values") or [] if isinstance(answer, dict) else []
-    return rows[0].get("id") if status == 200 and len(rows) == 1 else None
+    return status, (rows[0].get("id") if status == 200 and len(rows) == 1 else None)
 
 
 def accounts(vcfa: Vcfa, urn: str, name: str) -> list[dict] | None:
@@ -259,23 +271,31 @@ def _write_0600(path: str, value: str, new: bool) -> None:
         f.write(value)
 
 
+def no_org(status: int, record: dict) -> int:
+    """Why the organization was not found: its list was not read (3), or it was read and names no such organization
+    (2, refused before any write)."""
+    if status != 200:
+        return EXIT_UNREAD
+    record["refused"] = "the organization was not found by that name"
+    return EXIT_REFUSED
+
+
 def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
-    urn = org_urn(vcfa, a.org)
+    status, urn = org_lookup(vcfa, a.org)
     if not urn:
-        record["refused"] = "the organization was not found by that name"
-        return 1
+        return no_org(status, record)
     existing = accounts(vcfa, urn, a.name)
     if existing is None:
-        return 1
+        return EXIT_UNREAD
     if existing:
         record["refused"] = "the service account exists; this script never adopts one: --teardown it first, or choose another name"
-        return 2
+        return EXIT_REFUSED
     partial = "the account exists without an active token: remove it with --teardown --execute before trying again"
     status, reg = vcfa.call("POST", f"/oauth/tenant/{a.org}/register", "/oauth/tenant/{org}/register",
                             body=register_body(a.name, a.role, str(uuid.uuid4())), org_urn=urn, accept="application/json")
     client_id = reg.get("client_id") if isinstance(reg, dict) else None
     if status not in (200, 201) or not client_id:
-        return 1
+        return EXIT_NOT_HELD
     save_state(state_path(a.org, a.name), {"tool": AGENT, "org": a.org, "name": a.name, "client_id": client_id,
                                            "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
     record["state_file_written"] = True   # before the grant, so an account left part way can still be removed
@@ -287,12 +307,12 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
                                accept="application/json", auth=False)
     if status != 200 or not isinstance(device, dict) or not device.get("device_code"):
         record["partial"] = partial
-        return 1
+        return EXIT_NOT_HELD
     status, _ = vcfa.call("POST", "/cloudapi/1.0.0/deviceLookup/grant", "/cloudapi/1.0.0/deviceLookup/grant",
                           body={"userCode": device.get("user_code")}, org_urn=urn, accept=ACCOUNTS_ACCEPT)
     if status not in (200, 204):
         record["partial"] = partial
-        return 1
+        return EXIT_NOT_HELD
     form = {"grant_type": DEVICE_CODE, "client_id": client_id, "device_code": device["device_code"]}
     answer: dict = {}
     for _ in range(POLL_LIMIT):
@@ -307,7 +327,7 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     record["device_grant"] = {"status": status, "refresh_token": bool(token), "expires_in_s": answer.get("expires_in")}
     if status != 200 or not token or not access:
         record["partial"] = partial
-        return 1
+        return EXIT_NOT_HELD
     _write_0600(a.token_file, token, new=True)
     record["token_file_written"] = True
     status, session = vcfa.call("GET", "/cloudapi/1.0.0/sessions/current", "/cloudapi/1.0.0/sessions/current  (as the account)",
@@ -328,17 +348,16 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     held = (rb["present"] and rb["status"] == ["ACTIVE"] and rb["roles"] == [a.role]
             and record["session"]["status"] == 200 and record["session"]["roles"] == [a.role]
             and record["refresh"]["status"] == 200 and record["refresh"]["bearer"])
-    return 0 if held else 1
+    return EXIT_OK if held else EXIT_NOT_HELD
 
 
 def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
-    urn = org_urn(vcfa, a.org)
+    status, urn = org_lookup(vcfa, a.org)
     if not urn:
-        record["refused"] = "the organization was not found by that name"
-        return 1
+        return no_org(status, record)
     rows = accounts(vcfa, urn, a.name)
     if rows is None:
-        return 1
+        return EXIT_UNREAD
     state_file = state_path(a.org, a.name)
     state = load_state(state_file)
     if rows and not owned(state, a.org, a.name, rows):
@@ -346,7 +365,7 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
                              f"({'none read' if not state else 'another account recorded'}). An account made elsewhere "
                              "is revoked and removed where it was made; for one made here, run from the folder, or with "
                              "the STATE, its create wrote")
-        return 2
+        return EXIT_REFUSED
     client_id = next((client_id_of(r) for r in rows if client_id_of(r)), None)
     token = _secret_from(a.token_file) if a.token_file and os.path.exists(a.token_file) and rows else None
     checks: dict[str, list[dict]] = {}
@@ -375,7 +394,9 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     if left == [] and rows:
         state["removed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         save_state(state_file, state)
-    return 0 if left == [] and refused else 1
+    if left is None:
+        return EXIT_UNREAD   # the residue read failed: whether the account is gone is not known
+    return EXIT_OK if left == [] and refused else EXIT_NOT_HELD
 
 
 def _secret_from(path: str) -> str:
@@ -508,8 +529,31 @@ def usage_problem(a: argparse.Namespace) -> str | None:
     return None
 
 
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a usage error, the code this script gives a refusal; it exits 5 here."""
+
+    def error(self, message: str):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="One VCF Automation service account: plan, create, remove. Plan by default.")
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5) before anything is sent, and
+    an error the script did not expect exits 3, the code for a read that failed, never 1 or 2."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("service_account.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; read the "
+              "organization before trusting what it holds (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str] | None = None) -> int:
+    ap = _Parser(description="One VCF Automation service account: plan, create, remove. Plan by default.")
     ap.add_argument("--org", required=True, help="the organization's name")
     ap.add_argument("--name", required=True, help="the service account's name; one per integration")
     ap.add_argument("--role", help="the one role it holds, by name (for example \"Organization User\")")
@@ -521,7 +565,7 @@ def main(argv: list[str] | None = None) -> int:
     problem = usage_problem(a)
     if problem:
         print(problem, file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     given = [(os.environ.get("VCFA_HOST", ""), "host"), (a.org, "org"), (a.name, "client")]
     if not a.execute:
         lines = plan_lines(a)
@@ -529,12 +573,12 @@ def main(argv: list[str] | None = None) -> int:
             lines = scrub(lines, estate_values({"plan": lines}, [(v, k) for v, k in given if v]))
         print("\n".join(lines))
         print("\nplan only: nothing was sent (--execute sends it)")
-        return 0
+        return EXIT_OK
     host = os.environ.get("VCFA_HOST")
     if not host or not (os.environ.get("VCFA_PROVIDER_BEARER_FILE") or os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE")):
         print("VCFA_HOST and a provider credential (VCFA_PROVIDER_REFRESH_TOKEN_FILE or VCFA_PROVIDER_BEARER_FILE) are required",
               file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "teardown" if a.teardown else "create", "org": a.org, "name": a.name, "calls": []}
     if not a.teardown:
@@ -543,7 +587,7 @@ def main(argv: list[str] | None = None) -> int:
         vcfa = Vcfa(host, provider_bearer(host), record["calls"])
     except (RuntimeError, OSError, KeyError) as e:
         print(f"could not start: {e}", file=sys.stderr)
-        return 1
+        return EXIT_UNREAD
     record["exit"] = teardown(vcfa, a, record) if a.teardown else create(vcfa, a, record)
     table = estate_values(record, [(v, k) for v, k in given if v])
     clean = scrub(record, table)
@@ -553,7 +597,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(report(clean if a.redact else record)))
     if left:
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{out} written with every estate value replaced")

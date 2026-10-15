@@ -70,11 +70,24 @@ Env:  OPS_HOST                 VCF Operations FQDN (required)
       OUT                      the record (default census.json)
 Use:  python3 census.py [--redact] [--egress-metadata-url URL]
       python3 census.py --orgs-only [--redact]       VCF Automation's organizations only, on a provider credential
-Exit: 0 recorded, every call answered · 1 a call failed (the record is still written and names the call; a refused
-      fleet read opens the print with NOT READ, so its zero counts are not taken for the estate's), or --orgs-only read
-      an organization signing in through VCF single sign-on whose issuer BROKER_HOSTS does not name, so the brokers
-      given miss at least the one the platform signs in through · 2 a usage error (--orgs-only without BROKER_HOSTS
-      among them), or the record refused because an estate value survived the scrub (nothing is written)
+Exit, the first that applies, so a scheduler reads one state from one number:
+      0 recorded, every call answered
+      3 a read failed or is not known: a call failed (the record is still written and names the call; a refused fleet
+        read opens the print with NOT READ, so its zero counts are not taken for the estate's), the credential could
+        not be obtained, --orgs-only read an organization signing in through VCF single sign-on whose issuer
+        BROKER_HOSTS does not name (so the brokers given miss at least the one the platform signs in through), or an
+        error the script did not expect
+      5 a usage error (a missing credential or host, --orgs-only without BROKER_HOSTS, an unreadable
+        FINGERPRINT_KEY_FILE, a Python older than 3.10), or the record refused because an estate value survived the
+        scrub (nothing is written)
+A tool that reads this record (service-accounts' catalog_check.py --census) takes it as a read only when its exit is
+0, no fleet call failed, and the lines it needs are there.
+
+Before a realm. The fleet read runs on a bearer the broker trades for an API token, and the token is made for an API
+client of a realm or a VCF single sign-on user, so the census as written starts once VCF single sign-on has a realm.
+Before that, read what has no realm to wait for: --orgs-only on a VCF Automation provider credential, and
+vcenter-authorization's authz.py, which runs without REALM_DOMAIN. Whether VCF Operations' own local administrator,
+through /suite-api/api/auth/token/acquire, can read the fleet identity plane was not tried.
 """
 
 from __future__ import annotations
@@ -101,6 +114,7 @@ API_TOKEN_GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
 SECRET_KEYS = {"accessToken", "token", "bindDnPassword", "clientSecret", "client_secret", "password",
                "refreshToken", "refresh_token", "privateKey"}
 KIND = {"EXTERNAL": "instance", "EMBEDDED": "embedded"}
+EXIT_UNREAD, EXIT_USAGE = 3, 5
 
 # ── the allow-lists: a field not named here never reaches the record ───────────────────────────────────────────
 DC = ("host", "port", "protocol", "certificateName")
@@ -726,7 +740,7 @@ def org_report(s: dict) -> list[str]:
     if missed:
         lines.append(f"NOT PLACED: {len(missed)} organization(s) sign in through VCF single sign-on with an issuer "
                      "BROKER_HOSTS does not name, so the brokers given miss the platform's own and an organization "
-                     "on a broker may read as on a provider of its own; name every broker's host and read again; exit 1")
+                     "on a broker may read as on a provider of its own; name every broker's host and read again; exit 3")
     return lines
 
 
@@ -905,7 +919,7 @@ def census(egress_url: str | None, ops_token: str | None, vcfa_token: str | None
         vcfa = Reader("vcf-automation", f"https://{os.environ['VCFA_HOST']}", {"Authorization": f"Bearer {vcfa_token}"}, calls)
         record["organizations"] = organizations(vcfa)
         record["summary"] = summary(record)
-        record["exit"] = 1 if failed(calls) or unplaced_issuers(record["summary"]) else 0
+        record["exit"] = EXIT_UNREAD if failed(calls) or unplaced_issuers(record["summary"]) else 0
         return record
     ops = Reader("vcf-operations", f"https://{os.environ['OPS_HOST']}/suite-api", {"Authorization": f"Bearer {ops_token}"}, calls)
     record["fleet"] = fleet(ops)
@@ -927,7 +941,7 @@ def census(egress_url: str | None, ops_token: str | None, vcfa_token: str | None
             record["vcenters"].append(vcenter(vc, host))
             vc.call("DELETE", "/api/session")
     record["summary"] = summary(record)
-    record["exit"] = 1 if failed(calls) else 0
+    record["exit"] = EXIT_UNREAD if failed(calls) else 0
     return record
 
 
@@ -956,8 +970,31 @@ def given_values(egress_url: str | None) -> list[tuple[str, str]]:
     return [(v, k) for v, k in out if v]
 
 
+class _Parser(argparse.ArgumentParser):
+    """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
+
+    def error(self, message: str):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Read a VCF 9.1 estate's identity model, read-only by default.")
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5) before anything is read, and an
+    error the script did not expect exits 3, the code for a read that failed."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("census.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
+              "about what it had not read (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str] | None = None) -> int:
+    ap = _Parser(description="Read a VCF 9.1 estate's identity model, read-only by default.")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
     ap.add_argument("--egress-metadata-url", metavar="URL",
                     help="ask each broker to fetch this SAML metadata URL (sends one request per broker)")
@@ -973,29 +1010,36 @@ def main(argv: list[str] | None = None) -> int:
         if a.egress_metadata_url:
             print("--orgs-only reads VCF Automation alone; --egress-metadata-url asks the brokers, so the two do not combine",
                   file=sys.stderr)
-            return 2
+            return EXIT_USAGE
         if not os.environ.get("VCFA_HOST") or not vcfa_cred:
             print("--orgs-only needs VCFA_HOST and a provider credential (VCFA_PROVIDER_BEARER_FILE or "
                   "VCFA_PROVIDER_REFRESH_TOKEN_FILE); no VCF Operations credential is read", file=sys.stderr)
-            return 2
+            return EXIT_USAGE
         if not given_brokers():
             print("--orgs-only needs BROKER_HOSTS, every broker's host (the instance broker and each management "
                   "vCenter's embedded one): it reads no broker, so without them an organization on a broker would read "
                   "as on a provider of its own, and the census would pass", file=sys.stderr)
-            return 2
+            return EXIT_USAGE
     elif not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required; "
               "--orgs-only reads the organizations on a VCF Automation provider credential alone", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if a.egress_metadata_url:
         print("--egress-metadata-url: each broker will be asked to fetch the URL; this sends a request per broker")
     try:
         key = None if a.orgs_only else fingerprint_key()
+    except (OSError, ValueError) as e:
+        print(f"FINGERPRINT_KEY_FILE could not be read: {type(e).__name__}", file=sys.stderr)
+        return EXIT_USAGE
+    try:
         ops_token = None if a.orgs_only else ops_bearer()
         vcfa_token = vcfa_bearer(os.environ["VCFA_HOST"]) if os.environ.get("VCFA_HOST") else None
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
-        print(f"could not obtain a credential: {type(e).__name__} {getattr(e, 'code', '')}".rstrip(), file=sys.stderr)
-        return 1
+        print(f"could not obtain a credential: {type(e).__name__} {getattr(e, 'code', '')}".rstrip()
+              + ("; if the estate has no realm yet, there is no API client or VCF single sign-on user to make the token "
+                 "for, so read it with --orgs-only and vcenter-authorization's authz.py first" if not a.orgs_only else ""),
+              file=sys.stderr)
+        return EXIT_UNREAD
     record = census(a.egress_metadata_url, ops_token, vcfa_token, orgs_only=a.orgs_only, key=key)
     bad = failed(record["calls"])
     table = estate_values(record, given_values(a.egress_metadata_url))
@@ -1012,7 +1056,7 @@ def main(argv: list[str] | None = None) -> int:
     if left:
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))})",
               file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{len(record['calls'])} call(s), {len(bad)} failed; {out} written with every estate value replaced")

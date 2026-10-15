@@ -28,8 +28,8 @@ create writes a state file (STATE, default api_client.<client id>.state.json, mo
 the ids of the tokens this script issued, no secret; keep it beside the record and do not publish it), and --rotate,
 --retire-old and --teardown act only on a client that file records with the same uuid, so a mistyped id, or a client
 someone else made under it, is refused before anything is sent. A client made in the console is rotated and removed
-in the console. None of them removes the client, or a token of the client, that the run is signed in as: run them on
-the token of the administrator who made the client, never on the client's own. A teardown of a client that is not
+in the console. None of them acts on the client the run is signed in as, a rotation included: run them on the token of
+the administrator who made the client, never on the client's own. A teardown of a client that is not
 there removes nothing and exits 0, so it is safe to re-run. Lifetimes outside the bounds the broker held on the
 reference estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60) are refused before anything
 is sent.
@@ -52,14 +52,23 @@ Use:  python3 api_client.py --client-id ID --role ROLE --api-token-ttl MIN --acc
                             [--old-token-file OLD] [--execute] [--redact]
       python3 api_client.py --client-id ID --retire-old [--old-token-file OLD] [--execute] [--redact]
       python3 api_client.py --client-id ID --teardown [--execute] [--redact]
-Exit: 0 the plan printed, or the run held on read-back (the client with its one role and an active token with both
-      lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
-      still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no
-      client and no token left) · 1 a call failed, or the read-back did not hold · 2 a usage error, a refusal (the
-      client exists, or for a rotation, a retirement or a teardown is not one the state file records; the run is
-      signed in as the client; a retirement with one token, or whose newest token this script did not issue; a
-      lifetime outside the bounds; the token file exists), or the record was refused because an estate value survived
-      the scrub
+Exit, the first that applies, so a scheduler reads one state from one number:
+      2 refused by this script before any write: the client exists (for a create); no state file records the client
+        with this uuid (for a rotation, a retirement or a teardown), or there is no client by that id (for a rotation or
+        a retirement); the run is
+        signed in as the client, or its bearer is not a JWT this script can read, for every write after the create,
+        a rotation included; a retirement while the client holds one token, or whose newest token this script did not
+        issue last; or the fleet holds no realm to make a client in
+      1 the run did not hold: a write was refused, or the read-back was not what was asked
+      3 a read failed or is undetermined: a list or the realm could not be read, the read-back could not be read, the
+        operator's credential was not traded for a bearer, or an error the script did not expect
+      0 the plan printed, or the run held on read-back (the client with its one role and an active token with both
+        lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
+        still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no
+        client and no token left)
+      5 a usage error (a missing or bad argument or environment variable, a lifetime outside the bounds, a token file
+        that exists), a Python older than 3.10, or the record refused because an estate value survived the scrub
+        (nothing is written)
 """
 
 from __future__ import annotations
@@ -83,6 +92,9 @@ API_TOKEN_GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
 # The bounds the broker held a create to on the reference estate (minutes), not the documented ranges.
 API_TOKEN_TTL = (1440, 259200)
 ACCESS_TOKEN_TTL = (30, 60)
+# One exit contract for every identity companion: 0 nothing to act on, 3 a read failed or is undetermined, 5 a usage
+# error; 1 and 2 are this script's own (the run did not hold; refused before any write).
+EXIT_OK, EXIT_NOT_HELD, EXIT_REFUSED, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
 
 
 # ── HTTP, standard library only ──────────────────────────────────────────────────────────────────────────────────
@@ -136,7 +148,8 @@ def ops_bearer() -> str:
     status, answer = _send("POST", f"https://{broker}/acs/t/{broker_tenant()}/token",
                            form={"grant_type": API_TOKEN_GRANT, "api_token": (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))})
     if status != 200 or not isinstance(answer, dict) or "access_token" not in answer:
-        # a deleted or rotated API token answers 500 here, not 401: check the token still exists before its expiry
+        # a deleted API token is refused here, not with 401: HTTP 500 on 9.1.0 (2026-09-16), HTTP 400 for a deleted API
+        # client token on 9.1.1 (X-153, X-190); check the token still exists, then its expiry, before the service
         raise RuntimeError(f"the broker did not trade the operator's API token for a bearer (HTTP {status})")
     return answer["access_token"]
 
@@ -223,9 +236,12 @@ def bounds_error(api_ttl: int | None, access_ttl: int | None) -> str | None:
 
 # ── the reads every run makes ────────────────────────────────────────────────────────────────────────────────────
 def realm_id(fleet: Fleet) -> str | None:
+    """The realm's id; "" when the fleet answered and holds no realm; None when the read failed."""
     status, answer = fleet.call("GET", "/ssorealms", "/ssorealms")
-    realms = (answer or {}).get("ssoRealms") or [] if isinstance(answer, dict) else []
-    return realms[0].get("id") if status == 200 and realms else None
+    if status != 200 or not isinstance(answer, dict):
+        return None
+    realms = answer.get("ssoRealms") or []
+    return str(realms[0].get("id") or "") if realms else ""
 
 
 def instances(fleet: Fleet, rid: str) -> dict[str, str] | None:
@@ -348,9 +364,10 @@ def owned(state: dict, client_id: str, row: dict | None) -> bool:
                 and state.get("client_uuid") == uuid)
 
 
-def guard(fleet: Fleet, client_id: str, row: dict | None, state: dict, record: dict, removes: bool) -> int | None:
-    """The refusals every write after the create runs before it sends anything: a client this script did not make,
-    and, for a write that removes, the client the run is signed in as. None when the write may go ahead."""
+def guard(fleet: Fleet, client_id: str, row: dict | None, state: dict, record: dict) -> int | None:
+    """The refusals every write after the create runs before it sends anything, a rotation as much as a removal: a
+    client this script did not make, a bearer this script cannot read, and the client the run is signed in as. None
+    when the write may go ahead."""
     me = signed_in_as(getattr(fleet, "bearer", None))
     record["signed_in_as"] = whoami_words(me, client_id, row)
     if not owned(state, client_id, row):
@@ -358,16 +375,17 @@ def guard(fleet: Fleet, client_id: str, row: dict | None, state: dict, record: d
                              f"({'none read' if not state else 'another client recorded'}). A client made in the "
                              "console is rotated and removed in the console; for one made here, run from the folder, "
                              "or with the STATE, its create wrote")
-        return 2
-    if removes and me.get("type") is None:
-        record["refused"] = ("the run's bearer is not a readable JWT, so this script cannot rule out removing the "
+        return EXIT_REFUSED
+    if me.get("type") is None:
+        record["refused"] = ("the run's bearer is not a readable JWT, so this script cannot rule out acting on the "
                              "client it is signed in as; run it on the token of the administrator who made the client")
-        return 2
-    if removes and is_self(me, client_id, row):
-        record["refused"] = ("the run is signed in as this client: once its tokens or the client are gone, no "
-                             "credential outlives the removal to read the residue or to finish it. Run it on the token "
-                             "of the administrator who made the client, or remove it in the console")
-        return 2
+        return EXIT_REFUSED
+    if is_self(me, client_id, row):
+        record["refused"] = ("the run is signed in as this client: a client never rotates or removes itself, because "
+                             "once its tokens change or go, no credential outlives the write to read it back or to "
+                             "finish it. Run it on the token of the administrator who made the client, or do it in the "
+                             "console")
+        return EXIT_REFUSED
     return None
 
 
@@ -375,24 +393,24 @@ def guard(fleet: Fleet, client_id: str, row: dict | None, state: dict, record: d
 def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     existing = clients(fleet, rid)
     if existing is None:
-        return 1
+        return EXIT_UNREAD
     if mine(existing, a.client_id):
         record["refused"] = "the client exists; this script never adopts a client: --teardown it first, or choose another id"
-        return 2
+        return EXIT_REFUSED
     scope = REALM_SCOPE
     if a.scope == "instance":
         covered = instances(fleet, rid)
         if covered is None:
-            return 1
+            return EXIT_UNREAD
         if a.instance not in covered:
             record["refused"] = (f"the realm covers no VCF instance named {a.instance}; it covers "
                                  f"{', '.join(sorted(covered)) or 'none'}")
-            return 2
+            return EXIT_REFUSED
         scope = instance_scope(covered[a.instance], a.instance)
     post, put, issue = create_bodies(a.client_id, a.role, a.api_token_ttl, a.access_token_ttl, a.description, scope)
     status, answer = fleet.call("POST", f"/ssorealms/{rid}/api-clients", post["path"], post["body"])
     if status not in (200, 201) or not isinstance(answer, dict):
-        return 1
+        return EXIT_NOT_HELD
     uuid = answer.get("clientUuid") or answer.get("id") or answer.get("uuid")
     state_file = state_path(a.client_id)
     state = {"tool": AGENT, "client_id": a.client_id, "client_uuid": uuid,
@@ -403,12 +421,12 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     status, _ = fleet.call("PUT", f"/ssorealms/{rid}/principals/{uuid}/roles", put["path"], put["body"])
     if status not in (200, 201, 204):
         record["partial"] = partial
-        return 1
+        return EXIT_NOT_HELD
     status, answer = fleet.call("POST", f"/ssorealms/{rid}/api-tokens", issue["path"], issue["body"])
     token = next((answer[k] for k in ("token", "apiToken", "value") if isinstance(answer, dict) and isinstance(answer.get(k), str)), None)
     if status not in (200, 201) or not token:
         record["partial"] = partial
-        return 1
+        return EXIT_NOT_HELD
     fd = os.open(a.token_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(token)
@@ -423,7 +441,9 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
             and any(t["status"] == "ACTIVE" and t["api_token_ttl_min"] == a.api_token_ttl
                     and t["access_token_ttl_min"] == a.access_token_ttl for t in rb.get("tokens") or [])
             and record["exchange"].get("status") == 200)
-    return 0 if held else 1
+    if "error" in rb:
+        return EXIT_UNREAD
+    return EXIT_OK if held else EXIT_NOT_HELD
 
 
 def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
@@ -432,14 +452,14 @@ def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     only the token it reads; with --old-token-file the record shows the old token still trading in the overlap."""
     cl, tk = clients(fleet, rid), tokens(fleet, rid)
     if cl is None or tk is None:
-        return 1
+        return EXIT_UNREAD
     rows = mine(cl, a.client_id)
     if not rows:
         record["refused"] = "no client by that id; a rotation never creates one: create it first"
-        return 2
+        return EXIT_REFUSED
     state_file = state_path(a.client_id)
     state = load_state(state_file)
-    refused = guard(fleet, a.client_id, rows[0], state, record, removes=False)
+    refused = guard(fleet, a.client_id, rows[0], state, record)
     if refused is not None:
         return refused
     before = {t["id"] for t in mine(tk, a.client_id) if t.get("id")}
@@ -450,7 +470,7 @@ def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     token = next((answer[k] for k in ("token", "apiToken", "value") if isinstance(answer, dict) and isinstance(answer.get(k), str)), None)
     if status not in (200, 201) or not token:
         record["refused"] = f"the new token was not issued (HTTP {status}); the old ones are untouched"
-        return 1
+        return EXIT_NOT_HELD
     fd = os.open(a.token_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(token)
@@ -472,11 +492,13 @@ def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     if record["exchange"].get("status") != 200:
         record["partial"] = ("the new token did not trade at the broker; the old ones are untouched: point nothing at "
                              "the new one, and remove it with --retire-old only once a new token proves")
-        return 1
+        return EXIT_NOT_HELD
     record["next"] = "point the integration at the new token, run one job, then --retire-old"
+    if "error" in overlap:
+        return EXIT_UNREAD
     held = (record["overlap"]["active_tokens"] == len(before) + 1 and len(new) == 1
             and ("old_token_in_overlap" not in record or record["old_token_in_overlap"]["status"] == 200))
-    return 0 if held else 1
+    return EXIT_OK if held else EXIT_NOT_HELD
 
 
 def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
@@ -486,13 +508,13 @@ def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> i
     before the delete and refused after it."""
     cl, tk = clients(fleet, rid), tokens(fleet, rid)
     if cl is None or tk is None:
-        return 1
+        return EXIT_UNREAD
     rows = mine(cl, a.client_id)
     if not rows:
         record["refused"] = "no client by that id"
-        return 2
+        return EXIT_REFUSED
     state = load_state(state_path(a.client_id))
-    refused = guard(fleet, a.client_id, rows[0], state, record, removes=True)
+    refused = guard(fleet, a.client_id, rows[0], state, record)
     if refused is not None:
         return refused
     held_now = [t for t in mine(tk, a.client_id) if t.get("id")]
@@ -500,17 +522,17 @@ def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> i
     if len(held_now) < 2:
         record["refused"] = ("the client holds one token, so there is nothing older to retire; --rotate issues a new "
                              "one first")
-        return 2
+        return EXIT_REFUSED
     if any(t.get("creationDate") is None for t in held_now):
         record["refused"] = "a token carries no creation date, so the newest cannot be told; retire them in the console"
-        return 2
+        return EXIT_REFUSED
     newest = max(held_now, key=lambda t: t["creationDate"])
     issued = state.get("tokens") or []
     if not issued or newest["id"] != issued[-1]:
         record["refused"] = ("the newest token is not the one this script issued last, so it may not be the one the "
                              "integration holds: point the integration at the token you mean to keep, and retire the "
                              "others in the console")
-        return 2
+        return EXIT_REFUSED
     old = _read(a.old_token_file) if a.old_token_file else None
     if old:
         record["old_token_before_delete"] = {"status": prove(old)["status"]}
@@ -527,7 +549,9 @@ def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> i
     left = rb.get("tokens") or []
     held = (len(left) == 1 and left[0]["status"] == "ACTIVE"
             and ("old_token_after_delete" not in record or record["old_token_after_delete"]["status"] != 200))
-    return 0 if held else 1
+    if "error" in rb:
+        return EXIT_UNREAD
+    return EXIT_OK if held else EXIT_NOT_HELD
 
 
 def _read(path: str) -> str:
@@ -540,12 +564,12 @@ def teardown(fleet: Fleet, rid: str, client_id: str, record: dict) -> int:
     and never the client the run is signed in as; a client that is not there removes nothing and exits 0."""
     tk, cl = tokens(fleet, rid), clients(fleet, rid)
     if tk is None or cl is None:
-        return 1
+        return EXIT_UNREAD
     rows = mine(cl, client_id)
     state_file = state_path(client_id)
     state = load_state(state_file)
     if rows:
-        refused = guard(fleet, client_id, rows[0], state, record, removes=True)
+        refused = guard(fleet, client_id, rows[0], state, record)
         if refused is not None:
             return refused
     if rows:
@@ -561,7 +585,9 @@ def teardown(fleet: Fleet, rid: str, client_id: str, record: dict) -> int:
     if clean and rows:
         state["removed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         save_state(state_file, state)
-    return 0 if clean else 1
+    if "error" in rb:
+        return EXIT_UNREAD
+    return EXIT_OK if clean else EXIT_NOT_HELD
 
 
 # ── the record contract: every estate value replaced, or nothing written ─────────────────────────────────────────
@@ -692,8 +718,31 @@ def report(record: dict) -> list[str]:
     return lines
 
 
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a usage error, the code this script gives a refusal; it exits 5 here."""
+
+    def error(self, message: str):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="One VCF SSO API client for one integration: plan, create, remove. Plan by default.")
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5) before anything is sent, and
+    an error the script did not expect exits 3, the code for a read that failed, never 1 or 2."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("api_client.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; read the fleet "
+              "before trusting what it holds (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str] | None = None) -> int:
+    ap = _Parser(description="One VCF SSO API client for one integration: plan, create, remove. Plan by default.")
     ap.add_argument("--client-id", required=True, help="the client's id, also its name; one per integration")
     ap.add_argument("--role", help="the one VCF role the client holds (for example vcf_viewer)")
     ap.add_argument("--scope", choices=("realm", "instance"), default="realm",
@@ -714,19 +763,19 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     if sum((a.rotate, a.retire_old, a.teardown)) > 1:
         print("--rotate, --retire-old and --teardown are separate runs, not one", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if (a.scope == "instance") != bool(a.instance):
         print("--scope instance and --instance NAME go together", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if a.scope == "instance" and (a.rotate or a.retire_old or a.teardown):
         print("--scope is read only when a client is created", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if a.old_token_file and not (a.rotate or a.retire_old):
         print("--old-token-file is read only with --rotate or --retire-old", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if a.old_token_file and not os.path.exists(a.old_token_file):
         print(f"{a.old_token_file} does not exist", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if not (a.teardown or a.retire_old):
         problem = (None if a.role or a.rotate else "--role is required") or bounds_error(a.api_token_ttl, a.access_token_ttl)
         if not problem and a.execute and not a.token_file:
@@ -735,7 +784,7 @@ def main(argv: list[str] | None = None) -> int:
             problem = f"{a.token_file} exists; the token is never written over a file"
         if problem:
             print(problem, file=sys.stderr)
-            return 2
+            return EXIT_USAGE
     if not a.execute:
         lines = plan_lines(a)
         if a.redact:   # the plan carries the host and the client id you gave; a shared transcript carries neither
@@ -743,10 +792,10 @@ def main(argv: list[str] | None = None) -> int:
             lines = scrub(lines, estate_values({"plan": lines}, [(v, k) for v, k in given if v]))
         print("\n".join(lines))
         print("\nplan only: nothing was sent (--execute sends it)")
-        return 0
+        return EXIT_OK
     if not os.environ.get("OPS_HOST") or not (os.environ.get("OPS_BEARER_FILE") or (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))):
         print("OPS_HOST and a VCF Operations credential (OPS_API_TOKEN_FILE or OPS_BEARER_FILE) are required", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     mode = "teardown" if a.teardown else "retire-old" if a.retire_old else "rotate" if a.rotate else "create"
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": mode, "client": a.client_id, "calls": []}
@@ -764,10 +813,14 @@ def main(argv: list[str] | None = None) -> int:
         fleet = Fleet(os.environ["OPS_HOST"], ops_bearer(), record["calls"])
     except (RuntimeError, urllib.error.URLError, OSError) as e:
         print(f"could not start: {e}", file=sys.stderr)
-        return 1
+        return EXIT_UNREAD
     rid = realm_id(fleet)
-    if not rid:
-        record["exit"] = 1
+    if rid is None:
+        record["exit"] = EXIT_UNREAD
+    elif not rid:
+        record["refused"] = ("the fleet holds no realm: an API client lives in a realm, so there is nothing to make it "
+                             "in until VCF single sign-on has one")
+        record["exit"] = EXIT_REFUSED
     else:
         record["exit"] = (teardown(fleet, rid, a.client_id, record) if a.teardown
                           else retire_old(fleet, rid, a, record) if a.retire_old
@@ -782,7 +835,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(report(clean if a.redact else record)))
     if left:
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
     print(f"\n{out} written with every estate value replaced")

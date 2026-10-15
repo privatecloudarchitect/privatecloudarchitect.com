@@ -45,7 +45,7 @@ export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer      # mode 0600; or V
 export BROKER_HOSTS=<instance-broker-fqdn>,<mgmt-vcenter-fqdn>,<mgmt-vcenter-fqdn>   # required, see below
 export TLS_VERIFY=false                                        # only on a self-signed lab CA
 
-python3 census.py --orgs-only --redact    # the organizations block alone; exit 2 without a provider credential or BROKER_HOSTS
+python3 census.py --orgs-only --redact    # the organizations block alone; exit 5 without a provider credential or BROKER_HOSTS
 ```
 
 It reads no broker, so it calls an organization's OIDC issuer the broker only when the issuer's host is in
@@ -55,7 +55,7 @@ reference estate the provider consumption organization's issuer was on an embedd
 (2026-10-15, one run). So `--orgs-only` refuses to start without `BROKER_HOSTS`: unset, an organization on a broker
 reads as on a provider of its own and the run exits 0 on a reading it was never given the means to make. And an
 organization signing in through VCF single sign-on, whose issuer is a broker by definition, read with an issuer
-`BROKER_HOSTS` does not name fails the read (`NOT PLACED`, exit 1): the brokers given miss the one the platform signs in
+`BROKER_HOSTS` does not name fails the read (`NOT PLACED`, exit 3): the brokers given miss the one the platform signs in
 through. An embedded broker left out is not caught that way, so name every one.
 
 ### Joining the record to your credential catalog
@@ -66,11 +66,25 @@ credential catalog of the service-accounts companion (`catalog_check.py --census
 carries a keyed fingerprint of its client id and its name, the same under that key in every record, and meaningless
 without it. Give `catalog_check.py` the same file.
 
-| Exit | Means |
-|---|---|
-| 0 | the record is written and every call answered |
-| 1 | a call failed; the record is still written and names the call, and the run prints the server's reason. A refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing. With `--orgs-only`, also an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name |
-| 2 | a usage error (with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`), or the record was refused because an estate value survived the scrub; nothing is written |
+| Exit | Means | What a scheduler does |
+|---|---|---|
+| 0 | the record is written and every call answered | nothing |
+| 3 | a read failed or is not known: a call failed (the record is still written and names the call, and the run prints the server's reason; a refused fleet identity read opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing), the credential could not be obtained, with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name, or an error the script did not expect | fix the read; take no count from this run |
+| 5 | a usage error (a missing host or credential; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10), or the record was refused because an estate value survived the scrub; nothing is written | fix the invocation |
+
+These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
+census judges nothing, so it has no finding code of its own. A tool that reads `census.json`, as
+`catalog_check.py --census` does, takes it as a read only when its `exit` is 0, no fleet call failed and the lines it
+needs are there.
+
+### Before your estate has a realm
+
+The fleet read runs on a bearer the broker trades for an API token, and an API token is made for an API client of a
+realm or for a VCF single sign-on user, so this census starts once VCF single sign-on has a realm. Before that, read
+what does not wait for one: `--orgs-only` above, on a VCF Automation provider credential, and the vcenter-authorization
+companion's `authz.py`, which runs without `REALM_DOMAIN` and reports the realm-spelled class as not applicable.
+Whether VCF Operations' own local administrator, through `POST /suite-api/api/auth/token/acquire`, can read the fleet
+identity plane was not tried.
 
 ## Scope, stated plainly
 

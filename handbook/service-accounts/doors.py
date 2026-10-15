@@ -39,8 +39,15 @@ Surfaces are chosen by which environment variables are set; unset ones are skipp
 
 Verdict: accepted (status below 400), refused (401 or 403), other. Where the Platform identity chapter states
 an expectation, the row says MATCH or DIFFERS; a DIFFERS row is worth a report, because the chapter's matrix
-is built from exactly these reads. Exit 0 when every attempted read returned an HTTP status, 1 when a
-transport error stopped one, 2 when the broker mint failed.
+is built from exactly these reads. A DIFFERS row is counted on the summary line and does not change the exit: it is
+the chapter's to correct, not a fault on your estate.
+
+Exit: 0 every attempted read returned an HTTP status
+      3 a read failed: a transport error stopped one (no status), the broker mint failed, or an error the script
+        did not expect
+      5 a usage error: OPS_HOST or the api-token unset, or a Python older than 3.10
+A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
+run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190).
 """
 
 import base64
@@ -58,6 +65,7 @@ from rtmlib import service_jwt
 
 CLOUDAPI_ACCEPT = "application/json;version=9.1.0"
 ROWS = []
+EXIT_UNREAD, EXIT_USAGE = 3, 5
 
 
 def req(method, url, headers=None, data=None, timeout=60):
@@ -139,14 +147,37 @@ def rights_count(host, tok):
 
 
 def main():
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5), and an error the script did
+    not expect exits 3, the code for a read that failed."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("doors.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run()
+    except Exception as e:  # noqa: BLE001  the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]} (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run():
+    try:
+        held = secret("OPS_API_TOKEN")
+    except OSError as e:
+        print(f"FATAL: OPS_API_TOKEN_FILE could not be read: {type(e).__name__}", file=sys.stderr)
+        return EXIT_USAGE
+    if not os.environ.get("OPS_HOST") or not held:
+        print("FATAL: OPS_HOST and OPS_API_TOKEN_FILE (or OPS_API_TOKEN) are required: the broker's bearer is the first "
+              "door read", file=sys.stderr)
+        return EXIT_USAGE
     print("doors.py: one harmless read per pair; tokens minted per run and never printed\n")
     # ---- the broker and the surfaces its bearer reaches, or does not
     try:
         tok = bearer()
     except Exception as e:  # noqa: BLE001
         print(f"FATAL: the broker exchange failed: {type(e).__name__}: {e}")
-        print("       a deleted or rotated api-token answers HTTP 500 here, not 401: check the token still exists, then its expiry, before the service")
-        sys.exit(2)
+        print("       the broker refused the api-token; a deleted API client token was refused with HTTP 400 on 9.1.1 "
+              "(HTTP 500 on the 9.1.0 run of 2026-09-16): check the token still exists, then its expiry, before the service")
+        return EXIT_UNREAD
     print("broker bearer minted from the api-token\n")
     st, _ = ops("GET", "/api/resources", tok, params={"pageSize": 1})
     row("VCF Operations", "broker bearer", st, "accepted")
@@ -263,8 +294,8 @@ def main():
     else:
         print("\n  SDDC Manager                         skipped: SDDC_HOST, SDDC_USER, SDDC_PASSWORD_FILE not all set")
     print(f"\n{len(ROWS)} pairs read; {sum(1 for r in ROWS if r[4].startswith('DIFFERS'))} differ from the chapter; {sum(1 for r in ROWS if r[2] is None)} without an answer")
-    sys.exit(1 if any(r[2] is None for r in ROWS) else 0)
+    return EXIT_UNREAD if any(r[2] is None for r in ROWS) else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

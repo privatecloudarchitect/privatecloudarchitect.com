@@ -59,9 +59,14 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token) or VCFA
       (default update.json). --prove --org and --configure --org need VCFA_HOST, the provider credential and
       ENTRA_TENANT_ID; --configure also APP_CLIENT_ID and, for a new app, APP_SECRET_FILE (OIDC) or METADATA_FILE
       (SAML); they write OUT (default prove.json, configure.json)
-Exit: 0 done · 1 a call or a check failed · 2 refused (a name this script did not create; for --update, an
-      organization not federated to ENTRA_TENANT_ID, a change its protocol does not take, or a missing file; for
-      --org, no such organization, a protocol or key switch, a role its type lacks, or a named group held another way)
+Exit: 0 done · 1 a call or a check failed · 2 refused by what it read (a name this script did not create; no state
+      file to tear down; for --update, an organization not federated to ENTRA_TENANT_ID or a change its protocol does
+      not take; for --org, no such organization, a protocol or key switch, a role its type lacks, a named group held
+      another way, or SAML with no metadata yet, when it prints what the tenant needs) · 3 a result not known: a
+      credential refused before anything was read, a record the scrub refused to write, or an error it did not
+      expect (never 1) · 5 not run as asked: an unknown, missing or malformed argument, a missing environment variable
+      or a file that cannot be read, metadata that is not the tenant's, SECRET_DAYS of a year or more, or a Python
+      older than 3.9. Nothing is sent on a 5.
 """
 
 import argparse
@@ -78,6 +83,17 @@ import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timedelta, timezone
+
+# The identity companions' shared exit contract: 3 is a result not known (never a finding), 5 is not run as asked.
+EXIT_DONE, EXIT_FAILED, EXIT_REFUSED, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
+
+
+class UsageError(Exception):
+    """Not run as asked: a missing or malformed argument, environment variable or file. Exit 5, nothing sent."""
+
+
+class ScrubError(Exception):
+    """The record would carry an estate value, so it is not written. Exit 3: the run is not on record."""
 
 CLOUDAPI = "application/json;version=9.1.0"
 GROUPS_ACCEPT = "application/json;version=10.0.0.0-alpha"  # the version the live group import answered on 9.1
@@ -463,7 +479,7 @@ class Scrubber:
         left = [v for v in self.values if v.lower() in text.lower()]
         left += IPV4_RX.findall(text)
         if left:
-            raise SystemExit(f"refusing to write the record: {len(left)} estate value(s) survived the scrub")
+            raise ScrubError(f"refusing to write the record: {len(left)} estate value(s) survived the scrub")
 
 
 # ── HTTP, standard library only ────────────────────────────────────────────────────────────────────────────────
@@ -496,8 +512,11 @@ def _read_file(var):
     path = os.environ.get(var)
     if not path:
         return None
-    with open(path, encoding="utf-8") as f:
-        return f.read().strip()
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError as e:   # a variable that names no readable file is a usage error, not a failed read
+        raise UsageError(f"{var} names a file that cannot be read ({type(e).__name__})") from None
 
 
 class Vcfa:
@@ -516,7 +535,7 @@ class Vcfa:
         else:
             self.bearer = _read_file("VCFA_PROVIDER_BEARER_FILE")
         if not self.bearer:
-            raise SystemExit("set VCFA_PROVIDER_REFRESH_TOKEN_FILE or VCFA_PROVIDER_BEARER_FILE")
+            raise UsageError("set VCFA_PROVIDER_REFRESH_TOKEN_FILE or VCFA_PROVIDER_BEARER_FILE")
 
     def call(self, method, path, body=None, accept=CLOUDAPI, ctype=None, tenant=None, params=None):
         url = path if path.startswith("https://") else f"https://{self.host}{path}"
@@ -834,7 +853,7 @@ class Run:
             self.step("admin consent for openid profile email", g.status)
         days = int(os.environ.get("SECRET_DAYS", "180"))
         if days >= 365:
-            raise SystemExit("SECRET_DAYS must be under a year")
+            raise UsageError("SECRET_DAYS must be under a year")
         cur = g.req("GET", f"/applications/{app['id']}?$select=passwordCredentials")
         for cred in cur.get("passwordCredentials") or []:
             if cred.get("displayName") == "vcf-automation":
@@ -1136,12 +1155,12 @@ def update(a):
                              ("metadata", a.metadata)) if on]
     if not (host and org_name and tenant) or not asked:
         print("--update needs VCFA_HOST, ORG, ENTRA_TENANT_ID and at least one of --key-refresh, --keys, --secret, --metadata")
-        return 2
+        return EXIT_USAGE
     new_secret = _read_file("NEW_SECRET_FILE") if a.secret else None
     metadata = _read_file("METADATA_FILE") if a.metadata else None
     if (a.secret and not new_secret) or (a.metadata and not metadata):
-        print("refused: --secret needs NEW_SECRET_FILE and --metadata needs METADATA_FILE")
-        return 2
+        print("not run: --secret needs NEW_SECRET_FILE and --metadata needs METADATA_FILE")
+        return EXIT_USAGE
     san, steps, t0 = Scrubber(), [], time.monotonic()
     for v, ph in ((host, "{{host}}"), (org_name, "{{org}}"), (tenant, "{{tenant-id}}")):
         san.add(v, ph)
@@ -1220,8 +1239,8 @@ def update(a):
         else:
             certs = metadata_certs(metadata)
             if f"sts.windows.net/{tenant}" not in metadata or not certs:
-                print("refused: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
-                return 2
+                print("not run: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
+                return EXIT_USAGE
             step("plan", "read", protocol="SAML", metadata={"certificates_now": len(metadata_certs(fed.get("samlMetadata"))),
                                                              "certificates_new": len(certs),
                                                              "new_not_held": len(set(certs) - set(metadata_certs(fed.get("samlMetadata"))))})
@@ -1433,12 +1452,12 @@ def prove_existing(a):
     host, tenant, org_name = os.environ.get("VCFA_HOST"), os.environ.get("ENTRA_TENANT_ID"), a.org
     if not (host and tenant and org_name):
         print("--prove --org needs VCFA_HOST, ENTRA_TENANT_ID and the organization's name")
-        return 2
+        return EXIT_USAGE
     try:
         wanted_keys = parse_groups(a.group)
     except ValueError as e:
-        print(f"refused: {e}")
-        return 2
+        print(f"not run: {e}")
+        return EXIT_USAGE
     log = _Log("prove existing", host, org_name, tenant, "prove.json")
     vcfa = Vcfa(host)
     org = vcfa.org(org_name)
@@ -1503,19 +1522,19 @@ def configure_existing(a):
     host, tenant, org_name = os.environ.get("VCFA_HOST"), os.environ.get("ENTRA_TENANT_ID"), a.org
     if not (host and tenant and org_name and a.protocol):
         print("--configure --org needs VCFA_HOST, ENTRA_TENANT_ID, --protocol and the organization's name")
-        return 2
+        return EXIT_USAGE
     try:
         wanted_keys = parse_groups(a.group)
     except ValueError as e:
-        print(f"refused: {e}")
-        return 2
+        print(f"not run: {e}")
+        return EXIT_USAGE
     client_id, new_secret, metadata = os.environ.get("APP_CLIENT_ID"), _read_file("APP_SECRET_FILE"), _read_file("METADATA_FILE")
     if a.protocol == "oidc" and not client_id:
-        print("refused: --configure --protocol oidc needs APP_CLIENT_ID, the client id of the app the tenant's administrator built")
-        return 2
+        print("not run: --configure --protocol oidc needs APP_CLIENT_ID, the client id of the app the tenant's administrator built")
+        return EXIT_USAGE
     if metadata and (f"sts.windows.net/{tenant}" not in metadata or not metadata_certs(metadata)):
-        print("refused: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
-        return 2
+        print("not run: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
+        return EXIT_USAGE
     key = (a.user_key or "oid") if a.protocol == "oidc" else None
     log = _Log("configure" if a.execute else "configure plan", host, org_name, tenant, "configure.json")
     log.san.add(client_id, "{{client-id}}")
@@ -1640,8 +1659,52 @@ def configure_existing(a):
     return 0 if all(checks.values()) else 1
 
 
-def main():
-    p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a usage error, the code this script gives a refusal; here it is a UsageError, exit 5."""
+
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        raise UsageError(message)
+
+
+BUILD_ENV = ("VCFA_HOST", "ORG", "ENTRA_TENANT_ID", "ENTRA_CLIENT_ID")
+
+
+def credential_problem(entra):
+    """What is missing for the credentials a mode needs, or "": the provider's, and for a build Entra's."""
+    if not (os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE") or os.environ.get("VCFA_PROVIDER_BEARER_FILE")):
+        return "a provider credential (VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE)"
+    if entra and not (os.environ.get("ENTRA_CLIENT_SECRET_FILE")
+                      or (os.environ.get("ENTRA_CERT_FILE") and os.environ.get("ENTRA_KEY_FILE"))):
+        return "an Entra credential (ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE)"
+    return ""
+
+
+def main(argv=None):
+    """The run, with two guards around it: a Python older than 3.9 is refused (exit 5) before anything is sent, and an
+    error the script did not expect exits 3, a result not known, never 1, the code for a call or a check that failed."""
+    if sys.version_info < (3, 9):  # noqa: UP036  the script is run by readers on their own Python
+        print("org_federation.py needs Python 3.9 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except UsageError as e:
+        print(f"not run: {e} (see the header); exit 5", file=sys.stderr)
+        return EXIT_USAGE
+    except ScrubError as e:
+        print(f"{e}; exit 3", file=sys.stderr)
+        return EXIT_UNREAD
+    except CallError as e:   # raised outside a mode's own handling: the provider credential's exchange
+        print(f"a credential was refused before anything was read: {e}; exit 3", file=sys.stderr)
+        return EXIT_UNREAD
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}; what it had not done is not known "
+              "(exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv=None):
+    p = _Parser(prog="org_federation.py", description=__doc__.split("\n\n")[0])
     p.add_argument("--protocol", choices=("oidc", "saml"))
     p.add_argument("--org-type", choices=("classic", "all-apps"))
     p.add_argument("--user-key", choices=("oid", "preferred_username"))
@@ -1656,12 +1719,14 @@ def main():
     p.add_argument("--keys", action="store_true")
     p.add_argument("--secret", action="store_true")
     p.add_argument("--metadata", action="store_true")
-    a = p.parse_args()
+    a = p.parse_args(argv)
     if a.org or a.configure:
         if a.update or a.teardown or (a.prove and a.configure) or not (a.prove or a.configure):
             p.error("--org goes with --prove or --configure, and --configure with --org")
         if not a.org:
             p.error("--configure needs --org NAME")
+        if credential_problem(entra=False):
+            raise UsageError(f"--org needs {credential_problem(entra=False)}")
         return prove_existing(a) if a.prove else configure_existing(a)
     if a.group:
         p.error("--group goes with --org")
@@ -1669,6 +1734,8 @@ def main():
     if a.update:
         if a.prove or a.teardown:
             p.error("--update does not combine with --prove or --teardown")
+        if credential_problem(entra=False):
+            raise UsageError(f"--update needs {credential_problem(entra=False)}")
         return update(a)
     if a.key_refresh is not None or a.keys or a.secret or a.metadata:
         p.error("--key-refresh, --keys, --secret and --metadata go with --update")
@@ -1683,6 +1750,12 @@ def main():
         print(json.dumps(plan(a.protocol, a.org_type, a.user_key), indent=1))
         print("\nplan only: nothing was changed. Add --execute to build, --prove to check, --teardown --execute to remove.")
         return 0
+    missing = [k for k in BUILD_ENV if not os.environ.get(k)] + ([credential_problem(entra=True)] if credential_problem(entra=True) else [])
+    if missing:
+        raise UsageError(f"--execute, --prove and --teardown need {', '.join(missing[:-1]) + ' and ' if len(missing) > 1 else ''}{missing[-1]}")
+    days = os.environ.get("SECRET_DAYS", "180")
+    if not (days.isdigit() and 0 < int(days) < 365):   # checked before anything is sent, not at the secret step
+        raise UsageError(f"SECRET_DAYS must be a whole number of days under a year, not {days!r}")
     run = Run(a)
     vcfa, g = Vcfa(run.host), Graph(run.tenant, run.client)
     try:

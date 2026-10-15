@@ -13,9 +13,16 @@ verification is the platform's job) and prints what the token says about its hol
 Any other JWT can be decoded instead: set JWT_ENV to the name of an environment variable holding it (for
 example a service JWT from the fleet plane's exchange, or the bearer another flow returned).
 
-Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN_FILE; OPS_BROKER_HOST, BROKER_TENANT, OPS_TLS_VERIFY optional)
+Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN_FILE; OPS_BROKER_HOST, the broker that trades the token, when it
+       is not OPS_HOST; BROKER_TENANT, OPS_TLS_VERIFY optional)
        JWT_ENV (optional)  name of an env var holding a JWT to decode instead of minting one
-Exit:  0 claims printed · 2 the mint failed
+Exit:  0 claims printed
+       3 the mint failed (the broker did not trade the api-token for a bearer), or an error the script did not expect
+       5 a usage error: OPS_HOST or the api-token unset, JWT_ENV naming an empty variable or a value that is not a
+         JWT, or a Python older than 3.10
+A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
+run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190); one past its expiry date is
+not tested.
 Never prints a token value.
 """
 
@@ -24,6 +31,8 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
+
+EXIT_UNREAD, EXIT_USAGE = 3, 5
 
 PRINCIPAL_KEYS = ("sub", "prn", "azp", "client_id", "cid")
 PERSON_KEYS = ("preferred_username", "username", "upn", "email", "eml", "user_id", "name", "user_name", "given_name")
@@ -34,11 +43,18 @@ def b64url(part):
     return base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))
 
 
+class NotAJwt(ValueError):
+    """A value that does not decode as a JWT: a usage error when the reader named it, never a failed read."""
+
+
 def decode(jwt):
     parts = jwt.split(".")
     if len(parts) != 3:
-        raise SystemExit(f"FATAL: not a JWT (expected three dot-separated parts, got {len(parts)})")
-    return json.loads(b64url(parts[0])), json.loads(b64url(parts[1]))
+        raise NotAJwt(f"not a JWT (expected three dot-separated parts, got {len(parts)})")
+    try:
+        return json.loads(b64url(parts[0])), json.loads(b64url(parts[1]))
+    except ValueError as e:
+        raise NotAJwt(f"not a JWT ({type(e).__name__} decoding its header or claims)") from None
 
 
 def stamp(epoch):
@@ -46,21 +62,49 @@ def stamp(epoch):
 
 
 def main():
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5), and an error the script did
+    not expect exits 3, the code for a read that failed."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("claims.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run()
+    except Exception as e:  # noqa: BLE001  the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]} (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run():
     if os.environ.get("JWT_ENV"):
         source = f"the JWT in ${os.environ['JWT_ENV']}"
         jwt = os.environ.get(os.environ["JWT_ENV"], "")
         if not jwt:
-            raise SystemExit(f"FATAL: {os.environ['JWT_ENV']} is empty")
+            print(f"FATAL: {os.environ['JWT_ENV']} is empty", file=sys.stderr)
+            return EXIT_USAGE
     else:
-        from opslib import bearer
+        from opslib import bearer, secret
+        try:
+            held = secret("OPS_API_TOKEN")
+        except OSError as e:
+            print(f"FATAL: OPS_API_TOKEN_FILE could not be read: {type(e).__name__}", file=sys.stderr)
+            return EXIT_USAGE
+        if not os.environ.get("OPS_HOST") or not held:
+            print("FATAL: OPS_HOST and OPS_API_TOKEN_FILE (or OPS_API_TOKEN) are required, or JWT_ENV to decode a JWT you hold",
+                  file=sys.stderr)
+            return EXIT_USAGE
         source = "the bearer exchanged from your api-token at the broker"
         try:
             jwt = bearer()
         except Exception as e:  # noqa: BLE001 - the harness reports, it does not retry
             print(f"FATAL: the broker exchange failed: {type(e).__name__}: {e}")
-            print("       a deleted or rotated api-token answers HTTP 500 here, not 401: check the token still exists, then its expiry, before the service")
-            sys.exit(2)
-    header, claims = decode(jwt)
+            print("       the broker refused the api-token; a deleted API client token was refused with HTTP 400 on 9.1.1 "
+                  "(HTTP 500 on the 9.1.0 run of 2026-09-16): check the token still exists, then its expiry, before the service")
+            return EXIT_UNREAD
+    try:
+        header, claims = decode(jwt)
+    except NotAJwt as e:
+        print(f"FATAL: {e}", file=sys.stderr)
+        return EXIT_USAGE
     print(f"decoded: {source} ({len(jwt)} characters; value never printed)")
     print(f"header:   alg={header.get('alg')}  typ={header.get('typ')}  kid={'present' if header.get('kid') else 'absent'}")
     print(f"issuer:   {claims.get('iss')}")
@@ -95,7 +139,8 @@ def main():
     other = sorted(k for k in claims if k not in PRINCIPAL_KEYS + PERSON_KEYS + SCOPE_KEYS + ("iss", "aud", "iat", "exp", "nbf", "jti", "realm", "tenant", "org", "tid", "context_name"))
     if other:
         print(f"other claims present: {', '.join(other)}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

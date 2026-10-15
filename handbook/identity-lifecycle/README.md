@@ -10,7 +10,7 @@ with a certificate. No token, secret or password is printed or written.
 | File | What it is |
 |---|---|
 | `leavers.py` | Finds every organization federated to one Entra tenant from the organization's own settings (OIDC by an issuer on the tenant, SAML by metadata naming it), reads each account against Entra and both gates a sign-in passes (the app's assignment, and a group imported into the organization that the sign-in can carry), and reports every leaver, the tokens it holds (how many, and the last one's end date, for every account) and what the run would do. It lists every role granted to a federated account directly, and flags an account disabled here whose name an enabled, entitled Entra user now holds; `--ack` silences a flag a person has decided on, until a date. `--execute --org` closes the confirmed leavers of one organization, and refuses an organization where an unusual share reads gone; `--close-now --org --user` closes one named account at once, without asking Entra. Each state has its own exit code. Writes `leavers.json`, and refuses to write a record carrying any estate value. |
-| `leavers.json` | That record from the reference estate, a read-only run on 2026-10-15 of the script as it stands: every organization federated to the lab tenant. |
+| `leavers.json` | That record from the reference estate, a read-only run on 2026-10-15 of the script as it stands (every open leaver confirmed over three reads before it counts): every organization federated to the lab tenant. |
 | `expected-output.md` | The transcripts of that run, of the same run with its one flag acknowledged, and of a closed leaver, with what to read in them. |
 
 ## Run it
@@ -28,7 +28,7 @@ python3 leavers.py                     # report, print, record
 python3 leavers.py --redact            # the same, printed with placeholders, for a transcript you will share
 python3 leavers.py --name-claim <org>=mail   # the same, for an organization whose name claim carries mail (repeatable)
 python3 leavers.py --ack acks.json     # the same, with the flags a person has decided on acknowledged until a date
-python3 leavers.py --execute --org <org> --user <upn>   # close one confirmed leaver of one organization
+python3 leavers.py --execute --org <org> --user <account>   # close one confirmed leaver of one organization
 python3 leavers.py --execute --org <org>                # close every confirmed leaver of that organization
 python3 leavers.py --execute --org <org> --max-leavers 10   # the same, past the guard, once you know why so many left
 
@@ -37,10 +37,15 @@ python3 leavers.py --close-now --org <org> --user <account>             # the pl
 python3 leavers.py --close-now --org <org> --user <account> --execute   # close that one account now, reading both back
 ```
 
-`<account>` is the account's user name in VCF Automation: a principal name, or the object id in an organization keyed
-on `oid`. `--close-now` needs no Graph credential, acts on exactly one account the name matches (it refuses a name
-that matches none or several), and touches only that account's tokens and record. Then remove the person at the
-provider, so the next report finds them in step.
+`<account>` names one account, in any case: its user name in VCF Automation (a principal name, or the object id in an
+organization keyed on `oid`), the person's principal name in an organization keyed on `oid`, or the account's id
+(`urn:vcloud:user:...`, in the record). Keyed on `oid`, an account is named by its person's Entra object id, so a
+principal name is resolved through the tenant's app with `GET /users/{principal name}` (Microsoft Graph's Get user
+call, `User.Read.All`) and the account named by that object id is selected; for that, `--close-now` needs the Graph
+variables too, and otherwise needs none. The match (the name, the object id, the account it selects) is printed
+before anything is sent. A name that selects no account, or more than one, refuses the run (exit 5) and nothing is
+sent; pass the account's id from the record to choose between two. `--close-now` touches only that account's tokens
+and record. Then remove the person at the provider, so the next report finds them in step.
 
 ### Your provider credential
 
@@ -81,17 +86,20 @@ portal's sign-in.
 
 So the close is a person's step. Schedule the report on the token and alert on any non-zero exit: on 1 run the close,
 `--execute --org` (or `--close-now`) on a provider bearer from a portal sign-in; on 3 fix the read before trusting any
-decision; on 4 decide each flag and acknowledge it until a date; on 2 finish the close by hand. Each state has its own
-code, and the first that applies wins, so a flag never hides a failed read or an open leaver:
+decision (a leaver whose three reads disagreed is read again by the next run); on 4 decide each flag and acknowledge
+it until a date; on 2 finish the close by hand. Each state has its own code, and the first that applies wins, so a
+flag never hides a failed read or an open leaver. The codes keep the contract every identity companion keeps: 0
+nothing for a person to act on, 3 a read failed or a result is undetermined (never a finding), 5 a usage error; 1, 2
+and 4 are this script's own; an error the script did not expect exits 3, never 1.
 
 | Exit | Means | What the scheduler does with it |
 |---|---|---|
 | 2 | with `--execute`, a close that did not hold on read-back (a token left, the account still enabled, or another field changed) | alert whoever ran the close: read the account's `result` in the record and finish it by hand |
-| 1 | an open leaver: an account still enabled, or holding a token, whose person has left, including one `--execute` refused under the guard | alert whoever closes leavers: they run `--execute --org` on a provider bearer |
-| 3 | a read failed (an organization, a gate, an account, or the credential itself), a tenant no organization names, an error the script did not expect, or an account is undetermined | alert the job's owner: nothing is known about what was not read, so fix the read (a Graph permission, a credential, the tenant, the organization's user key, or a `--name-claim` the reason names) |
+| 1 | an open leaver: an account still enabled, or holding a token, whose person has left, on three reads that agree, including one `--execute` refused under the guard | alert whoever closes leavers: they run `--execute --org` on a provider bearer |
+| 3 | a read failed (an organization, a gate, an account, a `--user` resolution, or the credential itself), a tenant no organization names, an error the script did not expect, or an account is undetermined, among them a leaver whose three reads disagreed | alert the job's owner: nothing is known about what was not read, so fix the read (a Graph permission, a credential, the tenant, the organization's user key, or a `--name-claim` the reason names); a leaver whose reads disagreed is read again by the next run |
 | 4 | a flag nobody acknowledged: a role granted to a federated account directly, or a name in use again | open a ticket for the account's owner; once decided, acknowledge it in `--ack` until a date |
 | 0 | nothing open, nothing unread, nothing flagged; with `--close-now`, the plan printed or the close held | nothing |
-| 5 | a usage error (a malformed `--name-claim` among them), a Python older than 3.10, an unreadable `--ack` file, an account `--close-now` cannot name exactly once, or the record refused because an estate value survived the scrub; nothing is written | fix the invocation |
+| 5 | a usage error (a malformed `--name-claim` among them), a Python older than 3.10, an unreadable `--ack` file, a `--user` that selects no account or more than one, or the record refused because an estate value survived the scrub; nothing is written | fix the invocation |
 
 An acknowledgement file is a JSON list; each entry names the organization, the account, the flag (`direct-role` or
 `name-in-use-again`) and the last day it holds:
@@ -141,11 +149,15 @@ An entry that matches no flag is counted on the report, so a stale file is notic
   exits 3, never 0: a wrong tenant would otherwise read as nothing to do.
 - **It fails closed.** An organization whose gate cannot be read, or an account whose user cannot be read, is
   reported undetermined and never acted on.
-- **It acts only on what three reads agree on.** Entra's directory reads settle after a change. With `--execute`,
-  each leaver is read again three times, ten seconds apart, and closed only when every read says leaver; otherwise
-  it is left for the next run.
-- **It acts only on a named organization.** `--execute` needs `--org`; `--user` narrows it to one account. Every
-  account is still read and reported.
+- **It alerts, and acts, only on what three reads agree on.** Entra's directory reads settle after a change. Every
+  leaver still enabled or holding a token is read again three times, ten seconds apart, in a report as with
+  `--execute`, and counts as open (exit 1), or is closed, only when every read says leaver; a leaver whose reads
+  disagree reads undetermined (exit 3), its reason naming the reads, and the next run reads it again. An
+  organization's leavers are read in the same three rounds, so the wait does not grow with their number: on the
+  reference estate three such reads of an organization's leaver took 22 to 23 s (2026-10-15). A leaver already
+  disabled with no token is not read again.
+- **It acts only on a named organization.** `--execute` needs `--org`; `--user` narrows it to one account, chosen and
+  printed before anything is judged or sent, as for `--close-now` above. Every account is still read and reported.
 - **It refuses a mass close.** `--execute` refuses an organization whose open leavers number more than three and more
   than a quarter of its federated accounts (or more than `--max-leavers N`): it closes none of them, each reads
   `refused` with the reason, and the run exits 1. A share that size is more often a wrong lookup than a bad week, and
@@ -159,7 +171,8 @@ An entry that matches no flag is counted on the report, so a stale file is notic
   token is in step, so a re-run changes nothing. A close leaves roles granted directly in place: the account closed
   on the reference estate kept its direct role, and the report flags it until a person removes it.
 - **What it never acts on.** A role granted to a federated account directly is listed and flagged, because a new
-  person later given the same name signs in to the same account and holds it. An account disabled here whose name
+  person later given the same name signed in to the same account and held it (over SAML and over OIDC keyed on
+  `preferred_username`, with the account enabled; whether a disabled account turns that person away was not run). An account disabled here whose name
   an enabled, entitled Entra user now holds is flagged, because if that is a different person, enabling the account
   hands them its roles. Both are decisions for a person.
 - **What the name check cannot see.** The flag above fires only on an account disabled here. An account never closed,
@@ -190,7 +203,10 @@ flagged.
   an account whose name does not fit its organization's key is undetermined too. Matching by object id ran once on
   the reference estate (2026-10-13), on an All Apps organization keyed on `oid` for the run: two accounts named by
   object id read keep, one was closed with `--close-now`, the other read leaver once disabled at Entra and was closed;
-  the accounts named by principal name read undetermined.
+  the accounts named by principal name read undetermined. A principal name given to `--user` under `oid` is resolved
+  as above; that resolution ran read-only against the lab tenant on 2026-10-15, where each of ten federated accounts'
+  principal names selected that account from a copy of its organization's list renamed to object ids, in both jobs.
+  No organization federated to the lab tenant was keyed on `oid` that day, so selection on a live one was not run.
 - What the name match covers, and what it was tested on. Every federated account on the reference estate was found
   by its `userPrincipalName` (2026-10-15). The `mail` and `otherMails` lookups found a throwaway member user whose
   `mail` and `otherMails` each held an address other than its `userPrincipalName`, the shape of a name claim sourced
@@ -202,9 +218,12 @@ flagged.
   declaration is held by the script's tests. An Entra guest was not tested: the reference tenant refused the
   throwaway guest's invitation. A name no lookup finds is judged as above: undetermined when no account
   of the organization is found, and a leaver otherwise, with the mass-close guard between it and `--execute`.
-- What it cannot see: whether a revoked token was in use, sessions a leaver already holds (they run to their own
-  expiry), and the fleet's own users behind the identity broker (that half of the job is a design today). It cannot
-  tell whether a name in use again belongs to the same person; it flags the case and acts on nothing.
+- What it cannot see: whether a revoked token was in use, sessions a leaver already holds, and the fleet's own users
+  behind the identity broker (that half of the job is a design today). Of the sessions: a user disabled at the
+  provider while signed in kept the session bearer it held to the end of its hour; disabling a local user's account
+  in VCF Automation ended the session-login bearer it held at once (one run); whether the close ends a federated
+  user's browser session was not tried. It cannot tell whether a name in use again belongs to the same person; it
+  flags the case and acts on nothing.
 - Measured on VCF Automation 9.1 against Entra ID with a provider bearer and a Graph certificate, and with a provider
   API token (2026-10-13: a report run held; a close was refused 403); the Graph client-secret path was not exercised
   on the reference estate. The Graph application permissions the reads need were measured on a throwaway app before
@@ -215,7 +234,10 @@ flagged.
   members. On 2026-10-15 the report exited 4 on the reference estate (one flag, nothing open, nothing unread), and 0
   with that flag acknowledged; re-run that day with the direct-member reads, it reached the same decision on every
   account, no gate group had a group among its direct members, and no federated user was in a gate group only
-  through nesting.
+  through nesting. Re-run once more with every open leaver confirmed over three reads, it reached the same decision
+  on every account again and exited 4, in 30.2 s against 30.7 s for the version before (95 calls each); no leaver was
+  open, so none was read again, and the three reads, timed apart on each organization's in-step leaver, took 22 to
+  23 s and agreed.
 
 ## Reading the record
 
@@ -225,9 +247,11 @@ organization and which of those a sign-in can carry) and a `users` list. Each ac
 `enabled`, `direct_roles` and `effective_roles` by name, its `tokens` by name and type, the `decision` and its
 `reason`, `found` (whether a lookup found its Entra user) and `matched_by` (which lookup), any `flags`, with the
 ones `--ack` covers under `acknowledged` (and an expired one under `ack_expired`), and, where the run did something or
-would, its `action`; a closed account carries `confirm_reads` and a `result` with what was revoked and the read-back.
+would, its `action`; every leaver that was open carries `confirm_reads`, the three reads that confirmed it (or, for
+one now undetermined, that disagreed), and a closed account a `result` with what was revoked and the read-back.
 Each organization carries its `leaver_guard`: its open leavers, its federated accounts, the limit, and whether
-`--execute` refuses it and why. `summary` holds the totals (`keep`, `leaver`, `out_of_scope`, `undetermined`,
+`--execute` refuses it and why; one whose leavers were read again carries `confirm_seconds`. A run given `--user`
+carries `user_match`: the name given, how it was resolved, the object id, and the account it selected. `summary` holds the totals (`keep`, `leaver`, `out_of_scope`, `undetermined`,
 `open_leavers`, `refused`, `closed`, `not_held`, `in_step`, `direct_role`, `name_in_use_again`, `acknowledged`, and
 `flagged`, the flags no acknowledgement covers) and `per_org`: per organization, its accounts, how many are federated,
 found, kept, leavers, open and flagged, whether the guard refuses it, the federated accounts holding a direct role

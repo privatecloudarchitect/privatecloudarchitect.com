@@ -54,8 +54,13 @@ exit 0
 ## claims.py
 
 Three runs: the operator's own api-token (a person), an API client's stored api-token (dead: deleted or rotated
-away, so the broker answers 500), and a service JWT decoded through JWT_ENV (it names the person who minted the
-Operations session it was exchanged from).
+away, so on this 9.1.0 run of 2026-09-16 the broker answered 500; on 9.1.1 a deleted API client token was refused with
+400), and a service JWT decoded through JWT_ENV (it names the person who minted the Operations session it was
+exchanged from).
+
+The runs were recorded on 2026-09-16, when a failed mint exited 2 and printed an unscoped 500 hint. Since 2026-10-15
+claims.py exits 3 for a failed mint, the code every identity companion gives a read that failed, and its hint names
+the code per run: run today, the second transcript ends `exit 3`. The printed lines are kept as they were recorded.
 
 ```text
 ----- claims.py with the operator's api-token
@@ -74,7 +79,7 @@ expires:  <utc timestamp>  (lifetime 60 min 0 s: the minutes clock; the api-toke
 other claims present: acct, auth_time, authorization_details, ctx, domain, group_ids, group_names, idp, pid, prn_type, wid
 
 exit 0
------ claims.py with the API client's api-token
+----- claims.py with the API client's api-token (recorded on VCF 9.1.0, 2026-09-16)
 FATAL: the broker exchange failed: HTTPError: HTTP Error 500: Internal Server Error
        a deleted or rotated api-token answers HTTP 500 here, not 401: check the token still exists, then its expiry, before the service
 
@@ -109,4 +114,14 @@ catalog_check.py: 3 credential(s) in credentials.example.json, read on 2026-10-1
   ok    directory-bind           owner identity-team    due 2027-03-23
 
 exit 1
+```
+
+With `--census` on a census record that did not read. The record is a synthetic one, made for the transcript in the
+shape `census.py` writes when its credential is refused the fleet identity plane: every fleet call answered 403, its
+API client list is empty, and it exited 3. The join refuses it before printing any entry, so its empty list is never
+read as an estate with no API client.
+
+```text
+$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-refused.json --today 2026-10-13
+NOT READ: census-refused.json is not a read of the API clients: the census exited 3, not 0: a read failed, so its counts are not the estate's. Nothing is joined (exit 3)
 ```

@@ -3,8 +3,8 @@
 Companion to the chapter
 ([privatecloudarchitect.com/handbook/tenant-federation](https://privatecloudarchitect.com/handbook/tenant-federation)):
 one script that federates a VCF Automation organization straight to Microsoft Entra ID, over OIDC or SAML, on a
-classic or an All Apps organization, and takes it down again. Stdlib Python; the `cryptography` package only when
-Entra is reached with a certificate rather than a client secret. No secret or token is printed or written.
+classic or an All Apps organization, and takes it down again. Stdlib Python 3.9 or later; the `cryptography` package
+only when Entra is reached with a certificate rather than a client secret. No secret or token is printed or written.
 
 | File | What it is |
 |---|---|
@@ -39,7 +39,17 @@ python3 org_federation.py --protocol oidc --org-type all-apps --prove
 python3 org_federation.py --protocol oidc --org-type all-apps --teardown --execute
 ```
 
-A provider bearer lasts an hour, so mint it just before each run. `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider bearer and a certificate; the api-token and the client secret paths were not exercised there, and whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tested.
+A provider bearer lasts an hour, so mint it just before each run. `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused an account write (403) that a provider bearer carried, so give every write here a provider bearer.
+
+## Exit codes
+
+| Exit | Means |
+|---|---|
+| 0 | done: the plan printed, or every step and check passed |
+| 1 | a call or a check failed; the record names which |
+| 2 | refused by what it read: a name this script did not create, no state file to tear down, no such organization, an organization not federated to `ENTRA_TENANT_ID`, a change its protocol does not take, a protocol or user-key switch, a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
+| 3 | a result not known: a credential refused before anything was read, a record the scrub refused to write, or an error the script did not expect (never 1) |
+| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`), a missing environment variable or credential, a file that cannot be read, metadata that is not the tenant's or names no signing certificate, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
 assignments and permission grants, and groups, and sets a service principal's claims policy. On the reference
@@ -52,8 +62,11 @@ tenant-wide powers: run it in a tenant made for trials, or as an app you remove 
 
 `--execute` builds only throwaways: it refuses any organization, app or group it did not create. A real tenant's
 organization is built in two halves. The tenant's administrator builds the Entra app from the workshop's first list
-and hands over its client id and secret (OIDC) or its federation metadata (SAML). You create the organization, then
-write its side with `--configure --org`, and prove it with `--prove --org`. Both take the organization by name and
+and hands over its client id and secret (OIDC) or its federation metadata (SAML). You create the organization first,
+choosing its type, which decides the role names its groups are imported with: `POST /cloudapi/1.0.0/orgs`, with
+`isClassicTenant` true for a classic organization, the call `--execute` sends for its throwaways (this script has no
+mode that creates an organization it does not also tear down). Then write its side with `--configure --org`, and
+prove it with `--prove --org`. Both take the organization by name and
 need no state file; neither writes to Entra.
 
 ```bash
@@ -73,7 +86,8 @@ python3 ../federation-operations/watch.py                            # with ORGS
 with the role the organization type defines, resolved by name from the organization's own role list. It refuses
 (exit 2) a protocol or user-key switch on an organization already federated, an organization signed in through VCF
 single sign-on (OIDC), a role key the organization type lacks (a classic organization has no auditor), and a named
-group the organization already holds under the other protocol or with other roles. Over SAML without
+group the organization already holds under the other protocol or with other roles; a missing `APP_CLIENT_ID` over
+OIDC, or metadata that is not the tenant's, is a usage error (exit 5) and sends nothing. Over SAML without
 `METADATA_FILE` it prints the organization's own service-provider identifier and reply URL for the tenant's
 administrator, and stops. `--prove --org` reads the settings back against the plan for the protocol, type and user key
 the organization holds, every imported group's roles against the organization's own role list, each named group's
@@ -99,7 +113,7 @@ body back and reads every changed field back. It never touches Entra: the tenant
 certificates on Entra ID, and this writes what the organization must hold.
 
 ```bash
-export VCFA_HOST=<automation-fqdn> VCFA_PROVIDER_REFRESH_TOKEN_FILE=<file> ENTRA_TENANT_ID=<tenant-id>
+export VCFA_HOST=<automation-fqdn> VCFA_PROVIDER_BEARER_FILE=<file> ENTRA_TENANT_ID=<tenant-id>   # a provider bearer, as for --configure
 export ORG=<the organization>
 
 python3 org_federation.py --update --key-refresh               # plan: automatic refresh on, strategy ADD, every hour
@@ -110,8 +124,9 @@ METADATA_FILE=<file> python3 org_federation.py --update --metadata --execute    
 ```
 
 It refuses (exit 2) an organization not federated to `ENTRA_TENANT_ID` (an organization signed in through VCF single
-sign-on included), a change the organization's protocol does not take (`--metadata` on OIDC, the others on SAML), a
-`--secret` or `--metadata` without its file, and metadata that is not this tenant's or names no signing certificate.
+sign-on included) and a change the organization's protocol does not take (`--metadata` on OIDC, the others on SAML).
+A `--secret` or `--metadata` without its file, and metadata that is not this tenant's or names no signing
+certificate, are usage errors (exit 5): nothing is sent.
 A settings write carries the client secret, because VCF Automation refuses an OIDC settings write without it: the one
 the organization holds, read and sent back in memory, or the new one; neither is printed or written.
 

@@ -16,11 +16,20 @@ a command or in a console.
     python tokens.py --kubeconfig         every credential in your kubeconfig, no token needed
 
 Nothing is written anywhere.
+
+Exit: 0 the token is usable (or, with --kubeconfig, no credential has expired)
+      1 a token is expired or inside the clock-skew margin
+      3 nothing could be read off the token: it is not a JWT, so nothing here can say when it expires, or an error
+        the script did not expect
+      5 a usage error: no token given, a --file or kubeconfig that cannot be read, PyYAML missing for --kubeconfig, or
+        a Python older than 3.10
+These are the codes every identity companion uses for 0, 3 and 5; 1 is this script's own finding.
 """
 from __future__ import annotations
 import argparse, base64, json, os, sys, datetime as dt
 
 SKEW = dt.timedelta(minutes=2)          # clocks disagree; do not call a token dead on the second
+EXIT_UNREAD, EXIT_USAGE = 3, 5
 
 
 def _seg(part: str) -> dict:
@@ -135,10 +144,10 @@ def from_kubeconfig() -> int:
     try:
         import yaml
     except ImportError:
-        print("this mode needs PyYAML (pip install pyyaml)"); return 2
+        print("this mode needs PyYAML (pip install pyyaml)"); return EXIT_USAGE
     path = os.environ.get("KUBECONFIG") or os.path.expanduser("~/.kube/config")
     if not os.path.exists(path):
-        print(f"no kubeconfig at {path}"); return 2
+        print(f"no kubeconfig at {path}"); return EXIT_USAGE
     with open(path, encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh) or {}
     users = cfg.get("users") or []
@@ -177,12 +186,34 @@ def from_kubeconfig() -> int:
     return 1 if bad else 0
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+class _Parser(argparse.ArgumentParser):
+    """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
+
+    def error(self, message: str):
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The run, with two guards around it: a Python older than 3.10 is refused (exit 5), and an error the script did
+    not expect exits 3, never 1, which says a token expired."""
+    if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
+        print("tokens.py needs Python 3.10 or later", file=sys.stderr)
+        return EXIT_USAGE
+    try:
+        return _run(argv)
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]} (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run(argv: list[str] | None = None) -> int:
+    ap = _Parser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("source", nargs="?", default=None, help="'-' to read the token from stdin")
     ap.add_argument("--file", help="read the token from this file")
     ap.add_argument("--kubeconfig", action="store_true", help="read every kubeconfig credential")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
 
     if a.kubeconfig:
         return from_kubeconfig()
@@ -190,14 +221,18 @@ def main() -> int:
     if a.source == "-":
         raw = sys.stdin.read()
     elif a.file:
-        with open(a.file, encoding="utf-8") as fh:
-            raw = fh.read()
+        try:
+            with open(a.file, encoding="utf-8") as fh:
+                raw = fh.read()
+        except OSError as e:
+            print(f"could not read {a.file}: {type(e).__name__}")
+            return EXIT_USAGE
     else:
         raw = os.environ.get("TOKEN", "")
         if not raw:
             ap.print_help()
             print("\nno token given: set $TOKEN, pass --file, or pipe one with '-'")
-            return 2
+            return EXIT_USAGE
 
     raw = raw.strip()
     if raw.lower().startswith("bearer "):
@@ -208,7 +243,7 @@ def main() -> int:
         print("it expires. An opaque token is not a worse token; it just means the issuer is the")
         print("only thing that knows, and you learn its lifetime from the issuer's documentation")
         print("or by measuring when it stops working.")
-        return 2
+        return EXIT_UNREAD
     return report(claims)
 
 

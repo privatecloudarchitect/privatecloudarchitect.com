@@ -124,8 +124,10 @@ Organizations: 10
 ## A credential whose role cannot read the fleet identity plane
 
 The same script, the same day, on the API token of an API client holding VCF Viewer, with the fleet plane only. Every
-fleet identity read answered 403, so the script prints NOT READ and the refused reads before any line that counts, and exits 1. Without that first
-line the counts below it would read as an estate with no broker and no emergency client.
+fleet identity read answered 403, so the script prints NOT READ and the refused reads before any line that counts. It
+exited 1 on that run, the code a failed read then had; since 2026-10-15 a failed read exits 3, as on every identity
+companion. Without that first line the counts below it would read as an estate with no broker and no emergency client,
+and a tool that reads the record (`catalog_check.py --census`) refuses it for its exit and its failed calls.
 
 ```
 $ python3 census.py --redact
