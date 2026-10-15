@@ -76,7 +76,9 @@ organization's settings store, read whether its OIDC is switched on or off, so a
 taken as keyed on a name. Under `oid`, a name no Entra user holds (Graph answers 404, as for a
 person deleted at Entra) that an account still carries selects an account named before the organization was keyed on
 `oid`, not the one the person signs in to; the plan refuses it (exit 5), naming that account's id, and points to the
-object id the leaver notice carries. Keyed on a name (OIDC on `preferred_username`, or SAML on Entra's name claim,
+object id the leaver notice carries. The plan refuses the same way when the name resolves to an object id that names
+no account while the name selects such an account: the name may belong to someone else now, so the account's id is
+named only for you to check against the notice, never offered as the next step. Keyed on a name (OIDC on `preferred_username`, or SAML on Entra's name claim,
 read from the organization's stored settings for the protocol of the account the name selects), the name is the
 account's key: the account a name selects is the one every holder of that name signs in to, so no guard can choose
 between people, none runs, and no Graph variable is needed. Stored as keyed on anything else (`sub`, an object-id

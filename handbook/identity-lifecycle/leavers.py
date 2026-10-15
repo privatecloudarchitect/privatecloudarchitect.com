@@ -297,6 +297,12 @@ UNHELD_NAME = ("no Entra user holds {given} now (Graph answered 404), so it reso
                "selects, {account}, is named by the name itself, made before the organization was keyed on oid, and is "
                "not the account a person signs in to under oid. Close the person's own account by the object id the "
                "leaver notice or the last report carries; close this one, if it is theirs too, by its id: --user {id}")
+RESOLVED_ELSEWHERE = ("{given} resolves to the Entra object id {oid} now, which names no account in the organization; the "
+                      "account the name selects, {account}, is named by the name itself, made before the organization was "
+                      "keyed on oid, and is not the account a person signs in to under oid. The name may have been given "
+                      "to someone else since the departure, so close the departed person's own account by the object id "
+                      "the leaver notice or the last report carries; close {account}, if it is theirs too, by its id after "
+                      "checking it against the notice: --user {id}")
 NOT_NAME_KEYED = ("account {account} signs in over the organization's {protocol}, which it stores as keyed on {key}, "
                   "not on a principal name, so the account a name selects may not be the one a person signs in to: "
                   "check it against the leaver notice, then close it by its id: --user {id}")
@@ -1374,6 +1380,12 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
         m["left_on"] = left_on
         if guard.get("refused") or guard.get("unread"):
             m["refused" if guard.get("refused") else "unread"] = guard.get("refused") or guard.get("unread")
+        elif key in BY_ID and str(m.get("account") or "").lower() != str(m["object_id"]).lower():
+            # re-check A1: the dates pass, yet the object id the name resolves to names no account, and the name selects
+            # a legacy account named before the key was oid. Suggesting that account's id closed a dead account and left
+            # the leaver's own open, so the plan refuses it (exit 5) and points to the object id the notice carries.
+            m["refused"] = RESOLVED_ELSEWHERE.format(given=account, oid=m["object_id"], account=m["account"], id=m["id"])
+            m["guard"] = {**guard, "refused": m["refused"]}
     elif user is not None and named:
         m["guard"] = {"ok": True, "why": "named by its object id or its account id: no name was resolved"}
     elif user is not None and key in BY_ID:  # N2 shape A: Graph knows no user by the name, and an account carries it
@@ -1859,10 +1871,7 @@ def exit_means(record: dict) -> str:
         oid = m.get("object_id")
         if oid and str(m.get("account") or "").lower() == str(oid).lower():
             return PLAN_ONLY + f"; to close, run it again with --user {oid} (the object id, never the name) and --execute"
-        if oid:  # the name selected an account named before the key was oid: that account's own id closes it
-            return PLAN_ONLY + (f"; to close the account it selects, run it again with --user {m.get('id')} (the "
-                                "account's id, never the name) and --execute")
-        return PLAN_ONLY + "; to close, run it again with --execute"
+        return PLAN_ONLY + "; to close, run it again with --execute"   # a name selecting another account is refused
     return EXIT_MEANS.get(code, "")
 
 
