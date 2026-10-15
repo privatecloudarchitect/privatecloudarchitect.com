@@ -31,7 +31,9 @@ the realm it records, so a mistyped id, a client someone else made under it, or 
 refused before anything is sent. A client made in the console is rotated and removed in the console. None of them acts
 on the client the run is signed in as, a rotation included: run them on the token of the administrator who made the
 client, never on the client's own. A teardown of a client that is not there removes nothing and exits 0, so it is safe
-to re-run.
+to re-run: in the fleet's only realm, or in the realm the state file records. On a fleet of more than one realm, a
+teardown that finds no client where no state file records the realm it was made in exits 3, because the client may live
+in a realm this run never read.
 
 One realm, named. Every run acts in one realm, and the plan and the record name it. With --realm (its name or its id,
 as GET /ssorealms lists them) the run acts in that realm; without it, in the fleet's only realm. A fleet holding more
@@ -40,10 +42,11 @@ than one realm, with no --realm, and a --realm that names none of the fleet's re
 bound, in a realm nobody chose.
 
 Every list is read to its end: the realm's API clients and its API tokens (people's tokens included) are read page by
-page, 50 to a page, until the items counted once each (by id) reach the total the fleet states (pageInfo.totalCount). A
-page refused, an answer with no list or no total, a total that changes between pages, a page that adds nothing new, or
-pages that end before the total is reached, is a read that failed (exit 3), never a shorter list, and a run that could
-not read a list whole sends no write that rests on it. Lifetimes outside the bounds the broker held on the reference
+page, 50 asked to a page, until the items counted once each (by id) reach the total the fleet states
+(pageInfo.totalCount). A page refused, an answer with no list or no total, a total that changes between pages, a page
+that adds nothing new, or pages that end (a page shorter than the page size the answer states it served) before the
+total is reached, is a read that failed (exit 3), never a shorter list, and a run that could not read a list whole sends
+no write that rests on it. Lifetimes outside the bounds the broker held on the reference
 estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60) are refused before anything is sent.
 
 Env:  OPS_HOST                 VCF Operations FQDN (required)
@@ -74,12 +77,13 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       1 the run did not hold: a write was refused, or the read-back was not what was asked
       3 a read failed or is undetermined: a list or the realm list could not be read (a page refused, an answer with no
         list or no total, a total that changed between pages, a page that added nothing new, or pages that end before
-        the total they state), the read-back could not be read, the operator's credential was not traded for a bearer,
-        or an error the script did not expect
+        the total they state), the read-back could not be read, the create answered without the client's uuid (nothing
+        more is sent), a teardown on a fleet of more than one realm that found no client where no state file records
+        its realm, the operator's credential was not traded for a bearer, or an error the script did not expect
       0 the plan printed, or the run held on read-back (the client with its one role and an active token with both
         lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
-        still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no
-        client and no token left)
+        still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a
+        teardown, no client and no token left, in the fleet's only realm or the realm the state file records)
       5 a usage error (a missing or bad argument or environment variable, a lifetime outside the bounds, a token file
         that exists, with --execute an operator credential file that cannot be read or is empty, a fleet holding more
         than one realm with no --realm, a --realm that names none of the fleet's realms or more than one), or a Python
@@ -343,13 +347,22 @@ def _item_id(row: dict) -> str | None:
     return str(ident) if ident else None
 
 
+def served_size(info: object, asked: int) -> int:
+    """The page size the fleet served: pageInfo.pageSize when the answer states a positive one, else the size asked. A
+    fleet may serve fewer than it was asked for (asked 500, the reference estate answered 50), so a page is short only
+    against the size it was served at, never against the size asked."""
+    size = info.get("pageSize") if isinstance(info, dict) else None
+    return size if isinstance(size, int) and not isinstance(size, bool) and size > 0 else asked
+
+
 def fleet_pages(fleet: Fleet, rid: str, kind: str, key: str) -> list[dict] | None:
     """Every page of one fleet IAM query (`kind` is api-clients or api-tokens), read until the items counted once each,
     by id, reach the total the answer states (pageInfo.totalCount). None, never a shorter list, when a page is refused,
     an answer carries no list under `key` or no total, the total changes between pages, an item carries no id, a page
     adds no item not already read, more distinct items come back than the total states, or a page comes back empty or
-    short before the total is reached: a list read in part is not a list, and a teardown or a retirement that trusted
-    one could leave a token alive. A row repeated on a later page (the list moved under the read) is counted once."""
+    short (against the page size the answer states it served) before the total is reached: a list read in part is not
+    a list, and a teardown or a retirement that trusted one could leave a token alive. A row repeated on a later page
+    (the list moved under the read) is counted once."""
     found: dict[str, dict] = {}
     total: int | None = None
     for page in range(MAX_PAGES):
@@ -381,7 +394,7 @@ def fleet_pages(fleet: Fleet, rid: str, kind: str, key: str) -> list[dict] | Non
         if len(found) > total:
             _shape(fleet, f"{len(found)} distinct items where the answer states {total}")
             return None
-        if len(rows) < PAGE_SIZE or len(found) == before:
+        if len(rows) < served_size(info, PAGE_SIZE) or len(found) == before:
             _shape(fleet, f"the pages ended at {len(found)} of the {total} the answer states")
             return None
     _shape(fleet, f"more than {MAX_PAGES} pages")
@@ -403,13 +416,15 @@ def mine(rows: list[dict], client_id: str) -> list[dict]:
             and client_id in (r.get("clientId"), r.get("clientName"), r.get("apiClientId"), r.get("principalName"))]
 
 
-def readback(fleet: Fleet, rid: str, client_id: str) -> dict:
-    """What the fleet holds for the client now: its roles, and each token's status and lifetimes. No token value."""
+def readback(fleet: Fleet, rid: str, client_id: str, keep: str | None = None) -> dict:
+    """What the fleet holds for the client now: its roles, and each token's status and lifetimes. No token value. With
+    `keep`, a token id, whether that token is among the client's: a retirement holds only when the one left is it."""
     cl, tk = clients(fleet, rid), tokens(fleet, rid)
     if cl is None or tk is None:
         return {"error": "a list could not be read"}
     c = mine(cl, client_id)
-    return {"client_present": bool(c),
+    kept = {"newest_kept": any(t.get("id") == keep for t in mine(tk, client_id))} if keep else {}
+    return {**kept, "client_present": bool(c),
             "roles": sorted({r.get("roleName") for x in c for r in (x.get("roles") or [])} - {None}),
             "role_scopes": sorted({(r.get("roleScope") or {}).get("scopeType") for x in c for r in (x.get("roles") or [])} - {None}),
             "scope_resources": sorted({str(res.get("name") or res.get("id")) for x in c for r in (x.get("roles") or [])
@@ -547,6 +562,10 @@ def create(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     if status not in (200, 201) or not isinstance(answer, dict):
         return EXIT_NOT_HELD
     uuid = answer.get("clientUuid") or answer.get("id") or answer.get("uuid")
+    if not isinstance(uuid, str) or not uuid:   # the role is bound by uuid: never PUT to a principal not named
+        record["partial"] = ("the create answered without the client's uuid, so no role was bound and no token issued: "
+                             "read the realm's API clients, and remove this one in the console")
+        return EXIT_UNREAD
     state_file = state_path(a.client_id)
     state = {"tool": AGENT, "client_id": a.client_id, "client_uuid": uuid, "realm_id": rid, "realm": record.get("realm"),
              "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "tokens": []}
@@ -692,9 +711,9 @@ def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> i
     if old:
         record["old_token_after_delete"] = {"status": prove(old)["status"]}
         del old
-    record["readback"] = rb = readback(fleet, rid, a.client_id)
+    record["readback"] = rb = readback(fleet, rid, a.client_id, keep=newest["id"])
     left = rb.get("tokens") or []
-    held = (len(left) == 1 and left[0]["status"] == "ACTIVE"
+    held = (len(left) == 1 and left[0]["status"] == "ACTIVE" and rb.get("newest_kept") is True
             and ("old_token_after_delete" not in record or record["old_token_after_delete"]["status"] != 200))
     if "error" in rb:
         return EXIT_UNREAD
@@ -719,6 +738,16 @@ def teardown(fleet: Fleet, rid: str, client_id: str, record: dict) -> int:
         refused = guard(fleet, client_id, rows[0], state, record)
         if refused is not None:
             return refused
+    elif (record.get("realms_in_fleet") or 1) > 1 and state.get("realm_id") != rid:
+        # the realm read holds no such client, and nothing says the client was made here: on a fleet of more than one
+        # realm it may live in another, where it was never looked for (C11 N4). Not read, never "nothing to remove".
+        record["undetermined"] = (f"no client by that id in realm {record.get('realm') or rid}, one of the fleet's "
+                                  f"{record.get('realms_in_fleet')} realms, and "
+                                  + ("no state file records the realm it was made in" if not state.get("realm_id")
+                                     else "the state file records another realm")
+                                  + ": whether it lives in another realm was not read. Run with --realm naming the "
+                                    "realm its create recorded, from the folder the create ran in or with STATE set")
+        return EXIT_UNREAD
     if rows:
         for t in mine(tk, client_id):
             if t.get("id"):
@@ -837,6 +866,8 @@ def report(record: dict) -> list[str]:
         lines.append(f"  refused: {record['refused']}")
     if record.get("partial"):
         lines.append(f"  stopped part way: {record['partial']}")
+    if record.get("undetermined"):
+        lines.append(f"  NOT READ: {record['undetermined']}")
     if "exchange" in record:
         e = record["exchange"]
         lines.append(f"  the {'new ' if record.get('mode') == 'rotate' else ''}token traded at the broker: HTTP {e.get('status')}"

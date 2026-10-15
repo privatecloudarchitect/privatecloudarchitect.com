@@ -46,7 +46,8 @@ Checks (pure functions over what was read; each returns {check, state, detail, m
   pkce             usePKCE off for an Entra web app (every sign-in failed with it on)
   secret_end       the client secret the organization holds: expired fails, inside WARN_DAYS warns, and a held secret
                    that matches none of the app's secrets fails (removed at Entra, or another app's); where several
-                   share its hint, each is judged and the first to end stands
+                   share its hint, each is judged and the first to end stands; a held secret whose end date does not
+                   read is unknown, unless another held one has already ended
   saml_cert_end    the app's active SAML signing certificate: expired fails, inside WARN_DAYS warns
   saml_cert_held   the active certificate is in the organization's stored metadata (else every sign-in fails);
                    a second certificate it does not hold warns (making it active would stop sign-in)
@@ -75,10 +76,11 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded 
       organization); WARN_DAYS (default 30); OUT (default watch.json).
 A read the watch could not make is never a pass, and neither is a check it did not run. Every VCF Automation list is
 read until its distinct items reach the total the answer states, and a Graph list to its last next link; a list not read
-whole is a read that failed. An organization with neither OIDC nor SAML on is left out unless ORGS names it, and printed
+whole is a read that failed, and so is a page that adds no item not already read or a next link that comes back, which
+the watch stops at rather than follow. An organization with neither OIDC nor SAML on is left out unless ORGS names it, and printed
 as left out. An organization whose reads
 fail is kept in the run, named and counted, whether or not ORGS names it; an app or service principal Graph cannot find
-for an organization federated to the run's tenant is a failed read, as is a settings read that returns no
+for an organization federated to the run's tenant is a failed read, and so are two apps that carry its identifier, as is a settings read that returns no
 client secret to match; a credential refused before any organization is read ends the run at exit 3 with no
 record; and a run that judges no organization (a wrong host, the tenant's only organization with its federation
 switched off, a credential that lists none it can judge) exits 3 and says what it listed and why it judged none of
@@ -280,15 +282,19 @@ def without_tenant_app(row: dict) -> str:
 
 # ── time ───────────────────────────────────────────────────────────────────────────────────────────────────
 def when(value: str | None) -> datetime | None:
-    """An ISO 8601 instant as either API writes it (a Z suffix, three to seven fractional digits)."""
-    if not value:
+    """An ISO 8601 instant as either API writes it (a Z suffix, three to seven fractional digits); None for anything
+    else, a date that does not exist among them, which each check reads as a time it could not judge."""
+    if not isinstance(value, str) or not value:
         return None
     m = re.match(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d+))?(Z|[+-]\d\d:\d\d)?$", value)
     if not m:
         return None
     frac = (m.group(2) or "0")[:6].ljust(6, "0")
-    tz = timezone.utc if m.group(3) in (None, "Z") else datetime.strptime(m.group(3).replace(":", ""), "%z").tzinfo
-    return datetime.strptime(f"{m.group(1)}.{frac}", "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=tz)
+    try:
+        tz = timezone.utc if m.group(3) in (None, "Z") else datetime.strptime(m.group(3).replace(":", ""), "%z").tzinfo
+        return datetime.strptime(f"{m.group(1)}.{frac}", "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=tz)
+    except ValueError:
+        return None
 
 
 def _days(end: datetime, now: datetime) -> float:
@@ -310,6 +316,8 @@ def key_refresh(oauth: dict, now: datetime) -> dict:
     age = round((now - success).total_seconds() / 3600, 1) if success else None
     if not oauth.get("autoRefreshKey"):
         return _result("key_refresh", "fail", "automatic key refresh is off: a key the provider rolls in is never fetched", interval_h=hours, success_age_h=age)
+    if success is None and oauth.get("lastKeySuccessfulRefresh"):   # a time held but not read is not a refresh that failed
+        return _result("key_refresh", "unknown", "the last successful refresh's time does not read, so its age is not known", interval_h=hours, success_age_h=None)
     if success is None and not oauth.get("lastKeyRefreshAttempt"):
         return _result("key_refresh", "unknown", "no scheduled refresh yet; the first runs on the hour", interval_h=hours, success_age_h=None)
     if success is None:
@@ -352,21 +360,37 @@ def secret_end(app: dict, now: datetime, warn_days: int) -> dict:
     app's secrets fails: it is the state a rotation leaves when the old secret is removed before the new one is
     written, and Entra refuses a secret it does not hold. No other secret stands in for it. When several of the app's
     secrets share the hint, which one the organization holds cannot be told, so each is judged and the earliest end
-    stands: a pass on the later one could hide the one in use."""
-    creds = [c for c in app.get("passwordCredentials") or [] if when(c.get("endDateTime"))]
+    stands: a pass on the later one could hide the one in use. Every secret the hint matches is judged, whether or not
+    its end date reads: one whose end does not read leaves the earliest end not known (unknown, exit 3), unless one
+    that reads has already ended, which fails whatever the other holds."""
+    creds = app.get("passwordCredentials") or []
     held = [c for c in creds if c.get("in_use")]
     if not held:
         listed = f"none of the {len(creds)} secret(s) the app lists" if creds else "no secret: the app lists none"
         return _result("secret_end", "fail", f"the secret the organization holds matches {listed}; it was removed at Entra "
                        "or is another app's, and Entra refuses a secret it does not hold: write the app's current secret "
                        "into the organization", days_left=None, matched=False, listed=len(creds))
-    judged = min(held, key=lambda c: when(c["endDateTime"]))
-    days = _days(when(judged["endDateTime"]), now)
     which = ("the secret the organization holds" if len(held) == 1 else
              f"of the {len(held)} secrets that share the hint of the one the organization holds, the first to end,")
-    others = [c for c in creds if not c.get("in_use") and when(c["endDateTime"]) < now]
+    others = [c for c in creds if not c.get("in_use") and when(c.get("endDateTime")) and when(c["endDateTime"]) < now]
     tail = f"; {len(others)} other listed secret(s) already expired" if others else ""
     shared = {"sharing_hint": len(held)} if len(held) > 1 else {}
+    unread = [c for c in held if not when(c.get("endDateTime"))]
+    if unread:
+        ended = [when(c["endDateTime"]) for c in held if c not in unread and when(c["endDateTime"]) < now]
+        if ended:
+            days = _days(min(ended), now)
+            return _result("secret_end", "fail", f"of the {len(held)} secrets that share the hint of the one the organization "
+                           f"holds, one expired {-days} days ago, and {len(unread)} {'has' if len(unread) == 1 else 'have'} an end date "
+                           f"that does not read{tail}",
+                           days_left=days, matched=True, unread_end=len(unread), **shared)
+        whose = ("the secret the organization holds has an end date that does not read" if len(held) == 1 else
+                 f"{len(unread)} of the {len(held)} secrets that share the hint of the one the organization holds have an "
+                 "end date that does not read")
+        return _result("secret_end", "unknown", f"{whose}, so when the secret it holds ends is not known{tail}",
+                       days_left=None, matched=True, unread_end=len(unread), **shared)
+    judged = min(held, key=lambda c: when(c["endDateTime"]))
+    days = _days(when(judged["endDateTime"]), now)
     if days < 0:
         return _result("secret_end", "fail", f"{which} expired {-days} days ago{tail}", days_left=days, matched=True, **shared)
     if days <= warn_days:
@@ -526,8 +550,9 @@ def whole_list(fetch, what: str) -> list[dict]:
     """Every item of a VCF Automation cloudapi list, read page by page (fetch(page), pages counted from 1) until the
     count of distinct items, by id, equals the total the answer states (resultTotal). A list is read whole or not at
     all: an answer without its list or without a stated total, a page that comes back empty or short before the total
-    is reached, pages that end (pageCount) short of it, or a total that changes between pages, is a list not read
-    (ReadError, exit 3), never a short or an empty one."""
+    is reached, pages that end (pageCount) short of it, a total that changes between pages, or a page that adds no item
+    not already read (a pager that would never reach the total), is a list not read (ReadError, exit 3), never a short
+    or an empty one. Each page adds at least one item, so the read ends within the total's count of pages."""
     seen: set = set()
     out: list[dict] = []
     total, size = None, None
@@ -542,7 +567,7 @@ def whole_list(fetch, what: str) -> list[dict]:
             total = stated
         elif stated != total:
             raise ReadError(f"{what}: the stated total moved from {total} to {stated} between pages")
-        rows = data["values"]
+        rows, before = data["values"], len(out)
         for row in rows:   # a row that moved to a later page during the read is counted once
             ident = row.get("id") if isinstance(row, dict) and row.get("id") else json.dumps(row, sort_keys=True)
             if ident not in seen:
@@ -557,6 +582,9 @@ def whole_list(fetch, what: str) -> list[dict]:
         count = data.get("pageCount")
         if not rows or len(rows) < size or (isinstance(count, int) and page >= count):
             raise ReadError(f"{what}: the pages ended at {len(out)} of the {total} items the answer states")
+        if len(out) == before:   # a whole page of items already read: a pager that does not advance is not followed
+            raise ReadError(f"{what}: page {page} added no item not already read, at {len(out)} of the {total} the "
+                            "answer states")
     raise ReadError(f"{what}: more than {MAX_PAGES} pages")
 
 
@@ -670,15 +698,27 @@ class Graph:
         return signing + "." + b64(sig)
 
     def values(self, path: str, **query: str) -> list[dict]:
+        """Every item of a Graph list, following @odata.nextLink until it is absent. A page without its `value` list, a
+        next link already followed, or a page that adds no item not already read and still points to another, is a
+        list not read (ReadError, exit 3), never followed further."""
         qs = urllib.parse.urlencode({f"${k}": v for k, v in query.items()}, quote_via=urllib.parse.quote)
-        url, out = f"{GRAPH}{path}" + (f"?{qs}" if qs else ""), []
-        while url:   # every page, by Graph's next link; a page without its list is a read that did not happen
+        url, out, followed, seen = f"{GRAPH}{path}" + (f"?{qs}" if qs else ""), [], set(), set()
+        for _ in range(MAX_PAGES):
+            if url in followed:
+                raise ReadError(f"a next link of {path} came back a second time, so the list would never end")
+            followed.add(url)
             r = _fetch(url, {"Authorization": f"Bearer {self._bearer}", "Accept": "application/json"}, True)
             if not isinstance(r, dict) or not isinstance(r.get("value"), list):
-                raise ValueError(f"a page of {path} came back without its list")
-            out += r["value"]
+                raise ReadError(f"a page of {path} came back without its list")
+            new = [v for v in r["value"] if not (isinstance(v, dict) and v.get("id") and v["id"] in seen)]
+            seen.update(v["id"] for v in new if isinstance(v, dict) and v.get("id"))
+            out += new
             url = r.get("@odata.nextLink")
-        return out
+            if not url:
+                return out
+            if not new:
+                raise ReadError(f"a page of {path} added no item not already read and pointed to another, at {len(out)} items")
+        raise ReadError(f"{path}: more than {MAX_PAGES} pages")
 
 
 def published_kids(jwks_uri: str) -> list[str]:
@@ -937,7 +977,9 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
                 seen.update([entity] if entity else [])
                 apps = graph.values("/applications", filter=f"identifierUris/any(x:x eq '{entity}')", select=sel) if entity else []
                 looked_for = "the organization's entity id" if entity else "an entity id (the organization's metadata names none)"
-            app = apps[0] if apps else None
+            if len(apps) > 1:   # which app signs this organization's users in cannot be told: no check judges one
+                out["read_errors"].append(f"Graph: {len(apps)} apps in the tenant carry {looked_for}")
+            app = apps[0] if len(apps) == 1 else None
             if app:
                 for c in app.get("passwordCredentials") or []:
                     c["in_use"] = bool(prefix) and c.get("hint") == prefix
@@ -948,7 +990,7 @@ def watch_org(api: Vcfa, graph: Graph | None, org: dict, now: datetime, warn_day
                 sp = sps[0] if sps else None
                 if sp is None:
                     out["read_errors"].append("Graph: the app has no service principal in the tenant")
-            else:   # an app the watch cannot find is a read it could not make, never a pass
+            elif not apps:   # an app the watch cannot find is a read it could not make, never a pass
                 out["read_errors"].append(f"Graph: no app in the tenant carries {looked_for}")
             if sp is not None:
                 seen.add(sp["id"])

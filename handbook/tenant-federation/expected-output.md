@@ -108,23 +108,28 @@ An organization with SAML switched off, its metadata or its SAML users still hel
 way ("the organization holds SAML metadata and SAML users, enabled or not"). Exit 2, and nothing is sent.
 
 A switched-off federation is also never switched back on by accident. Without `--enable`, a run writes no settings to
-it. Importing a renamed group's new name, the repair federation-operations teaches, sends the import alone:
+it. Importing a renamed group's new name, the repair federation-operations teaches, takes `--groups-only`, which sends
+the imports alone and never a settings write, whatever the settings hold:
 
 ```
-$ python3 org_federation.py --configure --org <org> --protocol oidc --group member=<the new name> --execute
-  plan: read  {'protocol': 'OIDC', 'org_type': 'all-apps', 'user_key': 'oid, the key it holds', 'settings_to_change': [], 'groups_to_import': ['Organization User'], 'groups_already_held': 0}
-  ...
-  settings left as stored: nothing to change, and the federation stays switched off: nothing written
+$ python3 org_federation.py --configure --org <org> --protocol oidc --groups-only --group member=<the new name> --execute
+  plan: read  {'protocol': 'OIDC', 'org_type': 'all-apps', 'groups_only': True, 'settings_to_change': [], 'groups_to_import': ['Organization User'], 'groups_already_held': 0}
+  --groups-only: no settings are written, and the federation stays switched off
+  each group is imported by the name the tenant's administrator gave; VCF Automation does not check it against Entra, so confirm it is assigned to the app, and run the watch after
   group imported with its role: 201  {'role': 'Organization User', 'providerType': 'OAUTH'}
+  check: group <the new name> imported over OAUTH holding Organization User: pass
 ```
 
-When a setting differs, the run is refused until `--enable` is given, and the plan then shows the switch:
+It needs no `APP_CLIENT_ID`, secret or metadata. An organization that stores no settings for the tenant over that
+protocol is refused, since a group imported there would serve no federation. Without `--groups-only`, a run whose
+settings already read as planned also imports alone; when a setting differs, it is refused until `--enable` or
+`--groups-only` is given, and the plan with `--enable` shows the switch:
 
 ```
 $ python3 org_federation.py --configure --org <org> --protocol oidc --execute
   plan: read  {..., 'settings_to_change': ['maxClockSkew'], ...}
     maxClockSkew: 300 -> 60
-refused: the organization's OIDC federation is switched off (enabled: off), and this run would write its settings (maxClockSkew): add --enable to write them and switch it on (enabled: off -> on). Without --enable, --configure writes no settings to a switched-off federation, so an import alone leaves it off
+refused: the organization's OIDC federation is switched off (enabled: off), and this run would write its settings (maxClockSkew): add --enable to write them and switch it on (enabled: off -> on), or give --groups-only with each --group ROLE=NAME to import the groups alone and write no settings. Without either, --configure writes no settings to a switched-off federation
 
 $ python3 org_federation.py --configure --org <org> --protocol oidc --enable
   plan: read  {..., 'settings_to_change': ['enabled', 'maxClockSkew'], ...}
@@ -133,6 +138,36 @@ $ python3 org_federation.py --configure --org <org> --protocol oidc --enable
 ```
 
 Each line under the plan is a field the write changes, as `old -> new`: the values a rollback writes back by hand.
+
+## A new app under the users an organization holds
+
+The app's client id decides who a returning OIDC user is only when the users are keyed on a claim that moves with the
+app. Entra makes `sub` pairwise to each app, so on an organization keyed on `sub` that holds OIDC users, enabled or
+not, a new `APP_CLIENT_ID` is refused before anything is sent:
+
+```
+$ APP_CLIENT_ID=<the new app> python3 org_federation.py --configure --org <org> --protocol oidc --execute
+refused: the organization holds OIDC users keyed on sub, enabled or not, and this run would change its clientId: Entra makes sub pairwise to each app, so every returning user would get a new account, and the old account would keep its direct roles. Set APP_CLIENT_ID to the client id the organization holds to keep its app, or move the tenant to the new app through a new organization
+```
+
+Asked for another key on such an organization, the refusal names only a flag the script takes:
+
+```
+refused: the organization keys its users on sub in the OIDC settings it holds, enabled or not: run --configure without --user-key, which keeps it; a move to another key goes through a new organization
+```
+
+Keyed on `oid` or `preferred_username`, which Entra sends the same for a person in every app of one tenant, the change
+goes ahead, and the plan names what the users keep:
+
+```
+  plan: read  {'protocol': 'OIDC', 'org_type': 'all-apps', 'user_key': 'oid, the key it holds', 'settings_to_change': ['clientId', 'clientSecret'], 'groups_to_import': [], 'groups_already_held': 0}
+    clientId: <the app it holds> -> <the new app>
+    clientSecret: replaced by the secret in APP_SECRET_FILE (no value shown)
+  the app changes (clientId): the 1 OIDC user(s) it holds keep their accounts, because oid does not change with the app within one tenant
+```
+
+These transcripts are the companion's own output on the shapes its tests hold; no live run has made them. The repo
+records no organization keyed on `sub`.
 
 ## A SAML organization's user-name claim
 
@@ -213,7 +248,9 @@ recorded 7 steps to federation.json; every estate value replaced by a placeholde
 Deleting the app also soft-deletes its service principal, so three objects go to Entra's recycle bin, not two. The
 bin can refuse a purge for some seconds after the delete (21 seconds for the service principal here, 21 for an app on
 another run); the script asks again until it is done. `residue check: none` means every object reads back as gone,
-from the active directory and from the bin. A `LEFT` lists what remains; run the teardown again.
+from the active directory and from the bin. A `LEFT` lists what remains; run the teardown again. A read that answers
+neither 200 nor 404 (a 403, a 5xx) says nothing of whether the object is gone: the residue check reads `NOT KNOWN`,
+names the object and the status under `not_read`, and the run exits 3.
 
 ## Not run as asked: exit 5, nothing sent
 
@@ -227,7 +264,9 @@ not run: --execute, --prove and --teardown need VCFA_HOST, ORG, ENTRA_TENANT_ID,
 
 The exit codes a script around it reads: 0 done, 1 a check failed or a write was refused while building, configuring,
 updating or tearing down, 2 refused by what it read, with nothing sent (a name it did not create, a protocol, key or
-SAML user-name claim switch judged on what the organization stores, enabled or not, a settings write to a switched-off
-federation without `--enable`, a secret Entra refused, an organization it cannot find), 3 a result not known (a
-credential refused before anything was read, a read refused or a list not read to its end, Entra out of reach, a record
-the scrub refused, an error it did not expect), 5 not run as asked.
+SAML user-name claim switch judged on what the organization stores, enabled or not, a new app or issuer under OIDC
+users keyed on a claim other than `oid` or `preferred_username`, a settings write to a switched-off federation without
+`--enable`, a group-only import with no federation to serve, a secret Entra refused, an organization it cannot find),
+3 a result not known (a credential refused before anything was read, a read refused or a list not read to its end,
+Entra out of reach, a teardown residue it could not read, a record the scrub refused on a run that would have exited
+0, an error it did not expect), 5 not run as asked. A record the scrub refuses never hides a 1, a 2 or a 3.

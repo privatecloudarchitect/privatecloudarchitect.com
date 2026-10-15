@@ -45,7 +45,7 @@ Schedule it and read the exit code:
 | 0 | every check this run owns ran, on every organization it covers (at least one organization judged), and every one is ok, the watch's own provider API token's end date included when it runs on one |
 | 1 | a warning: an end date inside `WARN_DAYS` (the watch's own provider API token's among them), a refresh interval over one hour, a signing certificate the organization does not yet hold, no local user holding the organization's top role, a tenant's report older than `--attested-max-days` |
 | 2 | a failure that stops sign-in now or at the provider's next roll: a published key not held, refreshes not succeeding, an expired secret or certificate, a secret the organization holds that the app no longer lists, the active certificate missing from the organization's metadata, a renamed group, PKCE on, a disabled app |
-| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run on a run not declared `--provider-only` (no Graph credential given, so the tenant's read-only app is owed; a provider other than Entra ID), an organization federated to a tenant outside `--expect-tenants`, a run whose own tenant no organization names, a run that judged no organization (a wrong host, the only organization's federation switched off, a credential that lists none it can judge), the watch's own provider API token's end date unread (its token list refused, or no token or several it could single out), an organization whose reads were refused or whose lists were not read to their end, the tenant's app not found in Graph, a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh), a provider credential refused or the organization list not read whole before any organization was read, or a record the scrub refused (no record is written in those two cases). An error the watch did not expect exits 3 too, never 1 |
+| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run on a run not declared `--provider-only` (no Graph credential given, so the tenant's read-only app is owed; a provider other than Entra ID), an organization federated to a tenant outside `--expect-tenants`, a run whose own tenant no organization names, a run that judged no organization (a wrong host, the only organization's federation switched off, a credential that lists none it can judge), the watch's own provider API token's end date unread (its token list refused, or no token or several it could single out), an organization whose reads were refused or whose lists were not read to their end, the tenant's app not found in Graph or found twice (two apps carrying the organization's identifier), a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh, or a held client secret whose end date does not read), a provider credential refused or the organization list not read whole before any organization was read, or a record the scrub refused (no record is written in those two cases). An error the watch did not expect exits 3 too, never 1 |
 | 5 | not run as asked: an unknown or missing argument, `--protocol` without `--why`, a missing `VCFA_HOST` or provider credential, a credential or key file that cannot be read, a non-numeric `WARN_DAYS`, an Entra variable without `ENTRA_TENANT_ID` or `ENTRA_TENANT_ID` without the app's id and credential (unless `--provider-only`), a Graph credential with `--provider-only`, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, `--tenant-attested` without `--provider-only` or with a date that is malformed or in the future, a Python older than 3.9. Nothing is read from VCF Automation |
 
 `--why` keeps its own two codes: 0 a row matched, 1 none did (it prints the first reads for a message no run showed).
@@ -91,7 +91,8 @@ neither OIDC nor SAML is on is printed as `OFF` with its name, and counted in th
 Automation list is read until its distinct items reach the total the answer states (`resultTotal`): a page that
 answers without its list or its total, a page that comes back empty or short before the total, or a total that moves
 between pages, is a read that failed (exit 3), never a short or an empty list. Graph lists are read to their last
-`@odata.nextLink`.
+`@odata.nextLink`. Every pager is bounded: a page that adds no item not already read, or a next link that comes back,
+is a read that failed at once, not after thousands of requests.
 
 A read the watch could not make never passes. An organization whose reads fail stays in the run and the record,
 named and counted, whether or not `ORGS` names it: with `ORGS` unset, an organization that could not be read cannot
@@ -99,7 +100,11 @@ be shown to be unfederated. The secret check judges only the secret the organiza
 three characters against each secret's `hint`; when that secret matches none on the app, the state a rotation leaves
 when the old secret is removed before the new one is written, the check fails rather than judging another secret.
 When two or more of the app's secrets share that hint, which one the organization holds cannot be told, so each is
-judged and the first to end stands (`sharing_hint` in the record).
+judged and the first to end stands (`sharing_hint` in the record). Every secret the hint matches is judged, whether
+or not its end date reads: one whose end date does not read leaves the first end not known, so the check reads
+`unknown` and the run exits 3 (`unread_end` in the record), unless another matched secret has already ended, which
+fails whatever the unread one holds. A last successful key refresh whose time does not read is `unknown` too, not a
+refresh that failed.
 
 ## Scope, stated plainly
 
@@ -151,7 +156,7 @@ judged and the first to end stands (`sharing_hint` in the record).
 `org_type` and a `checks` list. Each check has a `state` (`ok`, `warn`, `fail`, `unknown`), a `detail` sentence
 and a `measure` with its numbers: `interval_h` and `success_age_h` for key refresh, `held`, `published` and
 `missing` for keys, `days_left` and `matched` (whether the organization's own secret was identified; when it was not, the check fails
-and `days_left` is null), and `sharing_hint` where several secrets share its hint, for the secret, `days_left` for the SAML certificate, `stored` and `others_not_held` for metadata, `imported`, `assigned`
+and `days_left` is null), `sharing_hint` where several secrets share its hint, and `unread_end` where a matched secret's end date does not read, for the secret, `days_left` for the SAML certificate, `stored` and `others_not_held` for metadata, `imported`, `assigned`
 and `unmatched` for group names, `local_admins` and `role` (the top role judged, read from the organization's own role list) for break-glass. `read_errors` names any plane that could not be
 read. `not_run`, where present, names the rollover checks the run did not make for that organization, `why`, and
 what is `owed` for them to run (for a run without a Graph credential, the tenant's read-only app; on a declared

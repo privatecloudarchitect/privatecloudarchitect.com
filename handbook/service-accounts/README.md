@@ -75,15 +75,16 @@ cp credentials.example.json credentials.json       # then one entry per credenti
 python3 catalog_check.py credentials.json
 
 # every API client the identity-model census read, joined to the catalog
-export FINGERPRINT_KEY_FILE=<a secret of your own, mode 0600>   # the same file census.py ran with
+export FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key   # a secret of your own, mode 0600 (below); the same file census.py ran with
 python3 catalog_check.py credentials.json --census census.json
 ```
 
 The census record names every API client by a placeholder, so the join is on keyed fingerprints: `census.py` run
 with `FINGERPRINT_KEY_FILE` set gives each client the fingerprint of its client id and of its name, and the check
 computes the same for each catalog entry's `api_client` (or its `name`, when that is the client's). Make the key once,
-for example `python3 -c "import secrets; print(secrets.token_hex(32))" > key && chmod 600 key`, keep it off any shared
-disk, and use the same file for every run you will join. A client no entry names fails, as does one whose entry has no
+under your home and outside this clone, created at mode 0600 rather than changed to it after it is written:
+`( umask 077; mkdir -p ~/.vcf && python3 -c "import secrets; print(secrets.token_hex(32))" > ~/.vcf/fingerprint.key )`.
+Keep it off any shared disk, and use the same file for every run you will join. A client no entry names fails, as does one whose entry has no
 owner or no `next_due`, one holding no role, a token missing a lifetime, and a token `EXPIRED`, `REVOKED` or past its
 end date; a client with no token, and a token that expires before its entry's `next_due`, are warnings. A token whose
 state (anything but `ACTIVE`, `EXPIRED` or `REVOKED`) or end date the record does not carry is not judged: its client

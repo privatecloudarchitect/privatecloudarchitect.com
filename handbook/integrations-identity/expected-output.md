@@ -519,7 +519,9 @@ api_client_teardown.json written with every estate value replaced
 ```
 
 - **The residue read is the result.** After the deletes, both lists were read again: no client, no token. A teardown of a
-  client that is not there removes nothing and exits 0, so it is safe to run again.
+  client that is not there removes nothing and exits 0, so it is safe to run again, in the fleet's only realm or the
+  realm the state file records; on a fleet of more than one realm with no state file recording the client's realm, it
+  prints `NOT READ` and exits 3, because the client may be in a realm the run did not read.
 - **Signed in as a person.** The run's own bearer is read for who it is; signed in as the client it would remove, the
   teardown refuses, because nothing would outlive the removal to read the residue.
 

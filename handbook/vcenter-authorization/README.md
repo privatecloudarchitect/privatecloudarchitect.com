@@ -4,11 +4,12 @@ Companion to the chapter
 ([privatecloudarchitect.com/handbook/vcenter-authorization](https://privatecloudarchitect.com/handbook/vcenter-authorization)):
 one script that reads every permission on your vCenters and classifies it by how it behaves for someone
 signed in through the VCF identity broker, and three opt-in probes that settle the questions a read cannot.
-Standard library Python 3.10 or later, plus pyVmomi for the session read, `--remove` and the probes.
+Standard library Python 3.10 or later, plus pyVmomi for the session read (needed once `REALM_DOMAIN` is set), `--remove`
+and the probes.
 
 | File | What it is |
 |---|---|
-| `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), and the probes (opt-in, on objects they create and remove). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
+| `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
 | `authz.json` | That record from the reference estate. The chapter's plates render it. |
 
 ## Run it
@@ -34,6 +35,14 @@ vCenter, records `domainsNamedNothing` and exits 3; check the spelling against t
 census. Every run also prints, on the terminal only and never in the record, the domains it read as another provider's
 with their grant counts, which is where a misspelled domain shows.
 
+With `REALM_DOMAIN` set, the census also reads who is signed in on each vCenter (pyVmomi), because a broker session
+carries the directory's name: a live session spelled in `REALM_DOMAIN` shows a domain people sign in with, and a grant
+spelled in it may apply to them. So a session list not read whole is a read that failed (exit 3, `NOT PLACED`), and the
+realm-spelled grants are no finding until it is read: a list refused, one that does not hold the session that read it,
+one that holds only the reader's own sessions (an identity that may not read the others lists only its own: run the
+census as an administrator of the vCenter), or none read because pyVmomi is missing. Before a realm (`--no-realm`) the
+session read is optional.
+
 A misspelled `REALM_DOMAIN` is caught the same way. It moves every realm-spelled grant into another provider's class,
 where nothing flags it, while the directory domains still name their own grants. So with `REALM_DOMAIN` set, a vCenter
 on which the realm names no grant while grants of an unplaced domain are there (one in none of `DIRECTORY_DOMAINS`,
@@ -50,7 +59,8 @@ domain is the one your directory spells its users and groups in, `DOMAIN\user`, 
 census tests the realm's name first, so a `REALM_DOMAIN` typed as a directory domain, or as a domain in `OTHER_DOMAINS`,
 would class every working grant in that domain realm-spelled: exit 1 would say to remove them, and `--remove` would
 accept their ids. So a `REALM_DOMAIN` equal to any `DIRECTORY_DOMAINS` or `OTHER_DOMAINS` entry, compared without regard
-to case or surrounding spaces, is refused before anything is read (exit 5), and so is one equal to `LOCAL_DOMAIN`, where
+to case, surrounding spaces or a trailing dot (`corp.example.` and `CORP.EXAMPLE` are one domain), is refused before
+anything is read (exit 5), and so is one equal to `LOCAL_DOMAIN`, where
 every grant sorts as local first and no realm-spelled grant could be found. `--remove` and `--where-realm` are refused
 the same way. Expected output, with the names replaced:
 
@@ -95,7 +105,9 @@ reads as the realm, so its working grants would read realm-spelled. Two guards s
 `REALM_DOMAIN` equal to a domain you named is refused (exit 5), and `--remove` reads who is signed in on that vCenter
 first. A broker session carries the directory's name, so a live session spelled in `REALM_DOMAIN` shows that domain is
 one people sign in with, and a grant in it may apply to them: the removal is refused, plan and `--execute` alike, with
-nothing sent (exit 3), as it is when the session list cannot be read whole. A directory nobody from is signed in to at
+nothing sent (exit 3), as it is when the session list cannot be read whole: refused, without the session that read it,
+or holding only the reader's own sessions, the list an identity that may not read the others gets. A directory nobody
+from is signed in to at
 that moment passes both, so `--remove` runs only with `OTHER_DOMAINS` stated, empty when there is none, as your
 declaration that `DIRECTORY_DOMAINS` names every directory. Expected output, with the names replaced:
 
@@ -115,11 +127,15 @@ The first that applies, so a scheduler reads one state from one number:
 
 | Exit | Means | Do |
 |---|---|---|
-| 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; or a probe that left residue | read the vCenter's permissions before anything else |
-| 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, and never while a live session is spelled in it; before a realm there is no such class) | name them with `--where-realm`, remove them with `--remove` |
-| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a permission list held no permission, the session list was not read whole, the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run, or an error the script did not expect | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
-| 0 | nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held | nothing |
-| 5 | a usage error, found before anything is read (a missing or wrong argument or variable, a password file it cannot read, a `REALM_DOMAIN` equal to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, `--remove` among them, a Python older than 3.10), or the record refused because an estate value survived the scrub (nothing is written) | fix the invocation |
+| 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; `--remove-probe-roles` refused (a probe role granted to someone other than its reserved group, which removing the role would remove too; nothing is sent) or not held (a probe role still listed after it); or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of a probe role, one there before it began included, when it sends nothing) | read the vCenter's permissions before anything else |
+| 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, only when every vCenter's session list was read whole, and never while a live session is spelled in it; before a realm there is no such class) | name them with `--where-realm`, remove them with `--remove` |
+| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a permission list held no permission, a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing), the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run or its residue was not read back, or an error the script did not expect | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
+| 0 | nothing for a person to act on: every vCenter read and placed (with `REALM_DOMAIN` set, its session list read whole), no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held | nothing |
+| 5 | a usage error, found before anything is read (a missing or wrong argument or variable, a password file it cannot read, a `REALM_DOMAIN` equal to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, `--remove` among them, a Python older than 3.10) | fix the invocation |
+
+A record refused because an estate value or a password survived the scrub is not written, and it never hides the run's
+result: the run's own code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3, because nothing
+shows what it read (the probes and `--remove-probe-roles` may already have written to vCenter).
 
 The probes need a test user that is **not** an administrator, and a directory group it belongs to:
 
@@ -174,8 +190,10 @@ group carries its grant.
   `--probe-tags` create a folder (and a tag category and tag) and grant roles on them for the length of one case;
   `--supervisor-vm` attaches a throwaway tag to the VM you name and tries grants on it as the administrator, removing
   any it is given. Each removes every grant and object it made except the six probe roles, kept on purpose (below),
+  reads the vCenter back for its folder, its tag category, any grant it made on the VM and every grant of a probe role,
   and never replaces a permission that already exists (vSphere keeps one per principal per object, so a principal
-  that already holds one is skipped and recorded as skipped).
+  that already holds one is skipped and recorded as skipped). A probe sends nothing while a probe role is already
+  granted to someone other than its reserved group (exit 2): reconciling the role would change what they hold.
 - `--remove` was run once, on one 9.1.1 vCenter, on a grant the run made on a folder it made and removed. The pre-realm
   path, which now runs with `--no-realm`, was run (in X-197, as `REALM_DOMAIN` left unset, before a run had to declare
   it) on an estate that has a realm, not on one without. An estate with no realm yet was not run.
@@ -185,8 +203,9 @@ group carries its grant.
   that runs a Supervisor held 12 grants of one domain no domain given placed, and the run exited 3 until that domain was
   named in `OTHER_DOMAINS`, then 0. Which product those grants belong to was not read in that run.
 - The refusal of a realm typed as a directory, another provider's or the local domain is the script's code and its
-  tests; no run was made with one. So are `--remove`'s session guard and the census's `realmSignedIn`: no run was made
-  with a live session spelled in the realm, and the record's session read holds none.
+  tests; no run was made with one. So are `--remove`'s session guard, the census's `realmSignedIn`, and the refusal of
+  a session list that holds only the reader's own sessions: no run was made with a live session spelled in the realm
+  or with a filtered list, and the record's session read holds none.
 - Paging: each vCenter's own API metadata (vSphere API 9.0.0.0 onward) defines both lists as paged. A call that sets no
   iteration returns "only the first permissions that fit in a size defined by the service" (the role list reads the
   same), and a page size the client sets may be lowered by a service policy. On 2026-10-15, on the reference estate's
@@ -198,7 +217,10 @@ group carries its grant.
   So the probes use six roles named `authz-probe-<what it holds>`, created the first time they are needed and
   reconciled on every run, instead of creating and deleting roles each time. Their reserved groups hold a
   grant of a role nobody else is given, which changes no one's access. `--remove-probe-roles` removes them and
-  reports the groups left behind; removing those takes the vCenter's SSO administrator.
+  reports the groups left behind; removing those takes the vCenter's SSO administrator. A role removed takes every
+  grant of it along, so it refuses, with nothing sent, while a probe role is granted to anyone but its reserved group,
+  and it reads the role list back after (exit 2 for either). These two guards are the script's code and its tests; no
+  run was made with them.
 - The reserved groups list no members: vCenter's user directory returns none for them, even for a group
   whose VCF role is held. The census does not claim who holds a VCF role; VCF Operations' fleet IAM answers
   that.
@@ -216,7 +238,11 @@ group carries its grant.
 - `exit`: the run's exit code (a record written before the exit table carries none).
 - `vcenters.<vc>.reservedGroupGrants`: grants on `vcf_reserved_*` groups, by the role held (product roles by
   name, custom roles as `a custom role`) and scope. Object-scoped ones are the Supervisor's namespace grants.
-- `vcenters.<vc>.sessions`: sessions by class, and the local administrator's sessions by client agent.
+- `vcenters.<vc>.sessions`: sessions by class, and the local administrator's sessions by client agent; `error` when the
+  list was not read whole, or `not read: pyVmomi is not installed`.
+- `probeRoleTeardown.<vc>`: with `--remove-probe-roles`, the roles removed, `rolesLeft` on the read-back, the reserved
+  groups VCF left, or `refused` with nothing sent.
 - `roleDrift`: custom roles whose copies differ between vCenters, with what each copy holds beyond the shared
   set.
-- `grantProbe`, `tagProbe`, `supervisorProbe`: each case, its outcome, and the residue read afterwards.
+- `grantProbe`, `tagProbe`, `supervisorProbe`: each case, its outcome, and the residue read afterwards (`true` or a
+  count: left behind; `null`: not read back); `aborted` when the probe could not run, or sent nothing.

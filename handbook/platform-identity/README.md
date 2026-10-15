@@ -29,9 +29,9 @@ Standard library only, except `--kubeconfig`, which needs PyYAML.
 
 | Exit | Means |
 |---|---|
-| 0 | the token is usable; with `--kubeconfig`, every credential was judged and none has run out: an exec plugin renews itself, and each token's, token file's and client certificate's end date was read |
-| 1 | it is expired or inside the clock-skew margin; with `--kubeconfig`, any credential has run out, and this comes first |
-| 3 | undetermined: it is not a JWT, or it carries no `exp` claim, so nothing here can say when it expires; with `--kubeconfig`, and none run out, a credential it could not judge, which it names (an opaque token, a certificate or token file it could not read, an auth-provider entry, a user name and password, an entry with none of these), or a kubeconfig that declares no users; or an error the script did not expect |
+| 0 | the token is usable; with `--kubeconfig`, every credential of every user entry was judged and none has run out: an exec plugin with a command renews itself, and each token's, token file's and client certificate's end date was read |
+| 1 | it is expired or inside the clock-skew margin; with `--kubeconfig`, a user entry whose soonest end, among every credential it holds, has passed or falls inside the margin, and this comes first |
+| 3 | undetermined: it is not a JWT, or it carries no `exp` claim, so nothing here can say when it expires; with `--kubeconfig`, and none run out, a credential it could not judge, which it names (an opaque token, a certificate or token file it could not read, an exec entry that is not a plugin with a command, an auth-provider entry, a user name and password, an entry with none of these), even beside one it judged, or a kubeconfig that declares no users; or an error the script did not expect |
 | 5 | a usage error: no token given, a file it cannot read, a kubeconfig it cannot read or that is not one, PyYAML missing for `--kubeconfig`, an argument it does not take, a Python older than 3.10 |
 
 0, 3 and 5 mean what they mean on every identity companion; 1 is this script's own finding. A token with no `exp`
@@ -56,10 +56,14 @@ credential you are about to use rather than merely inspect.
 
 ## `--kubeconfig`
 
-Classifies every credential by whether it can renew itself, and reads the end of each one that cannot:
+Classifies every credential by whether it can renew itself, and reads the end of each one that cannot. A user entry
+can hold more than one (a client certificate beside a token, a token beside an exec plugin), and which one a client
+presents is not read here, so every credential of the entry is judged and the soonest end stands for it: a valid
+certificate beside an expired token is an entry that has run out (exit 1).
 
 - **exec plugin**: renews itself, possibly by prompting, which is fine at a terminal and a hang in a
-  script.
+  script. An `exec` entry that is not a mapping with a `command` (an `exec: null`, a string) is not a plugin anything
+  can run, and is not judged.
 - **client certificate**: no login at all, and an end date of its own: the run reads the certificate's
   `notAfter` (from `client-certificate-data`, or the file `client-certificate` names) and says how long it has.
   It reads the date only; it does not say the certificate is trusted.
@@ -67,8 +71,10 @@ Classifies every credential by whether it can renew itself, and reads the end of
   an hour after it started working.
 
 A credential whose end cannot be read is listed as UNDETERMINED and named again under `NOT JUDGED`: an opaque token,
-a token with no `exp` claim, a certificate or token file it cannot read, an `auth-provider` entry, a user name and
-password, or an entry with none of these. The run then exits 3 unless another credential has already run out, and a
+a token with no `exp` claim, a certificate or token file it cannot read, an `exec` entry that is not a plugin with a
+command, an `auth-provider` entry, a user name and password, or an entry with none of these. A credential judged
+beside it does not judge it. A token or certificate that ends inside the two-minute clock-skew margin counts as run
+out here too. The run then exits 3 unless another credential has already run out, and a
 kubeconfig that declares no users exits 3 as well: a run that judged nothing has nothing to pass.
 
 It reads the file directly rather than shelling out, because `kubectl config view` redacts token

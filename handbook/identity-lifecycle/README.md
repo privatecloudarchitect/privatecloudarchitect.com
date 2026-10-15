@@ -17,7 +17,7 @@ with a certificate. No token, secret or password is printed or written.
 
 ```bash
 export VCFA_HOST=<automation-fqdn>
-export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer             # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE
+export VCFA_PROVIDER_BEARER_FILE=~/.vcf/provider-bearer              # mode 0600, outside the clone (below); or VCFA_PROVIDER_REFRESH_TOKEN_FILE
 export TLS_VERIFY=false                                             # only on a self-signed lab CA
 export ENTRA_TENANT_ID=<tenant-id> ENTRA_CLIENT_ID=<app-id>         # the id (any case) or a domain name; the app reads users, groups and apps
 export ENTRA_CERT_FILE=/path/to/cert.pem ENTRA_KEY_FILE=/path/to/key.pem   # or ENTRA_CLIENT_SECRET_FILE
@@ -69,10 +69,20 @@ about 39 days on 2026-10-15). A date the guard needs that did not read, or that 
 failed (exit 3), never a pass. The dates catch a name given to someone new after the departure. They do not catch an
 existing person renamed onto the name, whose Entra user and account both predate the departure: a close by that name
 would disable that person and leave the departed person's account open. So `--close-now --execute` under `oid` takes
-the object id only. Given a principal name it is refused (exit 5, nothing sent) and prints the object id the name
-resolved to: check it against the leaver notice, then run again with `--user <object id> --execute`. Keyed on a name
-(`preferred_username`, or SAML), the name is the account's key: the account a name selects is the one every holder of
-that name signs in to, so no guard can choose between people, none runs, and no Graph variable is needed.
+the object id, or the account's id, only. Given anything else it is refused (exit 5) before the name is resolved and
+before anything is sent, whatever Entra holds under the name: run the plan, which resolves it and prints the object id,
+check that against the leaver notice, then run again with `--user <object id> --execute`. The key is the one the
+organization's settings store, read whether its OIDC is switched on or off, so an organization switched off is never
+taken as keyed on a name. Under `oid`, a name no Entra user holds (Graph answers 404, as for a
+person deleted at Entra) that an account still carries selects an account named before the organization was keyed on
+`oid`, not the one the person signs in to; the plan refuses it (exit 5), naming that account's id, and points to the
+object id the leaver notice carries. Keyed on a name (OIDC on `preferred_username`, or SAML on Entra's name claim,
+read from the organization's stored settings for the protocol of the account the name selects), the name is the
+account's key: the account a name selects is the one every holder of that name signs in to, so no guard can choose
+between people, none runs, and no Graph variable is needed. Stored as keyed on anything else (`sub`, an object-id
+claim, or no key at all), the script does not take a principal name as that protocol's account key, so a name that
+selects one of its accounts is refused (exit 5, in the plan and with `--execute`, nothing sent), and the refusal names
+the account's id to check against the notice and close by.
 
 `--close-now` is for a federated account. It reads the account before anything is sent and refuses one that is not
 federated (`LOCAL`, or anything but `OAUTH` or `SAML`) at the plan, with exit 5 and nothing sent. Before that check,
@@ -107,8 +117,8 @@ the script's tests.
 
 ### Your provider credential
 
-By hand, the script runs on a provider bearer (`VCFA_PROVIDER_BEARER_FILE`, a file of mode 0600), the credential a
-provider call presents. It acts in every organization, so hold it as tier-0 and delete it when the work ends. Two
+By hand, the script runs on a provider bearer (`VCFA_PROVIDER_BEARER_FILE`, a file of mode 0600 under your home,
+outside any clone, where no commit can carry it), the credential a provider call presents. It acts in every organization, so hold it as tier-0 and delete it when the work ends. Two
 sign-ins give one, and a close held on each on the reference estate:
 
 - **The provider portal's sign-in.** Sign in at `https://<automation-fqdn>/provider`; the bearer is what the portal
@@ -120,25 +130,26 @@ sign-ins give one, and a close held on each on the reference estate:
   the password:
 
 ```bash
-umask 077                                   # both files are created mode 0600
-curl -s -X POST -u '<user>@System' -D - -o /dev/null -H 'Accept: application/json;version=9.1.0' \
-     https://<automation-fqdn>/cloudapi/1.0.0/sessions/provider \
-  | awk 'tolower($1)=="x-vmware-vcloud-access-token:" {sub(/\r$/, "", $2); print $2 > "provider-bearer";
-         print "Authorization: Bearer " $2 > "provider-bearer-header"}'
+( umask 077; mkdir -p ~/.vcf &&             # both files mode 0600, under your home and outside any clone
+  curl -s -X POST -u '<user>@System' -D - -o /dev/null -H 'Accept: application/json;version=9.1.0' \
+       https://<automation-fqdn>/cloudapi/1.0.0/sessions/provider \
+  | awk -v dir="$HOME/.vcf" 'tolower($1)=="x-vmware-vcloud-access-token:" {sub(/\r$/, "", $2);
+         print $2 > (dir "/provider-bearer"); print "Authorization: Bearer " $2 > (dir "/provider-bearer-header")}' )
+export VCFA_PROVIDER_BEARER_FILE=~/.vcf/provider-bearer
 # add -k only on a self-signed lab CA. The bearer never reaches a command line: a tool reads provider-bearer
 # (VCFA_PROVIDER_BEARER_FILE), and curl reads the header from its file (-H @file, curl 7.55 or later).
 # When the work is done, end the session, then remove both files; skip the end and remove them anyway,
 # since the bearer stays valid until its hour runs out.
-curl -s -X DELETE -H @provider-bearer-header -H 'Accept: application/json;version=9.1.0' \
+curl -s -X DELETE -H "@$HOME/.vcf/provider-bearer-header" -H 'Accept: application/json;version=9.1.0' \
      https://<automation-fqdn>/cloudapi/1.0.0/sessions/current
-rm -f provider-bearer provider-bearer-header
+rm -f ~/.vcf/provider-bearer ~/.vcf/provider-bearer-header
 ```
 
-  Run on 2026-10-15 as a directory account holding System Administrator, the credential given on standard input in
-  place of curl's prompt: both files were written at mode 0600, the session read 200 with the bearer, the end as
-  printed answered 204, the same read was then refused (401), and no file was left. An end sent without the
-  `Accept` header answered 406 and left the session live, which is why the header is there. On such a bearer, with no Graph variable set,
-  `--close-now --execute` disabled a federated account the provider made for the run and read it back (one run; the
+  Run on 2026-10-15 as a directory account holding System Administrator, with the two files in the working folder
+  rather than `~/.vcf`, the credential given on standard input in place of curl's prompt: both files were written at
+  mode 0600, the session read 200 with the bearer, the end as printed answered 204, the same read was then refused
+  (401), and no file was left. An end sent without the `Accept` header answered 406 and left the session live, which
+  is why the header is there. On such a bearer, with no Graph variable set, `--close-now --execute` disabled a federated account the provider made for the run and read it back (one run; the
   account held no token, so the revoke was not exercised). The System organization's local administrator was not
   tried. The Basic session's bearer lifetime was not read; plan for the hour.
 
@@ -211,14 +222,16 @@ and 4 are this script's own; an error the script did not expect exits 3, never 1
 |---|---|---|
 | 2 | with `--execute`, a close that did not hold on read-back (a token left, the account still enabled, or another field changed), or whose read-back did not read (refused, or a list answered without its values), the `result` naming which read | alert whoever ran the close: read the account's `result` in the record and finish it by hand |
 | 1 | an open leaver: an account still enabled, or holding a token, whose person has left, on three reads that agree, including one `--execute` refused under the guard | alert whoever closes leavers: they run `--execute --org` on a provider bearer |
-| 3 | a read failed (an organization, a gate, an account, a list read in part, a `--user` resolution, an `--expect-tenants` discovery read, the credential itself, the run's own provider API token's end date, or a date `--close-now`'s name guard needs), a tenant no organization names, an organization `--expect-tenants` leaves uncovered, an organization with its federation switched off that still holds an enabled federated account or a token of one, an error the script did not expect, or an account is undetermined, among them a leaver whose three reads disagreed; and a run whose record was refused for a surviving estate value when it found nothing else | alert the job's owner: nothing is known about what was not read, so fix the read (a Graph permission, a credential, the tenant, the organization's user key, a `--name-claim` the reason names, `VCFA_PROVIDER_TOKEN_NAME`, or the schedule an uncovered organization's tenant lacks); close a switched-off organization's federated accounts by name, or switch its federation back on; a leaver whose reads disagreed is read again by the next run |
+| 3 | a read failed (an organization, a gate, an account, a list read in part, a `--user` resolution, an `--expect-tenants` discovery read, the credential itself, the run's own provider API token's end date, or a date `--close-now`'s name guard needs), a tenant no organization names, an organization `--expect-tenants` leaves uncovered, an organization with its federation switched off that still holds an enabled federated account or a token of one, an error the script did not expect, or an account is undetermined, among them a leaver whose three reads disagreed; and a run whose record was refused for a surviving estate value when its own code was 0 (a close that held among them, which prints what its writes did) | alert the job's owner: nothing is known about what was not read, so fix the read (a Graph permission, a credential, the tenant, the organization's user key, a `--name-claim` the reason names, `VCFA_PROVIDER_TOKEN_NAME`, or the schedule an uncovered organization's tenant lacks); close a leaver's account in a switched-off organization with `--close-now` (under `oid` by the object id, never the name), or switch its federation back on; a leaver whose reads disagreed is read again by the next run |
 | 4 | a flag nobody acknowledged: a role granted to a federated account directly, or a name in use again; or the run's own provider API token inside `WARN_DAYS` of its end | open a ticket for the account's owner; once decided, acknowledge it in `--ack` until a date. For the token, rotate it and set `VCFA_PROVIDER_TOKEN_NAME` to the new name; that flag is not acknowledged, and the rotation clears it |
 | 0 | nothing open, nothing unread, nothing flagged; with `--close-now`, the close held, or the plan printed (its last line says nothing was sent and nothing was closed) | nothing |
-| 5 | a usage error (a malformed `--name-claim`, `WARN_DAYS` or `--left-on` among them), a Python older than 3.10, an unreadable `--ack` file, a `--user` that selects no account or more than one, an `--expect-tenants` list that leaves out the run's own tenant or names a domain Entra knows as no tenant, and with `--close-now` an account that is not federated, or under `oid` a principal name given without `--left-on`, refused by the name guard, or given to `--execute`; nothing is sent and nothing is written | fix the invocation; under `oid`, close by the object id the plan printed |
+| 5 | a usage error (a malformed `--name-claim`, `WARN_DAYS` or `--left-on` among them), a Python older than 3.10, an unreadable `--ack` file, a `--user` that selects no account or more than one, an `--expect-tenants` list that leaves out the run's own tenant or names a domain Entra knows as no tenant, and with `--close-now` an account that is not federated; under `oid`, a `--user` given to `--execute` that is not an object id or the account's id, a principal name given without `--left-on` or refused by the name guard, or a name no Entra user holds that an account still carries; and a name that selects an account whose protocol the organization stores as keyed on anything but a name; nothing is sent and nothing is written | fix the invocation; under `oid`, close by the object id the plan printed, or the account's id the refusal names |
 
 A record the script refuses to write because an estate value survived its scrub never hides what the run found: the
-run's own code stands when it is 1, 2, 3 or 4, and a run that found nothing exits 3, because the record a later tool
-reads was not written.
+run's own code stands when it is 1, 2, 3 or 4, and a run whose code was 0 exits 3, because the record a later tool
+reads was not written. A run that closed something prints, in counts and with no estate value, the
+writes it sent, the tokens revoked, the accounts disabled and on how many the close held, and that the record was
+not written.
 
 An acknowledgement file is a JSON list; each entry names the organization, the account, the flag (`direct-role` or
 `name-in-use-again`) and the last day it holds:
@@ -270,18 +283,22 @@ An entry that matches no flag is counted on the report, so a stale file is notic
   reported undetermined and never acted on.
 - **A list is read whole, or it did not read.** A VCF Automation list is read page by page until its distinct items
   (by id) number the total the answer states (`resultTotal`). An answer without its values or its total, a page that
-  comes back empty or short of its page size before the total, or a total that changes between pages, is a list read
+  comes back empty or short of its page size before the total, a page that adds no item not already read (the list
+  served again, or moved under the read: unread at that page), or a total that changes between pages, is a list read
   in part: its organization is unreadable, or a close's read-back did not read, never a shorter list. A Microsoft
-  Graph list follows `@odata.nextLink` to its end, and a 200 without its `value` list is a read that failed; so is a
-  membership answer (`checkMemberGroups`) without one, which leaves the account undetermined. The call that ended a
+  Graph list follows `@odata.nextLink` to its end, and a 200 without its `value` list is a read that failed, as is a
+  next link that repeats one already followed, which would go round for ever (a page holding no items is read on:
+  Microsoft Graph's paging guidance says a page may hold none); so is a membership answer (`checkMemberGroups`)
+  without its list, which leaves the account undetermined. The call that ended a
   read in part carries a `shape` in the record naming why. A page size of 1 over more than 50 items is held by the
   script's tests; the reference estate's lists fit on one page.
 - **A federation switched off is listed, never dropped.** An organization with OIDC and SAML both off is not judged:
   the script cannot ask Entra about people who cannot sign in through it. It reads the organization's accounts and
   tokens instead, because an enabled federated account comes back when the federation is switched on, and whether
   an API token of a federated account stops refreshing while it is off was not tested. One that holds either is unreadable (exit 3), its
-  reason naming the counts: close those accounts with `--close-now`, or switch the federation back on so the report
-  judges them. One that holds neither is listed (`nothing for this report to judge`) and changes no exit. On the
+  reason naming the counts: close a leaver's account there with `--close-now`, by the object id where the
+  organization stores `oid` as its key (the close reads the key it stores, switched off or not), or switch the
+  federation back on so the report judges them. One that holds neither is listed (`nothing for this report to judge`) and changes no exit. On the
   reference estate, 2026-10-15, three organizations were listed, none holding anything federated.
 - **It alerts, and acts, only on what three reads agree on.** Entra's directory reads settle after a change. Every
   leaver still enabled or holding a token is read again three times, ten seconds apart, in a report as with
@@ -295,8 +312,8 @@ An entry that matches no flag is counted on the report, so a stale file is notic
 - **It refuses a mass close.** `--execute` refuses an organization whose open leavers number more than three and more
   than a quarter of its federated accounts (or more than `--max-leavers N`): it closes none of them, each reads
   `refused` with the reason, and the run exits 1. A share that size is more often a wrong lookup than a bad week, and
-  naming one account with `--user` does not step around it. Read why so many read gone, then close them by name or
-  rerun with `--max-leavers`.
+  naming one account with `--user` does not step around it. Read why so many read gone, then close each with
+  `--close-now` (under `oid` by its object id, never the name) or rerun with `--max-leavers`.
 - **A close** reads the account first and sends nothing to one that is not federated, then revokes each API token the
   account holds, then disables the account by writing its full record back with `enabled` false, then reads both
   back: no token left, the account disabled, and no other field changed. A read-back that did not read (refused, or

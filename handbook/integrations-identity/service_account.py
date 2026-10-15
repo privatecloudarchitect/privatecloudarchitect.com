@@ -48,17 +48,21 @@ Use:  python3 service_account.py --org ORG --name NAME --role "ROLE NAME" [--tok
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 refused by this script before any write: the account exists (for a create), or for a teardown it is not one
         the state file records; or no organization answers to that name
-      1 the run did not hold: a write was refused, or the read-back was not what was asked (the account active, its
-        bearer holding exactly the role, the stored token refreshing; for a teardown, no account left and the revoked
-        token refused)
+      1 the run did not hold: a write was refused (a teardown's revoke among them), or the read-back was not what was
+        asked (the account active, its bearer holding exactly the role, the stored token refreshing; for a teardown,
+        no account left and, with --token-file, the revoked token refused)
       3 a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer
         without its list or its total, a total that changed between pages, a page that added nothing new, or pages
         that end before the total they state), the read-back or the residue could not be read back, the provider's
         credential was not traded for a bearer, or an error the script did not expect
-      0 the plan printed, or the run held on read-back
+      0 the plan printed, or the run held on read-back: for a create, the account active, its bearer's session holding
+        exactly the role and the stored token refreshing; for a teardown, every revoke answered, the organization's
+        list read whole with no account by that name left and, with --token-file, the revoked token refused (without
+        it the token is not tried, and the record notes it). An account of that name in another organization is not
+        read: the organization is the one you name
       5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
-        exists, with --execute a provider credential file that cannot be read or is empty), or a Python older than
-        3.10; nothing is written
+        exists for a create or does not for a teardown, with --execute a provider credential file that cannot be read
+        or is empty), or a Python older than 3.10; nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
       the run's code stands when it is 1, 2 or 3, and a run that held exits 3 (its writes were made; the record was not
       written).
@@ -203,14 +207,22 @@ def _shape(vcfa: Vcfa, why: str) -> None:
         vcfa.calls[-1]["shape"] = why
 
 
+def served_size(answer: dict, asked: int) -> int:
+    """The page size VCF Automation served: the answer's pageSize when it states a positive one, else the size asked. A
+    page is short only against the size it was served at, never against the size asked, which a service may lower."""
+    size = answer.get("pageSize")
+    return size if isinstance(size, int) and not isinstance(size, bool) and size > 0 else asked
+
+
 def vcfa_pages(vcfa: Vcfa, path: str, shown: str, org_urn: str | None = None,
                accept: str = CLOUDAPI) -> list[dict] | None:
     """Every page of one VCF Automation cloudapi list, read until the items counted once each, by id, reach the total
     the answer states (resultTotal). None, never a shorter list, when a page is refused, an answer carries no `values`
     list or no total, the total changes between pages, an item carries no id, a page adds no item not already read,
-    more distinct items come back than the total states, or a page comes back empty or short before the total is
-    reached: a list read in part is not a list, and a teardown that trusted one could leave an account alive. A row
-    repeated on a later page (the list moved under the read) is counted once."""
+    more distinct items come back than the total states, or a page comes back empty or short (against the page size
+    the answer states it served) before the total is reached: a list read in part is not a list, and a teardown that
+    trusted one could leave an account alive. A row repeated on a later page (the list moved under the read) is
+    counted once."""
     found: dict[str, dict] = {}
     total: int | None = None
     sep = "&" if "?" in path else "?"
@@ -241,7 +253,7 @@ def vcfa_pages(vcfa: Vcfa, path: str, shown: str, org_urn: str | None = None,
         if len(found) > total:
             _shape(vcfa, f"{len(found)} distinct items where the answer states {total}")
             return None
-        if len(rows) < PAGE_SIZE or len(found) == before:
+        if len(rows) < served_size(answer, PAGE_SIZE) or len(found) == before:
             _shape(vcfa, f"the pages ended at {len(found)} of the {total} the answer states")
             return None
     _shape(vcfa, f"more than {MAX_PAGES} pages")
@@ -366,6 +378,9 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
                             body=register_body(a.name, a.role, str(uuid.uuid4())), org_urn=urn, accept="application/json")
     client_id = reg.get("client_id") if isinstance(reg, dict) else None
     if status not in (200, 201) or not client_id:
+        if status in (200, 201):   # registered, perhaps, with no id to record: nothing here can remove it
+            record["partial"] = ("the register answered without a client id, so no state file records the account: "
+                                 "read the organization's service accounts, and remove one by this name where it was made")
         return EXIT_NOT_HELD
     save_state(state_path(a.org, a.name), {"tool": AGENT, "org": a.org, "name": a.name, "client_id": client_id,
                                            "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
@@ -379,8 +394,8 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     status, device = vcfa.call("POST", f"/oauth/tenant/{a.org}/device_authorization",
                                "/oauth/tenant/{org}/device_authorization", form={"client_id": client_id},
                                accept="application/json", auth=False)
-    if status != 200 or not isinstance(device, dict) or not device.get("device_code"):
-        record["partial"] = partial
+    if status != 200 or not isinstance(device, dict) or not device.get("device_code") or not device.get("user_code"):
+        record["partial"] = partial   # the grant names the user code this client's own authorization returned, or nothing
         return EXIT_NOT_HELD
     status, _ = vcfa.call("POST", "/cloudapi/1.0.0/deviceLookup/grant", "/cloudapi/1.0.0/deviceLookup/grant",
                           body={"userCode": device.get("user_code")}, org_urn=urn, accept=ACCOUNTS_ACCEPT)
@@ -447,9 +462,11 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     client_id = next((client_id_of(r) for r in rows if client_id_of(r)), None)
     token = _secret_from(a.token_file) if a.token_file and os.path.exists(a.token_file) and rows else None
     checks: dict[str, list[dict]] = {}
+    revokes = []
     for acct in rows:
-        vcfa.call("POST", f"/cloudapi/1.0.0/serviceAccounts/{acct['id']}/revoke", "/cloudapi/1.0.0/serviceAccounts/{id}/revoke",
-                  body={}, org_urn=urn, accept=ACCOUNTS_ACCEPT)
+        status, _ = vcfa.call("POST", f"/cloudapi/1.0.0/serviceAccounts/{acct['id']}/revoke",
+                              "/cloudapi/1.0.0/serviceAccounts/{id}/revoke", body={}, org_urn=urn, accept=ACCOUNTS_ACCEPT)
+        revokes.append(status)
     if token:   # read between the two writes, so the record says which of them refused the token
         checks["after_revoke"] = refusals(vcfa, a.org, client_id, token)
     for acct in rows:
@@ -467,8 +484,13 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     if token:
         checks["after_delete"] = refusals(vcfa, a.org, client_id, token)
         record["revoked_token"] = checks
+    elif rows:
+        record["revoked_token"] = "not tried: no --token-file"
     del token
-    refused = not any(t["status"] == 200 or t["bearer"] for tries in checks.values() for t in tries)
+    if any(st not in (200, 202, 204) for st in revokes):   # the revoke is what ends the refresh token (G-374)
+        record["revoke_refused"] = sorted({st for st in revokes if st not in (200, 202, 204)})
+    refused = (not any(t["status"] == 200 or t["bearer"] for tries in checks.values() for t in tries)
+               and "revoke_refused" not in record)
     if left == [] and rows:
         state["removed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         save_state(state_file, state)
@@ -585,7 +607,11 @@ def report(record: dict) -> list[str]:
     if "residue" in record:
         lines.append(f"  residue: account present {record['residue']['account_present']}"
                      + ("  (there was nothing to remove)" if record.get("nothing_to_remove") else ""))
-    for when, tries in (record.get("revoked_token") or {}).items():
+    if isinstance(record.get("revoked_token"), str):
+        lines.append(f"  the revoked token: {record['revoked_token']}")
+    if record.get("revoke_refused"):
+        lines.append(f"  the revoke answered HTTP {', '.join(map(str, record['revoke_refused']))}: not held")
+    for when, tries in (record.get("revoked_token") if isinstance(record.get("revoked_token"), dict) else {}).items():
         for t in tries:
             lines.append(f"  refresh with the revoked token, {when.replace('_', ' ')} ({t['form']}): HTTP {t['status']}, "
                          f"bearer {'issued' if t['bearer'] else 'refused'}" + (f" ({t['error']})" if t.get("error") else ""))
@@ -607,6 +633,8 @@ def credential_problem() -> str | None:
 
 def usage_problem(a: argparse.Namespace) -> str | None:
     if a.teardown:
+        if a.token_file and not os.path.exists(a.token_file):   # named to be tried: a file not there would pass untried
+            return f"{a.token_file} does not exist: --token-file with --teardown is the stored token to try after the revoke"
         return None
     if not a.role:
         return ("--role is required: the role's name, for example \"Organization User\" in an All Apps organization or "

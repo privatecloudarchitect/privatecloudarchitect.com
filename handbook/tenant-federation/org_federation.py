@@ -31,16 +31,30 @@ the organization with a role. This script does both sides in the order that work
                          the organization holds (oid when it holds none). It refuses to switch an organization's
                          protocol, OIDC user key or SAML user-name claim under the users it holds, judged on what it
                          stores, enabled or not (a federation switched off still holds its key, its mapping, its metadata
-                         and its users); a named group that already exists under the other protocol or with other roles;
-                         and a new client secret Entra does not accept, asked at Entra's token endpoint before anything is
-                         written. A federation that is switched off stays off: a settings write to it needs --enable,
-                         which the plan shows as "enabled: off -> on", and without it only the named groups are imported.
+                         and its users). Under the OIDC users it holds, enabled or not, it refuses a change of the app
+                         (its client id) or of the issuer unless they are keyed on oid or preferred_username, values a
+                         person keeps across the apps of one tenant: Entra makes sub pairwise to each app, so under sub
+                         every returning user would get a new account and the old one would keep its direct roles; and it
+                         refuses an issuer it cannot read the users' tenant from, since oid and sub both change across
+                         tenants. It refuses a named group that already exists under the other protocol or with other
+                         roles, and a new client secret Entra does not accept, asked at Entra's token endpoint before
+                         anything is written. A federation that is switched off stays off: a run whose settings would
+                         change is refused without --enable, which the plan shows as "enabled: off -> on"; a run whose
+                         settings already read as planned imports the named groups and writes no settings.
                          Over SAML without METADATA_FILE it prints the organization's own service-provider identifier
                          and reply URL for the tenant, and stops. It never writes to Entra
+  --configure --org NAME --groups-only
+                         imports each --group ROLE=NAME and never writes the settings, whatever they hold and whether
+                         the federation is switched on or off; it needs no APP_CLIENT_ID, secret or metadata, and refuses
+                         an organization that stores no settings for ENTRA_TENANT_ID over the protocol named, or whose
+                         live federation is the other protocol, another provider's or VCF single sign-on's
   --teardown --execute   deletes what --execute created (only that), purges it from Entra's recycle bin, and reads
-                         each object back to confirm nothing is left
-  --update               day 2 on an existing organization federated to the tenant (it need not be one this script
-                         built): reads its settings, changes only the fields named by --key-refresh [HOURS] (automatic
+                         each object back to confirm nothing is left; an object whose read answers neither 200 nor 404
+                         is not known to be gone, and the run exits 3. Without --execute it reads the state file and
+                         lists what it records, and refuses (exit 2) when there is none
+  --update               day 2 on an existing organization federated to the tenant over a federation switched on (it
+                         need not be one this script built; one switched off is refused, with what it holds):
+                         reads its settings, changes only the fields named by --key-refresh [HOURS] (automatic
                          refresh on, strategy ADD, every HOURS, default 1), --keys (the keys the provider publishes now,
                          the write after an emergency roll), --secret (the client secret in NEW_SECRET_FILE, which the
                          tenant's administrator rotated) or --metadata (the SAML metadata in METADATA_FILE), and prints
@@ -73,18 +87,23 @@ Env:  VCFA_HOST; VCFA_PROVIDER_BEARER_FILE (a provider bearer, minted as platfor
       ENTRA_TENANT_ID; --configure also APP_CLIENT_ID and, for a new app, APP_SECRET_FILE (OIDC) or METADATA_FILE
       (SAML); they write OUT (default prove.json, configure.json)
 Exit: 0 done · 1 a check failed, or a write refused while building, configuring, updating or tearing down · 2 refused
-      by what it read (a name this script did not create; no state file to tear down; for --update, an organization not
-      federated to ENTRA_TENANT_ID or a change its protocol does not take; for --org, no such organization, a protocol,
-      key or SAML user-name claim switch judged on what the organization stores and the users it holds, enabled or not,
-      a settings write to a switched-off federation without --enable, a role its type lacks, a named group held another
-      way, or SAML with no metadata yet, when it prints what the tenant needs; for --configure and --update, a client
-      secret Entra refused), with nothing sent · 3 a result not known: a credential refused before anything was read, a
-      read refused or a list not read whole in any mode (a proof only reads), Entra out of reach when asked about a
-      secret, a check with nothing to read yet (--prove --org over SAML before any enabled SAML user has signed in), a
-      record the scrub refused to write, or an error it did not expect (never 1) · 5 not run as asked: an unknown,
-      missing or malformed argument (--enable without --configure among them), a missing environment variable
-      or a file that cannot be read, metadata that is not the tenant's, SECRET_DAYS of a year or more, or a Python
-      older than 3.9. Nothing is sent on a 5.
+      by what it read (a name this script did not create; no state file to tear down; for --execute over its own
+      organization, a protocol or key switch under the users it holds; for --update, an organization not federated to
+      ENTRA_TENANT_ID over a federation switched on, or a change its protocol does not take; for --org, no such
+      organization, a protocol, key or SAML user-name claim switch judged on what the organization stores and the users
+      it holds, enabled or not, a change of the app or issuer under OIDC users keyed on another claim than oid or
+      preferred_username, a settings write to a switched-off federation without --enable, a role its type lacks, a named
+      group held another way, a group-only import to an organization holding no settings for the tenant, or SAML with
+      no metadata yet, when it prints what the tenant needs; for --configure and --update, a client secret Entra
+      refused), with nothing sent · 3 a result not known: a credential refused before anything was read, a read refused
+      or a list not read whole in any mode (a proof only reads), Entra out of reach when asked about a secret, a check
+      with nothing to read yet (--prove --org over SAML before any enabled SAML user has signed in), a teardown whose
+      residue could not be read, a record the scrub refused to write on a run that would have exited 0, or an error it
+      did not expect (never 1) · 5 not run as asked: an unknown, missing or malformed argument (--enable without
+      --configure, --groups-only without --group or with --enable or --user-key among them), a missing environment
+      variable or a file that cannot be read, metadata that is not the tenant's, SECRET_DAYS of a year or more, or a
+      Python older than 3.9. Nothing is sent on a 5. A record the scrub refuses is not written and never hides the run's
+      code: 1, 2 and 3 stand, and a run that would have exited 0 exits 3.
 """
 
 import argparse
@@ -111,7 +130,20 @@ class UsageError(Exception):
 
 
 class ScrubError(Exception):
-    """The record would carry an estate value, so it is not written. Exit 3: the run is not on record."""
+    """The record would carry an estate value, so it is not written. The run's own code stands (a 0 becomes 3)."""
+
+
+class RefusedError(Exception):
+    """Refused by what it read, before anything was sent: exit 2."""
+
+
+# Set when the scrub refuses a record. The record is not written and the run's own code stands: 1, 2 and 3 are kept,
+# and a run that would have exited 0 exits 3, since its result is not on record (G-456). main() reads it.
+RECORD = {"refused": False}
+
+# The keys --user-key offers. Entra sends a person the same oid in every app of one tenant, and the same principal
+# name, so a client change under either keeps every account; sub is pairwise to each app, and is not offered.
+USER_KEYS = ("oid", "preferred_username")
 
 CLOUDAPI = "application/json;version=9.1.0"
 PAGE_SIZE = 128  # a cloudapi list is read page by page to its pageCount, so a list longer than one page is read whole
@@ -503,6 +535,20 @@ class Scrubber:
             raise ScrubError(f"refusing to write the record: {len(left)} estate value(s) survived the scrub")
 
 
+def write_record(out, text, san):
+    """Write a scrubbed record, or refuse it when an estate value survived the scrub: the record is not written, the
+    refusal is printed and RECORD is marked, so the run keeps its own code and a 0 becomes 3 (G-456). True if written."""
+    try:
+        san.check(text)
+    except ScrubError as e:
+        RECORD["refused"] = True
+        print(f"{e}; {out} not written: the run's own code stands, and a run that would exit 0 exits 3", file=sys.stderr)
+        return False
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(text + "\n")
+    return True
+
+
 # ── HTTP, standard library only ────────────────────────────────────────────────────────────────────────────────
 def _ctx():
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
@@ -542,8 +588,9 @@ def whole_list(fetch, what):
     """Every item of a VCF Automation cloudapi list, read page by page (fetch(page), pages counted from 1) until the
     count of distinct items, by id, equals the total the answer states (resultTotal). A list is read whole or not at
     all: an answer without its list or without a stated total, a page that comes back empty or short before the total
-    is reached, pages that end (pageCount) short of it, or a total that changes between pages, is a list not read
-    (ReadError, exit 3), never a short or an empty one."""
+    is reached, pages that end (pageCount) short of it, a total that changes between pages, or a page that adds no item
+    not already read (a pager that would never reach the total), is a list not read (ReadError, exit 3), never a short
+    or an empty one. Each page adds at least one item, so the read ends within the total's count of pages."""
     seen, out, total, size = set(), [], None, None
     for page in range(1, MAX_PAGES + 1):
         data = fetch(page)
@@ -556,7 +603,7 @@ def whole_list(fetch, what):
             total = stated
         elif stated != total:
             raise ReadError(f"{what}: the stated total moved from {total} to {stated} between pages")
-        rows = data["values"]
+        rows, before = data["values"], len(out)
         for row in rows:   # a row that moved to a later page during the read is counted once
             ident = row.get("id") if isinstance(row, dict) and row.get("id") else json.dumps(row, sort_keys=True)
             if ident not in seen:
@@ -571,6 +618,9 @@ def whole_list(fetch, what):
         count = data.get("pageCount")
         if not rows or len(rows) < size or (isinstance(count, int) and page >= count):
             raise ReadError(f"{what}: the pages ended at {len(out)} of the {total} items the answer states")
+        if len(out) == before:   # a whole page of items already read: a pager that does not advance is not followed
+            raise ReadError(f"{what}: page {page} added no item not already read, at {len(out)} of the {total} the "
+                            "answer states")
     raise ReadError(f"{what}: more than {MAX_PAGES} pages")
 
 
@@ -642,8 +692,11 @@ class Vcfa:
         raise CallError("a task did not finish in time")
 
     def org(self, name):
-        _, data, _ = self.ok("GET", "/cloudapi/1.0.0/orgs", "find organization", params={"filter": f"name=={name}", "pageSize": 10})
-        rows = data.get("values", [])
+        """The organization by that name, or None when the list filtered on it, read whole, holds none. A filtered
+        list answered without its list or its total is a read that failed (ReadError), never "no such organization"."""
+        rows = self.pages("/cloudapi/1.0.0/orgs", "find organization", filt=f"name=={name}")
+        if len(rows) > 1:
+            raise ReadError(f"find organization: {len(rows)} organizations answer to the name")
         return rows[0] if rows else None
 
     def settings(self, uuid_, kind):
@@ -659,16 +712,16 @@ class Vcfa:
         secret = data.pop("clientSecret", None)
         return data, secret
 
-    def pages(self, path, step, tenant=None, accept=CLOUDAPI):
-        """Every item of a cloudapi list, read whole (whole_list): a page refused midway, a 200 without its list, or
-        pages that end short of the stated total raise ReadError, never a short list."""
+    def pages(self, path, step, tenant=None, accept=CLOUDAPI, filt=None):
+        """Every item of a cloudapi list, read whole (whole_list), filtered on `filt` when given: a page refused midway,
+        a 200 without its list, or pages that end short of the stated total raise ReadError, never a short list."""
         def fetch(page):
-            return self.ok("GET", path, step, accept=accept, tenant=tenant, params={"page": page, "pageSize": PAGE_SIZE})[1]
+            params = {"page": page, "pageSize": PAGE_SIZE, **({"filter": filt} if filt else {})}
+            return self.ok("GET", path, step, accept=accept, tenant=tenant, params=params)[1]
         return whole_list(fetch, step)
 
     def role(self, org_urn, name):
-        _, data, _ = self.ok("GET", "/cloudapi/1.0.0/roles", "find role", tenant=org_urn, params={"filter": f"name=={name}", "pageSize": 10})
-        rows = data.get("values", [])
+        rows = self.pages("/cloudapi/1.0.0/roles", "find role", org_urn, filt=f"name=={name}")
         return {"id": rows[0]["id"], "name": rows[0]["name"]} if rows else None
 
     def role_names(self, org_urn):
@@ -751,18 +804,27 @@ class Graph:
             time.sleep(5)
 
     def values(self, path):
-        """Every item of a Graph list, following @odata.nextLink until it is absent. A 200 without its `value` list is
-        a list not read (ReadError, exit 3), never an empty one."""
-        out, url = [], path
+        """Every item of a Graph list, following @odata.nextLink until it is absent. A 200 without its `value` list, a
+        next link already followed, or a page that adds no item not already read and still points to another, is a
+        list not read (ReadError, exit 3), never an empty or a short one, and never followed further."""
+        out, url, followed, seen = [], path, set(), set()
+        what = f"Graph GET {path.split('?')[0]}"
         for _ in range(MAX_PAGES):
+            if url in followed:
+                raise ReadError(f"{what}: a next link came back a second time, so the list would never end")
+            followed.add(url)
             data = self.req("GET", url)
             if not isinstance(data, dict) or not isinstance(data.get("value"), list):
-                raise ReadError(f"Graph GET {path.split('?')[0]}: a page answered without its list")
-            out += data["value"]
+                raise ReadError(f"{what}: a page answered without its list")
+            new = [r for r in data["value"] if not (isinstance(r, dict) and r.get("id") in seen and r.get("id"))]
+            seen.update(r["id"] for r in new if isinstance(r, dict) and r.get("id"))
+            out += new
             url = data.get("@odata.nextLink")
             if not url:
                 return out
-        raise ReadError(f"Graph GET {path.split('?')[0]}: more than {MAX_PAGES} pages")
+            if not new:
+                raise ReadError(f"{what}: a page added no item not already read and pointed to another, at {len(out)} items")
+        raise ReadError(f"{what}: more than {MAX_PAGES} pages")
 
     def one(self, collection, filt, select="id,displayName"):
         q = urllib.parse.urlencode({"$filter": filt, "$select": select})
@@ -772,8 +834,11 @@ class Graph:
         return rows[0] if rows else None
 
     def exists(self, path):
+        """True when Graph reads the object (200), False when it answers 404, None for any other answer: a 403, a 5xx
+        or a throttle past its retries says nothing of whether the object is gone, so it is never read as gone."""
         st, _ = self.call("GET", path)
-        return st == 200
+        self.status = st
+        return True if st == 200 else False if st == 404 else None
 
 
 # A client secret is proven before it is written anywhere: Entra is asked for a client-credentials token with it, the
@@ -866,10 +931,21 @@ class Run:
             self.san.add(self.state.get(k), p)
 
     def mine(self, kind, found_id):
-        """An existing object is used only when this script created it; anything else is refused."""
+        """An existing object is used only when this script created it; anything else is refused (exit 2)."""
         if found_id and self.state.get(f"{kind}_created") != found_id:
-            print(f"refused: a {kind} with this name exists and this script did not create it; choose another ORG")
-            sys.exit(2)
+            raise RefusedError(f"a {kind} with this name exists and this script did not create it; choose another ORG")
+
+    def same_sign_in(self, vcfa, org):
+        """A re-run over this script's own organization keeps the protocol and key its users were made under: the
+        settings it stores and the users it holds are read, and a switch is refused (exit 2) before anything is sent,
+        as --configure refuses it (switch_refusal)."""
+        a, urn, uid = self.args, org["id"], org["id"].rsplit(":", 1)[-1]
+        users = vcfa.pages("/cloudapi/1.0.0/users", "read users", urn)
+        why = switch_refusal(vcfa.settings(uid, "oauth"), vcfa.settings(uid, "federation"), self.tenant, a.protocol,
+                             a.user_key if a.protocol == "oidc" else None, users)
+        if why:
+            raise RefusedError(why)
+        self.step("the organization's stored sign-in and users read: no switch", "done", users=len(users))
 
     # ── build ──────────────────────────────────────────────────────────────────────────────────────────
     def build(self, vcfa, g):
@@ -877,6 +953,8 @@ class Run:
         roles = ROLES[a.org_type]
         org = vcfa.org(self.org_name)
         self.mine("org", org and org["id"])
+        if org is not None:   # a re-run over its own build: refused before anything is sent if it would switch
+            self.same_sign_in(vcfa, org)
         if org is None:
             st, _, hdrs = vcfa.ok("POST", "/cloudapi/1.0.0/orgs", "create organization",
                                   body={"name": self.org_name, "displayName": self.org_name, "isEnabled": True,
@@ -928,6 +1006,11 @@ class Run:
             stored["subjectAttributeName"] = (back.get("oidcAttributeMapping") or {}).get("subjectAttributeName")
             stored["signing_keys"] = len(((back.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration")) or [])
             self.step("OIDC settings written and read back", put_st, stored=stored)
+            want = {"enabled": True, "usePKCE": False, "autoRefreshKey": True, "keyRefreshStrategy": "ADD",
+                    "keyRefreshFrequencyInHours": 1, "subjectAttributeName": a.user_key}
+            off = sorted(k for k, v in want.items() if stored.get(k) != v) + ([] if stored["signing_keys"] else ["signing_keys"])
+            if off:   # the write answered, and the read back is what the sign-in runs on
+                raise CallError(f"the OIDC settings read back differ from the write in {', '.join(off)}")
             provider_type = "OAUTH"
         else:
             meta = self._metadata(g, app["appId"], sp["id"])
@@ -935,20 +1018,27 @@ class Run:
                     body=saml_settings(vcfa.settings(uid, "federation"), meta, "Sign in with Entra ID"),
                     accept=VCD_JSON, ctype=FEDERATION_SETTINGS)
             back = vcfa.settings(uid, "federation")
+            mapped = back.get("samlAttributeMapping") or {}
             stored = {"enabled": back.get("enabled"),
-                      "mapping": sorted(k for k, v in (back.get("samlAttributeMapping") or {}).items() if k.endswith("AttributeName") and v)}
+                      "mapping": sorted(k for k, v in mapped.items() if k.endswith("AttributeName") and v)}
             self.step("SAML settings written and read back", put_st, stored=stored)
+            off = [k for k, v in ENTRA_SAML_MAPPING.items() if mapped.get(k) != v] + ([] if stored["enabled"] is True else ["enabled"])
+            if off:
+                raise CallError(f"the SAML settings read back differ from the write in {', '.join(off)}")
             provider_type = "SAML"
 
-        _, rows, _ = vcfa.ok("GET", "/cloudapi/1.0.0/groups", "find imported group", accept=GROUPS_ACCEPT, tenant=urn,
-                             params={"filter": f"name=={self.group_name}", "pageSize": 10})
-        if rows.get("values"):
+        rows = vcfa.pages("/cloudapi/1.0.0/groups", "find imported group", urn, GROUPS_ACCEPT, filt=f"name=={self.group_name}")
+        if rows:
             self.step("group already imported", "done")
         else:
             role_ref = vcfa.role(urn, roles["member"])
+            if role_ref is None:
+                raise CallError(f"the role {roles['member']} was not found in the organization's role list")
             st, made, _ = vcfa.ok("POST", "/cloudapi/1.0.0/groups", "import group", accept=GROUPS_ACCEPT, tenant=urn,
                                   body=group_import(self.group_name, provider_type, role_ref))
-            self.step("group imported with its role", st, role=roles["member"], providerType=made.get("providerType"))
+            self.step("group imported with its role", st, role=roles["member"], providerType=(made or {}).get("providerType"))
+            if (made or {}).get("providerType") != provider_type:
+                raise CallError(f"the group import answered providerType {(made or {}).get('providerType')}, not {provider_type}")
 
     def _entra_oidc(self, g):
         redirect = f"https://{self.host}/login/oauth?service=tenant:{self.org_name}"
@@ -1132,9 +1222,7 @@ class Run:
             policy = g.req("GET", f"{GRAPH_BETA}/servicePrincipals/{sp_id}/claimsPolicy")
             checks["the app emits an email claim"] = any(c.get("name") == "emailaddress" for c in policy.get("claims") or [])
         if org:
-            _, rows, _ = vcfa.ok("GET", "/cloudapi/1.0.0/groups", "read imported group", accept=GROUPS_ACCEPT, tenant=org["id"],
-                                 params={"filter": f"name=={self.group_name}", "pageSize": 10})
-            got = rows.get("values") or []
+            got = vcfa.pages("/cloudapi/1.0.0/groups", "read imported group", org["id"], GROUPS_ACCEPT, filt=f"name=={self.group_name}")
             roles = sorted(r.get("name") for r in (got[0].get("roleEntityRefs") or [])) if got else []
             checks["group imported with the member-level role"] = roles == [ROLES[a.org_type]["member"]]
         for name, ok in checks.items():
@@ -1146,10 +1234,11 @@ class Run:
 
     # ── teardown ───────────────────────────────────────────────────────────────────────────────────────
     def teardown(self, vcfa, g):
+        """Deletes what the state file records as created, and returns the residue check: True when every object reads
+        back gone, False when one is left, None when one could not be read (exit 3)."""
         s = self.state
         if not s:
-            print("refused: no state file, so nothing here was created by this script")
-            sys.exit(2)
+            raise RefusedError("no state file, so nothing here was created by this script")
         org = vcfa.org(self.org_name)
         if org and s.get("org_created") == org["id"]:
             _, body, _ = vcfa.ok("GET", f"/cloudapi/1.0.0/orgs/{org['id']}", "read organization")
@@ -1161,7 +1250,13 @@ class Run:
             self.step("organization disabled and deleted", st)
         for kind, path in (("app", f"/applications/{s.get('app_created')}"), ("group", f"/groups/{s.get('group_created')}")):
             oid = s.get(f"{kind}_created")
-            if oid and g.exists(path):
+            if not oid:
+                continue
+            there = g.exists(path)
+            if there is None:   # a 403 or a 5xx: whether it is there is not known, so the teardown stops here
+                raise ReadError(f"whether the Entra {kind} recorded as created is still there could not be read "
+                                f"(HTTP {g.status})")
+            if there:
                 g.req("DELETE", path)
                 self.step(f"Entra {kind} deleted by object id", g.status)
         for kind in ("app", "service principal", "group"):  # deleted objects wait in the recycle bin; these are ours
@@ -1180,24 +1275,32 @@ class Run:
         return self.residue(vcfa, g)
 
     def residue(self, vcfa, g):
-        s, left = self.state, []
+        """Every object the state file records, read back from the directory and the recycle bin until none is left or
+        three minutes pass. True: none left. False: one is left (exit 1). None: none is known to be left, and one read
+        answered neither 200 nor 404, so whether it is gone is not known (exit 3), never "none"."""
+        s, left, unread = self.state, [], []
         deadline = time.monotonic() + 180
         while True:
-            left = []
+            left, unread = [], []
             if vcfa.org(self.org_name):
                 left.append("organization")
-            for kind, coll, oid in (("app", "applications", s.get("app_created")), ("service principal", "servicePrincipals", s.get("sp_id")),
-                                    ("group", "groups", s.get("group_created"))):
-                if oid and g.exists(f"/{coll}/{oid}"):
-                    left.append(kind)
-            for kind, oid in (("app", s.get("app_created")), ("service principal", s.get("sp_id")), ("group", s.get("group_created"))):
-                if oid and g.exists(f"/directory/deletedItems/{oid}"):
-                    left.append(f"{kind} in the recycle bin")
-            if not left or time.monotonic() > deadline:
+            made = [(kind, coll, oid) for kind, coll, oid in (
+                        ("app", "applications", s.get("app_created")), ("service principal", "servicePrincipals", s.get("sp_id")),
+                        ("group", "groups", s.get("group_created"))) if oid]
+            reads = [(f"/{coll}/{oid}", kind) for kind, coll, oid in made]
+            reads += [(f"/directory/deletedItems/{oid}", f"{kind} in the recycle bin") for kind, _coll, oid in made]
+            for path, label in reads:
+                there = g.exists(path)
+                if there:
+                    left.append(label)
+                elif there is None:
+                    unread.append(f"{label} (HTTP {g.status})")
+            if (not left and not unread) or time.monotonic() > deadline:
                 break
             time.sleep(15)  # Entra's reads lag its deletes by seconds
-        self.step("residue check", "none" if not left else "LEFT", left=left)
-        return not left
+        self.step("residue check", "LEFT" if left else "NOT KNOWN" if unread else "none", left=left,
+                  **({"not_read": unread} if unread else {}))
+        return False if left else None if unread else True
 
     def write(self):
         """One record per organization: each mode (execute, prove, teardown) writes its steps under its own key, so a
@@ -1214,10 +1317,8 @@ class Run:
         rec.update(head)
         rec.setdefault("runs", {})[mode] = {"captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": self.steps}
         text = self.san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
-        self.san.check(text)
-        with open(out, "w", encoding="utf-8") as f:
-            f.write(text + "\n")
-        print(f"\nrecorded {len(self.steps)} steps to {out}; every estate value replaced by a placeholder")
+        if write_record(out, text, self.san):
+            print(f"\nrecorded {len(self.steps)} steps to {out}; every estate value replaced by a placeholder")
 
 
 # ── day 2: change an existing organization's federation, only the named fields ─────────────────────────────────
@@ -1229,6 +1330,23 @@ def federated_to(oauth, fed, tenant):
     if fed.get("enabled") and f"sts.windows.net/{tenant}" in str(fed.get("samlMetadata") or ""):
         return "saml"
     return None
+
+
+def federation_found(oauth, fed, tenant):
+    """What an organization's sign-in settings hold, as a refusal says it: whose OIDC settings and SAML metadata it
+    stores, each switched on or off, or VCF single sign-on, or nothing stored."""
+    if oauth.get("vidb"):
+        return "it signs in through VCF single sign-on"
+    found, issuer, meta = [], str(oauth.get("issuerId") or ""), str(fed.get("samlMetadata") or "")
+    if issuer:   # the tenant is matched as federated_to() matches it
+        whose = "ENTRA_TENANT_ID" if f"login.microsoftonline.com/{tenant}" in issuer else "another provider"
+        found.append(f"OIDC settings for {whose}, switched {'on' if oauth.get('enabled') else 'off'}")
+    if meta:
+        whose = "ENTRA_TENANT_ID" if f"sts.windows.net/{tenant}" in meta else "another provider"
+        found.append(f"SAML metadata for {whose}, switched {'on' if fed.get('enabled') else 'off'}")
+    elif fed.get("enabled"):
+        found.append("SAML switched on with no metadata")
+    return "it holds " + " and ".join(found) if found else "it stores no OIDC or SAML settings"
 
 
 def oidc_update(current, secret, refresh_hours=None, keys=None):
@@ -1289,10 +1407,8 @@ def update(a):
         rec = {"mode": "update" if a.execute else "update plan", "protocol": proto, "asked": asked,
                "captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": steps, "held": ok}
         text = san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
-        san.check(text)
-        with open(out, "w", encoding="utf-8") as f:
-            f.write(text + "\n")
-        print(f"\nrecorded {len(steps)} steps to {out}; every estate value replaced by a placeholder")
+        if write_record(out, text, san):
+            print(f"\nrecorded {len(steps)} steps to {out}; every estate value replaced by a placeholder")
 
     vcfa = Vcfa(host)
     org = vcfa.org(org_name)
@@ -1304,8 +1420,14 @@ def update(a):
     oauth, fed = vcfa.settings(uid, "oauth"), vcfa.settings(uid, "federation")
     proto = federated_to(oauth, fed, tenant)
     san.add(oauth.get("clientId"), "{{client-id}}")
-    if proto is None:
-        print("refused: the organization is not federated to ENTRA_TENANT_ID over OIDC or SAML")
+    if proto is None:   # say what it holds: a federation to this tenant switched off reads differently from none
+        found = federation_found(oauth, fed, tenant)
+        hint = ""
+        if "for ENTRA_TENANT_ID, switched off" in found:
+            hint = (". --update changes a federation that is switched on; --configure --org NAME --enable writes a "
+                    "switched-off one's settings and switches it on, and --configure --org NAME --groups-only --group "
+                    "ROLE=NAME imports a group and leaves it off")
+        print(f"refused: the organization has no federation to ENTRA_TENANT_ID switched on: {found}{hint}")
         return 2
     wrong = [n for n in asked if (proto == "oidc") == (n == "metadata")]
     if wrong:
@@ -1546,14 +1668,28 @@ def local_admin_held(users, top_role):
                and any(r.get("name") == top_role for r in u.get("roleEntityRefs") or []) for u in users)
 
 
-def switch_refusal(oauth, fed, tenant, protocol, user_key, users=()):
+def app_changes(oauth, client_id=None, issuer=None):
+    """The fields of the app an organization's OIDC users were made under that a write would change: its client id
+    and its issuer (which names the tenant). A value not given is not compared."""
+    out = []
+    if client_id is not None and (oauth.get("clientId") or "") != client_id:
+        out.append("clientId")
+    if issuer is not None and str(oauth.get("issuerId") or "").rstrip("/").lower() != str(issuer).rstrip("/").lower():
+        out.append("issuerId")
+    return out
+
+
+def switch_refusal(oauth, fed, tenant, protocol, user_key, users=(), client_id=None, new_issuer=None):
     """Why --configure leaves this organization's sign-in alone, or "". A protocol, an OIDC user key or the SAML
     user-name claim is never switched in place under the users it keys (a SAML organization moved to OIDC refused its
     users; a move to oid split an account; a renamed SAML user was refused), and that is judged on what the organization
     stores and on the users it holds, whatever `enabled` says: a federation switched off during an incident still holds
-    its key, its metadata, its mapping and its users. An organization signed in through VCF single sign-on is that
-    provider's, and one whose stored settings name another provider is not this tenant's. A fresh organization, with
-    nothing stored and no federated user, is configured."""
+    its key, its metadata, its mapping and its users. Under the OIDC users it holds, the app (`client_id`) and the issuer
+    (`new_issuer`) change only when the users are keyed on oid or preferred_username, values a person keeps across the
+    apps of one tenant (sub is pairwise to each app), and only when the stored issuer names this tenant (oid and sub
+    both change across tenants). An organization signed in through VCF single sign-on is that provider's, and one
+    whose stored settings name another provider is not this tenant's. A fresh organization, with nothing stored and no
+    federated user, is configured. Every flag a refusal names is one the parser takes."""
     oidc_on, saml_on = bool(oauth.get("enabled")) and not oauth.get("vidb"), bool(fed.get("enabled"))
     now = federated_to(oauth, fed, tenant)
     kinds = {u.get("providerType") for u in users or ()}
@@ -1581,12 +1717,28 @@ def switch_refusal(oauth, fed, tenant, protocol, user_key, users=()):
             if issuer and f"login.microsoftonline.com/{tenant}" not in issuer:
                 return "the organization holds OIDC settings for a provider other than ENTRA_TENANT_ID, enabled or not"
         if held_key and held_key != user_key:
-            return (f"the organization keys its users on {held_key} in the OIDC settings it holds, enabled or not: run "
-                    f"--configure with --user-key {held_key}, or without --user-key, to keep it; a move to another key "
-                    "goes through a new organization")
+            keep = (f"run --configure with --user-key {held_key}, or without --user-key, to keep it" if held_key in USER_KEYS
+                    else "run --configure without --user-key, which keeps it")
+            return (f"the organization keys its users on {held_key} in the OIDC settings it holds, enabled or not: "
+                    f"{keep}; a move to another key goes through a new organization")
         if not held_key and (now == "oidc" or "OAUTH" in kinds):
             return ("the organization holds OIDC users or a live OIDC federation and stores no user key, so the key they "
                     "were made under cannot be read: move the tenant through a new organization")
+        moved = app_changes(oauth, client_id, new_issuer)
+        if "OAUTH" in kinds and moved:
+            if "issuerId" in moved and f"login.microsoftonline.com/{tenant}" not in issuer:
+                return ("the organization holds OIDC users, enabled or not, and stores no issuer for ENTRA_TENANT_ID, so the "
+                        "tenant they were made under cannot be read; Entra gives a person another oid and sub in another "
+                        "tenant, so a write naming another tenant would give every returning user a new account: move the "
+                        "tenant through a new organization")
+            if held_key not in USER_KEYS:
+                why = ("Entra makes sub pairwise to each app, so every returning user would get a new account" if held_key == "sub"
+                       else f"{held_key} is not known to stay the same for a person across apps, as oid and preferred_username "
+                            "do, so a returning user could get a new account")
+                return (f"the organization holds OIDC users keyed on {held_key}, enabled or not, and this run would change "
+                        f"its {' and '.join(moved)}: {why}, and the old account would keep its direct roles. Set "
+                        "APP_CLIENT_ID to the client id the organization holds to keep its app, or move the tenant to "
+                        "the new app through a new organization")
         return ""
     if now is None:
         if "OAUTH" in kinds:
@@ -1609,6 +1761,27 @@ def switch_refusal(oauth, fed, tenant, protocol, user_key, users=()):
                     "--metadata changes the metadata alone; a move to another claim goes through a new organization")
         return ("the organization holds SAML users and stores no user-name claim, so the claim they were matched on "
                 f"cannot be read, and this run would write {want}: move the tenant through a new organization")
+    return ""
+
+
+def groups_only_refusal(oauth, fed, tenant, protocol):
+    """Why a group-only import (--groups-only) is not sent to this organization, or "". It writes no settings, so the
+    key, the claim, the app and `enabled` stay as stored, and only the federation the groups would serve is judged: an
+    organization that stores this tenant's settings over the protocol named, switched on or off, takes them; one whose
+    live federation is the other protocol, another provider's or VCF single sign-on's does not."""
+    if oauth.get("vidb"):
+        return "the organization signs in through VCF single sign-on, and its groups are that provider's"
+    now = federated_to(oauth, fed, tenant)
+    if ((bool(oauth.get("enabled")) and not oauth.get("vidb")) or bool(fed.get("enabled"))) and now is None:
+        return "the organization is federated to a provider other than ENTRA_TENANT_ID"
+    if now and now != protocol:
+        return (f"the organization is federated over {now.upper()}, so a group imported over {protocol.upper()} would "
+                "serve no sign-in")
+    stored = (f"login.microsoftonline.com/{tenant}" in str(oauth.get("issuerId") or "") if protocol == "oidc"
+              else f"sts.windows.net/{tenant}" in str(fed.get("samlMetadata") or ""))
+    if not stored:
+        return (f"the organization stores no {protocol.upper()} settings for ENTRA_TENANT_ID, enabled or not, so a group "
+                "imported alone would serve no federation: write the settings first with --configure --org NAME --enable")
     return ""
 
 
@@ -1639,10 +1812,8 @@ class _Log:
     def write(self, **head):
         rec = {"mode": self.mode, **head, "captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": self.steps}
         text = self.san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
-        self.san.check(text)
-        with open(self.out, "w", encoding="utf-8") as f:
-            f.write(text + "\n")
-        print(f"\nrecorded {len(self.steps)} steps to {self.out}; every estate value replaced by a placeholder")
+        if write_record(self.out, text, self.san):
+            print(f"\nrecorded {len(self.steps)} steps to {self.out}; every estate value replaced by a placeholder")
 
 
 def _org_reads(vcfa, org, log):
@@ -1785,9 +1956,11 @@ def configure_existing(a):
     default; with --execute, a settings round trip (only when a field differs), the named groups imported with the
     role the organization type defines, resolved from the organization's own role list, and every write read back.
     It refuses a protocol, OIDC user key or SAML user-name claim switch, judged on what the organization stores and the
-    users it holds whether or not its federation is switched on; a named group that exists another way; a client secret
-    Entra does not accept; and any settings write to a federation that is switched off, unless --enable is given, so a
-    group import alone never switches a federation on. The user key defaults to the one the organization holds."""
+    users it holds whether or not its federation is switched on; a change of the app or the issuer under OIDC users
+    keyed on a claim that moves with the app; a named group that exists another way; a client secret Entra does not
+    accept; and any settings write to a federation that is switched off, unless --enable is given, so a group import
+    alone never switches a federation on. The user key defaults to the one the organization holds. With --groups-only
+    it imports the named groups and never writes the settings (groups_only_refusal judges the organization)."""
     host, tenant, org_name = os.environ.get("VCFA_HOST"), os.environ.get("ENTRA_TENANT_ID"), a.org
     if not (host and tenant and org_name and a.protocol):
         print("--configure --org needs VCFA_HOST, ENTRA_TENANT_ID, --protocol and the organization's name")
@@ -1797,8 +1970,12 @@ def configure_existing(a):
     except ValueError as e:
         print(f"not run: {e}")
         return EXIT_USAGE
-    client_id, new_secret, metadata = os.environ.get("APP_CLIENT_ID"), _read_file("APP_SECRET_FILE"), _read_file("METADATA_FILE")
-    if a.protocol == "oidc" and not client_id:
+    groups_only = bool(getattr(a, "groups_only", False))
+    if groups_only:   # a group-only import sends no settings, so it reads no app, secret or metadata
+        client_id = new_secret = metadata = None
+    else:
+        client_id, new_secret, metadata = os.environ.get("APP_CLIENT_ID"), _read_file("APP_SECRET_FILE"), _read_file("METADATA_FILE")
+    if a.protocol == "oidc" and not client_id and not groups_only:
         print("not run: --configure --protocol oidc needs APP_CLIENT_ID, the client id of the app the tenant's administrator built")
         return EXIT_USAGE
     if metadata and (f"sts.windows.net/{tenant}" not in metadata or not metadata_certs(metadata)):
@@ -1829,10 +2006,14 @@ def configure_existing(a):
 
         if a.org_type and a.org_type != org_type:
             return refuse(f"the organization is a {org_type} organization, not {a.org_type}")
-        why = switch_refusal(r["oauth"], r["fed"], tenant, a.protocol, key, r["users"])
+        if groups_only:
+            why = groups_only_refusal(r["oauth"], r["fed"], tenant, a.protocol)
+        else:   # the issuer this run writes is Entra's v2.0 issuer for the tenant; it is judged again once discovery reads
+            why = switch_refusal(r["oauth"], r["fed"], tenant, a.protocol, key, r["users"], client_id if key else None,
+                                 f"{AUTHORITY}/{tenant}/v2.0" if key else None)
         if why:
             return refuse(why)
-        if a.protocol == "saml" and not metadata:
+        if a.protocol == "saml" and not metadata and not groups_only:
             href = next((ln["href"] for ln in r["fed"].get("link") or [] if ln.get("type") == SAML_METADATA), None)
             if href:
                 _, xml, _ = vcfa.call("GET", "/" + href.split("://", 1)[-1].split("/", 1)[-1], accept=SAML_METADATA)
@@ -1857,14 +2038,32 @@ def configure_existing(a):
         if clashes:
             return refuse(f"{len(clashes)} named group(s) exist under another protocol or with other roles; change them by hand, "
                           "because an import of a name the organization holds answered 201 with the group it already had")
-        secret, keys, secret_changes = None, [], False
-        if a.protocol == "oidc":
+        secret, keys, secret_changes, kept, changes = None, [], False, "", []
+        if groups_only:   # no settings are read for a write, planned or sent: only the named groups
+            current = r["oauth"] if a.protocol == "oidc" else r["fed"]
+            was_on = current.get("enabled") is True
+            log.step("plan", "read", protocol=a.protocol.upper(), org_type=org_type, groups_only=True,
+                     settings_to_change=[], groups_to_import=[roles[k] for k, _n in imports],
+                     groups_already_held=len(held_ok))
+            print(f"  --groups-only: no settings are written, and the federation stays switched {'on' if was_on else 'off'}")
+            if imports:
+                print("  each group is imported by the name the tenant's administrator gave; VCF Automation does not "
+                      "check it against Entra, so confirm it is assigned to the app, and run the watch after")
+        elif a.protocol == "oidc":
             current, held_secret = vcfa.settings_for_write(r["uid"], "oauth")
             same_app = current.get("clientId") == client_id
             secret = new_secret or (held_secret if same_app else None)
             secret_changes = bool(secret) and secret != held_secret
             del held_secret
             disc, keys = _discovery(tenant)
+            why = switch_refusal(current, r["fed"], tenant, "oidc", key, r["users"], client_id, disc.get("issuer"))
+            if why:   # the same judgement on the settings read for the write and the issuer Entra names
+                del secret
+                return refuse(why)
+            if "clientId" in app_changes(current, client_id) and key in USER_KEYS:
+                held = sum(1 for u in r["users"] if u.get("providerType") == "OAUTH")
+                kept = (f"the app changes (clientId): the {held} OIDC user(s) it holds keep their accounts, because {key} "
+                        "does not change with the app within one tenant")
             body = oidc_settings(current, disc, keys, client_id, secret, key)
             planned = oidc_settings({}, disc, [], "{{client-id}}", "{{client-secret}}", key)
             kind, ctype = "oauth", OAUTH_SETTINGS
@@ -1873,68 +2072,75 @@ def configure_existing(a):
             body = saml_settings(current, metadata, "Sign in with Entra ID")
             planned = plan("saml", org_type, None)["settings"]["fields"]
             kind, ctype = "federation", FEDERATION_SETTINGS
-        # A federation switched off stays off unless --enable: the body carries `enabled` as stored, so a run that only
-        # imports a group (a rename's repair) writes no settings, and a settings write to it without --enable is refused.
-        was_on = current.get("enabled") is True
-        if not was_on and not a.enable:
-            body["enabled"] = planned["enabled"] = current.get("enabled")
-        changes = settings_changes(current, body) + (["clientSecret"] if secret_changes else [])
-        held_keys = {k.get("keyId") for k in ((current.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
-        if a.protocol == "oidc" and not {k["keyId"] for k in keys} <= held_keys:   # a key Entra publishes and it lacks
-            changes.append("oAuthKeyConfigurations")
-        if a.protocol == "saml" and current.get("samlMetadata") != metadata:
-            changes.append("samlMetadata")
-        shown = old_and_new(current, body, changes, keys)
-        log.step("plan", "read", protocol=a.protocol.upper(), org_type=org_type,
-                 user_key=key and (key + ("" if a.user_key else ", the key it holds" if held_key else ", the default")),
-                 settings_to_change=changes, old_and_new=shown, quiet=("old_and_new",),
-                 groups_to_import=[roles[k] for k, _n in imports], groups_already_held=len(held_ok))
-        for name, change in shown.items():   # the values a rollback writes back by hand
-            print(f"    {name}: {change}")
-        if imports:
-            print("  each group is imported by the name the tenant's administrator gave; VCF Automation does not check it "
-                  "against Entra, so confirm it is assigned to the app, and run the watch after")
-        if changes and not was_on and not a.enable:
-            return refuse(f"the organization's {a.protocol.upper()} federation is switched off (enabled: "
-                          f"{_shown('enabled', current.get('enabled'))}), and this run would write its settings "
-                          f"({', '.join(changes)}): add --enable to write them and switch it on (enabled: off -> on). "
-                          "Without --enable, --configure writes no settings to a switched-off federation, so an import "
-                          "alone leaves it off")
-        if changes and a.protocol == "oidc" and not secret:
-            return refuse("APP_SECRET_FILE is needed: the organization holds no secret for this app")
-        if secret_changes:   # proven at Entra before it is written anywhere
-            why = secret_refusal(tenant, client_id, secret)
-            if why:
-                return refuse(f"the secret in APP_SECRET_FILE was not written: {why}. Nothing was sent to VCF Automation")
-            log.step("the secret in APP_SECRET_FILE, accepted by Entra for APP_CLIENT_ID", "done")
+        if not groups_only:
+            # A federation switched off stays off unless --enable: the body carries `enabled` as stored, so a run that only
+            # imports a group (a rename's repair) writes no settings, and a settings write to it without --enable is refused.
+            was_on = current.get("enabled") is True
+            if not was_on and not a.enable:
+                body["enabled"] = planned["enabled"] = current.get("enabled")
+            changes = settings_changes(current, body) + (["clientSecret"] if secret_changes else [])
+            held_keys = {k.get("keyId") for k in ((current.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
+            if a.protocol == "oidc" and not {k["keyId"] for k in keys} <= held_keys:   # a key Entra publishes and it lacks
+                changes.append("oAuthKeyConfigurations")
+            if a.protocol == "saml" and current.get("samlMetadata") != metadata:
+                changes.append("samlMetadata")
+            shown = old_and_new(current, body, changes, keys)
+            log.step("plan", "read", protocol=a.protocol.upper(), org_type=org_type,
+                     user_key=key and (key + ("" if a.user_key else ", the key it holds" if held_key else ", the default")),
+                     settings_to_change=changes, old_and_new=shown, quiet=("old_and_new", "accounts_kept"),
+                     groups_to_import=[roles[k] for k, _n in imports], groups_already_held=len(held_ok),
+                     **({"accounts_kept": kept} if kept else {}))
+            for name, change in shown.items():   # the values a rollback writes back by hand
+                print(f"    {name}: {change}")
+            if kept:
+                print(f"  {kept}")
+            if imports:
+                print("  each group is imported by the name the tenant's administrator gave; VCF Automation does not check it "
+                      "against Entra, so confirm it is assigned to the app, and run the watch after")
+            if changes and not was_on and not a.enable:
+                return refuse(f"the organization's {a.protocol.upper()} federation is switched off (enabled: "
+                              f"{_shown('enabled', current.get('enabled'))}), and this run would write its settings "
+                              f"({', '.join(changes)}): add --enable to write them and switch it on (enabled: off -> on), or "
+                              "give --groups-only with each --group ROLE=NAME to import the groups alone and write no "
+                              "settings. Without either, --configure writes no settings to a switched-off federation")
+            if changes and a.protocol == "oidc" and not secret:
+                return refuse("APP_SECRET_FILE is needed: the organization holds no secret for this app")
+            if secret_changes:   # proven at Entra before it is written anywhere
+                why = secret_refusal(tenant, client_id, secret)
+                if why:
+                    return refuse(f"the secret in APP_SECRET_FILE was not written: {why}. Nothing was sent to VCF Automation")
+                log.step("the secret in APP_SECRET_FILE, accepted by Entra for APP_CLIENT_ID", "done")
         if not a.execute:
-            del body, secret
+            if not groups_only:
+                del body
+            del secret
             print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
             log.write(protocol=a.protocol, org_type=org_type, held=None)
             return 0
-        if changes:
-            put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{r['uid']}/settings/{kind}", f"write {a.protocol.upper()} settings",
-                                   body=body, accept=VCD_JSON, ctype=ctype)
-            wrote = True
-            log.step("settings written as a round trip", put_st, changed=changes)
-        else:
-            log.step("settings already as planned" if was_on or a.enable else
-                     "settings left as stored: nothing to change, and the federation stays switched off", "nothing written")
-        del body
         checks = {}
-        if a.protocol == "oidc":
-            back, back_secret = vcfa.settings_for_write(r["uid"], "oauth")
-            checks["the organization holds the app's client id"] = back.get("clientId") == client_id
+        if not groups_only:
             if changes:
-                checks["the organization holds the secret it was given"] = back_secret == secret
-            stored = {k.get("keyId") for k in ((back.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
-            checks["the organization holds every signing key Entra publishes"] = {k["keyId"] for k in keys} <= stored
-            del back_secret, secret
-        else:
-            back = vcfa.settings(r["uid"], "federation")
-            checks["the organization holds the metadata's certificates"] = set(metadata_certs(metadata)) <= set(metadata_certs(back.get("samlMetadata")))
-        failed, _differing = against_plan(back, planned, a.protocol)
-        checks["every setting the sign-in depends on reads back as planned"] = not failed
+                put_st, _, _ = vcfa.ok("PUT", f"/api/admin/org/{r['uid']}/settings/{kind}", f"write {a.protocol.upper()} settings",
+                                       body=body, accept=VCD_JSON, ctype=ctype)
+                wrote = True
+                log.step("settings written as a round trip", put_st, changed=changes)
+            else:
+                log.step("settings already as planned" if was_on or a.enable else
+                         "settings left as stored: nothing to change, and the federation stays switched off", "nothing written")
+            del body
+            if a.protocol == "oidc":
+                back, back_secret = vcfa.settings_for_write(r["uid"], "oauth")
+                checks["the organization holds the app's client id"] = back.get("clientId") == client_id
+                if changes:
+                    checks["the organization holds the secret it was given"] = back_secret == secret
+                stored = {k.get("keyId") for k in ((back.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
+                checks["the organization holds every signing key Entra publishes"] = {k["keyId"] for k in keys} <= stored
+                del back_secret, secret
+            else:
+                back = vcfa.settings(r["uid"], "federation")
+                checks["the organization holds the metadata's certificates"] = set(metadata_certs(metadata)) <= set(metadata_certs(back.get("samlMetadata")))
+            failed, _differing = against_plan(back, planned, a.protocol)
+            checks["every setting the sign-in depends on reads back as planned"] = not failed
         for k, name in imports:
             role_ref = vcfa.role(r["urn"], roles[k])   # resolved by name from this organization's own role list
             if role_ref is None:
@@ -1985,12 +2191,14 @@ def credential_problem(entra):
 
 def main(argv=None):
     """The run, with two guards around it: a Python older than 3.9 is refused (exit 5) before anything is sent, and an
-    error the script did not expect exits 3, a result not known, never 1, the code for a call or a check that failed."""
+    error the script did not expect exits 3, a result not known, never 1, the code for a call or a check that failed.
+    A record the scrub refused never hides the run's code: 1, 2 and 3 stand, and a 0 becomes 3 (G-456)."""
     if sys.version_info < (3, 9):  # noqa: UP036  the script is run by readers on their own Python
         print("org_federation.py needs Python 3.9 or later", file=sys.stderr)
         return EXIT_USAGE
+    RECORD["refused"] = False
     try:
-        return _run(argv)
+        code = _run(argv)
     except UsageError as e:
         print(f"not run: {e} (see the header); exit 5", file=sys.stderr)
         return EXIT_USAGE
@@ -1999,21 +2207,27 @@ def main(argv=None):
         return EXIT_UNREAD
     except ReadError as e:   # raised outside a mode's own handling: the organization's lookup, its first read
         print(f"a read failed: {e}; nothing is known of what it did not read (exit 3)", file=sys.stderr)
-        return EXIT_UNREAD
+        code = EXIT_UNREAD
     except CallError as e:   # raised outside a mode's own handling: the provider credential's exchange
         print(f"a credential was refused before anything was read: {e}; exit 3", file=sys.stderr)
-        return EXIT_UNREAD
+        code = EXIT_UNREAD
     except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
         print(f"the run stopped on an error it did not expect: {type(e).__name__}; what it had not done is not known "
               "(exit 3)", file=sys.stderr)
+        code = EXIT_UNREAD
+    if RECORD["refused"] and code == EXIT_DONE:
+        print("the run would have exited 0, and its record was not written: exit 3", file=sys.stderr)
         return EXIT_UNREAD
+    return code
 
 
-def _run(argv=None):
+def build_parser():
+    """The flags every mode takes. A refusal names only flags this parser accepts, and the companion's tests parse each
+    command a refusal suggests."""
     p = _Parser(prog="org_federation.py", description=__doc__.split("\n\n")[0])
     p.add_argument("--protocol", choices=("oidc", "saml"))
     p.add_argument("--org-type", choices=("classic", "all-apps"))
-    p.add_argument("--user-key", choices=("oid", "preferred_username"))
+    p.add_argument("--user-key", choices=USER_KEYS)
     p.add_argument("--execute", action="store_true")
     p.add_argument("--prove", action="store_true")
     p.add_argument("--teardown", action="store_true")
@@ -2027,34 +2241,70 @@ def _run(argv=None):
     p.add_argument("--metadata", action="store_true")
     p.add_argument("--enable", action="store_true",
                    help="with --configure: write the settings of a federation that is switched off, and switch it on")
+    p.add_argument("--groups-only", action="store_true",
+                   help="with --configure: import each --group and never write the settings, switched on or off")
+    return p
+
+
+def parse_args(argv=None):
+    """The run's flags, checked as a whole before anything is read: a combination no mode takes is a usage error
+    (UsageError, exit 5). The environment is checked by each mode."""
+    p = build_parser()
     a = p.parse_args(argv)
     if a.enable and not a.configure:
         p.error("--enable goes with --configure")
+    if a.groups_only:
+        if not a.configure:
+            p.error("--groups-only goes with --configure")
+        if a.enable or a.user_key:
+            p.error("--groups-only writes no settings, so it takes neither --enable nor --user-key")
+        if not a.group:
+            p.error("--groups-only needs at least one --group ROLE=NAME")
     if a.org or a.configure:
         if a.update or a.teardown or (a.prove and a.configure) or not (a.prove or a.configure):
             p.error("--org goes with --prove or --configure, and --configure with --org")
         if not a.org:
             p.error("--configure needs --org NAME")
-        if credential_problem(entra=False):
-            raise UsageError(f"--org needs {credential_problem(entra=False)}")
-        return prove_existing(a) if a.prove else configure_existing(a)
+        return a
     if a.group:
         p.error("--group goes with --org")
-    a.user_key = a.user_key or "oid"
     if a.update:
         if a.prove or a.teardown:
             p.error("--update does not combine with --prove or --teardown")
-        if credential_problem(entra=False):
-            raise UsageError(f"--update needs {credential_problem(entra=False)}")
-        return update(a)
+        return a
     if a.key_refresh is not None or a.keys or a.secret or a.metadata:
         p.error("--key-refresh, --keys, --secret and --metadata go with --update")
     if not (a.protocol and a.org_type):
         p.error("--protocol and --org-type are required")
-    if a.teardown and not a.execute:
+    return a
+
+
+def _run(argv=None):
+    a = parse_args(argv)
+    if a.org:
+        if credential_problem(entra=False):
+            raise UsageError(f"--org needs {credential_problem(entra=False)}")
+        return prove_existing(a) if a.prove else configure_existing(a)
+    a.user_key = a.user_key or "oid"
+    if a.update:
+        if credential_problem(entra=False):
+            raise UsageError(f"--update needs {credential_problem(entra=False)}")
+        return update(a)
+    if a.teardown and not a.execute:   # the plan reads the state file, as --execute would, and nothing remote
         state = os.environ.get("STATE", f"org_federation.{os.environ.get('ORG', '<org>')}.state.json")
-        print(f"teardown plan: delete the organization, the Entra app and the group recorded as created in {state},")
-        print("purge the app, its service principal and the group from Entra's recycle bin, then read each back. Add --execute.")
+        if not os.path.exists(state):
+            print(f"refused: no state file at {state}, so nothing here was created by this script; --teardown --execute "
+                  "refuses the same")
+            return EXIT_REFUSED
+        try:
+            with open(state, encoding="utf-8") as f:
+                held = json.load(f)
+        except (OSError, ValueError):
+            raise UsageError("STATE names a file that cannot be read as a state file") from None
+        made = [what for key, what in (("org_created", "the organization"), ("app_created", "the Entra app"),
+                                       ("sp_id", "its service principal"), ("group_created", "the group")) if held.get(key)]
+        print(f"teardown plan: delete what {state} records as created ({', '.join(made) or 'nothing'}), purge the Entra "
+              "objects from the recycle bin, then read each back. Add --execute.")
         return 0
     if not (a.execute or a.prove):
         print(json.dumps(plan(a.protocol, a.org_type, a.user_key), indent=1))
@@ -2068,7 +2318,7 @@ def _run(argv=None):
         raise UsageError(f"SECRET_DAYS must be a whole number of days under a year, not {days!r}")
     run = Run(a)
     vcfa, g = Vcfa(run.host), Graph(run.tenant, run.client)
-    unread = False
+    unread = refused = False
     try:
         if a.teardown:
             ok = run.teardown(vcfa, g)
@@ -2077,6 +2327,11 @@ def _run(argv=None):
         else:
             run.build(vcfa, g)
             ok = True
+        unread = ok is None   # a residue check that could not read whether an object is gone
+    except RefusedError as e:   # refused by what it read, before anything was sent
+        print(f"refused: {e}")
+        run.step("refused", str(e))
+        ok, refused = False, True
     except ReadError as e:   # a refused read or a list not read whole, in any mode: a result not known, exit 3
         run.step("read failed", str(e))
         ok, unread = False, True
@@ -2085,6 +2340,8 @@ def _run(argv=None):
         ok = False
         unread = bool(a.prove and not a.teardown)   # --prove only reads: a refused read is a result not known, exit 3
     run.write()
+    if refused:
+        return EXIT_REFUSED
     if unread:
         print("not known: a read was refused or not read whole; nothing is known of what it did not read (exit 3)")
         return EXIT_UNREAD

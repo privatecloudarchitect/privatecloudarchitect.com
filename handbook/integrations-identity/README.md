@@ -180,8 +180,8 @@ off any shared disk, the same file on every read): each vCenter and each directo
 keyed fingerprint, the same in every record made under that key. Then compare:
 
 ```bash
-python3 -c "import secrets; print(secrets.token_hex(32))" > fingerprint.key && chmod 600 fingerprint.key   # once
-export FINGERPRINT_KEY_FILE=$PWD/fingerprint.key
+( umask 077; mkdir -p ~/.vcf && python3 -c "import secrets; print(secrets.token_hex(32))" > ~/.vcf/fingerprint.key )   # once: mode 0600, outside this clone
+export FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key
 OUT=sessions-$(date -u +%FT%H%M).json python3 vcenter_exchange.py --sessions --redact    # on a schedule; in a crontab line, write each % as \%
 python3 vcenter_exchange.py --compare sessions-*.json --ack acks.json \
     --cover-hours 24 --span-days 7 --max-gap-minutes 30
@@ -316,7 +316,8 @@ the fleet answered with 50. The token list holds every token in the realm, peopl
 by page until its items, counted once each by id, reach the total the answer states (`pageInfo.totalCount`): on
 2026-10-15 a page of one at a time read the same clients and tokens as one page. A page refused, an answer without its
 list or its total, a total that changes between pages, a page that adds nothing new (a fleet that answered every page
-with the same first 50 of 120 would read 50), or pages that end before the total, is a read that failed (exit 3), and
+with the same first 50 of 120 would read 50), or pages that end before the total (a page shorter than the
+`pageInfo.pageSize` the answer states it served, not the size asked), is a read that failed (exit 3), and
 nothing is created or deleted on it; a person's token (`tokenType` `USER`) is never counted as the client's, whatever
 its principal name reads.
 
@@ -330,15 +331,17 @@ when the fleet holds more than one.
 realm it was made in, and the ids of the tokens this script issued; no secret). `--rotate`, `--retire-old` and
 `--teardown` act only on a client that file records with the same uuid, in the realm it records, so a mistyped id, a
 client someone made under that id in the console, or a run that reads another realm (where a teardown would find
-nothing and report the client gone), is refused before anything is sent. Run them from the folder the create ran in, or set `STATE`. A client made in the console is
-rotated and removed in the console.
+nothing and report the client gone), is refused before anything is sent. A state file written before the realm was
+recorded, or none, cannot say which realm the client is in: on a fleet of more than one realm, a teardown that then finds
+no client in the realm it reads exits 3 (`NOT READ`), never "nothing to remove". Run them from the folder the create ran
+in, or set `STATE`. A client made in the console is rotated and removed in the console.
 
 | Exit | Means |
 |---|---|
-| 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved and active beside the old ones and, when given, the old token still trading; for a retirement, one token left and, when given, the old token refused; for a teardown, no client and no token left |
+| 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved and active beside the old ones and, when given, the old token still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a teardown, no client and no token left, in the fleet's only realm or the realm the state file records |
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
 | 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; a run signed in as the client it would change, or on a bearer it cannot read, for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; a state file that records the client in another realm than the run reads; or a fleet with no realm to make a client in |
-| 3 | a read failed or is undetermined: a list or the realm list not read whole (a page refused, an answer without its list or its total, a total that changed between pages, a page that added nothing new, or pages that end before the total they state), the read-back not read, a token issued whose id the list read after it could not name, your token not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
+| 3 | a read failed or is undetermined: a list or the realm list not read whole (a page refused, an answer without its list or its total, a total that changed between pages, a page that added nothing new, or pages that end before the total they state), the read-back not read, a token issued whose id the list read after it could not name, a create answered without the client's uuid (no role bound, nothing more sent), a teardown on a fleet of more than one realm that found no client where no state file records its realm, your token not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
 | 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists, a fleet of more than one realm with no `--realm`, a `--realm` that names none of its realms or more than one), or a Python older than 3.10; nothing is written |
 
 ### What it sends, and in what order
@@ -375,7 +378,9 @@ after, when it must be refused. It refuses a client holding one token, and a cli
 this script issued last, since that may not be the token the integration holds.
 
 A teardown queries the client's tokens and deletes each, deletes the client, then reads both lists again and records
-the residue. A teardown of a client that is not there removes nothing and exits 0, so it is safe to re-run. Run it on
+the residue. A teardown of a client that is not there removes nothing and exits 0, so it is safe to re-run, in the
+fleet's only realm or in the realm the state file records; on a fleet of more than one realm with no state file
+recording the client's realm, it exits 3, since the client may be in a realm the run did not read. Run it on
 the token of the administrator who made the client: signed in as the client itself, nothing would outlive the removal
 to read the residue, and the script refuses.
 
@@ -387,7 +392,7 @@ id; the script refuses an id.
 
 ```bash
 export VCFA_HOST=<vcf-automation-fqdn>
-export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer   # mode 0600; a provider bearer: platform-identity's plate 04,
+export VCFA_PROVIDER_BEARER_FILE=~/.vcf/provider-bearer     # mode 0600, outside this clone; platform-identity's plate 04,
                                                             # "Your provider bearer", the credential the reference runs used
 export TLS_VERIFY=false                                     # only on a self-signed lab CA
 
@@ -402,7 +407,7 @@ python3 service_account.py --org tenant-a --name backup-01 --teardown --token-fi
 | `--org ORG` | the organization's name (required) |
 | `--name NAME` | the service account's name; one per integration (required) |
 | `--role "ROLE NAME"` | the one role it holds, by name: the member role is `Organization User` in an All Apps organization and `Organization Member` in a classic one, so read the organization's type first (the Organizations line of the identity-model companion's `census.py --orgs-only` prints `all-apps` or `classic` for each) (required to create) |
-| `--token-file PATH` | where the refresh token is written, mode 0600; the file must not exist (required with `--execute` to create). With `--teardown`, the token to refresh once after the revoke, to show it is refused |
+| `--token-file PATH` | where the refresh token is written, mode 0600; the file must not exist (required with `--execute` to create). With `--teardown`, the token to refresh once after the revoke, to show it is refused; it must exist (exit 5 before anything is sent), and without it the token is not tried, which the report prints |
 | `--teardown` | revoke the account's token and delete the account instead |
 | `--execute` | send the calls; without it the plan is printed |
 | `--redact` | print with placeholders instead of your host, organization and account name |
@@ -423,14 +428,15 @@ id; no secret), and the teardown revokes and deletes only an account that file r
 
 | Exit | Means |
 |---|---|
-| 0 | the plan printed; or the run held on read-back: the account active, its bearer's session holding exactly the role, the stored token refreshing; or, for a teardown, no account left and the revoked token refused |
-| 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
+| 0 | the plan printed; or the run held on read-back: the account active, its bearer's session holding exactly the role, the stored token refreshing; or, for a teardown, every revoke answered, the organization's list read whole with no account of that name left and, with `--token-file`, the revoked token refused (an account of that name in another organization is not read: the organization is the one you name) |
+| 1 | the run did not hold: a write was refused (a teardown's revoke among them), or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
 | 2 | refused by this script before any write: an account that already exists (refused, never adopted), for a teardown an account the state file does not record, or no organization by that name |
 | 3 | a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer without its list or its `resultTotal`, a total that changed between pages, a page that added nothing new, or pages that end before the total), the read-back not read, the residue not read back, the provider's credential not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
-| 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists), or a Python older than 3.10; nothing is written |
+| 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists for a create, or does not for a teardown), or a Python older than 3.10; nothing is written |
 
-**Every list read whole.** The organization list and the account list are read page by page, 128 to a page, until
-their items, counted once each by id, reach the total the answer states (`resultTotal`). A list not read whole is exit
+**Every list read whole.** The organization list and the account list are read page by page, 128 asked to a page,
+until their items, counted once each by id, reach the total the answer states (`resultTotal`); a page is short only
+against the `pageSize` the answer states it served. A list not read whole is exit
 3: a create registers nothing on it, and a teardown revokes and deletes nothing, so an account on a page that was never
 read is not left behind under an exit 0.
 
@@ -452,9 +458,10 @@ read is not left behind under an exit 0.
 
 A teardown first reads the account list whole and refuses an account the state file does not record. It then revokes
 the account's token
-(`POST /cloudapi/1.0.0/serviceAccounts/{id}/revoke`), deletes the account, reads the list until it is empty, and with
-`--token-file` refreshes once with the revoked token to show it is refused. A teardown of an account that is not there
-removes nothing and exits 0, so it is safe to re-run.
+(`POST /cloudapi/1.0.0/serviceAccounts/{id}/revoke`; a revoke that does not answer 200, 202 or 204 is a teardown that
+did not hold, exit 1), deletes the account, reads the list until it is empty, and with `--token-file` refreshes once
+with the revoked token to show it is refused. A teardown of an account that is not there removes nothing and exits 0,
+so it is safe to re-run; it reads the organization you name, and no other.
 
 ## What `vcenter_exchange.py` does, and in what order
 

@@ -47,9 +47,9 @@ A provider bearer lasts an hour, so mint it just before each run, as the platfor
 |---|---|
 | 0 | done: the plan printed, or every step and check passed |
 | 1 | a check failed, or a write was refused while building, configuring, updating or tearing down; the record names which |
-| 2 | refused by what it read, with nothing sent: a name this script did not create, no state file to tear down, no such organization, an organization not federated to `ENTRA_TENANT_ID`, a change its protocol does not take, a switch of protocol, OIDC user key or SAML user-name claim (judged on what the organization stores and the users it holds, enabled or not), a settings write to a switched-off federation without `--enable`, a client secret Entra refused, a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
-| 3 | a result not known: a credential refused before anything was read, a read refused or a list not read to its end in any mode (`--prove` and `--prove --org` only read), Entra out of reach when asked about a new secret, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a record the scrub refused to write, or an error the script did not expect (never 1) |
-| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`), a missing environment variable or credential, a file that cannot be read, metadata that is not the tenant's or names no signing certificate, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
+| 2 | refused by what it read, with nothing sent: a name this script did not create, no state file to tear down, no such organization, an organization with no federation to `ENTRA_TENANT_ID` switched on (for `--update`, which says what the organization holds), a change its protocol does not take, a switch of protocol, OIDC user key or SAML user-name claim (judged on what the organization stores and the users it holds, enabled or not, and on a re-run of `--execute` over its own organization), a change of the app or the issuer under OIDC users keyed on a claim other than `oid` or `preferred_username`, a settings write to a switched-off federation without `--enable`, a group-only import to an organization that stores no settings for the tenant over that protocol, a client secret Entra refused, a role its type lacks, a named group held another way, or SAML with no metadata yet (it prints what the tenant needs) |
+| 3 | a result not known: a credential refused before anything was read, a read refused or a list not read to its end in any mode (`--prove` and `--prove --org` only read), Entra out of reach when asked about a new secret, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a teardown that could not read whether an object it made is gone (an answer other than 200 or 404), a record the scrub refused to write on a run that would have exited 0, or an error the script did not expect (never 1). A record the scrub refuses never hides a 1, a 2 or a 3: the run's own code stands |
+| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`, `--groups-only` without `--group` or with `--enable` or `--user-key`), a missing environment variable or credential, a file that cannot be read, metadata that is not the tenant's or names no signing certificate, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
 assignments and permission grants, and groups, and sets a service principal's claims policy. On the reference
@@ -94,10 +94,21 @@ each changing field as `old -> new`, the values a rollback writes back by hand (
   its user name, taken from the claim the organization's mapping names: a console-built organization that maps
   another claim and holds SAML users is refused, since the write would refuse each user whose two values differ; with
   no SAML user yet, the claim is written and the plan shows the old one;
+- a change of the app (its client id) or of the issuer under the OIDC users it holds, enabled or not, unless they are
+  keyed on `oid` or `preferred_username`. Entra sends a person the same `oid` in every app of one tenant, and makes
+  `sub` pairwise to each app, so under `sub` every returning user would get a new account and the old account would
+  keep its direct roles; a key other than those two is refused the same way, since whether it moves with the app is
+  not known. Under `oid` or `preferred_username` the plan says the users keep their accounts. An issuer the users'
+  tenant cannot be read from is refused whatever the key, since `oid` and `sub` both change across tenants. A
+  refusal names only flags the script takes: an organization keyed on `sub` is kept on it by running without
+  `--user-key`;
 - a settings write to a federation that is switched off, unless `--enable` is given, which the plan shows as
-  `enabled: off -> on`. Without `--enable` a run writes no settings to it, so importing a group alone (the repair of a
-  renamed group) leaves the federation off. An organization that was never federated is switched off too, so its
-  first configuration takes `--enable`;
+  `enabled: off -> on`. Without `--enable` a run whose settings already read as planned imports the named groups and
+  writes no settings, and one whose settings would change is refused. `--groups-only` imports each `--group` and
+  never writes the settings, whatever they hold, on a federation switched on or off (the repair of a renamed group on
+  a federation switched off during an incident); it needs no `APP_CLIENT_ID`, secret or metadata, and refuses an
+  organization that stores no settings for the tenant over that protocol. An organization that was never federated
+  is switched off too, so its first configuration takes `--enable`;
 - a new client secret Entra does not accept: before anything is written, the plan asks Entra's token endpoint for a
   token with it, and a refusal is named (a Secret ID pasted where the Value belongs is named as such);
 - an organization signed in through VCF single sign-on, settings stored for a provider other than `ENTRA_TENANT_ID`, a
@@ -105,8 +116,9 @@ each changing field as `old -> new`, the values a rollback writes back by hand (
   already holds under the other protocol or with other roles.
 
 A missing `APP_CLIENT_ID` over OIDC, or metadata that is not the tenant's, is a usage error (exit 5) and sends
-nothing. Every list it reads (users, groups, roles) is read until its distinct items reach the total the platform
-states; a list read short is exit 3, never a short list. Over SAML without
+nothing. Every list it reads (organizations, users, groups, roles) is read until its distinct items reach the total
+the platform states, and every Graph list to its last next link; a list read short, a page that adds no item not
+already read, or a next link that comes back, is exit 3, never a short list, and the read stops there. Over SAML without
 `METADATA_FILE` it prints the organization's own service-provider identifier and reply URL for the tenant's
 administrator, and stops. `--prove --org` reads the settings back against the plan for the protocol, type and user key
 the organization holds, every imported group's roles against the organization's own role list, each named group's
@@ -154,8 +166,11 @@ NEW_SECRET_FILE=<file> python3 org_federation.py --update --secret --execute    
 METADATA_FILE=<file> python3 org_federation.py --update --metadata --execute      # SAML: metadata naming both certificates
 ```
 
-It refuses (exit 2) an organization not federated to `ENTRA_TENANT_ID` (an organization signed in through VCF single
-sign-on included) and a change the organization's protocol does not take (`--metadata` on OIDC, the others on SAML).
+It refuses (exit 2) an organization with no federation to `ENTRA_TENANT_ID` switched on, and says what the
+organization holds: a federation to the tenant switched off (then it names the `--configure --org NAME --enable` and
+`--configure --org NAME --groups-only` commands that change one), settings for another provider, VCF single sign-on,
+or nothing stored. It refuses a change the organization's protocol does not take (`--metadata` on OIDC, the others on
+SAML).
 A `--secret` or `--metadata` without its file, and metadata that is not this tenant's or names no signing
 certificate, are usage errors (exit 5): nothing is sent.
 A settings write carries the client secret, because VCF Automation refuses an OIDC settings write without it: the one
@@ -198,14 +213,18 @@ tests hold and no live run has shown yet. The writer was not run against an orga
 
 - `--execute` and `--teardown` create and delete only what they record in the state file
   (`org_federation.<ORG>.state.json`, object ids, no secrets): an existing organization, app or group of the same
-  name is refused, never adopted. `--configure --org` and `--prove --org` read no state file and delete nothing. Keep the state
+  name is refused, never adopted. `--teardown` without `--execute` reads the state file and lists what it records;
+  with no state file it refuses (exit 2), as `--teardown --execute` does. `--configure --org` and `--prove --org` read no state file and delete nothing. Keep the state
   file beside the record and do not publish it.
 - `--prove` checks configuration on both sides. It does not sign anyone in: a federated sign-in is a browser
   protocol, so the proof that matters (an entitled user holds its group's role, a user in no assigned group is
   refused at Entra with `AADSTS50105`, several sign-ins minutes apart) is yours to make in a browser.
 - Teardown deletes the organization (disabled first, by a round trip of its full record), the Entra app and the
   group, by object id; deleting the app soft-deletes its service principal, so it purges all three from Entra's
-  recycle bin, and reads each back until nothing is left or three minutes pass.
+  recycle bin, and reads each back until nothing is left or three minutes pass. A read that answers neither 200 nor
+  404 says nothing of whether the object is gone, so the residue check reads `NOT KNOWN` and the run exits 3. A
+  re-run of `--execute` over its own organization reads its stored settings and users first, and refuses a protocol
+  or key switch under them.
 - Entra and VCF Automation only. Other providers federate the same way on the VCF Automation side; the Entra side
   is this script's.
 - The SAML email claim is set through Microsoft Graph's beta claims-policy endpoint

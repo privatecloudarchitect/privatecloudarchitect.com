@@ -168,15 +168,17 @@ Leavers · CLOSE-NOW PLAN, nothing sent · one named account, to be closed witho
   exit 0: plan only: nothing was sent and nothing was closed; to close, run it again with --user {{user-1}} (the object id, never the name) and --execute
 ```
 
-The same name given to `--execute` is refused, exit 5, before anything is sent, and the refusal names the object id
-to check against the leaver notice. The dates cannot tell this person from the one who left, so the close takes the
-object id the notice carries, never the name:
+The same name given to `--execute` is refused, exit 5, before it is resolved and before anything is sent, whatever
+Entra holds under it: under `oid`, `--execute` takes an object id or the account's id only. The dates cannot tell this
+person from the one who left, so the close takes the object id the notice carries, which the plan above printed for
+checking, never the name. The close reads the key the organization stores whether or not its federation is switched
+on, so the same refusal holds on one switched off:
 
 ```
 $ python3 leavers.py --redact --close-now --org <org> --user <principal name> --left-on 2026-09-01 --execute
   --user: refused (see the report below)
 Leavers · CLOSE-NOW · one named account, closed without asking Entra
-  refused: under oid, --execute closes by the object id only: {{user-1}} resolved to object id {{id-3}} and the dates above passed, but an existing person renamed onto this name passes every date check; check that object id against the leaver notice, then run again with --user {{id-3}} --execute
+  refused: the organization is keyed on oid, so --execute takes an object id or the account's id (urn:vcloud:user:...), never a name: {{user-1}} is refused before it is resolved and before anything is sent, whatever Entra holds under it. Run the plan without --execute, with --left-on (the departure date the leaver notice gives), to resolve the name and print its object id; check that object id against the leaver notice, then run again with --user <object id> --execute
   exit 5: not run as asked
 ```
 

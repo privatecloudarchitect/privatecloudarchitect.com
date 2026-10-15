@@ -61,15 +61,18 @@ Switched off. An organization with OIDC and SAML both switched off is not judged
 lists it, and reads its accounts and tokens for what federated sign-in left there. An enabled federated account
 comes back when the federation is switched on, and whether an API token of a federated account stops refreshing while
 the federation is off was not tested, so an organization holding either is unreadable (exit 3): this report cannot
-judge what it skipped. Close those accounts by name, or switch the federation back on.
+judge what it skipped. Close a leaver's account there with --close-now (below), which reads the key the organization
+stores whether or not it is switched on: under oid by the object id the leaver notice carries, never the name; or
+switch the federation back on so the report reads them.
 One that holds neither is listed and changes no exit.
 
 Fail closed. An organization whose gate cannot be read, or an account whose state cannot be read, is reported
 undetermined and never acted on. A list is read whole or not at all: a VCF Automation list is read page by page until
 its distinct items (by id) number the total the answer states (resultTotal), and an answer without its values or its
-total, a page that comes back empty or short before the total, or a total that changes between pages, is a list that
-did not read; a Microsoft Graph list follows @odata.nextLink to its end, and a 200 without its value list did not
-read. Entra's directory reads settle after a change, so every leaver still enabled or
+total, a page that comes back empty or short before the total, a page that adds no item not already read, or a total
+that changes between pages, is a list that did not read; a Microsoft Graph list follows @odata.nextLink to its end,
+and a 200 without its value list, or a next link that repeats one already followed, did not read. Entra's directory
+reads settle after a change, so every leaver still enabled or
 holding a token is read again CONFIRM_READS times, CONFIRM_PAUSE seconds apart (all of an organization's in the same
 rounds), in a report and with --execute alike: it counts as an open leaver (exit 1), or is closed, only when every
 read agrees, and a leaver whose reads disagree is undetermined (exit 3), its reason naming the reads, for the next
@@ -93,12 +96,20 @@ refused (exit 5) when the Entra user holding the name now was created on or afte
 selects was made on or after it, or when that user is newer than the account; when a date the guard needs did not
 read, or did not parse, the run is unread (exit 3). The dates catch a name given to someone new after the departure;
 they do not catch an existing person renamed onto the name, whose user and account both predate it. So --close-now
---execute under oid closes by the object id only: given a principal name it is refused (exit 5, nothing sent), and it
-prints the object id the name resolved to, for the operator to check against the leaver notice and re-run with. The
-account's date is its import (first sign-in) or create event in the audit trail, the account record carrying none; an
-account older than the trail's reach is bounded by the trail's oldest event. Keyed on a name (preferred_username,
-SAML), the name is the account's key: the account it selects is the one every holder of the name signs in to, so no
-guard can choose between people and none runs. --close-now refuses,
+--execute under oid takes an object id or the account's id only: given anything else it is refused before any name is
+resolved and before anything is sent (exit 5), whatever Graph would answer, and the plan, run without --execute, is
+where a name is resolved and the object id printed, for the operator to check against the leaver notice and close by.
+The key is the one the organization's settings store, read whether its OIDC is switched on or off, so an
+organization switched off is never taken as keyed on a name. Under oid, a name Graph knows no user by, which an account still
+carries, selects an account named before the organization was keyed on oid, not the one the person signs in to: the
+plan refuses it (exit 5), naming that account's id and pointing to the object id the notice carries. The account's
+date is its import (first sign-in) or create event in the audit trail, the account record carrying none; an account
+older than the trail's reach is bounded by the trail's oldest event. Keyed on a name (OIDC on preferred_username,
+SAML on Entra's name claim, each read from the organization's stored settings for the protocol of the account the name
+selects), the name is the account's key: the account it selects is the one every holder of the name signs in to, so
+no guard can choose between people and none runs. Under any other stored key (sub, an object-id claim, none stored)
+the script does not take a principal name as the account's key, so a name that selects an account of that protocol
+is refused (exit 5, in the plan and with --execute, nothing sent) and the account's id closes it. --close-now refuses,
 at the plan and before any write, an account that is not federated (LOCAL, or anything but OAUTH or SAML): on a local
 account the disable was refused (400) after its tokens had been revoked.
 
@@ -181,7 +192,7 @@ Use:  python3 leavers.py                                   report every federate
                                                            without --execute. Needs no Graph credential, except for the
                                                            plan to resolve a principal name in an organization keyed on
                      [--left-on YYYY-MM-DD]                oid, which needs the departure date the leaver notice gives;
-                                                           under oid --execute takes the object id only
+                                                           under oid --execute takes the object id or the account id
       ACCOUNT is the account's user name (a principal name, or under oid the object id), a principal name under oid
       (resolved through Graph to the object id; for --close-now, in the plan only), or the account's id
       (urn:vcloud:user:...).
@@ -202,10 +213,13 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         says it sent nothing and closed nothing)
       5 a usage error, a Python older than 3.10, an unreadable --ack file, a --user that names no account or more than
         one, an --expect-tenants list that leaves out this run's tenant or names no tenant, a bad WARN_DAYS or
-        --left-on, and with --close-now an account that is not federated, or under oid a principal name without
-        --left-on, one the name guard refuses, or one given to --execute (nothing is sent, nothing is written)
+        --left-on, and with --close-now an account that is not federated, under oid a --user given to --execute that
+        is not an object id or the account's id, a principal name without --left-on, one the name guard refuses, or
+        one no Entra user holds while an account carries it, and a name that selects an account whose protocol is
+        stored as keyed on anything but a name (nothing is sent, nothing is written)
       A record refused because an estate value survived the scrub is not written, and never hides a finding: the
-      run's code stands when it is 1, 2, 3 or 4, and a run that found nothing exits 3 (the record was not written).
+      run's code stands when it is 1, 2, 3 or 4, and a run whose code was 0 exits 3 (the record was not written); a
+      run that closed something prints what its writes did, in counts, and that the record was not written.
 The contract every identity companion keeps: 0 nothing for a person to act on, 3 a read failed or a result is
 undetermined (never a finding), 5 a usage error; 1, 2 and 4 are this script's own, above; an unexpected error is 3.
 """
@@ -274,6 +288,18 @@ PAGE_SIZE = 128     # items per page of a cloudapi list asked for; a list is rea
 MAX_PAGES = 10000   # a bound on one list read: a list that has not reached its stated total by then did not read
 SWITCHED_OFF = "federation switched off (OIDC and SAML both disabled)"
 PLAN_ONLY = "plan only: nothing was sent and nothing was closed"
+OID_EXECUTE = ("the organization is keyed on oid, so --execute takes an object id or the account's id "
+               "(urn:vcloud:user:...), never a name: {given} is refused before it is resolved and before anything is "
+               "sent, whatever Entra holds under it. Run the plan without --execute, with --left-on (the departure date "
+               "the leaver notice gives), to resolve the name and print its object id; check that object id against "
+               "the leaver notice, then run again with --user <object id> --execute")
+UNHELD_NAME = ("no Entra user holds {given} now (Graph answered 404), so it resolves to no object id; the account it "
+               "selects, {account}, is named by the name itself, made before the organization was keyed on oid, and is "
+               "not the account a person signs in to under oid. Close the person's own account by the object id the "
+               "leaver notice or the last report carries; close this one, if it is theirs too, by its id: --user {id}")
+NOT_NAME_KEYED = ("account {account} signs in over the organization's {protocol}, which it stores as keyed on {key}, "
+                  "not on a principal name, so the account a name selects may not be the one a person signs in to: "
+                  "check it against the leaver notice, then close it by its id: --user {id}")
 WARN_DAYS = 30     # the run's own provider API token flags (exit 4) inside this many days of its end; the watch's default
 # An account's creation, as the audit trail records it: a federated account is imported at its first sign-in, a local
 # one created. The account record itself carries no creation time (read 2026-10-15, X-212).
@@ -433,8 +459,9 @@ def leaver_guard(open_leavers: int, federated: int, max_leavers: int | None = No
         limit = f"more than {MAX_LEAVERS} and more than a quarter of the federated accounts"
     return {"open": open_leavers, "federated": federated, "limit": limit, "exceeded": exceeded,
             "why": (f"{open_leavers} open leavers of {federated} federated accounts is {limit}: closing none; read "
-                    "why so many read gone (a name claim from another attribute, a lookup refused), then close them "
-                    "by name or rerun with --max-leavers") if exceeded else ""}
+                    "why so many read gone (a name claim from another attribute, a lookup refused), then close each "
+                    "with --close-now (under oid by its object id, never the name) or rerun with --max-leavers")
+            if exceeded else ""}
 
 
 def load_acks(path: str) -> list[dict]:
@@ -568,8 +595,10 @@ class Vcfa(Reader):
         asked of each, and the list is read when its distinct items (by id) number the answer's resultTotal. None,
         never a shorter list, when a page is refused, an answer carries no `values` list or no resultTotal, the total
         changes between pages, a page comes back empty or short of the page size it states before the total is
-        reached, or the distinct items pass the total: a list read in part is not a list (G-431, B11-S3). An empty
-        list carries `values` and a resultTotal of 0. The call that ended a read in part is marked with why."""
+        reached, a page adds no item not already read (the list served again, or moved under the read: it is unread at
+        that page, never after MAX_PAGES more), or the distinct items pass the total: a list read in part is not a list
+        (G-431, B11-S3). An empty list carries `values` and a resultTotal of 0. The call that ended a read in part is
+        marked with why."""
         seen: dict[str, dict] = {}
         total, hdr = None, ({TENANT_HEADER: org_urn} if org_urn else {})
         for page in range(1, MAX_PAGES + 1):
@@ -577,7 +606,7 @@ class Vcfa(Reader):
                                         accept=TENANT_JSON if org_urn else CLOUDAPI, headers=hdr)
             why = list_shape(answer, "values", total)
             if why is None:
-                total, rows = answer["resultTotal"], answer["values"]
+                total, rows, before = answer["resultTotal"], answer["values"], len(seen)
                 for r in rows:
                     seen.setdefault(item_key(r), r)
                 if len(seen) == total:
@@ -588,6 +617,8 @@ class Vcfa(Reader):
                     why = f"{len(seen)} distinct items, more than the {total} the answer states"
                 elif len(rows) < size:
                     why = f"the pages ended at {len(seen)} of the {total} the answer states"
+                elif len(seen) == before:
+                    why = f"page {page} added nothing to the {len(seen)} of the {total} the answer states"
             if why is not None:
                 if self.calls and self.calls[-1].get("status") == 200:
                     self.calls[-1]["shape"] = why
@@ -637,19 +668,31 @@ class Graph(Reader):
 
     def values(self, path: str, **query: str) -> list | None:
         """Every item of a Graph list, following @odata.nextLink until an answer carries none; None, never a shorter
-        list, when a page was refused or a 200 came back without its `value` list (B11-S3): a list read in part is
-        not a list. The page that did not read is marked with why."""
+        list, when a page was refused, a 200 came back without its `value` list (B11-S3), a next link repeats one
+        already followed (the pages would go round for ever), or MAX_PAGES pass: a list read in part is not a list.
+        A page with no items and a next link is read on, since Graph's paging guidance says a page may hold none.
+        The page that did not read is marked with why."""
         qs = urllib.parse.urlencode({f"${k}": v for k, v in query.items()}, quote_via=urllib.parse.quote)
-        url, out = f"{GRAPH}{path}" + (f"?{qs}" if qs else ""), []
-        while url:
+        url, out, followed = f"{GRAPH}{path}" + (f"?{qs}" if qs else ""), [], set()
+        for _page in range(MAX_PAGES):
             _status, answer = self.call("GET", url)
             if not isinstance(answer, dict) or not isinstance(answer.get("value"), list):
                 if self.calls and self.calls[-1].get("status") == 200:
                     self.calls[-1]["shape"] = "no value list in the answer"
                 return None
             out += answer["value"]
+            followed.add(url)
             url = answer.get("@odata.nextLink")
-        return out
+            if not url:
+                return out
+            if not isinstance(url, str):
+                self.calls[-1]["shape"] = "a next page link that is not a link"
+                return None
+            if url in followed:
+                self.calls[-1]["shape"] = "the next page link repeats one already read"
+                return None
+        self.calls[-1]["shape"] = f"no end after {MAX_PAGES} pages"
+        return None
 
     def one(self, path: str, flt: str, select: str) -> dict | None:
         rows = self.values(path, filter=flt, select=select)
@@ -860,8 +903,9 @@ def read_switched_off(vcfa: Vcfa, off: list[dict]) -> tuple[list[dict], list[dic
         if n or m:
             unread.append({"org": o["org"], "reason": (
                 f"{SWITCHED_OFF}, and it still holds {n} enabled federated account(s) and {m} API token(s) of federated "
-                "accounts: this report does not judge them; close them by name, or switch federation back on so the "
-                "report reads them")})
+                "accounts: this report does not judge them; close a leaver's account with --close-now (it reads the "
+                "key the organization stores, so under oid by the object id, never the name), or switch federation "
+                "back on so the report reads them")})
     return rows, unread
 
 
@@ -1229,12 +1273,30 @@ def close(vcfa: Vcfa, urn: str, user: dict, tokens: list[dict]) -> dict:
 
 
 def org_key(vcfa: Vcfa, urn: str) -> tuple[bool, str | None]:
-    """An organization's OIDC user key, read from its own settings: (read, key). A SAML organization, or one with OIDC
-    off, has no OIDC key (None), which is never oid."""
+    """An organization's OIDC user key as its settings store it: (read, key), whatever `enabled` says. An organization
+    switched off that stores oid is treated as keyed on oid, never as keyed on a name (N2: read only while OIDC was on,
+    the key of one switched off was None, so a name was taken as the key and an account made before the key closed by
+    it). None when the settings store no key."""
     _s, oauth = vcfa.call("GET", f"/api/admin/org/{urn.rsplit(':', 1)[-1]}/settings/oauth", accept=VCD_JSON)
     if not isinstance(oauth, dict):
         return False, None
-    return True, ((oauth.get("oidcAttributeMapping") or {}).get("subjectAttributeName") if oauth.get("enabled") else None)
+    mapping = oauth.get("oidcAttributeMapping")
+    return True, (mapping.get("subjectAttributeName") if isinstance(mapping, dict) else None)
+
+
+def saml_key(vcfa: Vcfa, urn: str) -> tuple[bool, str | None]:
+    """An organization's SAML user-name key as it stores it (samlAttributeMapping's userNameAttributeName): (read, key),
+    whatever `enabled` says; None when it stores none."""
+    _s, fed = vcfa.call("GET", f"/api/admin/org/{urn.rsplit(':', 1)[-1]}/settings/federation", accept=VCD_JSON)
+    if not isinstance(fed, dict):
+        return False, None
+    mapping = fed.get("samlAttributeMapping")
+    return True, (mapping.get("userNameAttributeName") if isinstance(mapping, dict) else None)
+
+
+def exact(given: str) -> bool:
+    """Whether --user names an account exactly, with no name to resolve: an Entra object id, or the account's id."""
+    return bool(OBJECT_ID.match(given)) or given.lower().startswith("urn:vcloud:user:")
 
 
 def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph=None, announce=None,
@@ -1249,11 +1311,17 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
     leaver notice gives: refused (exit 5) when the Entra user holding the name now was created on or after that date,
     or the account it selects was made on or after it or before that user; unread (exit 3) when a date it needs did
     not read or did not parse. Those dates do not catch an existing person renamed onto the name (B11-S1), so under
-    oid a principal name is taken by the plan only: with `execute` it is refused (exit 5, nothing sent), naming the
-    object id it resolved to, which the operator checks against the leaver notice and closes by. Keyed on a name
-    (preferred_username, SAML) the name is the account's key, so the account it selects is the one every holder of the
-    name signs in to and no other person's account can be chosen: no guard runs and no Graph is read. `make_graph`
-    gives the Graph reader, made only when a principal name must be resolved under oid."""
+    oid a principal name is taken by the plan only: with `execute`, a --user that is not an object id or the account's
+    id is refused (exit 5) before it is resolved and before anything is sent, whatever Graph would answer (N2); the
+    plan resolves it and prints the object id, which the operator checks against the leaver notice and closes by. The
+    key is the one the organization stores, switched on or off (org_key). Under oid, a name Graph answers 404 for that
+    an account still carries selects an account named before the key was oid, not the one the person signs in to, so
+    the plan refuses it (exit 5), naming that account's id (N2 shape A). Keyed on a name (OIDC on preferred_username,
+    SAML on Entra's name claim, read for the protocol of the account the name selects) the name is the account's key,
+    so the account it selects is the one every holder of the name signs in to and no other person's account can be
+    chosen: no guard runs and no Graph is read. Under any other stored key a name is refused (exit 5), and the
+    account's id closes the account. `make_graph` gives the Graph reader, made only when a principal name must be
+    resolved under oid."""
     record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "close-now" if execute else "close-now plan", "organizations": [], "unreadable": [],
               "federated_elsewhere": 0, "sent": []}
@@ -1272,18 +1340,25 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
     org = [o for o in orgs if str(o.get("name")) == org_name]
     if len(org) != 1:
         return stop(refused=f"no single organization is named {org_name}")
-    urn = str(org[0]["id"])
+    urn, named = str(org[0]["id"]), exact(account)
+    key = None
+    if not named:
+        read, key = org_key(vcfa, urn)
+        if not read:
+            return stop(unread="the organization's OIDC settings were refused, so how it names its accounts is not known")
+        if execute and key in BY_ID:  # N2: refused before any name is resolved, whatever Graph would answer
+            m = record["user_match"] = {"given": account, "user_key": key, "object_id": None, "accounts": [],
+                                        "resolved_by": "not at all: under oid, --execute resolves no name",
+                                        "refused": OID_EXECUTE.format(given=account)}
+            if announce:
+                announce(match_line(m))
+            return stop(refused=m["refused"])
     users = vcfa.pages("/cloudapi/1.0.0/users", urn)
     tokens = vcfa.pages("/cloudapi/1.0.0/tokens", urn)
     if users is None or tokens is None:
         return stop(unread="the organization's users or tokens were refused")
-    key = None
-    if not OBJECT_ID.match(account) and not account.lower().startswith("urn:vcloud:user:"):
-        read, key = org_key(vcfa, urn)
-        if not read:
-            return stop(unread="the organization's OIDC settings were refused, so how it names its accounts is not known")
     graph = None
-    if key in BY_ID and not OBJECT_ID.match(account) and make_graph is not None:
+    if key in BY_ID and not named and make_graph is not None:
         try:
             graph = make_graph()
         except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
@@ -1299,16 +1374,24 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
         m["left_on"] = left_on
         if guard.get("refused") or guard.get("unread"):
             m["refused" if guard.get("refused") else "unread"] = guard.get("refused") or guard.get("unread")
-        elif execute:  # the dates passed, but a rename onto an existing person passes them too: close by object id
-            m["refused"] = (f"under oid, --execute closes by the object id only: {account} resolved to object id "
-                            f"{m['object_id']} and the dates above passed, but an existing person renamed onto this "
-                            "name passes every date check; check that object id against the leaver notice, then run "
-                            f"again with --user {m['object_id']} --execute")
-    elif user is not None:
-        m["guard"] = {"ok": True, "why": ("named by its object id or its account id: no name was resolved" if key in BY_ID
-                                         or OBJECT_ID.match(account) or account.lower().startswith("urn:vcloud:user:")
-                                         else "the organization is not keyed on oid, so the account a name selects is "
-                                              "the one named by it, which every holder of that name signs in to")}
+    elif user is not None and named:
+        m["guard"] = {"ok": True, "why": "named by its object id or its account id: no name was resolved"}
+    elif user is not None and key in BY_ID:  # N2 shape A: Graph knows no user by the name, and an account carries it
+        m["refused"] = UNHELD_NAME.format(given=account, account=m["account"], id=m["id"])
+        m["guard"] = {"refused": m["refused"]}
+    elif user is not None and user.get("providerType") in FEDERATED:
+        protocol = "OIDC" if user.get("providerType") == "OAUTH" else "SAML"
+        read, pkey = (True, key) if protocol == "OIDC" else saml_key(vcfa, urn)
+        if not read:
+            m["unread"] = "the organization's SAML settings were refused, so how it names its SAML accounts is not known"
+        elif pkey in BY_NAME:
+            m["guard"] = {"ok": True, "why": f"the organization is not keyed on oid, and names its {protocol} accounts by "
+                                             f"{pkey}, a name: the account a name selects is the one every holder of "
+                                             "that name signs in to"}
+        else:
+            m["refused"] = NOT_NAME_KEYED.format(account=m["account"], protocol=protocol, id=m["id"],
+                                                 key=pkey or "no key it stores")
+            m["guard"] = {"refused": m["refused"]}
     if user is not None and user.get("providerType") not in FEDERATED and not m.get("refused") and not m.get("unread"):
         m["refused"] = (f"account {m['account']} is a {user.get('providerType') or 'unknown'} account: --close-now closes a "
                         "federated account (OAUTH or SAML), and nothing is sent to any other; close a local account in "
@@ -1772,9 +1855,14 @@ def exit_means(record: dict) -> str:
     held, so its line says it is a plan, and how to close: under oid, by the object id the plan resolved (B11-S4)."""
     code = record.get("exit")
     if record.get("mode") == "close-now plan" and code == 0:
-        oid = (record.get("user_match") or {}).get("object_id")
-        return PLAN_ONLY + (f"; to close, run it again with --user {oid} (the object id, never the name) and --execute"
-                            if oid else "; to close, run it again with --execute")
+        m = record.get("user_match") or {}
+        oid = m.get("object_id")
+        if oid and str(m.get("account") or "").lower() == str(oid).lower():
+            return PLAN_ONLY + f"; to close, run it again with --user {oid} (the object id, never the name) and --execute"
+        if oid:  # the name selected an account named before the key was oid: that account's own id closes it
+            return PLAN_ONLY + (f"; to close the account it selects, run it again with --user {m.get('id')} (the "
+                                "account's id, never the name) and --execute")
+        return PLAN_ONLY + "; to close, run it again with --execute"
     return EXIT_MEANS.get(code, "")
 
 
@@ -1784,11 +1872,28 @@ def given_values() -> list[tuple[str, str]]:
     return [(v, k) for v, k in out if v]
 
 
+def done_text(record: dict, calls: list) -> str:
+    """What a run's writes did, in counts and without an estate value, so it can be printed under --redact too: how
+    many writes were sent, how many tokens were revoked and accounts disabled, and on how many accounts the close held.
+    Empty when nothing was sent."""
+    sent = [c for c in calls if c.get("method") in ("PUT", "DELETE", "POST", "PATCH") and c.get("plane") != "graph"]
+    if not sent:
+        return ""
+    results = [r["result"] for o in record.get("organizations") or [] for r in o.get("users") or [] if r.get("result")]
+    revoked = sum(1 for r in results for t in r.get("revoked") or [] if t.get("status") in (200, 204))
+    disabled = sum(1 for r in results if r.get("disabled"))
+    held = sum(1 for r in results if r.get("held"))
+    return (f"the run sent {len(sent)} write(s): {revoked} token(s) revoked and {disabled} account(s) disabled, and the "
+            f"close held on {held} of the {len(results)} account(s) it closed")
+
+
 def _write(record: dict, calls: list, redact: bool) -> int:
     """Print the run, scrub the record and write it; refuse to write one in which an estate value survived. A run
     refused as a usage error (a --user that names no account, or several) is printed and not written. A record refused
     for a surviving value never masks what the run found: the run's code stands when it is 1, 2 or 4 (or 3), and a
-    run that found nothing exits 3, because the record a later tool reads was not written."""
+    run whose code was 0 exits 3, because the record a later tool reads was not written (G-456). A run that wrote
+    says what its writes did (done_text), counts only, whether or not the report itself was printed: a close that held
+    is never reported as a run that found nothing."""
     record["calls"] = [{k: v for k, v in c.items() if k != "message"} for c in calls]
     table = estate_values(record, given_values())
     clean = scrub(record, table)
@@ -1806,10 +1911,15 @@ def _write(record: dict, calls: list, redact: bool) -> int:
         return EXIT_USAGE
     if left:
         code = record["exit"] if record.get("exit") in (EXIT_OPEN, EXIT_HELD_NOT, EXIT_FLAGGED, EXIT_UNREAD) else EXIT_UNREAD
-        why = ("the run's own code stands" if code == record.get("exit")
-               else "the run found nothing to act on, and the record a later tool reads was not written")
+        done = done_text(record, calls)
+        if code == record.get("exit"):
+            why = "the run's own code stands"
+        elif done:
+            why = "the close held, and the record a later tool reads was not written"
+        else:
+            why = "the run found nothing to act on, and the record a later tool reads was not written"
         print(f"refusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))}); "
-              f"exit {code}: {why}", file=sys.stderr)
+              + (f"{done}; {out} not written; " if done else "") + f"exit {code}: {why}", file=sys.stderr)
         return code
     with open(out, "w", encoding="utf-8") as f:
         f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")

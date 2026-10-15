@@ -18,13 +18,17 @@ Read-only by default:
      another product ships under their own names, each read with its members); directory user, directory group,
      realm spelling (inert behind an AD/LDAP provider, not measured behind a federated one), or another provider's;
   2. ROLES: the role catalog, and the custom roles whose copies differ between vCenters;
-  3. SESSIONS (pyVmomi, optional): who is signed in now, by principal class and client agent. Addresses,
-     session keys and login times are never read into the record.
+  3. SESSIONS (pyVmomi): who is signed in now, by principal class and client agent, from a list read whole (one
+     that does not hold the reading session, or holds nothing but the reader's own sessions, is not). Addresses,
+     session keys and login times are never read into the record. With REALM_DOMAIN set the session read is part of
+     the judgment, so a run without pyVmomi exits 3; before a realm (--no-realm) it is optional.
 
 Opt-in probes. Each creates its own throwaway objects (a folder, a tag category and tag), removes them in a
-``finally``, and reads the vCenter back for residue. None replaces an existing permission: vSphere keeps one
-permission per principal per object, so a principal that already holds one where a case would add one is
-skipped and recorded as skipped. All need pyVmomi.
+``finally``, and reads the vCenter back for residue: the folder, the category, any grant it made on the Supervisor
+VM, and every grant of a probe role; a residue read that does not answer is not a clean run (exit 3). None replaces
+an existing permission: vSphere keeps one permission per principal per object, so a principal that already holds
+one where a case would add one is skipped and recorded as skipped. A probe sends nothing while a probe role is
+already granted to someone other than its reserved group (exit 2). All need pyVmomi.
 
 The probes' roles are not throwaway. On a vCenter joined to VCF single sign-on, VCF creates a local group
 ``vcf_reserved_<role id>`` for every role created there, and deleting the role leaves the group behind, so a
@@ -32,7 +36,9 @@ probe that created and deleted its roles on every run would leave one empty grou
 probes use six roles named ``authz-probe-<what it holds>``, created the first time they are needed, reconciled
 to their declared privileges on every run, and granted only on the probe's own objects for the length of a
 case. ``--remove-probe-roles`` removes them and reports the reserved groups VCF leaves; removing those takes
-the vCenter's SSO administrator.
+the vCenter's SSO administrator. A role removed takes every grant of it along, so it refuses, with nothing sent,
+while a probe role is granted to anyone but its reserved group, and reads the role list back after (exit 2 for
+either).
 
   --probe-grants   on PROBE_VCENTER: a one-privilege role (Folder.Create) on a throwaway folder, granted in turn
                    to TEST_USER and to TEST_GROUP, each in the directory and the realm spelling, measured from
@@ -64,7 +70,8 @@ the realm, so its working grants would read realm-spelled. Two guards stand befo
 domain you named is refused (exit 5, below). And --remove reads who is signed in on that vCenter first (pyVmomi): a
 broker session carries the directory's name, so a live session spelled in REALM_DOMAIN shows that domain is one people
 sign in with, and a grant in it may apply to them. The removal is then refused, plan and --execute alike, with nothing
-sent (exit 3), as it is when the session list cannot be read whole (one that does not hold the session that read it).
+sent (exit 3), as it is when the session list cannot be read whole: one that does not hold the session that read it,
+or one that holds nothing but the reader's own sessions (an identity that may not read the others lists only its own).
 A directory nobody from is signed in to at that moment passes both, so --remove runs only with OTHER_DOMAINS stated,
 empty when there is none (export OTHER_DOMAINS=), as your declaration that DIRECTORY_DOMAINS names every directory.
 
@@ -85,9 +92,9 @@ provider's, and the vCenter is placed (on the reference estate, the workload vCe
 The realm is not the directory domain, refused. The census tests the realm's name before the directory domains and
 another provider's, so a REALM_DOMAIN that names a DIRECTORY_DOMAINS or OTHER_DOMAINS entry would class every working
 grant in that domain realm-spelled: exit 1 would say to remove them, and --remove would accept their ids. So a
-REALM_DOMAIN equal to any of those entries, compared case-insensitively after trimming, is a usage error (exit 5) found
-before anything is read, and so is one equal to LOCAL_DOMAIN, where every grant sorts as local first and no grant could
-ever read realm-spelled.
+REALM_DOMAIN equal to any of those entries, compared without regard to case, surrounding spaces or a trailing dot
+(corp.example. and CORP.EXAMPLE are one domain), is a usage error (exit 5) found before anything is read, and so is one
+equal to LOCAL_DOMAIN, where every grant sorts as local first and no grant could ever read realm-spelled.
 
 Paged lists. The permission and role lists are paged: an answer that carries a marker has more after it, and the next
 page is asked for with that marker until an answer carries none. A page refused, or a marker answered twice, is a list
@@ -121,24 +128,32 @@ Run:  python3 authz.py [--where-realm] [--probe-grants] [--probe-tags] [--superv
       Python 3.10 or later.
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 a removal (--remove --execute) that did not hold on read-back: a named grant still there, or another grant
-        moved; or a probe that left residue (its folder, its tag category, or a grant of a probe role)
+        moved; --remove-probe-roles refused (a probe role granted to someone other than its reserved group: removing
+        the role would remove that grant with it, so nothing is sent) or not held (a probe role still listed after it);
+        or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of
+        a probe role, one there before the probe began included, when the probe sends nothing)
       1 the census read realm-spelled grants: remove them (--where-realm names them, --remove removes them). Only
-        with REALM_DOMAIN set, and never while a live session is spelled in it (that is 3); before a realm there is
-        no such class
+        with REALM_DOMAIN set, only when the session list of every vCenter read was read whole, and never while a live
+        session is spelled in it (each of those is 3); before a realm there is no such class
       3 a read failed or a result is undetermined: a vCenter refused the session or a page of the permission or role
-        list, a permission list with no permission in it, the session list could not be read whole, a vCenter on which
-        DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no grant while another provider's grants are there, a vCenter on which REALM_DOMAIN names no grant while grants
-        of a domain in none of the domains given are there (a misspelled realm hides its grants there), a live session
-        spelled in REALM_DOMAIN (a domain people sign in with, so a grant spelled in it may apply to them; with
-        --remove, nothing is sent), a probe that could not run its cases, or an error the script did not expect. Nothing is
-        known about what was not read
-      0 nothing for a person to act on: every vCenter read and placed, no realm-spelled grant, every probe clean
-        (with --remove: the plan printed, or every named grant removed and nothing else moved)
+        list, a permission list with no permission in it, a session list not read whole (refused, holding nothing but
+        the reader's own sessions, or, with REALM_DOMAIN set, not read because pyVmomi is missing), a vCenter on which
+        DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no grant while another provider's grants are there, a
+        vCenter on which REALM_DOMAIN names no grant while grants of a domain in none of the domains given are there (a
+        misspelled realm hides its grants there), a live session spelled in REALM_DOMAIN (a domain people sign in with,
+        so a grant spelled in it may apply to them; with --remove, nothing is sent), a probe that could not run its
+        cases or whose residue was not read back, or an error the script did not expect. Nothing is known about what
+        was not read
+      0 nothing for a person to act on: every vCenter read and placed (with REALM_DOMAIN set, its session list read
+        whole), no realm-spelled grant, every probe clean (with --remove: the plan printed, or every named grant removed
+        and nothing else moved)
       5 a usage error, before anything is read: an argument or environment variable missing or wrong, a REALM_DOMAIN
         that names a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, --remove without OTHER_DOMAINS stated,
         an id --remove cannot name as a realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it
-        (--remove among them), a Python older than 3.10; or the record refused because an estate value survived the
-        scrub (nothing is written)
+        (--remove among them), a Python older than 3.10
+      A record refused because an estate value or a password survived the scrub is not written, and never hides the
+      run's result: the run's code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3 (its
+      record was not written; the probes and --remove-probe-roles may already have written to vCenter).
 """
 import argparse
 import base64
@@ -333,24 +348,31 @@ def have_pyvmomi():
 
 # ---------------------------------------------------------------- the census
 
+def norm(domain):
+    """A domain as every comparison here reads it: trimmed, without regard to case, and with a trailing dot dropped, so
+    ``corp.example.`` and ``CORP.EXAMPLE`` name one domain (a spelling that differs only so would otherwise pass the
+    realm guard and class a directory's working grants realm-spelled)."""
+    return str(domain or "").strip().rstrip(".").strip().lower()
+
+
 def local_domain():
-    return (os.environ.get("LOCAL_DOMAIN") or "VSPHERE.LOCAL").strip().upper()
+    return norm(os.environ.get("LOCAL_DOMAIN") or "VSPHERE.LOCAL").upper()
 
 
 def classify(domain, name, realm, directories, local=None):
     """One principal's class, by how it behaves for a broker session and who looks after it. A local principal is
     reserved (a VCF role arriving), VCF-managed (leave it), Administrators (the administrator and its group: read the
     members), or other (read it, members included)."""
-    d = domain.upper()
-    if d == (local or local_domain()).upper():
+    d = norm(domain)
+    if d == norm(local or local_domain()):
         if name.startswith(RESERVED_PREFIX):
             return "reserved group"
         if VCF_MANAGED.search(name):
             return LOCAL_CLASSES[0]
         return LOCAL_CLASSES[1] if name.lower() in {p.lower() for p in PRODUCT_LOCAL} else LOCAL_CLASSES[2]
-    if realm and d == realm.upper():
+    if realm and d == norm(realm):
         return "realm spelling"
-    if d.lower() in directories:
+    if d in {norm(x) for x in directories}:
         return "directory"
     return "another provider"
 
@@ -392,8 +414,8 @@ def census(rest, realm, directories, perms=None, cat=None):
 
 
 def other_domains_declared():
-    """OTHER_DOMAINS, lower-cased: the domains the reader knows are another identity provider's."""
-    return {x.strip().lower() for x in os.environ.get("OTHER_DOMAINS", "").split(",") if x.strip()}
+    """OTHER_DOMAINS, as norm() reads them: the domains the reader knows are another identity provider's."""
+    return {norm(x) for x in os.environ.get("OTHER_DOMAINS", "").split(",") if norm(x)}
 
 
 REALM_IS = "REALM_DOMAIN is the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms)"
@@ -403,13 +425,14 @@ def realm_overlap(realm, directories, others=(), local=""):
     """Why REALM_DOMAIN cannot be read, when it names a domain the run was given as something else; else None.
     classify() tests the realm before a directory domain or another provider's, so a realm typed as one of them would
     class every working grant in it realm-spelled: exit 1 would say to remove them and --remove would accept their
-    ids. The local domain is tested first, so a realm typed as it could never class a grant realm-spelled. Compared
-    case-insensitively after trimming; ``local`` empty is VSPHERE.LOCAL, the default."""
+    ids. The local domain is tested first, so a realm typed as it could never class a grant realm-spelled. Compared as
+    norm() reads a domain: trimmed, without regard to case, a trailing dot dropped; ``local`` empty is VSPHERE.LOCAL, the
+    default."""
     r = (realm or "").strip()
-    if not r:
+    if not norm(r):
         return None
     for var, entry in [("DIRECTORY_DOMAINS", d) for d in directories] + [("OTHER_DOMAINS", d) for d in others]:
-        if entry.strip().lower() == r.lower():
+        if norm(entry) == norm(r):
             what = ("a directory domain is the one your directory spells its users and groups in, DOMAIN\\user, which a "
                     "broker session carries" if var == "DIRECTORY_DOMAINS"
                     else "OTHER_DOMAINS names the domains you know are another identity provider's")
@@ -417,7 +440,7 @@ def realm_overlap(realm, directories, others=(), local=""):
                     "one, every working grant in that domain would be classed realm-spelled and named for removal. Set "
                     "REALM_DOMAIN to the realm's name")
     lo = (local or "").strip()
-    if r.lower() == (lo or "VSPHERE.LOCAL").lower():
+    if norm(r) == norm(lo or "VSPHERE.LOCAL"):
         return (f"REALM_DOMAIN ({r}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same domain. "
                 f"{REALM_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in that domain sorts "
                 "as local and no realm-spelled grant could be found. Set REALM_DOMAIN to the realm's name")
@@ -426,7 +449,7 @@ def realm_overlap(realm, directories, others=(), local=""):
 
 def unplaced(others, declared):
     """Of the domains read as another provider's (domain to grant count), the ones OTHER_DOMAINS does not name."""
-    return {d: n for d, n in others.items() if d.lower() not in declared}
+    return {d: n for d, n in others.items() if norm(d) not in declared}
 
 
 def realm_names_nothing(by_class, realm, undeclared):
@@ -529,8 +552,13 @@ def drift(catalogs, L):
 
 
 def session_list(si):
-    """Every live session on one vCenter. The list must hold the session that read it, or it is not the whole list: a
-    refusal, or a list without that session, is a read that failed (ReadError, exit 3)."""
+    """Every live session on one vCenter. vCenter states no count for the list, so it is checked for the member it must
+    hold: the session that read it. A refusal, or a list without that session, is a read that failed (ReadError, exit
+    3). So is a list that holds nothing but the reader's own sessions: an identity that may not read the others lists
+    only its own (a directory account with no administrator role did, on the reference estate), and that list says
+    nothing of anyone else. Read whole by an administrator, each reference vCenter listed hundreds of sessions besides
+    the reader's, so a list of the reader's alone is read as filtered, never as an estate where no one else is signed
+    in."""
     try:
         sm = si.content.sessionManager
         own, listed = sm.currentSession, list(sm.sessionList or [])
@@ -538,6 +566,10 @@ def session_list(si):
         raise ReadError(f"the session list was not read: {type(e).__name__}") from None
     if own is None or own.key not in {s.key for s in listed}:
         raise ReadError("the session list does not hold the session that read it, so it is not the whole list")
+    me = str(getattr(own, "userName", "") or "").strip().lower()
+    if all(s.key == own.key or (me and str(getattr(s, "userName", "") or "").strip().lower() == me) for s in listed):
+        raise ReadError("the session list held only the reader's own session(s): an identity that may not read the others "
+                        "lists only its own, so it is not the whole list; run as an administrator of the vCenter")
     return listed
 
 
@@ -546,8 +578,8 @@ def realm_sessions(names, realm):
     (DOMAIN\\user), so a session spelled in REALM_DOMAIN shows that domain is one people sign in with: a directory left
     out of DIRECTORY_DOMAINS and typed as the realm, or a realm whose grants can apply. Either way a grant spelled in
     it may apply to them."""
-    r = (realm or "").strip().lower()
-    return [n for n in names if r and str(n).rpartition("\\")[0].strip().lower() == r]
+    r = norm(realm)
+    return [n for n in names if r and norm(str(n).rpartition("\\")[0]) == r]
 
 
 def session_names(host, user, password):
@@ -570,7 +602,7 @@ def sessions(si, realm, directories):
         domain, _, name = str(s.userName).rpartition("\\")
         cls = classify(domain, name, realm, directories)
         by_class[cls] += 1
-        if domain.upper() == local_domain() and name == "Administrator":
+        if norm(domain) == norm(local_domain()) and name == "Administrator":
             admin_agents[str(getattr(s, "userAgent", "") or "").split("/")[0][:40] or "(none)"] += 1
     return {"byClass": dict(sorted(by_class.items())), "localAdministratorByAgent": dict(sorted(admin_agents.items()))}
 
@@ -613,12 +645,31 @@ def probe_role_grants(am):
                if p.roleId in ids and not str(p.principal).split("\\")[-1].startswith(RESERVED_PREFIX))
 
 
+def held_before(n):
+    """Why a probe sends nothing: a probe role is already granted to someone other than its reserved group. Reconciling
+    the role would change what that principal holds, and the residue read after the run would count the grant as the
+    probe's own. The record keeps the count as residue, so the run exits 2."""
+    return (f"{n} grant(s) of an {PROBE_ROLE_PREFIX}* role to someone other than its reserved group were there before "
+            "the probe began: reconciling the role would change what they hold, so nothing was sent; remove those grants "
+            "where they were made, then run again")
+
+
 def remove_probe_roles(si):
+    """Remove the authz-probe-* roles once nothing but their reserved groups holds them, and read the role list back.
+    RemoveAuthorizationRole with failIfUsed false removes a role with every grant of it, so a grant of a probe role to
+    anyone else is refused first, with nothing sent: that grant is someone's access, removed where it was made. A probe
+    role still listed after the removal is a removal that did not hold. Either is exit 2."""
     am = si.content.authorizationManager
+    held = probe_role_grants(am)
+    if held:
+        return {"removed": 0, "refused": f"{held} grant(s) of a probe role to someone other than its reserved group: "
+                                         "removing the role would remove those grants with it, so nothing was sent"}
     roles = [(r.roleId, r.name) for r in am.roleList if r.name.startswith(PROBE_ROLE_PREFIX)]
     for rid, _ in roles:
         am.RemoveAuthorizationRole(rid, False)
-    return {"removed": len(roles), "reservedGroupsLeft": reserved_groups_left(si, [rid for rid, _ in roles])}
+    left = sum(1 for r in am.roleList if r.name.startswith(PROBE_ROLE_PREFIX))
+    return {"removed": len(roles), "rolesLeft": left,
+            "reservedGroupsLeft": reserved_groups_left(si, [rid for rid, _ in roles])}
 
 
 def reserved_groups_left(si, role_ids):
@@ -641,6 +692,16 @@ def wait(task, seconds=30):
         if task.info.state in ("success", "error"):
             return
         time.sleep(1)
+
+
+def folder_left(si, name):
+    """Whether a folder by the probe's own name is still there: the residue read after its delete."""
+    from pyVmomi import vim
+    view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [vim.Folder], True)
+    try:
+        return any(f.name == name for f in view.view)
+    finally:
+        view.Destroy()
 
 
 def measure_folder(host, subject, folder_moid, folder_name, admin_si):
@@ -684,6 +745,10 @@ def probe_grants(host, admin, subject, cases):
     made = {}
     rec = {"privilege": "Folder.Create", "cases": []}
     try:
+        held = probe_role_grants(am)
+        if held:   # the residue read below counts them, so the run exits 2 with nothing sent
+            rec["aborted"] = held_before(held)
+            return rec
         dc = next(e for e in si.content.rootFolder.childEntity if isinstance(e, vim.Datacenter))
         made["folder"] = dc.vmFolder.CreateFolder(name)
         ids, rec["probeRoles"] = ensure_probe_roles(am, ["folder-create"])
@@ -706,10 +771,7 @@ def probe_grants(host, admin, subject, cases):
         with contextlib.suppress(Exception):
             if "folder" in made:
                 wait(made["folder"].Destroy_Task())
-        view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [vim.Folder], True)
-        rec["residue"] = {"folder": any(f.name == name for f in view.view),
-                          "grantsOfProbeRoles": probe_role_grants(am)}
-        view.Destroy()
+        rec["residue"] = {"folder": folder_left(si, name), "grantsOfProbeRoles": probe_role_grants(am)}
         unsoap(si)
     return rec
 
@@ -734,8 +796,12 @@ class TagLab:
         return "/api/cis/tagging/tag-association/" + urllib.parse.quote(self.tag, safe="")
 
     def attached(self):
+        """The objects the tag is attached to. A refused list is a read that failed (ReadError, exit 3), never an empty
+        one: read as empty, an attach that landed would be measured as refused and never detached."""
         st, body = self.rest.call("POST", self.path() + "?action=list-attached-objects")
-        return [o.get("id") for o in body or []]
+        if st != 200 or not isinstance(body, list):
+            raise ReadError(f"the probe tag's attached-object list answered {st}")
+        return [o.get("id") for o in body if isinstance(o, dict)]
 
     def try_attach(self, host, subject, obj):
         r = Rest(host, *subject)
@@ -753,10 +819,14 @@ class TagLab:
             r.close()
 
     def close(self):
+        """Delete the tag and its category, then read the category list back: True when the category is still there,
+        False when it is gone, None when the list could not be read (a residue not read is no clean run: exit 3)."""
         self.rest.call("DELETE", "/api/cis/tagging/tag/" + urllib.parse.quote(self.tag, safe=""))
         self.rest.call("DELETE", "/api/cis/tagging/category/" + urllib.parse.quote(self.cat, safe=""))
         st, cats = self.rest.call("GET", "/api/cis/tagging/category")
-        return self.cat in (cats or [])
+        if st != 200 or not isinstance(cats, list):
+            return None
+        return self.cat in cats
 
 
 def grant_global(rest, principal, group, role_id, propagate):
@@ -794,6 +864,10 @@ def probe_tags(host, admin, subject, d, r):
     rec = {"cases": []}
     lab = None
     try:
+        held = probe_role_grants(am)
+        if held:   # the residue read below counts them, so the run exits 2 with nothing sent
+            rec["aborted"] = held_before(held)
+            return rec
         keys = {"none": "none", "tag": "attach-tag", "object": "tag-on-object", "both": "tag-both"}
         ids, rec["probeRoles"] = ensure_probe_roles(am, list(keys.values()))
         made["roles"] = {k: ids[v] for k, v in keys.items()}
@@ -851,6 +925,7 @@ def probe_tags(host, admin, subject, d, r):
         if "folder" in made:
             with contextlib.suppress(Exception):
                 wait(made["folder"].Destroy_Task())
+            rec["residue"]["folder"] = folder_left(si, name)
         rec["residue"]["grantsOfProbeRoles"] = probe_role_grants(am)
         rest.close()
         unsoap(si)
@@ -866,8 +941,12 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
     name = "authz-run-" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     made = {}
     rec = {"identities": {}, "grantAttempts": []}
-    lab = None
+    lab, vm, granted = None, None, []
     try:
+        held = probe_role_grants(am)
+        if held:   # the residue read below counts them, so the run exits 2 with nothing sent
+            rec["aborted"] = held_before(held)
+            return rec
         view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [vim.VirtualMachine], True)
         found = [v for v in view.view if v.name == vm_name]
         view.Destroy()
@@ -903,6 +982,7 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
                 try:
                     am.SetEntityPermissions(vm, [vim.AuthorizationManager.Permission(
                         principal=principal, group=False, roleId=role, propagate=False)])
+                    granted.append(principal)
                     row["result"] = "accepted"
                     row.update(lab.try_attach(host, operator, obj))
                     am.RemoveEntityPermission(vm, principal, False)
@@ -914,6 +994,10 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
         rec["residue"] = {}
         if lab is not None:
             rec["residue"]["category"] = lab.close()
+        if granted:   # a principal granted here held nothing on the VM before (a holder is skipped), so any it holds now is left
+            mine = {p.lower() for p in granted}
+            rec["residue"]["grantsOnVm"] = sum(1 for p in am.RetrieveEntityPermissions(vm, False)
+                                               if str(p.principal).lower() in mine)
         rec["residue"]["grantsOfProbeRoles"] = probe_role_grants(am)
         rest.close()
         unsoap(si)
@@ -984,6 +1068,11 @@ def main(argv=None):
     except UsageError as e:
         print(f"{e} (exit 5)", file=sys.stderr)
         return EXIT_USAGE
+    except ReadError as e:  # a read a step needed did not answer (a probe's own read among them); nothing is written
+        print(f"NOT READ: {e}; the run stopped there and wrote no record. A probe that stopped ran its removals first, "
+              "and their residue read is not shown: read the vCenter for authz-run-* objects and grants of authz-probe-* "
+              "roles (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
     except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
               "about what it had not read (exit 3)", file=sys.stderr)
@@ -994,9 +1083,9 @@ def _settings(a):
     """The environment the run reads, checked before anything is read: a usage error raises UsageError."""
     hosts = _hosts()
     user, password = os.environ.get("VC_USER", "").strip(), secret("VC_PASSWORD")
-    realm = os.environ.get("REALM_DOMAIN", "").strip()
-    given = [x.strip() for x in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if x.strip()]
-    directories = [x.lower() for x in given]
+    realm = os.environ.get("REALM_DOMAIN", "").strip().rstrip(".").strip()
+    given = [x.strip() for x in os.environ.get("DIRECTORY_DOMAINS", "").split(",") if norm(x)]
+    directories = [norm(x) for x in given]
     if not hosts or not user or not password:
         raise UsageError("VC_HOSTS, VC_USER and VC_PASSWORD_FILE (or VC_PASSWORD) are required")
     if not directories:
@@ -1139,6 +1228,11 @@ def _run(argv=None):
         elif isinstance(row["sessions"], dict):
             print(f"     sessions by class {row['sessions']['byClass']}; local administrator by agent "
                   f"{row['sessions']['localAdministratorByAgent']}")
+        else:
+            print(f"     sessions {row['sessions']}")
+        if realm and sessions_unread(row):
+            print("     NOT PLACED: the session list was not read whole, so whether people sign in with REALM_DOMAIN's "
+                  "domain is not known here, and a grant spelled in it is no finding until it is (exit 3)")
     record["roleDrift"] = drift(catalogs, L)
     if a.remove_probe_roles:
         record["probeRoleTeardown"] = {}
@@ -1149,6 +1243,11 @@ def _run(argv=None):
             finally:
                 unsoap(si)
         print(f"\n  probe roles removed: {record['probeRoleTeardown']}")
+        for label, t in record["probeRoleTeardown"].items():
+            if t.get("refused") or t.get("rolesLeft"):
+                print(f"     {label}: NOT HELD: " + (f"refused, {t['refused']}" if t.get("refused")
+                                                    else f"{t['rolesLeft']} probe role(s) still listed after the removal")
+                      + " (exit 2)")
     print(f"\n  custom roles whose copies differ between vCenters: {len(record['roleDrift'])}")
 
     probe_host = os.environ.get("PROBE_VCENTER", hosts[0])
@@ -1181,6 +1280,12 @@ def _run(argv=None):
                                f"{op_dom.upper()}\\{op_local}", f"{realm.upper()}\\{op_local}", L)}
         print(f"\n  supervisor probe: {json.dumps(record['supervisorProbe']['identities'])}")
         print(f"     grant attempts: {[(g['attempt'], g['result']) for g in record['supervisorProbe']['grantAttempts']]}")
+    for key in ("grantProbe", "tagProbe", "supervisorProbe"):
+        rec = record.get(key) or {}
+        if rec.get("aborted"):
+            print(f"  {key}: NOT RUN: {rec['aborted']}")
+        if probe_residue(rec) or probe_unread(rec):
+            print(f"  {key}: residue {rec.get('residue')} (True or a count: left behind; None: not read back)")
 
     record["exit"] = code = exit_code(record, realm)
     text = json.dumps(record, indent=1, ensure_ascii=False)
@@ -1191,12 +1296,9 @@ def _run(argv=None):
     for value in sorted({v for v in estate if v and v not in PRODUCT_ROLES | PRODUCT_LOCAL}, key=len, reverse=True):
         if re.search(r"(?<![A-Za-z0-9-])" + re.escape(value) + r"(?![A-Za-z0-9-])", text, re.IGNORECASE):
             shape = re.sub(r"[A-Za-z]", "a", re.sub(r"[0-9]", "9", value))
-            print(f"refusing to write authz.json: an estate value ({len(value)} characters, shape {shape}) reached the "
-                  "record; nothing is written (exit 5)", file=sys.stderr)
-            return EXIT_USAGE
+            return refused_record(f"an estate value ({len(value)} characters, shape {shape}) reached the record", code)
     if any(s and s in text for s in (password, subject[1])):
-        print("refusing to write authz.json: a password reached the record; nothing is written (exit 5)", file=sys.stderr)
-        return EXIT_USAGE
+        return refused_record("a password reached the record", code)
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "authz.json"), "w", encoding="utf-8") as f:
         f.write(text + "\n")
@@ -1207,29 +1309,59 @@ def _run(argv=None):
     return code
 
 
+def refused_record(why, code):
+    """A record the scrub refused: nothing is written, and the run's own code stands (G-456), because the census read,
+    and the probes or --remove-probe-roles may already have written. A run that found nothing to act on exits 3: its
+    record was not written, so nothing shows what it read. Never 5, which would say nothing was read or sent."""
+    code = code if code != EXIT_OK else EXIT_UNREAD
+    print(f"refusing to write authz.json: {why}; nothing is written; exit {code}: "
+          + ("the run's own code stands" if code != EXIT_UNREAD else "the record that shows what the run read was not "
+             "written"), file=sys.stderr)
+    return code
+
+
 def probe_residue(rec):
-    """Whether a probe left something behind: its folder, its tag category, or a grant of a probe role."""
+    """Whether a probe left something behind: its folder, its tag category, a grant it made on the Supervisor VM, or a
+    grant of a probe role (one there before the probe began is counted too: the probe then sent nothing)."""
     res = (rec or {}).get("residue") or {}
-    return bool(res.get("folder") or res.get("category") or res.get("grantsOfProbeRoles"))
+    return any(res.get(k) for k in ("folder", "category", "grantsOnVm", "grantsOfProbeRoles"))
+
+
+def probe_unread(rec):
+    """Whether a probe's residue read did not read: a value None is a residue not read back, never a clean run."""
+    return any(v is None for v in ((rec or {}).get("residue") or {}).values())
+
+
+def sessions_unread(row):
+    """Whether a vCenter whose grants were read had its session list read whole: a list refused, one holding only the
+    reader's own sessions, or none read (pyVmomi not installed, or no session read recorded) is not."""
+    s = row.get("sessions")
+    return "error" not in row and (not isinstance(s, dict) or "error" in s)
 
 
 def exit_code(record, realm):
-    """The first that applies: 2 a probe left residue, 1 realm-spelled grants read (only with a realm, and none while
-    a live session is spelled in it), 3 a vCenter or its session list not read, a vCenter whose domains named no grant
-    or whose realm named none beside an unplaced domain, a live session spelled in the realm (a grant spelled in it
-    may then apply to someone, so the realm-spelled grants are no finding), or a probe that could not run; else 0."""
+    """The first that applies: 2 a probe left residue, or --remove-probe-roles was refused or did not hold; 1
+    realm-spelled grants read (only with a realm, only when every vCenter read had its session list read whole, and
+    none while a live session is spelled in it); 3 a vCenter not read, a session list not read whole (with a realm,
+    pyVmomi missing among them: whether people sign in with the realm's domain is then not known), a vCenter whose
+    domains named no grant or whose realm named none beside an unplaced domain, a live session spelled in the realm (a
+    grant spelled in it may then apply to someone, so the realm-spelled grants are no finding), a probe that could not
+    run, or a residue not read back; else 0."""
     probes = [record.get(k) for k in ("grantProbe", "tagProbe", "supervisorProbe") if record.get(k) is not None]
-    if any(probe_residue(p) for p in probes):
+    teardown = (record.get("probeRoleTeardown") or {}).values()
+    if any(probe_residue(p) for p in probes) or any(t.get("refused") or t.get("rolesLeft") for t in teardown):
         return EXIT_NOT_HELD
     rows = list((record.get("vcenters") or {}).values())
     signed_in = any(r.get("realmSignedIn") for r in rows)
-    if realm and not signed_in and any(n for r in rows for k, n in (r.get("byClass") or {}).items()
-                                       if k.startswith("realm spelling")):
+    sessions_short = any(sessions_unread(r) for r in rows)
+    if realm and not signed_in and not sessions_short and any(
+            n for r in rows for k, n in (r.get("byClass") or {}).items() if k.startswith("realm spelling")):
         return EXIT_REALM
     unread = (not rows or signed_in or any("error" in r for r in rows)
               or any(r.get("domainsNamedNothing") or r.get("realmNamedNothing") for r in rows)
               or any(isinstance(r.get("sessions"), dict) and "error" in r["sessions"] for r in rows)
-              or any(p.get("aborted") for p in probes))
+              or (bool(realm) and sessions_short)
+              or any(p.get("aborted") or probe_unread(p) for p in probes))
     return EXIT_UNREAD if unread else EXIT_OK
 
 

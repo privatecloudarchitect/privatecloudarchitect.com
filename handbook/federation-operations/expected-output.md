@@ -55,7 +55,9 @@ $ ORGS=<the four organizations> python3 watch.py --redact
   passed, and the next hourly run did refresh it), so the check warns on the interval and does not fail on the age.
 - **`secret_end` names the secret the organization holds,** matched by Graph's hint, not the one that ends last.
   `{{org-3}}` lists two secrets: one ends in 23 days and is the one it uses; the other expired six days before the
-  run and is unused, so it is reported, not judged.
+  run and is unused, so it is reported, not judged. A secret the hint matches whose end date does not read is never
+  dropped: it reads `UNKNOWN secret_end ... has an end date that does not read`, exit 3, unless another matched
+  secret has already ended (the companion's tests hold this; no run on the reference estate showed it).
 - **`saml_cert_held` warns on `{{org-4}}`.** Its Entra app carries a second signing certificate that the
   organization's metadata does not hold. Nothing fails while the first stays active; made active, the second
   stops every sign-in until metadata carrying it is loaded. The warning is the step the rollover needs first.
