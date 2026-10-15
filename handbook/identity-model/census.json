@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-13T07:41:40Z",
+ "captured": "2026-10-15T20:53:05Z",
  "sent": [
   "POST and DELETE /api/session on each vCenter: a session opened and closed"
  ],
@@ -210,7 +210,7 @@
       "apiTokenTtl": 259200,
       "accessTokenTtl": 60,
       "expirationDate": 1801671996000,
-      "lastUsedDate": 1791877300000
+      "lastUsedDate": 1792097585000
      },
      {
       "tokenName": "{{name-16}}",
@@ -232,7 +232,7 @@
       "apiTokenTtl": 259200,
       "accessTokenTtl": 60,
       "expirationDate": 1806579876000,
-      "lastUsedDate": 1791873511000
+      "lastUsedDate": 1792053364000
      }
     ],
     "emergency_clients": [],
@@ -614,14 +614,22 @@
   {
    "plane": "vcf-operations",
    "method": "POST",
-   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/api-clients/query",
-   "status": 200
+   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/api-clients/query?page=0&pageSize=50",
+   "status": 200,
+   "listed": {
+    "total": 4,
+    "distinct": 4
+   }
   },
   {
    "plane": "vcf-operations",
    "method": "POST",
-   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/api-tokens/query",
-   "status": 200
+   "path": "/api/fleet-management/iam/ssorealms/{{id-6}}/api-tokens/query?page=0&pageSize=50",
+   "status": 200,
+   "listed": {
+    "total": 3,
+    "distinct": 3
+   }
   },
   {
    "plane": "vcf-operations",
@@ -644,14 +652,22 @@
   {
    "plane": "vcf-operations",
    "method": "GET",
-   "path": "/api/fleet-management/iam/roles",
-   "status": 200
+   "path": "/api/fleet-management/iam/roles?page=0&pageSize=50",
+   "status": 200,
+   "listed": {
+    "total": 7,
+    "distinct": 7
+   }
   },
   {
    "plane": "vcf-automation",
    "method": "GET",
    "path": "/cloudapi/1.0.0/orgs?page=1&pageSize=128",
-   "status": 200
+   "status": 200,
+   "listed": {
+    "total": 10,
+    "distinct": 10
+   }
   },
   {
    "plane": "vcf-automation",
@@ -1001,9 +1017,9 @@
       "api_token_ttl_min": 259200,
       "access_token_ttl_min": 60,
       "expires": "2027-01-24",
-      "days_left": 103,
+      "days_left": 100,
       "last_used": "2026-07-29",
-      "days_since_used": 75
+      "days_since_used": 78
      }
     ]
    },
@@ -1020,8 +1036,8 @@
       "api_token_ttl_min": 259200,
       "access_token_ttl_min": 60,
       "expires": "2027-04-01",
-      "days_left": 170,
-      "last_used": "2026-10-13",
+      "days_left": 167,
+      "last_used": "2026-10-15",
       "days_since_used": 0
      }
     ]
@@ -1042,8 +1058,8 @@
     "api_token_ttl_min": 259200,
     "access_token_ttl_min": 60,
     "expires": "2027-02-03",
-    "days_left": 113,
-    "last_used": "2026-10-13",
+    "days_left": 110,
+    "last_used": "2026-10-15",
     "days_since_used": 0
    }
   ],

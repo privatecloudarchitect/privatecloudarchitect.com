@@ -32,8 +32,9 @@ refused before anything is sent. A client made in the console is rotated and rem
 on the client the run is signed in as, a rotation included: run them on the token of the administrator who made the
 client, never on the client's own. A teardown of a client that is not there removes nothing and exits 0, so it is safe
 to re-run: in the fleet's only realm, or in the realm the state file records. On a fleet of more than one realm, a
-teardown that finds no client where no state file records the realm it was made in exits 3, because the client may live
-in a realm this run never read.
+teardown, a rotation or a retirement that finds no client where no state file records the realm it was made in exits 3
+(NOT READ), because the client may live in a realm this run never read; it never says the client is gone, and never
+suggests making it again.
 
 One realm, named. Every run acts in one realm, and the plan and the record name it. With --realm (its name or its id,
 as GET /ssorealms lists them) the run acts in that realm; without it, in the fleet's only realm. A fleet holding more
@@ -70,16 +71,18 @@ Use:  python3 api_client.py --client-id ID --role ROLE --api-token-ttl MIN --acc
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 refused by this script before any write: the client exists (for a create); no state file records the client
         with this uuid (for a rotation, a retirement or a teardown), the state file records it in another realm, or
-        there is no client by that id (for a rotation or a retirement); the run is
-        signed in as the client, or its bearer is not a JWT this script can read, for every write after the create,
-        a rotation included; a retirement while the client holds one token, or whose newest token this script did not
-        issue last; or the fleet holds no realm to make a client in
+        there is no client by that id (for a rotation or a retirement, in the fleet's only realm or the realm the
+        state file records); the run is signed in as the client, or its bearer is not a JWT this script can read, for
+        every write after the create, a rotation included; a retirement while the client holds one token, or whose
+        newest token this script did not issue last; or the fleet holds no realm (no client to make, rotate, retire or
+        remove in one)
       1 the run did not hold: a write was refused, or the read-back was not what was asked
       3 a read failed or is undetermined: a list or the realm list could not be read (a page refused, an answer with no
         list or no total, a total that changed between pages, a page that added nothing new, or pages that end before
         the total they state), the read-back could not be read, the create answered without the client's uuid (nothing
-        more is sent), a teardown on a fleet of more than one realm that found no client where no state file records
-        its realm, the operator's credential was not traded for a bearer, or an error the script did not expect
+        more is sent), a teardown, a rotation or a retirement on a fleet of more than one realm that found no client
+        where no state file records its realm, the operator's credential was not traded for a bearer, or an error the
+        script did not expect
       0 the plan printed, or the run held on read-back (the client with its one role and an active token with both
         lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
         still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a
@@ -514,6 +517,22 @@ def owned(state: dict, client_id: str, row: dict | None) -> bool:
                 and state.get("client_uuid") == uuid)
 
 
+def elsewhere(record: dict, state: dict, rid: str) -> str | None:
+    """Why a client this realm's list, read whole, does not hold may still live in another realm, or None when this
+    realm is the only place it can be: the fleet's only realm, or the realm the state file records. On a fleet of more
+    than one realm with no state file naming this realm, the run looked in one realm of several, so whether the client
+    exists was not read (C11 N4): every write after the create, a rotation and a retirement as much as a teardown,
+    then exits 3 (NOT READ), never "not there" and never a suggestion to make the client again."""
+    if (record.get("realms_in_fleet") or 1) <= 1 or state.get("realm_id") == rid:
+        return None
+    return (f"no client by that id in realm {record.get('realm') or rid}, one of the fleet's "
+            f"{record.get('realms_in_fleet')} realms, and "
+            + ("no state file records the realm it was made in" if not state.get("realm_id")
+               else "the state file records another realm")
+            + ": whether it lives in another realm was not read. Run with --realm naming the realm its create "
+              "recorded, from the folder the create ran in or with STATE set")
+
+
 def guard(fleet: Fleet, client_id: str, row: dict | None, state: dict, record: dict) -> int | None:
     """The refusals every write after the create runs before it sends anything, a rotation as much as a removal: a
     client this script did not make, a bearer this script cannot read, and the client the run is signed in as. None
@@ -614,11 +633,15 @@ def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     if cl is None or tk is None:
         return EXIT_UNREAD
     rows = mine(cl, a.client_id)
-    if not rows:
-        record["refused"] = "no client by that id; a rotation never creates one: create it first"
-        return EXIT_REFUSED
     state_file = state_path(a.client_id)
     state = load_state(state_file)
+    if not rows:
+        unread = elsewhere(record, state, rid)
+        if unread:   # one realm of several read: the client may be in another, and is never made again here
+            record["undetermined"] = unread
+            return EXIT_UNREAD
+        record["refused"] = "no client by that id; a rotation never creates one: create it first"
+        return EXIT_REFUSED
     refused = guard(fleet, a.client_id, rows[0], state, record)
     if refused is not None:
         return refused
@@ -676,10 +699,14 @@ def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> i
     if cl is None or tk is None:
         return EXIT_UNREAD
     rows = mine(cl, a.client_id)
+    state = load_state(state_path(a.client_id))
     if not rows:
+        unread = elsewhere(record, state, rid)
+        if unread:   # one realm of several read: the client may be in another
+            record["undetermined"] = unread
+            return EXIT_UNREAD
         record["refused"] = "no client by that id"
         return EXIT_REFUSED
-    state = load_state(state_path(a.client_id))
     refused = guard(fleet, a.client_id, rows[0], state, record)
     if refused is not None:
         return refused
@@ -738,15 +765,10 @@ def teardown(fleet: Fleet, rid: str, client_id: str, record: dict) -> int:
         refused = guard(fleet, client_id, rows[0], state, record)
         if refused is not None:
             return refused
-    elif (record.get("realms_in_fleet") or 1) > 1 and state.get("realm_id") != rid:
+    elif elsewhere(record, state, rid):
         # the realm read holds no such client, and nothing says the client was made here: on a fleet of more than one
         # realm it may live in another, where it was never looked for (C11 N4). Not read, never "nothing to remove".
-        record["undetermined"] = (f"no client by that id in realm {record.get('realm') or rid}, one of the fleet's "
-                                  f"{record.get('realms_in_fleet')} realms, and "
-                                  + ("no state file records the realm it was made in" if not state.get("realm_id")
-                                     else "the state file records another realm")
-                                  + ": whether it lives in another realm was not read. Run with --realm naming the "
-                                    "realm its create recorded, from the folder the create ran in or with STATE set")
+        record["undetermined"] = elsewhere(record, state, rid)
         return EXIT_UNREAD
     if rows:
         for t in mine(tk, client_id):
@@ -905,6 +927,10 @@ def report(record: dict) -> list[str]:
 class _Parser(argparse.ArgumentParser):
     """argparse exits 2 on a usage error, the code this script gives a refusal; it exits 5 here."""
 
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
     def error(self, message: str):
         self.print_usage(sys.stderr)
         print(f"{self.prog}: error: {message}", file=sys.stderr)
@@ -1013,8 +1039,9 @@ def _run(argv: list[str] | None = None) -> int:
     if realms is None:
         record["exit"] = EXIT_UNREAD
     elif not realms:
-        record["refused"] = ("the fleet holds no realm: an API client lives in a realm, so there is nothing to make it "
-                             "in until VCF single sign-on has one")
+        record["refused"] = ("the fleet holds no realm: an API client lives in a realm, so "
+                             + ("there is nothing to make it in until VCF single sign-on has one" if mode == "create"
+                                else "there is no API client to rotate, retire or remove, and nothing was sent"))
         record["exit"] = EXIT_REFUSED
     else:
         realm, problem = choose_realm(realms, a.realm)

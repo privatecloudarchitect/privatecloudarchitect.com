@@ -1,8 +1,9 @@
 # What a run looks like
 
-The reference estate, 2026-10-13 (UTC): two VCF 9.1.1 instances, both management vCenters and one workload vCenter,
+The reference estate, 2026-10-15 (UTC): two VCF 9.1.1 instances, both management vCenters and one workload vCenter,
 VCF Operations and VCF Automation. Run with `--redact`, so the names are placeholders; the record path is shortened
-to its file name. Exit 0: every call answered.
+to its file name. Exit 0: every call answered, and each paged list (the fleet roles, the realm's API clients and
+tokens, the organizations) read to the total its answer stated, which the record keeps on each page as `listed`.
 
 The given hosts take the first placeholders, in the order the script reads them: `{{host-1}}` is `OPS_HOST`,
 `{{host-2}}` is `OPS_BROKER_HOST`, `{{host-3}}` is `VCFA_HOST`, and `{{host-4}}` to `{{host-6}}` are `VC_HOSTS`. A
@@ -22,10 +23,10 @@ API client sessions in vCenter: CUSTOMER\<client id> (the broker tenant, not the
 Emergency client: none
 API clients: 4
   {{name-8}}: roles sddc_admin, vcf_administrator, {{role-1}}; no token
-  {{name-10}}: roles vcf_administrator; token {{name-16}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-01-24, 103 d left; last used 2026-07-29, 75 d before the read
-  {{name-12}}: roles vcf_viewer; token {{name-17}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-04-01, 170 d left; last used 2026-10-13, 0 d before the read
+  {{name-10}}: roles vcf_administrator; token {{name-16}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-01-24, 100 d left; last used 2026-07-29, 78 d before the read
+  {{name-12}}: roles vcf_viewer; token {{name-17}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-04-01, 167 d left; last used 2026-10-15, 0 d before the read
   {{name-14}}: roles vcf_administrator; no token
-User API token of {{name-1}}: token {{name-15}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-02-03, 113 d left; last used 2026-10-13, 0 d before the read
+User API token of {{name-1}}: token {{name-15}} ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-02-03, 110 d left; last used 2026-10-15, 0 d before the read
 Fleet settings: access token 60 min, API token 259200 min (180 d), retention 43200 min (30 d), all-users group off
 Organizations: 10
   {{org-1}}  all-apps: ldap-system
@@ -107,7 +108,7 @@ Organizations: 10
   settings hold the same two values.
 - **Each token's runway.** Every token line ends with its expiry and the days left, then the date it was last
   exchanged for a bearer, both counted from the moment of the read, so the record reads the same on any later day.
-  One client holding VCF Administrator had last exchanged its token 75 days before the read, and two clients hold
+  One client holding VCF Administrator had last exchanged its token 78 days before the read, and two clients hold
   no token at all: both are questions for the client's owner, since a client whose function retired is deleted. A
   token whose expiry falls before the rotation date in your catalog is the one to rotate first.
 - **Each organization chooses its own way in.** Three sign in only through VCF Automation's system LDAP
@@ -123,7 +124,7 @@ Organizations: 10
 
 ## A credential whose role cannot read the fleet identity plane
 
-The same script, the same day, on the API token of an API client holding VCF Viewer, with the fleet plane only. Every
+The same script, on 2026-10-13, on the API token of an API client holding VCF Viewer, with the fleet plane only. Every
 fleet identity read answered 403, so the script prints NOT READ and the refused reads before any line that counts. It
 exited 1 on that run, the code a failed read then had; since 2026-10-15 a failed read exits 3, as on every identity
 companion, the NOT READ line also counts a list read in part and names the role only when a read was refused, and a
@@ -147,8 +148,9 @@ FAILED vcf-operations GET /api/fleet-management/iam/roles: 403 403
 5 call(s), 5 failed; census.json written with every estate value replaced
 ```
 
-The run above it used a VCF single sign-on user's API token holding VCF Administrator. A role between the two was not
-tried, and neither was an API client holding VCF Administrator.
+The full run of 2026-10-13 beside it used a VCF single sign-on user's API token holding VCF Administrator, as the run
+at the top of this page does. A role between the two was not tried; an API client holding VCF Administrator was, the
+same day (the last section).
 
 ## An answer without its list
 
@@ -179,8 +181,9 @@ No reference run produced this either; the tests hold it. A paged list is read u
 total the answer states. Here the fleet stated 120 API clients and its second page came back empty, so the census
 counts what it read, says the list is not the estate's, and exits 3; an answer with no stated total, a short page
 before the total, a page of entries already read and a total that changes between pages are refused the same way.
-An organization listed without `isClassicTenant` prints `type not read` in place of its type, and its list call is
-marked, so the run exits 3 there too:
+An organization listed without `isClassicTenant` prints `type not read` in place of its type, one listed without
+`isProviderConsumptionOrg` prints `provider consumption not read` after it, and either marks the list call, so the
+run exits 3 there too:
 
 ```
 $ python3 census.py --redact
@@ -196,7 +199,7 @@ FAILED vcf-automation GET /cloudapi/1.0.0/orgs?page=1&pageSize=128: 200 1 organi
 
 ## The same census as an API client holding VCF Administrator
 
-The same day, a throwaway API client holding VCF Administrator at realm scope ran the census on the fleet plane: every
+On 2026-10-13, a throwaway API client holding VCF Administrator at realm scope ran the census on the fleet plane: every
 fleet identity read answered, and each fleet line (brokers, realm, provider, directories, emergency clients, settings,
 API clients other than itself, user tokens) was the same as a VCF single sign-on user's API token read straight
 after it. One run. With VCF Viewer every read was refused (above), and no role between the two was tried, so the

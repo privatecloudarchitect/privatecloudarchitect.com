@@ -47,7 +47,7 @@ Use:  python3 service_account.py --org ORG --name NAME --role "ROLE NAME" [--tok
       python3 service_account.py --org ORG --name NAME --teardown [--token-file PATH] [--execute] [--redact]
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 refused by this script before any write: the account exists (for a create), or for a teardown it is not one
-        the state file records; or no organization answers to that name
+        the state file records; or no organization, or more than one, carries that name exactly
       1 the run did not hold: a write was refused (a teardown's revoke among them), or the read-back was not what was
         asked (the account active, its bearer holding exactly the role, the stored token refreshing; for a teardown,
         no account left and, with --token-file, the revoked token refused)
@@ -260,14 +260,17 @@ def vcfa_pages(vcfa: Vcfa, path: str, shown: str, org_urn: str | None = None,
     return None
 
 
-def org_lookup(vcfa: Vcfa, org: str) -> tuple[int, str | None]:
-    """200 and the organization's URN when exactly one answers to the name; 200 and None when the list, read whole,
-    holds no such organization (or more than one); 0 and None when the list was not read whole."""
+def org_lookup(vcfa: Vcfa, org: str) -> tuple[int, str | None, int]:
+    """(200, the organization's URN, 1) when exactly one organization in the filtered list, read whole, carries the
+    name given, character for character; (200, None, n) when n other than one do; (0, None, 0) when the list was not
+    read whole. A row the filter returned under another name is never taken for the one named (a filter that matches
+    more than the exact name, a wildcard among them, would otherwise hand the register an organization nobody named)."""
     rows = vcfa_pages(vcfa, f"/cloudapi/1.0.0/orgs?filter={urllib.parse.quote('name==' + org)}",
                       "/cloudapi/1.0.0/orgs?filter=name=={org}")
     if rows is None:
-        return 0, None
-    return 200, (str(rows[0]["id"]) if len(rows) == 1 else None)
+        return 0, None, 0
+    named = [r for r in rows if r.get("name") == org]
+    return 200, (str(named[0]["id"]) if len(named) == 1 else None), len(named)
 
 
 def accounts(vcfa: Vcfa, urn: str, name: str) -> list[dict] | None:
@@ -354,19 +357,20 @@ def _write_0600(path: str, value: str, new: bool) -> None:
         f.write(value)
 
 
-def no_org(status: int, record: dict) -> int:
-    """Why the organization was not found: its list was not read (3), or it was read and names no such organization
-    (2, refused before any write)."""
+def no_org(status: int, count: int, record: dict) -> int:
+    """Why no one organization was found: its list was not read (3), or it was read whole and no organization, or more
+    than one, carries the name given (2, refused before any write)."""
     if status != 200:
         return EXIT_UNREAD
-    record["refused"] = "the organization was not found by that name"
+    record["refused"] = ("the organization was not found by that name (compared exactly, case included)" if not count
+                         else f"{count} organizations carry that name, and a run acts in exactly one")
     return EXIT_REFUSED
 
 
 def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
-    status, urn = org_lookup(vcfa, a.org)
+    status, urn, count = org_lookup(vcfa, a.org)
     if not urn:
-        return no_org(status, record)
+        return no_org(status, count, record)
     existing = accounts(vcfa, urn, a.name)
     if existing is None:
         return EXIT_UNREAD
@@ -445,9 +449,9 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
 
 
 def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
-    status, urn = org_lookup(vcfa, a.org)
+    status, urn, count = org_lookup(vcfa, a.org)
     if not urn:
-        return no_org(status, record)
+        return no_org(status, count, record)
     rows = accounts(vcfa, urn, a.name)
     if rows is None:
         return EXIT_UNREAD
@@ -650,6 +654,10 @@ def usage_problem(a: argparse.Namespace) -> str | None:
 
 class _Parser(argparse.ArgumentParser):
     """argparse exits 2 on a usage error, the code this script gives a refusal; it exits 5 here."""
+
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
 
     def error(self, message: str):
         self.print_usage(sys.stderr)

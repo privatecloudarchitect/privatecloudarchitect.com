@@ -9,7 +9,7 @@ and the probes.
 
 | File | What it is |
 |---|---|
-| `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
+| `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), every grant saved to a file of your own and two saves compared (`--save-permissions`, `--compare-permissions`), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
 | `authz.json` | That record from the reference estate. The chapter's plates render it. |
 
 ## Run it
@@ -71,9 +71,11 @@ REALM_DOMAIN (<domain>) and DIRECTORY_DOMAINS (<domain>) name the same domain. R
 ### Every page of the lists
 
 The permission and role lists are paged: an answer that carries a `marker` has more after it, and the census asks for
-the next page with that marker until an answer carries none. A page refused, or a marker answered twice, is a list not
-read (exit 3, `NOT READ` under that vCenter), and so is a permission list with no permission in it, because `VC_USER`,
-an administrator, holds one.
+the next page with that marker until an answer carries none. vCenter states no total for them, so the read holds them to
+what it can check. A page refused, an item without its id, an id answered on an earlier page (the list moved while it was
+read), a page that says more follow and adds nothing, or a marker answered twice, is a list not read (exit 3, `NOT READ`
+under that vCenter), and so is a permission list with no permission in it, because `VC_USER`, an administrator, holds
+one.
 
 ### Before the realm exists
 
@@ -121,17 +123,66 @@ held: every named grant is gone and no other grant moved
 exit 0
 ```
 
+## Save every grant, and compare two saves
+
+The census counts grants by class and names none. To see which grants a change moved, save the whole list before the
+change and again after, on your own disk, and compare the two grant by grant:
+
+```bash
+export VC_HOSTS=<every vCenter the change touches>
+python3 authz.py --save-permissions ~/.vcf/grants-before.json      # a new file, mode 0600, outside the clone
+# ... the change ...
+python3 authz.py --save-permissions ~/.vcf/grants-after.json
+python3 authz.py --compare-permissions ~/.vcf/grants-before.json ~/.vcf/grants-after.json
+```
+
+`--save-permissions FILE` reads each vCenter's permission list whole, with the census's pager and its rules, and the
+role catalog for the roles' names, and writes every grant: the vCenter, the entity (its type and id), the principal as
+vCenter spells it in the grant (`DOMAIN\name`, user or group), the role's id and name, whether it propagates, and the
+permission's id. It needs `VC_HOSTS`, `VC_USER` and `VC_PASSWORD_FILE`, and no domain variable. The file names every
+principal on your estate, so it is never scrubbed and never published: it is written only as a new file (an existing one
+is refused, so a list saved before a change is never written over), at mode 0600, and never inside the clone (exit 5 for
+each; `~/.vcf` is where the other companions keep their files). A list not read whole on any vCenter writes nothing
+(exit 3), because a saved list that missed a vCenter's grants would compare as removals. The file carries its own header,
+per-vCenter counts, totals and a digest of its grants.
+
+`--compare-permissions BEFORE AFTER` reads no vCenter. It matches grants by the grant key: the vCenter, the entity, the
+principal (its name, and whether it is a user or a group) and the role. On the terminal only, it prints each grant added,
+removed or changed (a grant that started or stopped propagating); a grant given another role on the same entity shows as
+one removed and one added. vCenter's list can carry one grant more than once, under different permission ids and
+identical otherwise (one key on one vCenter of the reference estate held two): the save reports such a key, and the compare counts
+the grants under such a key, so one of the two gone is one removal. It exits 1 on any difference and 0 on none. It exits 3, comparing nothing, when either file is
+unreadable, partial, edited after it was written, or not written by `--save-permissions`. A vCenter read in one file only
+is named `NOT COMPARED`, and the files are not shown equal: exit 3, unless a vCenter both read differs (1). A host typed
+in another case, or with a trailing dot, is the same vCenter. BEFORE saved after AFTER is a usage error (exit 5), since
+every addition would read as a removal. Output, with the names replaced and the counts written as `<n>`:
+
+```text
+authz.py --compare-permissions: grant by grant, on every vCenter both files read (printed here only)
+  BEFORE: saved <time>, 2 vCenter(s), <n> grants
+  AFTER: saved <time>, 2 vCenter(s), <n> grants
+  <vcenter-1>: 0 added, 0 removed, 0 changed, of <n> and <n> grants
+  <vcenter-2>: 1 added, 1 removed, 0 changed, of <n> and <n> grants
+    + Folder <folder-moid>: <directory>\<group> (GROUP), role ReadOnly (-2), propagating
+    - Folder <folder-moid>: <realm>\<group> (GROUP), role ReadOnly (-2), propagating
+2 grant(s) differ
+exit 1
+```
+
+What a compare cannot see: vCenter keeps a grant by the principal's name, so a name your directory gave to someone new
+reads as the same grant. Who holds a name is the directory's to answer.
+
 ## Exit codes
 
 The first that applies, so a scheduler reads one state from one number:
 
 | Exit | Means | Do |
 |---|---|---|
-| 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; `--remove-probe-roles` refused (a probe role granted to someone other than its reserved group, which removing the role would remove too; nothing is sent) or not held (a probe role still listed after it); or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of a probe role, one there before it began included, when it sends nothing) | read the vCenter's permissions before anything else |
-| 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, only when every vCenter's session list was read whole, and never while a live session is spelled in it; before a realm there is no such class) | name them with `--where-realm`, remove them with `--remove` |
-| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a permission list held no permission, a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing), the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run or its residue was not read back, or an error the script did not expect | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
-| 0 | nothing for a person to act on: every vCenter read and placed (with `REALM_DOMAIN` set, its session list read whole), no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held | nothing |
-| 5 | a usage error, found before anything is read (a missing or wrong argument or variable, a password file it cannot read, a `REALM_DOMAIN` equal to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, `--remove` among them, a Python older than 3.10) | fix the invocation |
+| 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; `--remove-probe-roles` refused (a probe role granted to someone other than its own reserved group, which removing the role would remove too; nothing is sent) or not held (a probe role still listed after it); or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of a probe role, one there before it began included, when it sends nothing) | read the vCenter's permissions before anything else |
+| 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, only when every vCenter's session list was read whole, and never while a live session is spelled in it; before a realm there is no such class); with `--compare-permissions`, a grant added, removed or changed on a vCenter both files read | name them with `--where-realm`, remove them with `--remove`; for a compare, read each line and confirm the change was meant |
+| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a list not read whole (a permission list with no permission, an item without its id, an id answered twice, a page that adds nothing), a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing), the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run, stopped on an error, or its residue was not read back, a vCenter `--remove-probe-roles` could not finish or read back, or an error the script did not expect; with `--save-permissions`, a list not read whole (nothing written); with `--compare-permissions`, a file unreadable, partial or not written by `--save-permissions` (nothing compared), or a vCenter read in one file only | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
+| 0 | nothing for a person to act on: every vCenter read and placed (with `REALM_DOMAIN` set, its session list read whole), no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held; with `--save-permissions`, the file written; with `--compare-permissions`, no difference and every vCenter in both files | nothing |
+| 5 | a usage error, found before anything is sent (a missing or wrong argument or variable, an abbreviated flag, since flags are taken whole and `--exec` is not `--execute`, a password file it cannot read, a `REALM_DOMAIN` equal to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, `--remove` among them, a `--supervisor-vm` that names no VM or several, looked up before the census and every probe, a `--save-permissions` FILE that exists, has no directory or lies inside the clone, a `--compare-permissions` BEFORE saved after AFTER, a Python older than 3.10) | fix the invocation |
 
 A record refused because an estate value or a password survived the scrub is not written, and it never hides the run's
 result: the run's own code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3, because nothing
@@ -150,6 +201,13 @@ python3 authz.py --probe-grants --probe-tags --supervisor-vm <a Supervisor VM yo
 `TEST_LOCAL_GROUP`, optional, names a local SSO group you have made to hold `TEST_GROUP` as a member: `--probe-grants`
 then adds one case, the role granted to that local group, and measures whether a directory group nested in a local
 group carries its grant.
+
+`--supervisor-vm` is looked up on `SUPERVISOR_VCENTER` before the census and every probe: a name that names no VM, or
+several, is a usage error (exit 5) with nothing read or sent, and a lookup that cannot be made is exit 3, nothing sent.
+Each grant a probe makes comes off in a `finally` the moment its case ends, the global ones by their permission ids
+(deleting the folder does not take them). A probe that meets an error it did not expect stops there: its removals still
+run, its residue is read back into the record (`stopped`), any probe after it is not run, and the run exits 2 for residue
+or 3. A grant it could not take off the Supervisor VM is named on your terminal only, with the command's other residue.
 
 ## What it answers
 
@@ -218,9 +276,22 @@ group carries its grant.
   reconciled on every run, instead of creating and deleting roles each time. Their reserved groups hold a
   grant of a role nobody else is given, which changes no one's access. `--remove-probe-roles` removes them and
   reports the groups left behind; removing those takes the vCenter's SSO administrator. A role removed takes every
-  grant of it along, so it refuses, with nothing sent, while a probe role is granted to anyone but its reserved group,
-  and it reads the role list back after (exit 2 for either). These two guards are the script's code and its tests; no
-  run was made with them.
+  grant of it along, so it refuses, with nothing sent, while a probe role is granted to anyone but its own reserved
+  group, and it reads the role list back after (exit 2 for either). A probe role is one of the six names, matched whole,
+  and its own reserved group is `vcf_reserved_<its role id>` in the local domain, matched whole: a role you named
+  `authz-probe-<anything else>` is never reconciled, counted or removed, and a grant to another role's reserved group,
+  or to a directory group of that name, counts as someone's access. It works one vCenter at a time and prints each
+  one's result as it is done, so a run that stops shows which were done; a vCenter it could not finish is recorded with
+  the roles it removed before the error (exit 3). These guards are the script's code and its tests; no run was made
+  with them.
+- The census sorts a local group named `vcf_reserved_` and a role id, matched whole, as a reserved group: a group you
+  named with that prefix and anything else is read as `local, other`.
+- A probe that stopped on an error, the `--supervisor-vm` lookup before the census, and `--remove-probe-roles` across
+  vCenters that fail part way are the script's code and its tests; no run stopped so.
+- `--save-permissions` and `--compare-permissions` were run once, read-only, on the reference estate's three 9.1.1
+  vCenter instances (X-220, 2026-10-15): two saves wrote every grant at mode 0600 and compared equal, and two copies
+  altered after they were written were refused. Every list came in one page there, so the paging past one page, the
+  refusal of a list not read whole and the compare across two vCenter sets are the script's tests (recorded answers).
 - The reserved groups list no members: vCenter's user directory returns none for them, even for a group
   whose VCF role is held. The census does not claim who holds a VCF role; VCF Operations' fleet IAM answers
   that.
@@ -240,9 +311,11 @@ group carries its grant.
   name, custom roles as `a custom role`) and scope. Object-scoped ones are the Supervisor's namespace grants.
 - `vcenters.<vc>.sessions`: sessions by class, and the local administrator's sessions by client agent; `error` when the
   list was not read whole, or `not read: pyVmomi is not installed`.
-- `probeRoleTeardown.<vc>`: with `--remove-probe-roles`, the roles removed, `rolesLeft` on the read-back, the reserved
-  groups VCF left, or `refused` with nothing sent.
+- `probeRoleTeardown.<vc>`: with `--remove-probe-roles`, the roles removed (`removedRoles`), `rolesLeft` on the
+  read-back (`null`: not read back), the reserved groups VCF left, `refused` with nothing sent, or `error` with what was
+  removed before it.
 - `roleDrift`: custom roles whose copies differ between vCenters, with what each copy holds beyond the shared
   set.
 - `grantProbe`, `tagProbe`, `supervisorProbe`: each case, its outcome, and the residue read afterwards (`true` or a
-  count: left behind; `null`: not read back); `aborted` when the probe could not run, or sent nothing.
+  count: left behind; `null`: not read back); `aborted` when the probe could not run, or sent nothing; `stopped` when it
+  met an error it did not expect, with only the error's kind (its message is on the terminal).

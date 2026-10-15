@@ -76,10 +76,10 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         session POST with no session id, a list read whose answer holds no list (a 200 without its list key is
         not an empty list), a paged list not read whole (no stated total, a page empty or short before the total, a
         total that changed between pages), an organization listed without isClassicTenant (its type prints "type not
-        read"), a list of no broker (the census's own bearer came from one) or, as the provider, of no
-        organization (the provider's own System organization is one) (the record is still written and names the
-        call; a fleet read refused or read in part opens
-        the print with NOT READ, so its counts are not taken for the estate's), the credential could
+        read") or without isProviderConsumptionOrg (it prints "provider consumption not read"), a list of no broker
+        (the census's own bearer came from one) or, as the provider, of no organization (the provider's own System
+        organization is one) (the record is still written and names the call; a fleet read refused or read in part
+        opens the print with NOT READ, so its counts are not taken for the estate's), the credential could
         not be obtained, --orgs-only read an organization signing in through VCF single sign-on whose issuer
         BROKER_HOSTS does not name (so the brokers given miss at least the one the platform signs in through), the
         record refused because an estate value survived the scrub (nothing is written, so a tool that reads the
@@ -506,9 +506,9 @@ def fleet(ops: Reader) -> dict:
 def organization(org: dict, ldap: dict, oauth: dict, saml: dict) -> dict:
     """One organization's ways in, from its own three settings reads. Of the OIDC issuer only the host is kept."""
     custom = ldap.get("customOrgLdapSettings") or {}
-    classic = org.get("isClassicTenant")
+    classic, consumption = org.get("isClassicTenant"), org.get("isProviderConsumptionOrg")
     return {"name": org.get("name"), "id": org.get("id"), "classic": classic if isinstance(classic, bool) else None,
-            "providerConsumption": bool(org.get("isProviderConsumptionOrg")), "enabled": org.get("isEnabled"),
+            "providerConsumption": consumption if isinstance(consumption, bool) else None, "enabled": org.get("isEnabled"),
             "ldapMode": ldap.get("orgLdapMode"), "ldapHost": custom.get("hostName"), "ldapPort": custom.get("port"),
             "ldapSsl": custom.get("isSsl"), "oidc": bool(oauth.get("enabled")), "oidcVidb": bool(oauth.get("vidb")),
             "issuerHost": host_of(oauth.get("issuerId")), "saml": bool(saml.get("enabled"))}
@@ -522,9 +522,16 @@ def organizations(vcfa: Reader) -> list[dict]:
     orgs = vcfa_pages(vcfa, "/cloudapi/1.0.0/orgs")
     if not orgs:
         shape_error(vcfa.calls, "no organization in the list, where the provider's own System organization is one")
+    # The type decides which ways in and roles apply, and the provider consumption flag says which organization the
+    # provider consumes from: an entry without either is printed "type not read" or "provider consumption not read",
+    # never all-apps or an ordinary organization, and the run exits 3.
     untyped = sum(1 for o in orgs if not isinstance(o.get("isClassicTenant"), bool))
-    if untyped:   # the type decides which ways in and roles apply: an entry without it is printed "type not read"
-        shape_error(vcfa.calls, f"{untyped} organization(s) in the list without isClassicTenant, so their type is not read")
+    unflagged = sum(1 for o in orgs if not isinstance(o.get("isProviderConsumptionOrg"), bool))
+    missing = ([f"{untyped} organization(s) in the list without isClassicTenant, so their type is not read"] if untyped
+               else []) + ([f"{unflagged} organization(s) in the list without isProviderConsumptionOrg, so whether each "
+                            "is the provider's consumption organization is not read"] if unflagged else [])
+    if missing:
+        shape_error(vcfa.calls, "; ".join(missing))
     for org in orgs:
         uid = str(org.get("id", "")).rsplit(":", 1)[-1]
         reads = []
@@ -846,12 +853,19 @@ def unplaced_issuers(s: dict) -> list[str]:
     return [o["name"] for o in s["organizations"] if "vcf-sso" in o["sign_in"] and o["issuer"] != "broker"]
 
 
+def consumption(flag: object) -> str:
+    """The provider consumption flag as the Organizations line prints it: named when true, nothing when false, and
+    "provider consumption not read" when the list entry carried no such flag (the run then exits 3: an absent flag is
+    not false)."""
+    return ", provider consumption" if flag is True else "" if flag is False else ", provider consumption not read"
+
+
 def org_report(s: dict) -> list[str]:
     """The organizations block: each organization's type and its ways in."""
     if not s["organizations"]:
         return []
     lines = [f"Organizations: {len(s['organizations'])}"]
-    lines += [f"  {o['name']}  {o['type']}{', provider consumption' if o['provider_consumption'] else ''}: "
+    lines += [f"  {o['name']}  {o['type']}{consumption(o['provider_consumption'])}: "
               f"{', '.join(o['sign_in'])}" + (f" (issuer: {o['issuer']})" if o["issuer"] else "")
               for o in s["organizations"]]
     if s.get("orgs_only") and not s["brokers"] and any(o["issuer"] == "other" for o in s["organizations"]):
@@ -1117,6 +1131,10 @@ def given_values(egress_url: str | None) -> list[tuple[str, str]]:
 
 class _Parser(argparse.ArgumentParser):
     """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
+
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
 
     def error(self, message: str):
         self.print_usage(sys.stderr)

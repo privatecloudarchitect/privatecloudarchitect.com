@@ -16,8 +16,10 @@ client with its roles and its tokens' two lifetimes. Each API client in the reco
 holds alone: an owner, a role, both lifetimes and a rotation date. A client that no catalog entry names, or whose
 entry has no owner or no next_due, fails; so does one with no role, a token missing a lifetime, a token EXPIRED or
 REVOKED, or a token whose end date has passed; a client holding no token, or a token that expires before its entry's
-next_due, is a warning. A token whose state (anything but ACTIVE, EXPIRED or REVOKED) or end date the record does not
-carry is not judged: its client reads `unread`, and the run exits 3. Every name in a census record is a
+next_due, is a warning, and so is an entry that two API clients join (a name two clients share, in two realms or
+across a re-creation): one entry per credential, so name each by its client id. A token whose state (anything but
+ACTIVE, EXPIRED or REVOKED) or end date the record does not carry is not judged: its client reads `unread`, and the run
+exits 3. Every name in a census record is a
 placeholder, so the join is on keyed fingerprints: run the census with FINGERPRINT_KEY_FILE set, and give this
 script the same file. The join first checks that the census read, each check on its own whatever the record's exit
 says. A record is not a read when its own exit is not 0; when a call to VCF Operations' fleet identity plane failed,
@@ -41,8 +43,8 @@ Exit, the worst state in this order, so a warning never hides a client the run c
         fingerprint), checked before any entry is printed, with nothing joined, because nothing about the API clients
         is known; or a joined client holds a token whose state or end date the record does not carry, so that client
         is not judged; or an error the script did not expect
-      1 a warning (due inside the window, a next-due date later than the cadence allows, a client with no token, or a
-        token expiring before its rotation date), and nothing above
+      1 a warning (due inside the window, a next-due date later than the cadence allows, a client with no token, a
+        token expiring before its rotation date, or a catalog entry two API clients join), and nothing above
       0 every entry complete and not due inside the window, and with --census every API client complete
       5 a usage error: an argument this script does not take, a --today that is not a date, a catalog or census file
         that cannot be read, a catalog that is not one (no JSON object with a credentials list of objects), FINGERPRINT_KEY_FILE unset or unreadable, a census record without fingerprints or made
@@ -160,6 +162,19 @@ def census_join(catalog: dict, census: dict, key: bytes,
     for client in (census.get("summary") or {}).get("api_clients") or []:
         entry = next((by_fp[f] for f in client.get("fingerprints") or [] if f in by_fp), None)
         out.append((client, entry, *client_check(client, entry, today)))
+    # One entry per credential. Two API clients can share a name (one in each of two realms, or a client made again
+    # under the name of one never deleted), and an entry that names its client by that name joins both: each is then
+    # judged against one owner's rotation date that can track only one of them. A warning, never a pass.
+    shared: dict[int, int] = {}
+    for _client, entry, _state, _why in out:
+        if entry is not None:
+            shared[id(entry)] = shared.get(id(entry), 0) + 1
+    for i, (client, entry, state, why) in enumerate(out):
+        if entry is not None and shared[id(entry)] > 1:
+            named = entry.get("api_client") or entry.get("name")
+            why = [*why, f"{shared[id(entry)]} API clients join the one catalog entry naming {named}: one entry per "
+                         "credential keeps each one's rotation on its own record, so name each by its client id"]
+            out[i] = (client, entry, state if state in ("fail", "unread") else "warn", why)
     return out
 
 

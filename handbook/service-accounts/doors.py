@@ -15,11 +15,14 @@ Surfaces are chosen by which environment variables are set; unset ones are skipp
       Real-Time Metrics RTM_HOST   GET /data-query-service/api/v1/metadata   broker bearer      expect refused
                                                                              service JWT        expect accepted
       Fleet lifecycle   FLEET_HOST GET /fleet-lcm/v1/components              its own JWT        expect accepted
-                                                                             the metrics JWT    expect refused (audience checked HERE;
-                                                                             the reverse pair is accepted: the metrics
-                                                                             service does not check, so mint one per
-                                                                             service because at least one of them does;
-                                                                             the /health probe answers any JWT and is shown for contrast)
+                                                                             the metrics JWT    expect refused (a JWT minted for
+                                                                             another service is refused HERE; the reverse
+                                                                             pair is accepted, so mint one per service
+                                                                             because at least one of them refuses another's;
+                                                                             the /health probe answers any JWT and is shown
+                                                                             for contrast. A service JWT carries no aud
+                                                                             claim: what it names per service is its
+                                                                             authorization_details, read 2026-10-15, X-126)
       Log management    LOGS_HOST  GET /api/v2/agent/groups (X-JWT-Token)    its own JWT        expect accepted
                         (host:port, the API port is 9543 on the build this was proven on)
   VCF Automation (VCFA_HOST, VCFA_ORG):
@@ -180,6 +183,10 @@ def rights_count(host, tok):
 class _Parser(argparse.ArgumentParser):
     """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
 
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
     def error(self, message):
         self.print_usage(sys.stderr)
         print(f"{self.prog}: error: {message}", file=sys.stderr)
@@ -277,9 +284,9 @@ def _run():
             not_read("Fleet lifecycle, service JWT (VCF_FLEET_LCM)", "the service JWT could not be minted")
         if rtm_jwt:
             st, _, _ = req("GET", fleet, {"Authorization": f"Bearer {rtm_jwt}", "Accept": "application/json"})
-            row("Fleet lifecycle, components", "the metrics service's JWT", st, "refused", "audience is per service")
+            row("Fleet lifecycle, components", "the metrics service's JWT", st, "refused", "minted per service, so another service's is refused here")
             st, _, _ = req("GET", health, {"Authorization": f"Bearer {rtm_jwt}", "Accept": "application/json"})
-            row("Fleet lifecycle, health probe", "the metrics service's JWT", st, None, "the health probe does not check the audience")
+            row("Fleet lifecycle, health probe", "the metrics service's JWT", st, None, "the health probe answers any service's JWT")
         if fjwt and os.environ.get("RTM_HOST"):
             st, _, _ = req("GET", f"https://{os.environ['RTM_HOST']}/data-query-service/api/v1/metadata", {"Authorization": f"Bearer {fjwt}", "Accept": "application/json"})
             # The chapter records the asymmetry rather than a symmetric rule: Fleet lifecycle refuses a JWT
@@ -287,7 +294,7 @@ def _run():
             # "refused" here made this harness disagree with the page it exists to check, which is a
             # drift-detector reporting drift against itself.
             row("Real-Time Metrics", "the fleet service's JWT", st, "accepted",
-                "this one does not check the audience; Fleet lifecycle does")
+                "accepted here, while Fleet lifecycle refuses another service's")
     else:
         print("  Fleet lifecycle                    skipped: FLEET_HOST not set")
     if os.environ.get("LOGS_HOST"):

@@ -157,6 +157,11 @@ api_client_retire.json written with every estate value replaced
   2 with `refused: the client holds one token`. Run on a client's own token, every write after the create refuses too
   (`--rotate` included, since 2026-10-15, held by the companion's tests): a second throwaway client, holding VCF
   Administrator, was refused its teardown that way, with no call that deletes.
+- **One realm of several is not a read of the fleet.** On a fleet of more than one realm, a `--rotate` or a
+  `--retire-old` that finds no client in the realm it reads, where no state file records that realm, prints `NOT READ`
+  and exits 3, as a teardown does: the client may be in a realm the run did not read, so the run never says "create it
+  first". In the fleet's only realm, or the realm the state file records, no client is a refusal (exit 2). Held by the
+  companion's tests, not run on the reference estate, which holds one realm.
 - **Regenerating a token in place gives no overlap.** The fleet API also regenerates a token's value
   (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`). In a run of 2026-10-13, called outside the script, the answer
   was a token under a new id with a new end date and a new value; the value from before answered HTTP 400 at the broker
@@ -286,7 +291,10 @@ exchange.json written with every estate value replaced; exit 1
 
 - **A list that holds only the census's own session is a failed read.** Minutes later the same lists held 275 to 354
   sessions each; a list of one means this identity may not see the others. The census prints that the read was narrowed and exits 3, a
-  read that failed, rather than reporting an estate with nobody signed in.
+  read that failed, rather than reporting an estate with nobody signed in. A list holding several sessions, every one
+  under the census identity's own name, is narrowed the same way and exits 3 (`sessions not read: the session list held
+  only this census identity's own sessions`), and so does a list that does not hold the session that read it; both are
+  held by the companion's tests, not seen on the reference estate.
 
 ## 3. That client rebound to `vcf_administrator`
 

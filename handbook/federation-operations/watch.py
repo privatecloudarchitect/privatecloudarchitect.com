@@ -75,9 +75,10 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded 
       OIDC or SAML on, except one signed in through VCF single sign-on and the provider's own consumption
       organization); WARN_DAYS (default 30); OUT (default watch.json).
 A read the watch could not make is never a pass, and neither is a check it did not run. Every VCF Automation list is
-read until its distinct items reach the total the answer states, and a Graph list to its last next link; a list not read
-whole is a read that failed, and so is a page that adds no item not already read or a next link that comes back, which
-the watch stops at rather than follow. An organization with neither OIDC nor SAML on is left out unless ORGS names it, and printed
+read until its distinct items reach the total the answer states, a page that adds no item not already read being a read
+that failed at once; a Graph list is read to its last next link, a page with no item read on (Microsoft's paging guidance
+says a page may hold none) and a next link that comes back a read that failed at once. A list not read whole is a read
+that failed. An organization with neither OIDC nor SAML on is left out unless ORGS names it, and printed
 as left out. An organization whose reads
 fail is kept in the run, named and counted, whether or not ORGS names it; an app or service principal Graph cannot find
 for an organization federated to the run's tenant is a failed read, and so are two apps that carry its identifier, as is a settings read that returns no
@@ -698,14 +699,17 @@ class Graph:
         return signing + "." + b64(sig)
 
     def values(self, path: str, **query: str) -> list[dict]:
-        """Every item of a Graph list, following @odata.nextLink until it is absent. A page without its `value` list, a
-        next link already followed, or a page that adds no item not already read and still points to another, is a
-        list not read (ReadError, exit 3), never followed further."""
+        """Every item of a Graph list, following @odata.nextLink until it is absent, as Microsoft's paging guidance
+        says ("Paging Microsoft Graph data in your app": "To read all results, you must continue to call Microsoft
+        Graph with the @odata.nextLink property returned in each response until the @odata.nextLink property is no
+        longer returned", and "A page of results might contain zero or more results"). So a page holding no item, or
+        only items already read (counted once, by id), is read on while it carries a next link. A page without its
+        `value` list, a next link that is not a link or repeats one already followed (the pages would go round for
+        ever), or a list still paging after MAX_PAGES pages, is a list not read (ReadError, exit 3), never an empty or
+        a short one. The same rule as the tenant-federation companion's and the leaver job's pager."""
         qs = urllib.parse.urlencode({f"${k}": v for k, v in query.items()}, quote_via=urllib.parse.quote)
         url, out, followed, seen = f"{GRAPH}{path}" + (f"?{qs}" if qs else ""), [], set(), set()
         for _ in range(MAX_PAGES):
-            if url in followed:
-                raise ReadError(f"a next link of {path} came back a second time, so the list would never end")
             followed.add(url)
             r = _fetch(url, {"Authorization": f"Bearer {self._bearer}", "Accept": "application/json"}, True)
             if not isinstance(r, dict) or not isinstance(r.get("value"), list):
@@ -716,8 +720,10 @@ class Graph:
             url = r.get("@odata.nextLink")
             if not url:
                 return out
-            if not new:
-                raise ReadError(f"a page of {path} added no item not already read and pointed to another, at {len(out)} items")
+            if not isinstance(url, str):
+                raise ReadError(f"a page of {path} gave a next link that is not a link, at {len(out)} items")
+            if url in followed:
+                raise ReadError(f"a next link of {path} came back a second time, so the list would never end")
         raise ReadError(f"{path}: more than {MAX_PAGES} pages")
 
 
@@ -1165,6 +1171,10 @@ def _print(results: list[dict], names: dict | None, attested: dict | None = None
 
 class _Parser(argparse.ArgumentParser):
     """argparse exits 2 on a usage error, the code this script gives a failure; it exits 5 here."""
+
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
 
     def error(self, message: str):  # type: ignore[override]
         self.print_usage(sys.stderr)

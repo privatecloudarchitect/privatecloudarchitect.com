@@ -23,22 +23,29 @@ Read-only by default:
      session keys and login times are never read into the record. With REALM_DOMAIN set the session read is part of
      the judgment, so a run without pyVmomi exits 3; before a realm (--no-realm) it is optional.
 
-Opt-in probes. Each creates its own throwaway objects (a folder, a tag category and tag), removes them in a
-``finally``, and reads the vCenter back for residue: the folder, the category, any grant it made on the Supervisor
-VM, and every grant of a probe role; a residue read that does not answer is not a clean run (exit 3). None replaces
-an existing permission: vSphere keeps one permission per principal per object, so a principal that already holds
-one where a case would add one is skipped and recorded as skipped. A probe sends nothing while a probe role is
-already granted to someone other than its reserved group (exit 2). All need pyVmomi.
+Opt-in probes. Each creates its own throwaway objects (a folder, a tag category and tag), removes each grant it
+makes in a ``finally`` the moment its case ends, removes its objects, and reads the vCenter back for residue: the
+folder, the category, any grant it made on the Supervisor VM, and every grant of a probe role; a residue read that
+does not answer is not a clean run (exit 3). A probe that meets an error it did not expect stops there: its removals
+still run, its residue is still read back and recorded (``stopped``), any probe after it is not run, and the run
+exits 2 for residue or 3. None replaces an existing permission: vSphere keeps one permission per principal per
+object, so a principal that already holds one where a case would add one is skipped and recorded as skipped. A probe
+sends nothing while a probe role is already granted to someone other than its own reserved group (exit 2). All need
+pyVmomi.
 
 The probes' roles are not throwaway. On a vCenter joined to VCF single sign-on, VCF creates a local group
 ``vcf_reserved_<role id>`` for every role created there, and deleting the role leaves the group behind, so a
 probe that created and deleted its roles on every run would leave one empty group per role per run. The
 probes use six roles named ``authz-probe-<what it holds>``, created the first time they are needed, reconciled
 to their declared privileges on every run, and granted only on the probe's own objects for the length of a
-case. ``--remove-probe-roles`` removes them and reports the reserved groups VCF leaves; removing those takes
-the vCenter's SSO administrator. A role removed takes every grant of it along, so it refuses, with nothing sent,
-while a probe role is granted to anyone but its reserved group, and reads the role list back after (exit 2 for
-either).
+case. A probe role is one of those six names, matched whole, and its own reserved group is
+``vcf_reserved_<that role's id>`` in the local domain, matched whole: a role an operator named with the same prefix,
+another role's reserved group, and a directory group of that name are never taken for them. ``--remove-probe-roles``
+removes the six and reports the reserved groups VCF leaves; removing those takes the vCenter's SSO administrator. A
+role removed takes every grant of it along, so it refuses, with nothing sent, while a probe role is granted to anyone
+but its own reserved group, and reads the role list back after (exit 2 for either). It works one vCenter at a time and
+prints each one's result as it is done, so a run that stops shows which were done; a vCenter it could not finish is
+recorded with what it removed before the error (exit 3).
 
   --probe-grants   on PROBE_VCENTER: a one-privilege role (Folder.Create) on a throwaway folder, granted in turn
                    to TEST_USER and to TEST_GROUP, each in the directory and the realm spelling, measured from
@@ -49,10 +56,25 @@ either).
                    from. AttachTag counts only from a global permission that propagates; ObjectAttachable must
                    be in effect on the object. Each case attaches a throwaway tag as TEST_USER and detaches it.
   --supervisor-vm NAME
-                   on PROBE_VCENTER: the effective roles and tag privileges of VC_USER and TEST_USER on one
+                   on SUPERVISOR_VCENTER: the effective roles and tag privileges of VC_USER and TEST_USER on one
                    Supervisor-managed VM, an attach of a throwaway tag as each, and VC_USER's attempts to grant
-                   itself a tag role on the VM (every role it grants itself carries ModifyPermissions, so an
-                   accepted grant stays removable). Choose a VM you own.
+                   itself a tag role and Admin on the VM, each grant it is given removed as its attempt ends. Choose
+                   a VM you own. The name is looked up before the census and every probe: one that names no VM, or
+                   several, is a usage error (exit 5) with nothing read or sent.
+
+A saved permission list, and a compare. Each is a run of its own, and neither writes the record.
+  --save-permissions FILE
+                   every grant on every vCenter in VC_HOSTS (vCenter, entity, principal as vCenter spells it, user or
+                   group, role id and name, whether it propagates, permission id), each list read whole by the pager
+                   below, written to FILE: a new file of mode 0600, outside the clone, never scrubbed and never
+                   published. A list not read whole on any vCenter writes nothing (exit 3). The file carries its own
+                   header, totals and digest, so the compare can tell it from any other.
+  --compare-permissions BEFORE AFTER
+                   two such files, compared by the grant key (vCenter, entity, principal with user or group, role):
+                   each grant added, removed or changed (whether it propagates), printed on the terminal only. vCenter's
+                   list can carry one grant under two permission ids; such a key is compared by count. Exit 1
+                   on any difference, 0 on none, 3 on a file unreadable, partial or not written by --save-permissions,
+                   and 3 when a vCenter was read in one file only (it was not compared). Reads no vCenter.
 
 The realm-spelled grants, named and removed. The census counts them and never names them in the record.
   --where-realm    with the census: each realm-spelled grant's permission id, principal, object, role and scope,
@@ -97,8 +119,10 @@ REALM_DOMAIN equal to any of those entries, compared without regard to case, sur
 equal to LOCAL_DOMAIN, where every grant sorts as local first and no grant could ever read realm-spelled.
 
 Paged lists. The permission and role lists are paged: an answer that carries a marker has more after it, and the next
-page is asked for with that marker until an answer carries none. A page refused, or a marker answered twice, is a list
-not read (exit 3). A permission list with no permission in it is too: VC_USER, an administrator, holds one.
+page is asked for with that marker until an answer carries none. vCenter states no total for them, so the read holds
+them to what it can check: a page refused, an item without its id, an id answered on an earlier page (the list moved
+while it was read), a page that says more follow and adds nothing, or a marker answered twice, is a list not read
+(exit 3). A permission list with no permission in it is too: VC_USER, an administrator, holds one.
 
 Environment:
   VC_HOSTS            comma-separated vCenter FQDNs (one, with --remove)
@@ -125,6 +149,8 @@ Environment:
 
 Run:  python3 authz.py [--where-realm] [--probe-grants] [--probe-tags] [--supervisor-vm NAME]
       python3 authz.py --remove ID[,ID...] [--execute]
+      python3 authz.py --save-permissions FILE
+      python3 authz.py --compare-permissions BEFORE AFTER
       Python 3.10 or later.
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 a removal (--remove --execute) that did not hold on read-back: a named grant still there, or another grant
@@ -134,7 +160,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         a probe role, one there before the probe began included, when the probe sends nothing)
       1 the census read realm-spelled grants: remove them (--where-realm names them, --remove removes them). Only
         with REALM_DOMAIN set, only when the session list of every vCenter read was read whole, and never while a live
-        session is spelled in it (each of those is 3); before a realm there is no such class
+        session is spelled in it (each of those is 3); before a realm there is no such class. With
+        --compare-permissions: a grant added, removed or changed on a vCenter both files read
       3 a read failed or a result is undetermined: a vCenter refused the session or a page of the permission or role
         list, a permission list with no permission in it, a session list not read whole (refused, holding nothing but
         the reader's own sessions, or, with REALM_DOMAIN set, not read because pyVmomi is missing), a vCenter on which
@@ -142,15 +169,22 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         vCenter on which REALM_DOMAIN names no grant while grants of a domain in none of the domains given are there (a
         misspelled realm hides its grants there), a live session spelled in REALM_DOMAIN (a domain people sign in with,
         so a grant spelled in it may apply to them; with --remove, nothing is sent), a probe that could not run its
-        cases or whose residue was not read back, or an error the script did not expect. Nothing is known about what
-        was not read
+        cases, stopped on an error, or whose residue was not read back, a vCenter --remove-probe-roles could not finish
+        or read back, or an error the script did not expect. With --save-permissions: a list not read whole on any
+        vCenter (nothing written). With --compare-permissions: a file unreadable, partial or not written by
+        --save-permissions (nothing compared), or a vCenter read in one file only (not compared, so the files are not
+        shown equal). Nothing is known about what was not read
       0 nothing for a person to act on: every vCenter read and placed (with REALM_DOMAIN set, its session list read
         whole), no realm-spelled grant, every probe clean (with --remove: the plan printed, or every named grant removed
-        and nothing else moved)
-      5 a usage error, before anything is read: an argument or environment variable missing or wrong, a REALM_DOMAIN
+        and nothing else moved; with --save-permissions: the file written; with --compare-permissions: no grant added,
+        removed or changed, and every vCenter in both files)
+      5 a usage error, before anything is sent: an argument or environment variable missing or wrong (an abbreviated flag
+        among them: flags are taken whole, so --exec is not --execute), a REALM_DOMAIN
         that names a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, --remove without OTHER_DOMAINS stated,
         an id --remove cannot name as a realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it
-        (--remove among them), a Python older than 3.10
+        (--remove among them), a --supervisor-vm that names no VM or several (looked up before the census and every
+        probe), a --save-permissions FILE that exists, has no directory or lies inside the clone, a
+        --compare-permissions BEFORE saved after AFTER, a Python older than 3.10
       A record refused because an estate value or a password survived the scrub is not written, and never hides the
       run's result: the run's code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3 (its
       record was not written; the probes and --remove-probe-roles may already have written to vCenter).
@@ -173,6 +207,10 @@ ATTACH = "InventoryService.Tagging.AttachTag"
 ON_OBJECT = "InventoryService.Tagging.ObjectAttachable"
 MODIFY = "Authorization.ModifyPermissions"
 RESERVED_PREFIX = "vcf_reserved_"
+# A reserved group's whole name: vcf_reserved_ and the id of the role it holds, an integer (-1 for Admin, -2 for
+# ReadOnly, a large number for a custom role). Matched whole, never by its prefix: a local group an operator named
+# vcf_reserved_<anything else> is theirs, not a VCF role arriving, and is read like any other local group.
+RESERVED_NAME = r"^vcf_reserved_-?[0-9]+$"
 # The local principals VCF keeps for itself: its integration accounts (svc-), the Supervisor's (wcp-) and the solution
 # users, named with a UUID at the end (nsxt_<uuid> among them). The census sorts by name, so an account an operator
 # named svc- lands here too. vCenter's own administrator and Administrators group are a class of their own. Every other
@@ -190,8 +228,29 @@ PRODUCT_ROLES = {
 }
 PRODUCT_LOCAL = {"Administrator", "Administrators"}
 
+# The classification, as data, in the order classify() applies it: the first rule whose domain and name both match
+# names the class. ``domain`` is the domain the principal's must equal, compared as norm() reads a domain: "local" is
+# LOCAL_DOMAIN (VSPHERE.LOCAL by default), "realm" is REALM_DOMAIN (never matched while it is unset), "directory" is any
+# of DIRECTORY_DOMAINS, "any" is every domain. ``name`` is a pattern the principal's name must match, without regard to
+# case, or None for any name. The chapter's grant translator runs this same table in the reader's browser, exported by
+# rule_table(), so the page cannot class a grant otherwise than the census does.
+CLASS_RULES = (
+    ("local", RESERVED_NAME, "reserved group"),
+    ("local", VCF_MANAGED.pattern, LOCAL_CLASSES[0]),
+    ("local", "^(?:" + "|".join(sorted(re.escape(p) for p in PRODUCT_LOCAL)) + ")$", LOCAL_CLASSES[1]),
+    ("local", None, LOCAL_CLASSES[2]),
+    ("realm", None, "realm spelling"),
+    ("directory", None, "directory"),
+    ("any", None, "another provider"),
+)
+# The domains REALM_DOMAIN may never equal, in the order realm_overlap() tests them. classify() tests the local domain
+# first and the realm before a directory or another provider's domain, so a realm typed as one of these would either
+# class every working grant in it realm-spelled or never class one so. Exported with the rules for the same reason.
+REALM_MUST_DIFFER = ("DIRECTORY_DOMAINS", "OTHER_DOMAINS", "LOCAL_DOMAIN")
+
 # The exit codes, one state each (the docstring's table).
 EXIT_OK, EXIT_REALM, EXIT_NOT_HELD, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
+EXIT_DIFFER = EXIT_REALM  # --compare-permissions: a grant added, removed or changed
 NO_REALM = "not applicable: --no-realm, an estate with no realm yet"
 
 
@@ -275,24 +334,40 @@ class Rest:
 PAGE_SIZE = None
 
 
-def pages(what, ask):
-    """Every item of a paged vSphere Automation list. ``ask(marker)`` sends one request and returns its status and
-    body. An answer whose ``marker`` is set has more items after it, and the next page is asked for with that marker;
-    an answer with no marker has returned the last of them. A page refused, an answer without its items list, or a
-    marker that is not a string or was answered before, is a list not read (ReadError, exit 3)."""
-    out, marker, seen = [], None, set()
+def pages(what, ask, ident):
+    """Every item of a paged vSphere Automation list, each once. ``ask(marker)`` sends one request and returns its status
+    and body; ``ident(item)`` is the item's id. An answer whose ``marker`` is set has more items after it, and the next
+    page is asked for with that marker; an answer with no marker has returned the last of them. vCenter states no total
+    for these lists, so the read is held to what it can check: a page refused, an answer without its items list, an
+    item without its id, an id read on an earlier page (the list moved while it was read), a page that says more follow
+    and adds no item, or a marker that is not a string or was answered before, is a list not read (ReadError, exit 3)."""
+    out, marker, seen, ids = [], None, set(), set()
     while True:
         st, body = ask(marker)
-        page = f" on page {len(seen) + 1}" if seen else ""
+        n = len(seen) + 1
+        page = f" on page {n}" if seen else ""
         if st != 200 or not isinstance(body, dict) or not isinstance(body.get("items"), list):
             raise ReadError(f"the {what} list answered {st}{page}")
-        out += body["items"]
+        for item in body["items"]:
+            try:
+                i = ident(item)
+            except (KeyError, TypeError):
+                i = None
+            if i is None or str(i) == "":
+                raise ReadError(f"the {what} list answered an item without its id on page {n}")
+            if str(i) in ids:
+                raise ReadError(f"the {what} list answered an id it had answered before, on page {n}: the list moved "
+                                "while it was read; read it again")
+            ids.add(str(i))
+            out.append(item)
         marker = body.get("marker")
         if marker is None or marker == "":
             return out
         if not isinstance(marker, str) or marker in seen:
             raise ReadError(f"the {what} list answered a marker it had answered before, or one that is not a string, "
-                            f"on page {len(seen) + 1}")
+                            f"on page {n}")
+        if not body["items"]:
+            raise ReadError(f"the {what} list answered a page that adds nothing and says more follow, on page {n}")
         seen.add(marker)
 
 
@@ -306,7 +381,7 @@ def permissions(rest, page_size=None):
         it = {k: v for k, v in (("page_size", size), ("marker", marker)) if v}
         return rest.call("POST", "/api/vcenter/authorization/permissions?action=list", {"iterate": it} if it else {})
 
-    items = pages("permission", ask)
+    items = pages("permission", ask, lambda p: p["permission"])
     if not items:
         raise ReadError("the permission list answered with no permission in it, though the administrator that read it "
                         "holds one")
@@ -321,7 +396,7 @@ def roles(rest, page_size=None):
         query = urllib.parse.urlencode([(k, v) for k, v in (("page_size", size), ("marker", marker)) if v])
         return rest.call("GET", "/api/vcenter/authorization/roles" + (f"?{query}" if query else ""))
 
-    return {str(i["role"]): i["info"] for i in pages("role", ask)}
+    return {str(i["role"]): i["info"] for i in pages("role", ask, lambda r: r["role"])}
 
 
 def soap(host, user, password):
@@ -359,22 +434,30 @@ def local_domain():
     return norm(os.environ.get("LOCAL_DOMAIN") or "VSPHERE.LOCAL").upper()
 
 
-def classify(domain, name, realm, directories, local=None):
-    """One principal's class, by how it behaves for a broker session and who looks after it. A local principal is
-    reserved (a VCF role arriving), VCF-managed (leave it), Administrators (the administrator and its group: read the
-    members), or other (read it, members included)."""
+def classify(domain, name, realm, directories, local=None, rules=CLASS_RULES):
+    """One principal's class, by how it behaves for a broker session and who looks after it: the first of ``rules``
+    (CLASS_RULES, in order) whose domain and name both match. A local principal is reserved (a VCF role arriving),
+    VCF-managed (leave it), Administrators (the administrator and its group: read the members), or other (read it,
+    members included). ``rules`` is a parameter so the chapter's builder can run the table its page carries through
+    this same function and hold the two equal."""
     d = norm(domain)
-    if d == norm(local or local_domain()):
-        if name.startswith(RESERVED_PREFIX):
-            return "reserved group"
-        if VCF_MANAGED.search(name):
-            return LOCAL_CLASSES[0]
-        return LOCAL_CLASSES[1] if name.lower() in {p.lower() for p in PRODUCT_LOCAL} else LOCAL_CLASSES[2]
-    if realm and d == norm(realm):
-        return "realm spelling"
-    if d in {norm(x) for x in directories}:
-        return "directory"
-    return "another provider"
+    domains = {"local": {norm(local or local_domain())}, "realm": {norm(realm)} - {""},
+               "directory": {norm(x) for x in directories} - {""}}
+    for where, pattern, cls in rules:
+        if where != "any" and d not in domains[where]:
+            continue
+        if pattern is None or re.search(pattern, str(name or ""), re.IGNORECASE):
+            return cls
+    raise ValueError("the classification table has no rule for every domain")
+
+
+def rule_table():
+    """The classification and the realm guard as data, for the chapter's grant translator: classify()'s rules in order,
+    how a domain is compared, the default local domain, and the domains REALM_DOMAIN may never equal. Patterns are
+    written so a browser's regular expressions read them the same way (no Python-only syntax)."""
+    return {"rules": [{"domain": w, "name": p, "class": c} for w, p, c in CLASS_RULES],
+            "nameFlags": "i", "domainCompare": "trimmed, trailing dots dropped, without regard to case",
+            "localDefault": "VSPHERE.LOCAL", "realmMustDiffer": list(REALM_MUST_DIFFER)}
 
 
 def names_nothing(by_class):
@@ -431,19 +514,22 @@ def realm_overlap(realm, directories, others=(), local=""):
     r = (realm or "").strip()
     if not norm(r):
         return None
-    for var, entry in [("DIRECTORY_DOMAINS", d) for d in directories] + [("OTHER_DOMAINS", d) for d in others]:
-        if norm(entry) == norm(r):
+    lo = (local or "").strip()
+    given = {"DIRECTORY_DOMAINS": list(directories), "OTHER_DOMAINS": list(others), "LOCAL_DOMAIN": [lo or "VSPHERE.LOCAL"]}
+    for var in REALM_MUST_DIFFER:
+        for entry in given[var]:
+            if norm(entry) != norm(r):
+                continue
+            if var == "LOCAL_DOMAIN":
+                return (f"REALM_DOMAIN ({r}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same domain. "
+                        f"{REALM_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in that domain "
+                        "sorts as local and no realm-spelled grant could be found. Set REALM_DOMAIN to the realm's name")
             what = ("a directory domain is the one your directory spells its users and groups in, DOMAIN\\user, which a "
                     "broker session carries" if var == "DIRECTORY_DOMAINS"
                     else "OTHER_DOMAINS names the domains you know are another identity provider's")
             return (f"REALM_DOMAIN ({r}) and {var} ({entry.strip()}) name the same domain. {REALM_IS}; {what}. Read as "
                     "one, every working grant in that domain would be classed realm-spelled and named for removal. Set "
                     "REALM_DOMAIN to the realm's name")
-    lo = (local or "").strip()
-    if norm(r) == norm(lo or "VSPHERE.LOCAL"):
-        return (f"REALM_DOMAIN ({r}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same domain. "
-                f"{REALM_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in that domain sorts "
-                "as local and no realm-spelled grant could be found. Set REALM_DOMAIN to the realm's name")
     return None
 
 
@@ -619,6 +705,37 @@ PROBE_ROLES = {
     "tag-on-object-modify": [ON_OBJECT, MODIFY],
 }
 SYSTEM_PRIVILEGES = {"System.Anonymous", "System.Read", "System.View"}
+# The six roles the probes keep, by their whole names. A role is a probe role only when its name is one of these: a
+# role an operator named authz-probe-<anything else> is theirs, and nothing here counts, reconciles or removes it.
+PROBE_ROLE_NAMES = frozenset(PROBE_ROLE_PREFIX + k for k in PROBE_ROLES)
+
+
+def probe_role_ids(am):
+    """The probe roles on this vCenter, by role id: the roles whose whole name is one of PROBE_ROLE_NAMES."""
+    return {r.roleId: r.name for r in am.roleList if r.name in PROBE_ROLE_NAMES}
+
+
+def own_reserved_group(principal, role_id):
+    """Whether a grant's principal is the reserved group VCF made for that very role, vcf_reserved_<role id> in the
+    local domain, matched whole: another role's reserved group, a group named with the prefix, or a directory group
+    of the same name holds the role as anyone else would."""
+    domain, _, name = str(principal).rpartition("\\")
+    return norm(domain) == norm(local_domain()) and name.lower() == f"{RESERVED_PREFIX}{role_id}".lower()
+
+
+def _read(fn):
+    """A residue read: its answer, or None when the read itself failed (a residue not read back is never a clean run)."""
+    try:
+        return fn()
+    except Exception:  # noqa: BLE001  any failure of a read-back leaves it unread, which exit_code reads as exit 3
+        return None
+
+
+def stopped(e):
+    """Why a step stopped, as its record keeps it: the error's kind only, since a message can carry a host or a
+    principal the scrub would then refuse. The message itself goes to the terminal, once, here."""
+    print(f"     stopped on {type(e).__name__}: {str(e)[:240]} (on this terminal only)", file=sys.stderr)
+    return f"{type(e).__name__}, an error the step did not expect"
 
 
 def ensure_probe_roles(am, keys):
@@ -640,9 +757,8 @@ def ensure_probe_roles(am, keys):
 
 def probe_role_grants(am):
     """Grants of a probe role to anyone but its own reserved group. A clean run leaves none."""
-    ids = {r.roleId for r in am.roleList if r.name.startswith(PROBE_ROLE_PREFIX)}
-    return sum(1 for p in am.RetrieveAllPermissions()
-               if p.roleId in ids and not str(p.principal).split("\\")[-1].startswith(RESERVED_PREFIX))
+    ids = probe_role_ids(am)
+    return sum(1 for p in am.RetrieveAllPermissions() if p.roleId in ids and not own_reserved_group(p.principal, p.roleId))
 
 
 def held_before(n):
@@ -655,21 +771,30 @@ def held_before(n):
 
 
 def remove_probe_roles(si):
-    """Remove the authz-probe-* roles once nothing but their reserved groups holds them, and read the role list back.
-    RemoveAuthorizationRole with failIfUsed false removes a role with every grant of it, so a grant of a probe role to
-    anyone else is refused first, with nothing sent: that grant is someone's access, removed where it was made. A probe
-    role still listed after the removal is a removal that did not hold. Either is exit 2."""
+    """Remove the six probe roles (PROBE_ROLE_NAMES, by whole name) once nothing but their own reserved groups holds
+    them, and read the role list back. RemoveAuthorizationRole with failIfUsed false removes a role with every grant of
+    it, so a grant of a probe role to anyone else is refused first, with nothing sent: that grant is someone's access,
+    removed where it was made. A probe role still listed after the removal is a removal that did not hold (exit 2). A
+    removal that stops on an error records the roles it removed before it and reads the role list back (exit 3)."""
     am = si.content.authorizationManager
-    held = probe_role_grants(am)
+    try:
+        held = probe_role_grants(am)
+        roles = sorted(probe_role_ids(am).items(), key=lambda kv: kv[1])
+    except Exception as e:  # noqa: BLE001  the grants not read: nothing may be sent
+        return {"removed": 0, "error": f"the probe roles' grants were not read ({stopped(e)}); nothing was sent"}
     if held:
         return {"removed": 0, "refused": f"{held} grant(s) of a probe role to someone other than its reserved group: "
                                          "removing the role would remove those grants with it, so nothing was sent"}
-    roles = [(r.roleId, r.name) for r in am.roleList if r.name.startswith(PROBE_ROLE_PREFIX)]
-    for rid, _ in roles:
-        am.RemoveAuthorizationRole(rid, False)
-    left = sum(1 for r in am.roleList if r.name.startswith(PROBE_ROLE_PREFIX))
-    return {"removed": len(roles), "rolesLeft": left,
-            "reservedGroupsLeft": reserved_groups_left(si, [rid for rid, _ in roles])}
+    done = []
+    for rid, name in roles:
+        try:
+            am.RemoveAuthorizationRole(rid, False)
+        except Exception as e:  # noqa: BLE001  record what was done before the error, and read the list back
+            return {"removed": len(done), "removedRoles": done, "error": f"the removal stopped at {name} ({stopped(e)})",
+                    "rolesLeft": _read(lambda: len(probe_role_ids(am)))}
+        done.append(name)
+    return {"removed": len(done), "removedRoles": done, "rolesLeft": _read(lambda: len(probe_role_ids(am))),
+            "reservedGroupsLeft": _read(lambda: reserved_groups_left(si, [rid for rid, _ in roles]))}
 
 
 def reserved_groups_left(si, role_ids):
@@ -692,6 +817,13 @@ def wait(task, seconds=30):
         if task.info.state in ("success", "error"):
             return
         time.sleep(1)
+
+
+def throwaway_folder(si, name):
+    """The probe's own folder, made under the first datacenter's VM folder."""
+    from pyVmomi import vim
+    dc = next(e for e in si.content.rootFolder.childEntity if isinstance(e, vim.Datacenter))
+    return dc.vmFolder.CreateFolder(name)
 
 
 def folder_left(si, name):
@@ -738,6 +870,10 @@ def measure_folder(host, subject, folder_moid, folder_name, admin_si):
 
 
 def probe_grants(host, admin, subject, cases):
+    """A one-privilege probe role granted on a throwaway folder to each case's principal in turn, measured from fresh
+    sessions of the subject. Each grant is removed in a ``finally`` the moment its case ends, whatever the measurement
+    did; an error the probe did not expect stops it, recorded as ``stopped``, and its folder is still deleted and the
+    vCenter read back for residue (exit 2 for residue, else 3)."""
     from pyVmomi import vim
     name = "authz-run-" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     si = soap(host, *admin)
@@ -749,29 +885,34 @@ def probe_grants(host, admin, subject, cases):
         if held:   # the residue read below counts them, so the run exits 2 with nothing sent
             rec["aborted"] = held_before(held)
             return rec
-        dc = next(e for e in si.content.rootFolder.childEntity if isinstance(e, vim.Datacenter))
-        made["folder"] = dc.vmFolder.CreateFolder(name)
+        made["folder"] = throwaway_folder(si, name)
         ids, rec["probeRoles"] = ensure_probe_roles(am, ["folder-create"])
         made["role"] = ids["folder-create"]
         folder = made["folder"]
         rec["baseline"] = measure_folder(host, subject, folder._moId, name, si)
         for label, principal, group in cases:
             row = {"case": label}
+            rec["cases"].append(row)
             if any(str(p.principal).lower() == principal.lower() for p in am.RetrieveEntityPermissions(folder, False)):
                 row["skipped"] = "the principal already holds a permission here"
-            else:
-                am.SetEntityPermissions(folder, [vim.AuthorizationManager.Permission(
-                    principal=principal, group=group, roleId=made["role"], propagate=True)])
+                continue
+            am.SetEntityPermissions(folder, [vim.AuthorizationManager.Permission(
+                principal=principal, group=group, roleId=made["role"], propagate=True)])
+            try:
                 time.sleep(3)
                 row.update(measure_folder(host, subject, folder._moId, name, si))
+            finally:
                 am.RemoveEntityPermission(folder, principal, group)
-            rec["cases"].append(row)
         rec["after"] = measure_folder(host, subject, folder._moId, name, si)
+    except Exception as e:  # noqa: BLE001  recorded, and the residue read below still runs
+        rec["stopped"] = stopped(e)
     finally:
         with contextlib.suppress(Exception):
             if "folder" in made:
                 wait(made["folder"].Destroy_Task())
-        rec["residue"] = {"folder": folder_left(si, name), "grantsOfProbeRoles": probe_role_grants(am)}
+        # read by the run's own folder name even when no create answered: a create that timed out may have landed
+        rec["residue"] = {"folder": _read(lambda: folder_left(si, name)),
+                          "grantsOfProbeRoles": _read(lambda: probe_role_grants(am))}
         unsoap(si)
     return rec
 
@@ -854,7 +995,10 @@ def ungrant_global(rest, permission):
 
 
 def probe_tags(host, admin, subject, d, r):
-    """Where the two tag privileges must come from, as an identity holding nothing else on this vCenter."""
+    """Where the two tag privileges must come from, as an identity holding nothing else on this vCenter. Each case's
+    grants are removed in a ``finally`` the moment the case ends, the global ones by their permission ids (deleting the
+    folder would not take them); an error the probe did not expect stops it, recorded as ``stopped``, and the tag, the
+    folder and every grant of a probe role are still read back for residue."""
     from pyVmomi import vim
     name = "authz-run-" + time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     si = soap(host, *admin)
@@ -872,8 +1016,7 @@ def probe_tags(host, admin, subject, d, r):
         ids, rec["probeRoles"] = ensure_probe_roles(am, list(keys.values()))
         made["roles"] = {k: ids[v] for k, v in keys.items()}
         made["roles"]["Admin"] = -1
-        dc = next(e for e in si.content.rootFolder.childEntity if isinstance(e, vim.Datacenter))
-        made["folder"] = dc.vmFolder.CreateFolder(name)
+        made["folder"] = throwaway_folder(si, name)
         obj = {"id": made["folder"]._moId, "type": "Folder"}
         lab = TagLab(rest, name, ["Folder"])
         # prove the delete path for a global permission before any case, on the realm spelling (inert behind AD/LDAP)
@@ -896,44 +1039,100 @@ def probe_tags(host, admin, subject, d, r):
         ]
         for label, grants in cases:
             row = {"case": label, "grants": []}
-            live_obj, live_global = [], []
-            for where, principal, role, propagate in grants:
-                if where == "global":
-                    pid, note = grant_global(rest, principal, False, made["roles"][role], propagate)
-                    row["grants"].append(note)
-                    if pid:
-                        live_global.append(pid)
-                else:
-                    if any(str(p.principal).lower() == principal.lower() for p in am.RetrieveEntityPermissions(made["folder"], False)):
-                        row["grants"].append("skipped: the principal already holds a permission here")
-                        continue
-                    am.SetEntityPermissions(made["folder"], [vim.AuthorizationManager.Permission(
-                        principal=principal, group=False, roleId=made["roles"][role], propagate=propagate)])
-                    live_obj.append(principal)
-                    row["grants"].append("created")
-            time.sleep(4)
-            row.update(lab.try_attach(host, subject, obj))
-            for principal in live_obj:
-                am.RemoveEntityPermission(made["folder"], principal, False)
-            for pid in live_global:
-                ungrant_global(rest, pid)
             rec["cases"].append(row)
+            live_obj, live_global = [], []
+            try:
+                for where, principal, role, propagate in grants:
+                    if where == "global":
+                        pid, note = grant_global(rest, principal, False, made["roles"][role], propagate)
+                        row["grants"].append(note)
+                        if pid:
+                            live_global.append(pid)
+                    else:
+                        if any(str(p.principal).lower() == principal.lower() for p in am.RetrieveEntityPermissions(made["folder"], False)):
+                            row["grants"].append("skipped: the principal already holds a permission here")
+                            continue
+                        am.SetEntityPermissions(made["folder"], [vim.AuthorizationManager.Permission(
+                            principal=principal, group=False, roleId=made["roles"][role], propagate=propagate)])
+                        live_obj.append(principal)
+                        row["grants"].append("created")
+                time.sleep(4)
+                row.update(lab.try_attach(host, subject, obj))
+            finally:   # every grant this case made, removed whatever the case did; a removal that fails shows as residue
+                for principal in live_obj:
+                    with contextlib.suppress(Exception):
+                        am.RemoveEntityPermission(made["folder"], principal, False)
+                for pid in live_global:
+                    with contextlib.suppress(Exception):
+                        ungrant_global(rest, pid)
+    except Exception as e:  # noqa: BLE001  recorded, and the residue read below still runs
+        rec["stopped"] = stopped(e)
     finally:
         rec["residue"] = {}
         if lab is not None:
-            rec["residue"]["category"] = lab.close()
+            rec["residue"]["category"] = _read(lab.close)
         if "folder" in made:
             with contextlib.suppress(Exception):
                 wait(made["folder"].Destroy_Task())
-            rec["residue"]["folder"] = folder_left(si, name)
-        rec["residue"]["grantsOfProbeRoles"] = probe_role_grants(am)
-        rest.close()
+        rec["residue"]["folder"] = _read(lambda: folder_left(si, name))
+        rec["residue"]["grantsOfProbeRoles"] = _read(lambda: probe_role_grants(am))
+        with contextlib.suppress(Exception):
+            rest.close()
         unsoap(si)
     return rec
 
 
+def read_identity(host, cred, vm, names, lab, obj, L):
+    """One identity on the Supervisor VM, from a session of its own: its effective roles, vCenter's privilege check for
+    the two tag privileges and ModifyPermissions, and an attach of the probe's tag, read back and detached."""
+    from pyVmomi import vim
+    s = soap(host, *cred)
+    try:
+        v = vim.VirtualMachine(vm._moId, s._stub)
+        got = s.content.authorizationManager.HasPrivilegeOnEntity(
+            v, s.content.sessionManager.currentSession.key, [ATTACH, ON_OBJECT, MODIFY])
+        eff = [names.get(x, str(x)) for x in (v.effectiveRole or [])]
+        return {"effectiveRoles": [x if x in PRODUCT_ROLES else L.get("role", x) for x in eff],
+                "check": {"AttachTag": bool(got[0]), "ObjectAttachable": bool(got[1]), "ModifyPermissions": bool(got[2])},
+                **lab.try_attach(host, cred, obj)}
+    finally:
+        unsoap(s)
+
+
+def vms_named(si, vm_name):
+    """The VMs on one vCenter whose name is exactly ``vm_name``."""
+    from pyVmomi import vim
+    view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [vim.VirtualMachine], True)
+    try:
+        return [v for v in view.view if v.name == vm_name]
+    finally:
+        view.Destroy()
+
+
+def supervisor_vm_check(host, user, password, vm_name):
+    """--supervisor-vm, checked before the census and every probe: a name that names no VM, or several, on that vCenter
+    is a usage error (exit 5) found before anything is written; a lookup that cannot be made is a read that failed
+    (exit 3), nothing sent either way. Before this check the grant and tag probes had already written when it failed."""
+    try:
+        si = soap(host, user, password)
+    except Exception as e:
+        raise ReadError(f"--supervisor-vm could not be looked up on its vCenter: {type(e).__name__}; nothing was sent") from None
+    try:
+        try:
+            n = len(vms_named(si, vm_name))
+        except Exception as e:
+            raise ReadError(f"--supervisor-vm could not be looked up on its vCenter: {type(e).__name__}; nothing was sent") from None
+    finally:
+        unsoap(si)
+    if n != 1:
+        raise UsageError(f"--supervisor-vm names {n} VMs on its vCenter, not one: name one VM you own; nothing was read "
+                         "or sent")
+
+
 def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
-    """One Supervisor-managed VM: effective roles, an attach as each identity, and the operator's grant attempts."""
+    """One Supervisor-managed VM: effective roles, an attach as each identity, and the operator's grant attempts. A
+    grant the operator is given on the VM is removed in a ``finally`` the moment its attempt ends; an error the probe did
+    not expect stops it, recorded as ``stopped``, and every grant it made on the VM is removed again and read back."""
     from pyVmomi import vim
     si = soap(host, *operator)
     am = si.content.authorizationManager
@@ -947,59 +1146,62 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
         if held:   # the residue read below counts them, so the run exits 2 with nothing sent
             rec["aborted"] = held_before(held)
             return rec
-        view = si.content.viewManager.CreateContainerView(si.content.rootFolder, [vim.VirtualMachine], True)
-        found = [v for v in view.view if v.name == vm_name]
-        view.Destroy()
-        if len(found) != 1:
-            raise UsageError(f"--supervisor-vm names {len(found)} VMs on that vCenter, not one")
+        found = vms_named(si, vm_name)
+        if len(found) != 1:   # checked before the run began; a VM renamed or added since is a probe that cannot run
+            rec["aborted"] = f"--supervisor-vm names {len(found)} VMs on that vCenter now, not one; nothing was sent"
+            return rec
         vm = found[0]
         rec["managedBy"] = vm.config.managedBy.extensionKey if vm.config.managedBy else None
         obj = {"id": vm._moId, "type": "VirtualMachine"}
         lab = TagLab(rest, name, ["VirtualMachine"])
         names = {x.roleId: x.name for x in am.roleList}
         for key, cred in (("operator", operator), ("tag identity", tag_identity)):
-            s = soap(host, *cred)
-            try:
-                v = vim.VirtualMachine(vm._moId, s._stub)
-                got = s.content.authorizationManager.HasPrivilegeOnEntity(
-                    v, s.content.sessionManager.currentSession.key, [ATTACH, ON_OBJECT, MODIFY])
-                eff = [names.get(x, str(x)) for x in (v.effectiveRole or [])]
-                rec["identities"][key] = {
-                    "effectiveRoles": [x if x in PRODUCT_ROLES else L.get("role", x) for x in eff],
-                    "check": {"AttachTag": bool(got[0]), "ObjectAttachable": bool(got[1]), "ModifyPermissions": bool(got[2])},
-                    **lab.try_attach(host, cred, obj)}
-            finally:
-                unsoap(s)
+            rec["identities"][key] = read_identity(host, cred, vm, names, lab, obj, L)
         ids, rec["probeRoles"] = ensure_probe_roles(am, ["tag-on-object-modify"])
         made["role"] = ids["tag-on-object-modify"]
         for label, principal, role in (("ObjectAttachable to itself, directory spelling", d_op, made["role"]),
                                        ("Admin to itself, directory spelling", d_op, -1),
                                        ("ObjectAttachable to itself, realm spelling", r_op, made["role"])):
             row = {"attempt": label}
+            rec["grantAttempts"].append(row)
             if any(str(p.principal).lower() == principal.lower() for p in am.RetrieveEntityPermissions(vm, False)):
                 row["result"] = "skipped: the principal already holds a permission on the VM"
-            else:
-                try:
-                    am.SetEntityPermissions(vm, [vim.AuthorizationManager.Permission(
-                        principal=principal, group=False, roleId=role, propagate=False)])
-                    granted.append(principal)
-                    row["result"] = "accepted"
-                    row.update(lab.try_attach(host, operator, obj))
-                    am.RemoveEntityPermission(vm, principal, False)
-                except vim.fault.NoPermission as e:
-                    row["result"] = "refused"
-                    row["missingPrivilege"] = str(getattr(e, "privilegeId", "") or "")
-            rec["grantAttempts"].append(row)
+                continue
+            try:
+                am.SetEntityPermissions(vm, [vim.AuthorizationManager.Permission(
+                    principal=principal, group=False, roleId=role, propagate=False)])
+            except vim.fault.NoPermission as e:
+                row["result"] = "refused"
+                row["missingPrivilege"] = str(getattr(e, "privilegeId", "") or "")
+                continue
+            granted.append(principal)
+            row["result"] = "accepted"
+            try:
+                row.update(lab.try_attach(host, operator, obj))
+            finally:   # the grant (Admin among them) comes off the VM whatever the attach did
+                am.RemoveEntityPermission(vm, principal, False)
+    except Exception as e:  # noqa: BLE001  recorded, and the removal and residue read below still run
+        rec["stopped"] = stopped(e)
     finally:
         rec["residue"] = {}
         if lab is not None:
-            rec["residue"]["category"] = lab.close()
+            rec["residue"]["category"] = _read(lab.close)
         if granted:   # a principal granted here held nothing on the VM before (a holder is skipped), so any it holds now is left
             mine = {p.lower() for p in granted}
-            rec["residue"]["grantsOnVm"] = sum(1 for p in am.RetrieveEntityPermissions(vm, False)
-                                               if str(p.principal).lower() in mine)
-        rec["residue"]["grantsOfProbeRoles"] = probe_role_grants(am)
-        rest.close()
+
+            def left_on_vm():
+                return [p for p in am.RetrieveEntityPermissions(vm, False) if str(p.principal).lower() in mine]
+
+            for p in _read(left_on_vm) or []:   # a removal that did not run, or did not hold: one more, then the read
+                with contextlib.suppress(Exception):
+                    am.RemoveEntityPermission(vm, p.principal, bool(getattr(p, "group", False)))
+            left = _read(left_on_vm)
+            rec["residue"]["grantsOnVm"] = None if left is None else len(left)
+            if left:
+                rec["leftOnVm"] = sorted({str(p.principal) for p in left})   # for the terminal; popped before the record
+        rec["residue"]["grantsOfProbeRoles"] = _read(lambda: probe_role_grants(am))
+        with contextlib.suppress(Exception):
+            rest.close()
         unsoap(si)
     return rec
 
@@ -1037,7 +1239,7 @@ def _ids(values):
 
 
 def _parser():
-    ap = _Parser(description=__doc__.split("\n")[0])
+    ap = _Parser(description=__doc__.split("\n")[0], allow_abbrev=False)  # "--exec" must never reach --execute
     ap.add_argument("--probe-grants", action="store_true")
     ap.add_argument("--probe-tags", action="store_true")
     ap.add_argument("--supervisor-vm", default="")
@@ -1052,6 +1254,11 @@ def _parser():
                     help="the realm-spelled grants to remove, by permission id, on the one vCenter VC_HOSTS names; "
                          "plan only without --execute")
     ap.add_argument("--execute", action="store_true", help="with --remove: send the DELETEs and read the list back")
+    ap.add_argument("--save-permissions", metavar="FILE",
+                    help="a run of its own: every grant on every vCenter in VC_HOSTS, each list read whole, written to "
+                         "FILE (a new file, mode 0600, outside the clone), with every principal named; never publish it")
+    ap.add_argument("--compare-permissions", nargs=2, metavar=("BEFORE", "AFTER"),
+                    help="a run of its own: two files --save-permissions wrote, compared grant by grant; reads no vCenter")
     return ap
 
 
@@ -1068,15 +1275,25 @@ def main(argv=None):
     except UsageError as e:
         print(f"{e} (exit 5)", file=sys.stderr)
         return EXIT_USAGE
-    except ReadError as e:  # a read a step needed did not answer (a probe's own read among them); nothing is written
-        print(f"NOT READ: {e}; the run stopped there and wrote no record. A probe that stopped ran its removals first, "
-              "and their residue read is not shown: read the vCenter for authz-run-* objects and grants of authz-probe-* "
-              "roles (exit 3)", file=sys.stderr)
+    except ReadError as e:  # a read a step needed did not answer, outside the probes (they record their own); no record
+        print(f"NOT READ: {e}; the run stopped there and wrote no record; what it read or did before it is on the lines "
+              "above (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
     except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
               "about what it had not read (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
+
+
+def _alone(a, flag):
+    """--save-permissions and --compare-permissions are runs of their own: any other flag beside one is a usage error."""
+    others = [f for f, on in (("--probe-grants", a.probe_grants), ("--probe-tags", a.probe_tags),
+                              ("--supervisor-vm", a.supervisor_vm), ("--remove-probe-roles", a.remove_probe_roles),
+                              ("--no-realm", a.no_realm), ("--where-realm", a.where_realm), ("--remove", a.remove),
+                              ("--execute", a.execute), ("--save-permissions", a.save_permissions),
+                              ("--compare-permissions", a.compare_permissions)) if on and f != flag]
+    if others:
+        raise UsageError(f"{flag} is a run of its own: it takes no {', '.join(others)}")
 
 
 def _settings(a):
@@ -1134,9 +1351,18 @@ def _settings(a):
 
 def _run(argv=None):
     a = _parser().parse_args(argv)
+    if a.compare_permissions:
+        _alone(a, "--compare-permissions")
+        return compare_permissions(*a.compare_permissions)
+    if a.save_permissions:
+        _alone(a, "--save-permissions")
+        return save_permissions(a.save_permissions)
     hosts, user, password, realm, directories = _settings(a)
     if a.remove:
         return _remove(hosts[0], user, password, realm, directories, _ids(a.remove), a.execute)
+    if a.supervisor_vm:   # before the census and every probe: a name that is not one VM is found before anything is written
+        supervisor_vm_check(os.environ.get("SUPERVISOR_VCENTER") or os.environ.get("PROBE_VCENTER") or hosts[0],
+                            user, password, a.supervisor_vm)
     out_dir = os.environ.get("OUT_DIR", os.path.dirname(os.path.abspath(__file__)))
     L = Labels()
     vc_label = {h: L.get("vcenter", h) for h in hosts}
@@ -1236,18 +1462,19 @@ def _run(argv=None):
     record["roleDrift"] = drift(catalogs, L)
     if a.remove_probe_roles:
         record["probeRoleTeardown"] = {}
-        for h in hosts:
-            si = soap(h, user, password)
+        print("\n  probe roles, one vCenter at a time:")
+        for h in hosts:   # each vCenter's result printed as it is done, so a run that stops shows which were
             try:
-                record["probeRoleTeardown"][vc_label[h]] = remove_probe_roles(si)
-            finally:
-                unsoap(si)
-        print(f"\n  probe roles removed: {record['probeRoleTeardown']}")
-        for label, t in record["probeRoleTeardown"].items():
-            if t.get("refused") or t.get("rolesLeft"):
-                print(f"     {label}: NOT HELD: " + (f"refused, {t['refused']}" if t.get("refused")
-                                                    else f"{t['rolesLeft']} probe role(s) still listed after the removal")
-                      + " (exit 2)")
+                si = soap(h, user, password)
+            except Exception as e:  # noqa: BLE001  that vCenter not reached: nothing sent there; the others still run
+                t = {"removed": 0, "error": f"the session was refused ({type(e).__name__}); nothing was sent"}
+            else:
+                try:
+                    t = remove_probe_roles(si)
+                finally:
+                    unsoap(si)
+            record["probeRoleTeardown"][vc_label[h]] = t
+            print(f"     {vc_label[h]}: {teardown_line(t)}", flush=True)
     print(f"\n  custom roles whose copies differ between vCenters: {len(record['roleDrift'])}")
 
     probe_host = os.environ.get("PROBE_VCENTER", hosts[0])
@@ -1255,6 +1482,8 @@ def _run(argv=None):
     subject = (test_user, secret("TEST_PASSWORD"))
     local, _, dom = test_user.partition("@")
     d_user, r_user = f"{dom.upper()}\\{local}", f"{realm.upper()}\\{local}"
+    left_on_vm = []
+    probes = []
     if a.probe_grants:
         group = os.environ["TEST_GROUP"]
         cases = [("group, directory spelling", f"{dom.upper()}\\{group}", True),
@@ -1264,28 +1493,42 @@ def _run(argv=None):
         nested = os.environ.get("TEST_LOCAL_GROUP", "").strip()
         if nested:
             cases.append(("group, nested in a local SSO group", f"{local_domain()}\\{nested}", True))
-        record["grantProbe"] = {"vcenter": vc_label.get(probe_host, L.get("vcenter", probe_host)),
-                                **probe_grants(probe_host, (user, password), subject, cases)}
-        print(f"\n  grant probe: {[(c['case'], c.get('check'), c.get('enforced')) for c in record['grantProbe']['cases']]}")
+        probes.append(("grantProbe", probe_host, lambda: probe_grants(probe_host, (user, password), subject, cases)))
     if a.probe_tags:
-        record["tagProbe"] = {"vcenter": vc_label.get(probe_host, L.get("vcenter", probe_host)),
-                              **probe_tags(probe_host, (user, password), subject, d_user, r_user)}
-        print(f"\n  tag probe: {[(c['case'], c.get('attached')) for c in record['tagProbe']['cases']]}")
+        probes.append(("tagProbe", probe_host, lambda: probe_tags(probe_host, (user, password), subject, d_user, r_user)))
     if a.supervisor_vm:
         op_local, _, op_dom = user.partition("@")
         sup_host = os.environ.get("SUPERVISOR_VCENTER", probe_host)
-        record["supervisorProbe"] = {
-            "vcenter": vc_label.get(sup_host, L.get("vcenter", sup_host)),
-            **probe_supervisor(sup_host, (user, password), subject, a.supervisor_vm,
-                               f"{op_dom.upper()}\\{op_local}", f"{realm.upper()}\\{op_local}", L)}
-        print(f"\n  supervisor probe: {json.dumps(record['supervisorProbe']['identities'])}")
-        print(f"     grant attempts: {[(g['attempt'], g['result']) for g in record['supervisorProbe']['grantAttempts']]}")
-    for key in ("grantProbe", "tagProbe", "supervisorProbe"):
-        rec = record.get(key) or {}
+        probes.append(("supervisorProbe", sup_host, lambda: probe_supervisor(
+            sup_host, (user, password), subject, a.supervisor_vm, f"{op_dom.upper()}\\{op_local}",
+            f"{realm.upper()}\\{op_local}", L)))
+    halted = None
+    for key, where, run in probes:
+        label = vc_label.get(where, L.get("vcenter", where))
+        if halted:   # a probe that stopped on an error leaves the ones after it unrun: nothing more is written
+            record[key] = {"vcenter": label, "aborted": f"not run: {halted} stopped on an error before it; nothing was sent"}
+            continue
+        try:
+            rec = run()
+        except Exception as e:  # noqa: BLE001  the probe's own sign-in failed before it wrote anything
+            rec = {"aborted": f"the probe did not start: {type(e).__name__}; nothing was sent"}
+        left_on_vm += rec.pop("leftOnVm", [])
+        record[key] = {"vcenter": label, **rec}
+        if rec.get("stopped"):
+            halted = key
+    for key, rec in ((k, record[k]) for k in ("grantProbe", "tagProbe", "supervisorProbe") if k in record):
+        print(f"\n  {key}: " + probe_line(key, rec))
         if rec.get("aborted"):
-            print(f"  {key}: NOT RUN: {rec['aborted']}")
-        if probe_residue(rec) or probe_unread(rec):
-            print(f"  {key}: residue {rec.get('residue')} (True or a count: left behind; None: not read back)")
+            print(f"     NOT RUN: {rec['aborted']}")
+        if rec.get("stopped"):
+            print(f"     STOPPED: {rec['stopped']}. Its removals ran as the probe stopped, and its residue was read back "
+                  "(next line); any probe after it was not run")
+        if rec.get("stopped") or probe_residue(rec) or probe_unread(rec):
+            print(f"     residue {rec.get('residue')} (True or a count: left behind; None: not read back). Read the vCenter "
+                  f"for folders named authz-run-*, tag categories of that name, and grants of the {len(PROBE_ROLE_NAMES)} "
+                  "authz-probe-* roles" + (", and remove these grants the probe made on the VM (printed here only, never "
+                                           "recorded): " + ", ".join(left_on_vm) if key == "supervisorProbe" and left_on_vm
+                                           else ""))
 
     record["exit"] = code = exit_code(record, realm)
     text = json.dumps(record, indent=1, ensure_ascii=False)
@@ -1320,6 +1563,35 @@ def refused_record(why, code):
     return code
 
 
+def teardown_line(t):
+    """One vCenter's --remove-probe-roles result, as the terminal shows it the moment that vCenter is done."""
+    if t.get("refused"):
+        return f"NOT HELD: refused, {t['refused']} (exit 2)"
+    done = f"{t.get('removed', 0)} probe role(s) removed" + (f" ({', '.join(t['removedRoles'])})" if t.get("removedRoles") else "")
+    if t.get("error"):
+        left = t.get("rolesLeft")
+        return (f"NOT READ: {t['error']}; {done} before it; "
+                + ("the role list was not read back" if left is None else f"{left} probe role(s) listed after it") + " (exit 3)")
+    if t.get("rolesLeft") is None:
+        return f"{done}; NOT READ: the role list was not read back (exit 3)"
+    if t["rolesLeft"]:
+        return f"NOT HELD: {done}, and {t['rolesLeft']} probe role(s) still listed after the removal (exit 2)"
+    groups = t.get("reservedGroupsLeft")
+    return (f"{done}, none listed after; "
+            + ("the reserved groups VCF left were not read" if groups is None
+               else f"{groups} reserved group(s) VCF left behind, removed by the vCenter's SSO administrator"))
+
+
+def probe_line(key, rec):
+    """A probe's cases, as the terminal shows them."""
+    if key == "grantProbe":
+        return str([(c["case"], c.get("check"), c.get("enforced")) for c in rec.get("cases", [])])
+    if key == "tagProbe":
+        return str([(c["case"], c.get("attached")) for c in rec.get("cases", [])])
+    return (json.dumps(rec.get("identities", {})) + "; grant attempts "
+            + str([(g["attempt"], g.get("result")) for g in rec.get("grantAttempts", [])]))
+
+
 def probe_residue(rec):
     """Whether a probe left something behind: its folder, its tag category, a grant it made on the Supervisor VM, or a
     grant of a probe role (one there before the probe began is counted too: the probe then sent nothing)."""
@@ -1330,6 +1602,12 @@ def probe_residue(rec):
 def probe_unread(rec):
     """Whether a probe's residue read did not read: a value None is a residue not read back, never a clean run."""
     return any(v is None for v in ((rec or {}).get("residue") or {}).values())
+
+
+def teardown_unread(t):
+    """Whether one vCenter's --remove-probe-roles did not finish or was not read back: an error, or no role list read
+    after the removal (a refusal sent nothing and is exit 2, never this)."""
+    return not t.get("refused") and (bool(t.get("error")) or t.get("rolesLeft") is None)
 
 
 def sessions_unread(row):
@@ -1348,7 +1626,7 @@ def exit_code(record, realm):
     grant spelled in it may then apply to someone, so the realm-spelled grants are no finding), a probe that could not
     run, or a residue not read back; else 0."""
     probes = [record.get(k) for k in ("grantProbe", "tagProbe", "supervisorProbe") if record.get(k) is not None]
-    teardown = (record.get("probeRoleTeardown") or {}).values()
+    teardown = list((record.get("probeRoleTeardown") or {}).values())
     if any(probe_residue(p) for p in probes) or any(t.get("refused") or t.get("rolesLeft") for t in teardown):
         return EXIT_NOT_HELD
     rows = list((record.get("vcenters") or {}).values())
@@ -1361,7 +1639,8 @@ def exit_code(record, realm):
               or any(r.get("domainsNamedNothing") or r.get("realmNamedNothing") for r in rows)
               or any(isinstance(r.get("sessions"), dict) and "error" in r["sessions"] for r in rows)
               or (bool(realm) and sessions_short)
-              or any(p.get("aborted") or probe_unread(p) for p in probes))
+              or any(p.get("aborted") or p.get("stopped") or probe_unread(p) for p in probes)
+              or any(teardown_unread(t) for t in teardown))
     return EXIT_UNREAD if unread else EXIT_OK
 
 
@@ -1425,6 +1704,262 @@ def _remove(host, user, password, realm, directories, ids, execute):
     print(("held: every named grant is gone and no other grant moved" if result["held"]
            else "NOT HELD: read the list again before anything else") + f"\nexit {code}")
     return code
+
+
+# ---------------------------------------------------------------- a saved permission list, and its compare
+
+SAVE_KIND = "authz.py --save-permissions"
+SAVE_FORMAT = 1
+GRANT_FIELDS = {"vcenter": str, "entity": dict, "principal": str, "principalType": str, "role": str, "propagate": bool}
+
+
+def host_key(host):
+    """A vCenter as the compare matches it across two files: trimmed, a trailing dot dropped, without regard to case."""
+    return norm(host)
+
+
+def principal_key(principal):
+    """A principal as the compare matches it: its domain as norm() reads one, and its name without regard to case."""
+    domain, _, name = str(principal).rpartition("\\")
+    return f"{norm(domain)}\\{name.strip().lower()}"
+
+
+def by_key(grants):
+    """Grants grouped by the grant key. vSphere's list can carry one grant more than once under different permission ids,
+    identical in every other field (one key on one vCenter of the reference estate held two), so a key may hold several."""
+    out = collections.defaultdict(list)
+    for g in grants:
+        out[compare_key(g)].append(g)
+    return out
+
+
+def shared_keys(grants):
+    """How many grant keys hold more than one grant."""
+    return sum(1 for v in by_key(grants).values() if len(v) > 1)
+
+
+def compare_key(g):
+    """The grant key: the vCenter, the entity (its type and id), the principal (its name and whether it is a user or a
+    group, since vSphere keeps a user's and a group's grant of one name apart) and the role id. What else a grant carries,
+    whether it propagates, is what a compare reports as changed."""
+    return (host_key(g["vcenter"]), str(g["entity"].get("type")), str(g["entity"].get("id")), principal_key(g["principal"]),
+            str(g["principalType"]).upper(), str(g["role"]))
+
+
+def saved_grant(host, p, cat):
+    """One grant as --save-permissions writes it: the vCenter, the entity, the principal as vCenter spells it in the
+    grant (DOMAIN\\name, as a broker session must match it), user or group, the role's id and name, whether it
+    propagates, and the permission's id. A grant without one of those fields is a list not read (ReadError)."""
+    try:
+        info, who, obj = p["info"], p["info"]["principal"], p["info"]["object"]
+        g = {"vcenter": host, "entity": {"type": str(obj["type"]), "id": str(obj["id"])},
+             "principal": f"{who['domain']}\\{who['name']}", "principalType": str(who["type"]).upper(),
+             "role": str(info["role"]), "roleName": (cat.get(str(info["role"])) or {}).get("name"),
+             "propagate": bool(info.get("propagating")), "permission": str(p["permission"])}
+    except (KeyError, TypeError):
+        raise ReadError("a permission in the list lacks its principal, object, role or id") from None
+    return g
+
+
+def digest(grants):
+    """A digest of the grants as written, so the compare can tell a file edited after --save-permissions wrote it."""
+    import hashlib
+    return hashlib.sha256(json.dumps(grants, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def inside_a_clone(path):
+    """Whether ``path`` lies inside the git work tree that holds this script: a saved list names every principal on the
+    estate, and a file inside a clone is one commit away from being published."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        if os.path.exists(os.path.join(here, ".git")):
+            root = os.path.realpath(here)
+            target = os.path.realpath(os.path.dirname(os.path.abspath(path)))
+            return target == root or target.startswith(root + os.sep)
+        parent = os.path.dirname(here)
+        if parent == here:
+            return False
+        here = parent
+
+
+def save_permissions(path):
+    """--save-permissions FILE: every grant on every vCenter VC_HOSTS names, each permission list read whole by the
+    pager the census uses (and the role catalog, for the roles' names), written to FILE, a new file of mode 0600. The
+    file names every principal as vCenter spells it: it is never scrubbed, and it is never published. A list not read
+    whole on any vCenter writes nothing (exit 3). It carries its own header and totals, so --compare-permissions can
+    tell a file this command wrote, whole, from any other."""
+    hosts = _hosts()
+    user, password = os.environ.get("VC_USER", "").strip(), secret("VC_PASSWORD")
+    if not hosts or not user or not password:
+        raise UsageError("--save-permissions needs VC_HOSTS, VC_USER and VC_PASSWORD_FILE (or VC_PASSWORD)")
+    if os.path.lexists(path):
+        raise UsageError(f"--save-permissions writes a new file, and {path} exists: name another, so a list saved before a "
+                         "change is never written over")
+    if not os.path.isdir(os.path.dirname(os.path.abspath(path))):
+        raise UsageError(f"--save-permissions: the directory for {path} does not exist")
+    if inside_a_clone(path):
+        raise UsageError("--save-permissions writes every principal's name: write FILE outside the clone (for example under "
+                         "~/.vcf), where no commit can carry it")
+    print(f"authz.py --save-permissions: every grant on {len(hosts)} vCenter(s), each list read whole, for {path}")
+    grants, header, unread = [], {}, []
+    for h in hosts:
+        rest = Rest(h, user, password)
+        if rest.token is None:
+            unread.append(h)
+            print(f"  {h}: NOT READ: the vSphere Automation API refused the session")
+            continue
+        try:
+            perms, cat = permissions(rest), roles(rest)
+            mine = [saved_grant(h, p, cat) for p in perms]
+        except ReadError as e:
+            unread.append(h)
+            print(f"  {h}: NOT READ: {e}")
+            continue
+        finally:
+            rest.close()
+        grants += mine
+        shared = shared_keys(mine)
+        header[h] = {"grants": len(mine), "global": sum(1 for g in mine if g["entity"]["type"] == "GlobalAcl"),
+                     "roles": len(cat), "sharedKeys": shared}
+        print(f"  {h}: {len(mine)} grants ({header[h]['global']} global), {len(cat)} roles, every page read"
+              + (f"; {shared} grant key(s) listed under more than one permission id, compared by count" if shared else ""))
+    if unread:
+        print(f"NOT READ: {len(unread)} vCenter(s); nothing was written, because a saved list that misses a vCenter's "
+              "grants would compare as removals (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+    doc = {"kind": SAVE_KIND, "format": SAVE_FORMAT,
+           "note": "every grant, each principal named as vCenter spells it: keep this file on your own disk, never publish it",
+           "saved_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "vcenters": header,
+           "totals": {"vcenters": len(header), "grants": len(grants)}, "grantsSha256": digest(grants), "grants": grants}
+    write_new(path, json.dumps(doc, indent=1, ensure_ascii=False) + "\n")
+    print(f"wrote {path}, mode 0600: {len(grants)} grants on {len(header)} vCenter(s), every principal named; it is never "
+          "scrubbed, so keep it on your own disk\nexit 0")
+    return EXIT_OK
+
+
+def write_new(path, text):
+    """Write a new file of mode 0600 whole, or nothing: a temporary file beside it, created 0600, then linked to the
+    name, which fails rather than replace a file that appeared meanwhile."""
+    d = os.path.dirname(os.path.abspath(path))
+    tmp = os.path.join(d, f".{os.path.basename(path)}.{os.getpid()}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        try:
+            os.link(tmp, path)
+        except FileExistsError:
+            raise UsageError(f"{path} appeared while the lists were read; nothing was written over it") from None
+    finally:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+
+
+def load_saved(path):
+    """A file --save-permissions wrote, whole, or the reason it is not one (ReadError, exit 3): unreadable, not JSON,
+    another kind or format, a grant without its fields, totals or per-vCenter counts that disagree with its grants, a
+    digest that does not match (edited after it was written)."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, UnicodeDecodeError, ValueError) as e:
+        raise ReadError(f"{path} was not read: {type(e).__name__}") from None
+    if not isinstance(doc, dict) or doc.get("kind") != SAVE_KIND or doc.get("format") != SAVE_FORMAT:
+        raise ReadError(f"{path} is not a file --save-permissions wrote (its kind or format is not {SAVE_KIND!r}, "
+                        f"format {SAVE_FORMAT})")
+    grants, header, totals = doc.get("grants"), doc.get("vcenters"), doc.get("totals")
+    if not isinstance(grants, list) or not isinstance(header, dict) or not isinstance(totals, dict):
+        raise ReadError(f"{path} is partial: its grants, vCenters or totals are missing")
+    for g in grants:
+        if not isinstance(g, dict) or any(not isinstance(g.get(k), t) for k, t in GRANT_FIELDS.items()):
+            raise ReadError(f"{path} is partial: a grant lacks one of {', '.join(GRANT_FIELDS)}")
+    counts = collections.Counter(g["vcenter"] for g in grants)
+    if (totals.get("grants") != len(grants) or totals.get("vcenters") != len(header) or set(counts) - set(header)
+            or any(not isinstance(v, dict) or v.get("grants") != counts.get(h, 0) for h, v in header.items())):
+        raise ReadError(f"{path} is partial: its totals do not match the grants it holds")
+    if doc.get("grantsSha256") != digest(grants):
+        raise ReadError(f"{path} was changed after --save-permissions wrote it (its digest does not match its grants)")
+    return doc
+
+
+def grant_text(g):
+    """One saved grant as the compare prints it, on the terminal only."""
+    role = f"{g.get('roleName')} ({g['role']})" if g.get("roleName") else g["role"]
+    return (f"{g['entity']['type']} {g['entity']['id']}: {g['principal']} ({g['principalType']}), role {role}, "
+            f"{'propagating' if g['propagate'] else 'not propagating'}")
+
+
+def compare_vcenter(before, after):
+    """One vCenter's two grant lists, compared by the grant key: (added, removed, changed, count before, count after).
+    A key held by one grant on each side is changed when it started or stopped propagating. A key held by several grants
+    on either side (one grant listed under two ids) is compared by count, for each propagation, and each grant added or
+    removed there is marked as one of several under its key."""
+    b, f = by_key(before), by_key(after)
+    added, removed, changed = [], [], []
+    for k in sorted(set(b) | set(f)):
+        gb, gf = b.get(k, []), f.get(k, [])
+        if len(gb) == len(gf) == 1:
+            if gb[0]["propagate"] != gf[0]["propagate"]:
+                changed.append((gb[0], gf[0]))
+            continue
+        note = f" (one of {max(len(gb), len(gf))} grants listed under this key)" if max(len(gb), len(gf)) > 1 else ""
+        cb, cf = collections.Counter(g["propagate"] for g in gb), collections.Counter(g["propagate"] for g in gf)
+        for prop, n in sorted((cf - cb).items()):
+            added += [(next(g for g in gf if g["propagate"] == prop), note)] * n
+        for prop, n in sorted((cb - cf).items()):
+            removed += [(next(g for g in gb if g["propagate"] == prop), note)] * n
+    return added, removed, changed, len(before), len(after)
+
+
+def compare_permissions(before_path, after_path):
+    """--compare-permissions BEFORE AFTER: two files --save-permissions wrote, compared by the grant key on every vCenter
+    both read. Exit, the first that applies: 3 a file unreadable, partial or not written by --save-permissions (nothing
+    compared); 5 BEFORE saved after AFTER; 1 a grant added, removed or changed on a vCenter both read; 3 a vCenter read
+    in one file only (it could not be compared, so the files are not shown equal), or none in common; 0 none."""
+    print("authz.py --compare-permissions: grant by grant, on every vCenter both files read (printed here only)")
+    try:
+        before, after = load_saved(before_path), load_saved(after_path)
+    except ReadError as e:
+        print(f"NOT READ: {e}; nothing was compared (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+    for label, doc in (("BEFORE", before), ("AFTER", after)):
+        print(f"  {label}: saved {doc.get('saved_utc')}, {doc['totals']['vcenters']} vCenter(s), {doc['totals']['grants']} "
+              "grants")
+    if str(before.get("saved_utc")) > str(after.get("saved_utc")):
+        print("BEFORE was saved after AFTER: name the earlier file first, or every addition reads as a removal (exit 5)",
+              file=sys.stderr)
+        return EXIT_USAGE
+    hb = {host_key(h): h for h in before["vcenters"]}
+    ha = {host_key(h): h for h in after["vcenters"]}
+    common = sorted(set(hb) & set(ha))
+    differ = 0
+    for hk in common:
+        added, removed, changed, nb, nf = compare_vcenter([g for g in before["grants"] if host_key(g["vcenter"]) == hk],
+                                                          [g for g in after["grants"] if host_key(g["vcenter"]) == hk])
+        differ += len(added) + len(removed) + len(changed)
+        print(f"  {ha[hk]}: {len(added)} added, {len(removed)} removed, {len(changed)} changed, of {nb} and {nf} grants")
+        for g, note in added:
+            print(f"    + {grant_text(g)}{note}")
+        for g, note in removed:
+            print(f"    - {grant_text(g)}{note}")
+        for old, new in changed:
+            print(f"    ~ {grant_text(new)} (was {'propagating' if old['propagate'] else 'not propagating'})")
+    only = [f"{hb[k]} (BEFORE only)" for k in sorted(set(hb) - set(ha))] + \
+           [f"{ha[k]} (AFTER only)" for k in sorted(set(ha) - set(hb))]
+    if only:
+        print("  NOT COMPARED, read in one file only: " + ", ".join(only))
+    if differ:
+        print(f"{differ} grant(s) differ" + (", and some vCenters were not compared" if only else "") + "\nexit 1")
+        return EXIT_DIFFER
+    if only or not common:
+        print("no difference on the vCenters both files read, but " + ("none is in both" if not common else
+              "not every vCenter was compared") + ": the files are not shown equal (exit 3)")
+        return EXIT_UNREAD
+    print(f"no grant added, removed or changed on {len(common)} vCenter(s)\nexit 0")
+    return EXIT_OK
 
 
 if __name__ == "__main__":

@@ -41,6 +41,13 @@ the organization with a role. This script does both sides in the order that work
                          anything is written. A federation that is switched off stays off: a run whose settings would
                          change is refused without --enable, which the plan shows as "enabled: off -> on"; a run whose
                          settings already read as planned imports the named groups and writes no settings.
+                         With the tenant's read-only app (ENTRA_CLIENT_ID and its credential) it reads the organization's
+                         app at Entra first, every call a GET, and refuses a group no group assigned to the app is named
+                         (VCF Automation imports such a name all the same) or two assigned groups are named, and over SAML
+                         metadata that does not name the certificate Entra signs the app with now, or names one the app
+                         does not hold; without it, it says that neither was read. Over SAML it judges the metadata by
+                         certificate thumbprint against what the organization holds, and refuses metadata naming none
+                         of the held certificates while the organization holds SAML users and the app was not read.
                          Over SAML without METADATA_FILE it prints the organization's own service-provider identifier
                          and reply URL for the tenant, and stops. It never writes to Entra
   --configure --org NAME --groups-only
@@ -57,7 +64,9 @@ the organization with a role. This script does both sides in the order that work
                          reads its settings, changes only the fields named by --key-refresh [HOURS] (automatic
                          refresh on, strategy ADD, every HOURS, default 1), --keys (the keys the provider publishes now,
                          the write after an emergency roll), --secret (the client secret in NEW_SECRET_FILE, which the
-                         tenant's administrator rotated) or --metadata (the SAML metadata in METADATA_FILE), and prints
+                         tenant's administrator rotated) or --metadata (the SAML metadata in METADATA_FILE, judged as
+                         --configure judges it: by certificate thumbprint, against the SAML users it holds and, with the
+                         tenant's read-only app, the certificate Entra signs the organization's app with), and prints
                          the plan; with --execute it writes the whole body back, with the secret the organization holds
                          or the new one, and reads every changed field back; when the organization already holds what
                          was asked it writes nothing and says "nothing to change". It never writes to Entra: a new
@@ -81,11 +90,14 @@ Env:  VCFA_HOST; VCFA_PROVIDER_BEARER_FILE (a provider bearer, minted as platfor
       package); ORG (the throwaway organization's name); ENTITLED_UPN and UNENTITLED_UPN (your test users);
       APP_NAME (the Entra app it makes, default vcfa-<ORG>); GROUP_NAME (the entitled group it makes, default
       vcfa-<ORG>-users); SECRET_DAYS (OIDC secret life, default 180); OUT (default federation.json); STATE (default
-      org_federation.<ORG>.state.json). --update needs VCFA_HOST, the provider credential, ENTRA_TENANT_ID and ORG
-      (the existing organization), NEW_SECRET_FILE for --secret, METADATA_FILE for --metadata; it writes OUT
-      (default update.json). --prove --org and --configure --org need VCFA_HOST, the provider credential and
-      ENTRA_TENANT_ID; --configure also APP_CLIENT_ID and, for a new app, APP_SECRET_FILE (OIDC) or METADATA_FILE
-      (SAML); they write OUT (default prove.json, configure.json)
+      org_federation.<ORG>.state.json). ENTRA_TENANT_ID takes the tenant's id or one of its domain names, resolved
+      to the id through Entra's public OpenID configuration before anything is sent. --update needs VCFA_HOST, the
+      provider credential, ENTRA_TENANT_ID and ORG (the existing organization), NEW_SECRET_FILE for --secret,
+      METADATA_FILE for --metadata; it writes OUT (default update.json). --prove --org and --configure --org need
+      VCFA_HOST, the provider credential and ENTRA_TENANT_ID; --configure also APP_CLIENT_ID and, for a new app,
+      APP_SECRET_FILE (OIDC) or METADATA_FILE (SAML); they write OUT (default prove.json, configure.json). For
+      --configure and --update --metadata, ENTRA_CLIENT_ID with ENTRA_CLIENT_SECRET_FILE, or with ENTRA_CERT_FILE and
+      ENTRA_KEY_FILE, names the tenant's read-only app (the federation watch's), which those modes only read through
 Exit: 0 done · 1 a check failed, or a write refused while building, configuring, updating or tearing down · 2 refused
       by what it read (a name this script did not create; no state file to tear down; for --execute over its own
       organization, a protocol or key switch under the users it holds; for --update, an organization not federated to
@@ -95,15 +107,21 @@ Exit: 0 done · 1 a check failed, or a write refused while building, configuring
       preferred_username, a settings write to a switched-off federation without --enable, a role its type lacks, a named
       group held another way, a group-only import to an organization holding no settings for the tenant, or SAML with
       no metadata yet, when it prints what the tenant needs; for --configure and --update, a client secret Entra
-      refused), with nothing sent · 3 a result not known: a credential refused before anything was read, a read refused
-      or a list not read whole in any mode (a proof only reads), Entra out of reach when asked about a secret, a check
-      with nothing to read yet (--prove --org over SAML before any enabled SAML user has signed in), a teardown whose
-      residue could not be read, a record the scrub refused to write on a run that would have exited 0, or an error it
-      did not expect (never 1) · 5 not run as asked: an unknown, missing or malformed argument (--enable without
-      --configure, --groups-only without --group or with --enable or --user-key among them), a missing environment
-      variable or a file that cannot be read, metadata that is not the tenant's, SECRET_DAYS of a year or more, or a
-      Python older than 3.9. Nothing is sent on a 5. A record the scrub refuses is not written and never hides the run's
-      code: 1, 2 and 3 stand, and a run that would have exited 0 exits 3.
+      refused, and SAML metadata naming none of the certificates the organization holds while it holds SAML users
+      and the organization's app was not read; with the tenant's read-only app, a group to import that no assigned
+      group is named or two are, metadata that does not name the certificate Entra signs the app with or names one the
+      app does not hold, and no app, or two, carrying the organization's client id or identifier), with nothing sent ·
+      3 a result not known: a credential refused before anything was read (the tenant's read-only app's among them), a
+      read refused or a list not read whole in any mode (a proof only reads), Entra out of reach when asked about a
+      secret or a tenant's domain, a check with nothing to read yet (--prove --org over SAML before any enabled SAML
+      user has signed in), a teardown whose residue could not be read, a record the scrub refused to write on a run that
+      would have exited 0, or an error it did not expect (never 1) · 5 not run as asked: an unknown, missing or
+      malformed argument (--enable without --configure, --groups-only without --group or with --enable or --user-key
+      among them), a missing environment variable or a file that cannot be read, ENTRA_CLIENT_ID without its
+      credential, an ENTRA_TENANT_ID that is neither a tenant id nor a domain Entra names a tenant for, metadata that
+      is not the tenant's or names no certificate that reads, SECRET_DAYS of a year or more, or a Python older than
+      3.9. Nothing is sent on a 5. A record the scrub refuses is not written and never hides the run's code: 1, 2 and 3
+      stand, and a run that would have exited 0 exits 3.
 """
 
 import argparse
@@ -516,6 +534,8 @@ class Scrubber:
 
     def __init__(self):
         self.values = {}
+        for domain in TENANT_GIVEN:   # a domain name given as ENTRA_TENANT_ID and resolved to the id
+            self.add(domain, "{{tenant-domain}}")
 
     def add(self, value, placeholder):
         if value and len(str(value)) >= 3:
@@ -622,6 +642,58 @@ def whole_list(fetch, what):
             raise ReadError(f"{what}: page {page} added no item not already read, at {len(out)} of the {total} the "
                             "answer states")
     raise ReadError(f"{what}: more than {MAX_PAGES} pages")
+
+
+# ENTRA_TENANT_ID takes the tenant's id or one of its domain names, as the federation watch and the leaver job do. A
+# domain is resolved to the id through Entra's public OpenID configuration for it, whose issuer names the tenant's id.
+TENANT_ID = re.compile(r"^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")
+DOMAIN = re.compile(r"^(?=.{4,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$")
+ENTRA_TENANT_IN = re.compile(r"(?:login\.microsoftonline\.com|sts\.windows\.net)/([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})/")
+TENANT_GIVEN = []   # a domain name given as ENTRA_TENANT_ID: an estate value every record's scrubber replaces
+
+
+def _openid_configuration(domain):
+    """Entra's public OpenID configuration for a domain: (status, document). No credential."""
+    url = f"{AUTHORITY}/{urllib.parse.quote(domain)}/v2.0/.well-known/openid-configuration"
+    try:
+        st, _, raw = _send("GET", url, {"Accept": "application/json"}, None, ssl.create_default_context())
+    except (urllib.error.URLError, OSError) as e:
+        raise ReadError(f"Entra's OpenID configuration for the tenant's domain could not be read ({type(e).__name__})") from None
+    return st, _parse(raw)
+
+
+def resolve_tenant(value, discover=None):
+    """The tenant's id in lower case. An id is taken as it is. A domain name is resolved through Entra's public OpenID
+    configuration for it, whose issuer names the tenant's id; a domain Entra answers names no tenant (4xx), or a string
+    that is neither an id nor a domain, is a usage error (exit 5). An answer that is neither (a 5xx, Entra out of reach)
+    is a read that failed (exit 3)."""
+    v = (value or "").strip()
+    if TENANT_ID.match(v):
+        return v.lower()
+    if not DOMAIN.match(v):
+        raise UsageError(f"ENTRA_TENANT_ID {v!r} is neither a tenant id nor a domain name")
+    st, doc = (discover or _openid_configuration)(v)
+    if 400 <= st < 500:
+        raise UsageError(f"Entra names no tenant for the domain in ENTRA_TENANT_ID (HTTP {st})")
+    if st != 200:
+        raise ReadError(f"Entra's OpenID configuration for the tenant's domain answered {st}")
+    m = ENTRA_TENANT_IN.search(((doc.get("issuer") or "") if isinstance(doc, dict) else "") + "/")
+    if not m:
+        raise UsageError("Entra's OpenID configuration for the domain in ENTRA_TENANT_ID names no tenant id")
+    return m.group(1).lower()
+
+
+def _resolve_tenant_env(discover=None):
+    """ENTRA_TENANT_ID as the tenant's id for every mode that reads it: a domain is resolved once, before anything is
+    sent, and kept for the records' scrubber. Unset, it is left for each mode to name as missing."""
+    given = os.environ.get("ENTRA_TENANT_ID")
+    if not given:
+        return
+    tid = resolve_tenant(given, discover)
+    if tid != given:
+        if not TENANT_ID.match(given.strip()):
+            TENANT_GIVEN.append(given.strip())
+        os.environ["ENTRA_TENANT_ID"] = tid
 
 
 def _read_file(var):
@@ -804,26 +876,31 @@ class Graph:
             time.sleep(5)
 
     def values(self, path):
-        """Every item of a Graph list, following @odata.nextLink until it is absent. A 200 without its `value` list, a
-        next link already followed, or a page that adds no item not already read and still points to another, is a
-        list not read (ReadError, exit 3), never an empty or a short one, and never followed further."""
+        """Every item of a Graph list, following @odata.nextLink until it is absent, as Microsoft's paging guidance
+        says ("Paging Microsoft Graph data in your app": "To read all results, you must continue to call Microsoft
+        Graph with the @odata.nextLink property returned in each response until the @odata.nextLink property is no
+        longer returned", and "A page of results might contain zero or more results"). So a page holding no item, or
+        only items already read (counted once, by id), is read on while it carries a next link. A 200 without its
+        `value` list, a next link that is not a link or repeats one already followed (the pages would go round for
+        ever), or a list still paging after MAX_PAGES pages, is a list not read (ReadError, exit 3), never an empty or
+        a short one. The same rule as the federation watch's and the leaver job's pager."""
         out, url, followed, seen = [], path, set(), set()
         what = f"Graph GET {path.split('?')[0]}"
         for _ in range(MAX_PAGES):
-            if url in followed:
-                raise ReadError(f"{what}: a next link came back a second time, so the list would never end")
             followed.add(url)
             data = self.req("GET", url)
             if not isinstance(data, dict) or not isinstance(data.get("value"), list):
                 raise ReadError(f"{what}: a page answered without its list")
-            new = [r for r in data["value"] if not (isinstance(r, dict) and r.get("id") in seen and r.get("id"))]
+            new = [r for r in data["value"] if not (isinstance(r, dict) and r.get("id") and r["id"] in seen)]
             seen.update(r["id"] for r in new if isinstance(r, dict) and r.get("id"))
             out += new
             url = data.get("@odata.nextLink")
             if not url:
                 return out
-            if not new:
-                raise ReadError(f"{what}: a page added no item not already read and pointed to another, at {len(out)} items")
+            if not isinstance(url, str):
+                raise ReadError(f"{what}: a page gave a next link that is not a link, at {len(out)} items")
+            if url in followed:
+                raise ReadError(f"{what}: a next link came back a second time, so the list would never end")
         raise ReadError(f"{what}: more than {MAX_PAGES} pages")
 
     def one(self, collection, filt, select="id,displayName"):
@@ -942,7 +1019,7 @@ class Run:
         a, urn, uid = self.args, org["id"], org["id"].rsplit(":", 1)[-1]
         users = vcfa.pages("/cloudapi/1.0.0/users", "read users", urn)
         why = switch_refusal(vcfa.settings(uid, "oauth"), vcfa.settings(uid, "federation"), self.tenant, a.protocol,
-                             a.user_key if a.protocol == "oidc" else None, users)
+                             a.user_key if a.protocol == "oidc" else None, users, rerun=True)
         if why:
             raise RefusedError(why)
         self.step("the organization's stored sign-in and users read: no switch", "done", users=len(users))
@@ -1349,6 +1426,19 @@ def federation_found(oauth, fed, tenant):
     return "it holds " + " and ".join(found) if found else "it stores no OIDC or SAML settings"
 
 
+def switched_off_hint(found):
+    """For --update's refusal: the --configure commands that change a federation to this tenant switched off, one pair
+    per protocol it holds, each a command the parser takes as printed (--configure needs --protocol)."""
+    held = [p for p, what in (("oidc", "OIDC settings"), ("saml", "SAML metadata"))
+            if f"{what} for ENTRA_TENANT_ID, switched off" in found]
+    if not held:
+        return ""
+    return (". --update changes a federation that is switched on. " + "; ".join(
+        f"For the {p.upper()} one, --configure --org NAME --protocol {p} --enable writes its settings and switches it "
+        f"on, and --configure --org NAME --protocol {p} --groups-only --group ROLE=NAME imports a group and leaves it off"
+        for p in held))
+
+
 def oidc_update(current, secret, refresh_hours=None, keys=None):
     """The OIDC settings for a day-2 write: the GET body with only the named fields changed and every other field
     carried through, the client secret on the write because VCF Automation refuses one without it. Returns the body
@@ -1381,6 +1471,154 @@ def metadata_certs(xml):
     return sorted({"".join(c.split()) for c in re.findall(r"<(?:\w+:)?X509Certificate>([^<]+)</(?:\w+:)?X509Certificate>", xml or "")})
 
 
+def thumbprints(xml):
+    """The SHA-1 thumbprint of each certificate a SAML metadata document names, as upper-case hex: the form Entra names
+    a signing certificate by (preferredTokenSigningKeyThumbprint). A certificate that is not base64 raises ValueError."""
+    return sorted({hashlib.sha1(base64.b64decode(c, validate=True)).hexdigest().upper() for c in metadata_certs(xml)})
+
+
+def _key_thumbprint(key_credential):
+    """A service principal's key credential as the thumbprint of its certificate (Graph gives it base64 in
+    customKeyIdentifier), upper-case hex; "" when it does not read."""
+    try:
+        return base64.b64decode(key_credential.get("customKeyIdentifier") or "", validate=True).hex().upper()
+    except ValueError:
+        return ""
+
+
+# Entra names the same identity-provider entity id, the tenant's issuer, in the metadata of every app of one tenant,
+# and the app's id nowhere in it; what tells two apps' metadata apart is the signing certificates, each app's metadata
+# naming its own (X-250, the lab's tenant, two SAML apps, default settings). So metadata is tied to the organization's
+# app by certificate: the one Entra signs the app with, read through the tenant's read-only app, or failing that the
+# ones the organization already holds.
+APP_NOT_READ = ("the tenant's read-only app was not given (ENTRA_CLIENT_ID with ENTRA_CLIENT_SECRET_FILE, or with "
+                "ENTRA_CERT_FILE and ENTRA_KEY_FILE)")
+
+
+def metadata_judgement(held_xml, new_xml, saml_users, app=None):
+    """Whether a SAML metadata write keeps the organization signing its people in: (refusal or "", facts), compared by
+    certificate thumbprint, never by count. `saml_users` is how many SAML users the organization holds, enabled or not;
+    `app` is the organization's app as the tenant's read-only app read it ({active, signing}), or None. With the app,
+    the metadata must name the certificate Entra signs the app with now, and no certificate the app does not hold:
+    another app's metadata in the same tenant names the same issuer and other certificates. Without it, metadata that
+    names none of the certificates the organization holds, while it holds SAML users, is refused: the organization's
+    own app after a roll and another app read the same, and a wrong one refuses every returning user. Raises ValueError
+    when a certificate in either document is not base64."""
+    held, new = set(thumbprints(held_xml)), set(thumbprints(new_xml))
+    facts = {"certificates_now": len(held), "certificates_new": len(new), "new_not_held": len(new - held),
+             "held_not_new": len(held - new), "kept": len(held & new), "app_read": app is not None}
+    if app is not None:
+        active, signing = app.get("active") or "", set(app.get("signing") or ())
+        foreign = new - signing
+        facts.update(names_the_apps_active_certificate=active in new, not_the_apps=len(foreign))
+        if not active:
+            return ("the organization's app at Entra names no active signing certificate, so which certificate its "
+                    "assertions are signed with could not be read: nothing is written until it names one", facts)
+        if active not in new:
+            return ("METADATA_FILE does not name the certificate Entra signs the organization's app with now: it is "
+                    "another app's metadata (every app of a tenant names the same issuer; the certificate tells them "
+                    "apart), or a certificate not yet made active, given alone. Load Entra's metadata for the "
+                    "organization's own app, which names its active certificate, and any next one", facts)
+        if foreign:
+            return (f"METADATA_FILE names {len(foreign)} certificate(s) the organization's app does not hold at Entra: "
+                    "it carries another app's certificate, which the organization would then trust", facts)
+        return "", facts
+    if held and not (held & new) and saml_users:
+        return (f"METADATA_FILE names none of the {len(held)} signing certificate(s) the organization holds, and the "
+                f"organization holds {saml_users} SAML user(s). It reads the same whether it is the organization's own "
+                "app after a roll or another app in the same tenant (every app of a tenant names the same issuer; the "
+                "certificate tells them apart), and a wrong one refuses every returning user. Give the tenant's "
+                "read-only app (ENTRA_CLIENT_ID with ENTRA_CLIENT_SECRET_FILE, or with ENTRA_CERT_FILE and "
+                "ENTRA_KEY_FILE) and run again: the run then reads the certificate Entra signs the organization's app "
+                "with, and writes metadata that names it", facts)
+    return "", facts
+
+
+def entra_app(g, protocol, client_id=None, entity=None):
+    """The organization's app at Entra, read through the tenant's read-only app (every call a GET, under the
+    Application.Read.All the watch runs on): over OIDC the app whose client id the organization holds or is given,
+    over SAML the app that carries the organization's service-provider identifier. Returns (refusal or "", app), app as
+    {active, signing, assigned}: the thumbprint Entra signs with, every signing certificate's thumbprint, and the display
+    name of every group assigned to the app. No app, two apps, or no service principal is a refusal, since which app
+    signs the organization's people in cannot be told; a read that fails raises ReadError (exit 3)."""
+    if protocol == "oidc":
+        if not client_id:
+            return "the organization holds no client id, so its app at Entra cannot be found", None
+        filt, looked_for = f"appId eq '{_odata(client_id)}'", "the client id"
+    else:
+        if not entity:
+            return ("the organization's service-provider metadata names no entity id, so its app at Entra cannot be "
+                    "found"), None
+        filt, looked_for = f"identifierUris/any(x:x eq '{_odata(entity)}')", "the organization's service-provider identifier"
+    apps = g.values("/applications?" + urllib.parse.urlencode({"$filter": filt, "$select": "id,appId"}))
+    if len(apps) != 1:
+        who = f"{len(apps)} apps in ENTRA_TENANT_ID carry" if apps else "no app in ENTRA_TENANT_ID carries"
+        return f"{who} {looked_for}, so which app signs the organization's people in cannot be told", None
+    sps = g.values("/servicePrincipals?" + urllib.parse.urlencode(
+        {"$filter": f"appId eq '{_odata(apps[0].get('appId') or '')}'",
+         "$select": "id,preferredTokenSigningKeyThumbprint,keyCredentials"}))
+    if len(sps) != 1:
+        return (f"the organization's app has {len(sps)} service principals in ENTRA_TENANT_ID, so its assignments "
+                "cannot be read"), None
+    sp = sps[0]
+    rows = g.values(f"/servicePrincipals/{sp['id']}/appRoleAssignedTo?" + urllib.parse.urlencode(
+        {"$select": "principalDisplayName,principalType"}))
+    return "", {"active": (sp.get("preferredTokenSigningKeyThumbprint") or "").upper(),
+                "signing": sorted({t for t in (_key_thumbprint(k) for k in sp.get("keyCredentials") or []
+                                              if k.get("usage") == "Sign") if t}),
+                "assigned": [r.get("principalDisplayName") for r in rows
+                             if r.get("principalType") == "Group" and r.get("principalDisplayName")]}
+
+
+def assignment_refusal(names, assigned):
+    """Why a group import is refused at Entra's side, or "": each name imported must be the display name of exactly
+    one group assigned to the organization's app, since the groups claim carries the assigned groups' display names
+    and the organization matches an imported group by name. VCF Automation imports a name no assigned group carries
+    (X-192), which then admits no one, and holds its role for whichever group is later given that name; a name two
+    assigned groups carry admits the members of both."""
+    missing = [n for n in names if n not in assigned]
+    doubled = [n for n in names if assigned.count(n) > 1]
+    if missing:
+        return (f"no group assigned to the organization's app at Entra is named {', '.join(missing)}: VCF Automation "
+                "would import the name all the same, admitting no one, and its role would wait for whichever group is "
+                "later given that name. Assign the group to the app at Entra, or correct the name")
+    if doubled:
+        return (f"more than one group assigned to the organization's app at Entra is named {', '.join(doubled)}: the "
+                "import would admit the members of each. Rename one at Entra first")
+    return ""
+
+
+def _odata(value):
+    """A value inside a single-quoted OData string literal: a quote is doubled."""
+    return str(value).replace("'", "''")
+
+
+def tenant_reader(tenant):
+    """The tenant's read-only app as a Graph client, or None when ENTRA_CLIENT_ID is not set. ENTRA_CLIENT_ID without
+    its credential is a usage error (exit 5); a credential Entra refuses raises CallError before anything is read
+    (exit 3). It is only read through: every call a GET."""
+    client = os.environ.get("ENTRA_CLIENT_ID")
+    if not client:
+        return None
+    if not (os.environ.get("ENTRA_CLIENT_SECRET_FILE") or (os.environ.get("ENTRA_CERT_FILE") and os.environ.get("ENTRA_KEY_FILE"))):
+        raise UsageError("ENTRA_CLIENT_ID names the tenant's read-only app and needs its credential: ENTRA_CLIENT_SECRET_FILE, "
+                         "or ENTRA_CERT_FILE and ENTRA_KEY_FILE")
+    return Graph(tenant, client)
+
+
+def _sp_entity(vcfa, fed):
+    """The organization's own service-provider identifier, from the metadata its federation settings link to; None
+    when the settings carry no link. A read that does not answer raises ReadError (exit 3)."""
+    href = next((ln["href"] for ln in fed.get("link") or [] if ln.get("type") == SAML_METADATA), None)
+    if not href:
+        return None
+    st, xml, _ = vcfa.call("GET", "/" + href.split("://", 1)[-1].split("/", 1)[-1], accept=SAML_METADATA)
+    if st != 200 or not isinstance(xml, str):
+        raise ReadError(f"read the organization's service-provider metadata: HTTP {st} (a new organization answers 500 "
+                        "for its first seconds: run again)")
+    return sp_metadata_names(xml)[0]
+
+
 def update(a):
     """--update: one existing organization's federation settings, only the named fields; a plan unless --execute."""
     host, org_name, tenant = os.environ.get("VCFA_HOST"), os.environ.get("ORG"), os.environ.get("ENTRA_TENANT_ID")
@@ -1410,6 +1648,8 @@ def update(a):
         if write_record(out, text, san):
             print(f"\nrecorded {len(steps)} steps to {out}; every estate value replaced by a placeholder")
 
+    # --metadata reads the organization's app at Entra through the tenant's read-only app when ENTRA_CLIENT_ID names it
+    graph = tenant_reader(tenant) if a.metadata else None
     vcfa = Vcfa(host)
     org = vcfa.org(org_name)
     if org is None:
@@ -1422,12 +1662,7 @@ def update(a):
     san.add(oauth.get("clientId"), "{{client-id}}")
     if proto is None:   # say what it holds: a federation to this tenant switched off reads differently from none
         found = federation_found(oauth, fed, tenant)
-        hint = ""
-        if "for ENTRA_TENANT_ID, switched off" in found:
-            hint = (". --update changes a federation that is switched on; --configure --org NAME --enable writes a "
-                    "switched-off one's settings and switches it on, and --configure --org NAME --groups-only --group "
-                    "ROLE=NAME imports a group and leaves it off")
-        print(f"refused: the organization has no federation to ENTRA_TENANT_ID switched on: {found}{hint}")
+        print(f"refused: the organization has no federation to ENTRA_TENANT_ID switched on: {found}{switched_off_hint(found)}")
         return 2
     wrong = [n for n in asked if (proto == "oidc") == (n == "metadata")]
     if wrong:
@@ -1486,14 +1721,49 @@ def update(a):
                              "oAuthKeyConfigurations", "lastKeyRefreshAttempt", "lastKeySuccessfulRefresh"))
             del back_secret, new_secret
         else:
-            certs = metadata_certs(metadata)
+            try:
+                certs = thumbprints(metadata)
+            except ValueError:
+                certs = []
             if f"sts.windows.net/{tenant}" not in metadata or not certs:
-                print("not run: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
+                print("not run: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate it can read")
                 return EXIT_USAGE
-            step("plan", "read", protocol="SAML", metadata={"certificates_now": len(metadata_certs(fed.get("samlMetadata"))),
-                                                             "certificates_new": len(certs),
-                                                             "new_not_held": len(set(certs) - set(metadata_certs(fed.get("samlMetadata"))))},
+            # Which certificates the write keeps, drops and adds, by thumbprint, and the SAML users a wrong one would
+            # refuse; with the tenant's read-only app, the certificate Entra signs the organization's app with now.
+            users = vcfa.pages("/cloudapi/1.0.0/users", "read users", org["id"])
+            for u in users:   # a user record can carry a password field; it goes the moment it arrives
+                u.pop("password", None)
+                for k in ("username", "email", "fullName", "nameInSource"):
+                    san.add(u.get(k), "{{user}}")
+            saml_users = sum(1 for u in users if u.get("providerType") == "SAML")
+            app = None
+            if graph is not None:
+                why, app = entra_app(graph, "saml", entity=_sp_entity(vcfa, fed))
+                if why:
+                    step("refused", f"{why}. Nothing was sent")
+                    write(proto, False)
+                    return 2
+            try:
+                why, facts = metadata_judgement(fed.get("samlMetadata"), metadata, saml_users, app)
+            except ValueError:
+                raise ReadError("a certificate in the metadata the organization holds does not read as base64, so what "
+                                "the write would drop is not known") from None
+            held_t = set(thumbprints(fed.get("samlMetadata")))
+            step("plan", "read", protocol="SAML", metadata=facts, saml_users=saml_users,
                  would_change=["samlMetadata"] if fed.get("samlMetadata") != metadata else [])
+            for label, group in (("kept", held_t & set(certs)), ("dropped", held_t - set(certs)), ("added", set(certs) - held_t)):
+                if group:   # printed for the reader to hold against Entra's portal; the record carries the counts
+                    print(f"    certificates {label}: {', '.join(sorted(group))}")
+            if why:
+                step("refused", f"{why}. Nothing was sent")
+                write(proto, False)
+                return 2
+            if app is None:
+                print(f"  {APP_NOT_READ}, so whether METADATA_FILE is the organization's own app's was read only from the "
+                      f"certificates it keeps ({facts['kept']} of the {facts['certificates_now']} the organization holds)")
+            else:
+                print("  METADATA_FILE names the certificate Entra signs the organization's app with now, and only the "
+                      "app's own, read through the tenant's read-only app")
             if not a.execute:
                 print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
                 write(proto, None)
@@ -1506,7 +1776,11 @@ def update(a):
             else:   # the organization already holds this metadata: nothing is sent
                 step("nothing to change", "nothing written", changed=changed)
             back = vcfa.settings(uid, "federation")
-            checks = {"the organization holds the new metadata's certificates": set(certs) <= set(metadata_certs(back.get("samlMetadata"))),
+            try:   # by thumbprint, as the plan compared them; a stored certificate that does not read holds nothing
+                stored = set(thumbprints(back.get("samlMetadata")))
+            except ValueError:
+                stored = set()
+            checks = {"the organization holds the new metadata's certificates": set(certs) <= stored,
                       "SAML still enabled": back.get("enabled") is True}
     except ReadError as e:   # a read that did not answer: what it would have shown is not known
         step("read failed", str(e))
@@ -1530,7 +1804,9 @@ def update(a):
 # administrator. --configure --org writes the organization's side from what the tenant's administrator handed over
 # (the app's client id and secret over OIDC, its federation metadata over SAML) as a round trip, imports each named
 # group with the role its organization type defines, resolved from the organization's own role list, and reads every
-# write back. Neither calls Entra ID beyond its public discovery and keys endpoints, and neither needs a Graph app.
+# write back. Neither writes to Entra ID. --prove --org calls it only at its public discovery and keys endpoints;
+# --configure --org also reads the organization's app through the tenant's read-only app when ENTRA_CLIENT_ID names it
+# (entra_app: each group's assignment before an import, and the certificate a SAML app signs with), and says when not.
 
 # The settings each protocol's sign-in depends on: a difference here fails the proof. Every other field the plan sets
 # is reported when it differs, without failing (a console-built organization may hold another clock skew or label).
@@ -1542,9 +1818,10 @@ REQUIRED = {
              "samlAttributeMapping.groupAttributeName"),
 }
 NOT_COMPARED = ("link", "href", "type", "clientSecret", "oAuthKeyConfigurations", "samlMetadata")
-# Both modes read the organization only. VCF Automation imported a group name no group assigned to the app carried
+# The proof reads the organization only. VCF Automation imported a group name no group assigned to the app carried
 # (X-192), and a proof of the organization's side passed it; the federation watch's group_names, which reads the app's
-# assignments through the tenant's read-only app, failed on it. So the Entra side of every group is the watch's to prove.
+# assignments through the tenant's read-only app, failed on it. So the Entra side of every group is the watch's to prove,
+# and --configure, given that app, reads it before an import.
 ENTRA_SIDE = ("This proves the organization's side. That each imported group is a group assigned to the app at Entra is "
               "the federation-operations watch's group_names check, through the tenant's read-only app: run it next.")
 ROLE_KEYS = ("member", "auditor", "administrator")
@@ -1608,9 +1885,10 @@ def old_and_new(current, body, changes, published=None):
             held = {k.get("keyId") for k in ((current.get("oAuthKeyConfigurations") or {}).get("oAuthKeyConfiguration") or [])}
             pub = {k["keyId"] for k in published or []}
             out[name] = f"{len(held)} held -> the {len(pub)} Entra publishes ({len(pub - held)} not held)"
-        elif name == "samlMetadata":
-            out[name] = (f"{len(metadata_certs(current.get('samlMetadata')))} signing certificate(s) -> "
-                         f"{len(metadata_certs(body.get('samlMetadata')))} in METADATA_FILE")
+        elif name == "samlMetadata":   # by thumbprint: which held certificates the write keeps and drops
+            held, new = set(thumbprints(current.get("samlMetadata"))), set(thumbprints(body.get("samlMetadata")))
+            out[name] = (f"{len(held)} signing certificate(s) held -> {len(new)} in METADATA_FILE ({len(held & new)} "
+                         f"kept, {len(held - new)} dropped, {len(new - held)} added)")
         else:
             out[name] = f"{_shown(name, now.get(name))} -> {_shown(name, then.get(name))}"
     return out
@@ -1679,7 +1957,7 @@ def app_changes(oauth, client_id=None, issuer=None):
     return out
 
 
-def switch_refusal(oauth, fed, tenant, protocol, user_key, users=(), client_id=None, new_issuer=None):
+def switch_refusal(oauth, fed, tenant, protocol, user_key, users=(), client_id=None, new_issuer=None, rerun=False):
     """Why --configure leaves this organization's sign-in alone, or "". A protocol, an OIDC user key or the SAML
     user-name claim is never switched in place under the users it keys (a SAML organization moved to OIDC refused its
     users; a move to oid split an account; a renamed SAML user was refused), and that is judged on what the organization
@@ -1689,7 +1967,9 @@ def switch_refusal(oauth, fed, tenant, protocol, user_key, users=(), client_id=N
     apps of one tenant (sub is pairwise to each app), and only when the stored issuer names this tenant (oid and sub
     both change across tenants). An organization signed in through VCF single sign-on is that provider's, and one
     whose stored settings name another provider is not this tenant's. A fresh organization, with nothing stored and no
-    federated user, is configured. Every flag a refusal names is one the parser takes."""
+    federated user, is configured. Every flag a refusal names is one the parser takes. `rerun` marks --execute run again
+    over the organization it built, whose refusal points to that command or a new organization, never to --configure,
+    which refuses a key change too."""
     oidc_on, saml_on = bool(oauth.get("enabled")) and not oauth.get("vidb"), bool(fed.get("enabled"))
     now = federated_to(oauth, fed, tenant)
     kinds = {u.get("providerType") for u in users or ()}
@@ -1717,6 +1997,12 @@ def switch_refusal(oauth, fed, tenant, protocol, user_key, users=(), client_id=N
             if issuer and f"login.microsoftonline.com/{tenant}" not in issuer:
                 return "the organization holds OIDC settings for a provider other than ENTRA_TENANT_ID, enabled or not"
         if held_key and held_key != user_key:
+            if rerun:   # --execute over its own build: the same command keeps the key; another key is another build
+                keep = (f"run the same command with --user-key {held_key} to keep it" if held_key in USER_KEYS
+                        else "this script builds only on oid or preferred_username, so leave it as it is")
+                return (f"the organization this script built keys its users on {held_key} in the OIDC settings it holds, "
+                        f"enabled or not: {keep}. A build keyed on {user_key} goes through a new organization: set ORG to "
+                        "a name no organization uses, and remove this one with --teardown --execute")
             keep = (f"run --configure with --user-key {held_key}, or without --user-key, to keep it" if held_key in USER_KEYS
                     else "run --configure without --user-key, which keeps it")
             return (f"the organization keys its users on {held_key} in the OIDC settings it holds, enabled or not: "
@@ -1978,13 +2264,22 @@ def configure_existing(a):
     if a.protocol == "oidc" and not client_id and not groups_only:
         print("not run: --configure --protocol oidc needs APP_CLIENT_ID, the client id of the app the tenant's administrator built")
         return EXIT_USAGE
-    if metadata and (f"sts.windows.net/{tenant}" not in metadata or not metadata_certs(metadata)):
-        print("not run: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate")
-        return EXIT_USAGE
+    if metadata:
+        try:
+            readable = bool(thumbprints(metadata))
+        except ValueError:
+            readable = False
+        if f"sts.windows.net/{tenant}" not in metadata or not readable:
+            print("not run: the metadata in METADATA_FILE is not this tenant's, or names no signing certificate it can read")
+            return EXIT_USAGE
     log = _Log("configure" if a.execute else "configure plan", host, org_name, tenant, "configure.json")
     log.san.add(client_id, "{{client-id}}")
+    log.san.add(os.environ.get("ENTRA_CLIENT_ID"), "{{reader-app}}")
     for name in wanted_keys.values():
         log.san.add(name, "{{group}}")
+    # The organization's app at Entra, read through the tenant's read-only app when ENTRA_CLIENT_ID names it: each
+    # group's assignment before it is imported, and over SAML the certificate Entra signs the app with
+    graph = tenant_reader(tenant)
     vcfa = Vcfa(host)
     org = vcfa.org(org_name)
     if org is None:
@@ -2038,17 +2333,34 @@ def configure_existing(a):
         if clashes:
             return refuse(f"{len(clashes)} named group(s) exist under another protocol or with other roles; change them by hand, "
                           "because an import of a name the organization holds answered 201 with the group it already had")
-        secret, keys, secret_changes, kept, changes = None, [], False, "", []
+        # Entra's side, before anything is sent: VCF Automation imports a group name no group assigned to the app carries
+        # (X-192), so each name is read against the app's assignments; over SAML the metadata is judged against the
+        # certificate Entra signs the app with. Without the tenant's read-only app neither is read, and the run says so.
+        app, entra_read = None, f"not read: {APP_NOT_READ}"
+        if graph is not None and (imports or (a.protocol == "saml" and not groups_only)):
+            if a.protocol == "oidc":
+                why, app = entra_app(graph, "oidc", client_id=client_id or r["oauth"].get("clientId"))
+            else:
+                why, app = entra_app(graph, "saml", entity=_sp_entity(vcfa, r["fed"]))
+            if why:
+                return refuse(why)
+            why = assignment_refusal([n for _k, n in imports], app["assigned"])
+            if why:
+                return refuse(why)
+            entra_read = "read"
+            log.step("the organization's app read at Entra, through the tenant's read-only app", "read",
+                     groups_assigned=len(app["assigned"]), groups_to_import=len(imports),
+                     groups_to_import_assigned=len(imports))
+        secret, keys, secret_changes, kept, changes, cert_facts = None, [], False, "", [], None
         if groups_only:   # no settings are read for a write, planned or sent: only the named groups
             current = r["oauth"] if a.protocol == "oidc" else r["fed"]
             was_on = current.get("enabled") is True
             log.step("plan", "read", protocol=a.protocol.upper(), org_type=org_type, groups_only=True,
                      settings_to_change=[], groups_to_import=[roles[k] for k, _n in imports],
-                     groups_already_held=len(held_ok))
+                     groups_already_held=len(held_ok), entra_assignment=entra_read if imports else None)
             print(f"  --groups-only: no settings are written, and the federation stays switched {'on' if was_on else 'off'}")
             if imports:
-                print("  each group is imported by the name the tenant's administrator gave; VCF Automation does not "
-                      "check it against Entra, so confirm it is assigned to the app, and run the watch after")
+                print(assignment_note(app))
         elif a.protocol == "oidc":
             current, held_secret = vcfa.settings_for_write(r["uid"], "oauth")
             same_app = current.get("clientId") == client_id
@@ -2069,6 +2381,24 @@ def configure_existing(a):
             kind, ctype = "oauth", OAUTH_SETTINGS
         else:
             current = vcfa.settings(r["uid"], "federation")
+            # The metadata written, judged by certificate thumbprint against what the organization holds, the SAML users
+            # it holds and, with the tenant's read-only app, the certificate Entra signs the organization's app with
+            saml_users = sum(1 for u in r["users"] if u.get("providerType") == "SAML")
+            try:
+                why, cert_facts = metadata_judgement(current.get("samlMetadata"), metadata, saml_users, app)
+            except ValueError:
+                raise ReadError("a certificate in the metadata the organization holds does not read as base64, so what "
+                                "the write would drop is not known") from None
+            if why:
+                return refuse(why)
+            if app is None:
+                print(f"  {APP_NOT_READ}, so whether METADATA_FILE is the organization's own app's was "
+                      + (f"read only from the certificates it keeps ({cert_facts['kept']} of the "
+                         f"{cert_facts['certificates_now']} the organization holds)" if cert_facts["certificates_now"]
+                         else "not read: the organization holds no metadata to hold it against"))
+            else:
+                print("  METADATA_FILE names the certificate Entra signs the organization's app with now, and only the "
+                      "app's own, read through the tenant's read-only app")
             body = saml_settings(current, metadata, "Sign in with Entra ID")
             planned = plan("saml", org_type, None)["settings"]["fields"]
             kind, ctype = "federation", FEDERATION_SETTINGS
@@ -2089,14 +2419,15 @@ def configure_existing(a):
                      user_key=key and (key + ("" if a.user_key else ", the key it holds" if held_key else ", the default")),
                      settings_to_change=changes, old_and_new=shown, quiet=("old_and_new", "accounts_kept"),
                      groups_to_import=[roles[k] for k, _n in imports], groups_already_held=len(held_ok),
+                     entra_assignment=entra_read if imports else None,
+                     **({"certificates": cert_facts} if cert_facts else {}),
                      **({"accounts_kept": kept} if kept else {}))
             for name, change in shown.items():   # the values a rollback writes back by hand
                 print(f"    {name}: {change}")
             if kept:
                 print(f"  {kept}")
             if imports:
-                print("  each group is imported by the name the tenant's administrator gave; VCF Automation does not check it "
-                      "against Entra, so confirm it is assigned to the app, and run the watch after")
+                print(assignment_note(app))
             if changes and not was_on and not a.enable:
                 return refuse(f"the organization's {a.protocol.upper()} federation is switched off (enabled: "
                               f"{_shown('enabled', current.get('enabled'))}), and this run would write its settings "
@@ -2115,7 +2446,7 @@ def configure_existing(a):
                 del body
             del secret
             print("\nplan only: nothing was changed. Add --execute to write it and read it back.")
-            log.write(protocol=a.protocol, org_type=org_type, held=None)
+            log.write(protocol=a.protocol, org_type=org_type, held=None, entra_app=entra_read)
             return 0
         checks = {}
         if not groups_only:
@@ -2164,12 +2495,26 @@ def configure_existing(a):
         return 1
     for name, ok in checks.items():
         log.step(f"check: {name}", "pass" if ok else "FAIL")
-    log.write(protocol=a.protocol, org_type=org_type, held=all(checks.values()))
+    log.write(protocol=a.protocol, org_type=org_type, held=all(checks.values()), entra_app=entra_read)
     return 0 if all(checks.values()) else 1
+
+
+def assignment_note(app):
+    """What the run printed about the groups it imports, read at Entra or not."""
+    if app is not None:
+        return ("  each group to import is assigned to the organization's app at Entra by that name, read through the "
+                "tenant's read-only app")
+    return (f"  {APP_NOT_READ}, so whether each group to import is assigned to the organization's app at Entra was not "
+            "read: VCF Automation imports a name no assigned group carries. Confirm each with the tenant's "
+            "administrator, and run the federation watch after")
 
 
 class _Parser(argparse.ArgumentParser):
     """argparse exits 2 on a usage error, the code this script gives a refusal; here it is a UsageError, exit 5."""
+
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
 
     def error(self, message):
         self.print_usage(sys.stderr)
@@ -2197,6 +2542,7 @@ def main(argv=None):
         print("org_federation.py needs Python 3.9 or later", file=sys.stderr)
         return EXIT_USAGE
     RECORD["refused"] = False
+    TENANT_GIVEN.clear()
     try:
         code = _run(argv)
     except UsageError as e:
@@ -2284,11 +2630,13 @@ def _run(argv=None):
     if a.org:
         if credential_problem(entra=False):
             raise UsageError(f"--org needs {credential_problem(entra=False)}")
+        _resolve_tenant_env()   # a domain name given as ENTRA_TENANT_ID, resolved to the id before anything is sent
         return prove_existing(a) if a.prove else configure_existing(a)
     a.user_key = a.user_key or "oid"
     if a.update:
         if credential_problem(entra=False):
             raise UsageError(f"--update needs {credential_problem(entra=False)}")
+        _resolve_tenant_env()
         return update(a)
     if a.teardown and not a.execute:   # the plan reads the state file, as --execute would, and nothing remote
         state = os.environ.get("STATE", f"org_federation.{os.environ.get('ORG', '<org>')}.state.json")
@@ -2316,6 +2664,7 @@ def _run(argv=None):
     days = os.environ.get("SECRET_DAYS", "180")
     if not (days.isdigit() and 0 < int(days) < 365):   # checked before anything is sent, not at the secret step
         raise UsageError(f"SECRET_DAYS must be a whole number of days under a year, not {days!r}")
+    _resolve_tenant_env()
     run = Run(a)
     vcfa, g = Vcfa(run.host), Graph(run.tenant, run.client)
     unread = refused = False

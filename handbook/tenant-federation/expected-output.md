@@ -113,11 +113,26 @@ the imports alone and never a settings write, whatever the settings hold:
 
 ```
 $ python3 org_federation.py --configure --org <org> --protocol oidc --groups-only --group member=<the new name> --execute
-  plan: read  {'protocol': 'OIDC', 'org_type': 'all-apps', 'groups_only': True, 'settings_to_change': [], 'groups_to_import': ['Organization User'], 'groups_already_held': 0}
+  the organization's app read at Entra, through the tenant's read-only app: read  {'groups_assigned': 1, 'groups_to_import': 1, 'groups_to_import_assigned': 1}
+  plan: read  {'protocol': 'OIDC', 'org_type': 'all-apps', 'groups_only': True, 'settings_to_change': [], 'groups_to_import': ['Organization User'], 'groups_already_held': 0, 'entra_assignment': 'read'}
   --groups-only: no settings are written, and the federation stays switched off
-  each group is imported by the name the tenant's administrator gave; VCF Automation does not check it against Entra, so confirm it is assigned to the app, and run the watch after
+  each group to import is assigned to the organization's app at Entra by that name, read through the tenant's read-only app
   group imported with its role: 201  {'role': 'Organization User', 'providerType': 'OAUTH'}
   check: group <the new name> imported over OAUTH holding Organization User: pass
+```
+
+With the tenant's read-only app set (`ENTRA_CLIENT_ID` and its credential, the watch's app), each group to import is
+read against the groups assigned to the organization's app at Entra before anything is sent. A name no assigned group
+carries, a typo or a group never assigned, is refused (exit 2): VCF Automation would import it all the same.
+
+```
+refused: no group assigned to the organization's app at Entra is named <the name given>: VCF Automation would import the name all the same, admitting no one, and its role would wait for whichever group is later given that name. Assign the group to the app at Entra, or correct the name
+```
+
+Without the read-only app, the run says that the assignment was not read, in place of the line above the import:
+
+```
+  the tenant's read-only app was not given (ENTRA_CLIENT_ID with ENTRA_CLIENT_SECRET_FILE, or with ENTRA_CERT_FILE and ENTRA_KEY_FILE), so whether each group to import is assigned to the organization's app at Entra was not read: VCF Automation imports a name no assigned group carries. Confirm each with the tenant's administrator, and run the federation watch after
 ```
 
 It needs no `APP_CLIENT_ID`, secret or metadata. An organization that stores no settings for the tenant over that
@@ -189,6 +204,43 @@ With no SAML user yet, the claim is written, and the plan keeps the old one on r
 `--prove --org` judges such an organization's claim as held, as it judges an OIDC organization's key, so it does not
 fail the organization on the claim its users are matched on.
 
+## SAML metadata, judged by certificate
+
+Entra names the same identity-provider entity id, the tenant's issuer, in the metadata of every app in one tenant, so
+another app's metadata reads as the tenant's; the signing certificates tell two apps apart. `--update --metadata` and
+`--configure --protocol saml` compare the file with the metadata the organization holds by certificate thumbprint, and
+print the certificates kept, dropped and added for you to hold against Entra's portal. Metadata that names none of the
+certificates the organization holds, while it holds SAML users, is refused unless the tenant's read-only app is given:
+
+```
+$ METADATA_FILE=<the metadata> python3 org_federation.py --update --metadata --execute
+  plan: read  {'protocol': 'SAML', 'metadata': {'certificates_now': 1, 'certificates_new': 1, 'new_not_held': 1, 'held_not_new': 1, 'kept': 0, 'app_read': False}, 'saml_users': 1, 'would_change': ['samlMetadata']}
+    certificates dropped: <thumbprint-1>
+    certificates added: <thumbprint-2>
+  refused: METADATA_FILE names none of the 1 signing certificate(s) the organization holds, and the organization holds 1 SAML user(s). It reads the same whether it is the organization's own app after a roll or another app in the same tenant (every app of a tenant names the same issuer; the certificate tells them apart), and a wrong one refuses every returning user. Give the tenant's read-only app (ENTRA_CLIENT_ID with ENTRA_CLIENT_SECRET_FILE, or with ENTRA_CERT_FILE and ENTRA_KEY_FILE) and run again: the run then reads the certificate Entra signs the organization's app with, and writes metadata that names it. Nothing was sent
+```
+
+With the read-only app, the run reads the certificate Entra signs the organization's app with now. Another app's
+metadata is refused:
+
+```
+  refused: METADATA_FILE does not name the certificate Entra signs the organization's app with now: it is another app's metadata (every app of a tenant names the same issuer; the certificate tells them apart), or a certificate not yet made active, given alone. Load Entra's metadata for the organization's own app, which names its active certificate, and any next one. Nothing was sent
+```
+
+and the repair after a certificate was already made active at Entra, which drops every certificate the organization
+holds, is written:
+
+```
+    certificates dropped: <thumbprint-1>
+    certificates added: <thumbprint-2>
+  METADATA_FILE names the certificate Entra signs the organization's app with now, and only the app's own, read through the tenant's read-only app
+  SAML settings written: 200  {'changed': ['samlMetadata']}
+  check: the organization holds the new metadata's certificates: pass
+  check: SAML still enabled: pass
+```
+
+These transcripts are the companion's own output on the shapes its tests hold; no live run has made them.
+
 ## A secret Entra refuses is not written
 
 A new client secret (`APP_SECRET_FILE`, or `NEW_SECRET_FILE` for `--update --secret`) is proven at Entra's token
@@ -215,6 +267,22 @@ $ python3 org_federation.py --update --key-refresh --execute
 
 Exit 0. These lines are the shape the companion's tests hold; the live day-2 runs on the reference estate predate the
 change, and the keys run there sent a write that changed nothing.
+
+On a federation switched off, `--update` is refused, and names the commands that change one, each as the parser takes
+it:
+
+```
+$ python3 org_federation.py --update --key-refresh --execute
+refused: the organization has no federation to ENTRA_TENANT_ID switched on: it holds OIDC settings for ENTRA_TENANT_ID, switched off. --update changes a federation that is switched on. For the OIDC one, --configure --org NAME --protocol oidc --enable writes its settings and switches it on, and --configure --org NAME --protocol oidc --groups-only --group ROLE=NAME imports a group and leaves it off
+```
+
+## A re-run of --execute keeps its key
+
+`--execute` run again over the organization it built, with another `--user-key`, is refused before anything is sent:
+
+```
+refused: the organization this script built keys its users on preferred_username in the OIDC settings it holds, enabled or not: run the same command with --user-key preferred_username to keep it. A build keyed on oid goes through a new organization: set ORG to a name no organization uses, and remove this one with --teardown --execute
+```
 
 ## A proof that could not read: exit 3
 
@@ -266,7 +334,10 @@ The exit codes a script around it reads: 0 done, 1 a check failed or a write was
 updating or tearing down, 2 refused by what it read, with nothing sent (a name it did not create, a protocol, key or
 SAML user-name claim switch judged on what the organization stores, enabled or not, a new app or issuer under OIDC
 users keyed on a claim other than `oid` or `preferred_username`, a settings write to a switched-off federation without
-`--enable`, a group-only import with no federation to serve, a secret Entra refused, an organization it cannot find),
-3 a result not known (a credential refused before anything was read, a read refused or a list not read to its end,
-Entra out of reach, a teardown residue it could not read, a record the scrub refused on a run that would have exited
-0, an error it did not expect), 5 not run as asked. A record the scrub refuses never hides a 1, a 2 or a 3.
+`--enable`, a group-only import with no federation to serve, a secret Entra refused, an organization it cannot find,
+SAML metadata dropping every held certificate under SAML users with the app unread, and with the tenant's read-only app
+a group no assigned group is named, metadata not naming the app's active certificate, or no app or two), 3 a result not
+known (a credential refused before anything was read, a read refused or a list not read to its end, Entra out of
+reach, a teardown residue it could not read, a record the scrub refused on a run that would have exited 0, an error it
+did not expect), 5 not run as asked (`ENTRA_CLIENT_ID` without its credential and a tenant domain Entra names no tenant
+for among them). A record the scrub refuses never hides a 1, a 2 or a 3.

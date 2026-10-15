@@ -197,7 +197,11 @@ Use:  python3 leavers.py                                   report every federate
       (resolved through Graph to the object id; for --close-now, in the plan only), or the account's id
       (urn:vcloud:user:...).
 Exit, the first that applies, so a scheduler reads one state from one number:
-      2 with --execute, a close that did not hold on read-back, among them a read-back that did not read
+      2 with --execute, a close that did not hold on read-back, among them a read-back that did not read; under each
+        the run prints how to finish it: the close again for that one account by its id (--close-now --org ORG --user
+        ID --execute: it reads the account afresh, revokes what it still holds, writes only if it is still enabled,
+        and reads both back), on a provider bearer where the write was refused 403, or, for a field the close did not
+        ask that changed, the field put back by hand (a re-run compares with its own read and would not see it)
       1 an open leaver: an account to close (still enabled or holding a token) that three reads agree on, including
         one --execute refused
       3 a read failed, or an account is undetermined (among them a leaver whose reads disagree): nothing is known about
@@ -232,6 +236,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import ssl
 import sys
 import time
@@ -1278,6 +1283,58 @@ def close(vcfa: Vcfa, urn: str, user: dict, tokens: list[dict]) -> dict:
     return out
 
 
+# Exit 2, finished: the command the run prints under each close that did not hold, and the calls a close sends, in its
+# order, for a person finishing one without the script. Each call carries the organization's tenant-context header.
+FINISH = "python3 leavers.py --close-now --org {org} --user {account} --execute"
+CLOSE_CALLS = (
+    ("GET", "/cloudapi/1.0.0/users/<account id>", "the account's record as it stands"),
+    ("DELETE", "/cloudapi/1.0.0/tokens/<token id>", "each API token the account still holds"),
+    ("PUT", "/cloudapi/1.0.0/users/<account id>", "that record, with enabled false"),
+    ("GET", "/cloudapi/1.0.0/users/<account id>", "read back: disabled, no other field changed"),
+    ("GET", "/cloudapi/1.0.0/tokens", "read back: no token the account owns"),
+)
+
+
+def finish_lines(org: str, row: dict) -> list[str]:
+    """What a person does with a close that did not hold (exit 2), from the row's result alone, printed under it.
+
+    Most such closes are finished by running the close again for that one account by its id, which `--close-now`
+    takes whatever key the organization stores: it reads the account afresh, revokes each token it still owns, writes
+    only if the account is still enabled, and reads both back, so a run that stopped part way is finished and one that
+    went through changes nothing. Three results are not: a write refused 403 (on a provider API token the close's write
+    was refused, so it is run on a provider bearer); an account that is not federated (no close of this script's
+    takes it); and a field the close did not ask that changed, which a re-run cannot see because it compares with its
+    own read, so the field is put back by hand. A close that held, or a row nothing closed, prints nothing."""
+    res = row.get("result") or {}
+    if row.get("action") != "closed" or res.get("held") is not False:
+        return []
+    err, rb = str(res.get("error") or ""), res.get("read_back") or {}
+    moved = rb.get("changed_unasked") or []
+    if "not federated" in err:
+        return [f"      finish: by hand in the organization's own administration: {err.split(';', 1)[0]}, which no close "
+                "of this script takes"]
+    out = []
+    if moved:
+        out.append(f"      finish by hand: the close changed {', '.join(moved)}, which it did not ask: read the account "
+                   "(GET /cloudapi/1.0.0/users/<account id>) and put the field back with a PUT of its record; a re-run "
+                   "compares with its own read and would not see the change")
+    left = [err] if err else []
+    failed = sum(1 for t in res.get("revoked") or [] if t.get("status") not in (200, 204))
+    if failed:
+        left.append(f"{failed} token revoke(s) refused")
+    if rb.get("tokens_left"):
+        left.append(f"{len(rb['tokens_left'])} token(s) left")
+    if rb.get("enabled") is True:
+        left.append("the account still enabled")
+    if left or not moved:
+        cmd = FINISH.format(org=shlex.quote(str(org)), account=shlex.quote(str(row.get("id"))))
+        bearer = " on a provider bearer (a provider API token was refused the close's write)" if "(403)" in err else ""
+        out.append(f"      finish: {cmd}{bearer}  ({'; '.join(left) or 'the close did not hold'}: the re-run reads "
+                   "the account afresh, revokes what it still holds, writes only if it is still enabled, and reads "
+                   "both back)")
+    return out
+
+
 def org_key(vcfa: Vcfa, urn: str) -> tuple[bool, str | None]:
     """An organization's OIDC user key as its settings store it: (read, key), whatever `enabled` says. An organization
     switched off that stores oid is treated as keyed on oid, never as keyed on a name (N2: read only while OIDC was on,
@@ -1665,10 +1722,15 @@ def summary(record: dict) -> dict:
 
 # ── the record contract: every estate value replaced, or nothing written ─────────────────────────────────────────
 # Product vocabulary is never registered, so it is never replaced and never mistaken for a surviving value; it is
-# matched without regard to case, and it includes every decision, protocol and type the script prints (G-356).
+# matched without regard to case, and it includes every decision, protocol and type the script prints (G-356). The
+# claim namespaces are product vocabulary too: a SAML organization's user key is a claim URI such as
+# http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name (or, for Entra's own claims, one under
+# schemas.microsoft.com), whose host the host pattern would otherwise take for an estate's and replace, leaving a
+# record that no longer says which claim the organization is keyed on.
+CLAIM_HOSTS = ("schemas.xmlsoap.org", "schemas.microsoft.com")
 PRODUCT = {w.lower() for w in (
     "System", "admin", "administrator", "default", "login.microsoftonline.com", "graph.microsoft.com",
-    "sts.windows.net", "OIDC", "SAML", "OAUTH", "LOCAL", "LDAP", "ApplicationGroup", "SecurityGroup", "All", "None",
+    "sts.windows.net", *CLAIM_HOSTS, "OIDC", "SAML", "OAUTH", "LOCAL", "LDAP", "ApplicationGroup", "SecurityGroup", "All", "None",
     "DirectoryRole", "keep", "leaver", "out of scope", "undetermined", "report", "execute", "Group", "User",
     "Organization Administrator", "Organization Owner", "Organization Member", "Organization User",
     "Organization Auditor", "Project Administrator", "Project User", "Service Broker User", "Catalog Author",
@@ -1835,6 +1897,7 @@ def report_lines(record: dict) -> list[str]:
                            f"{len(res.get('revoked') or [])} token(s); read back: enabled {rb.get('enabled')}, "
                            f"tokens left {left}, other fields changed {moved}; held {res.get('held')}"
                            + (f" ({res['error']})" if res.get("error") else ""))
+                out += finish_lines(o["org"], r)
     cred = record.get("credential")
     if cred:
         out.append(f"  credential: {cred['kind']}"
@@ -1854,7 +1917,7 @@ def report_lines(record: dict) -> list[str]:
 
 
 EXIT_MEANS = {0: "nothing open, nothing unread, nothing flagged", EXIT_OPEN: "an open leaver: run the close",
-              EXIT_HELD_NOT: "a close did not hold on read-back: read the result",
+              EXIT_HELD_NOT: "a close did not hold on read-back: run the finish line printed under it",
               EXIT_UNREAD: "a read failed, an account is undetermined, or an organization no schedule reads: fix the "
                            "read, nothing is known about it",
               EXIT_FLAGGED: "a flag nobody acknowledged, or this run's own API token near its end: decide and --ack "
@@ -1991,6 +2054,10 @@ def _iso_day(value: str) -> str:
 class _Parser(argparse.ArgumentParser):
     """argparse exits 2 on a usage error, the code this script gives a close that did not hold; it exits 5 here."""
 
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
     def error(self, message: str):
         self.print_usage(sys.stderr)
         print(f"{self.prog}: error: {message}", file=sys.stderr)
@@ -2011,7 +2078,8 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_UNREAD
 
 
-def _run(argv: list[str] | None = None) -> int:
+def build_parser() -> _Parser:
+    """The command line, built in one place so a test can parse every command the script suggests (G-463)."""
     ap = _Parser(description="Report, and on request close, VCF Automation accounts of people who have left at "
                              "Entra ID.")
     ap.add_argument("--execute", action="store_true", help="close the confirmed leavers of the organization --org names")
@@ -2036,7 +2104,11 @@ def _run(argv: list[str] | None = None) -> int:
     ap.add_argument("--expect-tenants", metavar="T1,T2,...",
                     help="every Entra tenant a schedule of this job runs for (ids or domain names, this run's own "
                          "among them): an organization federated to any other is uncovered, and the run exits 3")
-    a = ap.parse_args(argv)
+    return ap
+
+
+def _run(argv: list[str] | None = None) -> int:
+    a = build_parser().parse_args(argv)
     if a.left_on and not a.close_now:
         print("--left-on is for --close-now: it guards a principal name under oid", file=sys.stderr)
         return EXIT_USAGE

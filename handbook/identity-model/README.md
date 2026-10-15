@@ -9,7 +9,7 @@ written.
 | File | What it is |
 |---|---|
 | `census.py` | Reads the brokers from the identity plane (never the fleet inventory), each realm and the VCF instances it covers, the realm's identity provider and its directories with protocol and port, the two ways a vCenter grant can spell a principal (the directory's domain and the realm's name, each in capitals) and the third string an API client's session carries (the broker tenant), the API clients with their tokens' lifetimes and each token's runway (its days left, and when it was last exchanged for a bearer), the emergency clients, the fleet's token settings and roles, each VCF Automation organization's ways in, and the broker each vCenter signs in through. `--orgs-only` reads only the organizations, on a VCF Automation provider credential alone. `--egress-metadata-url` asks each broker to fetch a SAML metadata URL itself, proving or refuting its reach to a cloud identity provider. Writes `census.json`, and refuses to write a record carrying any estate value. |
-| `census.json` | That record from the reference estate, 2026-10-13. It predates the list totals each page call now records (`listed`), so `catalog_check.py --census` refuses it; a record from `census.py` as it stands joins. |
+| `census.json` | That record from the reference estate, 2026-10-15, written by `census.py` as it stands: every call answered, and every paged list's pages carry the total stated and the distinct entries read (`listed`). It was made without `FINGERPRINT_KEY_FILE`, so it carries no fingerprints and `catalog_check.py --census` refuses it as a usage error (exit 5); join a record from your own run, made with your key. |
 | `expected-output.md` | The transcript of that run, with what to read in it, and a run whose credential could not read the fleet identity plane. |
 
 ## Run it
@@ -69,7 +69,7 @@ without it. Give `catalog_check.py` the same file.
 | Exit | Means | What a scheduler does |
 |---|---|---|
 | 0 | the record is written and every call answered | nothing |
-| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); or an error the script did not expect | fix the read; take no count from this run |
+| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`) or without `isProviderConsumptionOrg` (it prints `provider consumption not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); or an error the script did not expect | fix the read; take no count from this run |
 | 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10); nothing is written | fix the invocation |
 
 These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
@@ -103,7 +103,8 @@ identity plane was not tried.
   call and the same entries as at the default size, none twice (2026-10-15, one run on the reference estate, whose
   lists are shorter than one default page, made before the distinct count and the `listed` numbers were added);
   more than a page, the shapes above and a page the server serves smaller than asked are held by the tests. On that
-  run every list answer carried its list, the empty ones included.
+  run every list answer carried its list, the empty ones included. The committed record's run (2026-10-15, one run)
+  carries `listed` on each list's pages, every one read to the total it stated.
 - `--egress-metadata-url` sends one request per broker that is not a read: `POST .../iam/saml-metadata/validate`,
   which the contract describes as validating and parsing metadata. The script reads the brokers, realms and
   providers again after the requests and records any difference; on the reference run there was none.
@@ -120,6 +121,12 @@ identity plane was not tried.
   service, the connection the provider administrator configures for organizations that belong to the provider; the
   census reads the organization's mode, not which directory that connection names. A Supervisor's issuer is read
   from each provider's own record; the Supervisor's provider list does not carry it.
+- The flag and the issuer's host are read together because they answer different questions. On the reference estate
+  (2026-10-15, one read), the System organization's OIDC settings carried the `vidb` flag on, with its issuer on the
+  instance broker that holds the realm; the provider consumption organization's carried it off, with its issuer on an
+  embedded broker that holds no realm, whose discovery document answered and named that issuer. The census calls the
+  second `oidc-broker` only because its issuer's host is a broker's; whether its people are the realm's people was
+  not tested.
 - Measured on VCF 9.1.1 with the VCF Operations API token of a VCF single sign-on user holding the VCF
   Administrator role, and once with a bearer file from the same user. An API client holding VCF Administrator read
   every fleet line the same as that user's token, field by field (one run, 2026-10-13). An API client holding VCF
@@ -150,7 +157,8 @@ in minutes, and its runway: `expires` and `days_left`, `last_used` and `days_sin
 the moment of the read, so the record reads the same on any later day; `last_used` is the API's `lastUsedDate`, the
 date the token was last exchanged for a bearer; and `fingerprints` when the run had `FINGERPRINT_KEY_FILE`), `user_tokens` (API tokens held by people), `settings` (the fleet's token lifetimes in minutes),
 `organizations` (`type`: `classic` or `all-apps` from `isClassicTenant`, or `type not read` when the list entry
-carried no such flag; `sign_in`; and the `issuer` of an OIDC organization: `broker`, `entra` or `other`;
+carried no such flag; `provider_consumption`: `isProviderConsumptionOrg` as read, true, false, or null when the entry
+carried no such flag, which prints `provider consumption not read`; `sign_in`; and the `issuer` of an OIDC organization: `broker`, `entra` or `other`;
 with `--orgs-only`, `broker` only for a host in `BROKER_HOSTS`),
 `vcenters` (the host each vCenter's default provider discovers its issuer at, and that host's broker kind), and
 `egress` when the option ran. `fleet`, `organizations` and `vcenters` hold what each plane answered, in the API's

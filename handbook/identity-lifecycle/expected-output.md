@@ -9,15 +9,17 @@ the script, it comes from.
 
 ## The report
 
-The run behind `leavers.json`, read-only, on 2026-10-15 at 17:45 UTC, by the script as it stands, on the provider API
-token the reference estate keeps (`VCFA_PROVIDER_REFRESH_TOKEN_FILE`, `WARN_DAYS` at its default). It took 30.7 s.
+The run behind `leavers.json`, read-only, on 2026-10-15 at 21:14 UTC, by the script as it stands, on the provider API
+token the reference estate keeps (`VCFA_PROVIDER_REFRESH_TOKEN_FILE`, `WARN_DAYS` at its default). It took 34.6 s.
 It lists the three organizations with their federation switched off and reads their accounts and tokens, none of
 them federated, so they change no exit; it confirms every open leaver over three reads before it counts one, and none
-was open; and it reads its own token's end date, 20.2 days off, inside the 30-day window. Exit 4: nothing is open and
+was open; and it reads its own token's end date, 20.1 days off, inside the 30-day window. Exit 4: nothing is open and
 nothing went unread, one federated account holds a role granted to it directly, a flag nobody has acknowledged yet,
 and the run's own token needs rotating. Every federated account was found at Entra by its userPrincipalName, and
 every account reached the decision the run before it reached (that run made 95 calls; this one makes 103, adding the
-switched-off organizations' reads and its own token's).
+switched-off organizations' reads and its own token's). Each SAML organization's `user_key` in the record is Entra's
+name claim, `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name`: the scrub keeps the claim namespaces, which
+name no estate, where a run of the version before replaced that host with a placeholder.
 
 ```
 $ python3 leavers.py --redact
@@ -44,7 +46,7 @@ Leavers · REPORT · 4 organization(s) federated to the tenant, 3 federated else
     {{user-2}}: keep (entitled through {{group-4}})
     {{user-3}}: keep (entitled through {{group-4}})
     {{user-5}}: keep (entitled through {{group-4}})
-  credential: provider API token {{name-1}}, ends 2026-11-04T22:31:54Z (20.2 days; WARN_DAYS 30)  FLAG credential-ends
+  credential: provider API token {{name-1}}, ends 2026-11-04T22:31:54Z (20.1 days; WARN_DAYS 30)  FLAG credential-ends
   totals: keep 7, leaver 3, out of scope 1, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 3, direct role 1, name in use again 0, acknowledged 0, flagged 1
   exit 4: a flag nobody acknowledged, or this run's own API token near its end: decide and --ack the flag; rotate the token, naming its successor in VCFA_PROVIDER_TOKEN_NAME
 
@@ -241,7 +243,8 @@ no call refused.
   close. 3 a read that failed or an account undetermined, a leaver whose reads disagreed among them (the next run
   reads it again), a list read in part, and an organization with its federation switched off that still holds an
   enabled federated account or a token of one: fix the read before trusting any decision. 4 a flag nobody acknowledged: decide
-  it and acknowledge it until a date. With `--execute`, 2 a close that did not hold: finish it by hand. The first that
+  it and acknowledge it until a date. With `--execute`, 2 a close that did not hold: run the `finish:` line printed
+  under it, the close again for that account by its id (the README says when to finish by hand). The first that
   applies wins, so a flag never hides a lost Graph permission (3) or an open leaver (1).
 - **The `credential:` line is the job's own token.** On a provider API token it gives the end the token record holds
   and the days left; `FLAG credential-ends` inside `WARN_DAYS` sets 4, and the fix is a rotation, not an
@@ -256,7 +259,8 @@ no call refused.
 - **A close reads back what it did, and a read-back that did not read is not a pass.** `held True` needs the account
   read back disabled with no other field changed and the token list read back with none left; when either read is
   refused or answers without its list, the line reads `tokens left unread` (or `enabled None`), `held False`, the
-  reason names the read, and the run exits 2.
+  reason names the read, and the run exits 2, with a `finish:` line under it naming what was left and the command
+  that finishes it.
 - **A direct role is a flag, never a leaver by itself.** An account that passes Entra's gate and holds a role directly
   reads keep even when no imported group carries it, because VCF Automation refuses only a user with neither; it is
   flagged `direct-role` for a person to decide. A user found only by `mail` or `otherMails` whose principal name is

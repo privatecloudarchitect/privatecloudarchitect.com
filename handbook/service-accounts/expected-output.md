@@ -1,13 +1,15 @@
 # Expected output
 
 Transcripts from one VCF 9.1.0 instance with Real-Time Metrics deployed, 2026-09-16, host names and identifiers
-replaced. Your rows will differ where your surfaces differ; the shape is what to expect.
+replaced, and the broker and fleet-plane half of `doors.py` read again on VCF 9.1.1 on 2026-10-15. Your rows will
+differ where your surfaces differ; the shape is what to expect.
 
 ## doors.py
 
 Every surface configured; the provider api-token path skipped because no provider refresh token was supplied.
-The one DIFFERS row is a finding, not a fault: it corrected the Platform identity chapter the same day (the
-audience check on the fleet plane is per service, and the metrics service's metadata read does not make it).
+The one DIFFERS row is a finding, not a fault: it corrected the Platform identity chapter the same day (Fleet
+lifecycle refuses a JWT minted for another service, and the metrics service's metadata read does not). The notes
+are kept as they were recorded; the next section says why they now read differently.
 
 ```text
 doors.py: one harmless read per pair; tokens minted per run and never printed
@@ -62,6 +64,35 @@ was refused, and the vCenter mint answered 401):
   NOT READ: Log management, service JWT (VCF_OPS_LI): the service JWT could not be minted; its doors were not read
   NOT READ: vCenter: the session mint returned no session id (HTTP 401); its doors were not read
 NOT READ: 2 configured surface(s) whose own token could not be minted: Log management, service JWT (VCF_OPS_LI); vCenter (exit 3)
+```
+
+## doors.py on VCF 9.1.1, the broker and the fleet plane
+
+The same reads on 2026-10-15, VCF 9.1.1, with the broker, NSX and the three fleet-plane services configured and VCF
+Automation, vCenter and SDDC Manager left unset (the catalog that ran it holds no tenant API token for the OAuth grant
+path). Every verdict is the one the 9.1.0 run read. The notes changed: a service JWT from the fleet plane's exchange
+carries no `aud` claim (`claims.py` prints `audience: None` for one, below), so what Fleet lifecycle refuses is a JWT
+minted for another service, not another audience. What each service's JWT names is its `authorization_details`: the
+fleet lifecycle's and the log service's each name their own service, and the metrics service's is empty.
+
+```text
+doors.py: one harmless read per pair; tokens minted per run and never printed
+
+broker bearer minted from the api-token
+
+  VCF Operations                     broker bearer               200  accepted  MATCH
+  NSX                                broker bearer               200  accepted  MATCH
+  Real-Time Metrics                  broker bearer               401  refused   MATCH                      the fleet plane refuses the broker's bearer
+  Real-Time Metrics                  service JWT (VCF_VODAP)     200  accepted  MATCH
+  Fleet lifecycle, components        service JWT (VCF_FLEET_LCM)  200  accepted  MATCH
+  Fleet lifecycle, components        the metrics service's JWT   401  refused   MATCH                      minted per service, so another service's is refused here
+  Fleet lifecycle, health probe      the metrics service's JWT   200  accepted                             the health probe answers any service's JWT
+  Real-Time Metrics                  the fleet service's JWT     200  accepted  MATCH                      accepted here, while Fleet lifecycle refuses another service's
+  Log management                     service JWT (VCF_OPS_LI)    200  accepted  MATCH                      sent as X-JWT-Token
+
+9 pairs read; 0 differ from the chapter; 0 without an answer
+
+exit 0
 ```
 
 ## claims.py
@@ -123,7 +154,14 @@ principal: a CLIENT (prn_type SERVICE): a machine identity, the shape automation
 
 principal: not determined (no prn_type claim and no person's claim; a claim that is absent names no machine)
 NOT DETERMINED: the claims do not say whether a person or a machine holds this bearer (exit 3)
+
+principal: not determined (no prn_type claim, and preferred_username holds a name of the form service-account-<name>, the name VCF Automation gives a service account's user, so the claims do not tell that machine from a person)
+NOT DETERMINED: the claims do not say whether a person or a machine holds this bearer (exit 3)
 ```
+
+The last pair is a VCF Automation bearer (it carries no `prn_type`) whose user name is a service account's: VCF
+Automation names that user `service-account-<name>`, as its session read on the reference estate, so the name alone
+does not say a person holds it.
 
 ## catalog_check.py
 
@@ -148,7 +186,7 @@ API client list is empty, and it exited 3. The join refuses it before printing a
 read as an estate with no API client.
 
 ```text
-$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-refused.json --today 2026-10-13
+$ FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key python3 catalog_check.py credentials.example.json --census census-refused.json --today 2026-10-13
 NOT READ: census-refused.json is not a read of the API clients: the census exited 3, not 0: a read failed, so its counts are not the estate's. Nothing is joined (exit 3)
 ```
 
@@ -158,10 +196,10 @@ passes every check but lists no API client is joined as zero. Both are synthetic
 shape the code prints, held by its tests:
 
 ```text
-$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-shape-exit0.json --today 2026-10-13
+$ FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key python3 catalog_check.py credentials.example.json --census census-shape-exit0.json --today 2026-10-13
 NOT READ: census-shape-exit0.json is not a read of the API clients: 1 of its fleet identity call(s) answered without the list the read needs (no apiClients list in the answer), so an empty list there is an unread one. Nothing is joined (exit 3)
 
-$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-zero.json --today 2026-10-13
+$ FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key python3 catalog_check.py credentials.example.json --census census-zero.json --today 2026-10-13
 ...
 API clients in the census of 2026-10-13T07:41:40Z: 0, so none is joined to the catalog: the census read the API client and token lists of its 1 realm(s) to the totals they state, with no call refused or answered without its list, and those lists hold no API client
 
@@ -173,15 +211,16 @@ The second run exits 1 for the example catalog's own warning, not for the census
 A record is a read only when it says its lists were read whole. `census.py` records on each page of a paged list the
 total the answer stated and the distinct entries read (`listed`); the join refuses a record whose last page of a
 realm's API client or token list does not carry them, or carries fewer read than stated. A record an earlier
-`census.py` wrote, the reference estate's committed one among them, carries none, so run `census.py` again. A joined client is
+`census.py` wrote carries none, so run `census.py` again; the reference estate's committed record (2026-10-15) carries
+them and no fingerprints, so the join refuses it as a usage error until you run the census with your own key. A joined client is
 judged on its tokens' state and end date too: `EXPIRED`, `REVOKED` or an end date past is a failure, and a state or end
 date the record does not carry is not judged (exit 3). These lines are the shape the code prints, held by its tests:
 
 ```text
-$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-before-totals.json --today 2026-10-13
+$ FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key python3 catalog_check.py credentials.example.json --census census-before-totals.json --today 2026-10-13
 NOT READ: census-before-totals.json is not a read of the API clients: its API client list of realm {{id-6}} does not state that it was read whole (no `listed` total on its last page; an earlier census.py did not record it), so a short read would pass as the whole list: run census.py again. Nothing is joined (exit 3)
 
-$ FINGERPRINT_KEY_FILE=key python3 catalog_check.py credentials.example.json --census census-unread-token.json --today 2026-10-13
+$ FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key python3 catalog_check.py credentials.example.json --census census-unread-token.json --today 2026-10-13
 ...
   unread {{name-7}}               catalog ci-inventory-read    roles vcf_viewer
         token {{name-9}}: its end date was not read, so neither its runway nor its rotation can be judged

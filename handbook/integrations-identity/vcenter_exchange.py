@@ -11,8 +11,9 @@ identities: every directory-account session from a client that is not interactiv
 unless INTERACTIVE_AGENTS says otherwise) is flagged, so a REST integration on a password is flagged as an SDK one is.
 The census needs no API client: with VC_USER alone it reads the list as that account, so it can come first; with an
 API client and no VC_USER it reads the list as the client's own session, so a scheduled census runs as a machine
-identity rather than on a person's password. An identity that may read only its own session is reported
-as unable to read the list, never as an empty one. The census reads vCenter only: NSX, VCF Operations, the SDDC
+identity rather than on a person's password. An identity that may read only its own sessions (a list holding nothing
+but the census's own session by key, or every session under the census identity's own name) is reported as unable to
+read the list, never as an empty one, and so is a list that does not hold the session that read it. The census reads vCenter only: NSX, VCF Operations, the SDDC
 Manager API and VCF Automation are not read.
 
   1. the bearer as presented     GET  /api/vcenter/datacenter                      (refused, the expected answer)
@@ -96,10 +97,10 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       1 --sessions found a directory account signing in from a client that is not interactive, a pair not acknowledged
       2 a vCenter answered the API client's exchange, or one of its sessions, and did not take the client
       3 a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty
-        one included: it always holds the census's own session), a census
-        identity that could read only its own session, a session NOT PLACED (in a domain neither DIRECTORY_DOMAINS nor
-        OTHER_DOMAINS names, so it was not judged), no vCenter read, a credential the broker did not trade, or an error
-        the script did not expect
+        one included: it always holds the census's own session, and one that does not hold it), a census identity
+        that could read only its own sessions (by key, or every session under its own name), a session NOT PLACED
+        (in a domain neither DIRECTORY_DOMAINS nor OTHER_DOMAINS names, so it was not judged), no vCenter read, a
+        credential the broker did not trade, or an error the script did not expect
       4 --sessions found the local administrator signing in from a client that is not interactive
       0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
         directory-account session is from an interactive client or acknowledged, and the local administrator signs in
@@ -553,8 +554,12 @@ def where_rows(host: str, rows: list[dict], mine: str | None, tenant: str, direc
 
 def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str, key: bytes | None = None,
                where: list | None = None, acks: list[dict] | None = None, others: set[str] = frozenset()) -> dict:
-    """The census from an open session. A list that holds only the census's own session means this identity may not
-    read the others, which is reported as such and never as an empty estate. With a where list, the address and last
+    """The census from an open session. vCenter states no count for the list, so it is checked for the member it must
+    hold, the session that read it, the way vcenter-authorization's authz.py checks it: a list without that session, or
+    with no key for it, is not the whole list (exit 3). So is a list that holds nothing but the census identity's own
+    sessions, by key or by its user name: an identity that may not read the others lists only its own (a directory
+    account with no administrator role did, on the reference estate), and that list says nothing of anyone else, so it
+    is reported as such and never as an estate where no one else is signed in. With a where list, the address and last
     activity of each directory and local administrator session go into that list, never into the census."""
     try:
         rows, mine = s.sessions(where=where is not None)
@@ -562,8 +567,17 @@ def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str
             return {"error": s.fault}
         if not rows:   # the list always holds the census's own session, so an empty one was not read: never zero sessions
             return {"error": "the session list came back empty, though it always holds this census's own session: not read"}
-        if mine and all(r["key"] == mine for r in rows):
+        if not mine or mine not in {r["key"] for r in rows}:
+            return {"error": "the session list does not hold the session that read it, so it is not the whole list: not read"}
+        if all(r["key"] == mine for r in rows):
             return {"error": "the session list held only this census's own session: this identity cannot read the others",
+                    "only_own_session_visible": True, "census_identity": {"user": who}}
+        me = {str(who or "").strip().lower()} | {str(r["user"]).strip().lower() for r in rows if r["key"] == mine}
+        me.discard("")
+        if all(r["key"] == mine or str(r["user"]).strip().lower() in me for r in rows):
+            return {"error": (f"the session list held only this census identity's own sessions ({len(rows)}, under its "
+                              "own name): an identity that may not read the others lists only its own, so it is not the "
+                              "whole list"),
                     "only_own_session_visible": True, "census_identity": {"user": who}}
         if where is not None:
             where += where_rows(s.url.split("/")[2], rows, mine, tenant, directories, local, others)
@@ -858,10 +872,10 @@ def unmatched_acks(record: dict, acks: list[dict]) -> int:
 def exit_code(record: dict) -> int:
     """The first that applies: 1 a directory account signs in from a client that is not interactive, a pair nobody
     acknowledged; 2 a vCenter answered the client's exchange or one of its sessions and did not take the client; 3 a
-    read failed or is undetermined (a vCenter that did not answer the exchange, a session list not read or holding only
-    the census's own session, a session in a domain neither DIRECTORY_DOMAINS nor OTHER_DOMAINS names, or no vCenter
-    at all); 4 the local administrator signs in from a client that is not interactive; else 0.
-    A scheduler reads it."""
+    read failed or is undetermined (a vCenter that did not answer the exchange, a session list not read, without the
+    census's own session or holding only the census identity's own sessions, a session in a domain neither
+    DIRECTORY_DOMAINS nor OTHER_DOMAINS names, or no vCenter at all); 4 the local administrator signs in from a client
+    that is not interactive; else 0. A scheduler reads it."""
     vcs = record["vcenters"]
     tried = [v for v in vcs if "exchange" in v]
     silent = [v for v in tried if not (v.get("exchange") or {}).get("status")]   # no answer at all: nothing is known
@@ -1165,6 +1179,10 @@ def unusable_secret_files() -> list[str]:
 
 class _Parser(argparse.ArgumentParser):
     """argparse exits 2 on a usage error, the code this script gives a refused client; it exits 5 here."""
+
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
 
     def error(self, message: str):
         self.print_usage(sys.stderr)

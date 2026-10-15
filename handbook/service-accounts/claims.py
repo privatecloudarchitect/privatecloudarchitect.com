@@ -7,8 +7,10 @@ verification is the platform's job) and prints what the token says about its hol
 
   issuer and audience         who minted it and for whom
   the principal               prn_type, where the broker states it: USER a person, SERVICE a machine (an API client);
-                              without it, a person's claim (a user name, an email, a user id) names a person, and a
-                              token with neither is not determined (exit 3), never read as a machine
+                              without it, a person's claim (a user name, an email, a user id) names a person, unless
+                              it holds service-account-<name>, the name VCF Automation gives a service account's
+                              user; that token, and one with neither, is not determined (exit 3), never read as a
+                              person or a machine on the strength of a name
   issued at, expires at       the bearer's own lifetime, read off the token rather than assumed
   scopes and realm            what the mint was narrowed to
 
@@ -21,8 +23,9 @@ Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN_FILE; OPS_BROKER_HOST, the
 Use:   python3 claims.py          it takes no argument; --help prints this
 Exit:  0 claims printed, the principal a PERSON or a CLIENT
        3 the mint failed (the broker did not trade the api-token for a bearer, or answered a bearer that is not a JWT),
-         the principal is not determined (no prn_type and no person's claim, or a prn_type other than USER or
-         SERVICE), or an error the script did not expect
+         the principal is not determined (no prn_type and no person's claim, no prn_type and a person's claim holding
+         a VCF Automation service account's user name, or a prn_type other than USER or SERVICE), or an error the
+         script did not expect
        5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, OPS_API_TOKEN_FILE that cannot
          be read, JWT_ENV naming an empty variable or a value that is not a JWT, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
@@ -68,10 +71,18 @@ def decode(jwt):
     return header, claims
 
 
+# VCF Automation names a service account's user service-account-<name> (its session read so on the reference estate,
+# 2026-10-08 and 2026-10-13, X-075 and X-147). A VCF Automation bearer carries no prn_type, so without it a claim
+# holding that name cannot tell the machine from a person: the principal is not determined, never a PERSON or a CLIENT
+# on the strength of a name.
+SERVICE_ACCOUNT_PREFIX = "service-account-"
+
+
 def principal_kind(claims):
     """PERSON, CLIENT or None (not determined), and why. The broker's prn_type decides (USER a person's api-token,
-    SERVICE an API client's); without it a person's claim names a person, and an absent claim names nobody. A prn of
-    the form id@tenant decides nothing: an API client's bearer carried one too."""
+    SERVICE an API client's); without it a person's claim names a person, unless one of them holds a VCF Automation
+    service account's user name, and an absent claim names nobody. A prn of the form id@tenant decides nothing: an API
+    client's bearer carried one too."""
     person = [k for k in PERSON_KEYS if claims.get(k)]
     held = claims.get("prn_type")
     if isinstance(held, str) and held.upper() == "USER":
@@ -80,6 +91,12 @@ def principal_kind(claims):
         return "CLIENT", "prn_type SERVICE" + (f"; it also carries {', '.join(person)}" if person else "")
     if held is not None:
         return None, f"prn_type {held!r}, which names neither USER nor SERVICE"
+    machine = [k for k in person if isinstance(claims[k], str)
+               and claims[k].strip().lower().startswith(SERVICE_ACCOUNT_PREFIX)]
+    if machine:
+        return None, (f"no prn_type claim, and {', '.join(machine)} holds a name of the form {SERVICE_ACCOUNT_PREFIX}<name>, "
+                      "the name VCF Automation gives a service account's user, so the claims do not tell that machine "
+                      "from a person")
     if person:
         return "PERSON", ", ".join(person)
     return None, "no prn_type claim and no person's claim; a claim that is absent names no machine"
@@ -91,6 +108,10 @@ def stamp(epoch):
 
 class _Parser(argparse.ArgumentParser):
     """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
+
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
 
     def error(self, message):
         self.print_usage(sys.stderr)

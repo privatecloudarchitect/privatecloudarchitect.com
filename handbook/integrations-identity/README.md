@@ -87,7 +87,8 @@ python3 vcenter_exchange.py --sessions --redact     # and the census, read as th
 **Which role the census needs, as tested.** On the reference estate an API client holding `vcf_viewer` at realm scope
 saw only its own session in every vCenter's session list, on three of three vCenters; the same client rebound to
 `vcf_administrator` read every list. A role between the two was not tried, nor a vCenter outside VCF single sign-on. A
-list that holds only the census's own session is reported as a failed read (exit 3), never as an empty estate. If the
+list that holds only the census's own session, or only sessions under the census identity's own name, is reported as a
+failed read (exit 3), never as an empty estate, and so is a list that does not hold the session that read it. If the
 census's client holds `vcf_administrator`, give it nothing else to do and keep its token on its own rotation.
 
 `BROKER_TENANT` (the broker tenant, default `CUSTOMER`), `INTERACTIVE_AGENTS` (default `vSphereUI`), `LOCAL_DOMAIN`
@@ -116,7 +117,7 @@ The exit is the first of these that applies, so a scheduler reads one state from
 |---|---|---|
 | 1 | `--sessions` found a directory account signing in from a client other than the vSphere Client, a pair no acknowledgement covers: an integration on a person's or a directory account's password, until its owner says otherwise | find its owner (`--where`), and move it to an identity of its own; a person's own pair, once confirmed, goes in `--ack` |
 | 2 | a vCenter answered the API client's exchange, or one of its sessions, and did not take the client | read the client's role and the realm's coverage of that vCenter |
-| 3 | a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty one included, since it always holds the census's own session), a census identity that could read only its own session, a session NOT PLACED (in a domain neither `DIRECTORY_DOMAINS` nor `OTHER_DOMAINS` names, so it was not judged), no vCenter read, a credential the broker did not trade, or an error the script did not expect | fix the read and run again; for NOT PLACED, name each domain printed on the terminal in one of the two lists; nothing is known of what was not read |
+| 3 | a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty one included, since it always holds the census's own session, and one that does not hold it), a census identity that could read only its own sessions (by key, or every session under its own name), a session NOT PLACED (in a domain neither `DIRECTORY_DOMAINS` nor `OTHER_DOMAINS` names, so it was not judged), no vCenter read, a credential the broker did not trade, or an error the script did not expect | fix the read and run again; for NOT PLACED, name each domain printed on the terminal in one of the two lists; nothing is known of what was not read |
 | 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client: an account in automated use is not a break-glass account | find the client (`--where`) and move it |
 | 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client or acknowledged, and the local administrator signs in from no other client | nothing |
 | 5 | a usage error (`--sessions` without `DIRECTORY_DOMAINS`, a domain in both `DIRECTORY_DOMAINS` and `OTHER_DOMAINS`, an `--ack` file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, `--ack` without `--sessions`, among them), or a Python older than 3.10; nothing is written | fix the invocation |
@@ -294,7 +295,7 @@ Identity & Access ▸ VCF SSO Overview**, the broker that holds your realm, **AP
 role VCF Administrator, then against that client **⋮ ▸ Generate API Token**, with both lifetimes set; copy it into a
 file of mode 0600, outside this clone (`~/.vcf/ops-api-token` above; the repository's `.gitignore` also ignores the
 file names the chapters use), before you continue, since the page says it cannot be retrieved afterwards. The integrations-identity
-chapter's plate 04, "Your VCF Operations API token", walks it
+chapter's Start here, step 3, "Your VCF Operations API token", walks it
 ([privatecloudarchitect.com/handbook/integrations-identity](https://privatecloudarchitect.com/handbook/integrations-identity)).
 Over the API the call is `POST /ssorealms/{realm}/api-tokens`, and it makes a token for an existing API client, named in
 `apiClientId`: asked on 2026-10-15 for a person's own token (`tokenType` `USER`, no client) by that person, it answered
@@ -332,16 +333,16 @@ realm it was made in, and the ids of the tokens this script issued; no secret). 
 `--teardown` act only on a client that file records with the same uuid, in the realm it records, so a mistyped id, a
 client someone made under that id in the console, or a run that reads another realm (where a teardown would find
 nothing and report the client gone), is refused before anything is sent. A state file written before the realm was
-recorded, or none, cannot say which realm the client is in: on a fleet of more than one realm, a teardown that then finds
-no client in the realm it reads exits 3 (`NOT READ`), never "nothing to remove". Run them from the folder the create ran
-in, or set `STATE`. A client made in the console is rotated and removed in the console.
+recorded, or none, cannot say which realm the client is in: on a fleet of more than one realm, a teardown, a rotation
+or a retirement that then finds no client in the realm it reads exits 3 (`NOT READ`), never "nothing to remove" and never
+"create it first". Run them from the folder the create ran in, or set `STATE`. A client made in the console is rotated and removed in the console.
 
 | Exit | Means |
 |---|---|
 | 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved and active beside the old ones and, when given, the old token still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a teardown, no client and no token left, in the fleet's only realm or the realm the state file records |
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
-| 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; a run signed in as the client it would change, or on a bearer it cannot read, for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; a state file that records the client in another realm than the run reads; or a fleet with no realm to make a client in |
-| 3 | a read failed or is undetermined: a list or the realm list not read whole (a page refused, an answer without its list or its total, a total that changed between pages, a page that added nothing new, or pages that end before the total they state), the read-back not read, a token issued whose id the list read after it could not name, a create answered without the client's uuid (no role bound, nothing more sent), a teardown on a fleet of more than one realm that found no client where no state file records its realm, your token not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
+| 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; for a rotation or a retirement, no client by that id in the fleet's only realm or the realm the state file records; a run signed in as the client it would change, or on a bearer it cannot read, for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; a state file that records the client in another realm than the run reads; or a fleet with no realm, so no client to make, rotate, retire or remove in one |
+| 3 | a read failed or is undetermined: a list or the realm list not read whole (a page refused, an answer without its list or its total, a total that changed between pages, a page that added nothing new, or pages that end before the total they state), the read-back not read, a token issued whose id the list read after it could not name, a create answered without the client's uuid (no role bound, nothing more sent), a teardown, a rotation or a retirement on a fleet of more than one realm that found no client where no state file records its realm, your token not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
 | 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists, a fleet of more than one realm with no `--realm`, a `--realm` that names none of its realms or more than one), or a Python older than 3.10; nothing is written |
 
 ### What it sends, and in what order
@@ -367,7 +368,8 @@ Every path is under `/api/fleet-management/iam` on VCF Operations.
 
 A rotation is two runs, with the integration's switch between them. `--rotate` queries the client and the tokens it
 holds, and refuses a client that is not there (it never creates one), that the state file does not record, or that
-the run is signed in as. It then
+the run is signed in as; on a fleet of more than one realm with no state file recording the client's realm, a client
+not found is not read (exit 3), since it may be in another realm. It then
 issues a new token (`POST /ssorealms/{realm}/api-tokens`, a name stamped with the time, both lifetimes), writes it to
 `--token-file`, trades it at the broker once and reads back that it is active beside the old ones. It deletes nothing:
 with `--old-token-file` it trades the old token too, so the record shows both working in the overlap. If the new token
@@ -404,7 +406,7 @@ python3 service_account.py --org tenant-a --name backup-01 --teardown --token-fi
 
 | Flag | What it does |
 |---|---|
-| `--org ORG` | the organization's name (required) |
+| `--org ORG` | the organization's name, exactly as VCF Automation spells it (required): an organization the filter returns under any other name is never acted in |
 | `--name NAME` | the service account's name; one per integration (required) |
 | `--role "ROLE NAME"` | the one role it holds, by name: the member role is `Organization User` in an All Apps organization and `Organization Member` in a classic one, so read the organization's type first (the Organizations line of the identity-model companion's `census.py --orgs-only` prints `all-apps` or `classic` for each) (required to create) |
 | `--token-file PATH` | where the refresh token is written, mode 0600; the file must not exist (required with `--execute` to create). With `--teardown`, the token to refresh once after the revoke, to show it is refused; it must exist (exit 5 before anything is sent), and without it the token is not tried, which the report prints |
@@ -430,7 +432,7 @@ id; no secret), and the teardown revokes and deletes only an account that file r
 |---|---|
 | 0 | the plan printed; or the run held on read-back: the account active, its bearer's session holding exactly the role, the stored token refreshing; or, for a teardown, every revoke answered, the organization's list read whole with no account of that name left and, with `--token-file`, the revoked token refused (an account of that name in another organization is not read: the organization is the one you name) |
 | 1 | the run did not hold: a write was refused (a teardown's revoke among them), or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
-| 2 | refused by this script before any write: an account that already exists (refused, never adopted), for a teardown an account the state file does not record, or no organization by that name |
+| 2 | refused by this script before any write: an account that already exists (refused, never adopted), for a teardown an account the state file does not record, or no organization, or more than one, carrying the name given exactly (case included) |
 | 3 | a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer without its list or its `resultTotal`, a total that changed between pages, a page that added nothing new, or pages that end before the total), the read-back not read, the residue not read back, the provider's credential not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
 | 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists for a create, or does not for a teardown), or a Python older than 3.10; nothing is written |
 
@@ -442,7 +444,8 @@ read is not left behind under an exit 0.
 
 ### What it sends, and in what order
 
-1. `GET /cloudapi/1.0.0/orgs` filtered by name, read whole: the organization's id, which every organization-scoped call
+1. `GET /cloudapi/1.0.0/orgs` filtered by name, read whole: the id of the one organization whose name is the name you
+   gave, character for character (none, or more than one, is refused, exit 2), which every organization-scoped call
    carries in `X-VMWARE-VCLOUD-TENANT-CONTEXT`. Then the organization's service accounts filtered by name, read whole;
    one with the name you gave is refused.
 2. `POST /oauth/tenant/{org}/register` with `client_name`, a new `software_id`, `software_version` and `scope`
@@ -475,8 +478,9 @@ so it is safe to re-run; it reads the organization you name, and no other.
 4. A second exchange, then `SessionManager.LoginByToken` over SOAP with the assertion in a WS-Security header, its XML
    declaration removed: who the session is, then `Logout`.
 5. With `--sessions`: a SOAP session as `VC_USER` or, without it, a third exchange and `LoginByToken` as the client;
-   `SessionManager.sessionList` read with `RetrievePropertiesEx`, the census's own session left out by its key, then
-   `Logout`.
+   `SessionManager.sessionList` and `currentSession` read with `RetrievePropertiesEx`; the list must hold the census's
+   own session, and something besides the census identity's own sessions, or it is not read (exit 3); the census's own
+   session is left out by its key, then `Logout`.
 
 Steps 1 to 4 run only when an API client's credential is given.
 

@@ -90,9 +90,12 @@ no organization`, with what it listed and why each was left out, and exits 3. Ea
 neither OIDC nor SAML is on is printed as `OFF` with its name, and counted in the record's `census`. Every VCF
 Automation list is read until its distinct items reach the total the answer states (`resultTotal`): a page that
 answers without its list or its total, a page that comes back empty or short before the total, or a total that moves
-between pages, is a read that failed (exit 3), never a short or an empty list. Graph lists are read to their last
-`@odata.nextLink`. Every pager is bounded: a page that adds no item not already read, or a next link that comes back,
-is a read that failed at once, not after thousands of requests.
+between pages, is a read that failed (exit 3), never a short or an empty list, and so is a page that adds no item not
+already read, at once rather than after thousands of requests. Graph lists are read to their last `@odata.nextLink`: a
+page holding no item is read on, since Microsoft's paging guidance says "A page of results might contain zero or more
+results" ([Paging Microsoft Graph data in your app](https://learn.microsoft.com/en-us/graph/paging)), and a 200 without
+its `value` list, a next link that is not a link or comes back a second time, or a list still paging after 10,000 pages,
+is a read that failed.
 
 A read the watch could not make never passes. An organization whose reads fail stays in the run and the record,
 named and counted, whether or not `ORGS` names it: with `ORGS` unset, an organization that could not be read cannot

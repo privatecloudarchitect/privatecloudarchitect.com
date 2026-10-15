@@ -316,6 +316,10 @@ def from_kubeconfig() -> int:
 class _Parser(argparse.ArgumentParser):
     """argparse's own refusal exits 2; here a usage error exits 5, as on every identity companion."""
 
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
     def error(self, message: str):
         self.print_usage(sys.stderr)
         print(f"{self.prog}: error: {message}", file=sys.stderr)

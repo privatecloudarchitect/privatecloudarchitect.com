@@ -41,7 +41,7 @@ exits 3 rather than 0, because a token that does not say when it dies is not kno
 
 | Section | Answers |
 |---|---|
-| Who it says you are | subject, issuer, audience, tenant, client. The **audience** is the one people skip: a token minted for one appliance is refused by another with a 403 that reads like a permissions problem |
+| Who it says you are | subject, issuer, audience, tenant, client. The **audience**, where a token carries one, is the field people skip: on the reference estate a bearer minted through the embedded Orchestrator's own sign-in was refused by the standalone Orchestrator with a 403 that reads like a permissions problem (2026-10-15). A fleet plane service JWT carries no audience: it is minted per service, so compare the service it was minted for with the one you call |
 | The two clocks | `exp` minus `iat` is the **mint lifetime**, a property of the issuer's policy rather than of your token, and the number to plan a refresh cadence around. `exp` minus now is what decides whether the next call works |
 | The verdict | usable, expired, or expiring inside the clock-skew margin |
 
