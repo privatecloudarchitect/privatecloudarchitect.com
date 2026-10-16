@@ -175,8 +175,8 @@ def register_body(name: str, role: str, software_id: str = "<a new UUID>") -> di
 
 def create_calls(name: str, role: str) -> list[dict]:
     return [
-        {"method": "GET", "path": "/cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=128  (every page, to the stated total)", "body": None},
-        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=128  (in the organization, every page: refused if present)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=32  (every page, to the stated total)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=32  (in the organization, every page: refused if present)", "body": None},
         {"method": "POST", "path": "/oauth/tenant/{org}/register", "body": register_body(name, role)},
         {"method": "POST", "path": "/oauth/tenant/{org}/device_authorization", "body": {"client_id": "<from the register>"}},
         {"method": "POST", "path": "/cloudapi/1.0.0/deviceLookup/grant  (in the organization)", "body": {"userCode": "<from the device authorization>"}},
@@ -187,17 +187,19 @@ def create_calls(name: str, role: str) -> list[dict]:
 
 def teardown_calls() -> list[dict]:
     return [
-        {"method": "GET", "path": "/cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=128, then serviceAccounts?filter=name=={name}  (every page, to the stated total)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=32, then serviceAccounts?filter=name=={name}  (every page, to the stated total)", "body": None},
         {"method": "POST", "path": "/cloudapi/1.0.0/serviceAccounts/{id}/revoke", "body": {}},
         {"method": "POST", "path": "/oauth/tenant/{org}/token  (refresh grant with the revoked token, with and without client_id)", "body": None},
         {"method": "DELETE", "path": "/cloudapi/1.0.0/serviceAccounts/{id}", "body": None},
-        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=128  (residue, until it is read empty)", "body": None},
+        {"method": "GET", "path": "/cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=32  (residue, until it is read empty)", "body": None},
         {"method": "POST", "path": "/oauth/tenant/{org}/token  (the same refresh grant again, after the delete)", "body": None},
     ]
 
 
 # ── the reads every run makes ────────────────────────────────────────────────────────────────────────────────────
-PAGE_SIZE = 128   # the largest page VCF Automation's cloudapi lists take; pages count from 1
+# Items asked for per page; pages count from 1. The service account list refuses a pageSize above 32 (HTTP 400, "must be
+# less than or equal to 32", X-260) where the organization list takes 128, so one size that both take serves both.
+PAGE_SIZE = 32
 MAX_PAGES = 10000
 
 

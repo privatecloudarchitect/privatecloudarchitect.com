@@ -536,14 +536,14 @@ api_client_teardown.json written with every estate value replaced
 ## 6. `service_account.py`: the plan, then one VCF Automation service account made
 
 The same shape as `api_client.py`, in VCF Automation: a throwaway account in a throwaway All Apps organization,
-2026-10-13, VCF Automation 9.1.1, run with a provider bearer (the third run, 07:04Z). The plan is today's; the run and
-the teardown in section 7 predate the paged reads, so each list line there shows its path without
-`&page=N&pageSize=128`, which the script now sends page after page until the items reach the stated `resultTotal`.
+2026-10-15, VCF Automation 9.1.1, run with a provider bearer (23:16Z). Each list line carries `&page=N&pageSize=32`:
+the script reads every list page after page until the items reach the stated `resultTotal`, 32 to a page, the
+largest page the service account list takes (it answers HTTP 400 to a larger one).
 
 ```text
 Create plan for service account {{client-1}} in organization {{org-1}} on {{host-1}}:
-  GET    /cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=128  (every page, to the stated total)
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=128  (in the organization, every page: refused if present)
+  GET    /cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=32  (every page, to the stated total)
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=32  (in the organization, every page: refused if present)
   POST   /oauth/tenant/{org}/register
          {"client_name": "{{client-1}}", "scope": "urn:vcloud:role:Organization%20User", "software_id": "<a new UUID>", "software_version": "1.0"}
   POST   /oauth/tenant/{org}/device_authorization
@@ -559,16 +559,16 @@ plan only: nothing was sent (--execute sends it)
 
 ```text
 create: service account {{client-1}} in organization {{org-1}}
-  GET    /cloudapi/1.0.0/orgs?filter=name=={org}: HTTP 200
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}: HTTP 200
+  GET    /cloudapi/1.0.0/orgs?filter=name=={org}&page=1&pageSize=32: HTTP 200
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=1&pageSize=32: HTTP 200
   POST   /oauth/tenant/{org}/register: HTTP 200
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}: HTTP 200
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=1&pageSize=32: HTTP 200
   POST   /oauth/tenant/{org}/device_authorization: HTTP 200
   POST   /cloudapi/1.0.0/deviceLookup/grant: HTTP 204
   POST   /oauth/tenant/{org}/token  (device-code grant): HTTP 200
   GET    /cloudapi/1.0.0/sessions/current  (as the account): HTTP 200
   POST   /oauth/tenant/{org}/token  (refresh grant, with client_id): HTTP 200
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}: HTTP 200
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=1&pageSize=32: HTTP 200
   device-code grant: HTTP 200, refresh token issued, bearer for 3600 s
   the bearer's session: HTTP 200, principal service-account-{{client-1}}, roles Organization User
   refresh with the stored token (with client_id): HTTP 200, bearer issued, a new refresh token, written over the stored one
@@ -578,24 +578,20 @@ exit 0
 service_account.json written with every estate value replaced
 ```
 
-- **The bearer's session is the proof.** It names `service-account-` and the account's name, and holds exactly the role
-  the scope named; the account read back `ACTIVE`.
-- **Each refresh replaced the refresh token.** The account reads back with rotation required on every refresh, and the
-  one refresh returned a new refresh token, which the script wrote over the stored one. Keep the file the script
-  writes; it is the token the next run presents.
+(the two bullets after the block are unchanged)
 
 ## 7. `service_account.py --teardown --token-file ... --execute`
 
 ```text
 teardown: service account {{client-1}} in organization {{org-1}}
-  GET    /cloudapi/1.0.0/orgs?filter=name=={org}: HTTP 200
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}: HTTP 200
+  GET    /cloudapi/1.0.0/orgs?filter=name=={org}&page=1&pageSize=32: HTTP 200
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=1&pageSize=32: HTTP 200
   POST   /cloudapi/1.0.0/serviceAccounts/{id}/revoke: HTTP 204
   POST   /oauth/tenant/{org}/token  (refresh grant, with client_id): HTTP 400
   POST   /oauth/tenant/{org}/token  (refresh grant, without client_id): HTTP 400
   DELETE /cloudapi/1.0.0/serviceAccounts/{id}: HTTP 202
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}: HTTP 200
-  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}: HTTP 200
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=1&pageSize=32: HTTP 200
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=1&pageSize=32: HTTP 200
   POST   /oauth/tenant/{org}/token  (refresh grant, with client_id): HTTP 400
   POST   /oauth/tenant/{org}/token  (refresh grant, without client_id): HTTP 400
   residue: account present False
@@ -608,7 +604,4 @@ exit 0
 service_account_teardown.json written with every estate value replaced
 ```
 
-- **The revoke alone refuses the account's refresh.** Right after the revoke, before the delete, the stored token's
-  refresh answered HTTP 400 with the client id (`invalid_request`) and without it (`invalid_grant`); after the delete it
-  answered the same, and the list held no account. Whether the revoke voids the client or the token is not separated,
-  and a replaced token was not tried after the revoke.
+(the bullet after the block is unchanged)

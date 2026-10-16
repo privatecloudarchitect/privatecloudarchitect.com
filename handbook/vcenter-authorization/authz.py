@@ -16,7 +16,8 @@ Read-only by default:
      arriving); local, split three ways (VCF-managed: svc- and wcp- accounts and solution users, left to VCF;
      Administrators: the local administrator and its group; other: what an operator made, and groups vCenter or
      another product ships under their own names, each read with its members); directory user, directory group,
-     realm spelling (inert behind an AD/LDAP provider, not measured behind a federated one), or another provider's;
+     realm spelling (inert behind an AD/LDAP provider, not measured behind a federated one), an API client's (the
+     broker tenant's spelling: an integration's own access, never removed here), or another provider's;
   2. ROLES: the role catalog, and the custom roles whose copies differ between vCenters;
   3. SESSIONS (pyVmomi): who is signed in now, by principal class and client agent, from a list read whole (one
      that does not hold the reading session, or holds nothing but the reader's own sessions, is not). Addresses,
@@ -107,16 +108,31 @@ so a misspelled REALM_DOMAIN or directory domain shows there.
 A misspelled realm, caught. A misspelled REALM_DOMAIN moves every realm-spelled grant into another provider's class,
 where nothing flags it, while the directory domains still name their grants. So with REALM_DOMAIN set, a vCenter on
 which the realm names no grant while grants of an unplaced domain are there (a domain in none of DIRECTORY_DOMAINS,
-LOCAL_DOMAIN, REALM_DOMAIN and OTHER_DOMAINS) is a failed read: the run prints NOT PLACED with those domains, on the
-terminal only, records realmNamedNothing, and exits 3. Name in OTHER_DOMAINS the domains you know are another identity
-provider's, and the vCenter is placed (on the reference estate, the workload vCenter that runs a Supervisor held one).
+LOCAL_DOMAIN, REALM_DOMAIN, BROKER_TENANT and OTHER_DOMAINS) is a failed read: the run prints NOT PLACED with those
+domains, on the terminal only, records realmNamedNothing, and exits 3. Name in OTHER_DOMAINS the domains you know are
+another identity provider's, and the vCenter is placed (on the reference estate, the workload vCenter that runs a
+Supervisor held one).
 
-The realm is not the directory domain, refused. The census tests the realm's name before the directory domains and
-another provider's, so a REALM_DOMAIN that names a DIRECTORY_DOMAINS or OTHER_DOMAINS entry would class every working
-grant in that domain realm-spelled: exit 1 would say to remove them, and --remove would accept their ids. So a
-REALM_DOMAIN equal to any of those entries, compared without regard to case, surrounding spaces or a trailing dot
-(corp.example. and CORP.EXAMPLE are one domain), is a usage error (exit 5) found before anything is read, and so is one
-equal to LOCAL_DOMAIN, where every grant sorts as local first and no grant could ever read realm-spelled.
+An API client's grant, kept. An API client signed in through the SAML exchange carries the broker tenant and its
+clientId, CUSTOMER\\<clientId> on the reference estate, and a grant to that name applied to the client's session, while
+a grant to CUSTOMER\\<user> did not reach a directory user signing in through the broker (X-221; one management
+vCenter, one run each). So a grant whose domain is BROKER_TENANT (CUSTOMER when unset) is classed API client (broker
+tenant), whatever its name, since the spelling cannot tell a clientId from a person's name: an integration's own
+access, to review with the integration's owner and never remove as clutter. The census counts it, prints the count
+and that advice on the terminal, and places its domain, so it is neither another provider's nor a reason for NOT
+PLACED; --remove refuses its id as it refuses every grant that is not realm-spelled. A BROKER_TENANT that is not the
+estate's leaves the API clients' grants in another provider's class, where their domain shows on the terminal.
+
+The realm is not the directory domain, refused. The census tests the realm's name before the directory domains, the
+broker tenant and another provider's, so a REALM_DOMAIN that names a DIRECTORY_DOMAINS or OTHER_DOMAINS entry, or the
+broker tenant, would class every working grant in that domain realm-spelled, an API client's own among them: exit 1
+would say to remove them, and --remove would accept their ids. So a REALM_DOMAIN equal to any of those, compared
+without regard to case, surrounding spaces or a trailing dot (corp.example. and CORP.EXAMPLE are one domain), is a
+usage error (exit 5) found before anything is read, and so is one equal to LOCAL_DOMAIN, where every grant sorts as
+local first and no grant could ever read realm-spelled. The broker tenant is held the same way: the census tests the
+local and the directory domains before it, so a BROKER_TENANT equal to a DIRECTORY_DOMAINS or LOCAL_DOMAIN entry would
+read every API client's grant as a person's or a local one, and is a usage error (exit 5). OTHER_DOMAINS may name it:
+that places a domain and classes nothing, and the broker tenant's rule comes first.
 
 Paged lists. The permission and role lists are paged: an answer that carries a marker has more after it, and the next
 page is asked for with that marker until an answer carries none. vCenter states no total for them, so the read holds
@@ -128,9 +144,9 @@ Environment:
   VC_HOSTS            comma-separated vCenter FQDNs (one, with --remove)
   VC_USER             an administrator of those vCenters, user@domain
   VC_PASSWORD_FILE    a file holding that password (mode 0600); VC_PASSWORD is read if it is not set
-  REALM_DOMAIN        the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); not the
-                      broker tenant an API client's session carries (CUSTOMER by default), and never a directory
-                      domain: one equal to a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry is refused (exit 5).
+  REALM_DOMAIN        the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); never the
+                      broker tenant an API client's session carries (BROKER_TENANT) or a directory domain: one equal to
+                      BROKER_TENANT or to a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry is refused (exit 5).
                       Required once the estate has a realm, and by --where-realm, --remove and the probes; before a
                       realm, run with --no-realm
   DIRECTORY_DOMAINS   required: comma-separated directory domains under the broker's identity provider (or, before
@@ -138,6 +154,11 @@ Environment:
                       another provider's and the census would count none, so the script refuses to start without it
   LOCAL_DOMAIN        the vCenter's own SSO domain (default VSPHERE.LOCAL); set it where yours is named otherwise,
                       or every local grant reads as another provider's
+  BROKER_TENANT       the broker tenant, the realm's path segment at the broker and the domain an API client's session
+                      carries before its clientId (default CUSTOMER, as on the reference estate); its grants are
+                      classed API client (broker tenant). One equal to a DIRECTORY_DOMAINS or LOCAL_DOMAIN entry is
+                      refused (exit 5). Set it where yours is named otherwise, or the API clients' grants read as
+                      another provider's
   OTHER_DOMAINS       comma-separated domains you know are another identity provider's. Their grants stay in another
                       provider's class and count as placed, so neither NOT PLACED check stops on them. Optional for
                       the census; --remove needs it stated, empty when there is none
@@ -180,8 +201,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         removed or changed, and every vCenter in both files)
       5 a usage error, before anything is sent: an argument or environment variable missing or wrong (an abbreviated flag
         among them: flags are taken whole, so --exec is not --execute), a REALM_DOMAIN
-        that names a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, --remove without OTHER_DOMAINS stated,
-        an id --remove cannot name as a realm-spelled grant on that vCenter, pyVmomi missing for a step that needs it
+        that names BROKER_TENANT or a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, a BROKER_TENANT that
+        names a DIRECTORY_DOMAINS or LOCAL_DOMAIN entry, --remove without OTHER_DOMAINS stated, an id --remove cannot
+        name as a realm-spelled grant on that vCenter (an API client's among them), pyVmomi missing for a step that needs it
         (--remove among them), a --supervisor-vm that names no VM or several (looked up before the census and every
         probe), a --save-permissions FILE that exists, has no directory or lies inside the clone, a
         --compare-permissions BEFORE saved after AFTER, a Python older than 3.10
@@ -228,12 +250,23 @@ PRODUCT_ROLES = {
 }
 PRODUCT_LOCAL = {"Administrator", "Administrators"}
 
+# The broker tenant: the domain an API client's vCenter session carries before its clientId (CUSTOMER on the reference
+# estate), the realm's path segment at the broker. BROKER_TENANT names it, CUSTOMER when unset or empty, as the other
+# identity companions read it. A grant spelled in it is an API client's (X-221: a grant to CUSTOMER\<clientId> applied
+# to that client's session, and one to CUSTOMER\<user> did not reach a directory user), so it is an integration's own
+# access: the census names its class and the advice below, and --remove, which removes only realm-spelled grants,
+# never removes one.
+BROKER_DEFAULT = "CUSTOMER"
+BROKER_CLASS = "API client (broker tenant)"
+BROKER_ADVICE = "an integration's own access: review it with the integration's owner, never remove it as clutter"
+
 # The classification, as data, in the order classify() applies it: the first rule whose domain and name both match
 # names the class. ``domain`` is the domain the principal's must equal, compared as norm() reads a domain: "local" is
 # LOCAL_DOMAIN (VSPHERE.LOCAL by default), "realm" is REALM_DOMAIN (never matched while it is unset), "directory" is any
-# of DIRECTORY_DOMAINS, "any" is every domain. ``name`` is a pattern the principal's name must match, without regard to
-# case, or None for any name. The chapter's grant translator runs this same table in the reader's browser, exported by
-# rule_table(), so the page cannot class a grant otherwise than the census does.
+# of DIRECTORY_DOMAINS, "broker" is BROKER_TENANT (CUSTOMER by default), "any" is every domain. ``name`` is a pattern the
+# principal's name must match, without regard to case, or None for any name. The chapter's grant translator runs this
+# same table in the reader's browser, exported by rule_table(), so the page cannot class a grant otherwise than the
+# census does.
 CLASS_RULES = (
     ("local", RESERVED_NAME, "reserved group"),
     ("local", VCF_MANAGED.pattern, LOCAL_CLASSES[0]),
@@ -241,12 +274,19 @@ CLASS_RULES = (
     ("local", None, LOCAL_CLASSES[2]),
     ("realm", None, "realm spelling"),
     ("directory", None, "directory"),
+    ("broker", None, BROKER_CLASS),
     ("any", None, "another provider"),
 )
 # The domains REALM_DOMAIN may never equal, in the order realm_overlap() tests them. classify() tests the local domain
-# first and the realm before a directory or another provider's domain, so a realm typed as one of these would either
-# class every working grant in it realm-spelled or never class one so. Exported with the rules for the same reason.
-REALM_MUST_DIFFER = ("DIRECTORY_DOMAINS", "OTHER_DOMAINS", "LOCAL_DOMAIN")
+# first and the realm before a directory, the broker tenant or another provider's domain, so a realm typed as one of
+# these would either class every working grant in it realm-spelled (an API client's among them, which --remove would
+# then accept) or never class one so. Exported with the rules for the same reason.
+REALM_MUST_DIFFER = ("DIRECTORY_DOMAINS", "OTHER_DOMAINS", "LOCAL_DOMAIN", "BROKER_TENANT")
+# The domains BROKER_TENANT may never equal, in the order broker_overlap() tests them. classify() tests the local and the
+# directory domains before the broker tenant, so a broker tenant typed as one of them would never class an API client's
+# grant as one: it would read as a person's grant or a local one. OTHER_DOMAINS may name it: it places a domain and
+# classes nothing, and the broker tenant's rule comes before another provider's.
+BROKER_MUST_DIFFER = ("DIRECTORY_DOMAINS", "LOCAL_DOMAIN")
 
 # The exit codes, one state each (the docstring's table).
 EXIT_OK, EXIT_REALM, EXIT_NOT_HELD, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
@@ -434,15 +474,22 @@ def local_domain():
     return norm(os.environ.get("LOCAL_DOMAIN") or "VSPHERE.LOCAL").upper()
 
 
-def classify(domain, name, realm, directories, local=None, rules=CLASS_RULES):
+def broker_tenant():
+    """BROKER_TENANT as the census reads it, CUSTOMER when unset or empty: the domain an API client's session carries."""
+    return norm(os.environ.get("BROKER_TENANT") or BROKER_DEFAULT).upper()
+
+
+def classify(domain, name, realm, directories, local=None, rules=CLASS_RULES, broker=None):
     """One principal's class, by how it behaves for a broker session and who looks after it: the first of ``rules``
     (CLASS_RULES, in order) whose domain and name both match. A local principal is reserved (a VCF role arriving),
     VCF-managed (leave it), Administrators (the administrator and its group: read the members), or other (read it,
-    members included). ``rules`` is a parameter so the chapter's builder can run the table its page carries through
-    this same function and hold the two equal."""
+    members included). A principal in the broker tenant's domain is an API client's, whatever its name: the spelling
+    cannot tell a clientId from a person's name, and a grant to CUSTOMER\\<user> did not reach a directory user (X-221).
+    ``rules`` is a parameter so the chapter's builder can run the table its page carries through this same function and
+    hold the two equal; ``local`` and ``broker`` empty read LOCAL_DOMAIN and BROKER_TENANT."""
     d = norm(domain)
     domains = {"local": {norm(local or local_domain())}, "realm": {norm(realm)} - {""},
-               "directory": {norm(x) for x in directories} - {""}}
+               "directory": {norm(x) for x in directories} - {""}, "broker": {norm(broker or broker_tenant())}}
     for where, pattern, cls in rules:
         if where != "any" and d not in domains[where]:
             continue
@@ -454,15 +501,20 @@ def classify(domain, name, realm, directories, local=None, rules=CLASS_RULES):
 def rule_table():
     """The classification and the realm guard as data, for the chapter's grant translator: classify()'s rules in order,
     how a domain is compared, the default local domain, and the domains REALM_DOMAIN may never equal. Patterns are
-    written so a browser's regular expressions read them the same way (no Python-only syntax)."""
+    written so a browser's regular expressions read them the same way (no Python-only syntax). The broker tenant's
+    default and the domains it may never equal travel with them."""
     return {"rules": [{"domain": w, "name": p, "class": c} for w, p, c in CLASS_RULES],
             "nameFlags": "i", "domainCompare": "trimmed, trailing dots dropped, without regard to case",
-            "localDefault": "VSPHERE.LOCAL", "realmMustDiffer": list(REALM_MUST_DIFFER)}
+            "localDefault": "VSPHERE.LOCAL", "realmMustDiffer": list(REALM_MUST_DIFFER),
+            "brokerDefault": BROKER_DEFAULT, "brokerMustDiffer": list(BROKER_MUST_DIFFER)}
 
 
 def names_nothing(by_class):
     """Whether neither the realm's name nor a directory domain names a grant on a vCenter whose list holds another
-    provider's grants: a misspelled domain hides its grants there, as VCF Automation's own grants sit there anyway."""
+    provider's grants: a misspelled domain hides its grants there, as VCF Automation's own grants sit there anyway. An
+    API client's grant neither raises this nor answers it: the broker tenant naming a grant says nothing of whether
+    DIRECTORY_DOMAINS and REALM_DOMAIN are spelled right, and a misspelled one still sends its grants to another
+    provider's class, where this finds them."""
     kinds = {k.rsplit(", ", 1)[0] for k in by_class}
     return "another provider" in kinds and not kinds & {"directory", "realm spelling"}
 
@@ -504,18 +556,23 @@ def other_domains_declared():
 REALM_IS = "REALM_DOMAIN is the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms)"
 
 
-def realm_overlap(realm, directories, others=(), local=""):
+BROKER_IS = ("BROKER_TENANT is the broker tenant, the domain an API client's session carries before its clientId "
+             "(CUSTOMER when unset)")
+
+
+def realm_overlap(realm, directories, others=(), local="", broker=""):
     """Why REALM_DOMAIN cannot be read, when it names a domain the run was given as something else; else None.
-    classify() tests the realm before a directory domain or another provider's, so a realm typed as one of them would
-    class every working grant in it realm-spelled: exit 1 would say to remove them and --remove would accept their
-    ids. The local domain is tested first, so a realm typed as it could never class a grant realm-spelled. Compared as
-    norm() reads a domain: trimmed, without regard to case, a trailing dot dropped; ``local`` empty is VSPHERE.LOCAL, the
-    default."""
+    classify() tests the realm before a directory domain, the broker tenant or another provider's, so a realm typed as
+    one of them would class every working grant in it realm-spelled, an API client's own grant among them: exit 1 would
+    say to remove them and --remove would accept their ids. The local domain is tested first, so a realm typed as it
+    could never class a grant realm-spelled. Compared as norm() reads a domain: trimmed, without regard to case, a
+    trailing dot dropped; ``local`` empty is VSPHERE.LOCAL and ``broker`` empty is CUSTOMER, the defaults."""
     r = (realm or "").strip()
     if not norm(r):
         return None
-    lo = (local or "").strip()
-    given = {"DIRECTORY_DOMAINS": list(directories), "OTHER_DOMAINS": list(others), "LOCAL_DOMAIN": [lo or "VSPHERE.LOCAL"]}
+    lo, b = (local or "").strip(), (broker or "").strip()
+    given = {"DIRECTORY_DOMAINS": list(directories), "OTHER_DOMAINS": list(others), "LOCAL_DOMAIN": [lo or "VSPHERE.LOCAL"],
+             "BROKER_TENANT": [b or BROKER_DEFAULT]}
     for var in REALM_MUST_DIFFER:
         for entry in given[var]:
             if norm(entry) != norm(r):
@@ -524,12 +581,42 @@ def realm_overlap(realm, directories, others=(), local=""):
                 return (f"REALM_DOMAIN ({r}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same domain. "
                         f"{REALM_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in that domain "
                         "sorts as local and no realm-spelled grant could be found. Set REALM_DOMAIN to the realm's name")
+            if var == "BROKER_TENANT":
+                return (f"REALM_DOMAIN ({r}) and BROKER_TENANT ({b or BROKER_DEFAULT + ', the default'}) name the same "
+                        f"domain. {REALM_IS}; {BROKER_IS}, and a grant spelled in it is that client's own access. Read as "
+                        "one, every API client's grant would be classed realm-spelled and named for removal. Set "
+                        "REALM_DOMAIN to the realm's name, and BROKER_TENANT to the broker tenant's")
             what = ("a directory domain is the one your directory spells its users and groups in, DOMAIN\\user, which a "
                     "broker session carries" if var == "DIRECTORY_DOMAINS"
                     else "OTHER_DOMAINS names the domains you know are another identity provider's")
             return (f"REALM_DOMAIN ({r}) and {var} ({entry.strip()}) name the same domain. {REALM_IS}; {what}. Read as "
                     "one, every working grant in that domain would be classed realm-spelled and named for removal. Set "
                     "REALM_DOMAIN to the realm's name")
+    return None
+
+
+def broker_overlap(broker, directories, local=""):
+    """Why BROKER_TENANT cannot be read, when it names a domain the run was given as a directory or the local domain;
+    else None. classify() tests those before the broker tenant, so an API client's grant would read as a directory
+    grant, a person's, or as a local one, and never as an integration's own access. Compared as norm() reads a domain;
+    ``broker`` empty is CUSTOMER and ``local`` empty is VSPHERE.LOCAL, the defaults."""
+    b, lo = (broker or "").strip(), (local or "").strip()
+    shown = b or BROKER_DEFAULT + ", the default"
+    given = {"DIRECTORY_DOMAINS": list(directories), "LOCAL_DOMAIN": [lo or "VSPHERE.LOCAL"]}
+    for var in BROKER_MUST_DIFFER:
+        for entry in given[var]:
+            if norm(entry) != norm(b or BROKER_DEFAULT):
+                continue
+            if var == "LOCAL_DOMAIN":
+                return (f"BROKER_TENANT ({shown}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same "
+                        f"domain. {BROKER_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in "
+                        "that domain sorts as local and no API client's grant could be told. Set BROKER_TENANT to the "
+                        "broker tenant's name")
+            return (f"BROKER_TENANT ({shown}) and DIRECTORY_DOMAINS ({entry.strip()}) name the same domain. {BROKER_IS}; "
+                    "a directory domain is the one your directory spells its users and groups in, DOMAIN\\user, which a "
+                    "broker session carries. Read as one, every API client's grant would be classed a directory grant, "
+                    "a person's. Take the broker tenant out of DIRECTORY_DOMAINS, or set BROKER_TENANT to the broker "
+                    "tenant's name")
     return None
 
 
@@ -549,7 +636,9 @@ def realm_names_nothing(by_class, realm, undeclared):
 def other_domains(perms, realm, directories):
     """The domains whose grants read as another provider's, with their counts: printed on the terminal only, so a
     misspelled REALM_DOMAIN or directory domain shows among them. A domain is an estate value; the record never
-    carries this."""
+    carries this. The broker tenant is not among them: its grants are API clients', placed by BROKER_TENANT, so a
+    vCenter whose only other domain is the broker tenant is placed. A BROKER_TENANT that does not match the estate's
+    sends the API clients' grants here, where their domain shows."""
     out = collections.Counter()
     for p in perms:
         who = p["info"]["principal"]
@@ -589,9 +678,11 @@ def grant_key(p):
 def removal_plan(perms, ids, realm, directories):
     """The grants --remove would delete, by id, or the reason it refuses (a usage error: nothing is sent). An id
     that is not on the vCenter, and an id that is not a realm-spelled grant, are refused: this script removes only
-    the class it exists to clean up. A realm that names a directory, another provider's or the local domain is refused
-    first: read as the realm, that domain's working grants would pass as realm-spelled."""
-    problem = realm_overlap(realm, directories, sorted(other_domains_declared()), os.environ.get("LOCAL_DOMAIN", ""))
+    the class it exists to clean up, so an API client's grant (the broker tenant's spelling) is never removed here. A
+    realm that names a directory, another provider's, the local domain or the broker tenant is refused first: read as
+    the realm, that domain's working grants would pass as realm-spelled."""
+    problem = realm_overlap(realm, directories, sorted(other_domains_declared()), os.environ.get("LOCAL_DOMAIN", ""),
+                            os.environ.get("BROKER_TENANT", ""))
     if problem:
         return None, problem
     by_id = {str(p.get("permission")): p for p in perms}
@@ -601,8 +692,12 @@ def removal_plan(perms, ids, realm, directories):
     realm_ids = {str(p.get("permission")) for p in realm_grants(perms, realm, directories)}
     other = [i for i in ids if i not in realm_ids]
     if other:
+        clients = [i for i in other if classify(by_id[i]["info"]["principal"]["domain"],
+                                                by_id[i]["info"]["principal"]["name"], realm, directories) == BROKER_CLASS]
         return None, (f"{', '.join(other)} {'is' if len(other) == 1 else 'are'} not a realm-spelled grant; this script "
-                      "removes only those, and any other grant is removed where it was made")
+                      "removes only those, and any other grant is removed where it was made"
+                      + (f". {', '.join(clients)} {'is' if len(clients) == 1 else 'are'} an {BROKER_CLASS} grant, "
+                         f"{BROKER_ADVICE}" if clients else ""))
     return [by_id[i] for i in ids], None
 
 
@@ -1314,7 +1409,8 @@ def _settings(a):
         raise UsageError("REALM_DOMAIN is required, or --no-realm to declare an estate with no realm yet: left to infer "
                          "it from a variable not set, a realm-spelled grant reads as another provider's (X-197)")
     others = [x.strip() for x in os.environ.get("OTHER_DOMAINS", "").split(",") if x.strip()]
-    overlap = realm_overlap(realm, given, others, os.environ.get("LOCAL_DOMAIN", ""))
+    overlap = (realm_overlap(realm, given, others, os.environ.get("LOCAL_DOMAIN", ""), os.environ.get("BROKER_TENANT", ""))
+               or broker_overlap(os.environ.get("BROKER_TENANT", ""), given, os.environ.get("LOCAL_DOMAIN", "")))
     if overlap:
         raise UsageError(overlap)
     removing = bool(a.remove)
@@ -1439,6 +1535,9 @@ def _run(argv=None):
                   "carries the directory's name, so REALM_DOMAIN names a domain people sign in with, and a grant "
                   "spelled in it may apply to them: check REALM_DOMAIN against the realm's name, and name every "
                   "directory in DIRECTORY_DOMAINS (exit 3)")
+        clients = sum(n for k, n in row["byClass"].items() if k.rsplit(", ", 1)[0] == BROKER_CLASS)
+        if clients:
+            print(f"     {BROKER_CLASS}: {clients} grant(s) in {broker_tenant()}, the broker tenant: {BROKER_ADVICE}")
         if others:
             print("     read as another provider's (printed here only, never recorded): "
                   + ", ".join(f"{d} {n}" for d, n in others.items()))

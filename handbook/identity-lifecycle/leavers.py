@@ -5,7 +5,8 @@ Removing someone at the identity provider stops their next sign-in. It does not 
 created at their first sign-in, which stays enabled, nor an API token that account holds, which keeps working until
 it is revoked. And over SAML, and over OIDC keyed on preferred_username, VCF Automation finds a returning account by
 its user name: a new person later given a departed person's name reached the old account while it was enabled, and
-held every role granted to it directly (whether a disabled account turns that person away was not run). This script
+held every role granted to it directly; closed, the account turned that person away, and enabled again, it let them in
+holding its direct role (All Apps organizations, one run per protocol). This script
 closes that gap from the platform's side, for every organization federated to one Entra ID tenant, of either type
 and either protocol.
 

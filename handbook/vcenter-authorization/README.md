@@ -21,6 +21,7 @@ export VC_PASSWORD_FILE=/path/to/password          # mode 0600
 export REALM_DOMAIN=<the realm's name>            # once the estate has a realm (before one, run with --no-realm); never a directory domain, nor CUSTOMER
 export DIRECTORY_DOMAINS=<directory domain>[,<another>]   # required
 export LOCAL_DOMAIN=<your SSO domain>             # only if it is not vsphere.local; otherwise every local grant reads as another provider's
+export BROKER_TENANT=<the broker tenant>          # only if it is not CUSTOMER: the domain an API client's session carries
 export OTHER_DOMAINS=<another provider's domain>[,<another>]   # domains you know are another provider's; optional for the census, stated (empty allowed) for --remove
 export TLS_VERIFY=false                            # only on a self-signed lab CA
 
@@ -61,12 +62,38 @@ would class every working grant in that domain realm-spelled: exit 1 would say t
 accept their ids. So a `REALM_DOMAIN` equal to any `DIRECTORY_DOMAINS` or `OTHER_DOMAINS` entry, compared without regard
 to case, surrounding spaces or a trailing dot (`corp.example.` and `CORP.EXAMPLE` are one domain), is refused before
 anything is read (exit 5), and so is one equal to `LOCAL_DOMAIN`, where
-every grant sorts as local first and no realm-spelled grant could be found. `--remove` and `--where-realm` are refused
-the same way. Expected output, with the names replaced:
+every grant sorts as local first and no realm-spelled grant could be found, or to the broker tenant (below). `--remove`
+and `--where-realm` are refused the same way. Expected output, with the names replaced:
 
 ```text
 REALM_DOMAIN (<domain>) and DIRECTORY_DOMAINS (<domain>) name the same domain. REALM_DOMAIN is the realm's name as vCenter spells it in a grant (VCF Operations, fleet IAM realms); a directory domain is the one your directory spells its users and groups in, DOMAIN\user, which a broker session carries. Read as one, every working grant in that domain would be classed realm-spelled and named for removal. Set REALM_DOMAIN to the realm's name (exit 5)
 ```
+
+### An API client's grant is kept
+
+A grant whose domain is the broker tenant, `BROKER_TENANT` (`CUSTOMER` when unset, as on the reference estate), is
+classed `API client (broker tenant)`, whatever the name after it. An API client signed in through the SAML exchange
+carries the broker tenant and its clientId, and the spelling cannot tell a clientId from a person's name. Such a grant
+is an integration's own access: review it with the integration's owner, never remove it as clutter. The census counts
+it by scope, prints the count and that advice on your terminal, and places its domain, so the broker tenant is never
+read as another provider's and never itself stops a run at `NOT PLACED`. `--remove` refuses its id, as it refuses every grant
+that is not realm-spelled, and names the class. On your terminal, as the script's tests show it:
+
+```text
+     API client (broker tenant): 2 grant(s) in CUSTOMER, the broker tenant: an integration's own access: review it with the integration's owner, never remove it as clutter
+```
+
+Two guards keep the class apart, each a usage error found before anything is read (exit 5). A `REALM_DOMAIN` equal to
+the broker tenant is refused, because the census tests the realm first and would class every API client's grant
+realm-spelled and offer it for removal. A `BROKER_TENANT` equal to a `DIRECTORY_DOMAINS` or `LOCAL_DOMAIN` entry is
+refused, because the census tests those first and every API client's grant would read as a person's or a local one.
+`OTHER_DOMAINS` may name the broker tenant: it places a domain and classes nothing. A `BROKER_TENANT` that is not your
+estate's leaves the API clients' grants in another provider's class, where their domain shows on the terminal.
+
+What this changes for a run: a vCenter where the broker tenant was the only domain none of the domains given placed
+could stop at `NOT PLACED` (exit 3) until the tenant was named in `OTHER_DOMAINS`; it is now placed. A `REALM_DOMAIN`
+equal to the broker tenant, and a `BROKER_TENANT` equal to a directory or the local domain, ran before and are now
+refused (exit 5). No exit code changed its meaning.
 
 ### Every page of the lists
 
@@ -182,7 +209,7 @@ The first that applies, so a scheduler reads one state from one number:
 | 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, only when every vCenter's session list was read whole, and never while a live session is spelled in it; before a realm there is no such class); with `--compare-permissions`, a grant added, removed or changed on a vCenter both files read | name them with `--where-realm`, remove them with `--remove`; for a compare, read each line and confirm the change was meant |
 | 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a list not read whole (a permission list with no permission, an item without its id, an id answered twice, a page that adds nothing), a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing), the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run, stopped on an error, or its residue was not read back, a vCenter `--remove-probe-roles` could not finish or read back, or an error the script did not expect; with `--save-permissions`, a list not read whole (nothing written); with `--compare-permissions`, a file unreadable, partial or not written by `--save-permissions` (nothing compared), or a vCenter read in one file only | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
 | 0 | nothing for a person to act on: every vCenter read and placed (with `REALM_DOMAIN` set, its session list read whole), no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held; with `--save-permissions`, the file written; with `--compare-permissions`, no difference and every vCenter in both files | nothing |
-| 5 | a usage error, found before anything is sent (a missing or wrong argument or variable, an abbreviated flag, since flags are taken whole and `--exec` is not `--execute`, a password file it cannot read, a `REALM_DOMAIN` equal to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant, pyVmomi missing for a step that needs it, `--remove` among them, a `--supervisor-vm` that names no VM or several, looked up before the census and every probe, a `--save-permissions` FILE that exists, has no directory or lies inside the clone, a `--compare-permissions` BEFORE saved after AFTER, a Python older than 3.10) | fix the invocation |
+| 5 | a usage error, found before anything is sent (a missing or wrong argument or variable, an abbreviated flag, since flags are taken whole and `--exec` is not `--execute`, a password file it cannot read, a `REALM_DOMAIN` equal to the broker tenant or to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, a `BROKER_TENANT` equal to a `DIRECTORY_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant (an API client's among them), pyVmomi missing for a step that needs it, `--remove` among them, a `--supervisor-vm` that names no VM or several, looked up before the census and every probe, a `--save-permissions` FILE that exists, has no directory or lies inside the clone, a `--compare-permissions` BEFORE saved after AFTER, a Python older than 3.10) | fix the invocation |
 
 A record refused because an estate value or a password survived the scrub is not written, and it never hides the run's
 result: the run's own code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3, because nothing
@@ -214,14 +241,16 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
 1. **Which grants apply to a broker session.** A broker session carries the directory's name for the user
    (`DOMAIN\user`). A grant on that name, or on a directory group the user is in, applies. A grant spelled with
    the realm's name is accepted by vCenter, reported as effective by an administrator's privilege query, and,
-   behind a broker backed by AD/LDAP, applies to nobody; behind a federated provider it was not measured. The realm's name is not the broker tenant (`CUSTOMER` by default) that an API client's
-   session carries as `CUSTOMER\<client id>`; whether a grant spelled `CUSTOMER\<name>` applies to anyone was not
-   tested. `--probe-grants` measures this on your vCenter with a one-privilege role on a
+   behind a broker backed by AD/LDAP, applies to nobody; behind a federated provider it was not measured. The realm's
+   name is not the broker tenant (`BROKER_TENANT`, `CUSTOMER` by default) that an API client's session carries as
+   `CUSTOMER\<its clientId>`. A grant spelled `CUSTOMER\<clientId>` applied to that client's session, and one spelled
+   `CUSTOMER\<user>` did not reach a directory user signing in through the broker (one management vCenter, one run
+   each). `--probe-grants` measures the directory and realm spellings on your vCenter with a one-privilege role on a
    throwaway folder: vCenter's own check, an actual subfolder create, and a REST read.
 2. **How VCF roles reach vCenter.** As global permissions on local groups named `vcf_reserved_<role id>`. The
    census counts them and the other classes: local principals, directory users and groups, realm-spelled grants,
-   another identity provider's grants (VCF Automation's, on Supervisor namespaces). Local principals split three
-   ways, by who looks after them:
+   API clients' grants (`API client (broker tenant)`, an integration's own access, kept), another identity provider's
+   grants (VCF Automation's, on Supervisor namespaces). Local principals split three ways, by who looks after them:
    - `local, VCF-managed`: VCF's integration accounts (`svc-`), the Supervisor's (`wcp-`) and the solution users,
      named with a UUID at the end. Leave them to VCF, and read them as the evidence of what each integration holds.
      The census sorts by name, so an account you named `svc-` yourself lands here: check the names.
@@ -264,6 +293,10 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
   tests; no run was made with one. So are `--remove`'s session guard, the census's `realmSignedIn`, and the refusal of
   a session list that holds only the reader's own sessions: no run was made with a live session spelled in the realm
   or with a filtered list, and the record's session read holds none.
+- The `API client (broker tenant)` class, `BROKER_TENANT` and its two guards are the script's code and its tests; no
+  census was run on an estate holding such a grant. The two grants behind the class were measured by X-221's own
+  driver, with `authz.py`'s probe role on a throwaway folder: one API client and one directory user, one management
+  vCenter, one run each; that the name after `CUSTOMER\` is the client's clientId was read for two clients.
 - Paging: each vCenter's own API metadata (vSphere API 9.0.0.0 onward) defines both lists as paged. A call that sets no
   iteration returns "only the first permissions that fit in a size defined by the service" (the role list reads the
   same), and a page size the client sets may be lowered by a service policy. On 2026-10-15, on the reference estate's
@@ -300,8 +333,9 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
 ## Reading the record
 
 - `vcenters.<vc>.byClass`: permission counts by class and scope (`global` or `object`). A record written before the
-  local split carries one `local` class; the shipped `authz.json` is one of those. A vCenter that was not read carries
-  only `error`.
+  local split carries one `local` class; the shipped `authz.json` is one of those, and it predates the
+  `API client (broker tenant)` class, which a record carries only when a grant in the broker tenant was read. A vCenter
+  that was not read carries only `error`.
 - `realmSpelling`: present when the run declared `--no-realm`, saying the realm-spelled class was not applicable.
 - `vcenters.<vc>.domainsNamedNothing`, `vcenters.<vc>.realmNamedNothing`, `vcenters.<vc>.realmSignedIn`: present on a
   vCenter the run could not place (the domains given named no grant there, the realm named none beside an unplaced

@@ -108,14 +108,23 @@ An organization with SAML switched off, its metadata or its SAML users still hel
 way ("the organization holds SAML metadata and SAML users, enabled or not"). Exit 2, and nothing is sent.
 
 A switched-off federation is also never switched back on by accident. Without `--enable`, a run writes no settings to
-it. Importing a renamed group's new name, the repair federation-operations teaches, takes `--groups-only`, which sends
-the imports alone and never a settings write, whatever the settings hold:
+it, and imports no group into it: VCF Automation refused a group import into a federation switched off (403,
+`GROUP_IMPORT`), where the same import was taken once the federation was switched on. A run with a group to import into
+a federation that stays off is refused before anything is sent (exit 2), and names the way that works:
 
 ```
 $ python3 org_federation.py --configure --org <org> --protocol oidc --groups-only --group member=<the new name> --execute
-  the organization's app read at Entra, through the tenant's read-only app: read  {'groups_assigned': 1, 'groups_to_import': 1, 'groups_to_import_assigned': 1}
+refused: the organization's OIDC federation is switched off, and VCF Automation refuses a group import into a federation switched off (it answered 403, GROUP_IMPORT), so the 1 group(s) to import were not sent. Switch it on and import in one run: --configure --org NAME --protocol oidc --enable with each --group ROLE=NAME (the plan shows enabled: off -> on), or switch it on first and run --groups-only after
+```
+
+Importing a renamed group's new name, the repair federation-operations teaches, takes `--groups-only` on a federation
+switched on: it sends the imports alone and never a settings write, whatever the settings hold:
+
+```
+$ python3 org_federation.py --configure --org <org> --protocol oidc --groups-only --group member=<the new name> --execute
+  the organization's app read at Entra, through the tenant's read-only app: read  {'groups_assigned': 2, 'groups_to_import': 1, 'groups_to_import_assigned': 1}
   plan: read  {'protocol': 'OIDC', 'org_type': 'all-apps', 'groups_only': True, 'settings_to_change': [], 'groups_to_import': ['Organization User'], 'groups_already_held': 0, 'entra_assignment': 'read'}
-  --groups-only: no settings are written, and the federation stays switched off
+  --groups-only: no settings are written, and the federation stays switched on
   each group to import is assigned to the organization's app at Entra by that name, read through the tenant's read-only app
   group imported with its role: 201  {'role': 'Organization User', 'providerType': 'OAUTH'}
   check: group <the new name> imported over OAUTH holding Organization User: pass
@@ -126,7 +135,7 @@ read against the groups assigned to the organization's app at Entra before anyth
 carries, a typo or a group never assigned, is refused (exit 2): VCF Automation would import it all the same.
 
 ```
-refused: no group assigned to the organization's app at Entra is named <the name given>: VCF Automation would import the name all the same, admitting no one, and its role would wait for whichever group is later given that name. Assign the group to the app at Entra, or correct the name
+refused: no group assigned to the organization's app at Entra is named <the name given>: VCF Automation would import the name all the same, admitting no one, and its role would wait for whichever group is later given that name. Assign the group to the app at Entra, or correct the name. An assignment made moments ago can read late at Entra (seen live: refused, then read seconds later), so where the group was just assigned, run again before changing anything
 ```
 
 Without the read-only app, the run says that the assignment was not read, in place of the line above the import:
@@ -136,15 +145,15 @@ Without the read-only app, the run says that the assignment was not read, in pla
 ```
 
 It needs no `APP_CLIENT_ID`, secret or metadata. An organization that stores no settings for the tenant over that
-protocol is refused, since a group imported there would serve no federation. Without `--groups-only`, a run whose
-settings already read as planned also imports alone; when a setting differs, it is refused until `--enable` or
-`--groups-only` is given, and the plan with `--enable` shows the switch:
+protocol is refused, since a group imported there would serve no federation. Without `--groups-only`, a run on a
+federation switched on whose settings already read as planned also imports alone; on a federation switched off, a run
+whose setting differs is refused until `--enable` is given, and the plan with `--enable` shows the switch:
 
 ```
 $ python3 org_federation.py --configure --org <org> --protocol oidc --execute
   plan: read  {..., 'settings_to_change': ['maxClockSkew'], ...}
     maxClockSkew: 300 -> 60
-refused: the organization's OIDC federation is switched off (enabled: off), and this run would write its settings (maxClockSkew): add --enable to write them and switch it on (enabled: off -> on), or give --groups-only with each --group ROLE=NAME to import the groups alone and write no settings. Without either, --configure writes no settings to a switched-off federation
+refused: the organization's OIDC federation is switched off (enabled: off), and this run would write its settings (maxClockSkew): add --enable to write them and switch it on (enabled: off -> on). Without it, --configure writes no settings to a switched-off federation
 
 $ python3 org_federation.py --configure --org <org> --protocol oidc --enable
   plan: read  {..., 'settings_to_change': ['enabled', 'maxClockSkew'], ...}
@@ -273,7 +282,7 @@ it:
 
 ```
 $ python3 org_federation.py --update --key-refresh --execute
-refused: the organization has no federation to ENTRA_TENANT_ID switched on: it holds OIDC settings for ENTRA_TENANT_ID, switched off. --update changes a federation that is switched on. For the OIDC one, --configure --org NAME --protocol oidc --enable writes its settings and switches it on, and --configure --org NAME --protocol oidc --groups-only --group ROLE=NAME imports a group and leaves it off
+refused: the organization has no federation to ENTRA_TENANT_ID switched on: it holds OIDC settings for ENTRA_TENANT_ID, switched off. --update changes a federation that is switched on. For the OIDC one, --configure --org NAME --protocol oidc --enable writes its settings and switches it on; a group is imported only into a federation switched on
 ```
 
 ## A re-run of --execute keeps its key

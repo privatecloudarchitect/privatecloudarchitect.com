@@ -39,22 +39,28 @@ the organization with a role. This script does both sides in the order that work
                          tenants. It refuses a named group that already exists under the other protocol or with other
                          roles, and a new client secret Entra does not accept, asked at Entra's token endpoint before
                          anything is written. A federation that is switched off stays off: a run whose settings would
-                         change is refused without --enable, which the plan shows as "enabled: off -> on"; a run whose
-                         settings already read as planned imports the named groups and writes no settings.
+                         change is refused without --enable, which the plan shows as "enabled: off -> on". VCF
+                         Automation refused a group import into a federation switched off (403), so a run that would
+                         import a group into one that stays off is refused before anything is sent; with --enable the
+                         settings are written first, switching it on, and the groups imported after.
                          With the tenant's read-only app (ENTRA_CLIENT_ID and its credential) it reads the organization's
                          app at Entra first, every call a GET, and refuses a group no group assigned to the app is named
                          (VCF Automation imports such a name all the same) or two assigned groups are named, and over SAML
                          metadata that does not name the certificate Entra signs the app with now, or names one the app
-                         does not hold; without it, it says that neither was read. Over SAML it judges the metadata by
+                         does not hold (read again for up to 90 s first while the metadata names the certificate the app
+                         signs with: Graph listed a certificate just added to the app later than Entra's metadata named
+                         it); without it, it says that neither was read. Over SAML it judges the metadata by
                          certificate thumbprint against what the organization holds, and refuses metadata naming none
                          of the held certificates while the organization holds SAML users and the app was not read.
                          Over SAML without METADATA_FILE it prints the organization's own service-provider identifier
                          and reply URL for the tenant, and stops. It never writes to Entra
   --configure --org NAME --groups-only
-                         imports each --group ROLE=NAME and never writes the settings, whatever they hold and whether
-                         the federation is switched on or off; it needs no APP_CLIENT_ID, secret or metadata, and refuses
-                         an organization that stores no settings for ENTRA_TENANT_ID over the protocol named, or whose
-                         live federation is the other protocol, another provider's or VCF single sign-on's
+                         imports each --group ROLE=NAME into a federation switched on and never writes the settings,
+                         whatever they hold; it needs no APP_CLIENT_ID, secret or metadata, and refuses an organization
+                         that stores no settings for ENTRA_TENANT_ID over the protocol named, whose live federation is
+                         the other protocol, another provider's or VCF single sign-on's, or whose federation over the
+                         protocol named is switched off while there is a group to import (VCF Automation refused that
+                         import with 403)
   --teardown --execute   deletes what --execute created (only that), purges it from Entra's recycle bin, and reads
                          each object back to confirm nothing is left; an object whose read answers neither 200 nor 404
                          is not known to be gone, and the run exits 3. Without --execute it reads the state file and
@@ -105,12 +111,14 @@ Exit: 0 done · 1 a check failed, or a write refused while building, configuring
       organization, a protocol, key or SAML user-name claim switch judged on what the organization stores and the users
       it holds, enabled or not, a change of the app or issuer under OIDC users keyed on another claim than oid or
       preferred_username, a settings write to a switched-off federation without --enable, a role its type lacks, a named
-      group held another way, a group-only import to an organization holding no settings for the tenant, or SAML with
+      group held another way, a group-only import to an organization holding no settings for the tenant, a group
+      import into a federation that stays switched off, or SAML with
       no metadata yet, when it prints what the tenant needs; for --configure and --update, a client secret Entra
       refused, and SAML metadata naming none of the certificates the organization holds while it holds SAML users
       and the organization's app was not read; with the tenant's read-only app, a group to import that no assigned
       group is named or two are, metadata that does not name the certificate Entra signs the app with or names one the
-      app does not hold, and no app, or two, carrying the organization's client id or identifier), with nothing sent ·
+      app does not hold after the app was read again, and no app, or two, carrying the organization's client id or
+      identifier), with nothing sent ·
       3 a result not known: a credential refused before anything was read (the tenant's read-only app's among them), a
       read refused or a list not read whole in any mode (a proof only reads), Entra out of reach when asked about a
       secret or a tenant's domain, a check with nothing to read yet (--prove --org over SAML before any enabled SAML
@@ -1427,15 +1435,16 @@ def federation_found(oauth, fed, tenant):
 
 
 def switched_off_hint(found):
-    """For --update's refusal: the --configure commands that change a federation to this tenant switched off, one pair
-    per protocol it holds, each a command the parser takes as printed (--configure needs --protocol)."""
+    """For --update's refusal: the --configure command that switches a federation to this tenant back on, one per
+    protocol it holds, each a command the parser takes as printed (--configure needs --protocol). A group-only import
+    is not offered: VCF Automation refused a group import into a federation switched off (403)."""
     held = [p for p, what in (("oidc", "OIDC settings"), ("saml", "SAML metadata"))
             if f"{what} for ENTRA_TENANT_ID, switched off" in found]
     if not held:
         return ""
     return (". --update changes a federation that is switched on. " + "; ".join(
         f"For the {p.upper()} one, --configure --org NAME --protocol {p} --enable writes its settings and switches it "
-        f"on, and --configure --org NAME --protocol {p} --groups-only --group ROLE=NAME imports a group and leaves it off"
+        "on; a group is imported only into a federation switched on"
         for p in held))
 
 
@@ -1534,6 +1543,37 @@ def metadata_judgement(held_xml, new_xml, saml_users, app=None):
     return "", facts
 
 
+# Entra's public app metadata named a certificate just added to the app (inactive) before Graph's read of the app's
+# service principal listed it: the plan refused the app's own certificate as another app's, and the same run seconds
+# later wrote it (X-251). So while the metadata names the certificate Entra signs the app with and one more that the
+# app's read does not list, the app is read again, up to APP_REREADS times APP_REREAD_PAUSE_S apart, before a refusal.
+# Another app's metadata, which does not name the certificate the app signs with, is refused at once.
+APP_REREADS, APP_REREAD_PAUSE_S = 9, 10
+
+
+def judge_metadata(held_xml, new_xml, saml_users, app=None, reread=None):
+    """metadata_judgement, with the organization's app read again (`reread`, returning entra_app's answer) while the
+    only fault is a certificate the app's read does not list yet beside the one it signs with. Returns (refusal or "",
+    facts, the app as last read). A read that fails raises ReadError (exit 3), as entra_app does."""
+    why, facts = metadata_judgement(held_xml, new_xml, saml_users, app)
+    reads = 0
+    while (why and app is not None and reread is not None and reads < APP_REREADS
+           and facts.get("names_the_apps_active_certificate") and facts.get("not_the_apps")):
+        time.sleep(APP_REREAD_PAUSE_S)
+        reads += 1
+        refusal, again = reread()
+        if refusal or again is None:   # the app no longer reads as one app: keep the refusal already made
+            break
+        app = again
+        why, facts = metadata_judgement(held_xml, new_xml, saml_users, app)
+    if reads:
+        facts["app_read_again"] = reads
+        if why:
+            why += (f" (the app was read {reads + 1} times over {reads * APP_REREAD_PAUSE_S} s, since a certificate just "
+                    "added to the app is listed late, and it still does not list this one)")
+    return why, facts, app
+
+
 def entra_app(g, protocol, client_id=None, entity=None):
     """The organization's app at Entra, read through the tenant's read-only app (every call a GET, under the
     Application.Read.All the watch runs on): over OIDC the app whose client id the organization holds or is given,
@@ -1581,7 +1621,9 @@ def assignment_refusal(names, assigned):
     if missing:
         return (f"no group assigned to the organization's app at Entra is named {', '.join(missing)}: VCF Automation "
                 "would import the name all the same, admitting no one, and its role would wait for whichever group is "
-                "later given that name. Assign the group to the app at Entra, or correct the name")
+                "later given that name. Assign the group to the app at Entra, or correct the name. An assignment made "
+                "moments ago can read late at Entra (seen live: refused, then read seconds later), so where the group "
+                "was just assigned, run again before changing anything")
     if doubled:
         return (f"more than one group assigned to the organization's app at Entra is named {', '.join(doubled)}: the "
                 "import would admit the members of each. Rename one at Entra first")
@@ -1736,15 +1778,17 @@ def update(a):
                 for k in ("username", "email", "fullName", "nameInSource"):
                     san.add(u.get(k), "{{user}}")
             saml_users = sum(1 for u in users if u.get("providerType") == "SAML")
-            app = None
+            app, reread = None, None
             if graph is not None:
-                why, app = entra_app(graph, "saml", entity=_sp_entity(vcfa, fed))
+                entity = _sp_entity(vcfa, fed)
+                why, app = entra_app(graph, "saml", entity=entity)
                 if why:
                     step("refused", f"{why}. Nothing was sent")
                     write(proto, False)
                     return 2
+                reread = lambda: entra_app(graph, "saml", entity=entity)  # noqa: E731
             try:
-                why, facts = metadata_judgement(fed.get("samlMetadata"), metadata, saml_users, app)
+                why, facts, app = judge_metadata(fed.get("samlMetadata"), metadata, saml_users, app, reread)
             except ValueError:
                 raise ReadError("a certificate in the metadata the organization holds does not read as base64, so what "
                                 "the write would drop is not known") from None
@@ -2071,6 +2115,29 @@ def groups_only_refusal(oauth, fed, tenant, protocol):
     return ""
 
 
+def federation_on(oauth, fed, protocol):
+    """Whether the organization's federation over `protocol` is switched on: OIDC by its own settings (VCF single
+    sign-on is not this federation), SAML by its federation settings."""
+    if protocol == "oidc":
+        return bool(oauth.get("enabled")) and not oauth.get("vidb")
+    return bool(fed.get("enabled"))
+
+
+def import_while_off(oauth, fed, protocol, imports, stays_off):
+    """Why the run imports no group, or "": VCF Automation refused a group import into a federation switched off (403,
+    GROUP_IMPORT), where the same import was taken with the federation switched on (X-251, X-256). So a run with a group
+    to import, into a federation over `protocol` that is switched off and stays off (a group-only run, or one without
+    --enable), is refused before anything is sent. A run with --enable writes the settings first, switching the
+    federation on, and imports after; a run with nothing to import sends nothing either way. Every flag it names is one
+    the parser takes."""
+    if not imports or not stays_off or federation_on(oauth, fed, protocol):
+        return ""
+    return (f"the organization's {protocol.upper()} federation is switched off, and VCF Automation refuses a group import "
+            f"into a federation switched off (it answered 403, GROUP_IMPORT), so the {imports} group(s) to import were not "
+            f"sent. Switch it on and import in one run: --configure --org NAME --protocol {protocol} --enable with each "
+            "--group ROLE=NAME (the plan shows enabled: off -> on), or switch it on first and run --groups-only after")
+
+
 def sp_metadata_names(xml):
     """The entity id and HTTP-POST assertion consumer an organization's service-provider metadata names."""
     entity = re.search(r'entityID="([^"]+)"', xml or "")
@@ -2333,15 +2400,20 @@ def configure_existing(a):
         if clashes:
             return refuse(f"{len(clashes)} named group(s) exist under another protocol or with other roles; change them by hand, "
                           "because an import of a name the organization holds answered 201 with the group it already had")
+        why = import_while_off(r["oauth"], r["fed"], a.protocol, len(imports), groups_only or not a.enable)
+        if why:
+            return refuse(why)
         # Entra's side, before anything is sent: VCF Automation imports a group name no group assigned to the app carries
         # (X-192), so each name is read against the app's assignments; over SAML the metadata is judged against the
         # certificate Entra signs the app with. Without the tenant's read-only app neither is read, and the run says so.
-        app, entra_read = None, f"not read: {APP_NOT_READ}"
+        app, entra_read, reread = None, f"not read: {APP_NOT_READ}", None
         if graph is not None and (imports or (a.protocol == "saml" and not groups_only)):
             if a.protocol == "oidc":
                 why, app = entra_app(graph, "oidc", client_id=client_id or r["oauth"].get("clientId"))
             else:
-                why, app = entra_app(graph, "saml", entity=_sp_entity(vcfa, r["fed"]))
+                entity = _sp_entity(vcfa, r["fed"])
+                why, app = entra_app(graph, "saml", entity=entity)
+                reread = lambda: entra_app(graph, "saml", entity=entity)  # noqa: E731
             if why:
                 return refuse(why)
             why = assignment_refusal([n for _k, n in imports], app["assigned"])
@@ -2385,7 +2457,7 @@ def configure_existing(a):
             # it holds and, with the tenant's read-only app, the certificate Entra signs the organization's app with
             saml_users = sum(1 for u in r["users"] if u.get("providerType") == "SAML")
             try:
-                why, cert_facts = metadata_judgement(current.get("samlMetadata"), metadata, saml_users, app)
+                why, cert_facts, app = judge_metadata(current.get("samlMetadata"), metadata, saml_users, app, reread)
             except ValueError:
                 raise ReadError("a certificate in the metadata the organization holds does not read as base64, so what "
                                 "the write would drop is not known") from None
@@ -2431,9 +2503,8 @@ def configure_existing(a):
             if changes and not was_on and not a.enable:
                 return refuse(f"the organization's {a.protocol.upper()} federation is switched off (enabled: "
                               f"{_shown('enabled', current.get('enabled'))}), and this run would write its settings "
-                              f"({', '.join(changes)}): add --enable to write them and switch it on (enabled: off -> on), or "
-                              "give --groups-only with each --group ROLE=NAME to import the groups alone and write no "
-                              "settings. Without either, --configure writes no settings to a switched-off federation")
+                              f"({', '.join(changes)}): add --enable to write them and switch it on (enabled: off -> on). "
+                              "Without it, --configure writes no settings to a switched-off federation")
             if changes and a.protocol == "oidc" and not secret:
                 return refuse("APP_SECRET_FILE is needed: the organization holds no secret for this app")
             if secret_changes:   # proven at Entra before it is written anywhere

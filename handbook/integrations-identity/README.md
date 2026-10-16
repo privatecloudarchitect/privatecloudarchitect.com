@@ -436,7 +436,7 @@ id; no secret), and the teardown revokes and deletes only an account that file r
 | 3 | a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer without its list or its `resultTotal`, a total that changed between pages, a page that added nothing new, or pages that end before the total), the read-back not read, the residue not read back, the provider's credential not traded for a bearer, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
 | 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists for a create, or does not for a teardown), or a Python older than 3.10; nothing is written |
 
-**Every list read whole.** The organization list and the account list are read page by page, 128 asked to a page,
+**Every list read whole.** The organization list and the account list are read page by page, 32 asked to a page, the largest the service account list takes (it refuses more with HTTP 400),
 until their items, counted once each by id, reach the total the answer states (`resultTotal`); a page is short only
 against the `pageSize` the answer states it served. A list not read whole is exit
 3: a create registers nothing on it, and a teardown revokes and deletes nothing, so an account on a page that was never
@@ -499,7 +499,9 @@ Steps 1 to 4 run only when an API client's credential is given.
   one token. The same day a second throwaway client, holding VCF Administrator and run on its own token, was refused its
   teardown before any delete; made by hand on that client's own bearer, the delete of its only token answered 204, the
   bearer still listed clients after the delete and then deleted its own client: the bearer outlived its token in that
-  run, which is why the refusal rests on the residue read and not on a measured failure. The fleet API's in-place regenerate
+  run, which is why the refusal rests on the residue read and not on a measured failure. A later run timed it: the
+  bearer kept reading, writing on its own client and trading at vCenter until its own expiry, 30 minutes after it was
+  minted, and was refused 30 seconds after. The fleet API's in-place regenerate
   (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`), called outside the script in the same run, answered a
   token under a new id with a new end date, and the value from before was refused three seconds later: it leaves no
   overlap, so the script does not use it. How long an overlap may last is bounded only by the old token's own end date,

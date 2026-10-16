@@ -47,7 +47,7 @@ A provider bearer lasts an hour, so mint it just before each run, as the platfor
 |---|---|
 | 0 | done: the plan printed, or every step and check passed |
 | 1 | a check failed, or a write was refused while building, configuring, updating or tearing down; the record names which |
-| 2 | refused by what it read, with nothing sent: a name this script did not create, no state file to tear down, no such organization, an organization with no federation to `ENTRA_TENANT_ID` switched on (for `--update`, which says what the organization holds), a change its protocol does not take, a switch of protocol, OIDC user key or SAML user-name claim (judged on what the organization stores and the users it holds, enabled or not, and on a re-run of `--execute` over its own organization), a change of the app or the issuer under OIDC users keyed on a claim other than `oid` or `preferred_username`, a settings write to a switched-off federation without `--enable`, a group-only import to an organization that stores no settings for the tenant over that protocol, a client secret Entra refused, a role its type lacks, a named group held another way, SAML with no metadata yet (it prints what the tenant needs), SAML metadata naming none of the certificates the organization holds while it holds SAML users and the organization's app was not read, and, with the tenant's read-only app, a group to import that no group assigned to the app is named (or two are), metadata that does not name the certificate Entra signs the app with or names one the app does not hold, or no app (or two) carrying the organization's client id or identifier |
+| 2 | refused by what it read, with nothing sent: a name this script did not create, no state file to tear down, no such organization, an organization with no federation to `ENTRA_TENANT_ID` switched on (for `--update`, which says what the organization holds), a change its protocol does not take, a switch of protocol, OIDC user key or SAML user-name claim (judged on what the organization stores and the users it holds, enabled or not, and on a re-run of `--execute` over its own organization), a change of the app or the issuer under OIDC users keyed on a claim other than `oid` or `preferred_username`, a settings write to a switched-off federation without `--enable`, a group import into a federation that stays switched off, a group-only import to an organization that stores no settings for the tenant over that protocol, a client secret Entra refused, a role its type lacks, a named group held another way, SAML with no metadata yet (it prints what the tenant needs), SAML metadata naming none of the certificates the organization holds while it holds SAML users and the organization's app was not read, and, with the tenant's read-only app, a group to import that no group assigned to the app is named (or two are), metadata that does not name the certificate Entra signs the app with or names one the app does not hold, or no app (or two) carrying the organization's client id or identifier |
 | 3 | a result not known: a credential refused before anything was read (the tenant's read-only app's among them), a read refused or a list not read to its end in any mode (`--prove` and `--prove --org` only read), Entra out of reach when asked about a new secret or a tenant's domain, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a teardown that could not read whether an object it made is gone (an answer other than 200 or 404), a record the scrub refused to write on a run that would have exited 0, or an error the script did not expect (never 1). A record the scrub refuses never hides a 1, a 2 or a 3: the run's own code stands |
 | 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`, `--groups-only` without `--group` or with `--enable` or `--user-key`), a missing environment variable or credential (`ENTRA_CLIENT_ID` without its credential among them), an `ENTRA_TENANT_ID` that is neither a tenant id nor a domain Entra names a tenant for, a file that cannot be read, metadata that is not the tenant's or names no signing certificate that reads, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
 
@@ -105,12 +105,14 @@ each changing field as `old -> new`, the values a rollback writes back by hand (
   refusal names only flags the script takes: an organization keyed on `sub` is kept on it by running without
   `--user-key`;
 - a settings write to a federation that is switched off, unless `--enable` is given, which the plan shows as
-  `enabled: off -> on`. Without `--enable` a run whose settings already read as planned imports the named groups and
-  writes no settings, and one whose settings would change is refused. `--groups-only` imports each `--group` and
-  never writes the settings, whatever they hold, on a federation switched on or off (the repair of a renamed group on
-  a federation switched off during an incident); it needs no `APP_CLIENT_ID`, secret or metadata, and refuses an
-  organization that stores no settings for the tenant over that protocol. An organization that was never federated
-  is switched off too, so its first configuration takes `--enable`;
+  `enabled: off -> on`; and a group import into a federation that stays switched off. VCF Automation refused a group
+  import into a federation switched off (403, `GROUP_IMPORT`) where the same import was taken once it was switched on,
+  so a run with a group to import and no `--enable` is refused there before anything is sent; with `--enable` the
+  settings are written first and the groups imported after. `--groups-only` imports each `--group` into a federation
+  switched on and never writes the settings, whatever they hold (the repair of a renamed group); it needs no
+  `APP_CLIENT_ID`, secret or metadata, and refuses an organization that stores no settings for the tenant over that
+  protocol. An organization that was never federated is switched off too, so its first configuration takes
+  `--enable`;
 - a new client secret Entra does not accept: before anything is written, the plan asks Entra's token endpoint for a
   token with it, and a refusal is named (a Secret ID pasted where the Value belongs is named as such);
 - an organization signed in through VCF single sign-on, settings stored for a provider other than `ENTRA_TENANT_ID`, a
@@ -125,8 +127,9 @@ each changing field as `old -> new`, the values a rollback writes back by hand (
   watch's `group_names` check is the one that reads it;
 - over SAML, metadata judged by certificate thumbprint, never by count: with the tenant's read-only app, metadata that
   does not name the certificate Entra signs the organization's app with now, or names a certificate the app does not
-  hold; without it, metadata naming none of the certificates the organization holds while it holds SAML users, enabled
-  or not. Entra names the same identity-provider entity id, the tenant's issuer, in every app's metadata in one tenant,
+  hold (the app read again for up to 90 seconds first while the metadata names the certificate it signs with, since
+  Graph listed a certificate just added to the app later than Entra's metadata named it); without it, metadata naming
+  none of the certificates the organization holds while it holds SAML users, enabled or not. Entra names the same identity-provider entity id, the tenant's issuer, in every app's metadata in one tenant,
   so another app's metadata reads as the tenant's; only the certificates tell two apps apart (read on two SAML apps of
   the lab's tenant, X-250). The plan prints the certificates kept, dropped and added by thumbprint.
 
@@ -193,8 +196,8 @@ METADATA_FILE=<file> python3 org_federation.py --update --metadata --execute    
 
 It refuses (exit 2) an organization with no federation to `ENTRA_TENANT_ID` switched on, and says what the
 organization holds: a federation to the tenant switched off (then it names, for each protocol it holds, the
-`--configure --org NAME --protocol <protocol> --enable` and `--configure --org NAME --protocol <protocol> --groups-only
---group ROLE=NAME` commands that change one), settings for another provider, VCF single sign-on, or nothing stored. It refuses a change the organization's protocol does not take (`--metadata` on OIDC, the others on
+`--configure --org NAME --protocol <protocol> --enable` command that switches it back on; a group is imported only
+into a federation switched on), settings for another provider, VCF single sign-on, or nothing stored. It refuses a change the organization's protocol does not take (`--metadata` on OIDC, the others on
 SAML).
 A `--secret` or `--metadata` without its file, and metadata that is not this tenant's or names no signing
 certificate, are usage errors (exit 5): nothing is sent.

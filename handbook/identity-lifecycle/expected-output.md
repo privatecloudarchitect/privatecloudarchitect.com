@@ -231,6 +231,48 @@ An earlier run of the same three, at 13:16 UTC, read the same end and the same f
 bearer leg exited 3 with one call refused, which that run's driver counted without naming, and the run above found
 no call refused.
 
+## The leaver test, before and after a close
+
+`leaver_test.py` on 2026-10-15, on a throwaway All Apps organization over SAML built for the test, with a throwaway
+test user that had signed in and minted its own API token. First run before anything was removed, with the planned
+removal time; then the user was taken out of the entitled group at Entra at 23:50:27 UTC, signed in once in a browser
+(Entra refused it with AADSTS50105), and `leavers.py --execute --org --user` closed the account; then the script was
+run once a minute. The runs printed names; they are replaced here with the placeholders `--redact` prints, and the
+record path shortened to its file name.
+
+```text
+$ python3 leaver_test.py --org {{org-1}} --user {{user-1}} --app {{id-3}} --removed-at 2026-10-15T23:50:19Z --latency 30
+leaver test: {{user-1}} in {{org-1}}, removed 2026-10-15T23:50:19Z, latency 30 min (deadline 2026-10-16T00:20:19Z); read 2026-10-15T23:50:22Z
+  FAIL    account disabled, no token: the account reads enabled and 1 API token(s) it owns are listed
+  FAIL    token refused: the token still yields an access token (dropped unread)
+  UNREAD  sign-in refused: no sign-in to the app since the removal is in the log yet: sign in as the test user, then run again before the deadline
+exit 1: the leaver still has a way in
+
+$ python3 leaver_test.py --org {{org-1}} --user {{user-1}} --app {{id-3}} --removed-at 2026-10-15T23:50:27Z --latency 30
+leaver test: {{user-1}} in {{org-1}}, removed 2026-10-15T23:50:27Z, latency 30 min (deadline 2026-10-16T00:20:27Z); read 2026-10-15T23:51:58Z
+  PASS    account disabled, no token: disabled, and no API token it owns is listed
+  PASS    token refused: refused: 400 invalid_grant
+  UNREAD  sign-in refused: no sign-in to the app since the removal is in the log yet: sign in as the test user, then run again before the deadline
+exit 3: not proven: a check could not be made (nothing is known about it)
+
+(the same, four more times, a minute apart)
+
+$ python3 leaver_test.py --org {{org-1}} --user {{user-1}} --app {{id-3}} --removed-at 2026-10-15T23:50:27Z --latency 30
+leaver test: {{user-1}} in {{org-1}}, removed 2026-10-15T23:50:27Z, latency 30 min (deadline 2026-10-16T00:20:27Z); read 2026-10-15T23:57:34Z
+  PASS    account disabled, no token: disabled, and no API token it owns is listed
+  PASS    token refused: refused: 400 invalid_grant
+  PASS    sign-in refused: refused with 50105 (the user is not assigned to the app), 17 s after the removal
+exit 0: every check passed inside the latency
+6 call(s), 0 read(s) refused or not read whole (the refresh grant's 400 invalid_grant is the token check passing, not a failed read); leaver-test.json written with every estate value replaced
+```
+
+The run over OIDC the same day, with the test user disabled at Entra instead, read the same way: exit 1 before, exit 3
+twice while the log caught up, then exit 0 at 23:45:57 UTC, the refusal logged as 50057 for an attempt 19 s after the
+removal. Read it as: the account and the token checks pass as soon as the close holds, and the sign-in check waits for
+Entra's log, which held the refused attempt some six to seven minutes after it was made; a run that finds nothing in
+the log yet is unproven, never a pass. The last line's wording is the script as it stands; the runs above printed
+the count of refused calls without separating the grant's 400 from a failed read.
+
 ## What to read in it
 
 - **Leavers in step are the goal.** Each leaver above is disabled and holds no token, so the run changes nothing and
@@ -268,9 +310,9 @@ no call refused.
   `--name-claim <org>=mail`.
 - **Closing an account does not drop its direct roles.** After the close, the throwaway account still holds Service
   Broker User, granted to it by name. A new person given a departed person's name reached the account and its direct
-  role while the account was enabled (over SAML and over OIDC keyed on `preferred_username`); whether this disabled
-  account would turn that person away was not run. So the report keeps flagging it until someone drops the role or
-  deletes the account. The `direct role assignments` line in every organization is the check that roles arrive only
+  role while the account was enabled (over SAML and over OIDC keyed on `preferred_username`); a closed account turned
+  that person away, and enabled again, let them in holding its direct role (All Apps organizations, one run per
+  protocol). So the report keeps flagging it until someone drops the role or deletes the account. The `direct role assignments` line in every organization is the check that roles arrive only
   through groups: it should read `none`.
 - **Two kinds of leaver.** The account in `{{org-3}}` left at Entra (its Entra account is disabled). The two accounts
   in `{{org-1}}` and `{{org-2}}` still exist and are enabled at Entra, but no group assigned to those apps carries
