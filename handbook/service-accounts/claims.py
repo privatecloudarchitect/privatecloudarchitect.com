@@ -20,14 +20,18 @@ example a service JWT from the fleet plane's exchange, or the bearer another flo
 Env:   opslib.py's variables (OPS_HOST, OPS_API_TOKEN_FILE; OPS_BROKER_HOST, the broker that trades the token, when it
        is not OPS_HOST; BROKER_TENANT, OPS_TLS_VERIFY optional)
        JWT_ENV (optional)  name of an env var holding a JWT to decode instead of minting one
-Use:   python3 claims.py          it takes no argument; --help prints this
+Use:   python3 claims.py                           mint at the broker and decode the bearer; --help prints this
+       python3 claims.py --replay replay/claims    without an estate: the broker's answer from the recorded set beside
+                                                   this script (its hosts are placeholders); nothing is sent and no
+                                                   credential is read; JWT_ENV does not combine with it
 Exit:  0 claims printed, the principal a PERSON or a CLIENT
        3 the mint failed (the broker did not trade the api-token for a bearer, or answered a bearer that is not a JWT),
          the principal is not determined (no prn_type and no person's claim, no prn_type and a person's claim holding
-         a VCF Automation service account's user name, or a prn_type other than USER or SERVICE), or an error the
-         script did not expect
+         a VCF Automation service account's user name, or a prn_type other than USER or SERVICE), a request a --replay
+         set holds no answer for, or an error the script did not expect
        5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, OPS_API_TOKEN_FILE that cannot
-         be read, JWT_ENV naming an empty variable or a value that is not a JWT, or a Python older than 3.10
+         be read, JWT_ENV naming an empty variable or a value that is not a JWT, a --replay directory that cannot be
+         read or holds no replay set, --replay with JWT_ENV set, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
 run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190); one past its expiry date is
 not tested.
@@ -42,6 +46,8 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
+
+from opslib import _replay_check  # noqa: F401  the replay block's check of a set, so a set can be checked from here
 
 EXIT_UNREAD, EXIT_USAGE = 3, 5
 
@@ -122,16 +128,35 @@ class _Parser(argparse.ArgumentParser):
 def main(argv: list[str] | None = None) -> int:
     """The run, with three guards around it: a Python older than 3.10 is refused (exit 5), an argument the script does
     not take is a usage error (exit 5) before anything is read, and an error the script did not expect exits 3, the
-    code for a read that failed."""
+    code for a read that failed. A replay set, once loaded, is unloaded however the run ends."""
     if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
         print("claims.py needs Python 3.10 or later", file=sys.stderr)
         return EXIT_USAGE
-    _Parser(prog="claims.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args(argv)
+    ap = _Parser(prog="claims.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--replay", metavar="DIR",
+                    help="answer every request from the recorded set in DIR (replay/claims beside this script is one): "
+                         "nothing is sent and no credential is read")
+    a = ap.parse_args(argv)
+    import opslib  # the broker exchange beside this script, and the replay set its requests are answered from
+
     try:
+        if a.replay:
+            try:
+                opslib.replay_start(a.replay)
+            except (OSError, ValueError) as e:
+                print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+                return EXIT_USAGE
+            if os.environ.get("JWT_ENV"):
+                print("--replay answers the broker's mint from the recorded set, and JWT_ENV names a JWT to decode "
+                      "instead, so the two do not combine: unset JWT_ENV, or run without --replay; nothing was sent",
+                      file=sys.stderr)
+                return EXIT_USAGE
         return _run()
     except Exception as e:  # noqa: BLE001  the last guard: whatever was not expected is not known, so exit 3
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]} (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
+    finally:
+        opslib.replay_stop()
 
 
 def _run():

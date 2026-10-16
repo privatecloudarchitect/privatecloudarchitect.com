@@ -14,7 +14,7 @@ Read-only. It changes nothing on the instance and writes one file, `content.json
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>        # minted in the operations console; OPS_REALM defaults to CUSTOMER
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # minted in the operations console; OPS_REALM defaults to CUSTOMER
 export OPS_OWNER=<your-owner-prefix>         # the first field of every name you author
 export OPS_NAMING=naming.example.json        # your bundles, kinds and scope values; copy it and edit
 export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
@@ -24,6 +24,10 @@ python3 content.py
 The api-token is exchanged at the identity broker for a short-lived bearer, the flow the handbook's Part 0
 identity chapter teaches. On 9.1 the older username and password token-acquire flow is rejected for federated
 users.
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 ## The practices, and what makes each one easy
 

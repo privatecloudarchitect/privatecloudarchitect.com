@@ -34,7 +34,8 @@ guest or an organization whose name claim carries mail resolves by mail. A name 
 when none was, every account of the organization is undetermined, because the name its user key carries is not one
 the lookups can read. Any other key, or an account whose name does not fit its organization's key, is undetermined.
 Local accounts are out of scope. Two more things are flagged and never acted on: a federated account holding a role
-directly (a reused name reached such a role on an enabled account, and a close leaves it in place), and an account disabled here whose name an
+directly (keyed on a name, a reused name reached such a role on an enabled account, and a close leaves it in place;
+under oid, a later holder of the name signs in to a new account and does not reach it), and an account disabled here whose name an
 enabled, entitled Entra user now holds (if that is a different person, re-enabling the account hands them its
 roles). An enabled account whose name a new person was given reads keep like any entitled account: the user record
 carries no creation time to compare with the Entra user's, and the report does not read the audit trail for one (only
@@ -159,8 +160,9 @@ Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider API token, traded 
       VCFA_PROVIDER_BEARER_FILE (a provider bearer, below); TLS_VERIFY=false only on a self-signed lab CA
       (VCF Automation only; Entra and Graph are always verified); ENTRA_TENANT_ID (the id, or a domain name), ENTRA_CLIENT_ID and
       ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (PEM; needs the `cryptography` package);
-      ORGS (comma list, to read fewer organizations); OUT (default leavers.json); WARN_DAYS (default 30, the watch's):
-      on a provider API token, the run flags its own token inside this many days of its end; VCFA_PROVIDER_TOKEN_NAME,
+      ORGS (comma list, to read fewer organizations); OUT (default leavers.json; leavers.replay.json under --replay);
+      WARN_DAYS (default 30, the watch's): on a provider API token, the run flags its own token inside this many days
+      of its end; VCFA_PROVIDER_TOKEN_NAME,
       the name the job's token was minted with (its client_name): set it whenever the run's user owns more than one
       REFRESH token, as during a rotation's overlap or when one administrator mints both scheduled jobs' tokens, or
       the run cannot tell which token it holds and exits 3; change it with the token file at every rotation
@@ -197,6 +199,12 @@ Use:  python3 leavers.py                                   report every federate
       ACCOUNT is the account's user name (a principal name, or under oid the object id), a principal name under oid
       (resolved through Graph to the object id; for --close-now, in the plan only), or the account's id
       (urn:vcloud:user:...).
+      python3 leavers.py --replay replay/leavers [...]    any of the above without an estate: every answer from the
+                                                           recorded set beside this script (its hosts are placeholders),
+                                                           dates judged at the time it was recorded; nothing is sent and
+                                                           no credential is read, a request the set holds no answer for
+                                                           is a read that failed (exit 3), and --execute runs its plan
+                                                           alone (with --close-now too): nothing is closed
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 with --execute, a close that did not hold on read-back, among them a read-back that did not read; under each
         the run prints how to finish it: the close again for that one account by its id (--close-now --org ORG --user
@@ -211,7 +219,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         still holds an enabled federated account or a token of one is one, a list read in part is one, and so is an
         error the script did not expect: nothing is read, or nothing is trusted, and nothing is written); also the
         run's own provider API token's end date unread (two REFRESH tokens of its user and no
-        VCFA_PROVIDER_TOKEN_NAME among the causes), and a --close-now name guard that could not read a date
+        VCFA_PROVIDER_TOKEN_NAME among the causes), a --close-now name guard that could not read a date, and a
+        request a --replay set holds no answer for
       4 a flag (a direct role, a name in use again) not acknowledged in --ack, or the run's own provider API token
         inside WARN_DAYS of its end (rotate it; that flag is not acknowledged, the rotation clears it)
       0 nothing open, nothing unread, nothing flagged (with --close-now: the close held, or the plan printed, which
@@ -221,7 +230,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         --left-on, and with --close-now an account that is not federated, under oid a --user given to --execute that
         is not an object id or the account's id, a principal name without --left-on, one the name guard refuses, or
         one no Entra user holds while an account carries it, and a name that selects an account whose protocol is
-        stored as keyed on anything but a name (nothing is sent, nothing is written)
+        stored as keyed on anything but a name, and a --replay directory that cannot be read or holds no replay set
+        (nothing is sent, nothing is written)
       A record refused because an estate value survived the scrub is not written, and never hides a finding: the
       run's code stands when it is 1, 2, 3 or 4, and a run whose code was 0 exits 3 (the record was not written); a
       run that closed something prints what its writes did, in counts, and that the record was not written.
@@ -405,12 +415,25 @@ def decide(user: dict, found: dict | None, member_of: set | None, gate: dict | N
     return "keep", "entitled through " + ", ".join(sorted(claim_groups(gate)[g] for g in carried))
 
 
-def flags(user: dict, decision: str) -> list[str]:
-    """What the script reports and never acts on (IAM-F70: a name in use again takes over the account)."""
+DIRECT_ROLE_OID = ("direct-role: granted to the account directly; the organization is keyed on oid, so a person later "
+                   "given this name signs in to a new account and does not reach these roles")
+DIRECT_ROLE_ENABLED = ("direct-role: granted to the account by name; while it is enabled, a person later given this name "
+                       "signs in to it and holds these roles (shown over SAML and OIDC keyed on preferred_username); a "
+                       "disabled account turned the name away")
+DIRECT_ROLE_DISABLED = ("direct-role: granted to the account by name; disabled, it turned a person later given this name "
+                        "away (shown over SAML and OIDC keyed on preferred_username), and enabling it again hands that "
+                        "person these roles")
+
+
+def flags(user: dict, decision: str, key: str | None = None) -> list[str]:
+    """What the script reports and never acts on (IAM-F70: a name in use again takes over the account). The direct-role
+    flag says what a later holder of the name reaches, by the organization's user key (`key`, as its settings store it,
+    None when they store none): under oid a new account, never these roles; keyed on a name, the account itself while
+    it is enabled, and a turned-away sign-in while it is disabled, until it is enabled again."""
     out = []
     if user.get("providerType") in FEDERATED and user.get("roleEntityRefs"):
-        out.append("direct-role: granted to the account by name, so a person later given this name holds them: shown "
-                   "for an enabled account over SAML and OIDC keyed on preferred_username, not run for a disabled one")
+        out.append(DIRECT_ROLE_OID if key in BY_ID
+                   else DIRECT_ROLE_DISABLED if user.get("enabled") is False else DIRECT_ROLE_ENABLED)
     if user.get("providerType") in FEDERATED and user.get("enabled") is False and decision == "keep":
         out.append("name-in-use-again: disabled here, and an enabled, entitled Entra user holds this name; if that "
                    "is a different person, delete the account or drop its direct roles before enabling it")
@@ -525,8 +548,245 @@ def exit_code(summary: dict, execute: bool) -> int:
     return 0
 
 
+# ── replay: recorded answers in place of the estate (the same block, byte for byte, in every identity companion) ──
+# --replay DIR answers every request from the recorded answers in DIR's *.json files, so a reader runs the tool without
+# an estate and a test drives its real code path. An answer is chosen by the request's method, path and query (an
+# answer may also name the host, headers the request must carry, such as an organization's tenant context, or a string
+# its body must hold); the most specific answer that fits is given, and several answers to one request are given in
+# their order, the last one again after that.
+# Nothing is sent while a set is loaded: _urlopen answers from the set and never reaches the network, no credential is
+# read, a request the set holds no answer for is a read that did not happen (exit 3, never an empty answer), and a
+# writing mode runs its plan alone. A set may name the time its answers were recorded ("now"), so a run judges dates
+# as it did then, and the hosts it recorded ("env"), never a credential.
+REPLAY = None  # the loaded set; None while the tool runs against an estate
+REPLAY_CREDENTIAL = "replay-placeholder"  # what a replayed run holds instead of a credential: nothing is sent
+REPLAY_ANSWER_KEYS = {"method", "path", "query", "host", "request_headers", "body_contains", "status", "body", "text",
+                      "headers", "fail", "note"}
+REPLAY_SET_KEYS = {"replay", "about", "source", "now", "env", "answers"}
+
+
+class ReplayMiss(urllib.error.URLError):
+    """A request the replay set holds no answer for: a read that did not happen, never an empty answer."""
+
+
+class _Replayed:
+    """A recorded answer in the shape urllib.request.urlopen returns."""
+
+    def __init__(self, url, status, headers, raw):
+        self.url, self.status, self.code, self.headers, self.reason, self._raw = url, status, status, headers, "", raw
+
+    def read(self, amt=None):
+        out = self._raw if amt is None else self._raw[:amt]
+        self._raw = self._raw[len(out):]
+        return out
+
+    def getcode(self):
+        return self.status
+
+    def geturl(self):
+        return self.url
+
+    def info(self):
+        return self.headers
+
+    def getheader(self, name, default=None):
+        return self.headers.get(name, default)
+
+    def close(self):
+        self._raw = b""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        self.close()
+        return False
+
+
+def _replay_tokens(value):
+    """{"$jwt": {claims}} anywhere in an answer becomes an unsigned token carrying those claims, made here: a set holds
+    no token, and a token made here was never issued by anything."""
+    import base64
+
+    def part(obj):
+        return base64.urlsafe_b64encode(json.dumps(obj, separators=(",", ":")).encode()).rstrip(b"=").decode()
+
+    if isinstance(value, dict):
+        if set(value) == {"$jwt"} and isinstance(value["$jwt"], dict):
+            return f"{part({'alg': 'none', 'typ': 'JWT'})}.{part(value['$jwt'])}.cmVwbGF5"
+        return {k: _replay_tokens(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replay_tokens(v) for v in value]
+    return value
+
+
+def _replay_check(name, doc):
+    """Why a set file cannot be replayed, or None."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("answers"), list):
+        return f"{name}: no answers list"
+    if set(doc) - REPLAY_SET_KEYS:
+        return f"{name}: keys a set does not take: {', '.join(sorted(set(doc) - REPLAY_SET_KEYS))}"
+    env = doc.get("env", {})
+    if not isinstance(env, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+        return f"{name}: env is not a map of names to values"
+    secret = [k for k in env if any(w in k.upper() for w in ("TOKEN", "SECRET", "PASSWORD", "BEARER", "KEY", "CERT"))]
+    if secret:
+        return f"{name}: env names a credential ({', '.join(secret)}); a set carries none"
+    for i, a in enumerate(doc["answers"]):
+        where = f"{name} answer {i + 1}"
+        if not isinstance(a, dict):
+            return f"{where}: not an object"
+        if set(a) - REPLAY_ANSWER_KEYS:
+            return f"{where}: keys an answer does not take: {', '.join(sorted(set(a) - REPLAY_ANSWER_KEYS))}"
+        if not isinstance(a.get("method"), str) or not isinstance(a.get("path"), str) or not a["path"].startswith("/"):
+            return f"{where}: needs a method and a path that starts with /"
+        query = a.get("query", {})
+        if query != "*" and not (isinstance(query, dict) and all(
+                isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
+                for v in query.values())):
+            return f"{where}: query is not a map of names to values, or *"
+        status = a.get("status", 200)
+        if isinstance(status, bool) or not isinstance(status, int) or not 100 <= status <= 599:
+            return f"{where}: status is not an HTTP status"
+        if "body" in a and "text" in a:
+            return f"{where}: holds both body and text"
+        if not all(isinstance(a.get(k, {}), dict) for k in ("headers", "request_headers")):
+            return f"{where}: headers or request_headers is not a map"
+        if not isinstance(a.get("fail", ""), str) or not isinstance(a.get("body_contains", ""), str):
+            return f"{where}: fail is not a reason, or body_contains is not a string"
+    return None
+
+
+class Replay:
+    """The recorded answers in one directory's *.json files, read in name order."""
+
+    def __init__(self, directory):
+        from datetime import datetime
+
+        names = sorted(n for n in os.listdir(directory) if n.endswith(".json"))
+        if not names:
+            raise ValueError(f"{directory} holds no *.json answer file")
+        self.directory, self.answers, self.env, self.now = directory, [], {}, None
+        self.asked, self.missed, self.answered = {}, [], 0
+        for name in names:
+            with open(os.path.join(directory, name), encoding="utf-8") as f:
+                doc = json.load(f)
+            why = _replay_check(name, doc)
+            if why:
+                raise ValueError(why)
+            self.answers += doc["answers"]
+            self.env.update(doc.get("env", {}))
+            if doc.get("now"):
+                now = datetime.fromisoformat(str(doc["now"]).replace("Z", "+00:00"))
+                if now.tzinfo is None:
+                    raise ValueError(f"{name}: now carries no offset")
+                if self.now is not None and now != self.now:
+                    raise ValueError(f"{name}: now differs from another file's")
+                self.now = now
+
+    def answer(self, req):
+        """The recorded answer to one request, as urlopen would give it; ReplayMiss when the set holds none."""
+        import email.message
+        import io
+
+        if isinstance(req, str):
+            req = urllib.request.Request(req)
+        method = req.get_method().upper()
+        url = urllib.parse.urlsplit(req.full_url)
+        path, host = urllib.parse.unquote(url.path), url.hostname
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        sent = req.data.decode("utf-8", "replace") if isinstance(req.data, bytes) else ""
+        carried = {k.lower(): str(v) for k, v in req.header_items()}
+
+        def fits(a):
+            if a["method"].upper() != method or urllib.parse.unquote(a["path"]) != path:
+                return False
+            if a.get("host") not in (None, host) or a.get("body_contains", "") not in sent:
+                return False
+            if any(carried.get(k.lower()) != str(v) for k, v in a.get("request_headers", {}).items()):
+                return False
+            want = a.get("query", {})
+            return want == "*" or (set(want) == set(query) and all(
+                v == "*" or (v if isinstance(v, list) else [v]) == query[k] for k, v in want.items()))
+
+        def weight(a):  # the most specific answer is given: an exact query over a "*", a named host over none
+            want = a.get("query", {})
+            exact = 0 if want == "*" else 1 if "*" in want.values() else 2
+            return exact, "host" in a, len(a.get("request_headers", {})), "body_contains" in a
+
+        hits = [a for a in self.answers if fits(a)]
+        hits = [a for a in hits if weight(a) == max(map(weight, hits))]
+        shown = f"{method} {url.path}" + (f"?{url.query}" if url.query else "")
+        if not hits:
+            self.missed.append(shown)
+            print(f"replay: the set holds no answer for {shown}: a read that did not happen", file=sys.stderr)
+            raise ReplayMiss(f"replay: no recorded answer for {method} {url.path}")
+        key = tuple(id(a) for a in hits)
+        a = hits[min(self.asked.get(key, 0), len(hits) - 1)]
+        self.asked[key] = self.asked.get(key, 0) + 1
+        self.answered += 1
+        if a.get("fail"):
+            raise urllib.error.URLError(f"replay: {a['fail']}")
+        headers = email.message.Message()
+        for k, v in _replay_tokens(a.get("headers", {})).items():
+            headers[k] = str(v)
+        if "body" in a:
+            raw, kind = json.dumps(_replay_tokens(a["body"])).encode(), "application/json"
+        else:
+            raw, kind = str(a.get("text", "")).encode(), "text/plain"
+        if raw and headers.get("Content-Type") is None:
+            headers["Content-Type"] = kind
+        status = a.get("status", 200)
+        if status >= 400:
+            raise urllib.error.HTTPError(req.full_url, status, "replayed refusal", headers, io.BytesIO(raw))
+        return _Replayed(req.full_url, status, headers, raw)
+
+
+def replay_start(directory):
+    """Load the set in DIR for this run. ValueError or OSError when it cannot be replayed: a usage error (exit 5)."""
+    global REPLAY
+    REPLAY = Replay(directory)
+    for k, v in REPLAY.env.items():
+        if k not in os.environ:
+            os.environ[k] = v
+        else:
+            REPLAY.env[k] = None  # the reader's own value stands, and stays when the run ends
+    print(f"replay: {len(REPLAY.answers)} recorded answers from {directory}; nothing is sent and no credential is read",
+          file=sys.stderr)
+    return REPLAY
+
+
+def replay_stop():
+    """Unload the set and the hosts it named: a run in a test leaves nothing behind for the next."""
+    global REPLAY
+    if REPLAY is not None:
+        for k, v in REPLAY.env.items():
+            if v is not None:
+                os.environ.pop(k, None)
+    REPLAY = None
+
+
+def replay_now():
+    """The time a replayed set was recorded at, when it names one, or the time now: dates are judged as they were."""
+    from datetime import datetime, timezone
+
+    return REPLAY.now if REPLAY is not None and REPLAY.now is not None else datetime.now(timezone.utc)
+
+
+def _urlopen(req, context=None, timeout=60, opener=None):
+    """urllib.request.urlopen, or, with a replay set loaded, its recorded answer: nothing leaves the process."""
+    if REPLAY is not None:
+        return REPLAY.answer(req)
+    if opener is not None:
+        return opener.open(req, timeout=timeout)
+    return urllib.request.urlopen(req, context=context, timeout=timeout)
+# ── end of the replay block ──────────────────────────────────────────────────────────────────────────────────────
+
+
 # ── HTTP, standard library only ──────────────────────────────────────────────────────────────────────────────────
-def _ctx(verify: bool) -> ssl.SSLContext:
+def _ctx(verify: bool) -> ssl.SSLContext | None:
+    if REPLAY is not None:  # a replayed run opens no connection, so it makes no TLS context
+        return None
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
@@ -535,6 +795,8 @@ def _lab_verify() -> bool:
 
 
 def _secret_file(name: str) -> str:
+    if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
+        return REPLAY_CREDENTIAL
     with open(os.environ[name], encoding="utf-8") as f:
         return f.read().strip()
 
@@ -567,8 +829,8 @@ class Reader:
             h["Content-Type"] = "application/json"
         url = url_or_path if url_or_path.startswith("https://") else self.base + url_or_path
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, data=data, headers=h, method=method),
-                                        context=_ctx(self.verify), timeout=60) as r:
+            with _urlopen(urllib.request.Request(url, data=data, headers=h, method=method),
+                          context=_ctx(self.verify), timeout=60) as r:
                 rec["status"], raw = r.status, r.read()
         except urllib.error.HTTPError as e:
             rec["status"], rec["message"] = e.code, _message(e)
@@ -597,7 +859,7 @@ class Vcfa(Reader):
                                            "refresh_token": _secret_file("VCFA_PROVIDER_REFRESH_TOKEN_FILE")}).encode()
             req = urllib.request.Request(f"https://{host}/oauth/provider/token", data=form, method="POST", headers={
                 "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
-            with urllib.request.urlopen(req, context=_ctx(verify), timeout=60) as r:
+            with _urlopen(req, context=_ctx(verify), timeout=60) as r:
                 bearer = json.loads(r.read())["access_token"]
         super().__init__("vcf-automation", f"https://{host}", {"Authorization": f"Bearer {bearer}"}, verify, calls)
         del bearer
@@ -671,7 +933,7 @@ class Graph(Reader):
             form["client_assertion"] = _assertion(tenant, client)
         req = urllib.request.Request(f"{ENTRA}/{tenant}/oauth2/v2.0/token", data=urllib.parse.urlencode(form).encode(),
                                      method="POST", headers={"Content-Type": "application/x-www-form-urlencoded"})
-        with urllib.request.urlopen(req, context=_ctx(True), timeout=60) as r:
+        with _urlopen(req, context=_ctx(True), timeout=60) as r:
             bearer = json.loads(r.read())["access_token"]
         del form
         self.tid = token_tenant(bearer)
@@ -743,6 +1005,8 @@ def resolve_tenant(given: str, graph: Graph) -> tuple[str | None, str]:
 
 def _assertion(tenant: str, client: str) -> str:
     """A signed JWT in place of a secret (PS256, x5t#S256), the form Entra takes for a certificate credential."""
+    if REPLAY is not None:  # a replayed run reads no key or certificate: nothing is sent
+        return REPLAY_CREDENTIAL
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding
@@ -811,7 +1075,7 @@ def _discovery(domain: str) -> tuple[int | None, dict | None]:
     openid-configuration, no credential. 400 names no tenant; the issuer carries the tenant id."""
     url = f"{ENTRA}/{urllib.parse.quote(domain)}/v2.0/.well-known/openid-configuration"
     try:
-        with urllib.request.urlopen(url, context=_ctx(True), timeout=30) as r:
+        with _urlopen(url, context=_ctx(True), timeout=30) as r:
             return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e:
         return e.code, None
@@ -1087,7 +1351,8 @@ def confirm_all(graph: Graph, users: list[dict], gate: dict, reads: int | None =
     groups' direct members afresh, then judges every account on that read, so an organization's leavers cost the
     same wall time as one. {account id: (True only when every read says leaver, the reads)}."""
     reads = CONFIRM_READS if reads is None else reads
-    pause = CONFIRM_PAUSE if pause is None else pause
+    if pause is None:  # recorded answers do not settle: a replayed run reads them again without waiting
+        pause = 0 if REPLAY is not None else CONFIRM_PAUSE
     seen: dict[str, list[str]] = {str(u.get("id")): [] for u in users}
     for i in range(reads):
         if i:
@@ -1386,7 +1651,7 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
     chosen: no guard runs and no Graph is read. Under any other stored key a name is refused (exit 5), and the
     account's id closes the account. `make_graph` gives the Graph reader, made only when a principal name must be
     resolved under oid."""
-    record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    record = {"captured": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "close-now" if execute else "close-now plan", "organizations": [], "unreadable": [],
               "federated_elsewhere": 0, "sent": []}
 
@@ -1528,7 +1793,7 @@ def own_credential(vcfa: Vcfa, warn_days: int, now: datetime | None = None, name
     if when is None:
         out["unread"] = "its token record gives no end date, so when it stops is not known"
         return out
-    now = now or datetime.now(timezone.utc)
+    now = now or replay_now()  # a replayed run judges the end date as the recorded run did
     out["ends"] = when.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     out["days_left"] = round((when - now).total_seconds() / 86400, 1)
     if out["days_left"] <= warn_days:
@@ -1553,7 +1818,7 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
     if not orgs and not unreadable:  # a wrong tenant id reads as nothing to do: it is a read that failed (exit 3)
         unreadable.append({"org": None, "reason": f"no organization names this tenant ({elsewhere} federated "
                                                   "elsewhere): check ENTRA_TENANT_ID"})
-    record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    record = {"captured": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "execute" if execute else "report", "tenant": tenant, "organizations": [],
               "unreadable": unreadable, "federated_elsewhere": elsewhere, "sent": []}
     if expect is not None:
@@ -1579,7 +1844,7 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
             say(f"  {of['org']} ({of['protocol']}): {entry['error']}")
             continue
         act_ids = None
-        if execute and act_on:  # the one account --user names, chosen and announced before anything is judged or sent
+        if act_on:  # the one account --user names (--execute's, or its plan's under --replay), chosen and announced first
             m = entry["user_match"] = select_account(users, act_on, of.get("key"), graph)
             if announce:
                 announce(match_line(m))
@@ -1631,7 +1896,7 @@ def reconcile(vcfa: Vcfa, graph: Graph, tenant: str, only: list[str], execute: b
                         row["decision"], row["reason"] = "undetermined", unconfirmed(reads)
         todo = {}
         for user, row in zip(users, entry["users"], strict=True):
-            row["flags"] = flags(user, row["decision"])
+            row["flags"] = flags(user, row["decision"], of.get("key"))
             todo[user.get("id")] = action(user, row["decision"], mine[user.get("id")], execute, act_ids)
         federated = sum(1 for u in users if u.get("providerType") in FEDERATED)
         entry["leaver_guard"] = leaver_guard(sum(1 for t in todo.values() if t and not t.startswith("in step")),
@@ -1968,10 +2233,12 @@ def _write(record: dict, calls: list, redact: bool) -> int:
     says what its writes did (done_text), counts only, whether or not the report itself was printed: a close that held
     is never reported as a run that found nothing."""
     record["calls"] = [{k: v for k, v in c.items() if k != "message"} for c in calls]
+    if REPLAY is not None:  # a replayed run's record never passes for a live one: a reader refuses it as no run
+        record = {"replay": True, **record}
     table = estate_values(record, given_values())
     clean = scrub(record, table)
     left = leaks(clean, table)
-    out = os.environ.get("OUT", "leavers.json")
+    out = os.environ.get("OUT") or ("leavers.replay.json" if REPLAY is not None else "leavers.json")
     if not (left and redact):  # a redacted print with a surviving value would print that value
         print("\n".join(report_lines(clean if redact else record)))
         for c in calls:
@@ -2017,6 +2284,7 @@ def _close_now_main(a: argparse.Namespace) -> int:
     if not os.environ.get("VCFA_HOST"):
         print("set VCFA_HOST (see the header); --close-now needs no Graph credential", file=sys.stderr)
         return EXIT_USAGE
+    _plan_alone(a)
     calls: list = []
     try:
         vcfa = Vcfa(os.environ["VCFA_HOST"], calls)
@@ -2077,6 +2345,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
               "about what it had not read (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
+    finally:
+        replay_stop()
 
 
 def build_parser() -> _Parser:
@@ -2105,11 +2375,30 @@ def build_parser() -> _Parser:
     ap.add_argument("--expect-tenants", metavar="T1,T2,...",
                     help="every Entra tenant a schedule of this job runs for (ids or domain names, this run's own "
                          "among them): an organization federated to any other is uncovered, and the run exits 3")
+    ap.add_argument("--replay", metavar="DIR",
+                    help="answer every request from the recorded set in DIR (replay/leavers beside this script is "
+                         "one): nothing is sent and no credential is read")
     return ap
+
+
+def _plan_alone(a: argparse.Namespace) -> bool:
+    """Under --replay a writing mode runs its plan alone: --execute is turned off before anything is read, so a
+    replayed run sends no write and never says a close happened. True when it was turned off."""
+    if REPLAY is None or not a.execute:
+        return False
+    print("replay: --execute runs its plan alone under --replay; nothing is sent", file=sys.stderr)
+    a.execute = False
+    return True
 
 
 def _run(argv: list[str] | None = None) -> int:
     a = build_parser().parse_args(argv)
+    if a.replay:
+        try:
+            replay_start(a.replay)
+        except (OSError, ValueError) as e:
+            print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+            return EXIT_USAGE
     if a.left_on and not a.close_now:
         print("--left-on is for --close-now: it guards a principal name under oid", file=sys.stderr)
         return EXIT_USAGE
@@ -2147,6 +2436,7 @@ def _run(argv: list[str] | None = None) -> int:
     if not warn.isdigit():
         print(f"WARN_DAYS {warn!r}: a whole number of days, 0 or more", file=sys.stderr)
         return EXIT_USAGE
+    planned = _plan_alone(a)
     calls: list = []
     try:
         vcfa, graph = Vcfa(os.environ["VCFA_HOST"], calls), Graph(calls)
@@ -2166,7 +2456,7 @@ def _run(argv: list[str] | None = None) -> int:
             print("--expect-tenants does not name this run's own tenant (ENTRA_TENANT_ID): pass the full list, the "
                   "same on every schedule", file=sys.stderr)
             return EXIT_USAGE
-    only = [a.org] if a.execute else [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
+    only = [a.org] if a.org else [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
     record = reconcile(vcfa, graph, tenant, only, a.execute, a.user, say=lambda _m: None, max_leavers=a.max_leavers,
                        name_claims=name_claims, announce=_announcer(a.redact), expect=expect)
     if a.ack:
@@ -2175,6 +2465,8 @@ def _run(argv: list[str] | None = None) -> int:
         record["credential"] = own_credential(vcfa, int(warn), name=os.environ.get("VCFA_PROVIDER_TOKEN_NAME") or None)
     record["summary"] = summary(record)
     record["exit"] = EXIT_USAGE if record.get("refused") else exit_code(record["summary"], a.execute)
+    if planned:  # --execute's plan under --replay: what it would close, nothing sent
+        record["mode"] = "execute plan"
     return _write(record, calls, a.redact)
 
 

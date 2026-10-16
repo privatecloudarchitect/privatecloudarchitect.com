@@ -4,7 +4,8 @@
 Mints each token the documented way, issues ONE harmless read per surface, and prints one row per pair:
 surface, token, HTTP status, verdict. Read-only against the platform: nothing is created or changed, except
 that if VCF Automation answers a refresh-token grant with a different refresh token, the script writes that
-value back to the file it came from (see VCFA_REFRESH_TOKEN_FILE). Stdlib only. Never prints a token value.
+value back to the file it came from (see VCFA_REFRESH_TOKEN_FILE; never under --replay, which reads and writes no
+token file). Stdlib only. Never prints a token value.
 
 Surfaces are chosen by which environment variables are set; unset ones are skipped and reported as such.
 
@@ -49,13 +50,19 @@ that returned no session id; an SDDC Manager token mint that returned no token) 
 NOT READ for that surface and exits 3, never 0. A refused mint that is itself a row also prints its row: the row says
 what the mint answered, and NOT READ says what that left unread.
 
-Use:  python3 doors.py           it takes no argument; --help prints this
+Use:  python3 doors.py                          every surface whose variables are set; --help prints this
+      python3 doors.py --replay replay/doors     without an estate: every answer from the recorded set beside this
+                                                 script, which names the surfaces it recorded (its hosts are
+                                                 placeholders); nothing is sent, no credential or token file is read
+                                                 or written, and every credential reads as present, so a surface runs
+                                                 when its hosts and user names are set
 Exit: 0 every door of every surface configured was read and returned an HTTP status
       3 a read failed: a transport error stopped one (no status), the broker mint failed, a configured surface's own
-        token, session or bearer could not be minted so the doors behind it were not read, or an error the script did
-        not expect
+        token, session or bearer could not be minted so the doors behind it were not read, a request a --replay set
+        holds no answer for, or an error the script did not expect
       5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, a credential file (any NAME_FILE,
-        VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read, or a Python older than 3.10
+        VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read, a --replay directory that
+        cannot be read or holds no replay set, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
 run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190).
 """
@@ -73,7 +80,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from opslib import _ctx, bearer, ops, secret
+import opslib  # the broker exchange, and the replay set every request is answered from under --replay
+from opslib import _ctx, _urlopen, bearer, ops, secret
+from opslib import _replay_check  # noqa: F401  the replay block's check of a set, so a set can be checked from here
 from rtmlib import service_jwt
 
 CLOUDAPI_ACCEPT = "application/json;version=9.1.0"
@@ -90,7 +99,7 @@ def req(method, url, headers=None, data=None, timeout=60):
     """One request. Returns (status, body, response headers); a transport error returns (None, message, {})."""
     r = urllib.request.Request(url, data=data, method=method, headers=headers or {})
     try:
-        with urllib.request.urlopen(r, context=_ctx(), timeout=timeout) as resp:
+        with _urlopen(r, context=_ctx(), timeout=timeout) as resp:
             raw = resp.read()
             try:
                 body = json.loads(raw) if raw else None
@@ -141,8 +150,18 @@ def row(surface, token, status, expect=None, note=""):
 
 
 def read_file_token(path):
+    if opslib.REPLAY is not None:  # a replayed run reads no credential: nothing is sent
+        return opslib.REPLAY_CREDENTIAL
     with open(path, encoding="utf-8") as f:
         return f.read().strip()
+
+
+def token_file_named(var):
+    """The token file a variable names, or None when it is unset. Under --replay no file is read, so every token file
+    reads as present (a placeholder, never opened) and a surface runs when its hosts and user names are set."""
+    if opslib.REPLAY is not None:
+        return opslib.REPLAY_CREDENTIAL
+    return os.environ.get(var) or None
 
 
 def write_file_token(path, value):
@@ -163,7 +182,13 @@ def vcfa_refresh_grant(host, path, token_file):
         print(f"  {path}: HTTP {st}: {str(data)[:160]}")
         not_read(f"VCF Automation, {path}", f"the refresh-token grant returned no bearer (HTTP {st})")
         return None
-    sent = read_file_token(token_file); returned = data.get("refresh_token")
+    returned = data.get("refresh_token")
+    if opslib.REPLAY is not None:  # a replayed run reads and writes no token file, so a rotation is not judged
+        print(f"  {path}: bearer minted; "
+              + ("a refresh token came back with it, and under --replay no token file is read or rewritten, so whether "
+                 "it rotated is not judged" if returned else "no refresh token in the answer"))
+        return data["access_token"]
+    sent = read_file_token(token_file)
     if returned and returned != sent:
         write_file_token(token_file, returned)
         print(f"  {path}: bearer minted; the refresh token ROTATED and the file was rewritten (the old value is dead)")
@@ -212,16 +237,28 @@ def credentials_readable():
 def main(argv: list[str] | None = None) -> int:
     """The run, with three guards around it: a Python older than 3.10 is refused (exit 5), an argument the script does
     not take is a usage error (exit 5) before anything is read, and an error the script did not expect exits 3, the
-    code for a read that failed."""
+    code for a read that failed. A replay set, once loaded, is unloaded however the run ends."""
     if sys.version_info < (3, 10):  # noqa: UP036  the script is run by readers on their own Python
         print("doors.py needs Python 3.10 or later", file=sys.stderr)
         return EXIT_USAGE
-    _Parser(prog="doors.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args(argv)
+    ap = _Parser(prog="doors.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--replay", metavar="DIR",
+                    help="answer every request from the recorded set in DIR (replay/doors beside this script is one): "
+                         "nothing is sent and no credential is read")
+    a = ap.parse_args(argv)
     try:
+        if a.replay:
+            try:
+                opslib.replay_start(a.replay)
+            except (OSError, ValueError) as e:
+                print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+                return EXIT_USAGE
         return _run()
     except Exception as e:  # noqa: BLE001  the last guard: whatever was not expected is not known, so exit 3
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]} (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
+    finally:
+        opslib.replay_stop()
 
 
 def _run():
@@ -310,9 +347,9 @@ def _run():
     # ---- VCF Automation: three login paths, one principal
     host, org = os.environ.get("VCFA_HOST"), os.environ.get("VCFA_ORG")
     counts = {}
-    if host and org and os.environ.get("VCFA_REFRESH_TOKEN_FILE"):
+    if host and org and token_file_named("VCFA_REFRESH_TOKEN_FILE"):
         print("\nVCF Automation, the tenant OAuth grant")
-        t = vcfa_refresh_grant(host, f"/oauth/tenant/{org}/token", os.environ["VCFA_REFRESH_TOKEN_FILE"])
+        t = vcfa_refresh_grant(host, f"/oauth/tenant/{org}/token", token_file_named("VCFA_REFRESH_TOKEN_FILE"))
         if t:
             st, n = rights_count(host, t); counts["OAuth grant"] = n
             row("VCF Automation, rights", "tenant OAuth bearer", st, "accepted", f"{n} effective rights" if n is not None else "")
@@ -334,17 +371,17 @@ def _run():
         elif st is not None:
             not_read("VCF Automation, the Basic session login", f"the session login returned no bearer (HTTP {st})")
     else:
-        print("\n  VCF Automation, Basic session login   skipped: VCFA_USER and VCFA_PASSWORD_FILE not set")
-    if host and os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
+        print("\n  VCF Automation, Basic session login   skipped: VCFA_HOST, VCFA_USER, VCFA_PASSWORD_FILE not all set")
+    if host and token_file_named("VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
         print("\nVCF Automation, the provider api-token")
-        t = vcfa_refresh_grant(host, "/oauth/provider/token", os.environ["VCFA_PROVIDER_REFRESH_TOKEN_FILE"])
+        t = vcfa_refresh_grant(host, "/oauth/provider/token", token_file_named("VCFA_PROVIDER_REFRESH_TOKEN_FILE"))
         if t:
             st, n = rights_count(host, t); counts["provider api-token"] = n
             row("VCF Automation, provider rights", "provider bearer", st, "accepted", f"{n} effective rights" if n is not None else "")
             st, _, _ = req("GET", f"https://{host}/cci/kubernetes/api", {"Authorization": f"Bearer {t}", "Accept": "application/json"})
             row("VCF Automation, control plane", "provider bearer", st, "refused", "a tenant surface")
     else:
-        print("\n  VCF Automation, provider api-token    skipped: VCFA_PROVIDER_REFRESH_TOKEN_FILE not set")
+        print("\n  VCF Automation, provider api-token    skipped: VCFA_HOST, VCFA_PROVIDER_REFRESH_TOKEN_FILE not both set")
     if len(counts) > 1:
         print("\n  the arrival rule, in numbers: "
               + " · ".join(f"{k}: {v if v is not None else 'not read'}" for k, v in counts.items()))

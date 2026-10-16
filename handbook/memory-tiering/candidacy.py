@@ -26,7 +26,7 @@ both sides of the boundary).
 Read-only throughout: resource lists, stat keys, and stat values. It writes nothing to the instance.
 
 Run:
-  export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN=...
+  export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN_FILE=...   # mode 0600 (or OPS_API_TOKEN, the value)
   export OPS_TLS_VERIFY=false                 # only on a self-signed lab CA
   python3 candidacy.py                        # writes candidacy.json beside this file
 """

@@ -1,0 +1,148 @@
+{
+ "replay": 1,
+ "about": "the reference fleet's realm as api_client.py read it back on 2026-10-15 in the rotation's overlap, every name a placeholder: one realm covering two VCF instances, the API client backup-01 with vcf_viewer at the realm's scope and two active tokens, and the operator's own token beside them; the answers every mode's reads get (under --replay, --execute runs its plan alone and reads nothing, so the tests drive these through the replay block)",
+ "source": "api_client.json, api_client_overlap.json and api_client_instance.json beside api_client.py (the committed, scrubbed records of 2026-10-13 and 2026-10-15): the read-back's roles, scopes and token lifetimes, the run's signed_in_as, and the instance a role was bound at; the ids, the realm's name, the creation dates and the operator's token are made up (the records keep none)",
+ "now": "2026-10-15T06:37:03Z",
+ "env": {
+  "OPS_HOST": "ops.example.test"
+ },
+ "answers": [
+  {
+   "method": "POST",
+   "host": "ops.example.test",
+   "path": "/acs/t/CUSTOMER/token",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "sub": "operator",
+      "prn_type": "USER",
+      "iat": 1792050000,
+      "exp": 1792053600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   },
+   "note": "the operator's API token traded for a bearer: a person's (prn_type USER), as the records' signed_in_as"
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms",
+   "body": {
+    "ssoRealms": [
+     {
+      "id": "00000000-0000-4000-8000-0000000000a1",
+      "name": "sso-realm-01",
+      "idpId": "00000000-0000-4000-8000-0000000000b1"
+     }
+    ]
+   },
+   "note": "one realm: the records predate realms_in_fleet, and the reference fleet holds one"
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-0000000000a1",
+   "body": {
+    "id": "00000000-0000-4000-8000-0000000000a1",
+    "name": "sso-realm-01",
+    "ssoRealmCoverage": [
+     {
+      "id": "00000000-0000-4000-8000-0000000000c1",
+      "name": "instance-01",
+      "ssoEntityType": "VCF_INSTANCE"
+     },
+     {
+      "id": "00000000-0000-4000-8000-0000000000c2",
+      "name": "instance-02",
+      "ssoEntityType": "VCF_INSTANCE"
+     },
+     {
+      "id": "00000000-0000-4000-8000-0000000000c3",
+      "name": "ops-01",
+      "ssoEntityType": "MANAGEMENT_COMPONENT"
+     }
+    ]
+   },
+   "note": "the realm's coverage, read for --scope instance: api_client_instance.json bound a role at instance-01"
+  },
+  {
+   "method": "POST",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-0000000000a1/api-clients/query",
+   "query": {
+    "page": "0",
+    "pageSize": "*"
+   },
+   "body": {
+    "apiClients": [
+     {
+      "clientId": "backup-01",
+      "clientName": "backup-01",
+      "clientUuid": "00000000-0000-4000-8000-000000000a11",
+      "clientDescription": "backup",
+      "roles": [
+       {
+        "roleName": "vcf_viewer",
+        "roleScope": {
+         "scopeType": "SSO_REALM",
+         "resources": []
+        }
+       }
+      ]
+     }
+    ],
+    "pageInfo": {
+     "page": 0,
+     "pageSize": 50,
+     "totalCount": 1
+    }
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-0000000000a1/api-tokens/query",
+   "query": {
+    "page": "0",
+    "pageSize": "*"
+   },
+   "body": {
+    "apiTokens": [
+     {
+      "id": "00000000-0000-4000-8000-000000000e01",
+      "tokenName": "operator-token",
+      "tokenType": "USER",
+      "principalName": "operator@domain-1.example.test",
+      "tokenStatus": "ACTIVE",
+      "apiTokenTtl": 259200,
+      "accessTokenTtl": 60,
+      "creationDate": 1791963600000
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000d00",
+      "tokenName": "backup-01-token",
+      "tokenType": "API_CLIENT",
+      "apiClientId": "backup-01",
+      "tokenStatus": "ACTIVE",
+      "apiTokenTtl": 1440,
+      "accessTokenTtl": 60,
+      "creationDate": 1792050000000
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000d01",
+      "tokenName": "backup-01-token-20261015T063701Z",
+      "tokenType": "API_CLIENT",
+      "apiClientId": "backup-01",
+      "tokenStatus": "ACTIVE",
+      "apiTokenTtl": 2880,
+      "accessTokenTtl": 60,
+      "creationDate": 1792050015000
+     }
+    ],
+    "pageInfo": {
+     "page": 0,
+     "pageSize": 50,
+     "totalCount": 3
+    }
+   }
+  }
+ ]
+}

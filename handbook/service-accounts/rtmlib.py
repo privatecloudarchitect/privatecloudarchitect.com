@@ -10,6 +10,9 @@ The JWT lasted 35 minutes on the build it was proven on; re-mint on a schedule, 
 
 Environment (in addition to opslib.py's):
   RTM_HOST  (required)  the VCF instance services FQDN that fronts /data-query-service
+
+Every request goes through opslib's _urlopen, so a tool that loaded a replay set (--replay DIR) is answered from it
+and sends nothing.
 """
 
 import json
@@ -19,7 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from opslib import _ctx, ops
+from opslib import _ctx, _urlopen, ops
 
 
 def service_jwt(tok, service_type="VCF_VODAP"):
@@ -49,7 +52,7 @@ def rtm_get(path, jwt, params=None):
         "Authorization": f"Bearer {jwt}", "Accept": "application/json"})
     t0 = time.monotonic()
     try:
-        with urllib.request.urlopen(req, context=_ctx(), timeout=60) as r:
+        with _urlopen(req, context=_ctx(), timeout=60) as r:
             raw = r.read()
             return r.status, (json.loads(raw) if raw else None), time.monotonic() - t0
     except urllib.error.HTTPError as e:

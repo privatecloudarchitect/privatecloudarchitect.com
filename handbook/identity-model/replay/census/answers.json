@@ -1,0 +1,961 @@
+{
+ "replay": 1,
+ "about": "the reference estate's identity model as census.py read it on 2026-10-15 (X-270), every name a placeholder: one realm on an instance broker, two embedded brokers, an AD/LDAP provider with one directory, four API clients, ten organizations, three vCenters",
+ "source": "census.json beside census.py (the committed, scrubbed record of X-270), its placeholders made into values a URL can carry",
+ "now": "2026-10-15T20:53:05Z",
+ "env": {
+  "OPS_HOST": "ops.example.test",
+  "VCFA_HOST": "vcfa.example.test",
+  "VC_HOSTS": "host-4.example.test,host-5.example.test,host-6.example.test",
+  "VC_USER": "reader@domain-1.example.test",
+  "BROKER_HOSTS": "host-4.example.test,host-5.example.test,host-2.example.test"
+ },
+ "answers": [
+  {
+   "method": "POST",
+   "path": "/acs/t/CUSTOMER/token",
+   "host": "ops.example.test",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "sub": "name-7",
+      "prn_type": "SERVICE",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   },
+   "note": "the broker trades the API token for a bearer (the census's own credential)"
+  },
+  {
+   "method": "POST",
+   "path": "/oauth/provider/token",
+   "host": "vcfa.example.test",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "sub": "provider",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms",
+   "body": {
+    "ssoRealms": [
+     {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "name": "host-2.example.test",
+      "idpId": "00000000-0000-4000-8000-000000000007"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-000000000006",
+   "body": {
+    "id": "00000000-0000-4000-8000-000000000006",
+    "name": "host-2.example.test",
+    "idpId": "00000000-0000-4000-8000-000000000007",
+    "vcfInstanceId": "00000000-0000-4000-8000-000000000004",
+    "vidbResourceId": "00000000-0000-4000-8000-000000000005",
+    "totalConfiguredComponents": 10,
+    "ssoRealmCoverage": [
+     {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "name": "name-2",
+      "ssoEntityType": "VCF_INSTANCE"
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "name": "name-3",
+      "ssoEntityType": "VCF_INSTANCE"
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "name": "Automation Appliance",
+      "ssoEntityType": "MANAGEMENT_COMPONENT"
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000009",
+      "name": "Operations Appliance",
+      "ssoEntityType": "MANAGEMENT_COMPONENT"
+     },
+     {
+      "id": "00000000-0000-4000-8000-00000000000a",
+      "name": "VCF Operations for Networks",
+      "ssoEntityType": "OTHER_COMPONENTS"
+     },
+     {
+      "id": "00000000-0000-4000-8000-00000000000b",
+      "name": "VCF Operations for Logs",
+      "ssoEntityType": "OTHER_COMPONENTS"
+     },
+     {
+      "id": "00000000-0000-4000-8000-00000000000c",
+      "name": "name-4",
+      "ssoEntityType": "OTHER_COMPONENTS"
+     }
+    ],
+    "issues": []
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/vidbs",
+   "body": {
+    "vidbs": [
+     {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "displayName": "host-4.example.test",
+      "fqdn": "host-4.example.test",
+      "deploymentType": "EMBEDDED",
+      "version": "9.1.1.0.56",
+      "healthy": true,
+      "vcfInstanceId": "00000000-0000-4000-8000-000000000002",
+      "vidbStatus": {
+       "eligibilityStatus": "ELIGIBLE",
+       "reasons": []
+      }
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "displayName": "host-5.example.test",
+      "fqdn": "host-5.example.test",
+      "deploymentType": "EMBEDDED",
+      "version": "9.1.1.0.56",
+      "healthy": true,
+      "vcfInstanceId": "00000000-0000-4000-8000-000000000004",
+      "vidbStatus": {
+       "eligibilityStatus": "ELIGIBLE",
+       "reasons": []
+      }
+     },
+     {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "displayName": "host-2.example.test",
+      "fqdn": "host-2.example.test",
+      "deploymentType": "EXTERNAL",
+      "version": "9.1.1.0.56",
+      "healthy": true,
+      "vcfInstanceId": "00000000-0000-4000-8000-000000000004",
+      "vidbStatus": {
+       "eligibilityStatus": "ELIGIBLE",
+       "reasons": []
+      }
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/identity-providers/00000000-0000-4000-8000-000000000007",
+   "body": {
+    "id": "00000000-0000-4000-8000-000000000007",
+    "name": "name-5",
+    "idpProtocol": "LDAP_BIND",
+    "idpType": "ADLDAP",
+    "provisionType": "LDAP",
+    "ssoRealmId": "00000000-0000-4000-8000-000000000006",
+    "provisioningConfig": {
+     "ldapConfigurations": [
+      {
+       "name": "ad",
+       "domains": [
+        "domain-1.example.test"
+       ],
+       "ldapConfigurationId": "00000000-0000-4000-8000-00000000000d",
+       "ldapBindConfiguration": {
+        "type": "ACTIVE_DIRECTORY_LDAP",
+        "baseDn": "cn=dn-1,dc=example,dc=test",
+        "bindDn": "cn=dn-2,dc=example,dc=test",
+        "directorySearchAttribute": "sAMAccountName",
+        "primaryDomainController": {
+         "host": "host-7.example.test",
+         "port": 389,
+         "protocol": "LDAP",
+         "certificateName": "name-6"
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/identity-providers/00000000-0000-4000-8000-000000000007/ldap-directories",
+   "body": {
+    "ldapDirectories": [
+     {
+      "name": "ad",
+      "domains": [
+       "domain-1.example.test"
+      ],
+      "domainControllerHost": "host-8.example.test",
+      "domainControllerPort": 389,
+      "lastSyncStatus": "COMPLETED",
+      "lastSyncDateTime": 1790233522048,
+      "numberOfUsers": 14,
+      "numberOfGroups": 6,
+      "setupStatus": "COMPLETED",
+      "ldapConfigurationId": "00000000-0000-4000-8000-00000000000d"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-000000000006/oauth-apps",
+   "body": {
+    "oauthApps": [
+     {
+      "clientName": "VCF Operations for Networks",
+      "clientId": "name-18",
+      "redirectUrls": []
+     },
+     {
+      "clientName": "VCF Operations for Logs",
+      "clientId": "name-19",
+      "redirectUrls": []
+     },
+     {
+      "clientName": "name-4",
+      "clientId": "name-20",
+      "redirectUrls": [
+       "https://host-3.example.test/callback"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-000000000006/api-clients/query",
+   "query": {
+    "page": "0",
+    "pageSize": "*"
+   },
+   "body": {
+    "apiClients": [
+     {
+      "clientId": "name-7",
+      "clientUuid": "00000000-0000-4000-8000-00000000000e",
+      "clientName": "name-8",
+      "roles": [
+       {
+        "roleName": "sddc_admin",
+        "expiresAt": 0
+       },
+       {
+        "roleName": "vcf_administrator",
+        "expiresAt": 0
+       },
+       {
+        "roleName": "role-1",
+        "expiresAt": 0
+       }
+      ]
+     },
+     {
+      "clientId": "name-9",
+      "clientUuid": "00000000-0000-4000-8000-00000000000f",
+      "clientName": "name-10",
+      "roles": [
+       {
+        "roleName": "vcf_administrator",
+        "expiresAt": 0
+       }
+      ]
+     },
+     {
+      "clientId": "name-11",
+      "clientUuid": "00000000-0000-4000-8000-000000000010",
+      "clientName": "name-12",
+      "roles": [
+       {
+        "roleName": "vcf_viewer",
+        "expiresAt": 0
+       }
+      ]
+     },
+     {
+      "clientId": "name-13",
+      "clientUuid": "00000000-0000-4000-8000-000000000011",
+      "clientName": "name-14",
+      "roles": [
+       {
+        "roleName": "vcf_administrator",
+        "expiresAt": 0
+       }
+      ]
+     }
+    ],
+    "pageInfo": {
+     "page": 0,
+     "pageSize": 50,
+     "totalCount": 4
+    }
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-000000000006/api-tokens/query",
+   "query": {
+    "page": "0",
+    "pageSize": "*"
+   },
+   "body": {
+    "apiTokens": [
+     {
+      "tokenName": "name-15",
+      "tokenType": "USER",
+      "tokenStatus": "ACTIVE",
+      "principalName": "name-1",
+      "principalStatus": "ACTIVE",
+      "apiTokenTtl": 259200,
+      "accessTokenTtl": 60,
+      "expirationDate": 1801671996000,
+      "lastUsedDate": 1792097585000
+     },
+     {
+      "tokenName": "name-16",
+      "tokenType": "API_CLIENT",
+      "tokenStatus": "ACTIVE",
+      "principalName": "name-9",
+      "apiClientId": "name-9",
+      "apiTokenTtl": 259200,
+      "accessTokenTtl": 60,
+      "expirationDate": 1800823311000,
+      "lastUsedDate": 1785354298000
+     },
+     {
+      "tokenName": "name-17",
+      "tokenType": "API_CLIENT",
+      "tokenStatus": "ACTIVE",
+      "principalName": "name-11",
+      "apiClientId": "name-11",
+      "apiTokenTtl": 259200,
+      "accessTokenTtl": 60,
+      "expirationDate": 1806579876000,
+      "lastUsedDate": 1792053364000
+     }
+    ],
+    "pageInfo": {
+     "page": 0,
+     "pageSize": 50,
+     "totalCount": 3
+    }
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/ssorealms/00000000-0000-4000-8000-000000000006/emergency-clients",
+   "body": {
+    "emergencyClients": []
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/suite-api/api/fleet-management/iam/components/auth-sources/query",
+   "body": {
+    "iamComponentAuthSources": [
+     {
+      "componentType": "VCENTER",
+      "status": "CONFIGURED",
+      "authSourceType": "VCF_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006",
+      "vcfComponentId": "00000000-0000-4000-8000-000000000001"
+     },
+     {
+      "componentType": "NSX_MANAGER",
+      "status": "CONFIGURED",
+      "authSourceType": "VCF_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006",
+      "vcfComponentId": "00000000-0000-4000-8000-000000000012"
+     },
+     {
+      "componentType": "VCENTER",
+      "status": "CONFIGURED",
+      "authSourceType": "VCF_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006",
+      "vcfComponentId": "00000000-0000-4000-8000-000000000013"
+     },
+     {
+      "componentType": "VCENTER",
+      "status": "CONFIGURED",
+      "authSourceType": "VCF_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006",
+      "vcfComponentId": "00000000-0000-4000-8000-000000000003"
+     },
+     {
+      "componentType": "NSX_MANAGER",
+      "status": "CONFIGURED",
+      "authSourceType": "VCF_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006",
+      "vcfComponentId": "00000000-0000-4000-8000-000000000014"
+     },
+     {
+      "componentType": "NSX_MANAGER",
+      "status": "CONFIGURED",
+      "authSourceType": "VCF_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006",
+      "vcfComponentId": "00000000-0000-4000-8000-000000000015"
+     },
+     {
+      "componentType": "VCF_OPERATIONS",
+      "status": "CONFIGURED",
+      "authSourceType": "MANAGEMENT_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006"
+     },
+     {
+      "componentType": "VCF_AUTOMATION",
+      "status": "CONFIGURED",
+      "authSourceType": "MANAGEMENT_COMPONENT",
+      "ssoRealmId": "00000000-0000-4000-8000-000000000006"
+     },
+     {
+      "componentType": "VCF_SALT_RAAS",
+      "status": "NOT_CONFIGURED",
+      "authSourceType": "MANAGEMENT_COMPONENT"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/settings",
+   "body": {
+    "accessTokenTtl": 60,
+    "apiTokenTtl": 259200,
+    "apiTokenRetentionPeriod": 43200,
+    "allUsersGroupEnabled": false,
+    "jitInactiveUserEnabled": false,
+    "jitInactiveUserTtl": 43200
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/suite-api/api/fleet-management/iam/roles",
+   "query": {
+    "page": "0",
+    "pageSize": "*"
+   },
+   "body": {
+    "vcfRoles": [
+     {
+      "roleName": "role-1",
+      "type": "CUSTOM"
+     },
+     {
+      "roleName": "role-2",
+      "type": "CUSTOM"
+     },
+     {
+      "roleName": "sddc_admin",
+      "type": "BUILT_IN"
+     },
+     {
+      "roleName": "sddc_viewer",
+      "type": "BUILT_IN"
+     },
+     {
+      "roleName": "role-3",
+      "type": "CUSTOM"
+     },
+     {
+      "roleName": "vcf_administrator",
+      "type": "BUILT_IN"
+     },
+     {
+      "roleName": "vcf_viewer",
+      "type": "BUILT_IN"
+     }
+    ],
+    "pageInfo": {
+     "page": 0,
+     "pageSize": 50,
+     "totalCount": 7
+    }
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000021/settings/ldap",
+   "body": {
+    "orgLdapMode": "SYSTEM"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000021/settings/oauth",
+   "body": {
+    "enabled": false,
+    "vidb": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000021/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000022/settings/ldap",
+   "body": {
+    "orgLdapMode": "SYSTEM"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000022/settings/oauth",
+   "body": {
+    "enabled": false,
+    "vidb": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000022/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000023/settings/ldap",
+   "body": {
+    "orgLdapMode": "NONE"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000023/settings/oauth",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000023/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000024/settings/ldap",
+   "body": {
+    "orgLdapMode": "NONE"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000024/settings/oauth",
+   "body": {
+    "enabled": false,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000024/settings/federation",
+   "body": {
+    "enabled": true
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000025/settings/ldap",
+   "body": {
+    "orgLdapMode": "NONE"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000025/settings/oauth",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000025/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000026/settings/ldap",
+   "body": {
+    "orgLdapMode": "NONE"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000026/settings/oauth",
+   "body": {
+    "enabled": false,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000026/settings/federation",
+   "body": {
+    "enabled": true
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000027/settings/ldap",
+   "body": {
+    "orgLdapMode": "SYSTEM"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000027/settings/oauth",
+   "body": {
+    "enabled": false,
+    "vidb": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000027/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000028/settings/ldap",
+   "body": {
+    "orgLdapMode": "SYSTEM"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000028/settings/oauth",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://host-5.example.test/00000000-0000-4000-8000-0000000000e1/v2.0"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000028/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000029/settings/ldap",
+   "body": {
+    "orgLdapMode": "SYSTEM"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000029/settings/oauth",
+   "body": {
+    "enabled": true,
+    "vidb": true,
+    "issuerId": "https://host-2.example.test/00000000-0000-4000-8000-0000000000e1/v2.0"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000029/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-00000000002a/settings/ldap",
+   "body": {
+    "orgLdapMode": "SYSTEM"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-00000000002a/settings/oauth",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://host-9.example.test/00000000-0000-4000-8000-0000000000e1/v2.0"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-00000000002a/settings/federation",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/orgs",
+   "query": {
+    "page": "1",
+    "pageSize": "*"
+   },
+   "body": {
+    "resultTotal": 10,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000021",
+      "name": "org-1",
+      "displayName": "org-1",
+      "isEnabled": false,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000022",
+      "name": "org-2",
+      "displayName": "org-2",
+      "isEnabled": true,
+      "isClassicTenant": true,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000023",
+      "name": "org-3",
+      "displayName": "org-3",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000024",
+      "name": "org-4",
+      "displayName": "org-4",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000025",
+      "name": "org-5",
+      "displayName": "org-5",
+      "isEnabled": true,
+      "isClassicTenant": true,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000026",
+      "name": "org-6",
+      "displayName": "org-6",
+      "isEnabled": true,
+      "isClassicTenant": true,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000027",
+      "name": "org-7",
+      "displayName": "org-7",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000028",
+      "name": "org-8",
+      "displayName": "org-8",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": true
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000029",
+      "name": "System",
+      "displayName": "System",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-00000000002a",
+      "name": "org-9",
+      "displayName": "org-9",
+      "isEnabled": true,
+      "isClassicTenant": true,
+      "isProviderConsumptionOrg": false
+     }
+    ]
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/api/session",
+   "host": "host-4.example.test",
+   "status": 201,
+   "body": "session-id-host-4"
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/identity/providers",
+   "host": "host-4.example.test",
+   "body": [
+    {
+     "name": "name-21",
+     "config_tag": "Oidc",
+     "federation_type": "VMWARE_SSO_FEDERATION",
+     "is_default": true,
+     "domain_names": [
+      "domain-1.example.test"
+     ],
+     "oidc": {
+      "discovery_endpoint": "https://host-2.example.test/acs/t/CUSTOMER/.well-known/openid-configuration"
+     }
+    }
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/summaries",
+   "host": "host-4.example.test",
+   "body": {
+    "items": []
+   }
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/session",
+   "host": "host-4.example.test",
+   "status": 204
+  },
+  {
+   "method": "POST",
+   "path": "/api/session",
+   "host": "host-5.example.test",
+   "status": 201,
+   "body": "session-id-host-5"
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/identity/providers",
+   "host": "host-5.example.test",
+   "body": [
+    {
+     "name": "name-21",
+     "config_tag": "Oidc",
+     "federation_type": "VMWARE_SSO_FEDERATION",
+     "is_default": true,
+     "domain_names": [
+      "domain-1.example.test"
+     ],
+     "oidc": {
+      "discovery_endpoint": "https://host-2.example.test/acs/t/CUSTOMER/.well-known/openid-configuration"
+     }
+    }
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/summaries",
+   "host": "host-5.example.test",
+   "body": {
+    "items": []
+   }
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/session",
+   "host": "host-5.example.test",
+   "status": 204
+  },
+  {
+   "method": "POST",
+   "path": "/api/session",
+   "host": "host-6.example.test",
+   "status": 201,
+   "body": "session-id-host-6"
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/identity/providers",
+   "host": "host-6.example.test",
+   "body": [
+    {
+     "name": "name-21",
+     "config_tag": "Oidc",
+     "federation_type": "VMWARE_SSO_FEDERATION",
+     "is_default": true,
+     "domain_names": [
+      "domain-1.example.test"
+     ],
+     "oidc": {
+      "discovery_endpoint": "https://host-2.example.test/acs/t/CUSTOMER/.well-known/openid-configuration"
+     }
+    }
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/summaries",
+   "host": "host-6.example.test",
+   "body": {
+    "items": [
+     {
+      "supervisor": "00000000-0000-4000-8000-000000000020",
+      "info": {
+       "name": "name-22"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/00000000-0000-4000-8000-000000000020/identity/providers",
+   "host": "host-6.example.test",
+   "body": [
+    {
+     "provider": "00000000-0000-4000-8000-00000000002c"
+    }
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/vcenter/namespace-management/supervisors/00000000-0000-4000-8000-000000000020/identity/providers/00000000-0000-4000-8000-00000000002c",
+   "host": "host-6.example.test",
+   "body": {
+    "display_name": "name-23",
+    "issuer_URL": "https://host-3.example.test/oidc",
+    "username_claim": "preferred_username",
+    "groups_claim": "groups"
+   }
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/session",
+   "host": "host-6.example.test",
+   "status": 204
+  }
+ ]
+}

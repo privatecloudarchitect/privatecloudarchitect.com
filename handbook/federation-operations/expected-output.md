@@ -251,3 +251,188 @@ READ    the run judged no organization (2 listed; 2 with neither OIDC nor SAML o
 
 An organization left out this way is printed as `OFF` in every run, beside the organizations that were judged, so a
 federation switched off during an incident is never silent: without `--redact` it carries its name.
+
+## A replayed run
+
+`python3 watch.py --replay replay/watch` on the set beside the script: the reference run above, every name a
+placeholder, read from recorded answers with nothing sent and every date judged as of the record's time. The first line
+is written to standard error. Each check reads the state and measure `watch.json` records, and the run exits 1, as the
+recorded run did. Two lines the record does not hold come from what the set adds: the watch's own provider API token
+(a replayed run holds a token, not a bearer, so its end date is read), and the provider's System organization, which
+signs in through VCF single sign-on and is left out.
+
+```
+$ python3 watch.py --replay replay/watch
+replay: 45 recorded answers from replay/watch; nothing is sent and no credential is read
+
+the watch's own credential
+  OK      own_token       the watch's own provider API token ends in 90.0 days
+
+org-01  (oidc, all-apps)
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
+  OK      keys_held       all 6 published keys are held
+  OK      pkce            PKCE is off
+  WARN    secret_end      the secret the organization holds ends in 26.0 days: rotate with overlap
+  OK      app_gate        the app is enabled and requires assignment
+  OK      group_names     every imported group (1) is assigned to the app by that name
+  OK      break_glass     1 enabled local user(s) holding Organization Administrator
+
+org-02  (saml, all-apps)
+  OK      saml_cert_end   the active signing certificate ends in 361.0 days
+  OK      saml_cert_held  the organization's metadata holds every signing certificate on the app
+  OK      app_gate        the app is enabled and requires assignment
+  OK      group_names     every imported group (1) is assigned to the app by that name
+  WARN    break_glass     no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it
+
+org-03  (oidc, classic)
+  WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
+  OK      keys_held       all 6 published keys are held
+  OK      pkce            PKCE is off
+  WARN    secret_end      the secret the organization holds ends in 23.2 days: rotate with overlap; 1 other listed secret(s) already expired
+  OK      app_gate        the app is enabled and requires assignment
+  OK      group_names     every imported group (1) is assigned to the app by that name
+  WARN    break_glass     no enabled local user holds Organization Owner: when the provider refuses the organization, nobody can sign in to it
+
+org-04  (saml, classic)
+  OK      saml_cert_end   the active signing certificate ends in 358.2 days
+  WARN    saml_cert_held  1 other signing certificate(s) on the app are not in the organization's metadata: making one active stops sign-in until metadata carrying it is loaded
+  OK      app_gate        the app is enabled and requires assignment
+  OK      group_names     every imported group (1) is assigned to the app by that name
+  WARN    break_glass     no enabled local user holds Organization Owner: when the provider refuses the organization, nobody can sign in to it
+
+System  (off, all-apps)
+  OFF     neither OIDC nor SAML is on (federation switched off, or signed in through VCF single sign-on): left out and not judged; name it in ORGS to read it
+
+4 organization(s), 4 judged; exit 1; record written with every estate value replaced
+```
+
+The record is `watch.replay.json`, marked `"replay": true`. A request the set holds no answer for prints
+`replay: the set holds no answer for` with the request on standard error, and the read it belonged to reads as failed
+(exit 3).
+
+## The provider's inventory
+
+`inventory.py` on the reference estate, 2026-10-16 (UTC), read-only, on a provider bearer. The file declared the lab's
+one Entra tenant, the four organizations federated to it with their ids, placeholder owners, consent `consented`, and
+the tenant's two schedules pointed at the records committed in the companions: this folder's `watch.json` and the
+identity-lifecycle companion's `leavers.json`. Exit 1: the watch's record is four days old.
+
+```
+$ INVENTORY_FILE=<the provider's file> python3 inventory.py --redact
+
+{{tenant-1}}  (consent: consented; owners: tenant {{estate}}, provider {{estate}}; 4 organization(s) declared)
+  OK      owners        the tenant's owner and the provider's owner are named
+  NOTE    consent       not compared: no watch record that passed its check
+  DRIFT   watch         the last record is 95.4 h old, past its 24 h interval plus 1 h of slack: the schedule missed its run (the record also fails its check: the record lacks mode, judged, run_errors)
+  OK      leavers       the last record is 20.3 h old, inside its 24 h interval plus 1 h of slack; its run read, and exited 4 (its own schedule acts on that)
+  OK      organization  {{org-3}}: OIDC, federated to this tenant, declared
+  OK      organization  {{org-4}}: SAML, federated to this tenant, declared
+  OK      organization  {{org-5}}: OIDC, federated to this tenant, declared
+  OK      organization  {{org-6}}: SAML, federated to this tenant, declared
+
+outside every row
+  NOTE    organization  {{org-1}}: neither OIDC nor SAML is on, and its stored settings name no Entra tenant: not federated, and not declared
+  NOTE    organization  {{org-2}}: neither OIDC nor SAML is on, and its stored settings name no Entra tenant: not federated, and not declared
+  NOTE    organization  {{org-7}}: neither OIDC nor SAML is on, and its stored settings name no Entra tenant: not federated, and not declared
+  NOTE    organization  {{org-8}}: the provider's own consumption organization, left out as the watch leaves it out
+  NOTE    organization  {{org-9}}: signs in through VCF single sign-on: the platform's sign-in, outside this inventory
+  NOTE    organization  {{org-10}}: OIDC is on toward a provider other than Entra ID: outside this inventory, which reads Entra tenants
+
+10 organization(s) listed, 9 judged; 1 drift, 0 unread; exit 1; record written with every estate value replaced
+```
+
+- **The schedules are judged by their records.** The committed `watch.json`, written on 2026-10-12, lacks `mode`,
+  `judged` and `run_errors`, which the watch records now. It is past its interval plus its slack, so the schedule
+  missed its run (drift), and it also fails the record check, so the inventory does not read the tenant's consent from
+  it. The
+  committed `leavers.json`, written 20 hours before, is a report whose every call read; its exit 4 (a flag) belongs to
+  the leaver schedule and stays out of the inventory's exit.
+- **Every organization is placed.** The four federated to the tenant match the file by id. The other six are notes: no
+  row is owed for an organization with no federation on, one on VCF single sign-on, one on another provider, or the
+  provider's own.
+- **It sent nothing.** The run made 19 requests, every one a GET: the organization list, then each organization's OIDC
+  and SAML settings.
+
+### When the estate and the file have drifted
+
+The shapes the companion's tests hold, not a run on the reference estate: a fake estate of two tenants, seven
+organizations and three schedule records.
+
+```
+$ INVENTORY_FILE=<the provider's file> python3 inventory.py --redact
+
+{{tenant-1}}  (consent: consented; owners: tenant {{estate}}, provider {{estate}}; 4 organization(s) declared)
+  OK      owners        the tenant's owner and the provider's owner are named
+  OK      consent       the watch's last run read with the tenant's app, as the file states
+  OK      watch         the last record is 3.0 h old, inside its 24 h interval plus 1 h of slack; its run read, and exited 1 (its own schedule acts on that)
+  DRIFT   leavers       the last record is 50.0 h old, past its 24 h interval plus 1 h of slack: the schedule missed its run
+  DRIFT   row           {{org-6}}: the name is held by an organization of another id than declared: the declared organization is gone and a new one took its name; vet the new one before you declare its id
+  OK      organization  {{org-1}}: OIDC, federated to this tenant, declared
+  OK      organization  {{org-2}}: SAML, federated to this tenant, declared
+  DRIFT   organization  {{org-3}}: switched off: neither OIDC nor SAML is on, and the file declares it on; its stored settings name the tenant {{tenant-1}}
+  DRIFT   organization  {{org-6}}: OIDC, federated to this tenant, and missing from its row's organization list
+
+{{tenant-2}}  (consent: withheld; owners: tenant (blank), provider {{estate}}; 1 organization(s) declared)
+  DRIFT   owners        the tenant's owner is blank: name a role or a mailbox
+  DRIFT   consent       the file states the tenant withholds the read-only app, and the watch's last run read with it: set consent to consented, or take the app's credential out of the watch's schedule
+  OK      watch         the last record is 5.0 h old, inside its 24 h interval plus 1 h of slack; its run read, and exited 1 (its own schedule acts on that)
+  NOTE    leavers       no leaver report: it needs the read-only app, which the tenant withholds; a leaver is closed from the tenant's dated leaver notice
+  OK      organization  {{org-4}}: OIDC, federated to this tenant, declared
+
+outside every row
+  DRIFT   organization  {{org-5}}: OIDC, federated to the tenant {{tenant-3}}, which has no row in the file
+  NOTE    organization  {{org-7}}: the provider's own consumption organization, left out as the watch leaves it out
+
+7 organization(s) listed, 6 judged; 7 drift, 0 unread; exit 1; record written with every estate value replaced
+```
+
+- **Drift both ways.** `{{org-5}}` federates to a tenant the file has no row for; a row or a declared organization that
+  names no organization reads `no organization names this tenant` or `no organization by the declared name`.
+- **A reused name is caught by the declared id.** `{{org-6}}` holds the name the file declared under another id: the
+  declared organization is gone, and the new one is not in the row. Declared by name alone, the new holder would have
+  read as the old one.
+- **Switched off is never missing.** `{{org-3}}` has neither protocol on and still stores the tenant; the file declares
+  it on, so it is drift, and it reads `switched off`. Declared `"federation": "off"`, it reads `OK`.
+- **Consent is read from the watch's record.** The second tenant is declared `withheld`, and its watch ran with the
+  tenant's app. A watch run without the app and not declared reads `run it as watch.py --provider-only`.
+- **A record from a run that did not read is never a pass.** Had the watch's record exited 3, or named a read error,
+  the line would read `UNREAD watch ... is from a run that did not read` and the run would exit 3; had an
+  organization's settings read been refused, the line would read `UNREAD organization ... its settings were not read
+  (VCF Automation: HTTPError 403)`.
+
+### A replayed run
+
+`python3 inventory.py --replay replay/inventory` from this folder: the reference run above, every name a placeholder,
+read from recorded answers with nothing sent, against the inventory the set names (`replay/inventory/files/`, its two
+schedules pointed at this folder's `watch.json` and the identity-lifecycle companion's `leavers.json`). Each record's
+age is judged as of the recorded run's time, so every line and the exit are the recorded run's. The first line is
+written to standard error. The record is `inventory.replay.json`, marked `"replay": true`.
+
+```
+$ python3 inventory.py --replay replay/inventory
+replay: 20 recorded answers from replay/inventory; nothing is sent and no credential is read
+
+00000000-0000-4000-8000-0000000000e1  (consent: consented; owners: tenant the tenant's identity administrators, provider the provider's platform owners; 4 organization(s) declared)
+  OK      owners        the tenant's owner and the provider's owner are named
+  NOTE    consent       not compared: no watch record that passed its check
+  DRIFT   watch         the last record is 95.4 h old, past its 24 h interval plus 1 h of slack: the schedule missed its run (the record also fails its check: the record lacks mode, judged, run_errors)
+  OK      leavers       the last record is 20.3 h old, inside its 24 h interval plus 1 h of slack; its run read, and exited 4 (its own schedule acts on that)
+  OK      organization  org-03: OIDC, federated to this tenant, declared
+  OK      organization  org-04: SAML, federated to this tenant, declared
+  OK      organization  org-05: OIDC, federated to this tenant, declared
+  OK      organization  org-06: SAML, federated to this tenant, declared
+
+outside every row
+  NOTE    organization  org-01: neither OIDC nor SAML is on, and its stored settings name no Entra tenant: not federated, and not declared
+  NOTE    organization  org-02: neither OIDC nor SAML is on, and its stored settings name no Entra tenant: not federated, and not declared
+  NOTE    organization  org-07: neither OIDC nor SAML is on, and its stored settings name no Entra tenant: not federated, and not declared
+  NOTE    organization  org-08: the provider's own consumption organization, left out as the watch leaves it out
+  NOTE    organization  org-09: signs in through VCF single sign-on: the platform's sign-in, outside this inventory
+  NOTE    organization  org-10: OIDC is on toward a provider other than Entra ID: outside this inventory, which reads Entra tenants
+
+10 organization(s) listed, 9 judged; 1 drift, 0 unread; exit 1; record written with every estate value replaced
+```
+
+A watch record a replayed watch wrote, named as a schedule's record, reads `UNREAD watch ... is from a run that did not
+read: it is a replayed record, answered from a recorded set, not a run of the schedule`, whether or not the inventory
+itself runs under `--replay`.

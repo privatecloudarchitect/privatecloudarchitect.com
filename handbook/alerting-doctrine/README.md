@@ -19,7 +19,7 @@ Stdlib Python only; no token is printed or written.
 export OPS_HOST=<operations-fqdn>
 export OPS_BROKER_HOST=<identity-broker-fqdn>   # omit if the broker shares the Ops FQDN
 export OPS_REALM=CUSTOMER                       # the broker tenant (the realm's path segment), usually this
-export OPS_API_TOKEN=<api-token>                # minted in the operations console
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # minted in the operations console
 export OPS_OWNER="PCA"                          # the owner prefix your content carries
 export OPS_KIND=VirtualMachine                  # the kind to measure blast radius against
 export OPS_CHILD_KINDS=VirtualMachine,HostSystem  # the kinds that fail with a parent, for check 6
@@ -30,6 +30,10 @@ python3 storm.py                     # what your instance raised when a host fai
 python3 parent_aware.py              # dry run: the subjects it would use and every body it would send
 python3 parent_aware.py --execute    # throwaways only, watched up to 25 minutes, then removed
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 ## What `alerts.py` checks, and why each check is shaped that way
 

@@ -329,6 +329,58 @@ from the active directory and from the bin. A `LEFT` lists what remains; run the
 neither 200 nor 404 (a 403, a 5xx) says nothing of whether the object is gone: the residue check reads `NOT KNOWN`,
 names the object and the status under `not_read`, and the run exits 3.
 
+## A replayed run
+
+The first and third commands of the README's "Try it without an estate", run from this folder on the set beside the
+script: the committed records' two organizations, every name a placeholder, read from recorded answers with nothing
+sent. Each run's first line is written to standard error. The proof of `org-02` exits 0. The writer is given
+`--execute` and runs its plan alone: the placeholder stands for `NEW_SECRET_FILE`, the set answers Entra's token
+endpoint as accepting it, and the plan reads the six keys `update_keys.json` records, held and published. Under
+`--replay` the plan's closing suggestion, `--execute`, runs the same plan again.
+
+```
+$ python3 org_federation.py --replay replay/org_federation --prove --org org-02 --protocol saml --org-type classic
+replay: 22 recorded answers from replay/org_federation; nothing is sent and no credential is read
+  read: done  {'protocol': 'saml', 'org_type': 'classic', 'user_key': None, 'imported_groups': 1, 'roles': 3, 'failed_fields': [], 'differing_fields': [], 'saml_emails': {'saml_users': 1, 'enabled': 1, 'not_an_address': 0, 'disabled_not_judged': 0}}
+  check: organization enabled: pass
+  check: federated to ENTRA_TENANT_ID over OIDC or SAML: pass
+  check: federated over SAML, as planned: pass
+  check: a classic organization, as planned: pass
+  check: the metadata it holds names a signing certificate: pass
+  check: every enabled SAML user's stored email is an address, not its NameID: pass
+  check: every setting the sign-in depends on reads as planned: pass
+  check: at least one group imported over SAML: pass
+  check: imported group group-2 holds roles of the organization's own list: pass
+  check: an enabled local user holds Organization Owner: pass
+
+A round trip of a SAML user's record is a write, so --prove sends none. Where it was measured, a record whose stored email was the NameID was refused, and one whose stored email was the address answered 200; this run reads the stored email, and a round trip on this organization was not sent.
+
+This proves the organization's side. That each imported group is a group assigned to the app at Entra is the federation-operations watch's group_names check, through the tenant's read-only app: run it next.
+Then prove it in a browser, at https://<automation-host>/tenant/<org>:
+  - An entitled test user signs in through a browser and holds its group's role
+  - A test user in no assigned group is refused at Entra with AADSTS50105
+  - The new user's stored email is its address, and a round-trip update of its record succeeds
+  - After any settings change, several sign-ins spread over minutes
+
+recorded 11 steps to prove.replay.json; every estate value replaced by a placeholder
+
+$ python3 org_federation.py --replay replay/org_federation --update --keys --secret --execute
+replay: 22 recorded answers from replay/org_federation; nothing is sent and no credential is read
+replay: --execute runs its plan alone under --replay; nothing is sent
+  the secret in NEW_SECRET_FILE, accepted by Entra for the organization's app: done
+  plan: read  {'protocol': 'OIDC', 'key_refresh': None, 'keys': {'held': 6, 'published': 6, 'published_not_held': 0}, 'secret': "the organization's secret is replaced by the one in NEW_SECRET_FILE (no value shown)", 'would_change': ['clientSecret, if it differs from the one held']}
+
+plan only: nothing was changed. Add --execute to write it and read it back.
+
+recorded 2 steps to update.replay.json; every estate value replaced by a placeholder
+```
+
+Each record a replayed run writes (here `prove.replay.json` and `update.replay.json`) carries `"replay": true` at
+its top level.
+
+A request the set holds no answer for prints `replay: the set holds no answer for` with the request on standard
+error, and the read it belonged to fails: the run exits 3 and its record names the read.
+
 ## Not run as asked: exit 5, nothing sent
 
 Every mode that talks to VCF Automation or Entra checks its arguments and its environment before the first call.
@@ -347,6 +399,7 @@ users keyed on a claim other than `oid` or `preferred_username`, a settings writ
 SAML metadata dropping every held certificate under SAML users with the app unread, and with the tenant's read-only app
 a group no assigned group is named, metadata not naming the app's active certificate, or no app or two), 3 a result not
 known (a credential refused before anything was read, a read refused or a list not read to its end, Entra out of
-reach, a teardown residue it could not read, a record the scrub refused on a run that would have exited 0, an error it
-did not expect), 5 not run as asked (`ENTRA_CLIENT_ID` without its credential and a tenant domain Entra names no tenant
-for among them). A record the scrub refuses never hides a 1, a 2 or a 3.
+reach, a teardown residue it could not read, a record the scrub refused on a run that would have exited 0, a request a
+`--replay` set holds no answer for, an error it did not expect), 5 not run as asked (`ENTRA_CLIENT_ID` without its
+credential, a tenant domain Entra names no tenant for, and a `--replay` directory that cannot be read or holds no
+replay set among them). A record the scrub refuses never hides a 1, a 2 or a 3.

@@ -121,7 +121,8 @@ and prints the four readings the verdict alone does not give you. Read-only: res
 keys, and stat values. It writes nothing to the instance and no host name reaches its record.
 
 ```
-export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN=...
+export OPS_HOST=... OPS_BROKER_HOST=...
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>
 export OPS_TLS_VERIFY=false          # only on a self-signed lab CA
 python3 candidacy.py                 # writes candidacy.json beside the script
 ```
@@ -146,6 +147,10 @@ It reports:
    host actually reports. On the reference estate one tiered host is exactly 1:1 and the other is
    1:0.25, which makes any figure derived from the assumed uplift four times too large on the
    second one.
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 ### Two read shapes worth keeping
 

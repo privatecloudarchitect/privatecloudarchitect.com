@@ -51,7 +51,8 @@ so the loop has three owners.
 export SDDC_HOST=<sddc-manager-fqdn> SDDC_USERNAME=<user@sso-domain>
 read -rs SDDC_PASSWORD && export SDDC_PASSWORD
 # Operations plane (alert scope): the api-token flow from the identity chapter
-export OPS_HOST=<ops-fqdn> OPS_BROKER_HOST=<broker-fqdn> OPS_API_TOKEN=<api-token>
+export OPS_HOST=<ops-fqdn> OPS_BROKER_HOST=<broker-fqdn>
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>
 # Tenancy plane (firewall floor, access, audit trail): an organization session
 export VCFA_HOST=<automation-fqdn> VCFA_ORG=<organization> VCFA_USER=<account, without @domain>
 read -rs VCFA_PASSWORD && export VCFA_PASSWORD
@@ -61,6 +62,10 @@ export OPS_TLS_VERIFY=false  # only on a self-signed lab CA
 
 python3 hardening.py
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 Two details decide whether a plane reads or skips:
 

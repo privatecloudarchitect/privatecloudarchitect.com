@@ -40,11 +40,15 @@ Env:  VCFA_HOST                           VCF Automation FQDN (required)
                                           (mode 0600). Untried for these writes: no reference run sent them on one
       STATE                               the state file (default service_account.<org>.<name>.state.json)
       TLS_VERIFY=false                    only on a self-signed lab CA
-      OUT                                 the record (default service_account.json)
+      OUT                                 the record (default service_account.json; service_account.replay.json
+                                          under --replay)
 Use:  python3 service_account.py --org ORG --name NAME --role "ROLE NAME" [--token-file PATH] [--execute] [--redact]
             ROLE NAME is the organization's own role name: its member role is Organization User in an All Apps
             organization and Organization Member in a classic one (identity-model's census.py --orgs-only prints the type)
       python3 service_account.py --org ORG --name NAME --teardown [--token-file PATH] [--execute] [--redact]
+      python3 service_account.py --replay replay/service_account ...   without an estate: nothing is sent and no
+            credential is read, and --execute runs its plan alone (the plan reads nothing); the set beside this script
+            holds the answers the reads get, and a request it holds no answer for is a read that failed (exit 3)
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 refused by this script before any write: the account exists (for a create), or for a teardown it is not one
         the state file records; or no organization, or more than one, carries that name exactly
@@ -54,7 +58,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       3 a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer
         without its list or its total, a total that changed between pages, a page that added nothing new, or pages
         that end before the total they state), the read-back or the residue could not be read back, the provider's
-        credential was not traded for a bearer, or an error the script did not expect
+        credential was not traded for a bearer, a request that got no answer (a write among them: whether it was made
+        is not known; a refresh among them: neither held nor refused), a request a --replay set holds no answer for,
+        or an error the script did not expect
       0 the plan printed, or the run held on read-back: for a create, the account active, its bearer's session holding
         exactly the role and the stored token refreshing; for a teardown, every revoke answered, the organization's
         list read whole with no account by that name left and, with --token-file, the revoked token refused (without
@@ -62,7 +68,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         read: the organization is the one you name
       5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
         exists for a create or does not for a teardown, with --execute a provider credential file that cannot be read
-        or is empty), or a Python older than 3.10; nothing is written
+        or is empty, a --replay directory that cannot be read or holds no replay set), or a Python older than 3.10;
+        nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
       the run's code stands when it is 1, 2 or 3, and a run that held exits 3 (its writes were made; the record was not
       written).
@@ -82,7 +89,6 @@ import urllib.parse
 import urllib.request
 import uuid
 from collections import Counter
-from datetime import datetime, timezone
 
 AGENT = "service_account.py"
 CLOUDAPI = "application/json;version=9.1.0"
@@ -97,13 +103,252 @@ POLL_SECONDS, POLL_LIMIT = 5, 12   # the device-code grant is polled until the g
 GONE_SECONDS, GONE_LIMIT = 3, 20   # a deleted account leaves the list within a minute on the reference estate
 
 
+# ── replay: recorded answers in place of the estate (the same block, byte for byte, in every identity companion) ──
+# --replay DIR answers every request from the recorded answers in DIR's *.json files, so a reader runs the tool without
+# an estate and a test drives its real code path. An answer is chosen by the request's method, path and query (an
+# answer may also name the host, headers the request must carry, such as an organization's tenant context, or a string
+# its body must hold); the most specific answer that fits is given, and several answers to one request are given in
+# their order, the last one again after that.
+# Nothing is sent while a set is loaded: _urlopen answers from the set and never reaches the network, no credential is
+# read, a request the set holds no answer for is a read that did not happen (exit 3, never an empty answer), and a
+# writing mode runs its plan alone. A set may name the time its answers were recorded ("now"), so a run judges dates
+# as it did then, and the hosts it recorded ("env"), never a credential.
+REPLAY = None  # the loaded set; None while the tool runs against an estate
+REPLAY_CREDENTIAL = "replay-placeholder"  # what a replayed run holds instead of a credential: nothing is sent
+REPLAY_ANSWER_KEYS = {"method", "path", "query", "host", "request_headers", "body_contains", "status", "body", "text",
+                      "headers", "fail", "note"}
+REPLAY_SET_KEYS = {"replay", "about", "source", "now", "env", "answers"}
+
+
+class ReplayMiss(urllib.error.URLError):
+    """A request the replay set holds no answer for: a read that did not happen, never an empty answer."""
+
+
+class _Replayed:
+    """A recorded answer in the shape urllib.request.urlopen returns."""
+
+    def __init__(self, url, status, headers, raw):
+        self.url, self.status, self.code, self.headers, self.reason, self._raw = url, status, status, headers, "", raw
+
+    def read(self, amt=None):
+        out = self._raw if amt is None else self._raw[:amt]
+        self._raw = self._raw[len(out):]
+        return out
+
+    def getcode(self):
+        return self.status
+
+    def geturl(self):
+        return self.url
+
+    def info(self):
+        return self.headers
+
+    def getheader(self, name, default=None):
+        return self.headers.get(name, default)
+
+    def close(self):
+        self._raw = b""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        self.close()
+        return False
+
+
+def _replay_tokens(value):
+    """{"$jwt": {claims}} anywhere in an answer becomes an unsigned token carrying those claims, made here: a set holds
+    no token, and a token made here was never issued by anything."""
+    import base64
+
+    def part(obj):
+        return base64.urlsafe_b64encode(json.dumps(obj, separators=(",", ":")).encode()).rstrip(b"=").decode()
+
+    if isinstance(value, dict):
+        if set(value) == {"$jwt"} and isinstance(value["$jwt"], dict):
+            return f"{part({'alg': 'none', 'typ': 'JWT'})}.{part(value['$jwt'])}.cmVwbGF5"
+        return {k: _replay_tokens(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replay_tokens(v) for v in value]
+    return value
+
+
+def _replay_check(name, doc):
+    """Why a set file cannot be replayed, or None."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("answers"), list):
+        return f"{name}: no answers list"
+    if set(doc) - REPLAY_SET_KEYS:
+        return f"{name}: keys a set does not take: {', '.join(sorted(set(doc) - REPLAY_SET_KEYS))}"
+    env = doc.get("env", {})
+    if not isinstance(env, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+        return f"{name}: env is not a map of names to values"
+    secret = [k for k in env if any(w in k.upper() for w in ("TOKEN", "SECRET", "PASSWORD", "BEARER", "KEY", "CERT"))]
+    if secret:
+        return f"{name}: env names a credential ({', '.join(secret)}); a set carries none"
+    for i, a in enumerate(doc["answers"]):
+        where = f"{name} answer {i + 1}"
+        if not isinstance(a, dict):
+            return f"{where}: not an object"
+        if set(a) - REPLAY_ANSWER_KEYS:
+            return f"{where}: keys an answer does not take: {', '.join(sorted(set(a) - REPLAY_ANSWER_KEYS))}"
+        if not isinstance(a.get("method"), str) or not isinstance(a.get("path"), str) or not a["path"].startswith("/"):
+            return f"{where}: needs a method and a path that starts with /"
+        query = a.get("query", {})
+        if query != "*" and not (isinstance(query, dict) and all(
+                isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
+                for v in query.values())):
+            return f"{where}: query is not a map of names to values, or *"
+        status = a.get("status", 200)
+        if isinstance(status, bool) or not isinstance(status, int) or not 100 <= status <= 599:
+            return f"{where}: status is not an HTTP status"
+        if "body" in a and "text" in a:
+            return f"{where}: holds both body and text"
+        if not all(isinstance(a.get(k, {}), dict) for k in ("headers", "request_headers")):
+            return f"{where}: headers or request_headers is not a map"
+        if not isinstance(a.get("fail", ""), str) or not isinstance(a.get("body_contains", ""), str):
+            return f"{where}: fail is not a reason, or body_contains is not a string"
+    return None
+
+
+class Replay:
+    """The recorded answers in one directory's *.json files, read in name order."""
+
+    def __init__(self, directory):
+        from datetime import datetime
+
+        names = sorted(n for n in os.listdir(directory) if n.endswith(".json"))
+        if not names:
+            raise ValueError(f"{directory} holds no *.json answer file")
+        self.directory, self.answers, self.env, self.now = directory, [], {}, None
+        self.asked, self.missed, self.answered = {}, [], 0
+        for name in names:
+            with open(os.path.join(directory, name), encoding="utf-8") as f:
+                doc = json.load(f)
+            why = _replay_check(name, doc)
+            if why:
+                raise ValueError(why)
+            self.answers += doc["answers"]
+            self.env.update(doc.get("env", {}))
+            if doc.get("now"):
+                now = datetime.fromisoformat(str(doc["now"]).replace("Z", "+00:00"))
+                if now.tzinfo is None:
+                    raise ValueError(f"{name}: now carries no offset")
+                if self.now is not None and now != self.now:
+                    raise ValueError(f"{name}: now differs from another file's")
+                self.now = now
+
+    def answer(self, req):
+        """The recorded answer to one request, as urlopen would give it; ReplayMiss when the set holds none."""
+        import email.message
+        import io
+
+        if isinstance(req, str):
+            req = urllib.request.Request(req)
+        method = req.get_method().upper()
+        url = urllib.parse.urlsplit(req.full_url)
+        path, host = urllib.parse.unquote(url.path), url.hostname
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        sent = req.data.decode("utf-8", "replace") if isinstance(req.data, bytes) else ""
+        carried = {k.lower(): str(v) for k, v in req.header_items()}
+
+        def fits(a):
+            if a["method"].upper() != method or urllib.parse.unquote(a["path"]) != path:
+                return False
+            if a.get("host") not in (None, host) or a.get("body_contains", "") not in sent:
+                return False
+            if any(carried.get(k.lower()) != str(v) for k, v in a.get("request_headers", {}).items()):
+                return False
+            want = a.get("query", {})
+            return want == "*" or (set(want) == set(query) and all(
+                v == "*" or (v if isinstance(v, list) else [v]) == query[k] for k, v in want.items()))
+
+        def weight(a):  # the most specific answer is given: an exact query over a "*", a named host over none
+            want = a.get("query", {})
+            exact = 0 if want == "*" else 1 if "*" in want.values() else 2
+            return exact, "host" in a, len(a.get("request_headers", {})), "body_contains" in a
+
+        hits = [a for a in self.answers if fits(a)]
+        hits = [a for a in hits if weight(a) == max(map(weight, hits))]
+        shown = f"{method} {url.path}" + (f"?{url.query}" if url.query else "")
+        if not hits:
+            self.missed.append(shown)
+            print(f"replay: the set holds no answer for {shown}: a read that did not happen", file=sys.stderr)
+            raise ReplayMiss(f"replay: no recorded answer for {method} {url.path}")
+        key = tuple(id(a) for a in hits)
+        a = hits[min(self.asked.get(key, 0), len(hits) - 1)]
+        self.asked[key] = self.asked.get(key, 0) + 1
+        self.answered += 1
+        if a.get("fail"):
+            raise urllib.error.URLError(f"replay: {a['fail']}")
+        headers = email.message.Message()
+        for k, v in _replay_tokens(a.get("headers", {})).items():
+            headers[k] = str(v)
+        if "body" in a:
+            raw, kind = json.dumps(_replay_tokens(a["body"])).encode(), "application/json"
+        else:
+            raw, kind = str(a.get("text", "")).encode(), "text/plain"
+        if raw and headers.get("Content-Type") is None:
+            headers["Content-Type"] = kind
+        status = a.get("status", 200)
+        if status >= 400:
+            raise urllib.error.HTTPError(req.full_url, status, "replayed refusal", headers, io.BytesIO(raw))
+        return _Replayed(req.full_url, status, headers, raw)
+
+
+def replay_start(directory):
+    """Load the set in DIR for this run. ValueError or OSError when it cannot be replayed: a usage error (exit 5)."""
+    global REPLAY
+    REPLAY = Replay(directory)
+    for k, v in REPLAY.env.items():
+        if k not in os.environ:
+            os.environ[k] = v
+        else:
+            REPLAY.env[k] = None  # the reader's own value stands, and stays when the run ends
+    print(f"replay: {len(REPLAY.answers)} recorded answers from {directory}; nothing is sent and no credential is read",
+          file=sys.stderr)
+    return REPLAY
+
+
+def replay_stop():
+    """Unload the set and the hosts it named: a run in a test leaves nothing behind for the next."""
+    global REPLAY
+    if REPLAY is not None:
+        for k, v in REPLAY.env.items():
+            if v is not None:
+                os.environ.pop(k, None)
+    REPLAY = None
+
+
+def replay_now():
+    """The time a replayed set was recorded at, when it names one, or the time now: dates are judged as they were."""
+    from datetime import datetime, timezone
+
+    return REPLAY.now if REPLAY is not None and REPLAY.now is not None else datetime.now(timezone.utc)
+
+
+def _urlopen(req, context=None, timeout=60, opener=None):
+    """urllib.request.urlopen, or, with a replay set loaded, its recorded answer: nothing leaves the process."""
+    if REPLAY is not None:
+        return REPLAY.answer(req)
+    if opener is not None:
+        return opener.open(req, timeout=timeout)
+    return urllib.request.urlopen(req, context=context, timeout=timeout)
+# ── end of the replay block ──────────────────────────────────────────────────────────────────────────────────────
+
+
 # ── HTTP, standard library only ──────────────────────────────────────────────────────────────────────────────────
-def _ctx() -> ssl.SSLContext:
+def _ctx() -> ssl.SSLContext | None:
+    if REPLAY is not None:  # a replayed run opens no connection, so it loads no certificate store
+        return None
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
 def _secret_file(name: str) -> str:
+    if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
+        return REPLAY_CREDENTIAL
     with open(os.environ[name], encoding="utf-8") as f:
         return f.read().strip()
 
@@ -118,8 +363,8 @@ def _send(method: str, url: str, body: object | None = None, headers: dict | Non
     elif body is not None:
         data, h["Content-Type"] = json.dumps(body).encode(), "application/json"
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, data=data, method=method, headers=h),
-                                    context=_ctx(), timeout=60) as r:
+        with _urlopen(urllib.request.Request(url, data=data, method=method, headers=h), context=_ctx(),
+                      timeout=60) as r:
             raw, status = r.read(), r.status
     except urllib.error.HTTPError as e:
         raw, status = e.read() or b"", e.code
@@ -369,6 +614,13 @@ def no_org(status: int, count: int, record: dict) -> int:
     return EXIT_REFUSED
 
 
+def no_answer(what: str) -> str:
+    """The record's words for a request that got no answer at all (status 0): never a refusal and never a pass, because
+    whether a write that got none was made, or what a read that got none would have said, is not known."""
+    return (f"{what} got no answer, so what it did is not known: read the organization's service accounts before "
+            "acting")
+
+
 def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     status, urn, count = org_lookup(vcfa, a.org)
     if not urn:
@@ -383,13 +635,16 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     status, reg = vcfa.call("POST", f"/oauth/tenant/{a.org}/register", "/oauth/tenant/{org}/register",
                             body=register_body(a.name, a.role, str(uuid.uuid4())), org_urn=urn, accept="application/json")
     client_id = reg.get("client_id") if isinstance(reg, dict) else None
+    if status == 0:
+        record["undetermined"] = no_answer("the register")
+        return EXIT_UNREAD
     if status not in (200, 201) or not client_id:
         if status in (200, 201):   # registered, perhaps, with no id to record: nothing here can remove it
             record["partial"] = ("the register answered without a client id, so no state file records the account: "
                                  "read the organization's service accounts, and remove one by this name where it was made")
         return EXIT_NOT_HELD
     save_state(state_path(a.org, a.name), {"tool": AGENT, "org": a.org, "name": a.name, "client_id": client_id,
-                                           "created": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
+                                           "created": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ")})
     record["state_file_written"] = True   # before the grant, so an account left part way can still be removed
     rows = accounts(vcfa, urn, a.name)
     if rows is None:   # the register answered; the list that shows it did not, so nothing is said about it
@@ -402,11 +657,17 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
                                accept="application/json", auth=False)
     if status != 200 or not isinstance(device, dict) or not device.get("device_code") or not device.get("user_code"):
         record["partial"] = partial   # the grant names the user code this client's own authorization returned, or nothing
+        if status == 0:
+            record["undetermined"] = no_answer("the device authorization")
+            return EXIT_UNREAD
         return EXIT_NOT_HELD
     status, _ = vcfa.call("POST", "/cloudapi/1.0.0/deviceLookup/grant", "/cloudapi/1.0.0/deviceLookup/grant",
                           body={"userCode": device.get("user_code")}, org_urn=urn, accept=ACCOUNTS_ACCEPT)
     if status not in (200, 204):
         record["partial"] = partial
+        if status == 0:
+            record["undetermined"] = no_answer("the grant of the user code")
+            return EXIT_UNREAD
         return EXIT_NOT_HELD
     form = {"grant_type": DEVICE_CODE, "client_id": client_id, "device_code": device["device_code"]}
     answer: dict = {}
@@ -422,6 +683,9 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     record["device_grant"] = {"status": status, "refresh_token": bool(token), "expires_in_s": answer.get("expires_in")}
     if status != 200 or not token or not access:
         record["partial"] = partial
+        if status == 0:
+            record["undetermined"] = no_answer("the device-code grant")
+            return EXIT_UNREAD
         return EXIT_NOT_HELD
     _write_0600(a.token_file, token, new=True)
     record["token_file_written"] = True
@@ -444,6 +708,11 @@ def create(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
         record["readback"] = {"error": "the account list could not be read back"}
         return EXIT_UNREAD
     record["readback"] = rb = shape(rows)
+    unanswered = [w for w, st in (("the bearer's session read", record["session"]["status"]),
+                                  ("the refresh with the stored token", record["refresh"]["status"])) if st == 0]
+    if unanswered:   # neither held nor refused: not read
+        record["undetermined"] = no_answer(" and ".join(unanswered))
+        return EXIT_UNREAD
     held = (rb["present"] and rb["status"] == ["ACTIVE"] and rb["roles"] == [a.role]
             and record["session"]["status"] == 200 and record["session"]["roles"] == [a.role]
             and record["refresh"]["status"] == 200 and record["refresh"]["bearer"])
@@ -493,19 +762,27 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
     elif rows:
         record["revoked_token"] = "not tried: no --token-file"
     del token
-    if any(st not in (200, 202, 204) for st in revokes):   # the revoke is what ends the refresh token (G-374)
-        record["revoke_refused"] = sorted({st for st in revokes if st not in (200, 202, 204)})
+    if any(st not in (0, 200, 202, 204) for st in revokes):   # the revoke is what ends the refresh token (G-374)
+        record["revoke_refused"] = sorted({st for st in revokes if st not in (0, 200, 202, 204)})
     refused = (not any(t["status"] == 200 or t["bearer"] for tries in checks.values() for t in tries)
                and "revoke_refused" not in record)
     if left == [] and rows:
-        state["removed"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        state["removed"] = replay_now().strftime("%Y-%m-%dT%H:%M:%SZ")
         save_state(state_file, state)
     if left is None:
         return EXIT_UNREAD   # the residue read failed: whether the account is gone is not known
+    unanswered = ((["the revoke"] if 0 in revokes else [])
+                  + (["a refresh with the revoked token"] if any(t["status"] == 0 for tries in checks.values()
+                                                                 for t in tries) else []))
+    if unanswered:   # a revoke that got no answer may not have ended the token; a refresh that got none was not refused
+        record["undetermined"] = no_answer(" and ".join(unanswered))
+        return EXIT_UNREAD
     return EXIT_OK if left == [] and refused else EXIT_NOT_HELD
 
 
 def _secret_from(path: str) -> str:
+    if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
+        return REPLAY_CREDENTIAL
     with open(path, encoding="utf-8") as f:
         return f.read().strip()
 
@@ -590,9 +867,9 @@ def report(record: dict) -> list[str]:
     lines = [f"{record['mode']}: service account {record['name']} in organization {record['org']}"]
     for c in record.get("calls", []):
         lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}" + (f" ({c['shape']})" if c.get("shape") else ""))
-    for key in ("refused", "partial"):
+    for key, words in (("refused", "refused"), ("partial", "stopped part way"), ("undetermined", "NOT READ")):
         if record.get(key):
-            lines.append(f"  {'refused' if key == 'refused' else 'stopped part way'}: {record[key]}")
+            lines.append(f"  {words}: {record[key]}")
     if "device_grant" in record:
         g = record["device_grant"]
         lines.append(f"  device-code grant: HTTP {g['status']}, refresh token {'issued' if g['refresh_token'] else 'not issued'}"
@@ -620,7 +897,8 @@ def report(record: dict) -> list[str]:
     for when, tries in (record.get("revoked_token") if isinstance(record.get("revoked_token"), dict) else {}).items():
         for t in tries:
             lines.append(f"  refresh with the revoked token, {when.replace('_', ' ')} ({t['form']}): HTTP {t['status']}, "
-                         f"bearer {'issued' if t['bearer'] else 'refused'}" + (f" ({t['error']})" if t.get("error") else ""))
+                         + ("no answer, not read" if t["status"] == 0 else f"bearer {'issued' if t['bearer'] else 'refused'}")
+                         + (f" ({t['error']})" if t.get("error") else ""))
     lines.append(f"exit {record['exit']}")
     return lines
 
@@ -639,7 +917,7 @@ def credential_problem() -> str | None:
 
 def usage_problem(a: argparse.Namespace) -> str | None:
     if a.teardown:
-        if a.token_file and not os.path.exists(a.token_file):   # named to be tried: a file not there would pass untried
+        if a.token_file and REPLAY is None and not os.path.exists(a.token_file):   # a replayed run reads none
             return f"{a.token_file} does not exist: --token-file with --teardown is the stored token to try after the revoke"
         return None
     if not a.role:
@@ -679,6 +957,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; read the "
               "organization before trusting what it holds (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
+    finally:
+        replay_stop()
 
 
 def _run(argv: list[str] | None = None) -> int:
@@ -691,7 +971,19 @@ def _run(argv: list[str] | None = None) -> int:
     ap.add_argument("--teardown", action="store_true", help="revoke and remove the account instead")
     ap.add_argument("--execute", action="store_true", help="send the calls; without it the plan is printed")
     ap.add_argument("--redact", action="store_true", help="print with placeholders instead of your names")
+    ap.add_argument("--replay", metavar="DIR",
+                    help="answer every request from the recorded set in DIR (replay/service_account beside this script "
+                         "is one): nothing is sent and no credential is read")
     a = ap.parse_args(argv)
+    if a.replay:
+        try:
+            replay_start(a.replay)
+        except (OSError, ValueError) as e:
+            print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+            return EXIT_USAGE
+        if a.execute:   # every write this script sends needs --execute: off before anything is read
+            print("replay: --execute runs its plan alone under --replay; nothing is sent", file=sys.stderr)
+            a.execute = False
     problem = usage_problem(a)
     if problem:
         print(problem, file=sys.stderr)
@@ -713,7 +1005,7 @@ def _run(argv: list[str] | None = None) -> int:
     if problem:
         print(f"{problem}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE
-    record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    record = {"captured": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ"),
               "mode": "teardown" if a.teardown else "create", "org": a.org, "name": a.name, "calls": []}
     if not a.teardown:
         record["asked"] = {"role": a.role, "scope": role_scope(a.role)}
@@ -723,7 +1015,8 @@ def _run(argv: list[str] | None = None) -> int:
         print(f"could not start: {e}", file=sys.stderr)
         return EXIT_UNREAD
     record["exit"] = teardown(vcfa, a, record) if a.teardown else create(vcfa, a, record)
-    return write_record(record, given, a.redact, os.environ.get("OUT", "service_account.json"))
+    return write_record(record, given, a.redact, os.environ.get("OUT") or (
+        "service_account.replay.json" if REPLAY is not None else "service_account.json"))
 
 
 def write_record(record: dict, given: list[tuple[str, str]], redact: bool, out: str) -> int:

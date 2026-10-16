@@ -11,7 +11,32 @@ only when Entra is reached with a certificate rather than a client secret. No se
 | `org_federation.py` | Plans by default: prints every body each side will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for, and the name claim kept as the user principal name, which the leaver job looks each account up by), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. For a real tenant's organization, which `--execute` refuses, `--prove --org` proves it read-only and `--configure --org` writes the provider's side from what the tenant handed over; neither needs a state file. Writes `federation.json` (or `prove.json`, `configure.json`), and refuses to write a record carrying any estate value. |
 | `federation.json` | That record from the reference estate. The chapter's plates render it. |
 | `update_key_refresh.json`, `update_keys.json`, `update_secret.json`, `update_metadata.json` | The day-2 writer's records, one per kind of write, from a throwaway OIDC organization and a throwaway SAML one on the reference estate. federation-operations' plates render them. |
-| `expected-output.md` | A run's transcript, with what to read in it. |
+| `expected-output.md` | A run's transcript, with what to read in it, and a replayed run. |
+| `replay/org_federation/` | A recorded answer set built from `federation.json` and the `update_*.json` records, every name a placeholder, for `--replay`: the script runs on it with no estate and sends nothing. |
+
+## Try it without an estate
+
+`--replay DIR` answers every request from a recorded set instead of the estate, so you can run the script before you
+hold a provider credential or a tenant, or see what a mode prints before you point it at an organization. The set
+beside this README, `replay/org_federation/`, is made from the committed records, with a placeholder for every name:
+`org-01`, the All Apps organization over OIDC of the `update_*.json` records (its keys refreshed every 24 hours), and
+`org-02`, the classic organization over SAML of `federation.json`, both federated to one Entra tenant.
+
+```bash
+python3 org_federation.py --replay replay/org_federation --prove --org org-02 --protocol saml --org-type classic   # proven read-only; exits 0
+python3 org_federation.py --replay replay/org_federation --update --key-refresh   # ORG is org-01: the plan, 24 h to 1 h
+python3 org_federation.py --replay replay/org_federation --update --keys --secret --execute   # a writer: its plan alone
+python3 org_federation.py --replay replay/org_federation --configure --org org-01 --protocol oidc --group member=group-3 --execute
+```
+
+Nothing is sent and no credential is read: the set answers each request by its method, path and query, and names the
+placeholder host, tenant and organization it was recorded on (`ORG` is `org-01`, `APP_CLIENT_ID` its app). A request
+the set holds no answer for is a read that failed, so the run exits 3 and names the read, never a pass. Every write
+this script sends is sent under `--execute`, so under `--replay` a run given `--execute` prints `replay: --execute runs
+its plan alone under --replay; nothing is sent` and runs its plan: no mode writes, and no record says a write
+happened. Each record goes to its `.replay.json` name (`prove.replay.json`, `update.replay.json`,
+`configure.replay.json`, `federation.replay.json`) unless `OUT` names a file, so a replayed run never overwrites a
+real record. The transcript is under "A replayed run" in `expected-output.md`.
 
 ## Run it
 
@@ -48,8 +73,8 @@ A provider bearer lasts an hour, so mint it just before each run, as the platfor
 | 0 | done: the plan printed, or every step and check passed |
 | 1 | a check failed, or a write was refused while building, configuring, updating or tearing down; the record names which |
 | 2 | refused by what it read, with nothing sent: a name this script did not create, no state file to tear down, no such organization, an organization with no federation to `ENTRA_TENANT_ID` switched on (for `--update`, which says what the organization holds), a change its protocol does not take, a switch of protocol, OIDC user key or SAML user-name claim (judged on what the organization stores and the users it holds, enabled or not, and on a re-run of `--execute` over its own organization), a change of the app or the issuer under OIDC users keyed on a claim other than `oid` or `preferred_username`, a settings write to a switched-off federation without `--enable`, a group import into a federation that stays switched off, a group-only import to an organization that stores no settings for the tenant over that protocol, a client secret Entra refused, a role its type lacks, a named group held another way, SAML with no metadata yet (it prints what the tenant needs), SAML metadata naming none of the certificates the organization holds while it holds SAML users and the organization's app was not read, and, with the tenant's read-only app, a group to import that no group assigned to the app is named (or two are), metadata that does not name the certificate Entra signs the app with or names one the app does not hold, or no app (or two) carrying the organization's client id or identifier |
-| 3 | a result not known: a credential refused before anything was read (the tenant's read-only app's among them), a read refused or a list not read to its end in any mode (`--prove` and `--prove --org` only read), Entra out of reach when asked about a new secret or a tenant's domain, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a teardown that could not read whether an object it made is gone (an answer other than 200 or 404), a record the scrub refused to write on a run that would have exited 0, or an error the script did not expect (never 1). A record the scrub refuses never hides a 1, a 2 or a 3: the run's own code stands |
-| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`, `--groups-only` without `--group` or with `--enable` or `--user-key`), a missing environment variable or credential (`ENTRA_CLIENT_ID` without its credential among them), an `ENTRA_TENANT_ID` that is neither a tenant id nor a domain Entra names a tenant for, a file that cannot be read, metadata that is not the tenant's or names no signing certificate that reads, `SECRET_DAYS` of a year or more, a Python older than 3.9 |
+| 3 | a result not known: a credential refused before anything was read (the tenant's read-only app's among them), a read refused or a list not read to its end in any mode (`--prove` and `--prove --org` only read), Entra out of reach when asked about a new secret or a tenant's domain, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a teardown that could not read whether an object it made is gone (an answer other than 200 or 404), a record the scrub refused to write on a run that would have exited 0, a request a `--replay` set holds no answer for, or an error the script did not expect (never 1). A record the scrub refuses never hides a 1, a 2 or a 3: the run's own code stands |
+| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`, `--groups-only` without `--group` or with `--enable` or `--user-key`), a missing environment variable or credential (`ENTRA_CLIENT_ID` without its credential among them), an `ENTRA_TENANT_ID` that is neither a tenant id nor a domain Entra names a tenant for, a file that cannot be read, metadata that is not the tenant's or names no signing certificate that reads, `SECRET_DAYS` of a year or more, a `--replay` directory that cannot be read or holds no replay set, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
 assignments and permission grants, and groups, and sets a service principal's claims policy. On the reference
@@ -261,6 +286,9 @@ tests hold and no live run has shown yet. The writer was not run against an orga
 
 ## Reading the record
 
+Every record a `--replay` run writes (`federation.replay.json`, `update.replay.json`, `prove.replay.json`,
+`configure.replay.json`) carries `"replay": true` at its top level, and a live run's record carries no such key: a
+replayed record shows no read of an estate.
 One record per organization: `protocol`, `org_type` and `user_key`, then `runs`, with one entry per mode you ran
 (`execute`, `prove`, `teardown`), each holding when it ran and its `steps`. Each step has its HTTP status (or `done`
 where a step made several calls), the seconds since that run began, and what it read back: for OIDC the stored safety

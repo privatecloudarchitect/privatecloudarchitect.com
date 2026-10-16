@@ -13,6 +13,20 @@ error you get back almost never names one. A platform bearer and the credential 
 two different clocks. Knowing which one expired is what decides whether you re-mint in a command or
 in a console, and that is the difference between thirty seconds and an afternoon.
 
+## Try it without an estate
+
+`tokens.py` reads a token you already hold and sends nothing, so it needs no estate, only a token. Make an unsigned
+demo token in the shell, with placeholder claims and fixed dates, and read it. This one was minted for an hour and ran
+out on 2025-10-09, so the run reads both clocks and exits 1:
+
+```bash
+python3 -c 'import base64, json; p = lambda o: base64.urlsafe_b64encode(json.dumps(o).encode()).rstrip(b"=").decode(); print(p({"alg": "none", "typ": "JWT"}) + "." + p({"sub": "demo-reader", "iss": "https://broker.example.test/acs/t/CUSTOMER/", "iat": 1760000000, "exp": 1760003600}) + ".demo")' | python3 tokens.py -
+```
+
+Nothing is sent and nothing is written. The demo token carries no signature and was issued by nothing; `tokens.py`
+reads claims and does not validate a signature, so it reads this one as it would a bearer you hold. It takes no
+`--replay`: it sends no request, so there is nothing to replay.
+
 ## Running it
 
 ```bash

@@ -11,6 +11,60 @@ and the probes.
 |---|---|
 | `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), every grant saved to a file of your own and two saves compared (`--save-permissions`, `--compare-permissions`), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
 | `authz.json` | That record from the reference estate. The chapter's plates render it. |
+| `replay/authz/` | A recorded answer set made from `authz.json`, every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
+
+## Try it without an estate
+
+`--replay DIR` answers every request from a recorded set instead of your vCenters, so you can run the census before
+you have an estate to read, or see what it prints for a shape your estate has not shown you. The set beside this
+README, `replay/authz/`, is the reference estate's record (`authz.json`) made into the vSphere Automation API's answers
+for three vCenters, with a placeholder for every name:
+
+```bash
+python3 authz.py --replay replay/authz                 # the census of three vCenters; writes authz.replay.json
+python3 authz.py --replay replay/authz --where-realm   # the same, and each realm-spelled grant by id (none here)
+```
+
+Nothing is sent and no credential is read: the set answers each request by its method, path, query and host, and
+names the placeholder hosts and domains it was recorded with. A request the set holds no answer for is a read that
+failed, so the run exits 3 and names the call, never a pass. The session list is read through pyVmomi, which a set does
+not answer, so a replayed run reads none; with the set's `REALM_DOMAIN` it exits 3, as a run without pyVmomi does,
+because whether anyone signs in with the realm's domain is not known. A writing mode runs its plan alone: `--remove`
+with `--execute` sends nothing and stops where its plan reads who is signed in (exit 3), and the probes and
+`--remove-probe-roles`, which write as they go and have no plan, are refused (exit 5). `--save-permissions` writes its
+file from the set's answers. The record goes to `authz.replay.json`, in `OUT_DIR` or the directory you run in, so a
+replayed run never overwrites `authz.json`. The record and a list `--save-permissions` writes under `--replay` carry
+`"replay": true` at the top, so neither passes for a read of an estate: `--compare-permissions` refuses such a file
+(exit 3), and a live run's record and list carry no such key.
+
+### A replayed run
+
+The first command, run in this folder: the reference estate's three vCenters, read from recorded answers with nothing
+sent. The first line is written to standard error. The counts by class and the four custom roles whose copies differ
+are the record's; the record counts local grants as one class, so the set splits them into the Administrators group's
+one global grant and VCF-managed accounts. It exits 3 because no session list was read.
+
+```text
+$ python3 authz.py --replay replay/authz
+replay: 8 recorded answers from replay/authz; nothing is sent and no credential is read
+authz.py: vCenter authorization under VCF single sign-on, read the way a broker session reads it
+
+  {{vcenter-1}}: 70 permissions (64 global); {'directory, global': 1, 'directory, object': 1, 'local, Administrators, global': 1, 'local, VCF-managed, global': 46, 'local, VCF-managed, object': 5, 'reserved group, global': 16}
+     sessions not read: a replayed run reads no session list (it is read through pyVmomi)
+     NOT PLACED: the session list was not read whole, so whether people sign in with REALM_DOMAIN's domain is not known here, and a grant spelled in it is no finding until it is (exit 3)
+  {{vcenter-2}}: 144 permissions (102 global); {'directory, global': 1, 'directory, object': 1, 'local, Administrators, global': 1, 'local, VCF-managed, global': 80, 'local, VCF-managed, object': 41, 'reserved group, global': 20}
+     sessions not read: a replayed run reads no session list (it is read through pyVmomi)
+     NOT PLACED: the session list was not read whole, so whether people sign in with REALM_DOMAIN's domain is not known here, and a grant spelled in it is no finding until it is (exit 3)
+  {{vcenter-3}}: 249 permissions (75 global); {'another provider, object': 8, 'directory, global': 2, 'directory, object': 3, 'local, Administrators, global': 1, 'local, VCF-managed, global': 54, 'local, VCF-managed, object': 140, 'reserved group, global': 18, 'reserved group, object': 23}
+     read as another provider's (printed here only, never recorded): DOMAIN-2.EXAMPLE.TEST 8
+     sessions not read: a replayed run reads no session list (it is read through pyVmomi)
+     NOT PLACED: the session list was not read whole, so whether people sign in with REALM_DOMAIN's domain is not known here, and a grant spelled in it is no finding until it is (exit 3)
+
+  custom roles whose copies differ between vCenters: 4
+
+wrote authz.replay.json: counts, classes and outcomes, with every estate name replaced
+exit 3
+```
 
 ## Run it
 
@@ -179,7 +233,7 @@ removed or changed (a grant that started or stopped propagating); a grant given 
 one removed and one added. vCenter's list can carry one grant more than once, under different permission ids and
 identical otherwise (one key on one vCenter of the reference estate held two): the save reports such a key, and the compare counts
 the grants under such a key, so one of the two gone is one removal. It exits 1 on any difference and 0 on none. It exits 3, comparing nothing, when either file is
-unreadable, partial, edited after it was written, or not written by `--save-permissions`. A vCenter read in one file only
+unreadable, partial, edited after it was written, written by a replayed run, or not written by `--save-permissions`. A vCenter read in one file only
 is named `NOT COMPARED`, and the files are not shown equal: exit 3, unless a vCenter both read differs (1). A host typed
 in another case, or with a trailing dot, is the same vCenter. BEFORE saved after AFTER is a usage error (exit 5), since
 every addition would read as a removal. Output, with the names replaced and the counts written as `<n>`:
@@ -207,9 +261,9 @@ The first that applies, so a scheduler reads one state from one number:
 |---|---|---|
 | 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; `--remove-probe-roles` refused (a probe role granted to someone other than its own reserved group, which removing the role would remove too; nothing is sent) or not held (a probe role still listed after it); or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of a probe role, one there before it began included, when it sends nothing) | read the vCenter's permissions before anything else |
 | 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, only when every vCenter's session list was read whole, and never while a live session is spelled in it; before a realm there is no such class); with `--compare-permissions`, a grant added, removed or changed on a vCenter both files read | name them with `--where-realm`, remove them with `--remove`; for a compare, read each line and confirm the change was meant |
-| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a list not read whole (a permission list with no permission, an item without its id, an id answered twice, a page that adds nothing), a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing), the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run, stopped on an error, or its residue was not read back, a vCenter `--remove-probe-roles` could not finish or read back, or an error the script did not expect; with `--save-permissions`, a list not read whole (nothing written); with `--compare-permissions`, a file unreadable, partial or not written by `--save-permissions` (nothing compared), or a vCenter read in one file only | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
+| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a list not read whole (a permission list with no permission, an item without its id, an id answered twice, a page that adds nothing), a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing or the run is replayed), a request a `--replay` set holds no answer for, the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run, stopped on an error, or its residue was not read back, a vCenter `--remove-probe-roles` could not finish or read back, or an error the script did not expect; with `--save-permissions`, a list not read whole (nothing written); with `--compare-permissions`, a file unreadable, partial, written by a replayed run (`"replay": true`) or not written by `--save-permissions` (nothing compared), or a vCenter read in one file only | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
 | 0 | nothing for a person to act on: every vCenter read and placed (with `REALM_DOMAIN` set, its session list read whole), no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held; with `--save-permissions`, the file written; with `--compare-permissions`, no difference and every vCenter in both files | nothing |
-| 5 | a usage error, found before anything is sent (a missing or wrong argument or variable, an abbreviated flag, since flags are taken whole and `--exec` is not `--execute`, a password file it cannot read, a `REALM_DOMAIN` equal to the broker tenant or to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, a `BROKER_TENANT` equal to a `DIRECTORY_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant (an API client's among them), pyVmomi missing for a step that needs it, `--remove` among them, a `--supervisor-vm` that names no VM or several, looked up before the census and every probe, a `--save-permissions` FILE that exists, has no directory or lies inside the clone, a `--compare-permissions` BEFORE saved after AFTER, a Python older than 3.10) | fix the invocation |
+| 5 | a usage error, found before anything is sent (a missing or wrong argument or variable, an abbreviated flag, since flags are taken whole and `--exec` is not `--execute`, a password file it cannot read, a `REALM_DOMAIN` equal to the broker tenant or to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, a `BROKER_TENANT` equal to a `DIRECTORY_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant (an API client's among them), pyVmomi missing for a step that needs it, `--remove` among them, a `--supervisor-vm` that names no VM or several, looked up before the census and every probe, a `--save-permissions` FILE that exists, has no directory or lies inside the clone, a `--compare-permissions` BEFORE saved after AFTER, a `--replay` directory that cannot be read or holds no replay set, a probe or `--remove-probe-roles` under `--replay`, since each writes as it goes and has no plan to run alone, a Python older than 3.10) | fix the invocation |
 
 A record refused because an estate value or a password survived the scrub is not written, and it never hides the run's
 result: the run's own code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3, because nothing
@@ -337,6 +391,7 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
   `API client (broker tenant)` class, which a record carries only when a grant in the broker tenant was read. A vCenter
   that was not read carries only `error`.
 - `realmSpelling`: present when the run declared `--no-realm`, saying the realm-spelled class was not applicable.
+- `replay`: `true` in a replayed run's `authz.replay.json`; a record of a read of an estate carries no such key.
 - `vcenters.<vc>.domainsNamedNothing`, `vcenters.<vc>.realmNamedNothing`, `vcenters.<vc>.realmSignedIn`: present on a
   vCenter the run could not place (the domains given named no grant there, the realm named none beside an unplaced
   domain, or a live session there is spelled in the realm); the run exited 3.
@@ -344,7 +399,8 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
 - `vcenters.<vc>.reservedGroupGrants`: grants on `vcf_reserved_*` groups, by the role held (product roles by
   name, custom roles as `a custom role`) and scope. Object-scoped ones are the Supervisor's namespace grants.
 - `vcenters.<vc>.sessions`: sessions by class, and the local administrator's sessions by client agent; `error` when the
-  list was not read whole, or `not read: pyVmomi is not installed`.
+  list was not read whole, `not read: pyVmomi is not installed`, or, in a replayed run's `authz.replay.json`, `not read: a
+  replayed run reads no session list (it is read through pyVmomi)`.
 - `probeRoleTeardown.<vc>`: with `--remove-probe-roles`, the roles removed (`removedRoles`), `rolesLeft` on the
   read-back (`null`: not read back), the reserved groups VCF left, `refused` with nothing sent, or `error` with what was
   removed before it.

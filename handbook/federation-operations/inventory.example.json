@@ -1,0 +1,38 @@
+{
+  "_about": "The inventory inventory.py reads (INVENTORY_FILE). Copy it to a file of your own, keep that file private (it names your estate), and replace every <...>. Keys starting with _ are notes; any other key not shown here is refused. A record path that is not absolute is read from this file's folder.",
+  "tenants": [
+    {
+      "tenant": "<the first tenant's id, or one of its domain names>",
+      "consent": "consented",
+      "owners": {
+        "tenant": "<the tenant's identity administrator, as a role or a mailbox>",
+        "provider": "<the provider's owner of this tenant, as a role or a mailbox>"
+      },
+      "schedules": {
+        "watch": {"every_hours": 24, "record": "<path of the watch.json this tenant's watch schedule writes>", "slack_hours": 1},
+        "leavers": {"every_hours": 24, "record": "<path of the leavers.json this tenant's leaver report writes>"}
+      },
+      "organizations": [
+        {"name": "<an organization federated to this tenant>", "id": "urn:vcloud:org:<its id>"},
+        {"name": "<an organization whose federation is switched off on purpose>", "federation": "off"},
+        "<an organization declared by name alone>"
+      ]
+    },
+    {
+      "_about": "A tenant that withholds the read-only app: its watch runs declared --provider-only, and it has no leaver report to schedule, because the report needs the app.",
+      "tenant": "<the second tenant's id, or one of its domain names>",
+      "consent": "withheld",
+      "owners": {
+        "tenant": "<the tenant's identity administrator, as a role or a mailbox>",
+        "provider": "<the provider's owner of this tenant, as a role or a mailbox>"
+      },
+      "schedules": {
+        "watch": {"every_hours": 24, "record": "<path of the watch.json this tenant's watch schedule writes>"},
+        "leavers": null
+      },
+      "organizations": [
+        {"name": "<an organization federated to this tenant>", "id": "urn:vcloud:org:<its id>"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+ "replay": 1,
+ "about": "the reference estate's throwaway All Apps organization as service_account.py read it back on 2026-10-15, every name a placeholder: the organization tenant-a and its service account backup-01, active, holding Organization User, rotation required on every refresh; the answers a run's reads get (under --replay, --execute runs its plan alone and reads nothing, so the tests drive these through the replay block)",
+ "source": "service_account.json beside service_account.py (the committed, scrubbed record of 2026-10-15): the read-back's status, roles and rotation; the ids and the organization's type fields are made up (the record keeps none)",
+ "now": "2026-10-15T23:16:26Z",
+ "env": {
+  "VCFA_HOST": "vcfa.example.test"
+ },
+ "answers": [
+  {
+   "method": "POST",
+   "host": "vcfa.example.test",
+   "path": "/oauth/provider/token",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "sub": "provider-admin",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   },
+   "note": "the provider's API token traded for a bearer (VCFA_PROVIDER_REFRESH_TOKEN_FILE); with VCFA_PROVIDER_BEARER_FILE no trade is asked"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/orgs",
+   "query": {
+    "filter": "name==tenant-a",
+    "page": "1",
+    "pageSize": "*"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 32,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-0000000000c1",
+      "name": "tenant-a",
+      "displayName": "tenant-a",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     }
+    ]
+   },
+   "note": "the organization by name, read whole: one All Apps organization, as the record's run was made in"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/serviceAccounts",
+   "query": {
+    "filter": "name==backup-01",
+    "page": "1",
+    "pageSize": "*"
+   },
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-0000000000c1"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 32,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:serviceAccount:00000000-0000-4000-8000-0000000000f1",
+      "name": "backup-01",
+      "status": "ACTIVE",
+      "roles": [
+       {
+        "name": "Organization User",
+        "id": "urn:vcloud:role:00000000-0000-4000-8000-0000000000d1"
+       }
+      ],
+      "requireRotation": true,
+      "softwareVersion": "1.0",
+      "org": {
+       "name": "tenant-a",
+       "id": "urn:vcloud:org:00000000-0000-4000-8000-0000000000c1"
+      }
+     }
+    ]
+   },
+   "note": "the organization's service accounts by that name, read whole, in its tenant context: the create's read-back"
+  }
+ ]
+}

@@ -1,0 +1,216 @@
+{
+ "replay": 1,
+ "about": "the leaver test over SAML on the reference estate's throwaway All Apps organization (X-241), its passing run after the close, every name a placeholder: the account disabled with no API token it owns, the test user's own token refused 400 invalid_grant, and one sign-in refused with 50105 17 s after the removal at 2026-10-15T23:50:27Z",
+ "source": "the reference estate's leaver test over SAML on 2026-10-15 (X-241; its last run is the passing transcript under \"The leaver test, before and after a close\" in expected-output.md), its checks made into the answers that give them: the run's record keeps no answer body, so each body is built",
+ "now": "2026-10-15T23:57:34Z",
+ "env": {
+  "VCFA_HOST": "vcfa.example.test",
+  "ENTRA_TENANT_ID": "00000000-0000-4000-8000-000000000001",
+  "ENTRA_CLIENT_ID": "00000000-0000-4000-8000-000000000002"
+ },
+ "answers": [
+  {
+   "method": "POST",
+   "path": "/oauth/provider/token",
+   "host": "vcfa.example.test",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "sub": "provider-admin",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   },
+   "note": "the provider API token traded for a bearer (the run's own credential)"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/orgs",
+   "host": "vcfa.example.test",
+   "query": {
+    "page": "1",
+    "pageSize": "*"
+   },
+   "body": {
+    "resultTotal": 3,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000011",
+      "name": "System",
+      "displayName": "System",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000010",
+      "name": "org-1",
+      "displayName": "org-1",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000012",
+      "name": "org-2",
+      "displayName": "org-2",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "host": "vcfa.example.test",
+   "query": {
+    "page": "1",
+    "pageSize": "*"
+   },
+   "body": {
+    "resultTotal": 2,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000021",
+      "username": "name-2",
+      "fullName": "name-2",
+      "providerType": "LOCAL",
+      "enabled": true,
+      "orgEntityRef": {
+       "name": "org-1",
+       "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000010"
+      }
+     },
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000020",
+      "username": "name-1@domain-1.example.test",
+      "fullName": "name-1",
+      "providerType": "SAML",
+      "enabled": false,
+      "orgEntityRef": {
+       "name": "org-1",
+       "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000010"
+      }
+     }
+    ]
+   },
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000010"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users/urn:vcloud:user:00000000-0000-4000-8000-000000000020",
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000010"
+   },
+   "body": {
+    "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000020",
+    "username": "name-1@domain-1.example.test",
+    "fullName": "name-1",
+    "providerType": "SAML",
+    "enabled": false,
+    "orgEntityRef": {
+     "name": "org-1",
+     "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000010"
+    }
+   },
+   "note": "the account, read after the close: disabled"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "host": "vcfa.example.test",
+   "query": {
+    "page": "1",
+    "pageSize": "*"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:token:00000000-0000-4000-8000-000000000030",
+      "name": "name-3",
+      "type": "REFRESH",
+      "owner": {
+       "name": "name-2",
+       "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000021"
+      }
+     }
+    ]
+   },
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000010"
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/oauth/tenant/org-1/token",
+   "host": "vcfa.example.test",
+   "body_contains": "grant_type=refresh_token",
+   "status": 400,
+   "body": {
+    "error": "invalid_grant",
+    "error_description": "a refusal (placeholder)"
+   },
+   "note": "the test user's own API token, refused after the close"
+  },
+  {
+   "method": "POST",
+   "path": "/00000000-0000-4000-8000-000000000001/oauth2/v2.0/token",
+   "host": "login.microsoftonline.com",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "tid": "00000000-0000-4000-8000-000000000001",
+      "aud": "https://graph.microsoft.com",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3599
+   },
+   "note": "the sign-in log reader's client-credentials grant"
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/auditLogs/signIns",
+   "host": "graph.microsoft.com",
+   "query": "*",
+   "body": {
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#auditLogs/signIns",
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000040",
+      "createdDateTime": "2026-10-15T23:50:44Z",
+      "appId": "00000000-0000-4000-8000-000000000003",
+      "userPrincipalName": "name-1@domain-1.example.test",
+      "userId": "00000000-0000-4000-8000-000000000041",
+      "status": {
+       "errorCode": 50105,
+       "failureReason": "a refusal (placeholder)"
+      }
+     }
+    ]
+   },
+   "note": "the test user's browser sign-in after the removal, refused with AADSTS50105"
+  }
+ ]
+}

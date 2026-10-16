@@ -324,3 +324,99 @@ the count of refused calls without separating the grant's 400 from a failed read
   instead of passing unread.
 - **The local account is out of scope.** `{{user-1}}` is an organization's local administrator, the way in when the
   provider refuses; its role is direct by nature and is counted apart (`direct_local` in the record), never flagged.
+
+## A replayed run
+
+Each script on the set beside it, run from the companion folder: the recorded runs above, every name a placeholder,
+read from recorded answers with nothing sent and judged at the time each set was recorded. The first line of each run
+is written to standard error, and so is the second line of a run given `--execute`.
+
+`leavers.py --replay replay/leavers` reaches every decision `leavers.json` holds, with the same 103 calls, and exits 4,
+as the recorded run did. Given `--execute`, alone or with `--close-now`, it runs the close's plan alone: the
+organization's accounts are read and judged, nothing is sent, and the plan's own exit stands (the flags here, 4; a
+`--close-now` plan, 0).
+
+```text
+$ python3 leavers.py --replay replay/leavers --redact
+replay: 87 recorded answers from replay/leavers; nothing is sent and no credential is read
+Leavers · REPORT · 4 organization(s) federated to the tenant, 3 federated elsewhere (not read), 3 with federation switched off
+  {{org-5}}: federation switched off (OIDC and SAML both disabled); no enabled federated account and no API token of one: nothing for this report to judge
+  {{org-6}}: federation switched off (OIDC and SAML both disabled); no enabled federated account and no API token of one: nothing for this report to judge
+  {{org-7}}: federation switched off (OIDC and SAML both disabled); no enabled federated account and no API token of one: nothing for this report to judge
+  {{org-1}} (OIDC): 3 account(s); gate {{group-1}}
+    direct role assignments on federated accounts: none
+    {{user-1}}: out of scope (LOCAL account, not federated)
+    {{user-2}}: keep (entitled through {{group-1}})
+    {{user-3}}: leaver (not assigned to the app, directly or through a group) -> in step: already disabled, no token
+  {{org-2}} (SAML): 2 account(s); gate {{group-2}}
+    direct role assignments on federated accounts: none
+    {{user-2}}: keep (entitled through {{group-2}})
+    {{user-3}}: leaver (not assigned to the app, directly or through a group) -> in step: already disabled, no token
+  {{org-3}} (OIDC): 3 account(s); gate {{group-3}}
+    direct role assignments on federated accounts: {{user-4}} (Service Broker User)
+    {{user-2}}: keep (entitled through {{group-3}})
+    {{user-3}}: keep (entitled through {{group-3}})
+    {{user-4}}: leaver (the Entra account is disabled) -> in step: already disabled, no token  FLAG direct-role
+  {{org-4}} (SAML): 3 account(s); gate {{group-4}}
+    direct role assignments on federated accounts: none
+    {{user-2}}: keep (entitled through {{group-4}})
+    {{user-3}}: keep (entitled through {{group-4}})
+    {{user-5}}: keep (entitled through {{group-4}})
+  credential: provider API token {{name-1}}, ends 2026-11-04T22:31:54Z (20.1 days; WARN_DAYS 30)  FLAG credential-ends
+  totals: keep 7, leaver 3, out of scope 1, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 3, direct role 1, name in use again 0, acknowledged 0, flagged 1
+  exit 4: a flag nobody acknowledged, or this run's own API token near its end: decide and --ack the flag; rotate the token, naming its successor in VCFA_PROVIDER_TOKEN_NAME
+
+103 call(s), 0 refused; leavers.replay.json written with every estate value replaced; exit 4
+
+$ python3 leavers.py --replay replay/leavers --execute --org org-3
+replay: 87 recorded answers from replay/leavers; nothing is sent and no credential is read
+replay: --execute runs its plan alone under --replay; nothing is sent
+Leavers · EXECUTE PLAN · 1 organization(s) federated to the tenant
+  org-3 (OIDC): 3 account(s); gate group-3
+    direct role assignments on federated accounts: user-4@domain-1.example.test (Service Broker User)
+    user-2@domain-1.example.test: keep (entitled through group-3)
+    user-3@domain-1.example.test: keep (entitled through group-3)
+    user-4@domain-1.example.test: leaver (the Entra account is disabled) -> in step: already disabled, no token  FLAG direct-role
+  credential: provider API token name-1, ends 2026-11-04T22:31:54Z (20.1 days; WARN_DAYS 30)  FLAG credential-ends
+  totals: keep 2, leaver 1, out of scope 0, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 1, direct role 1, name in use again 0, acknowledged 0, flagged 1
+  exit 4: a flag nobody acknowledged, or this run's own API token near its end: decide and --ack the flag; rotate the token, naming its successor in VCFA_PROVIDER_TOKEN_NAME
+
+25 call(s), 0 refused; leavers.replay.json written with every estate value replaced; exit 4
+
+$ python3 leavers.py --replay replay/leavers --close-now --org org-3 --user user-4@domain-1.example.test --execute
+replay: 87 recorded answers from replay/leavers; nothing is sent and no credential is read
+replay: --execute runs its plan alone under --replay; nothing is sent
+  --user user-4@domain-1.example.test (resolved as given) selects account user-4@domain-1.example.test
+Leavers · CLOSE-NOW PLAN, nothing sent · one named account, to be closed without asking Entra
+  --user user-4@domain-1.example.test (resolved as given) selects account user-4@domain-1.example.test
+  org-3: one account named for --close-now; Entra not asked
+    direct role assignments on federated accounts: user-4@domain-1.example.test (Service Broker User)
+    user-4@domain-1.example.test: closed on request (named with --close-now; Entra was not asked whether the person has left) -> planned: revoke 0 token(s) (DELETE /cloudapi/1.0.0/tokens/{id} each), then disable the account (PUT /cloudapi/1.0.0/users/{id} with enabled false); nothing sent
+  totals: keep 0, leaver 0, out of scope 0, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 0, direct role 0, name in use again 0, acknowledged 0, flagged 0
+  exit 0: plan only: nothing was sent and nothing was closed; to close, run it again with --execute
+
+4 call(s), 0 refused; leavers.replay.json written with every estate value replaced; exit 0
+```
+
+`leaver_test.py --replay replay/leaver_test` on the leaver test's passing run over SAML. The first run exits 0, as the
+recorded run did; the second asks for a 5-minute latency, so its deadline falls before the reads and it exits 3.
+
+```text
+$ python3 leaver_test.py --replay replay/leaver_test --org org-1 --user name-1@domain-1.example.test --app 00000000-0000-4000-8000-000000000003 --removed-at 2026-10-15T23:50:27Z --latency 30
+replay: 8 recorded answers from replay/leaver_test; nothing is sent and no credential is read
+leaver test: name-1@domain-1.example.test in org-1, removed 2026-10-15T23:50:27Z, latency 30 min (deadline 2026-10-16T00:20:27Z); read 2026-10-15T23:57:34Z
+  PASS    account disabled, no token: disabled, and no API token it owns is listed
+  PASS    token refused: refused: 400 invalid_grant
+  PASS    sign-in refused: refused with 50105 (the user is not assigned to the app), 17 s after the removal
+exit 0: every check passed inside the latency
+6 call(s), 0 read(s) refused or not read whole (the refresh grant's 400 invalid_grant is the token check passing, not a failed read); leaver-test.replay.json written with every estate value replaced
+
+$ python3 leaver_test.py --replay replay/leaver_test --org org-1 --user name-1@domain-1.example.test --app 00000000-0000-4000-8000-000000000003 --removed-at 2026-10-15T23:50:27Z --latency 5
+replay: 8 recorded answers from replay/leaver_test; nothing is sent and no credential is read
+leaver test: name-1@domain-1.example.test in org-1, removed 2026-10-15T23:50:27Z, latency 5 min (deadline 2026-10-15T23:55:27Z); read 2026-10-15T23:57:34Z
+  UNREAD  account disabled, no token: read after the deadline: disabled with no token now, which does not show it inside the latency
+  UNREAD  token refused: refused now, read after the deadline: not shown inside the latency
+  PASS    sign-in refused: refused with 50105 (the user is not assigned to the app), 17 s after the removal
+exit 3: not proven: a check could not be made (nothing is known about it)
+6 call(s), 0 read(s) refused or not read whole (the refresh grant's 400 invalid_grant is the token check passing, not a failed read); leaver-test.replay.json written with every estate value replaced
+```

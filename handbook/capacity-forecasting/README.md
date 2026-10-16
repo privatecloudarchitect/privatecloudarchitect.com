@@ -25,12 +25,16 @@ The sheet's three rules, runnable against your own VCF Operations instance:
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # OPS_REALM defaults to CUSTOMER
 export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
 
 python3 runway.py
 python3 runway.py --parity parity.example.json    # after editing the example
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 Stdlib Python only; `opslib.py` holds the broker exchange (the same api-token flow the
 handbook's Part 0 identity chapter teaches). The script reads; it writes nothing.

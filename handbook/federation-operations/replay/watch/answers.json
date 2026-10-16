@@ -1,0 +1,1141 @@
+{
+ "replay": 1,
+ "about": "the reference estate's federation watch as watch.json recorded it on 2026-10-12, every name a placeholder: four throwaway organizations federated to one Entra tenant (an All Apps and a classic organization over OIDC, one of each over SAML), read through the tenant's read-only app, beside the provider's own System organization, which signs in through VCF single sign-on and is left out",
+ "source": "watch.json beside watch.py (the committed, scrubbed record of 2026-10-12): each answer is built so the checks read the measures it records; the System organization, the watch's own provider API token and every id, host and name are built",
+ "now": "2026-10-12T18:03:44Z",
+ "env": {
+  "VCFA_HOST": "vcfa.example.test",
+  "ENTRA_TENANT_ID": "00000000-0000-4000-8000-0000000000e1",
+  "ENTRA_CLIENT_ID": "00000000-0000-4000-8000-0000000000f0"
+ },
+ "answers": [
+  {
+   "method": "POST",
+   "path": "/oauth/provider/token",
+   "host": "vcfa.example.test",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "sub": "name-1",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   },
+   "note": "the provider API token traded for a bearer (the watch's own credential)"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/orgs",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "body": {
+    "resultTotal": 5,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c00",
+      "name": "System",
+      "displayName": "System",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c01",
+      "name": "org-01",
+      "displayName": "org-01",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c02",
+      "name": "org-02",
+      "displayName": "org-02",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c03",
+      "name": "org-03",
+      "displayName": "org-03",
+      "isEnabled": true,
+      "isClassicTenant": true,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c04",
+      "name": "org-04",
+      "displayName": "org-04",
+      "isEnabled": true,
+      "isClassicTenant": true,
+      "isProviderConsumptionOrg": false
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/tokens",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "body": {
+    "resultTotal": 2,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:token:00000000-0000-4000-8000-000000000201",
+      "name": "name-2",
+      "type": "REFRESH",
+      "owner": {
+       "name": "name-1",
+       "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000101"
+      },
+      "org": {
+       "name": "System",
+       "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c00"
+      },
+      "expirationTimeUtc": "2027-01-10T17:58:44.000Z"
+     },
+     {
+      "id": "urn:vcloud:token:00000000-0000-4000-8000-000000000202",
+      "name": "name-3",
+      "type": "REFRESH",
+      "owner": {
+       "name": "name-4",
+       "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000102"
+      },
+      "org": {
+       "name": "System",
+       "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c00"
+      },
+      "expirationTimeUtc": "2026-11-21T17:58:44.000Z"
+     }
+    ]
+   },
+   "note": "the provider's token list: the watch's own refresh token (90 days) and another user's"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/sessions/current",
+   "host": "vcfa.example.test",
+   "body": {
+    "id": "00000000-0000-4000-8000-000000000301",
+    "user": {
+     "name": "name-1",
+     "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000101"
+    },
+    "org": {
+     "name": "System",
+     "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c00"
+    },
+    "roles": [
+     "System Administrator"
+    ]
+   }
+  },
+  {
+   "method": "POST",
+   "path": "/00000000-0000-4000-8000-0000000000e1/oauth2/v2.0/token",
+   "host": "login.microsoftonline.com",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "tid": "00000000-0000-4000-8000-0000000000e1",
+      "aud": "https://graph.microsoft.com",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3599
+   },
+   "note": "the tenant's read-only app's client-credentials grant"
+  },
+  {
+   "method": "GET",
+   "path": "/00000000-0000-4000-8000-0000000000e1/discovery/v2.0/keys",
+   "host": "login.microsoftonline.com",
+   "body": {
+    "keys": [
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "kid-1"
+     },
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "kid-2"
+     },
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "kid-3"
+     },
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "kid-4"
+     },
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "kid-5"
+     },
+     {
+      "kty": "RSA",
+      "use": "sig",
+      "kid": "kid-6"
+     }
+    ]
+   },
+   "note": "the six signing keys Entra publishes for the tenant"
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c00/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "vidb": true
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c00/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c00"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000101",
+      "username": "name-1",
+      "enabled": true,
+      "providerType": "LOCAL",
+      "roleEntityRefs": [
+       {
+        "name": "System Administrator",
+        "id": "urn:vcloud:role:00000000-0000-4000-8000-0000000004ff"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c00"
+   },
+   "body": {
+    "resultTotal": 0,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": []
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/roles",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c00"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000400",
+      "name": "System Administrator"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c01/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0",
+    "clientId": "00000000-0000-4000-8000-000000000901",
+    "clientSecret": "rp1-a-placeholder-not-a-secret",
+    "jwksUri": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/discovery/v2.0/keys",
+    "orgRedirectUri": "https://vcfa.example.test/login/oauth?service=tenant:org-01",
+    "userAuthorizationEndpoint": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/oauth2/v2.0/authorize",
+    "scope": [
+     "openid",
+     "profile",
+     "email"
+    ],
+    "usePKCE": false,
+    "autoRefreshKey": true,
+    "keyRefreshStrategy": "ADD",
+    "keyRefreshFrequencyInHours": 24,
+    "lastKeyRefreshAttempt": "2026-10-12T18:00:01.000Z",
+    "lastKeySuccessfulRefresh": "2026-10-11T17:57:44.000Z",
+    "oAuthKeyConfigurations": {
+     "oAuthKeyConfiguration": [
+      {
+       "keyId": "kid-1",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-2",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-3",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-4",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-5",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-6",
+       "algorithm": "RSA"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c01/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c01"
+   },
+   "body": {
+    "resultTotal": 2,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-00000000050b",
+      "username": "name-11",
+      "enabled": true,
+      "providerType": "OAUTH",
+      "roleEntityRefs": [
+       {
+        "name": "Organization User",
+        "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402"
+       }
+      ]
+     },
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-00000000050c",
+      "username": "name-12",
+      "enabled": true,
+      "providerType": "LOCAL",
+      "roleEntityRefs": [
+       {
+        "name": "Organization Administrator",
+        "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000400"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c01"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:group:00000000-0000-4000-8000-000000000601",
+      "name": "group-1",
+      "providerType": "OAUTH"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/roles",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c01"
+   },
+   "body": {
+    "resultTotal": 3,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000400",
+      "name": "Organization Administrator"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000401",
+      "name": "Organization Auditor"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402",
+      "name": "Organization User"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/applications",
+   "query": {
+    "$filter": "appId eq '00000000-0000-4000-8000-000000000901'",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000701",
+      "appId": "00000000-0000-4000-8000-000000000901",
+      "displayName": "name-15",
+      "passwordCredentials": [
+       {
+        "keyId": "00000000-0000-4000-8000-000000000a01",
+        "displayName": "name-13",
+        "hint": "rp1",
+        "endDateTime": "2026-11-07T18:03:44Z"
+       }
+      ],
+      "identifierUris": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals",
+   "query": {
+    "$filter": "appId eq '00000000-0000-4000-8000-000000000901'",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000801",
+      "accountEnabled": true,
+      "appRoleAssignmentRequired": true,
+      "preferredTokenSigningKeyThumbprint": null,
+      "keyCredentials": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals/00000000-0000-4000-8000-000000000801/appRoleAssignedTo",
+   "query": {
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "principalDisplayName": "group-1",
+      "principalType": "Group"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c02/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c02/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "samlMetadata": "<EntityDescriptor xmlns=\"urn:oasis:names:tc:SAML:2.0:metadata\" entityID=\"https://sts.windows.net/00000000-0000-4000-8000-0000000000e1/\"><IDPSSODescriptor protocolSupportEnumeration=\"urn:oasis:names:tc:SAML:2.0:protocol\"><KeyDescriptor use=\"signing\"><KeyInfo xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><X509Data><X509Certificate>cmVwbGF5IHNpZ25pbmcgY2VydGlmaWNhdGUgb3JnLTAyIDE=</X509Certificate></X509Data></KeyInfo></KeyDescriptor><SingleSignOnService Binding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect\" Location=\"https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/saml2\"/></IDPSSODescriptor></EntityDescriptor>",
+    "samlSPEntityId": "https://vcfa.example.test/cloud/org/org-02/saml/metadata/alias/vcd",
+    "link": [
+     {
+      "rel": "down",
+      "type": "application/samlmetadata+xml",
+      "href": "https://vcfa.example.test/api/admin/org/00000000-0000-4000-8000-000000000c02/settings/federation/metadata"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c02/settings/federation/metadata",
+   "host": "vcfa.example.test",
+   "text": "<md:EntityDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" entityID=\"https://vcfa.example.test/cloud/org/org-02/saml/metadata/alias/vcd\"/>",
+   "note": "the organization's own service provider metadata, read for its entity id"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c02"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000515",
+      "username": "name-21",
+      "enabled": true,
+      "providerType": "SAML",
+      "roleEntityRefs": [
+       {
+        "name": "Organization User",
+        "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c02"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:group:00000000-0000-4000-8000-000000000602",
+      "name": "group-2",
+      "providerType": "SAML"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/roles",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c02"
+   },
+   "body": {
+    "resultTotal": 3,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000400",
+      "name": "Organization Administrator"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000401",
+      "name": "Organization Auditor"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402",
+      "name": "Organization User"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/applications",
+   "query": {
+    "$filter": "identifierUris/any(x:x eq 'https://vcfa.example.test/cloud/org/org-02/saml/metadata/alias/vcd')",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000702",
+      "appId": "00000000-0000-4000-8000-000000000902",
+      "displayName": "name-25",
+      "passwordCredentials": [],
+      "identifierUris": [
+       "https://vcfa.example.test/cloud/org/org-02/saml/metadata/alias/vcd"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals",
+   "query": {
+    "$filter": "appId eq '00000000-0000-4000-8000-000000000902'",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000802",
+      "accountEnabled": true,
+      "appRoleAssignmentRequired": true,
+      "preferredTokenSigningKeyThumbprint": "10347D0006F5AE342C60E6D4B1573C91631D112A",
+      "keyCredentials": [
+       {
+        "customKeyIdentifier": "EDR9AAb1rjQsYObUsVc8kWMdESo=",
+        "usage": "Sign",
+        "type": "AsymmetricX509Cert",
+        "endDateTime": "2027-10-08T18:03:44Z"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals/00000000-0000-4000-8000-000000000802/appRoleAssignedTo",
+   "query": {
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "principalDisplayName": "group-2",
+      "principalType": "Group"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c03/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0",
+    "clientId": "00000000-0000-4000-8000-000000000903",
+    "clientSecret": "rp3-a-placeholder-not-a-secret",
+    "jwksUri": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/discovery/v2.0/keys",
+    "orgRedirectUri": "https://vcfa.example.test/login/oauth?service=tenant:org-03",
+    "userAuthorizationEndpoint": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/oauth2/v2.0/authorize",
+    "scope": [
+     "openid",
+     "profile",
+     "email"
+    ],
+    "usePKCE": false,
+    "autoRefreshKey": true,
+    "keyRefreshStrategy": "ADD",
+    "keyRefreshFrequencyInHours": 24,
+    "lastKeyRefreshAttempt": "2026-10-12T18:00:01.000Z",
+    "lastKeySuccessfulRefresh": "2026-10-11T22:57:44.000Z",
+    "oAuthKeyConfigurations": {
+     "oAuthKeyConfiguration": [
+      {
+       "keyId": "kid-1",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-2",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-3",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-4",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-5",
+       "algorithm": "RSA"
+      },
+      {
+       "keyId": "kid-6",
+       "algorithm": "RSA"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c03/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c03"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-00000000051f",
+      "username": "name-31",
+      "enabled": true,
+      "providerType": "OAUTH",
+      "roleEntityRefs": [
+       {
+        "name": "Service Broker User",
+        "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c03"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:group:00000000-0000-4000-8000-000000000603",
+      "name": "group-3",
+      "providerType": "OAUTH"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/roles",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c03"
+   },
+   "body": {
+    "resultTotal": 3,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000400",
+      "name": "Organization Member"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000401",
+      "name": "Organization Owner"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402",
+      "name": "Service Broker User"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/applications",
+   "query": {
+    "$filter": "appId eq '00000000-0000-4000-8000-000000000903'",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000703",
+      "appId": "00000000-0000-4000-8000-000000000903",
+      "displayName": "name-35",
+      "passwordCredentials": [
+       {
+        "keyId": "00000000-0000-4000-8000-000000000a03",
+        "displayName": "name-33",
+        "hint": "rp3",
+        "endDateTime": "2026-11-04T22:51:44Z"
+       },
+       {
+        "keyId": "00000000-0000-4000-8000-000000000a13",
+        "displayName": "name-34",
+        "hint": "rx3",
+        "endDateTime": "2026-10-06T18:03:44Z"
+       }
+      ],
+      "identifierUris": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals",
+   "query": {
+    "$filter": "appId eq '00000000-0000-4000-8000-000000000903'",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000803",
+      "accountEnabled": true,
+      "appRoleAssignmentRequired": true,
+      "preferredTokenSigningKeyThumbprint": null,
+      "keyCredentials": []
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals/00000000-0000-4000-8000-000000000803/appRoleAssignedTo",
+   "query": {
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "principalDisplayName": "group-3",
+      "principalType": "Group"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c04/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c04/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "samlMetadata": "<EntityDescriptor xmlns=\"urn:oasis:names:tc:SAML:2.0:metadata\" entityID=\"https://sts.windows.net/00000000-0000-4000-8000-0000000000e1/\"><IDPSSODescriptor protocolSupportEnumeration=\"urn:oasis:names:tc:SAML:2.0:protocol\"><KeyDescriptor use=\"signing\"><KeyInfo xmlns=\"http://www.w3.org/2000/09/xmldsig#\"><X509Data><X509Certificate>cmVwbGF5IHNpZ25pbmcgY2VydGlmaWNhdGUgb3JnLTA0IDE=</X509Certificate></X509Data></KeyInfo></KeyDescriptor><SingleSignOnService Binding=\"urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect\" Location=\"https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/saml2\"/></IDPSSODescriptor></EntityDescriptor>",
+    "samlSPEntityId": "https://vcfa.example.test/cloud/org/org-04/saml/metadata/alias/vcd",
+    "link": [
+     {
+      "rel": "down",
+      "type": "application/samlmetadata+xml",
+      "href": "https://vcfa.example.test/api/admin/org/00000000-0000-4000-8000-000000000c04/settings/federation/metadata"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c04/settings/federation/metadata",
+   "host": "vcfa.example.test",
+   "text": "<md:EntityDescriptor xmlns:md=\"urn:oasis:names:tc:SAML:2.0:metadata\" entityID=\"https://vcfa.example.test/cloud/org/org-04/saml/metadata/alias/vcd\"/>",
+   "note": "the organization's own service provider metadata, read for its entity id"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/users",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c04"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:user:00000000-0000-4000-8000-000000000529",
+      "username": "name-41",
+      "enabled": true,
+      "providerType": "SAML",
+      "roleEntityRefs": [
+       {
+        "name": "Service Broker User",
+        "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/groups",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c04"
+   },
+   "body": {
+    "resultTotal": 1,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:group:00000000-0000-4000-8000-000000000604",
+      "name": "group-4",
+      "providerType": "SAML"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/roles",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "host": "vcfa.example.test",
+   "request_headers": {
+    "X-VMWARE-VCLOUD-TENANT-CONTEXT": "urn:vcloud:org:00000000-0000-4000-8000-000000000c04"
+   },
+   "body": {
+    "resultTotal": 3,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000400",
+      "name": "Organization Member"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000401",
+      "name": "Organization Owner"
+     },
+     {
+      "id": "urn:vcloud:role:00000000-0000-4000-8000-000000000402",
+      "name": "Service Broker User"
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/applications",
+   "query": {
+    "$filter": "identifierUris/any(x:x eq 'https://vcfa.example.test/cloud/org/org-04/saml/metadata/alias/vcd')",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000704",
+      "appId": "00000000-0000-4000-8000-000000000904",
+      "displayName": "name-45",
+      "passwordCredentials": [],
+      "identifierUris": [
+       "https://vcfa.example.test/cloud/org/org-04/saml/metadata/alias/vcd"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals",
+   "query": {
+    "$filter": "appId eq '00000000-0000-4000-8000-000000000904'",
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "id": "00000000-0000-4000-8000-000000000804",
+      "accountEnabled": true,
+      "appRoleAssignmentRequired": true,
+      "preferredTokenSigningKeyThumbprint": "9C057489F46E8DDE2233120E8399FD992D3ED77B",
+      "keyCredentials": [
+       {
+        "customKeyIdentifier": "nAV0ifRujd4iMxIOg5n9mS0+13s=",
+        "usage": "Sign",
+        "type": "AsymmetricX509Cert",
+        "endDateTime": "2027-10-05T22:51:44Z"
+       },
+       {
+        "customKeyIdentifier": "WlSAIwsUsA+fhL5gjXHKB8BUli0=",
+        "usage": "Sign",
+        "type": "AsymmetricX509Cert",
+        "endDateTime": "2029-10-11T18:03:44Z"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/v1.0/servicePrincipals/00000000-0000-4000-8000-000000000804/appRoleAssignedTo",
+   "query": {
+    "$select": "*"
+   },
+   "host": "graph.microsoft.com",
+   "body": {
+    "value": [
+     {
+      "principalDisplayName": "group-4",
+      "principalType": "Group"
+     }
+    ]
+   }
+  }
+ ]
+}

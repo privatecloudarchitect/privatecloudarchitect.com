@@ -27,7 +27,7 @@ quietly stops being true are all readable in one pass:
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # OPS_REALM defaults to CUSTOMER
 export OPS_OWNER="PCA"                       # the owner prefix your content carries
 export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
 
@@ -55,6 +55,10 @@ a different ticket. In the record (`promise.json`, 2026-09-21) 27 machines read 
 of them was confirmed stopped by the floor.
 
 It writes `promise.json`, names no address, check or machine, and changes nothing.
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 ## Where to start, and how to grow
 

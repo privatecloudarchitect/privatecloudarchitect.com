@@ -10,7 +10,27 @@ written.
 |---|---|
 | `census.py` | Reads the brokers from the identity plane (never the fleet inventory), each realm and the VCF instances it covers, the realm's identity provider and its directories with protocol and port, the two ways a vCenter grant can spell a principal (the directory's domain and the realm's name, each in capitals) and the third string an API client's session carries (the broker tenant), the API clients with their tokens' lifetimes and each token's runway (its days left, and when it was last exchanged for a bearer), the emergency clients, the fleet's token settings and roles, each VCF Automation organization's ways in, and the broker each vCenter signs in through. `--orgs-only` reads only the organizations, on a VCF Automation provider credential alone. `--egress-metadata-url` asks each broker to fetch a SAML metadata URL itself, proving or refuting its reach to a cloud identity provider. Writes `census.json`, and refuses to write a record carrying any estate value. |
 | `census.json` | That record from the reference estate, 2026-10-15, written by `census.py` as it stands: every call answered, and every paged list's pages carry the total stated and the distinct entries read (`listed`). It was made without `FINGERPRINT_KEY_FILE`, so it carries no fingerprints and `catalog_check.py --census` refuses it as a usage error (exit 5); join a record from your own run, made with your key. |
-| `expected-output.md` | The transcript of that run, with what to read in it, and a run whose credential could not read the fleet identity plane. |
+| `expected-output.md` | The transcript of that run, with what to read in it, a run whose credential could not read the fleet identity plane, and a replayed run. |
+| `replay/census/` | A recorded answer set made from `census.json`, every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
+
+## Try it without an estate
+
+`--replay DIR` answers every request from a recorded set instead of the estate, so you can run the census before
+you have an estate to read, or see what it prints for a shape your estate has not shown you. The set beside this
+README, `replay/census/`, is the reference estate's record (`census.json`) made into answers, with a placeholder for
+every name:
+
+```bash
+python3 census.py --replay replay/census                 # the whole census; writes census.replay.json
+python3 census.py --replay replay/census --orgs-only     # the organizations alone, as the provider
+```
+
+Nothing is sent and no credential is read: the set answers each request by its method, path and query, and names
+the placeholder hosts it was recorded on. A request the set holds no answer for is a read that failed, so the run
+exits 3 and names the call, never a pass. The record goes to `census.replay.json` unless `OUT` names a file, so a
+replayed run never overwrites a real `census.json`, and it carries `"replay": true`, so a tool that reads census
+records (`catalog_check.py --census`) refuses it as no read of an estate. The transcript is under "A replayed run"
+in `expected-output.md`.
 
 ## Run it
 
@@ -69,8 +89,8 @@ without it. Give `catalog_check.py` the same file.
 | Exit | Means | What a scheduler does |
 |---|---|---|
 | 0 | the record is written and every call answered | nothing |
-| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`) or without `isProviderConsumptionOrg` (it prints `provider consumption not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); or an error the script did not expect | fix the read; take no count from this run |
-| 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a Python older than 3.10); nothing is written | fix the invocation |
+| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`) or without `isProviderConsumptionOrg` (it prints `provider consumption not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); under `--replay`, a request the set holds no answer for; or an error the script did not expect | fix the read; take no count from this run |
+| 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a `--replay` directory that cannot be read or holds no replay set; a Python older than 3.10); nothing is written | fix the invocation |
 
 These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
 census judges nothing, so it has no finding code of its own. A tool that reads `census.json`, as

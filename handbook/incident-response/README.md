@@ -17,7 +17,7 @@ Python only; no token is printed or written.
 export OPS_HOST=<operations-fqdn>
 export OPS_BROKER_HOST=<identity-broker-fqdn>   # omit if the broker shares the Ops FQDN
 export OPS_REALM=CUSTOMER
-export OPS_API_TOKEN=<api-token>                # minted in the operations console
+export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # minted in the operations console
 export OPS_OWNER="PCA"                          # the owner prefix your content carries
 export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
 
@@ -25,6 +25,10 @@ python3 triage.py
 python3 triage.py --corpus /path/to/your/failure-record.md
 python3 triage.py --corpus record.md --entry '^### (F-\d+):'    # your own heading shape
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 ## Question one: is the queue made of incidents?
 

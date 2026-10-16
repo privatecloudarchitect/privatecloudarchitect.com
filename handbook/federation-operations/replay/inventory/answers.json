@@ -1,0 +1,332 @@
+{
+ "replay": 1,
+ "about": "the reference estate's organizations as the provider's inventory read them on 2026-10-16 (X-280), every name a placeholder: ten listed, four federated to one Entra tenant (two over OIDC, two over SAML), one over OIDC to another provider, one on VCF single sign-on, three never federated, and the provider's own consumption organization; INVENTORY_FILE names the inventory beside this set (files/inventory.json)",
+ "source": "lab/state/identity/2026-10-16T173023Z-X-280-provider-inventory.json (the scrubbed record of X-280): each organization's settings built to read as the state the record holds; ids, hosts and names built",
+ "now": "2026-10-16T17:30:33Z",
+ "env": {
+  "VCFA_HOST": "vcfa.example.test",
+  "INVENTORY_FILE": "files/inventory.json"
+ },
+ "answers": [
+  {
+   "method": "POST",
+   "path": "/oauth/provider/token",
+   "host": "vcfa.example.test",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "sub": "name-1",
+      "exp": 1792137600
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   },
+   "note": "the provider API token traded for a bearer (a replayed run holds a token; the recorded run held a bearer)"
+  },
+  {
+   "method": "GET",
+   "path": "/cloudapi/1.0.0/orgs",
+   "host": "vcfa.example.test",
+   "query": {
+    "page": "1",
+    "pageSize": "128"
+   },
+   "body": {
+    "resultTotal": 10,
+    "pageCount": 1,
+    "page": 1,
+    "pageSize": 128,
+    "associations": null,
+    "values": [
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c01",
+      "name": "org-01",
+      "displayName": "org-01",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c02",
+      "name": "org-02",
+      "displayName": "org-02",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c03",
+      "name": "org-03",
+      "displayName": "org-03",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c04",
+      "name": "org-04",
+      "displayName": "org-04",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c05",
+      "name": "org-05",
+      "displayName": "org-05",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c06",
+      "name": "org-06",
+      "displayName": "org-06",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c07",
+      "name": "org-07",
+      "displayName": "org-07",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c08",
+      "name": "org-08",
+      "displayName": "org-08",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": true
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c09",
+      "name": "org-09",
+      "displayName": "org-09",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     },
+     {
+      "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c0a",
+      "name": "org-10",
+      "displayName": "org-10",
+      "isEnabled": true,
+      "isClassicTenant": false,
+      "isProviderConsumptionOrg": false
+     }
+    ]
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c01/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": null,
+    "vidb": null,
+    "issuerId": null,
+    "clientId": null,
+    "oidcAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c01/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false,
+    "samlMetadata": null,
+    "samlSPEntityId": null,
+    "samlAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c02/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": null,
+    "vidb": null,
+    "issuerId": null,
+    "clientId": null,
+    "oidcAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c02/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false,
+    "samlMetadata": null,
+    "samlSPEntityId": null,
+    "samlAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c03/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0",
+    "clientId": "00000000-0000-4000-8000-000000000903",
+    "clientSecret": "a-placeholder-not-a-secret",
+    "jwksUri": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/discovery/v2.0/keys",
+    "orgRedirectUri": "https://vcfa.example.test/login/oauth?service=tenant:org-03"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c03/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false,
+    "samlMetadata": null,
+    "samlSPEntityId": null,
+    "samlAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c04/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": null,
+    "vidb": null,
+    "issuerId": null,
+    "clientId": null,
+    "oidcAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c04/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "samlSPEntityId": "https://vcfa.example.test/cloud/org/org-04/saml/metadata/alias/vcd",
+    "samlMetadata": "<EntityDescriptor xmlns=\"urn:oasis:names:tc:SAML:2.0:metadata\" entityID=\"https://sts.windows.net/00000000-0000-4000-8000-0000000000e1/\"/>"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c05/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/v2.0",
+    "clientId": "00000000-0000-4000-8000-000000000905",
+    "clientSecret": "a-placeholder-not-a-secret",
+    "jwksUri": "https://login.microsoftonline.com/00000000-0000-4000-8000-0000000000e1/discovery/v2.0/keys",
+    "orgRedirectUri": "https://vcfa.example.test/login/oauth?service=tenant:org-05"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c05/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false,
+    "samlMetadata": null,
+    "samlSPEntityId": null,
+    "samlAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c06/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": null,
+    "vidb": null,
+    "issuerId": null,
+    "clientId": null,
+    "oidcAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c06/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "samlSPEntityId": "https://vcfa.example.test/cloud/org/org-06/saml/metadata/alias/vcd",
+    "samlMetadata": "<EntityDescriptor xmlns=\"urn:oasis:names:tc:SAML:2.0:metadata\" entityID=\"https://sts.windows.net/00000000-0000-4000-8000-0000000000e1/\"/>"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c07/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": null,
+    "vidb": null,
+    "issuerId": null,
+    "clientId": null,
+    "oidcAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c07/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false,
+    "samlMetadata": null,
+    "samlSPEntityId": null,
+    "samlAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c09/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "vidb": true,
+    "issuerId": "https://broker.example.test/acs/t/CUSTOMER"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c09/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false,
+    "samlMetadata": null,
+    "samlSPEntityId": null,
+    "samlAttributeMapping": null
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c0a/settings/oauth",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": true,
+    "vidb": false,
+    "issuerId": "https://idp.example.test/oidc",
+    "clientId": "00000000-0000-4000-8000-00000000090a"
+   }
+  },
+  {
+   "method": "GET",
+   "path": "/api/admin/org/00000000-0000-4000-8000-000000000c0a/settings/federation",
+   "host": "vcfa.example.test",
+   "body": {
+    "enabled": false,
+    "samlMetadata": null,
+    "samlSPEntityId": null,
+    "samlAttributeMapping": null
+   }
+  }
+ ]
+}

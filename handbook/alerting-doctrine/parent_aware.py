@@ -21,7 +21,8 @@ Without --execute it picks the subjects, prints every body it would send, and ch
 refuses to start while an enabled notification rule could send the test alerts anywhere.
 
 Run:
-  export OPS_HOST=<operations-fqdn>  OPS_BROKER_HOST=<identity-broker-fqdn>  OPS_API_TOKEN=<api-token>
+  export OPS_HOST=<operations-fqdn>  OPS_BROKER_HOST=<identity-broker-fqdn>
+  export OPS_API_TOKEN_FILE=<api-token file>      # mode 0600 (or OPS_API_TOKEN, the value itself)
   export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
   export OPS_HOST_A=<host name>  OPS_HOST_B=<host name>   # optional; otherwise the first two that qualify
   python3 parent_aware.py                         # dry run: the subjects and the bodies

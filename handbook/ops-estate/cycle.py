@@ -26,7 +26,7 @@ and page nobody. If any step fails, the teardown still runs. It refuses to start
 exists, because the demonstration would then adopt an object it did not create.
 
 Usage:  python3 cycle.py
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...); OUT_DIR for the record (default: this folder)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE or OPS_API_TOKEN, ...); OUT_DIR for the record (default: this folder)
 Writes: converge-run.json, each step's command and output, plus the checks; and expected-output.md, the same
         run rendered as a transcript. The adoption step keeps only its
         summary line, so the record does not list your super metrics a second time.
@@ -43,7 +43,7 @@ import sys
 import tempfile
 import time
 
-from opslib import bearer, ops
+from opslib import bearer, ops, secret
 
 # The cycle takes no arguments; refuse any rather than run the whole cycle on a stray flag such as --help.
 if sys.argv[1:]:
@@ -96,6 +96,9 @@ def expected_output(record, exported):
 
 
 def main():
+    # The steps run in a temporary copy of this folder, so a token file named by a relative path is made absolute.
+    if os.environ.get("OPS_API_TOKEN_FILE"):
+        os.environ["OPS_API_TOKEN_FILE"] = os.path.abspath(os.environ["OPS_API_TOKEN_FILE"])
     work = pathlib.Path(tempfile.mkdtemp(prefix="ops-estate-cycle-"))
     for f in FILES:
         shutil.copy2(HERE / f, work / f)
@@ -187,7 +190,7 @@ def main():
     record["residueAfterTeardown"] = len(declared_ids(names))
     text = json.dumps(record, indent=1, ensure_ascii=False)
     for var in ("OPS_HOST", "OPS_BROKER_HOST", "OPS_API_TOKEN"):
-        v = os.environ.get(var)
+        v = secret(var) if var == "OPS_API_TOKEN" else os.environ.get(var)  # the token may be in OPS_API_TOKEN_FILE
         assert not v or v not in text, f"{var} reached the record"
     out_dir = pathlib.Path(os.environ.get("OUT_DIR", HERE))
     out_dir.mkdir(parents=True, exist_ok=True)

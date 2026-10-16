@@ -1,0 +1,43 @@
+{
+ "_about": "The inventory the replay set beside it was recorded against (X-280's file, every name a placeholder): one Entra tenant, the four organizations federated to it, declared with their ids, and the tenant's two schedules pointed at the records committed in the companions, as the recorded run pointed them.",
+ "tenants": [
+  {
+   "tenant": "00000000-0000-4000-8000-0000000000e1",
+   "consent": "consented",
+   "owners": {
+    "tenant": "the tenant's identity administrators",
+    "provider": "the provider's platform owners"
+   },
+   "schedules": {
+    "watch": {
+     "every_hours": 24,
+     "record": "../../../watch.json",
+     "slack_hours": 1
+    },
+    "leavers": {
+     "every_hours": 24,
+     "record": "../../../../identity-lifecycle/leavers.json",
+     "slack_hours": 1
+    }
+   },
+   "organizations": [
+    {
+     "name": "org-03",
+     "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c03"
+    },
+    {
+     "name": "org-04",
+     "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c04"
+    },
+    {
+     "name": "org-05",
+     "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c05"
+    },
+    {
+     "name": "org-06",
+     "id": "urn:vcloud:org:00000000-0000-4000-8000-000000000c06"
+    }
+   ]
+  }
+ ]
+}

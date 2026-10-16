@@ -1,0 +1,95 @@
+{
+ "replay": 1,
+ "about": "the reference estate's broker on VCF 9.1.1 (X-126, 2026-10-15) trading a VCF single sign-on user's api-token for a bearer, every value a placeholder",
+ "source": "lab/state/identity/2026-10-15T211204Z-X-126-token-facts.json (X-126, step 1), the committed record of a doors.py run on VCF 9.1.1",
+ "now": "2026-10-15T21:12:04Z",
+ "env": {
+  "OPS_HOST": "ops.example.test",
+  "OPS_BROKER_HOST": "broker.example.test"
+ },
+ "answers": [
+  {
+   "method": "POST",
+   "path": "/acs/t/CUSTOMER/token",
+   "body": {
+    "access_token": {
+     "$jwt": {
+      "acct": "name-1@domain-1.example.test",
+      "aud": "https://broker.example.test/auth/t/CUSTOMER/oauthtoken",
+      "auth_time": 1792098724,
+      "authorization_details": [
+       {
+        "type": "hcx",
+        "roles": [
+         "role-1"
+        ]
+       },
+       {
+        "type": "nsx_manager",
+        "roles": [
+         "role-2"
+        ]
+       },
+       {
+        "type": "salt_raas",
+        "roles": [
+         "role-3"
+        ]
+       },
+       {
+        "type": "vcenter",
+        "roles": [
+         "role-4"
+        ]
+       },
+       {
+        "type": "vcf_ops",
+        "roles": [
+         "role-5"
+        ]
+       },
+       {
+        "type": "vcfa",
+        "roles": [
+         "role-6"
+        ]
+       },
+       {
+        "type": "vro",
+        "roles": [
+         "role-7"
+        ]
+       }
+      ],
+      "azp": "client-1",
+      "cid": "client-1",
+      "ctx": "00000000-0000-4000-8000-000000000001",
+      "domain": "domain-1.example.test",
+      "eml": "name-1@domain-1.example.test",
+      "exp": 1792102324,
+      "group_ids": [
+       "00000000-0000-4000-8000-000000000002"
+      ],
+      "group_names": [
+       "name-2"
+      ],
+      "iat": 1792098724,
+      "idp": "00000000-0000-4000-8000-000000000003",
+      "iss": "https://broker.example.test/acs/t/CUSTOMER/",
+      "jti": "00000000-0000-4000-8000-000000000004",
+      "pid": "00000000-0000-4000-8000-000000000005",
+      "prn": "name-1@CUSTOMER",
+      "prn_type": "USER",
+      "scp": "openid profile user email group",
+      "sub": "00000000-0000-4000-8000-000000000006",
+      "user_id": "00000000-0000-4000-8000-000000000007",
+      "wid": "00000000-0000-4000-8000-000000000008"
+     }
+    },
+    "token_type": "Bearer",
+    "expires_in": 3600
+   },
+   "note": "the broker trades the api-token for a bearer: X-126's claim names, prn_type USER, 3600 s; scp as the 2026-09-16 transcript in expected-output.md prints it; every other value a placeholder"
+  }
+ ]
+}

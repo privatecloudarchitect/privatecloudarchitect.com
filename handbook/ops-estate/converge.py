@@ -14,7 +14,7 @@ Usage:  python3 converge.py [--dry-run] [--state FILE]
         --state FILE converges a declaration other than desired-state.json, such as the one export.py writes
         from what you already built. It only creates and updates; nothing here deletes, and teardown.py is
         deliberately bound to the demonstration declaration so it can never be pointed at your own content.
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE or OPS_API_TOKEN, ...)
 Exit:   0 on success; 1 on any failed write.
 """
 

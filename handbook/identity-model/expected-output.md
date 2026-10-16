@@ -204,3 +204,45 @@ fleet identity read answered, and each fleet line (brokers, realm, provider, dir
 API clients other than itself, user tokens) was the same as a VCF single sign-on user's API token read straight
 after it. One run. With VCF Viewer every read was refused (above), and no role between the two was tried, so the
 census credential reads at the administrator's level: hold it as tier-0.
+
+## A replayed run
+
+`python3 census.py --replay replay/census` on the set beside the script: the same estate as the run above, every name a placeholder, read from recorded answers with nothing sent. The first line is written to standard error. It exits 0, as the recorded run did.
+
+```
+$ python3 census.py --replay replay/census
+replay: 59 recorded answers from replay/census; nothing is sent and no credential is read
+Brokers, from the identity plane: 3 (2 embedded, 1 instance)
+  host-2.example.test  instance  holds realm host-2.example.test
+  host-4.example.test  embedded  holds no realm
+  host-5.example.test  embedded  holds no realm
+Realm host-2.example.test on the instance broker host-2.example.test: covers 2 VCF instance(s) (name-2, name-3), 10 component(s); issues: none
+Provider name-5: type ADLDAP, protocol LDAP_BIND, provisioning LDAP
+  directory ad (domain-1.example.test): LDAP port 389 to host-7.example.test; sync COMPLETED, 14 users, 6 groups
+vCenter grant spellings: DOMAIN-1.EXAMPLE.TEST\<name> (directory); HOST-2.EXAMPLE.TEST\<name> (the realm's name, inert behind an AD/LDAP provider)
+API client sessions in vCenter: CUSTOMER\<client id> (the broker tenant, not the realm's name)
+Emergency client: none
+API clients: 4
+  name-8: roles sddc_admin, vcf_administrator, role-1; no token
+  name-10: roles vcf_administrator; token name-16 ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-01-24, 100 d left; last used 2026-07-29, 78 d before the read
+  name-12: roles vcf_viewer; token name-17 ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-04-01, 167 d left; last used 2026-10-15, 0 d before the read
+  name-14: roles vcf_administrator; no token
+User API token of name-1: token name-15 ACTIVE: API token 259200 min (180 d), access token 60 min; expires 2027-02-03, 110 d left; last used 2026-10-15, 0 d before the read
+Fleet settings: access token 60 min, API token 259200 min (180 d), retention 43200 min (30 d), all-users group off
+Organizations: 10
+  org-1  all-apps: ldap-system
+  org-2  classic: ldap-system
+  org-3  all-apps: oidc (issuer: entra)
+  org-4  all-apps: saml
+  org-5  classic: oidc (issuer: entra)
+  org-6  classic: saml
+  org-7  all-apps: ldap-system
+  org-8  all-apps, provider consumption: oidc-broker, ldap-system (issuer: broker)
+  System  all-apps: vcf-sso, ldap-system (issuer: broker)
+  org-9  classic: oidc, ldap-system (issuer: other)
+vCenter host-4.example.test signs in through host-2.example.test (instance)
+vCenter host-5.example.test signs in through host-2.example.test (instance)
+vCenter host-6.example.test signs in through host-2.example.test (instance); Supervisor name-22: host-3.example.test
+
+57 call(s), 0 failed; census.replay.json written with every estate value replaced
+```

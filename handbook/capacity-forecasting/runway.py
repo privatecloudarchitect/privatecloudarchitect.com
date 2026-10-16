@@ -32,7 +32,7 @@ then grades against its own numbers has verified nothing that it then used.
 
 Usage:  python3 runway.py [--parity expectations.json] [--parity-warn] [--model alloc|demand|both]
                           [--record runway.json]
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE or OPS_API_TOKEN, ...)
 Exit:   0 healthy - 1 warning - 2 critical - 3 parity gate refused
 """
 

@@ -22,13 +22,14 @@ ACTIVE, EXPIRED or REVOKED) or end date the record does not carry is not judged:
 exits 3. Every name in a census record is a
 placeholder, so the join is on keyed fingerprints: run the census with FINGERPRINT_KEY_FILE set, and give this
 script the same file. The join first checks that the census read, each check on its own whatever the record's exit
-says. A record is not a read when its own exit is not 0; when a call to VCF Operations' fleet identity plane failed,
-or answered without the list the read needs (census.py marks such a call `shape`); when it carries no API client
-list or no realm list (a --orgs-only record reads no fleet); when it lists no realm, or did not query the API client
-and token lists of every realm it lists; when the last page of a realm's API client or token list does not state
-that the list was read whole (census.py records the stated total and the distinct entries read, `listed`, on each
-page; a record an earlier census.py wrote carries none) or states fewer entries read than its total; when its API client
-lines are not the clients its reads listed; or when an API client line carries no roles or tokens list, or, in a
+says. A record is not a read when a replayed run wrote it (census.py --replay marks its record "replay": true: its
+answers came from a recorded set, not from an estate); when its own exit is not 0; when a call to VCF Operations'
+fleet identity plane failed, or answered without the list the read needs (census.py marks such a call `shape`); when
+it carries no API client list or no realm list (a --orgs-only record reads no fleet); when it lists no realm, or did
+not query the API client and token lists of every realm it lists; when the last page of a realm's API client or token
+list does not state that the list was read whole (census.py records the stated total and the distinct entries read,
+`listed`, on each page; a record an earlier census.py wrote carries none) or states fewer entries read than its total;
+when its API client lines are not the clients its reads listed; or when an API client line carries no roles or tokens list, or, in a
 fingerprinted record, no fingerprint. The join then stops with exit 3, because a census that did not read its API
 clients would otherwise pass as an estate with none. An empty API client list from a read that passes every check is
 a read: the run says that zero were joined, and why the empty list is the estate's.
@@ -37,11 +38,11 @@ Use:  python3 catalog_check.py [CATALOG.json] [--today YYYY-MM-DD] [--census CEN
 Exit, the worst state in this order, so a warning never hides a client the run could not judge:
       2 a failure (a field missing, a date overdue or unreadable, a secret in the file, an API client without an
         owner, a role, both lifetimes or a rotation date, or holding a token EXPIRED, REVOKED or past its end date)
-      3 the census record is not a read (its exit is not 0, a fleet identity call failed or was marked `shape`, it has
-        no API client list or no realm list, a realm's client or token list was not queried or does not state it was
-        read whole, its client lines are not the clients its reads listed, or a client line lacks its roles, tokens or
-        fingerprint), checked before any entry is printed, with nothing joined, because nothing about the API clients
-        is known; or a joined client holds a token whose state or end date the record does not carry, so that client
+      3 the census record is not a read (a replayed run wrote it, its exit is not 0, a fleet identity call failed or
+        was marked `shape`, it has no API client list or no realm list, a realm's client or token list was not queried
+        or does not state it was read whole, its client lines are not the clients its reads listed, or a client line
+        lacks its roles, tokens or fingerprint), checked before any entry is printed, with nothing joined, because
+        nothing about the API clients is known; or a joined client holds a token whose state or end date the record does not carry, so that client
         is not judged; or an error the script did not expect
       1 a warning (due inside the window, a next-due date later than the cadence allows, a client with no token, a
         token expiring before its rotation date, or a catalog entry two API clients join), and nothing above
@@ -217,6 +218,9 @@ def census_unread(record: dict) -> str | None:
     exit says: a writer that marked a call and still wrote exit 0 is refused all the same."""
     if not isinstance(record, dict):
         return "it is not a census record"
+    if record.get("replay", False) is not False:  # census.py --replay writes "replay": true; a live record has no key
+        return ("a replayed run wrote it (\"replay\": true): its answers came from a recorded set, not from an estate, so "
+                "its API clients are no estate's")
     if record.get("orgs_only"):
         return "it is a --orgs-only record, which reads no fleet and so no API client"
     code = record.get("exit")

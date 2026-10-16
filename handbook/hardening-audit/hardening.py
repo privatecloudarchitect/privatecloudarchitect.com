@@ -13,7 +13,7 @@ with their reason, which is itself part of the posture record.
   SDDC Manager plane (certificates, credentials, backup):
     SDDC_HOST, SDDC_USERNAME, SDDC_PASSWORD
   Operations plane (alert scope):
-    OPS_HOST, OPS_API_TOKEN  (OPS_BROKER_HOST, OPS_REALM as in opslib.py)
+    OPS_HOST, OPS_API_TOKEN_FILE or OPS_API_TOKEN  (OPS_BROKER_HOST, OPS_REALM as in opslib.py)
     The token's role must be allowed to export a policy: a fleet API client
     holding only a viewer role lists the policies and is refused the export
     (HTTP 403), and the read is then recorded as a skip.
@@ -335,7 +335,7 @@ def read_builds(stok):
             builds["SDDC Manager"] = (sddc("/v1/sddc-managers", stok).get("elements") or [{}])[0].get("version")
         except Exception:
             builds["SDDC Manager"] = None
-    if os.environ.get("OPS_HOST") and os.environ.get("OPS_API_TOKEN"):
+    if os.environ.get("OPS_HOST") and any(os.environ.get(k) for k in ("OPS_API_TOKEN_FILE", "OPS_API_TOKEN")):
         try:
             st, v = ops("GET", "/api/versions/current", ops_bearer())
             name = v.get("releaseName") if st == 200 and isinstance(v, dict) else None
@@ -452,7 +452,7 @@ def main():
 
     planes = {
         "sddc": all(os.environ.get(k) for k in ("SDDC_HOST", "SDDC_USERNAME", "SDDC_PASSWORD")),
-        "ops": all(os.environ.get(k) for k in ("OPS_HOST", "OPS_API_TOKEN")),
+        "ops": bool(os.environ.get("OPS_HOST")) and any(os.environ.get(k) for k in ("OPS_API_TOKEN_FILE", "OPS_API_TOKEN")),
         "vcfa": all(os.environ.get(k) for k in ("VCFA_HOST", "VCFA_ORG", "VCFA_USER", "VCFA_PASSWORD")),
     }
     records, all_findings, skips = {}, [], []

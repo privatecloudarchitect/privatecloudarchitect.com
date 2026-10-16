@@ -1,15 +1,17 @@
 # Expected output
 
 Transcripts from one VCF 9.1.0 instance with Real-Time Metrics deployed, 2026-09-16, host names and identifiers
-replaced, and the broker and fleet-plane half of `doors.py` read again on VCF 9.1.1 on 2026-10-15. Your rows will
-differ where your surfaces differ; the shape is what to expect.
+replaced, and the broker and fleet-plane half of `doors.py` read again on VCF 9.1.1 on 2026-10-15; the last section
+replays that 9.1.1 run from the sets beside the scripts. Your rows will differ where your surfaces differ; the shape
+is what to expect.
 
 ## doors.py
 
 Every surface configured; the provider api-token path skipped because no provider refresh token was supplied.
 The one DIFFERS row is a finding, not a fault: it corrected the Platform identity chapter the same day (Fleet
 lifecycle refuses a JWT minted for another service, and the metrics service's metadata read does not). The notes
-are kept as they were recorded; the next section says why they now read differently.
+are kept as they were recorded; the next section says why they now read differently. Run today, a skipped path names
+every variable it needs: the provider line reads `skipped: VCFA_HOST, VCFA_PROVIDER_REFRESH_TOKEN_FILE not both set`.
 
 ```text
 doors.py: one harmless read per pair; tokens minted per run and never printed
@@ -228,4 +230,63 @@ $ FINGERPRINT_KEY_FILE=~/.vcf/fingerprint.key python3 catalog_check.py credentia
 NOT READ: a token's state or end date was not in the census record, so that client is not judged (exit 3)
 
 exit 3
+```
+
+## A replayed run
+
+The two commands under "Try it without an estate" in the README, run from this folder on the sets beside the scripts:
+the X-126 estate, every name a placeholder, read from recorded answers with nothing sent. The first line of each is
+written to standard error. Each exits 0, as the recorded run did, and the doors rows are the ones X-126 read.
+
+```text
+$ python3 claims.py --replay replay/claims
+replay: 1 recorded answers from replay/claims; nothing is sent and no credential is read
+decoded: the bearer exchanged from your api-token at the broker (1487 characters; value never printed)
+header:   alg=none  typ=JWT  kid=absent
+issuer:   https://broker.example.test/acs/t/CUSTOMER/
+audience: https://broker.example.test/auth/t/CUSTOMER/oauthtoken
+sub:      00000000-0000-4000-8000-000000000006
+prn:      name-1@CUSTOMER
+prn_type: USER
+azp:      client-1
+cid:      client-1
+principal: a PERSON (prn_type USER, eml, user_id): this bearer carries that person's rights, and a pipeline holding it dies with their account
+scp:      openid profile user email group
+issued:   2026-10-15T21:12:04Z
+expires:  2026-10-15T22:12:04Z  (lifetime 60 min 0 s: the minutes clock; the api-token behind it is on the months clock)
+other claims present: acct, auth_time, authorization_details, ctx, domain, group_ids, group_names, idp, pid, wid
+
+exit 0
+```
+
+```text
+$ python3 doors.py --replay replay/doors
+replay: 14 recorded answers from replay/doors; nothing is sent and no credential is read
+doors.py: one harmless read per pair; tokens minted per run and never printed
+
+broker bearer minted from the api-token
+
+  VCF Operations                     broker bearer               200  accepted  MATCH
+  NSX                                broker bearer               200  accepted  MATCH
+  Real-Time Metrics                  broker bearer               401  refused   MATCH                      the fleet plane refuses the broker's bearer
+  Real-Time Metrics                  service JWT (VCF_VODAP)     200  accepted  MATCH
+  Fleet lifecycle, components        service JWT (VCF_FLEET_LCM)  200  accepted  MATCH
+  Fleet lifecycle, components        the metrics service's JWT   401  refused   MATCH                      minted per service, so another service's is refused here
+  Fleet lifecycle, health probe      the metrics service's JWT   200  accepted                             the health probe answers any service's JWT
+  Real-Time Metrics                  the fleet service's JWT     200  accepted  MATCH                      accepted here, while Fleet lifecycle refuses another service's
+  Log management                     service JWT (VCF_OPS_LI)    200  accepted  MATCH                      sent as X-JWT-Token
+
+  VCF Automation, tenant OAuth grant   skipped: VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE not all set
+
+  VCF Automation, Basic session login   skipped: VCFA_HOST, VCFA_USER, VCFA_PASSWORD_FILE not all set
+
+  VCF Automation, provider api-token    skipped: VCFA_HOST, VCFA_PROVIDER_REFRESH_TOKEN_FILE not both set
+
+  vCenter                              skipped: VC_HOST, VC_USER, VC_PASSWORD_FILE not all set
+
+  SDDC Manager                         skipped: SDDC_HOST, SDDC_USER, SDDC_PASSWORD_FILE not all set
+
+9 pairs read; 0 differ from the chapter; 0 without an answer
+
+exit 0
 ```

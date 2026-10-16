@@ -605,3 +605,137 @@ service_account_teardown.json written with every estate value replaced
 ```
 
 (the bullet after the block is unchanged)
+
+## A replayed run
+
+Each command of "Try it without an estate" in the README, run from this folder on the set beside its script, with nothing sent: each set is the reference estate's records made into answers, every name a placeholder. The first line of each run is written to standard error. `vcenter_exchange.py` reads every answer from its set, and exits 0 on the exchange, every vCenter taking the client through both sessions, and 1 with `--sessions`, as the census of 2026-10-13 reads under today's table (its record printed 3, the code of its day).
+
+```text
+$ python3 vcenter_exchange.py --replay replay/vcenter_exchange
+replay: 15 recorded answers from replay/vcenter_exchange; nothing is sent and no credential is read
+vCenter host-1.example.test
+  the bearer as presented: HTTP 401
+  exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
+  REST session (SIGN): HTTP 201, user CUSTOMER\api-client-01, VM list HTTP 200 (0 VMs visible)
+  SOAP session (LoginByToken): user CUSTOMER\api-client-01
+vCenter host-2.example.test
+  the bearer as presented: HTTP 401
+  exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
+  REST session (SIGN): HTTP 201, user CUSTOMER\api-client-01, VM list HTTP 200 (0 VMs visible)
+  SOAP session (LoginByToken): user CUSTOMER\api-client-01
+vCenter host-3.example.test
+  the bearer as presented: HTTP 401
+  exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
+  REST session (SIGN): HTTP 201, user CUSTOMER\api-client-01, VM list HTTP 200 (0 VMs visible)
+  SOAP session (LoginByToken): user CUSTOMER\api-client-01
+The client took both sessions on 3 of 3 vCenter(s)
+
+exchange.replay.json written with every estate value replaced; exit 0
+```
+
+```text
+$ python3 vcenter_exchange.py --replay replay/vcenter_exchange --sessions
+replay: 15 recorded answers from replay/vcenter_exchange; nothing is sent and no credential is read
+Census read as the API client's own session
+vCenter host-1.example.test
+  the bearer as presented: HTTP 401
+  exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
+  REST session (SIGN): HTTP 201, user CUSTOMER\api-client-01, VM list HTTP 200 (0 VMs visible)
+  SOAP session (LoginByToken): user CUSTOMER\api-client-01
+  sessions (319, this census's own left out): directory 1, local administrator 15, local, VCF integration account 256, local, other 47
+    local administrator by agent: VMware vim-java 5, XML-WS Runtime git-revision#50dbfd3 2, vapi-endpoint 8
+    directory domain-1.example.test\person-01: vapi-endpoint 1  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
+vCenter host-2.example.test
+  the bearer as presented: HTTP 401
+  exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
+  REST session (SIGN): HTTP 201, user CUSTOMER\api-client-01, VM list HTTP 200 (0 VMs visible)
+  SOAP session (LoginByToken): user CUSTOMER\api-client-01
+  sessions (358, this census's own left out): directory 2, local administrator 8, local, VCF integration account 274, local, other 74
+    local administrator by agent: VMware vim-java 1, XML-WS Runtime git-revision#50dbfd3 3, vAPI 4
+    directory domain-1.example.test\person-01: vapi-endpoint 1  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
+    directory domain-1.example.test\person-02: vSphereUI 1
+vCenter host-3.example.test
+  the bearer as presented: HTTP 401
+  exchange: HTTP 200, urn:ietf:params:oauth:token-type:saml2, Bearer, lives 299 s
+  REST session (SIGN): HTTP 201, user CUSTOMER\api-client-01, VM list HTTP 200 (0 VMs visible)
+  SOAP session (LoginByToken): user CUSTOMER\api-client-01
+  sessions (280, this census's own left out): directory 3, local, VCF integration account 154, local, other 123
+    directory domain-1.example.test\person-01: vapi-endpoint 3  SIGNS IN FROM A CLIENT THAT IS NOT INTERACTIVE
+The client took both sessions on 3 of 3 vCenter(s)
+Directory accounts signing in from a client that is not interactive: 1
+WATCH: the local administrator holds 23 session(s) from clients that are not interactive: an account in automated use is not a break-glass account
+
+exchange.replay.json written with every estate value replaced; exit 1
+```
+
+`api_client.py` runs its plan alone under `--replay`: the second line, on standard error, says `--execute` was turned off, and the plan follows. It reads nothing and writes no token file, state file or record, and exits 0, as a plan does.
+
+```text
+$ python3 api_client.py --replay replay/api_client --client-id backup-01 --rotate --api-token-ttl 2880 --access-token-ttl 60 --token-file backup-01-token-new --execute
+replay: 5 recorded answers from replay/api_client; nothing is sent and no credential is read
+replay: --execute runs its plan alone under --replay; nothing is sent
+Rotation plan for API client backup-01 on ops.example.test:
+  in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query, ?page=N&pageSize=50 to the stated total: the client and the tokens it holds
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens
+         {"accessTokenTtl": 60, "apiClientId": "backup-01", "apiTokenTtl": 2880, "tokenName": "backup-01-token-<UTC stamp>", "tokenType": "API_CLIENT"}
+  POST   /acs/t/{broker tenant}/token at the broker  (the new token, once; with --old-token-file the old one too)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query, every page; read back: the new token active beside the old
+  then: the new token to backup-01-token-new (mode 0600, never printed); nothing is deleted: point the integration at the new token, run one job, then --retire-old
+
+plan only: nothing was sent (--execute sends it)
+```
+
+```text
+$ python3 api_client.py --replay replay/api_client --client-id backup-01 --teardown --execute
+replay: 5 recorded answers from replay/api_client; nothing is sent and no credential is read
+replay: --execute runs its plan alone under --replay; nothing is sent
+Teardown plan for API client backup-01 on ops.example.test:
+  in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens/query and api-clients/query, ?page=N&pageSize=50 to the stated total
+  DELETE /api/fleet-management/iam/ssorealms/{realm}/api-tokens/{token id}  (each of the client's tokens)
+  DELETE /api/fleet-management/iam/ssorealms/{realm}/api-clients/backup-01
+  POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query, every page: residue
+  only for a client the state file records, and never on the client's own token
+
+plan only: nothing was sent (--execute sends it)
+```
+
+`service_account.py` runs its plan alone the same way: nothing is read, registered, revoked or removed, and no token file, state file or record is written.
+
+```text
+$ python3 service_account.py --replay replay/service_account --org tenant-a --name backup-01 --role "Organization User" --token-file backup-01-refresh-token --execute
+replay: 3 recorded answers from replay/service_account; nothing is sent and no credential is read
+replay: --execute runs its plan alone under --replay; nothing is sent
+Create plan for service account backup-01 in organization tenant-a on vcfa.example.test:
+  GET    /cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=32  (every page, to the stated total)
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=32  (in the organization, every page: refused if present)
+  POST   /oauth/tenant/{org}/register
+         {"client_name": "backup-01", "scope": "urn:vcloud:role:Organization%20User", "software_id": "<a new UUID>", "software_version": "1.0"}
+  POST   /oauth/tenant/{org}/device_authorization
+         {"client_id": "<from the register>"}
+  POST   /cloudapi/1.0.0/deviceLookup/grant  (in the organization)
+         {"userCode": "<from the device authorization>"}
+  POST   /oauth/tenant/{org}/token  (polled until the grant lands)
+         {"client_id": "<from the register>", "device_code": "<from the device authorization>", "grant_type": "urn:ietf:params:oauth:grant-type:device_code"}
+  then: the refresh token to backup-01-refresh-token (mode 0600, never printed), the bearer's session read for its principal and roles, one refresh with the stored token, and the account read back
+
+plan only: nothing was sent (--execute sends it)
+```
+
+```text
+$ python3 service_account.py --replay replay/service_account --org tenant-a --name backup-01 --teardown --execute
+replay: 3 recorded answers from replay/service_account; nothing is sent and no credential is read
+replay: --execute runs its plan alone under --replay; nothing is sent
+Teardown plan for service account backup-01 in organization tenant-a on vcfa.example.test:
+  GET    /cloudapi/1.0.0/orgs?filter=name=={org}&page=N&pageSize=32, then serviceAccounts?filter=name=={name}  (every page, to the stated total)
+  POST   /cloudapi/1.0.0/serviceAccounts/{id}/revoke
+  POST   /oauth/tenant/{org}/token  (refresh grant with the revoked token, with and without client_id)
+  DELETE /cloudapi/1.0.0/serviceAccounts/{id}
+  GET    /cloudapi/1.0.0/serviceAccounts?filter=name=={name}&page=N&pageSize=32  (residue, until it is read empty)
+  POST   /oauth/tenant/{org}/token  (the same refresh grant again, after the delete)
+  then: no refresh test (no --token-file given)
+  only for an account the state file records with the same client id; any other is refused before the revoke
+
+plan only: nothing was sent (--execute sends it)
+```

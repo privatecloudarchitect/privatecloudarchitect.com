@@ -12,7 +12,36 @@ secret or password is printed or written.
 | `watch.py` | Reads each organization's OIDC or SAML settings, imported groups and local administrators from VCF Automation, the keys the provider publishes, and (optionally) the app behind the organization from Microsoft Graph, then runs nine checks: key refresh, keys held, PKCE, the client secret's end date, the SAML certificate's end date, whether the organization's metadata holds every signing certificate, imported group names against the groups assigned to the app, the app's own gate, and a local user holding the organization's top role (Organization Administrator in an All Apps organization, Organization Owner in a classic one) for the day the provider refuses; a run declared `--provider-only` with `--tenant-attested` adds a tenth, `tenant_report`, the age of the tenant's last report of its rollover dates. On a provider API token the run also checks that token's own end date (`own_token`). `--expect-tenants` names every tenant a schedule covers. `--why` is the sign-in router: what a user saw in, where it was refused and what to read first out. Writes `watch.json`, and refuses to write a record carrying any estate value. |
 | `watch.json` | That record from the reference estate, 2026-10-12, four throwaway organizations (classic and All Apps, OIDC and SAML). |
 | `watch_passing.json`, `watch_group_renamed.json`, `watch_restored.json` | The watch on one throwaway All Apps organization over OIDC built to pass, 2026-10-13: after its first scheduled key refresh (every check ok but `secret_end`, which warned because the run gave its rotated secret 30 days, inside the 30-day window; exit 1), with the entitled group renamed at Entra (`group_names` fails; exit 2), and with the name restored (exit 1 again). The day-2 writes that set it up are the tenant-federation companion's `update_*.json`. |
-| `expected-output.md` | The transcript of that run, with what to read in it. |
+| `expected-output.md` | The transcript of that run, with what to read in it, and a replayed run. |
+| `replay/watch/` | A recorded answer set built from `watch.json`, every name a placeholder, for `--replay`: the watch runs on it with no estate and sends nothing. |
+| `inventory.py` | The provider's inventory across its Entra tenants: reads every organization's federation settings, as the watch reads them, against a file the provider keeps (each tenant's owners, its consent to the read-only app, its watch and leaver schedules, its organizations), and reports drift both ways. Read-only. See [The provider's inventory](#the-providers-inventory-tenants-consent-schedules-and-owners). |
+| `inventory.example.json` | The shape of that file, placeholders only. |
+| `replay/inventory/` | A recorded answer set built from the inventory's reference run (2026-10-16), every name a placeholder, and the inventory it was read against (`files/inventory.json`, its schedules pointed at this folder's `watch.json` and the identity-lifecycle companion's `leavers.json`), for `--replay`. |
+
+## Try it without an estate
+
+`--replay DIR` answers every request from a recorded set instead of the estate, so you can run the watch before you
+hold a provider credential or the tenant's read-only app, or see what it prints for a shape your estate has not shown
+you. The set beside this README, `replay/watch/`, is the reference run of 2026-10-12 (`watch.json`) made into
+answers, with a placeholder for every name: four organizations federated to one Entra tenant, read through the
+tenant's app, beside the provider's own System organization, which the watch leaves out. `replay/inventory/` is the
+inventory's reference run of 2026-10-16: ten organizations, and the provider's file it was read against, which the set
+names itself.
+
+```bash
+python3 watch.py --replay replay/watch            # read, print, and write watch.replay.json; exits 1, as the record did
+python3 watch.py --replay replay/watch --redact   # the same, printed with placeholders
+python3 inventory.py --replay replay/inventory    # the inventory against replay/inventory/files/inventory.json; exits 1
+```
+
+Nothing is sent and no credential is read: the set answers each request by its method, path and query, names the
+placeholder hosts and tenant it was recorded on, and judges every date as of the record's time (for the inventory, the
+age of each schedule's record). A request the set holds no answer for is a read that failed, so the run exits 3 and
+names the read, never a pass. The inventory file a set names by a relative path is read from the set's folder; the
+schedule records that file names are read from the disk as given. Each record goes to its `.replay.json` name
+(`watch.replay.json`, `inventory.replay.json`) unless `OUT` names a file, so a replayed run never overwrites a real
+record, and it carries `"replay": true`, so a reader never takes it for a run of the schedule: the inventory refuses
+it as a run that did not read. The transcripts are under "A replayed run" in `expected-output.md`.
 
 ## Run it
 
@@ -45,8 +74,8 @@ Schedule it and read the exit code:
 | 0 | every check this run owns ran, on every organization it covers (at least one organization judged), and every one is ok, the watch's own provider API token's end date included when it runs on one |
 | 1 | a warning: an end date inside `WARN_DAYS` (the watch's own provider API token's among them), a refresh interval over one hour, a signing certificate the organization does not yet hold, no local user holding the organization's top role, a tenant's report older than `--attested-max-days` |
 | 2 | a failure that stops sign-in now or at the provider's next roll: a published key not held, refreshes not succeeding, an expired secret or certificate, a secret the organization holds that the app no longer lists, the active certificate missing from the organization's metadata, a renamed group, PKCE on, a disabled app |
-| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run on a run not declared `--provider-only` (no Graph credential given, so the tenant's read-only app is owed; a provider other than Entra ID), an organization federated to a tenant outside `--expect-tenants`, a run whose own tenant no organization names, a run that judged no organization (a wrong host, the only organization's federation switched off, a credential that lists none it can judge), the watch's own provider API token's end date unread (its token list refused, or no token or several it could single out), an organization whose reads were refused or whose lists were not read to their end, the tenant's app not found in Graph or found twice (two apps carrying the organization's identifier), a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh, or a held client secret whose end date does not read), a provider credential refused or the organization list not read whole before any organization was read, or a record the scrub refused (no record is written in those two cases). An error the watch did not expect exits 3 too, never 1 |
-| 5 | not run as asked: an unknown or missing argument, `--protocol` without `--why`, a missing `VCFA_HOST` or provider credential, a credential or key file that cannot be read, a non-numeric `WARN_DAYS`, an Entra variable without `ENTRA_TENANT_ID` or `ENTRA_TENANT_ID` without the app's id and credential (unless `--provider-only`), a Graph credential with `--provider-only`, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, `--tenant-attested` without `--provider-only` or with a date that is malformed or in the future, a Python older than 3.9. Nothing is read from VCF Automation |
+| 3 | nothing failed, and a read failed or a result is undetermined: the rollover checks not run on a run not declared `--provider-only` (no Graph credential given, so the tenant's read-only app is owed; a provider other than Entra ID), an organization federated to a tenant outside `--expect-tenants`, a run whose own tenant no organization names, a run that judged no organization (a wrong host, the only organization's federation switched off, a credential that lists none it can judge), the watch's own provider API token's end date unread (its token list refused, or no token or several it could single out), an organization whose reads were refused or whose lists were not read to their end, the tenant's app not found in Graph or found twice (two apps carrying the organization's identifier), a settings read with no secret to match, a Graph credential refused, a check that could not judge (`unknown`, such as a new organization before its first scheduled key refresh, or a held client secret whose end date does not read), a provider credential refused or the organization list not read whole before any organization was read, or a record the scrub refused (no record is written in those two cases), or a request a `--replay` set holds no answer for. An error the watch did not expect exits 3 too, never 1 |
+| 5 | not run as asked: an unknown or missing argument, `--protocol` without `--why`, a missing `VCFA_HOST` or provider credential, a credential or key file that cannot be read, a non-numeric `WARN_DAYS`, an Entra variable without `ENTRA_TENANT_ID` or `ENTRA_TENANT_ID` without the app's id and credential (unless `--provider-only`), a Graph credential with `--provider-only`, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, `--tenant-attested` without `--provider-only` or with a date that is malformed or in the future, a `--replay` directory that cannot be read or holds no replay set, a Python older than 3.9. Nothing is read from VCF Automation |
 
 `--why` keeps its own two codes: 0 a row matched, 1 none did (it prints the first reads for a message no run showed).
 
@@ -155,6 +184,8 @@ refresh that failed.
 
 ## Reading the record
 
+A record a `--replay` run writes carries `"replay": true` at its top level, and a live run's carries no such key: a
+replayed record shows no read of an estate, and the inventory takes it as a run that did not read.
 `organizations` holds one entry per organization, named `{{org-1}}` and onward, with its `protocol` and
 `org_type` and a `checks` list. Each check has a `state` (`ok`, `warn`, `fail`, `unknown`), a `detail` sentence
 and a `measure` with its numbers: `interval_h` and `success_age_h` for key refresh, `held`, `published` and
@@ -172,3 +203,120 @@ named, the run's own included; `tenant_attested` the report's date and age; `cre
 its `own_token` check (`days_left`, and `candidates` and `listed`, the counts it singled the token out of); `census` what
 the run listed and left out before reading (`listed`, `provider_own`, `off`); `judged` how many organizations it judged;
 `run_errors` what is wrong with the run as a whole; and `exit` the code the run returned.
+
+## The provider's inventory: tenants, consent, schedules and owners
+
+The watch and the leaver report (the identity-lifecycle companion's `leavers.py`) each run once per Entra tenant, and
+neither holds the list of tenants they run for. `inventory.py` holds that list in a file the provider keeps and reads
+the estate against it both ways: an organization federated to a tenant the file has no row for, or missing from its
+tenant's row, and a row or a declared organization that names no organization. Beside each tenant it holds the owners
+on each side, the tenant's consent to the read-only app, and the last record each of the tenant's two schedules wrote.
+Stdlib Python 3.9 or later. Read-only.
+
+**What it reads.** `GET /cloudapi/1.0.0/orgs`, read whole with the watch's pager, and for each organization but the
+provider's own consumption organization `GET /api/admin/org/{id}/settings/oauth` and `.../settings/federation`, read as
+the watch reads them: OIDC is on when its settings are enabled and not signed in through VCF single sign-on (`vidb`),
+SAML when its federation settings are enabled. The client secret the OIDC settings carry is deleted on arrival and
+never read. The Entra tenant comes from the stored OIDC issuer or the stored SAML metadata, read whether or not the
+protocol is switched on; an organization switched off whose stored settings name no Entra tenant reads as not
+federated. On a provider API token the run first trades it at `/oauth/provider/token` (a POST that opens a session
+and changes no setting). A tenant the file names by a domain is resolved through Entra's public OpenID configuration
+for it, with no credential. From the local disk it reads the file and each schedule's last record. It takes no Graph
+credential: a tenant's consent is read from the watch's own record.
+
+**The file.** JSON, named by `INVENTORY_FILE`; `inventory.example.json` shows its shape with placeholders. Copy it to a
+file of your own and keep that file private: it names your estate. One row per Entra tenant:
+
+| Key | What it holds |
+|---|---|
+| `tenant` | the tenant's id, or one of its domain names, resolved as the watch resolves it |
+| `consent` | `consented`, or `withheld` (the tenant's watch runs declared `--provider-only`) |
+| `owners` | `tenant`, the tenant's identity administrator, and `provider`, the provider's owner of the tenant: each a role or a mailbox |
+| `schedules` | `watch` and `leavers`, each `{"every_hours", "record", "slack_hours"}` or `null`. `record` is the path of the record that schedule writes, read from the file's own folder when it is not absolute; `slack_hours` defaults to 1. A tenant that withholds the app has `leavers: null`: the report needs the app, and a leaver is closed from the tenant's dated leaver notice |
+| `organizations` | each organization declared under the tenant: a name, or `{"name", "id", "federation"}`. Give the `id` (`urn:vcloud:org:<uuid>`) so a name reused by a new organization is caught, and `"federation": "off"` for one switched off on purpose |
+
+Keys starting with `_` are notes. Any other key not listed is refused (exit 5), so a misspelled key is never read as a
+missing one; a tenant in two rows, an organization declared twice, and a `leavers` schedule for a tenant that withholds
+the app are refused too.
+
+```bash
+export VCFA_HOST=<automation-fqdn>
+export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer   # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE
+export TLS_VERIFY=false                                    # only on a self-signed lab CA
+export INVENTORY_FILE=/path/to/tenants.json                # your own copy of inventory.example.json
+export OUT=inventory.json                                  # the run's record: never the file or a schedule's record
+
+python3 inventory.py            # read, print, record
+python3 inventory.py --redact   # the same, printed with placeholders, for a transcript you will share
+```
+
+**What it judges.** Each line carries a state: `OK`, `DRIFT`, `UNREAD`, or `NOTE`, which is information and changes no
+exit.
+
+- **Organizations.** One with OIDC or SAML on toward a tenant the file has no row for, or missing from its tenant's row,
+  is drift; so is one declared under another tenant's row than the one its settings name, one switched off while
+  declared on or on while declared off, and one declared while it signs in through VCF single sign-on. An organization
+  switched off is reported as switched off, never as missing. One on toward a provider other than Entra ID, one signed
+  in through VCF single sign-on, and one never federated are notes while undeclared. The provider's own consumption
+  organization is listed as the provider's, as the watch leaves it out. One whose settings read was refused is named
+  and unread.
+- **Rows.** A declared organization nothing matches is drift: no organization by its name, its declared id held by an
+  organization of another name, or its name held by an organization of another id (a name reused by a new
+  organization, which only the declared id catches). A row no organization names, switched on or off, is drift; when
+  an organization's settings were not read it is unread instead, since the unread one may name it.
+- **Owners.** A blank or missing owner on either side is drift.
+- **Schedules.** A schedule whose last record is past its interval plus its slack missed its run: drift, whatever the
+  record holds, since no run has written it since. A record that is missing, does not read, carries no capture time
+  that reads, or comes from a run that did not read is unread. No watch schedule is drift, and so is no leaver report
+  for a tenant that consented.
+- **Consent.** The file's consent against the mode the watch's last record carries: `consented` beside a run declared
+  provider-only or run without the app, or `withheld` beside a run made with the tenant's app or not declared, is
+  drift, and the line names the change. A record that did not pass its check is not compared.
+
+**The record check.** Before it uses a schedule's record, the inventory checks that the run which wrote it read. The
+record parses as a JSON object and carries the fields used here: the watch's `captured`, `exit`, `mode`, `judged`,
+`run_errors` and `organizations`, each with its `read_errors`; the leaver report's `captured`, `exit`, `mode`,
+`organizations`, `unreadable`, `summary` and `calls`. It does not declare itself replayed (`replay`: a run answered
+from a recorded set is no run of the schedule). Its exit is one its tool writes, and not 3 or 5. The watch judged
+at least one organization and names no run error and no organization's read error. The leaver record is a report (an
+`--execute` or close-now record covers one organization), names no unreadable organization, no undetermined account and
+no unread credential, judged at least one organization, and records no call refused or misshapen. A check that could
+not run is never a pass. What a record found (the watch's warnings and failures, the report's open leavers and flags)
+is its own schedule's to act on: the inventory prints the record's exit beside it and leaves it out of its own. A
+record names its tenant by a placeholder, so the `record` path in the file is what ties a record to its tenant.
+
+| Exit | Means |
+|---|---|
+| 0 | nothing for a person to act on: every organization read and placed as the file declares, every row matched, both owners named on every row, every declared schedule's last record inside its interval plus its slack and from a run that read, and each tenant's consent matching the watch's last record |
+| 1 | drift a person acts on: an organization with no row or missing from its row, a row or a declared organization that names no organization, a reused name or a moved id, a declared state the estate does not hold, a blank owner, a missed schedule, a schedule not declared, a consent the watch's record contradicts |
+| 3 | the run judged no organization (a wrong host, a credential that lists none it can read), whatever else it found; or nothing drifted, and a read failed or a result is undetermined: an organization's settings read refused (named), a row the unread organization may answer, a schedule's record missing, unreadable or from a run that did not read; or, with no record written, the credential refused, the organization list not read whole or empty, or a tenant's domain not resolved. A request a `--replay` set holds no answer for is a read that failed. A record the scrub refused is not written, never hides a 1, and turns a 0 into a 3. An error the run did not expect exits 3 too, never 1 |
+| 5 | not run as asked: an unknown or abbreviated flag, a missing `VCFA_HOST`, provider credential or `INVENTORY_FILE`, a file that cannot be read, a file that is not valid JSON or not the shape above, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, a tenant or an organization declared twice, `OUT` naming the file or a schedule's record, a `--replay` directory that cannot be read or holds no replay set, a Python older than 3.9. Nothing is read from VCF Automation |
+
+**Schedule it** once a day, after the tenants' watch and leaver schedules, and alert on any non-zero exit: on 1 the line
+names what to change (the file, a schedule, or an organization), and on 3 fix the read it names. Give each schedule's
+`slack_hours` the time its job takes plus the scheduler's jitter.
+
+**What it never does.** It sends no write: every request but the API token's trade is a GET, and nothing on VCF
+Automation or Entra changes. It takes no Graph credential. It prints and writes no secret, and its record carries no
+owner's value (`named` or `blank` only), no record path and no estate value. It never writes the file or a schedule's
+record: `OUT` naming either is refused before anything is read. It does not judge what a watch or leaver record found.
+
+**Reading its record.** `census` counts what the run listed and read (`listed`, `provider_own`, `unread`, `judged`,
+`oidc`, `saml`, `switched_off`, `vcf_sso`, `other_provider`, `tenants_named`, `rows`, `declared`). `tenants` holds each
+row's `consent`, `owners` (`named` or `blank`), how many organizations it `declared`, and its schedules' terms.
+`organizations` holds each organization's `state` (`oidc`, `saml`, `off`, `vcf-sso`, `provider` or `unread`) and
+`tenant`. `findings` holds every line, with its `state` (`ok`, `drift`, `unread`, `note`), `subject`, `tenant`, `org`
+and `detail`, and for a schedule a `measure`: `age_h`, `every_hours`, `slack_hours`, `record_exit`, `record_mode`, and
+`problems` where the record failed its check. `run_errors` is what is wrong with the run as a whole, and `exit` the code
+the run returned. Organizations are `{{org-1}}` and onward, tenants `{{tenant-1}}` and onward, the file's rows first. A
+run under `--replay` writes `inventory.replay.json` and marks it `"replay": true` at its top level; a live run's record
+carries no such key.
+
+**Scope.** Run once, read-only, on 2026-10-16 against the reference estate's VCF Automation and the lab's one Entra
+tenant, on a provider bearer: ten organizations listed and nine read (four federated to the tenant, one over OIDC to
+another provider, one on VCF single sign-on, three with neither protocol on and no Entra tenant stored), every request
+a GET. The tenant's watch schedule, pointed at this folder's `watch.json`, read as a missed run (its record about 95
+hours old, and lacking `mode`, `judged` and `run_errors`); its leaver schedule, pointed at the identity-lifecycle
+companion's `leavers.json`, read as on time and from a run that read; exit 1. A second tenant, a tenant that withholds
+the app, a switched-off organization holding a stored tenant, a reused name and a refused read are held by the
+companion's tests, not by a run.

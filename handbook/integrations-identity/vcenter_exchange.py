@@ -88,27 +88,32 @@ Env:  BROKER_HOST                 the identity broker that trades the API client
       FINGERPRINT_KEY_FILE        for --sessions records you will --compare: a secret of your own (mode 0600, kept off
                                   any shared disk), the same file on every run
       TLS_VERIFY=false            only on a self-signed lab CA
-      OUT                         the record (default exchange.json)
+      OUT                         the record (default exchange.json; exchange.replay.json under --replay)
 Use:  python3 vcenter_exchange.py [--sessions [--ack FILE]] [--redact]
       python3 vcenter_exchange.py --sessions --where      the address and last activity of each session, printed only
       python3 vcenter_exchange.py --compare A.json B.json C.json [--ack FILE] [--cover-hours N] [--span-days N]
                                   [--max-gap-minutes N]
+      python3 vcenter_exchange.py --replay replay/vcenter_exchange [--sessions]   without an estate: every answer from
+                                  the recorded set beside this script (its hosts are placeholders); nothing is sent and
+                                  no credential is read, and a request the set holds no answer for is a read that
+                                  failed (exit 3)
 Exit, the first that applies, so a scheduler reads one state from one number:
       1 --sessions found a directory account signing in from a client that is not interactive, a pair not acknowledged
       2 a vCenter answered the API client's exchange, or one of its sessions, and did not take the client
-      3 a read failed or is undetermined: a vCenter that did not answer the exchange, a session list not read (an empty
-        one included: it always holds the census's own session, and one that does not hold it), a census identity
-        that could read only its own sessions (by key, or every session under its own name), a session NOT PLACED
-        (in a domain neither DIRECTORY_DOMAINS nor OTHER_DOMAINS names, so it was not judged), no vCenter read, a
-        credential the broker did not trade, or an error the script did not expect
+      3 a read failed or is undetermined: a vCenter that did not answer the exchange or any other request, a session
+        list not read (an empty one included: it always holds the census's own session, and one that does not hold
+        it), a census identity that could read only its own sessions (by key, or every session under its own name), a
+        session NOT PLACED (in a domain neither DIRECTORY_DOMAINS nor OTHER_DOMAINS names, so it was not judged), no
+        vCenter read, a credential the broker did not trade, a request a --replay set holds no answer for, or an error
+        the script did not expect
       4 --sessions found the local administrator signing in from a client that is not interactive
       0 every vCenter took the client through both sessions (when a client is given), and with --sessions every
         directory-account session is from an interactive client or acknowledged, and the local administrator signs in
         from none other
       5 a usage error (a missing or bad argument or environment variable, --sessions without DIRECTORY_DOMAINS, a
         domain in both DIRECTORY_DOMAINS and OTHER_DOMAINS, an --ack file that cannot be read or breaks its format, a
-        credential file named that cannot be read or is empty, among them), or a Python older than 3.10; nothing is
-        written
+        credential file named that cannot be read or is empty, a --replay directory that cannot be read or holds no
+        replay set, among them), or a Python older than 3.10; nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
       the run's code stands when it is 1, 2, 3 or 4, and a run that found nothing exits 3 (the record a later --compare
       reads was not written).
@@ -121,7 +126,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       (hours of day, span, largest gap) · 4 the local administrator from a client that is not interactive in any
       record · 0 none of these · 5 a usage error: fewer than two records, an option that is not --compare's, a record
       that cannot be read or parsed, one without fingerprints, records made under two keys, or --ack without
-      FINGERPRINT_KEY_FILE or under another key
+      FINGERPRINT_KEY_FILE or under another key. A record a --replay run wrote carries "replay": true, and --compare
+      refuses it, alone or among live ones, before it compares anything: exit 3, naming the file (it is no read of an
+      estate), with --replay or without
 """
 
 from __future__ import annotations
@@ -142,7 +149,7 @@ import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime
 
 AGENT = "vcenter_exchange.py"
 API_TOKEN_GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
@@ -178,13 +185,252 @@ def broker_tenant() -> str:
     return os.environ.get("BROKER_TENANT") or os.environ.get("BROKER_REALM") or "CUSTOMER"
 
 
+# ── replay: recorded answers in place of the estate (the same block, byte for byte, in every identity companion) ──
+# --replay DIR answers every request from the recorded answers in DIR's *.json files, so a reader runs the tool without
+# an estate and a test drives its real code path. An answer is chosen by the request's method, path and query (an
+# answer may also name the host, headers the request must carry, such as an organization's tenant context, or a string
+# its body must hold); the most specific answer that fits is given, and several answers to one request are given in
+# their order, the last one again after that.
+# Nothing is sent while a set is loaded: _urlopen answers from the set and never reaches the network, no credential is
+# read, a request the set holds no answer for is a read that did not happen (exit 3, never an empty answer), and a
+# writing mode runs its plan alone. A set may name the time its answers were recorded ("now"), so a run judges dates
+# as it did then, and the hosts it recorded ("env"), never a credential.
+REPLAY = None  # the loaded set; None while the tool runs against an estate
+REPLAY_CREDENTIAL = "replay-placeholder"  # what a replayed run holds instead of a credential: nothing is sent
+REPLAY_ANSWER_KEYS = {"method", "path", "query", "host", "request_headers", "body_contains", "status", "body", "text",
+                      "headers", "fail", "note"}
+REPLAY_SET_KEYS = {"replay", "about", "source", "now", "env", "answers"}
+
+
+class ReplayMiss(urllib.error.URLError):
+    """A request the replay set holds no answer for: a read that did not happen, never an empty answer."""
+
+
+class _Replayed:
+    """A recorded answer in the shape urllib.request.urlopen returns."""
+
+    def __init__(self, url, status, headers, raw):
+        self.url, self.status, self.code, self.headers, self.reason, self._raw = url, status, status, headers, "", raw
+
+    def read(self, amt=None):
+        out = self._raw if amt is None else self._raw[:amt]
+        self._raw = self._raw[len(out):]
+        return out
+
+    def getcode(self):
+        return self.status
+
+    def geturl(self):
+        return self.url
+
+    def info(self):
+        return self.headers
+
+    def getheader(self, name, default=None):
+        return self.headers.get(name, default)
+
+    def close(self):
+        self._raw = b""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        self.close()
+        return False
+
+
+def _replay_tokens(value):
+    """{"$jwt": {claims}} anywhere in an answer becomes an unsigned token carrying those claims, made here: a set holds
+    no token, and a token made here was never issued by anything."""
+    import base64
+
+    def part(obj):
+        return base64.urlsafe_b64encode(json.dumps(obj, separators=(",", ":")).encode()).rstrip(b"=").decode()
+
+    if isinstance(value, dict):
+        if set(value) == {"$jwt"} and isinstance(value["$jwt"], dict):
+            return f"{part({'alg': 'none', 'typ': 'JWT'})}.{part(value['$jwt'])}.cmVwbGF5"
+        return {k: _replay_tokens(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replay_tokens(v) for v in value]
+    return value
+
+
+def _replay_check(name, doc):
+    """Why a set file cannot be replayed, or None."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("answers"), list):
+        return f"{name}: no answers list"
+    if set(doc) - REPLAY_SET_KEYS:
+        return f"{name}: keys a set does not take: {', '.join(sorted(set(doc) - REPLAY_SET_KEYS))}"
+    env = doc.get("env", {})
+    if not isinstance(env, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+        return f"{name}: env is not a map of names to values"
+    secret = [k for k in env if any(w in k.upper() for w in ("TOKEN", "SECRET", "PASSWORD", "BEARER", "KEY", "CERT"))]
+    if secret:
+        return f"{name}: env names a credential ({', '.join(secret)}); a set carries none"
+    for i, a in enumerate(doc["answers"]):
+        where = f"{name} answer {i + 1}"
+        if not isinstance(a, dict):
+            return f"{where}: not an object"
+        if set(a) - REPLAY_ANSWER_KEYS:
+            return f"{where}: keys an answer does not take: {', '.join(sorted(set(a) - REPLAY_ANSWER_KEYS))}"
+        if not isinstance(a.get("method"), str) or not isinstance(a.get("path"), str) or not a["path"].startswith("/"):
+            return f"{where}: needs a method and a path that starts with /"
+        query = a.get("query", {})
+        if query != "*" and not (isinstance(query, dict) and all(
+                isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
+                for v in query.values())):
+            return f"{where}: query is not a map of names to values, or *"
+        status = a.get("status", 200)
+        if isinstance(status, bool) or not isinstance(status, int) or not 100 <= status <= 599:
+            return f"{where}: status is not an HTTP status"
+        if "body" in a and "text" in a:
+            return f"{where}: holds both body and text"
+        if not all(isinstance(a.get(k, {}), dict) for k in ("headers", "request_headers")):
+            return f"{where}: headers or request_headers is not a map"
+        if not isinstance(a.get("fail", ""), str) or not isinstance(a.get("body_contains", ""), str):
+            return f"{where}: fail is not a reason, or body_contains is not a string"
+    return None
+
+
+class Replay:
+    """The recorded answers in one directory's *.json files, read in name order."""
+
+    def __init__(self, directory):
+        from datetime import datetime
+
+        names = sorted(n for n in os.listdir(directory) if n.endswith(".json"))
+        if not names:
+            raise ValueError(f"{directory} holds no *.json answer file")
+        self.directory, self.answers, self.env, self.now = directory, [], {}, None
+        self.asked, self.missed, self.answered = {}, [], 0
+        for name in names:
+            with open(os.path.join(directory, name), encoding="utf-8") as f:
+                doc = json.load(f)
+            why = _replay_check(name, doc)
+            if why:
+                raise ValueError(why)
+            self.answers += doc["answers"]
+            self.env.update(doc.get("env", {}))
+            if doc.get("now"):
+                now = datetime.fromisoformat(str(doc["now"]).replace("Z", "+00:00"))
+                if now.tzinfo is None:
+                    raise ValueError(f"{name}: now carries no offset")
+                if self.now is not None and now != self.now:
+                    raise ValueError(f"{name}: now differs from another file's")
+                self.now = now
+
+    def answer(self, req):
+        """The recorded answer to one request, as urlopen would give it; ReplayMiss when the set holds none."""
+        import email.message
+        import io
+
+        if isinstance(req, str):
+            req = urllib.request.Request(req)
+        method = req.get_method().upper()
+        url = urllib.parse.urlsplit(req.full_url)
+        path, host = urllib.parse.unquote(url.path), url.hostname
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        sent = req.data.decode("utf-8", "replace") if isinstance(req.data, bytes) else ""
+        carried = {k.lower(): str(v) for k, v in req.header_items()}
+
+        def fits(a):
+            if a["method"].upper() != method or urllib.parse.unquote(a["path"]) != path:
+                return False
+            if a.get("host") not in (None, host) or a.get("body_contains", "") not in sent:
+                return False
+            if any(carried.get(k.lower()) != str(v) for k, v in a.get("request_headers", {}).items()):
+                return False
+            want = a.get("query", {})
+            return want == "*" or (set(want) == set(query) and all(
+                v == "*" or (v if isinstance(v, list) else [v]) == query[k] for k, v in want.items()))
+
+        def weight(a):  # the most specific answer is given: an exact query over a "*", a named host over none
+            want = a.get("query", {})
+            exact = 0 if want == "*" else 1 if "*" in want.values() else 2
+            return exact, "host" in a, len(a.get("request_headers", {})), "body_contains" in a
+
+        hits = [a for a in self.answers if fits(a)]
+        hits = [a for a in hits if weight(a) == max(map(weight, hits))]
+        shown = f"{method} {url.path}" + (f"?{url.query}" if url.query else "")
+        if not hits:
+            self.missed.append(shown)
+            print(f"replay: the set holds no answer for {shown}: a read that did not happen", file=sys.stderr)
+            raise ReplayMiss(f"replay: no recorded answer for {method} {url.path}")
+        key = tuple(id(a) for a in hits)
+        a = hits[min(self.asked.get(key, 0), len(hits) - 1)]
+        self.asked[key] = self.asked.get(key, 0) + 1
+        self.answered += 1
+        if a.get("fail"):
+            raise urllib.error.URLError(f"replay: {a['fail']}")
+        headers = email.message.Message()
+        for k, v in _replay_tokens(a.get("headers", {})).items():
+            headers[k] = str(v)
+        if "body" in a:
+            raw, kind = json.dumps(_replay_tokens(a["body"])).encode(), "application/json"
+        else:
+            raw, kind = str(a.get("text", "")).encode(), "text/plain"
+        if raw and headers.get("Content-Type") is None:
+            headers["Content-Type"] = kind
+        status = a.get("status", 200)
+        if status >= 400:
+            raise urllib.error.HTTPError(req.full_url, status, "replayed refusal", headers, io.BytesIO(raw))
+        return _Replayed(req.full_url, status, headers, raw)
+
+
+def replay_start(directory):
+    """Load the set in DIR for this run. ValueError or OSError when it cannot be replayed: a usage error (exit 5)."""
+    global REPLAY
+    REPLAY = Replay(directory)
+    for k, v in REPLAY.env.items():
+        if k not in os.environ:
+            os.environ[k] = v
+        else:
+            REPLAY.env[k] = None  # the reader's own value stands, and stays when the run ends
+    print(f"replay: {len(REPLAY.answers)} recorded answers from {directory}; nothing is sent and no credential is read",
+          file=sys.stderr)
+    return REPLAY
+
+
+def replay_stop():
+    """Unload the set and the hosts it named: a run in a test leaves nothing behind for the next."""
+    global REPLAY
+    if REPLAY is not None:
+        for k, v in REPLAY.env.items():
+            if v is not None:
+                os.environ.pop(k, None)
+    REPLAY = None
+
+
+def replay_now():
+    """The time a replayed set was recorded at, when it names one, or the time now: dates are judged as they were."""
+    from datetime import datetime, timezone
+
+    return REPLAY.now if REPLAY is not None and REPLAY.now is not None else datetime.now(timezone.utc)
+
+
+def _urlopen(req, context=None, timeout=60, opener=None):
+    """urllib.request.urlopen, or, with a replay set loaded, its recorded answer: nothing leaves the process."""
+    if REPLAY is not None:
+        return REPLAY.answer(req)
+    if opener is not None:
+        return opener.open(req, timeout=timeout)
+    return urllib.request.urlopen(req, context=context, timeout=timeout)
+# ── end of the replay block ──────────────────────────────────────────────────────────────────────────────────────
+
+
 # ── HTTP, standard library only ──────────────────────────────────────────────────────────────────────────────────
-def _ctx() -> ssl.SSLContext:
+def _ctx() -> ssl.SSLContext | None:
+    if REPLAY is not None:  # a replayed run opens no connection, so it loads no certificate store
+        return None
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
 def _secret(name: str) -> str:
+    if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
+        return REPLAY_CREDENTIAL
     path = os.environ.get(f"{name}_FILE")
     if path:
         with open(path, encoding="utf-8") as f:
@@ -211,6 +457,8 @@ def fingerprint_key() -> bytes | None:
     path = os.environ.get("FINGERPRINT_KEY_FILE")
     if not path:
         return None
+    if REPLAY is not None:  # a replayed run reads no credential: records made under it carry the placeholder's key
+        return REPLAY_CREDENTIAL.encode()
     with open(path, "rb") as f:
         key = f.read().strip()
     if not key:
@@ -228,15 +476,28 @@ def key_check(key: bytes) -> str:
     return fingerprint("fingerprint key check", key)[:8]
 
 
+NO_ANSWER: list[str] = []   # each request of this run that got no answer at all, in order: run() reads it per vCenter
+
+
+def _call_name(req: urllib.request.Request) -> str:
+    """A request as the record names it: its method and path, and for a SOAP request (every one a POST to /sdk) the
+    operation its body holds. No query, header or body value."""
+    path = urllib.parse.urlsplit(req.full_url).path
+    op = re.search(r"<soapenv:Body><(\w+)", req.data.decode(errors="replace")) if isinstance(req.data, bytes) else None
+    return f"{req.get_method()} {path}" + (f" {op.group(1)}" if op else "")
+
+
 def _open(req: urllib.request.Request, opener=None, timeout: int = 60) -> tuple[int, bytes]:
-    """(status, body) for any answer, a refusal included; (0, b"") when the host did not answer."""
+    """(status, body) for any answer, a refusal included; (0, b"") when the host did not answer, and the request is
+    added to NO_ANSWER, so a vCenter where one went unanswered is a read that did not happen (exit 3), never a pass."""
     try:
-        r = (opener.open(req, timeout=timeout) if opener else urllib.request.urlopen(req, context=_ctx(), timeout=timeout))
+        r = (_urlopen(req, timeout=timeout, opener=opener) if opener else _urlopen(req, context=_ctx(), timeout=timeout))
         with r:
             return r.status, r.read()
     except urllib.error.HTTPError as e:
         return e.code, e.read() or b""
     except (urllib.error.URLError, OSError):
+        NO_ANSWER.append(_call_name(req))
         return 0, b""
 
 
@@ -254,6 +515,8 @@ def _form(url: str, fields: dict, headers: dict | None = None) -> tuple[int, dic
 def broker_bearer() -> str:
     """The bearer in BEARER_FILE, or the API client's API token traded at the broker for one."""
     if bearer_file():
+        if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
+            return REPLAY_CREDENTIAL
         with open(bearer_file(), encoding="utf-8") as f:
             return f.read().strip().removeprefix("Bearer ").strip()
     status, answer = _form(f"https://{broker_host()}/acs/t/{broker_tenant()}/token",
@@ -504,7 +767,7 @@ def census(rows: list[dict], mine: str | None, tenant: str, directories: set[str
     `_not_placed_domains`, which run() takes out before the record is made: printed on the terminal, never recorded."""
     by_class, admin, dirs, clients, loose = Counter(), Counter(), {}, set(), Counter()
     allowed = interactive_agents()
-    today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = today or replay_now().strftime("%Y-%m-%d")
     for r in rows:
         if r["key"] == mine:
             continue
@@ -581,7 +844,7 @@ def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str
                     "only_own_session_visible": True, "census_identity": {"user": who}}
         if where is not None:
             where += where_rows(s.url.split("/")[2], rows, mine, tenant, directories, local, others)
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        today = replay_now().strftime("%Y-%m-%d")
         return {**census(rows, mine, tenant, directories, local, key, acks, today, others), "census_identity": {"user": who}}
     finally:
         s.logout()
@@ -663,6 +926,8 @@ def report(record: dict) -> list[str]:
                                                                                     if rest.get("vm_count") is not None else "")
                                                                                  if rest.get("user") else ""))
             lines.append("  SOAP session (LoginByToken): " + (f"user {soap['user']}" if soap.get("user") else f"refused: {soap.get('fault')}"))
+        if v.get("no_answer"):
+            lines.append(f"  NOT READ: no answer to {', '.join(v['no_answer'])}; a read that did not happen (exit 3)")
         s = v.get("sessions")
         if isinstance(s, dict) and "by_class" in s:
             lines.append(f"  sessions ({s['sessions']}, this census's own left out): "
@@ -808,6 +1073,7 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
     listed as acknowledged; with a loose dict, the domains of the sessions not placed go into it, by vCenter, and never
     into the record."""
     hosts = [h.strip() for h in os.environ.get("VC_HOSTS", "").split(",") if h.strip()]
+    NO_ANSWER.clear()
     bearer = broker_bearer() if have_client() else None
     census_as = None if not with_sessions else ("password" if os.environ.get("VC_USER") else "client")
     tenant = broker_tenant()
@@ -821,8 +1087,10 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
         sent.append("per vCenter: a SOAP session as VC_USER, opened and closed")
     elif census_as == "client":
         sent.append("per vCenter: a third exchange, and a SOAP session as the client, opened and closed")
-    record = {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "census_as": census_as,
+    record = {"captured": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ"), "census_as": census_as,
               "sent": sent, "vcenters": []}
+    if REPLAY is not None:   # a replayed run is never taken for a read of an estate: --compare refuses this record
+        record["replay"] = True
     if with_sessions:
         record["interactive_agents"] = sorted(interactive_agents())
         record["other_domains_declared"] = len(others)   # a count, never the names; its presence marks the placement rule
@@ -832,6 +1100,7 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
         record["acks"] = {"entries": len(acks), "unmatched": 0}
     for host in hosts:
         row = {"vcenter": host, **({"fingerprint": fingerprint(host, key)} if key and with_sessions else {})}
+        start = len(NO_ANSWER)
         if bearer:
             status, _ = _open(urllib.request.Request(f"https://{host}/api/vcenter/datacenter",
                                                      headers={"Authorization": f"Bearer {bearer}", "User-Agent": AGENT}))
@@ -854,6 +1123,8 @@ def run(with_sessions: bool, where: list | None = None, key: bytes | None = None
         domains = row["sessions"].pop("_not_placed_domains", None) if isinstance(row.get("sessions"), dict) else None
         if domains and loose is not None:
             loose[host] = domains
+        if len(NO_ANSWER) > start:   # a request here got no answer: a read that did not happen on this vCenter
+            row["no_answer"] = NO_ANSWER[start:]
         record["vcenters"].append(row)
     if "acks" in record:
         record["acks"]["unmatched"] = unmatched_acks(record, acks)
@@ -869,19 +1140,33 @@ def unmatched_acks(record: dict, acks: list[dict]) -> int:
     return sum(1 for a in acks if (a["account"].lower(), a["agent"].lower()) not in seen)
 
 
+def took_client(v: dict) -> bool:
+    """Whether a vCenter took the API client through both sessions."""
+    return (v.get("rest") or {}).get("status") == 201 and bool((v.get("soap") or {}).get("user"))
+
+
+def refused_client(v: dict) -> bool:
+    """Whether a vCenter answered the client's exchange, or one of its sessions, and did not take the client: an answer
+    that refused, never a request that got none (that is a read that did not happen, exit 3)."""
+    ex, rest, soap = v.get("exchange") or {}, v.get("rest") or {}, v.get("soap") or {}
+    if took_client(v) or not ex.get("status"):
+        return False
+    return (ex["status"] != 200 or (bool(rest.get("status")) and rest["status"] != 201)
+            or (bool(soap.get("status")) and bool(soap.get("fault"))) or not v.get("no_answer"))
+
+
 def exit_code(record: dict) -> int:
     """The first that applies: 1 a directory account signs in from a client that is not interactive, a pair nobody
     acknowledged; 2 a vCenter answered the client's exchange or one of its sessions and did not take the client; 3 a
-    read failed or is undetermined (a vCenter that did not answer the exchange, a session list not read, without the
-    census's own session or holding only the census identity's own sessions, a session in a domain neither
-    DIRECTORY_DOMAINS nor OTHER_DOMAINS names, or no vCenter at all); 4 the local administrator signs in from a client
-    that is not interactive; else 0. A scheduler reads it."""
+    read failed or is undetermined (a vCenter that did not answer the exchange, or any other request, a session list
+    not read, without the census's own session or holding only the census identity's own sessions, a session in a
+    domain neither DIRECTORY_DOMAINS nor OTHER_DOMAINS names, or no vCenter at all); 4 the local administrator signs in
+    from a client that is not interactive; else 0. A scheduler reads it."""
     vcs = record["vcenters"]
     tried = [v for v in vcs if "exchange" in v]
-    silent = [v for v in tried if not (v.get("exchange") or {}).get("status")]   # no answer at all: nothing is known
-    refused = [v for v in tried if v not in silent
-               and not ((v.get("rest") or {}).get("status") == 201 and (v.get("soap") or {}).get("user"))]
-    unread = [v for v in vcs if isinstance(v.get("sessions"), dict) and "error" in v["sessions"]]
+    refused = [v for v in tried if refused_client(v)]
+    silent = [v for v in tried if v not in refused and not took_client(v)]   # a request without an answer: not known
+    unread = [v for v in vcs if (isinstance(v.get("sessions"), dict) and "error" in v["sessions"]) or v.get("no_answer")]
     sm = record["summary"]
     if sm["directory_not_interactive"]:
         return EXIT_DIRECTORY
@@ -1009,7 +1294,7 @@ def compare(records: list[dict], cover_hours: int = COVER_HOURS, span_days: floa
         cover = coverage([r["captured"] for r in records], cover_hours, span_days, max_gap)
     except (KeyError, TypeError, ValueError):
         raise CompareError("a record carries no capture time it can be placed by") from None
-    today = today or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = today or replay_now().strftime("%Y-%m-%d")
     ordered = sorted(records, key=lambda r: r["captured"])
     reads = [(r["captured"], sessions_of(r), named(r)) for r in ordered]
     vcenters = []
@@ -1115,6 +1400,11 @@ def compare_main(paths: list[str], cover_hours: int = COVER_HOURS, span_days: fl
         except (OSError, ValueError) as e:
             print(f"could not read {path}: {type(e).__name__}", file=sys.stderr)
             return EXIT_USAGE
+    replayed = [path for path, r in zip(paths, records, strict=True) if isinstance(r, dict) and r.get("replay")]
+    if replayed:   # recorded answers, not an estate: comparing them would pass a coverage nobody read
+        print(f"{', '.join(replayed)}: a --replay run's record (\"replay\": true) is no read of an estate; nothing was "
+              f"compared (exit {EXIT_UNREAD})", file=sys.stderr)
+        return EXIT_UNREAD
     acks = key = None
     if ack_path:
         try:
@@ -1162,7 +1452,10 @@ SECRET_FILES = ("VC_PASSWORD_FILE", "API_TOKEN_FILE", "OPS_API_TOKEN_FILE", "BEA
 
 
 def unusable_secret_files() -> list[str]:
-    """The *_FILE variables set to a file that cannot be read or holds nothing: a usage error, found before any call."""
+    """The *_FILE variables set to a file that cannot be read or holds nothing: a usage error, found before any call.
+    A replayed run opens none of them: it reads no credential."""
+    if REPLAY is not None:
+        return []
     bad = []
     for name in SECRET_FILES:
         path = os.environ.get(name)
@@ -1202,6 +1495,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
               "about what it had not read (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
+    finally:
+        replay_stop()
 
 
 def _run(argv: list[str] | None = None) -> int:
@@ -1223,7 +1518,16 @@ def _run(argv: list[str] | None = None) -> int:
                     help=f"with --compare: the days the reads must span, first to last (default {SPAN_DAYS})")
     ap.add_argument("--max-gap-minutes", type=_minutes, metavar="N",
                     help="with --compare: the longest gap allowed between two reads (default: none asked)")
+    ap.add_argument("--replay", metavar="DIR",
+                    help="answer every request from the recorded set in DIR (replay/vcenter_exchange beside this script "
+                         "is one): nothing is sent and no credential is read")
     a = ap.parse_args(argv)
+    if a.replay:
+        try:
+            replay_start(a.replay)
+        except (OSError, ValueError) as e:
+            print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+            return EXIT_USAGE
     compare_only = [o for o, v in (("--cover-hours", a.cover_hours), ("--span-days", a.span_days),
                                    ("--max-gap-minutes", a.max_gap_minutes)) if v is not None]
     if a.compare:
@@ -1306,7 +1610,7 @@ def _run(argv: list[str] | None = None) -> int:
     clean = scrub(record, table)
     clean["summary"] = summary(clean)
     left = leaks(clean, table)
-    out = os.environ.get("OUT", "exchange.json")
+    out = os.environ.get("OUT") or ("exchange.replay.json" if REPLAY is not None else "exchange.json")
     if not (left and a.redact):  # a redacted print with a surviving value would print that value
         print("\n".join(report(clean if a.redact else record)))
     if where is not None:

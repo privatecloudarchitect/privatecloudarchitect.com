@@ -16,3 +16,5 @@ bearer
 *-bearer
 *-bearer-header
 fingerprint.key
+# a record a tool writes under --replay (marked "replay": true; never a run against an estate)
+*.replay.json

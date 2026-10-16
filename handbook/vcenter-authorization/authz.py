@@ -75,7 +75,8 @@ A saved permission list, and a compare. Each is a run of its own, and neither wr
                    each grant added, removed or changed (whether it propagates), printed on the terminal only. vCenter's
                    list can carry one grant under two permission ids; such a key is compared by count. Exit 1
                    on any difference, 0 on none, 3 on a file unreadable, partial or not written by --save-permissions,
-                   and 3 when a vCenter was read in one file only (it was not compared). Reads no vCenter.
+                   3 on a file a replayed run wrote (it carries replay: true and is no read of an estate), and 3 when a
+                   vCenter was read in one file only (it was not compared). Reads no vCenter.
 
 The realm-spelled grants, named and removed. The census counts them and never names them in the record.
   --where-realm    with the census: each realm-spelled grant's permission id, principal, object, role and scope,
@@ -166,12 +167,24 @@ Environment:
   TEST_USER, TEST_PASSWORD_FILE, TEST_GROUP, PROBE_VCENTER   for the probes (TEST_USER must not be an administrator)
   TEST_LOCAL_GROUP    optional: a local SSO group holding TEST_GROUP, for the nested case of --probe-grants
   SUPERVISOR_VCENTER  the vCenter for --supervisor-vm (default PROBE_VCENTER)
-  OUT_DIR             where authz.json is written (default: this folder)
+  OUT_DIR             where authz.json is written (default: this folder; under --replay, authz.replay.json, in the
+                      directory the run starts in unless OUT_DIR names one)
 
 Run:  python3 authz.py [--where-realm] [--probe-grants] [--probe-tags] [--supervisor-vm NAME]
       python3 authz.py --remove ID[,ID...] [--execute]
       python3 authz.py --save-permissions FILE
       python3 authz.py --compare-permissions BEFORE AFTER
+      python3 authz.py --replay replay/authz [--where-realm]
+                       without an estate: every request answered from the recorded set beside this script (its hosts
+                       and names are placeholders); nothing is sent and no credential is read, and a request the set
+                       holds no answer for is a read that failed (exit 3). The session list, the probes and
+                       --remove-probe-roles go through pyVmomi, which a set does not answer: the session list is not
+                       read (with REALM_DOMAIN set, exit 3), the probes and --remove-probe-roles are refused (exit 5),
+                       and --remove runs its plan alone (--execute is turned off) and stops where the plan reads who is
+                       signed in (exit 3), with nothing sent. --save-permissions writes its file; --compare-permissions
+                       reads no vCenter either way. The record and a saved file a replayed run writes carry
+                       "replay": true at the top, so neither passes for a read of an estate: --compare-permissions
+                       refuses such a file (exit 3); a live run's carry no such key
       Python 3.10 or later.
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 a removal (--remove --execute) that did not hold on read-back: a named grant still there, or another grant
@@ -185,15 +198,16 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         --compare-permissions: a grant added, removed or changed on a vCenter both files read
       3 a read failed or a result is undetermined: a vCenter refused the session or a page of the permission or role
         list, a permission list with no permission in it, a session list not read whole (refused, holding nothing but
-        the reader's own sessions, or, with REALM_DOMAIN set, not read because pyVmomi is missing), a vCenter on which
-        DIRECTORY_DOMAINS (and REALM_DOMAIN, when set) name no grant while another provider's grants are there, a
+        the reader's own sessions, or, with REALM_DOMAIN set, not read because pyVmomi is missing or the run is
+        replayed), a request a --replay set holds no answer for, a vCenter on which DIRECTORY_DOMAINS (and
+        REALM_DOMAIN, when set) name no grant while another provider's grants are there, a
         vCenter on which REALM_DOMAIN names no grant while grants of a domain in none of the domains given are there (a
         misspelled realm hides its grants there), a live session spelled in REALM_DOMAIN (a domain people sign in with,
         so a grant spelled in it may apply to them; with --remove, nothing is sent), a probe that could not run its
         cases, stopped on an error, or whose residue was not read back, a vCenter --remove-probe-roles could not finish
         or read back, or an error the script did not expect. With --save-permissions: a list not read whole on any
-        vCenter (nothing written). With --compare-permissions: a file unreadable, partial or not written by
-        --save-permissions (nothing compared), or a vCenter read in one file only (not compared, so the files are not
+        vCenter (nothing written). With --compare-permissions: a file unreadable, partial, written by a replayed run
+        (replay: true) or not written by --save-permissions (nothing compared), or a vCenter read in one file only (not compared, so the files are not
         shown equal). Nothing is known about what was not read
       0 nothing for a person to act on: every vCenter read and placed (with REALM_DOMAIN set, its session list read
         whole), no realm-spelled grant, every probe clean (with --remove: the plan printed, or every named grant removed
@@ -206,7 +220,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         name as a realm-spelled grant on that vCenter (an API client's among them), pyVmomi missing for a step that needs it
         (--remove among them), a --supervisor-vm that names no VM or several (looked up before the census and every
         probe), a --save-permissions FILE that exists, has no directory or lies inside the clone, a
-        --compare-permissions BEFORE saved after AFTER, a Python older than 3.10
+        --compare-permissions BEFORE saved after AFTER, a --replay directory that cannot be read or holds no replay set,
+        a probe or --remove-probe-roles under --replay (each writes as it goes and has no plan to run alone), a Python
+        older than 3.10
       A record refused because an estate value or a password survived the scrub is not written, and never hides the
       run's result: the run's code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3 (its
       record was not written; the probes and --remove-probe-roles may already have written to vCenter).
@@ -311,6 +327,241 @@ class _Parser(argparse.ArgumentParser):
         raise SystemExit(EXIT_USAGE)
 
 
+# ── replay: recorded answers in place of the estate (the same block, byte for byte, in every identity companion) ──
+# --replay DIR answers every request from the recorded answers in DIR's *.json files, so a reader runs the tool without
+# an estate and a test drives its real code path. An answer is chosen by the request's method, path and query (an
+# answer may also name the host, headers the request must carry, such as an organization's tenant context, or a string
+# its body must hold); the most specific answer that fits is given, and several answers to one request are given in
+# their order, the last one again after that.
+# Nothing is sent while a set is loaded: _urlopen answers from the set and never reaches the network, no credential is
+# read, a request the set holds no answer for is a read that did not happen (exit 3, never an empty answer), and a
+# writing mode runs its plan alone. A set may name the time its answers were recorded ("now"), so a run judges dates
+# as it did then, and the hosts it recorded ("env"), never a credential.
+REPLAY = None  # the loaded set; None while the tool runs against an estate
+REPLAY_CREDENTIAL = "replay-placeholder"  # what a replayed run holds instead of a credential: nothing is sent
+REPLAY_ANSWER_KEYS = {"method", "path", "query", "host", "request_headers", "body_contains", "status", "body", "text",
+                      "headers", "fail", "note"}
+REPLAY_SET_KEYS = {"replay", "about", "source", "now", "env", "answers"}
+
+
+class ReplayMiss(urllib.error.URLError):
+    """A request the replay set holds no answer for: a read that did not happen, never an empty answer."""
+
+
+class _Replayed:
+    """A recorded answer in the shape urllib.request.urlopen returns."""
+
+    def __init__(self, url, status, headers, raw):
+        self.url, self.status, self.code, self.headers, self.reason, self._raw = url, status, status, headers, "", raw
+
+    def read(self, amt=None):
+        out = self._raw if amt is None else self._raw[:amt]
+        self._raw = self._raw[len(out):]
+        return out
+
+    def getcode(self):
+        return self.status
+
+    def geturl(self):
+        return self.url
+
+    def info(self):
+        return self.headers
+
+    def getheader(self, name, default=None):
+        return self.headers.get(name, default)
+
+    def close(self):
+        self._raw = b""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        self.close()
+        return False
+
+
+def _replay_tokens(value):
+    """{"$jwt": {claims}} anywhere in an answer becomes an unsigned token carrying those claims, made here: a set holds
+    no token, and a token made here was never issued by anything."""
+    import base64
+
+    def part(obj):
+        return base64.urlsafe_b64encode(json.dumps(obj, separators=(",", ":")).encode()).rstrip(b"=").decode()
+
+    if isinstance(value, dict):
+        if set(value) == {"$jwt"} and isinstance(value["$jwt"], dict):
+            return f"{part({'alg': 'none', 'typ': 'JWT'})}.{part(value['$jwt'])}.cmVwbGF5"
+        return {k: _replay_tokens(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replay_tokens(v) for v in value]
+    return value
+
+
+def _replay_check(name, doc):
+    """Why a set file cannot be replayed, or None."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("answers"), list):
+        return f"{name}: no answers list"
+    if set(doc) - REPLAY_SET_KEYS:
+        return f"{name}: keys a set does not take: {', '.join(sorted(set(doc) - REPLAY_SET_KEYS))}"
+    env = doc.get("env", {})
+    if not isinstance(env, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+        return f"{name}: env is not a map of names to values"
+    secret = [k for k in env if any(w in k.upper() for w in ("TOKEN", "SECRET", "PASSWORD", "BEARER", "KEY", "CERT"))]
+    if secret:
+        return f"{name}: env names a credential ({', '.join(secret)}); a set carries none"
+    for i, a in enumerate(doc["answers"]):
+        where = f"{name} answer {i + 1}"
+        if not isinstance(a, dict):
+            return f"{where}: not an object"
+        if set(a) - REPLAY_ANSWER_KEYS:
+            return f"{where}: keys an answer does not take: {', '.join(sorted(set(a) - REPLAY_ANSWER_KEYS))}"
+        if not isinstance(a.get("method"), str) or not isinstance(a.get("path"), str) or not a["path"].startswith("/"):
+            return f"{where}: needs a method and a path that starts with /"
+        query = a.get("query", {})
+        if query != "*" and not (isinstance(query, dict) and all(
+                isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
+                for v in query.values())):
+            return f"{where}: query is not a map of names to values, or *"
+        status = a.get("status", 200)
+        if isinstance(status, bool) or not isinstance(status, int) or not 100 <= status <= 599:
+            return f"{where}: status is not an HTTP status"
+        if "body" in a and "text" in a:
+            return f"{where}: holds both body and text"
+        if not all(isinstance(a.get(k, {}), dict) for k in ("headers", "request_headers")):
+            return f"{where}: headers or request_headers is not a map"
+        if not isinstance(a.get("fail", ""), str) or not isinstance(a.get("body_contains", ""), str):
+            return f"{where}: fail is not a reason, or body_contains is not a string"
+    return None
+
+
+class Replay:
+    """The recorded answers in one directory's *.json files, read in name order."""
+
+    def __init__(self, directory):
+        from datetime import datetime
+
+        names = sorted(n for n in os.listdir(directory) if n.endswith(".json"))
+        if not names:
+            raise ValueError(f"{directory} holds no *.json answer file")
+        self.directory, self.answers, self.env, self.now = directory, [], {}, None
+        self.asked, self.missed, self.answered = {}, [], 0
+        for name in names:
+            with open(os.path.join(directory, name), encoding="utf-8") as f:
+                doc = json.load(f)
+            why = _replay_check(name, doc)
+            if why:
+                raise ValueError(why)
+            self.answers += doc["answers"]
+            self.env.update(doc.get("env", {}))
+            if doc.get("now"):
+                now = datetime.fromisoformat(str(doc["now"]).replace("Z", "+00:00"))
+                if now.tzinfo is None:
+                    raise ValueError(f"{name}: now carries no offset")
+                if self.now is not None and now != self.now:
+                    raise ValueError(f"{name}: now differs from another file's")
+                self.now = now
+
+    def answer(self, req):
+        """The recorded answer to one request, as urlopen would give it; ReplayMiss when the set holds none."""
+        import email.message
+        import io
+
+        if isinstance(req, str):
+            req = urllib.request.Request(req)
+        method = req.get_method().upper()
+        url = urllib.parse.urlsplit(req.full_url)
+        path, host = urllib.parse.unquote(url.path), url.hostname
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        sent = req.data.decode("utf-8", "replace") if isinstance(req.data, bytes) else ""
+        carried = {k.lower(): str(v) for k, v in req.header_items()}
+
+        def fits(a):
+            if a["method"].upper() != method or urllib.parse.unquote(a["path"]) != path:
+                return False
+            if a.get("host") not in (None, host) or a.get("body_contains", "") not in sent:
+                return False
+            if any(carried.get(k.lower()) != str(v) for k, v in a.get("request_headers", {}).items()):
+                return False
+            want = a.get("query", {})
+            return want == "*" or (set(want) == set(query) and all(
+                v == "*" or (v if isinstance(v, list) else [v]) == query[k] for k, v in want.items()))
+
+        def weight(a):  # the most specific answer is given: an exact query over a "*", a named host over none
+            want = a.get("query", {})
+            exact = 0 if want == "*" else 1 if "*" in want.values() else 2
+            return exact, "host" in a, len(a.get("request_headers", {})), "body_contains" in a
+
+        hits = [a for a in self.answers if fits(a)]
+        hits = [a for a in hits if weight(a) == max(map(weight, hits))]
+        shown = f"{method} {url.path}" + (f"?{url.query}" if url.query else "")
+        if not hits:
+            self.missed.append(shown)
+            print(f"replay: the set holds no answer for {shown}: a read that did not happen", file=sys.stderr)
+            raise ReplayMiss(f"replay: no recorded answer for {method} {url.path}")
+        key = tuple(id(a) for a in hits)
+        a = hits[min(self.asked.get(key, 0), len(hits) - 1)]
+        self.asked[key] = self.asked.get(key, 0) + 1
+        self.answered += 1
+        if a.get("fail"):
+            raise urllib.error.URLError(f"replay: {a['fail']}")
+        headers = email.message.Message()
+        for k, v in _replay_tokens(a.get("headers", {})).items():
+            headers[k] = str(v)
+        if "body" in a:
+            raw, kind = json.dumps(_replay_tokens(a["body"])).encode(), "application/json"
+        else:
+            raw, kind = str(a.get("text", "")).encode(), "text/plain"
+        if raw and headers.get("Content-Type") is None:
+            headers["Content-Type"] = kind
+        status = a.get("status", 200)
+        if status >= 400:
+            raise urllib.error.HTTPError(req.full_url, status, "replayed refusal", headers, io.BytesIO(raw))
+        return _Replayed(req.full_url, status, headers, raw)
+
+
+def replay_start(directory):
+    """Load the set in DIR for this run. ValueError or OSError when it cannot be replayed: a usage error (exit 5)."""
+    global REPLAY
+    REPLAY = Replay(directory)
+    for k, v in REPLAY.env.items():
+        if k not in os.environ:
+            os.environ[k] = v
+        else:
+            REPLAY.env[k] = None  # the reader's own value stands, and stays when the run ends
+    print(f"replay: {len(REPLAY.answers)} recorded answers from {directory}; nothing is sent and no credential is read",
+          file=sys.stderr)
+    return REPLAY
+
+
+def replay_stop():
+    """Unload the set and the hosts it named: a run in a test leaves nothing behind for the next."""
+    global REPLAY
+    if REPLAY is not None:
+        for k, v in REPLAY.env.items():
+            if v is not None:
+                os.environ.pop(k, None)
+    REPLAY = None
+
+
+def replay_now():
+    """The time a replayed set was recorded at, when it names one, or the time now: dates are judged as they were."""
+    from datetime import datetime, timezone
+
+    return REPLAY.now if REPLAY is not None and REPLAY.now is not None else datetime.now(timezone.utc)
+
+
+def _urlopen(req, context=None, timeout=60, opener=None):
+    """urllib.request.urlopen, or, with a replay set loaded, its recorded answer: nothing leaves the process."""
+    if REPLAY is not None:
+        return REPLAY.answer(req)
+    if opener is not None:
+        return opener.open(req, timeout=timeout)
+    return urllib.request.urlopen(req, context=context, timeout=timeout)
+# ── end of the replay block ──────────────────────────────────────────────────────────────────────────────────────
+
+
 # ---------------------------------------------------------------- plumbing
 
 def ctx():
@@ -320,7 +571,9 @@ def ctx():
 
 def secret(name):
     """NAME_FILE's content, or NAME itself. A file named but unreadable is a usage error (exit 5), never a read that
-    failed: nothing has been sent when it is read."""
+    failed: nothing has been sent when it is read. A replayed run reads none: nothing is sent."""
+    if REPLAY is not None:
+        return REPLAY_CREDENTIAL
     path = os.environ.get(name + "_FILE")
     if path:
         try:
@@ -350,7 +603,7 @@ class Rest:
             h["Content-Type"] = "application/json"
         rq = urllib.request.Request(f"https://{self.host}{path}", data=data, method=method, headers=h)
         try:
-            with urllib.request.urlopen(rq, context=ctx(), timeout=60) as r:
+            with _urlopen(rq, context=ctx(), timeout=60) as r:
                 raw = r.read()
                 status = r.status
         except urllib.error.HTTPError as e:
@@ -439,7 +692,13 @@ def roles(rest, page_size=None):
     return {str(i["role"]): i["info"] for i in pages("role", ask, lambda r: r["role"])}
 
 
+REPLAY_NO_SOAP = ("a replayed run opens no pyVmomi session: a replay set holds the vSphere Automation API's answers, "
+                  "and the session list, the probes and the probe roles are read and written through pyVmomi")
+
+
 def soap(host, user, password):
+    if REPLAY is not None:  # pyVmomi sends through its own connection, never _urlopen: under --replay it never starts
+        raise ReadError(REPLAY_NO_SOAP)
     from pyVim.connect import SmartConnect
     c = ssl.create_default_context()
     if os.environ.get("TLS_VERIFY", "true").strip().lower() in ("0", "false", "no", "off"):
@@ -765,7 +1024,10 @@ def realm_sessions(names, realm):
 
 def session_names(host, user, password):
     """Who is signed in on one vCenter now, as vCenter spells each session's name (DOMAIN\\name), read whole: what
-    --remove checks before it acts. A session that cannot be opened, or a list not read whole, is ReadError (exit 3)."""
+    --remove checks before it acts. A session that cannot be opened, or a list not read whole, is ReadError (exit 3), and
+    so is a replayed run, which opens no pyVmomi session."""
+    if REPLAY is not None:
+        raise ReadError(f"the session list was not read: {REPLAY_NO_SOAP}")
     try:
         si = soap(host, user, password)
     except Exception as e:
@@ -1354,6 +1616,9 @@ def _parser():
                          "FILE (a new file, mode 0600, outside the clone), with every principal named; never publish it")
     ap.add_argument("--compare-permissions", nargs=2, metavar=("BEFORE", "AFTER"),
                     help="a run of its own: two files --save-permissions wrote, compared grant by grant; reads no vCenter")
+    ap.add_argument("--replay", metavar="DIR",
+                    help="answer every request from the recorded set in DIR (replay/authz beside this script is one): "
+                         "nothing is sent and no credential is read")
     return ap
 
 
@@ -1364,7 +1629,7 @@ def main(argv=None):
         print("authz.py needs Python 3.10 or later", file=sys.stderr)
         return EXIT_USAGE
     try:
-        return _run(argv)
+        return _missed(_run(argv))
     except SystemExit as e:  # argparse: --help exits 0, a usage error exits 5 through _Parser.error
         return e.code if isinstance(e.code, int) else EXIT_USAGE
     except UsageError as e:
@@ -1378,6 +1643,19 @@ def main(argv=None):
         print(f"the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; nothing is known "
               "about what it had not read (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
+    finally:
+        replay_stop()
+
+
+def _missed(code):
+    """A replayed run that asked for an answer its set does not hold exits 3 whatever it judged: that request was a read
+    that did not happen (the session's close among them, which a run on an estate does not judge), so nothing it led to
+    is a pass or a finding. A usage error stands."""
+    if REPLAY is not None and REPLAY.missed and code in (EXIT_OK, EXIT_REALM, EXIT_NOT_HELD):
+        print(f"replay: {len(REPLAY.missed)} request(s) the set holds no answer for ({', '.join(REPLAY.missed[:3])}): "
+              f"reads that did not happen, so the run is not judged (exit {EXIT_UNREAD}, not {code})", file=sys.stderr)
+        return EXIT_UNREAD
+    return code
 
 
 def _alone(a, flag):
@@ -1430,7 +1708,7 @@ def _settings(a):
                          "as REALM_DOMAIN reads as the realm, and its working grants would pass for removal. Name every "
                          "directory in DIRECTORY_DOMAINS, and state OTHER_DOMAINS, every other provider's domain, empty "
                          "when there is none (export OTHER_DOMAINS=)")
-    if removing and not have_pyvmomi():
+    if removing and REPLAY is None and not have_pyvmomi():  # replayed, the session read is not made: exit 3, not 5
         raise UsageError("--remove reads who is signed in on the vCenter before it acts, which needs pyVmomi")
     probing = a.probe_grants or a.probe_tags or a.supervisor_vm
     test_user = os.environ.get("TEST_USER", "")
@@ -1445,8 +1723,48 @@ def _settings(a):
     return hosts, user, password, realm, directories
 
 
+def stamp():
+    """The time a record or a saved list carries: under --replay, the time the set was recorded, so a replayed run
+    stamps what the recording did."""
+    if REPLAY is not None:
+        return replay_now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+# The modes that write to vCenter and have no plan of their own to run alone: each creates, grants or removes as it goes,
+# through pyVmomi, which a replay set does not answer. Under --replay each is refused (exit 5), with nothing sent.
+NO_PLAN = (("--probe-grants", "probe_grants"), ("--probe-tags", "probe_tags"), ("--supervisor-vm", "supervisor_vm"),
+           ("--remove-probe-roles", "remove_probe_roles"))
+
+
+def _replayed(a):
+    """--replay: load the set before any other check, then hold every writing mode to its plan. --execute is turned off
+    (--remove runs its plan alone); a mode with no plan is refused. Returns an exit code to stop on, or None."""
+    try:
+        replay_start(a.replay)
+    except (OSError, ValueError) as e:
+        print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+        return EXIT_USAGE
+    held = [flag for flag, dest in NO_PLAN if getattr(a, dest)]
+    if held:
+        one = len(held) == 1
+        print(f"replay: {', '.join(held)} {'has' if one else 'have'} no plan to run alone under --replay: "
+              f"{'it writes' if one else 'they write'} to vCenter as {'it goes' if one else 'they go'}, through pyVmomi, "
+              f"which a replay set does not answer. Run the census with --replay and without "
+              f"{'it' if one else 'them'}; nothing was sent (exit {EXIT_USAGE})", file=sys.stderr)
+        return EXIT_USAGE
+    if a.execute and a.remove:
+        print("replay: --execute runs its plan alone under --replay; nothing is sent", file=sys.stderr)
+        a.execute = False
+    return None
+
+
 def _run(argv=None):
     a = _parser().parse_args(argv)
+    if a.replay:
+        stop = _replayed(a)
+        if stop is not None:
+            return stop
     if a.compare_permissions:
         _alone(a, "--compare-permissions")
         return compare_permissions(*a.compare_permissions)
@@ -1459,18 +1777,22 @@ def _run(argv=None):
     if a.supervisor_vm:   # before the census and every probe: a name that is not one VM is found before anything is written
         supervisor_vm_check(os.environ.get("SUPERVISOR_VCENTER") or os.environ.get("PROBE_VCENTER") or hosts[0],
                             user, password, a.supervisor_vm)
-    out_dir = os.environ.get("OUT_DIR", os.path.dirname(os.path.abspath(__file__)))
+    # A replayed run writes authz.replay.json, in OUT_DIR or the directory it runs in, never over the record beside this
+    # script.
+    out_dir = os.environ.get("OUT_DIR", "." if REPLAY is not None else os.path.dirname(os.path.abspath(__file__)))
+    out_name = "authz.replay.json" if REPLAY is not None else "authz.json"
     L = Labels()
     vc_label = {h: L.get("vcenter", h) for h in hosts}
 
     print("authz.py: vCenter authorization under VCF single sign-on, read the way a broker session reads it\n")
     if not realm:
         print("  --no-realm: an estate with no realm yet, so the realm-spelled class is not applicable.\n")
-    record = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "vcenters": {}}
+    # A replayed run's record says so at its top, so it never passes for a read of an estate; a live one carries no key.
+    record = {**({"replay": True} if REPLAY is not None else {}), "captured_utc": stamp(), "vcenters": {}}
     if not realm:
         record["realmSpelling"] = NO_REALM
     catalogs = {}
-    pyv = have_pyvmomi()
+    pyv = have_pyvmomi() and REPLAY is None
     unread = []
     declared = other_domains_declared()
     for h in hosts:
@@ -1506,6 +1828,8 @@ def _run(argv=None):
                     row["sessions"] = {"error": str(e)}
                 finally:
                     unsoap(si)
+        elif REPLAY is not None:
+            row["sessions"] = "not read: a replayed run reads no session list (it is read through pyVmomi)"
         else:
             row["sessions"] = "not read: pyVmomi is not installed"
         signed_in = (row["sessions"].get("byClass") or {}).get("realm spelling", 0) \
@@ -1629,7 +1953,7 @@ def _run(argv=None):
                                            "recorded): " + ", ".join(left_on_vm) if key == "supervisorProbe" and left_on_vm
                                            else ""))
 
-    record["exit"] = code = exit_code(record, realm)
+    record["exit"] = code = _missed(exit_code(record, realm))  # a replayed run that met a miss is no pass
     text = json.dumps(record, indent=1, ensure_ascii=False)
     estate = set(hosts) | {user, local, dom, realm, test_user, os.environ.get("TEST_GROUP", ""), a.supervisor_vm,
                            os.environ.get("TEST_LOCAL_GROUP", ""),
@@ -1638,25 +1962,26 @@ def _run(argv=None):
     for value in sorted({v for v in estate if v and v not in PRODUCT_ROLES | PRODUCT_LOCAL}, key=len, reverse=True):
         if re.search(r"(?<![A-Za-z0-9-])" + re.escape(value) + r"(?![A-Za-z0-9-])", text, re.IGNORECASE):
             shape = re.sub(r"[A-Za-z]", "a", re.sub(r"[0-9]", "9", value))
-            return refused_record(f"an estate value ({len(value)} characters, shape {shape}) reached the record", code)
+            return refused_record(f"an estate value ({len(value)} characters, shape {shape}) reached the record", code,
+                                  out_name)
     if any(s and s in text for s in (password, subject[1])):
-        return refused_record("a password reached the record", code)
+        return refused_record("a password reached the record", code, out_name)
     os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, "authz.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(out_dir, out_name), "w", encoding="utf-8") as f:
         f.write(text + "\n")
-    print("\nwrote authz.json: counts, classes and outcomes, with every estate name replaced")
+    print(f"\nwrote {out_name}: counts, classes and outcomes, with every estate name replaced")
     if unread:
         print(f"NOT READ: {len(unread)} vCenter(s); nothing is known about their grants")
     print(f"exit {code}")
     return code
 
 
-def refused_record(why, code):
+def refused_record(why, code, name="authz.json"):
     """A record the scrub refused: nothing is written, and the run's own code stands (G-456), because the census read,
     and the probes or --remove-probe-roles may already have written. A run that found nothing to act on exits 3: its
     record was not written, so nothing shows what it read. Never 5, which would say nothing was read or sent."""
     code = code if code != EXIT_OK else EXIT_UNREAD
-    print(f"refusing to write authz.json: {why}; nothing is written; exit {code}: "
+    print(f"refusing to write {name}: {why}; nothing is written; exit {code}: "
           + ("the run's own code stands" if code != EXIT_UNREAD else "the record that shows what the run read was not "
              "written"), file=sys.stderr)
     return code
@@ -1677,7 +2002,7 @@ def teardown_line(t):
         return f"NOT HELD: {done}, and {t['rolesLeft']} probe role(s) still listed after the removal (exit 2)"
     groups = t.get("reservedGroupsLeft")
     return (f"{done}, none listed after; "
-            + ("the reserved groups VCF left were not read" if groups is None
+            + ("NOT READ: the reserved groups VCF left were not read back (exit 3)" if groups is None
                else f"{groups} reserved group(s) VCF left behind, removed by the vCenter's SSO administrator"))
 
 
@@ -1704,9 +2029,11 @@ def probe_unread(rec):
 
 
 def teardown_unread(t):
-    """Whether one vCenter's --remove-probe-roles did not finish or was not read back: an error, or no role list read
-    after the removal (a refusal sent nothing and is exit 2, never this)."""
-    return not t.get("refused") and (bool(t.get("error")) or t.get("rolesLeft") is None)
+    """Whether one vCenter's --remove-probe-roles did not finish or was not read back: an error, no role list read
+    after the removal, or the reserved groups VCF leaves not read (a residue not read back is never a clean run; a
+    refusal sent nothing and is exit 2, never this)."""
+    return not t.get("refused") and (bool(t.get("error")) or t.get("rolesLeft") is None
+                                     or ("reservedGroupsLeft" in t and t["reservedGroupsLeft"] is None))
 
 
 def sessions_unread(row):
@@ -1860,10 +2187,13 @@ def saved_grant(host, p, cat):
     return g
 
 
-def digest(grants):
-    """A digest of the grants as written, so the compare can tell a file edited after --save-permissions wrote it."""
+def digest(grants, replay=False):
+    """A digest of the grants as written, so the compare can tell a file edited after --save-permissions wrote it. A
+    replayed run's file folds its "replay": true into the digest, so the key cannot be taken off for the file to pass
+    as a read of an estate; a live file's digest covers its grants alone, as it always has."""
     import hashlib
-    return hashlib.sha256(json.dumps(grants, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    covered = {"replay": True, "grants": grants} if replay else grants
+    return hashlib.sha256(json.dumps(covered, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
 def inside_a_clone(path):
@@ -1926,13 +2256,21 @@ def save_permissions(path):
         print(f"NOT READ: {len(unread)} vCenter(s); nothing was written, because a saved list that misses a vCenter's "
               "grants would compare as removals (exit 3)", file=sys.stderr)
         return EXIT_UNREAD
-    doc = {"kind": SAVE_KIND, "format": SAVE_FORMAT,
+    if REPLAY is not None and REPLAY.missed:  # a close the set did not answer: not a list read whole either
+        print(f"replay: {len(REPLAY.missed)} request(s) the set holds no answer for; nothing was written (exit 3)",
+              file=sys.stderr)
+        return EXIT_UNREAD
+    replayed = REPLAY is not None
+    doc = {**({"replay": True} if replayed else {}), "kind": SAVE_KIND, "format": SAVE_FORMAT,
            "note": "every grant, each principal named as vCenter spells it: keep this file on your own disk, never publish it",
-           "saved_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "vcenters": header,
-           "totals": {"vcenters": len(header), "grants": len(grants)}, "grantsSha256": digest(grants), "grants": grants}
+           "saved_utc": stamp(), "vcenters": header,
+           "totals": {"vcenters": len(header), "grants": len(grants)}, "grantsSha256": digest(grants, replayed),
+           "grants": grants}
     write_new(path, json.dumps(doc, indent=1, ensure_ascii=False) + "\n")
     print(f"wrote {path}, mode 0600: {len(grants)} grants on {len(header)} vCenter(s), every principal named; it is never "
-          "scrubbed, so keep it on your own disk\nexit 0")
+          "scrubbed, so keep it on your own disk"
+          + ("; it carries replay: true, a replayed run's list, which --compare-permissions refuses" if replayed else "")
+          + "\nexit 0")
     return EXIT_OK
 
 
@@ -1960,7 +2298,8 @@ def write_new(path, text):
 def load_saved(path):
     """A file --save-permissions wrote, whole, or the reason it is not one (ReadError, exit 3): unreadable, not JSON,
     another kind or format, a grant without its fields, totals or per-vCenter counts that disagree with its grants, a
-    digest that does not match (edited after it was written)."""
+    digest that does not match (edited after it was written), or a file a replayed run wrote (replay: true), which is no
+    read of an estate, under --replay or not."""
     try:
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
@@ -1979,8 +2318,12 @@ def load_saved(path):
     if (totals.get("grants") != len(grants) or totals.get("vcenters") != len(header) or set(counts) - set(header)
             or any(not isinstance(v, dict) or v.get("grants") != counts.get(h, 0) for h, v in header.items())):
         raise ReadError(f"{path} is partial: its totals do not match the grants it holds")
-    if doc.get("grantsSha256") != digest(grants):
+    replayed = doc.get("replay") is True
+    if doc.get("grantsSha256") != digest(grants, replayed):
         raise ReadError(f"{path} was changed after --save-permissions wrote it (its digest does not match its grants)")
+    if replayed:
+        raise ReadError(f"{path} was written by a replayed run (replay: true): its grants are a recorded set's answers, "
+                        "no read of an estate, so it is not compared")
     return doc
 
 
@@ -2015,8 +2358,8 @@ def compare_vcenter(before, after):
 
 def compare_permissions(before_path, after_path):
     """--compare-permissions BEFORE AFTER: two files --save-permissions wrote, compared by the grant key on every vCenter
-    both read. Exit, the first that applies: 3 a file unreadable, partial or not written by --save-permissions (nothing
-    compared); 5 BEFORE saved after AFTER; 1 a grant added, removed or changed on a vCenter both read; 3 a vCenter read
+    both read. Exit, the first that applies: 3 a file unreadable, partial, written by a replayed run (replay: true) or
+    not written by --save-permissions (nothing compared); 5 BEFORE saved after AFTER; 1 a grant added, removed or changed on a vCenter both read; 3 a vCenter read
     in one file only (it could not be compared, so the files are not shown equal), or none in common; 0 none."""
     print("authz.py --compare-permissions: grant by grant, on every vCenter both files read (printed here only)")
     try:

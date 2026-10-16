@@ -77,6 +77,12 @@ the organization with a role. This script does both sides in the order that work
                          or the new one, and reads every changed field back; when the organization already holds what
                          was asked it writes nothing and says "nothing to change". It never writes to Entra: a new
                          secret is first proven at Entra's token endpoint, and one Entra refuses is not written.
+  --replay DIR           without an estate: every answer from the recorded set in DIR (replay/org_federation beside
+                         this script is one, its hosts and names placeholders), with any mode above. Nothing is sent and
+                         no credential is read; --execute runs its plan alone (every write here is sent under --execute),
+                         and a request the set holds no answer for is a read that failed (exit 3). Each record goes to
+                         its .replay.json name (federation.replay.json, update.replay.json, prove.replay.json,
+                         configure.replay.json) unless OUT names a file, and carries "replay": true at its top level
 
 Writes `federation.json`: the steps, their HTTP statuses, the waits Entra imposed, the setting names stored on
 read-back and any refusal verbatim. Every value from your estate (host, organization, tenant, users, ids) is replaced
@@ -123,12 +129,12 @@ Exit: 0 done · 1 a check failed, or a write refused while building, configuring
       read refused or a list not read whole in any mode (a proof only reads), Entra out of reach when asked about a
       secret or a tenant's domain, a check with nothing to read yet (--prove --org over SAML before any enabled SAML
       user has signed in), a teardown whose residue could not be read, a record the scrub refused to write on a run that
-      would have exited 0, or an error it did not expect (never 1) · 5 not run as asked: an unknown, missing or
-      malformed argument (--enable without --configure, --groups-only without --group or with --enable or --user-key
+      would have exited 0, a request a --replay set holds no answer for, or an error it did not expect (never 1) · 5
+      not run as asked: an unknown, missing or malformed argument (--enable without --configure, --groups-only without --group or with --enable or --user-key
       among them), a missing environment variable or a file that cannot be read, ENTRA_CLIENT_ID without its
       credential, an ENTRA_TENANT_ID that is neither a tenant id nor a domain Entra names a tenant for, metadata that
-      is not the tenant's or names no certificate that reads, SECRET_DAYS of a year or more, or a Python older than
-      3.9. Nothing is sent on a 5. A record the scrub refuses is not written and never hides the run's code: 1, 2 and 3
+      is not the tenant's or names no certificate that reads, SECRET_DAYS of a year or more, a --replay directory that
+      cannot be read or holds no replay set, or a Python older than 3.9. Nothing is sent on a 5. A record the scrub refuses is not written and never hides the run's code: 1, 2 and 3
       stand, and a run that would have exited 0 exits 3.
 """
 
@@ -563,6 +569,12 @@ class Scrubber:
             raise ScrubError(f"refusing to write the record: {len(left)} estate value(s) survived the scrub")
 
 
+def _record_name(default):
+    """A record's file name: the default, or under --replay its .replay.json twin, so a replayed run in the companion's
+    folder never overwrites a record of a real run."""
+    return default[: -len(".json")] + ".replay.json" if REPLAY is not None else default
+
+
 def write_record(out, text, san):
     """Write a scrubbed record, or refuse it when an estate value survived the scrub: the record is not written, the
     refusal is printed and RECORD is marked, so the run keeps its own code and a 0 becomes 3 (G-456). True if written."""
@@ -577,6 +589,241 @@ def write_record(out, text, san):
     return True
 
 
+# ── replay: recorded answers in place of the estate (the same block, byte for byte, in every identity companion) ──
+# --replay DIR answers every request from the recorded answers in DIR's *.json files, so a reader runs the tool without
+# an estate and a test drives its real code path. An answer is chosen by the request's method, path and query (an
+# answer may also name the host, headers the request must carry, such as an organization's tenant context, or a string
+# its body must hold); the most specific answer that fits is given, and several answers to one request are given in
+# their order, the last one again after that.
+# Nothing is sent while a set is loaded: _urlopen answers from the set and never reaches the network, no credential is
+# read, a request the set holds no answer for is a read that did not happen (exit 3, never an empty answer), and a
+# writing mode runs its plan alone. A set may name the time its answers were recorded ("now"), so a run judges dates
+# as it did then, and the hosts it recorded ("env"), never a credential.
+REPLAY = None  # the loaded set; None while the tool runs against an estate
+REPLAY_CREDENTIAL = "replay-placeholder"  # what a replayed run holds instead of a credential: nothing is sent
+REPLAY_ANSWER_KEYS = {"method", "path", "query", "host", "request_headers", "body_contains", "status", "body", "text",
+                      "headers", "fail", "note"}
+REPLAY_SET_KEYS = {"replay", "about", "source", "now", "env", "answers"}
+
+
+class ReplayMiss(urllib.error.URLError):
+    """A request the replay set holds no answer for: a read that did not happen, never an empty answer."""
+
+
+class _Replayed:
+    """A recorded answer in the shape urllib.request.urlopen returns."""
+
+    def __init__(self, url, status, headers, raw):
+        self.url, self.status, self.code, self.headers, self.reason, self._raw = url, status, status, headers, "", raw
+
+    def read(self, amt=None):
+        out = self._raw if amt is None else self._raw[:amt]
+        self._raw = self._raw[len(out):]
+        return out
+
+    def getcode(self):
+        return self.status
+
+    def geturl(self):
+        return self.url
+
+    def info(self):
+        return self.headers
+
+    def getheader(self, name, default=None):
+        return self.headers.get(name, default)
+
+    def close(self):
+        self._raw = b""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        self.close()
+        return False
+
+
+def _replay_tokens(value):
+    """{"$jwt": {claims}} anywhere in an answer becomes an unsigned token carrying those claims, made here: a set holds
+    no token, and a token made here was never issued by anything."""
+    import base64
+
+    def part(obj):
+        return base64.urlsafe_b64encode(json.dumps(obj, separators=(",", ":")).encode()).rstrip(b"=").decode()
+
+    if isinstance(value, dict):
+        if set(value) == {"$jwt"} and isinstance(value["$jwt"], dict):
+            return f"{part({'alg': 'none', 'typ': 'JWT'})}.{part(value['$jwt'])}.cmVwbGF5"
+        return {k: _replay_tokens(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replay_tokens(v) for v in value]
+    return value
+
+
+def _replay_check(name, doc):
+    """Why a set file cannot be replayed, or None."""
+    if not isinstance(doc, dict) or not isinstance(doc.get("answers"), list):
+        return f"{name}: no answers list"
+    if set(doc) - REPLAY_SET_KEYS:
+        return f"{name}: keys a set does not take: {', '.join(sorted(set(doc) - REPLAY_SET_KEYS))}"
+    env = doc.get("env", {})
+    if not isinstance(env, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
+        return f"{name}: env is not a map of names to values"
+    secret = [k for k in env if any(w in k.upper() for w in ("TOKEN", "SECRET", "PASSWORD", "BEARER", "KEY", "CERT"))]
+    if secret:
+        return f"{name}: env names a credential ({', '.join(secret)}); a set carries none"
+    for i, a in enumerate(doc["answers"]):
+        where = f"{name} answer {i + 1}"
+        if not isinstance(a, dict):
+            return f"{where}: not an object"
+        if set(a) - REPLAY_ANSWER_KEYS:
+            return f"{where}: keys an answer does not take: {', '.join(sorted(set(a) - REPLAY_ANSWER_KEYS))}"
+        if not isinstance(a.get("method"), str) or not isinstance(a.get("path"), str) or not a["path"].startswith("/"):
+            return f"{where}: needs a method and a path that starts with /"
+        query = a.get("query", {})
+        if query != "*" and not (isinstance(query, dict) and all(
+                isinstance(v, str) or (isinstance(v, list) and all(isinstance(x, str) for x in v))
+                for v in query.values())):
+            return f"{where}: query is not a map of names to values, or *"
+        status = a.get("status", 200)
+        if isinstance(status, bool) or not isinstance(status, int) or not 100 <= status <= 599:
+            return f"{where}: status is not an HTTP status"
+        if "body" in a and "text" in a:
+            return f"{where}: holds both body and text"
+        if not all(isinstance(a.get(k, {}), dict) for k in ("headers", "request_headers")):
+            return f"{where}: headers or request_headers is not a map"
+        if not isinstance(a.get("fail", ""), str) or not isinstance(a.get("body_contains", ""), str):
+            return f"{where}: fail is not a reason, or body_contains is not a string"
+    return None
+
+
+class Replay:
+    """The recorded answers in one directory's *.json files, read in name order."""
+
+    def __init__(self, directory):
+        from datetime import datetime
+
+        names = sorted(n for n in os.listdir(directory) if n.endswith(".json"))
+        if not names:
+            raise ValueError(f"{directory} holds no *.json answer file")
+        self.directory, self.answers, self.env, self.now = directory, [], {}, None
+        self.asked, self.missed, self.answered = {}, [], 0
+        for name in names:
+            with open(os.path.join(directory, name), encoding="utf-8") as f:
+                doc = json.load(f)
+            why = _replay_check(name, doc)
+            if why:
+                raise ValueError(why)
+            self.answers += doc["answers"]
+            self.env.update(doc.get("env", {}))
+            if doc.get("now"):
+                now = datetime.fromisoformat(str(doc["now"]).replace("Z", "+00:00"))
+                if now.tzinfo is None:
+                    raise ValueError(f"{name}: now carries no offset")
+                if self.now is not None and now != self.now:
+                    raise ValueError(f"{name}: now differs from another file's")
+                self.now = now
+
+    def answer(self, req):
+        """The recorded answer to one request, as urlopen would give it; ReplayMiss when the set holds none."""
+        import email.message
+        import io
+
+        if isinstance(req, str):
+            req = urllib.request.Request(req)
+        method = req.get_method().upper()
+        url = urllib.parse.urlsplit(req.full_url)
+        path, host = urllib.parse.unquote(url.path), url.hostname
+        query = urllib.parse.parse_qs(url.query, keep_blank_values=True)
+        sent = req.data.decode("utf-8", "replace") if isinstance(req.data, bytes) else ""
+        carried = {k.lower(): str(v) for k, v in req.header_items()}
+
+        def fits(a):
+            if a["method"].upper() != method or urllib.parse.unquote(a["path"]) != path:
+                return False
+            if a.get("host") not in (None, host) or a.get("body_contains", "") not in sent:
+                return False
+            if any(carried.get(k.lower()) != str(v) for k, v in a.get("request_headers", {}).items()):
+                return False
+            want = a.get("query", {})
+            return want == "*" or (set(want) == set(query) and all(
+                v == "*" or (v if isinstance(v, list) else [v]) == query[k] for k, v in want.items()))
+
+        def weight(a):  # the most specific answer is given: an exact query over a "*", a named host over none
+            want = a.get("query", {})
+            exact = 0 if want == "*" else 1 if "*" in want.values() else 2
+            return exact, "host" in a, len(a.get("request_headers", {})), "body_contains" in a
+
+        hits = [a for a in self.answers if fits(a)]
+        hits = [a for a in hits if weight(a) == max(map(weight, hits))]
+        shown = f"{method} {url.path}" + (f"?{url.query}" if url.query else "")
+        if not hits:
+            self.missed.append(shown)
+            print(f"replay: the set holds no answer for {shown}: a read that did not happen", file=sys.stderr)
+            raise ReplayMiss(f"replay: no recorded answer for {method} {url.path}")
+        key = tuple(id(a) for a in hits)
+        a = hits[min(self.asked.get(key, 0), len(hits) - 1)]
+        self.asked[key] = self.asked.get(key, 0) + 1
+        self.answered += 1
+        if a.get("fail"):
+            raise urllib.error.URLError(f"replay: {a['fail']}")
+        headers = email.message.Message()
+        for k, v in _replay_tokens(a.get("headers", {})).items():
+            headers[k] = str(v)
+        if "body" in a:
+            raw, kind = json.dumps(_replay_tokens(a["body"])).encode(), "application/json"
+        else:
+            raw, kind = str(a.get("text", "")).encode(), "text/plain"
+        if raw and headers.get("Content-Type") is None:
+            headers["Content-Type"] = kind
+        status = a.get("status", 200)
+        if status >= 400:
+            raise urllib.error.HTTPError(req.full_url, status, "replayed refusal", headers, io.BytesIO(raw))
+        return _Replayed(req.full_url, status, headers, raw)
+
+
+def replay_start(directory):
+    """Load the set in DIR for this run. ValueError or OSError when it cannot be replayed: a usage error (exit 5)."""
+    global REPLAY
+    REPLAY = Replay(directory)
+    for k, v in REPLAY.env.items():
+        if k not in os.environ:
+            os.environ[k] = v
+        else:
+            REPLAY.env[k] = None  # the reader's own value stands, and stays when the run ends
+    print(f"replay: {len(REPLAY.answers)} recorded answers from {directory}; nothing is sent and no credential is read",
+          file=sys.stderr)
+    return REPLAY
+
+
+def replay_stop():
+    """Unload the set and the hosts it named: a run in a test leaves nothing behind for the next."""
+    global REPLAY
+    if REPLAY is not None:
+        for k, v in REPLAY.env.items():
+            if v is not None:
+                os.environ.pop(k, None)
+    REPLAY = None
+
+
+def replay_now():
+    """The time a replayed set was recorded at, when it names one, or the time now: dates are judged as they were."""
+    from datetime import datetime, timezone
+
+    return REPLAY.now if REPLAY is not None and REPLAY.now is not None else datetime.now(timezone.utc)
+
+
+def _urlopen(req, context=None, timeout=60, opener=None):
+    """urllib.request.urlopen, or, with a replay set loaded, its recorded answer: nothing leaves the process."""
+    if REPLAY is not None:
+        return REPLAY.answer(req)
+    if opener is not None:
+        return opener.open(req, timeout=timeout)
+    return urllib.request.urlopen(req, context=context, timeout=timeout)
+# ── end of the replay block ──────────────────────────────────────────────────────────────────────────────────────
+
+
 # ── HTTP, standard library only ────────────────────────────────────────────────────────────────────────────────
 def _ctx():
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
@@ -586,10 +833,16 @@ def _ctx():
 def _send(method, url, headers, data=None, ctx=None):
     req = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
-        with urllib.request.urlopen(req, context=ctx, timeout=90) as r:
+        with _urlopen(req, context=ctx, timeout=90) as r:
             return r.status, dict(r.headers), r.read()
     except urllib.error.HTTPError as e:
         return e.code, dict(e.headers), e.read()
+    except urllib.error.URLError as e:
+        if method != "GET":   # a write or a token request whose answer never came: what it did is not known
+            raise
+        # A read that did not answer (out of reach, or a request a --replay set holds no answer for): a read that
+        # failed, exit 3, which each mode records; a GET changes nothing, so nothing is left unknown but what it read.
+        raise ReadError(f"GET {urllib.parse.urlsplit(url).path}: {e.reason}") from None
 
 
 def _parse(raw):
@@ -665,7 +918,7 @@ def _openid_configuration(domain):
     url = f"{AUTHORITY}/{urllib.parse.quote(domain)}/v2.0/.well-known/openid-configuration"
     try:
         st, _, raw = _send("GET", url, {"Accept": "application/json"}, None, ssl.create_default_context())
-    except (urllib.error.URLError, OSError) as e:
+    except (urllib.error.URLError, OSError, ReadError) as e:
         raise ReadError(f"Entra's OpenID configuration for the tenant's domain could not be read ({type(e).__name__})") from None
     return st, _parse(raw)
 
@@ -704,7 +957,21 @@ def _resolve_tenant_env(discover=None):
         os.environ["ENTRA_TENANT_ID"] = tid
 
 
+# The files that hold a credential. A replayed run opens none of them and holds the placeholder in their place, so it
+# needs none set; APP_SECRET_FILE, a new app's secret that --configure reads only when it is given, stands in only when
+# its variable is set. METADATA_FILE is the tenant's public metadata, not a credential, and is read as given.
+CREDENTIAL_FILES = ("VCFA_PROVIDER_BEARER_FILE", "VCFA_PROVIDER_REFRESH_TOKEN_FILE", "ENTRA_CLIENT_SECRET_FILE",
+                    "NEW_SECRET_FILE")
+
+
+def _given(var):
+    """Whether a credential file is given: its variable set, or a replayed run, which holds the placeholder."""
+    return bool(os.environ.get(var)) or (REPLAY is not None and var in CREDENTIAL_FILES)
+
+
 def _read_file(var):
+    if REPLAY is not None and (var in CREDENTIAL_FILES or (var == "APP_SECRET_FILE" and os.environ.get(var))):
+        return REPLAY_CREDENTIAL   # a replayed run reads no credential: nothing is sent
     path = os.environ.get(var)
     if not path:
         return None
@@ -835,6 +1102,8 @@ class Graph:
         return json.loads(raw)["access_token"]
 
     def _assertion(self):
+        if REPLAY is not None:  # a replayed run reads no key or certificate: nothing is sent
+            return REPLAY_CREDENTIAL
         from cryptography.hazmat.primitives import hashes, serialization  # only the certificate form needs it
         from cryptography.hazmat.primitives.asymmetric import padding
 
@@ -1390,17 +1659,21 @@ class Run:
     def write(self):
         """One record per organization: each mode (execute, prove, teardown) writes its steps under its own key, so a
         build, its check and its teardown read as one run. A record for another protocol or type is replaced."""
-        out = os.environ.get("OUT", "federation.json")
+        out = os.environ.get("OUT") or _record_name("federation.json")
         a, mode = self.args, "teardown" if self.args.teardown else ("prove" if self.args.prove else "execute")
         head = {"protocol": a.protocol, "org_type": a.org_type, "user_key": a.user_key if a.protocol == "oidc" else None}
         rec = {}
         if os.path.exists(out):
             with open(out, encoding="utf-8") as f:
                 rec = json.load(f)
-            if {k: rec.get(k) for k in head} != head:
+            # a record for another protocol or type is replaced, and so is one a replayed run wrote under a live run's
+            # name (or the other way about): a record is all replayed or all live
+            if {k: rec.get(k) for k in head} != head or bool(rec.get("replay")) != (REPLAY is not None):
                 rec = {}
         rec.update(head)
-        rec.setdefault("runs", {})[mode] = {"captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": self.steps}
+        if REPLAY is not None:   # a replayed run's record says so: it shows no read of an estate
+            rec = {"replay": True, **rec}
+        rec.setdefault("runs", {})[mode] = {"captured": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ"), "steps": self.steps}
         text = self.san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
         if write_record(out, text, self.san):
             print(f"\nrecorded {len(self.steps)} steps to {out}; every estate value replaced by a placeholder")
@@ -1642,7 +1915,7 @@ def tenant_reader(tenant):
     client = os.environ.get("ENTRA_CLIENT_ID")
     if not client:
         return None
-    if not (os.environ.get("ENTRA_CLIENT_SECRET_FILE") or (os.environ.get("ENTRA_CERT_FILE") and os.environ.get("ENTRA_KEY_FILE"))):
+    if not (_given("ENTRA_CLIENT_SECRET_FILE") or (os.environ.get("ENTRA_CERT_FILE") and os.environ.get("ENTRA_KEY_FILE"))):
         raise UsageError("ENTRA_CLIENT_ID names the tenant's read-only app and needs its credential: ENTRA_CLIENT_SECRET_FILE, "
                          "or ENTRA_CERT_FILE and ENTRA_KEY_FILE")
     return Graph(tenant, client)
@@ -1683,9 +1956,10 @@ def update(a):
         print(f"  {name}: {status}" + (f"  {facts}" if facts else ""), flush=True)
 
     def write(proto, ok):
-        out = os.environ.get("OUT", "update.json")
-        rec = {"mode": "update" if a.execute else "update plan", "protocol": proto, "asked": asked,
-               "captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": steps, "held": ok}
+        out = os.environ.get("OUT") or _record_name("update.json")
+        rec = {**({"replay": True} if REPLAY is not None else {}),
+               "mode": "update" if a.execute else "update plan", "protocol": proto, "asked": asked,
+               "captured": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ"), "steps": steps, "held": ok}
         text = san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
         if write_record(out, text, san):
             print(f"\nrecorded {len(steps)} steps to {out}; every estate value replaced by a placeholder")
@@ -2150,7 +2424,7 @@ class _Log:
 
     def __init__(self, mode, host, org_name, tenant, out_default):
         self.mode, self.steps, self.t0 = mode, [], time.monotonic()
-        self.out = os.environ.get("OUT", out_default)
+        self.out = os.environ.get("OUT") or _record_name(out_default)
         self.san = Scrubber()
         for v, ph in ((host, "{{host}}"), (org_name, "{{org}}"), (tenant, "{{tenant-id}}")):
             self.san.add(v, ph)
@@ -2163,7 +2437,8 @@ class _Log:
             print(f"  {name}: {status}" + (f"  {shown}" if shown else ""), flush=True)
 
     def write(self, **head):
-        rec = {"mode": self.mode, **head, "captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "steps": self.steps}
+        rec = {**({"replay": True} if REPLAY is not None else {}),
+               "mode": self.mode, **head, "captured": replay_now().strftime("%Y-%m-%dT%H:%M:%SZ"), "steps": self.steps}
         text = self.san.scrub(json.dumps(rec, indent=1, ensure_ascii=False))
         if write_record(self.out, text, self.san):
             print(f"\nrecorded {len(self.steps)} steps to {self.out}; every estate value replaced by a placeholder")
@@ -2597,9 +2872,9 @@ BUILD_ENV = ("VCFA_HOST", "ORG", "ENTRA_TENANT_ID", "ENTRA_CLIENT_ID")
 
 def credential_problem(entra):
     """What is missing for the credentials a mode needs, or "": the provider's, and for a build Entra's."""
-    if not (os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE") or os.environ.get("VCFA_PROVIDER_BEARER_FILE")):
+    if not (_given("VCFA_PROVIDER_REFRESH_TOKEN_FILE") or _given("VCFA_PROVIDER_BEARER_FILE")):
         return "a provider credential (VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE)"
-    if entra and not (os.environ.get("ENTRA_CLIENT_SECRET_FILE")
+    if entra and not (_given("ENTRA_CLIENT_SECRET_FILE")
                       or (os.environ.get("ENTRA_CERT_FILE") and os.environ.get("ENTRA_KEY_FILE"))):
         return "an Entra credential (ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE)"
     return ""
@@ -2632,6 +2907,8 @@ def main(argv=None):
         print(f"the run stopped on an error it did not expect: {type(e).__name__}; what it had not done is not known "
               "(exit 3)", file=sys.stderr)
         code = EXIT_UNREAD
+    finally:
+        replay_stop()
     if RECORD["refused"] and code == EXIT_DONE:
         print("the run would have exited 0, and its record was not written: exit 3", file=sys.stderr)
         return EXIT_UNREAD
@@ -2660,6 +2937,9 @@ def build_parser():
                    help="with --configure: write the settings of a federation that is switched off, and switch it on")
     p.add_argument("--groups-only", action="store_true",
                    help="with --configure: import each --group and never write the settings, switched on or off")
+    p.add_argument("--replay", metavar="DIR",
+                   help="answer every request from the recorded set in DIR (replay/org_federation beside this script "
+                        "is one): nothing is sent and no credential is read")
     return p
 
 
@@ -2698,6 +2978,17 @@ def parse_args(argv=None):
 
 def _run(argv=None):
     a = parse_args(argv)
+    if a.replay:
+        try:
+            replay_start(a.replay)
+        except (OSError, ValueError) as e:
+            print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+            return EXIT_USAGE
+        # Every write this script sends is sent under --execute (a build, a teardown, a settings round trip, a group
+        # import): under --replay it runs its plan alone, so no run can print or record that a write happened.
+        if a.execute:
+            print("replay: --execute runs its plan alone under --replay; nothing is sent", file=sys.stderr)
+            a.execute = False
     if a.org:
         if credential_problem(entra=False):
             raise UsageError(f"--org needs {credential_problem(entra=False)}")

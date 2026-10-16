@@ -48,7 +48,7 @@ Run:
   export OPS_HOST=<operations-fqdn>
   export OPS_BROKER_HOST=<identity-broker-fqdn>   # omit if the broker shares the Ops FQDN
   export OPS_REALM=CUSTOMER                       # the broker realm, usually this
-  export OPS_API_TOKEN=<api-token>                # minted in the operations console
+  export OPS_API_TOKEN_FILE=<api-token file>      # mode 0600 (or OPS_API_TOKEN, the value itself)
   export OPS_OWNER="PCA"                          # the owner prefix your content carries
   export OPS_NAMING=naming.example.json           # your bundles, kinds and scope values (see that file);
                                                   # without it only the grammar's shape is checked
