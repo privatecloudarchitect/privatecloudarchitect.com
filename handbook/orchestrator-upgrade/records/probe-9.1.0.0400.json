@@ -1,0 +1,298 @@
+{
+ "actions": {
+  "js": {
+   "environment": null,
+   "runtime": null,
+   "validationMessage": null
+  },
+  "powercli": {
+   "environment": "pcaprobe_20261016175259_powercli",
+   "runtime": null,
+   "validationMessage": null
+  },
+  "ps_stale": {
+   "environment": "pcaprobe_20261016175259_ps_stale",
+   "runtime": null,
+   "validationMessage": null
+  },
+  "py_current": {
+   "environment": "pcaprobe_20261016175259_py_current",
+   "runtime": null,
+   "validationMessage": null
+  },
+  "py_stale": {
+   "environment": "pcaprobe_20261016175259_py_stale",
+   "runtime": null,
+   "validationMessage": null
+  }
+ },
+ "defaultMemory": {
+  "node:24": 64000000,
+  "powercli:9.0.0-powershell-7.4": 150000000,
+  "powershell:7.4": 150000000,
+  "python:3.11": 64000000
+ },
+ "environments": {
+  "powercli": {
+   "runtime": "powercli:9.0.0-powershell-7.4",
+   "status": "UP_TO_DATE",
+   "validationMessage": null
+  },
+  "ps_stale": {
+   "runtime": "powercli:13-powershell-7.4",
+   "status": "UP_TO_DATE",
+   "validationMessage": "MISSING_RUNTIME"
+  },
+  "py_current": {
+   "runtime": "python:3.11",
+   "status": "UP_TO_DATE",
+   "validationMessage": null
+  },
+  "py_stale": {
+   "runtime": "python:3.10",
+   "status": "UP_TO_DATE",
+   "validationMessage": "MISSING_RUNTIME"
+  }
+ },
+ "errors": {
+  "js": null,
+  "powercli": null,
+  "ps_stale": null,
+  "py_current": null,
+  "py_stale": null
+ },
+ "measuredAt": "2026-10-16T17:53:00Z",
+ "orchestrator": "9.1.0.0400.25545107",
+ "residue": [],
+ "results": {
+  "js": {
+   "engine": "unavailable: TypeError: Cannot call property getPackage in object [JavaPackage java.lang.Package]. It is not a function, it is \"objec",
+   "features": {
+    "array_at": "ok: 3",
+    "array_flat": "ok: 2",
+    "array_includes": "ok: true",
+    "arrow_function": "ok: 42",
+    "async_await": "FAIL: SyntaxError: missing ; before statement",
+    "bigint": "ok: bigint",
+    "class_declaration": "FAIL: SyntaxError: identifier is a reserved word: class",
+    "class_extends": "FAIL: SyntaxError: identifier is a reserved word: class",
+    "computed_property": "ok: 1",
+    "date_slash_format": "ok: 2026",
+    "default_params": "ok: 6",
+    "define_getter": "ok: 1",
+    "destructuring": "ok: 10",
+    "e4x_xml_literal": "ok: 1",
+    "exponent_operator": "ok: 1024",
+    "for_each_in": "ok: 3",
+    "for_of": "ok: 6",
+    "generator": "ok: 3",
+    "java_system_property": "FAIL: TypeError: Cannot call property getProperty in object [JavaPackage java.lang.System]. It is not a function, it is \"object\".",
+    "json_roundtrip": "ok: 2",
+    "let_const": "ok: 3",
+    "let_loop_closure": "ok: 2",
+    "logical_assignment": "ok: 7",
+    "map_set": "ok: a2",
+    "nullish_coalescing": "ok: d",
+    "numeric_separator": "ok: 1000",
+    "object_entries": "ok: 1",
+    "object_fromentries": "ok: 1",
+    "optional_chaining": "ok: true",
+    "promise": "ok: function",
+    "proto_property": "ok: true",
+    "regex_lookbehind": "FAIL: SyntaxError: Invalid quantifier ?",
+    "regex_named_groups": "FAIL: SyntaxError: Invalid quantifier ?",
+    "rest_params": "ok: 3",
+    "shorthand_method": "ok: 1",
+    "spread_array": "FAIL: SyntaxError: syntax error",
+    "spread_object": "FAIL: SyntaxError: invalid property id",
+    "string_padstart": "ok: 005",
+    "string_replaceall": "ok: a+b+c",
+    "symbol": "ok: symbol",
+    "template_literal": "ok: hello vro"
+   }
+  },
+  "powercli": {
+   "edition": "Core",
+   "imports": {
+    "PowerNSX": "FAIL: The specified module 'PowerNSX' was not loaded because no valid module file was found in any module directory.",
+    "PowervRA": "FAIL: The specified module 'PowervRA' was not loaded because no valid module file was found in any module directory.",
+    "VMware.PowerCLI": "FAIL: The specified module 'VMware.PowerCLI' was not loaded because no valid module file was found in any module directory.",
+    "VMware.VimAutomation.Core": "ok in 0.0s"
+   },
+   "modules": [
+    "Microsoft.PowerShell.Host==7.0.0.0",
+    "Microsoft.PowerShell.Management==7.0.0.0",
+    "Microsoft.PowerShell.Security==7.0.0.0",
+    "Microsoft.PowerShell.Utility==7.0.0.0",
+    "PackageManagement==1.4.8.1",
+    "PowerShellGet==2.2.5",
+    "PSReadLine==2.3.6",
+    "VCF.PowerCLI==9.0.0.25182333",
+    "VMware.CloudServices==101.0.0.25182333",
+    "VMware.DeployAutomation==101.0.0.25182333",
+    "VMware.ImageBuilder==101.0.0.25182333",
+    "VMware.OpenAPI==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy.GlobalInfra==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy.Infra==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy.Initialize==101.0.0.25182333",
+    "VMware.Sdk.Srm==101.0.0.25182333",
+    "VMware.Sdk.Vcf.CloudBuilder==101.0.0.25182333",
+    "VMware.Sdk.Vcf.Installer==101.0.0.25182333",
+    "VMware.Sdk.Vcf.Ops==101.0.0.25182333",
+    "VMware.Sdk.Vcf.SddcManager==101.0.0.25182333",
+    "VMware.Sdk.Vr==101.0.0.25182333",
+    "VMware.Sdk.vSphere==101.0.0.25182333",
+    "VMware.Vcf.SddcManager==101.0.0.25182333",
+    "VMware.Vcf.Sso==101.0.0.25182333",
+    "VMware.Vim==9.0.0.25182333",
+    "VMware.VimAutomation.Cis.Core==101.0.0.25182333",
+    "VMware.VimAutomation.Cloud==101.0.0.25182333",
+    "VMware.VimAutomation.Common==101.0.0.25182333",
+    "VMware.VimAutomation.Core==101.0.0.25182333",
+    "VMware.VimAutomation.Hcx==101.0.0.25182333",
+    "VMware.VimAutomation.License==101.0.0.25182333",
+    "VMware.VimAutomation.Nsxt==101.0.0.25182333",
+    "VMware.VimAutomation.Sdk==101.0.0.25182333",
+    "VMware.VimAutomation.Security==101.0.0.25182333",
+    "VMware.VimAutomation.Srm==101.0.0.25182333",
+    "VMware.VimAutomation.Storage==101.0.0.25182333",
+    "VMware.VimAutomation.StorageUtility==1.6.1",
+    "VMware.VimAutomation.Vds==101.0.0.25182333",
+    "VMware.VimAutomation.Vmc==101.0.0.25182333",
+    "VMware.VimAutomation.Vpc==101.0.0.25182333",
+    "VMware.VimAutomation.vROps==101.0.0.25182333",
+    "VMware.VimAutomation.WorkloadManagement==101.0.0.25182333",
+    "VMware.VumAutomation==101.0.0.25182333"
+   ],
+   "powershell": "7.4.11"
+  },
+  "ps_stale": {
+   "edition": "Core",
+   "imports": {
+    "PowerNSX": "FAIL: The specified module 'PowerNSX' was not loaded because no valid module file was found in any module directory.",
+    "PowervRA": "FAIL: The specified module 'PowervRA' was not loaded because no valid module file was found in any module directory.",
+    "VMware.PowerCLI": "FAIL: The specified module 'VMware.PowerCLI' was not loaded because no valid module file was found in any module directory.",
+    "VMware.VimAutomation.Core": "ok in 0.0s"
+   },
+   "modules": [
+    "Microsoft.PowerShell.Host==7.0.0.0",
+    "Microsoft.PowerShell.Management==7.0.0.0",
+    "Microsoft.PowerShell.Security==7.0.0.0",
+    "Microsoft.PowerShell.Utility==7.0.0.0",
+    "PackageManagement==1.4.8.1",
+    "PowerShellGet==2.2.5",
+    "PSReadLine==2.3.6",
+    "VCF.PowerCLI==9.0.0.25182333",
+    "VMware.CloudServices==101.0.0.25182333",
+    "VMware.DeployAutomation==101.0.0.25182333",
+    "VMware.ImageBuilder==101.0.0.25182333",
+    "VMware.OpenAPI==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy.GlobalInfra==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy.Infra==101.0.0.25182333",
+    "VMware.Sdk.Nsx.Policy.Initialize==101.0.0.25182333",
+    "VMware.Sdk.Srm==101.0.0.25182333",
+    "VMware.Sdk.Vcf.CloudBuilder==101.0.0.25182333",
+    "VMware.Sdk.Vcf.Installer==101.0.0.25182333",
+    "VMware.Sdk.Vcf.Ops==101.0.0.25182333",
+    "VMware.Sdk.Vcf.SddcManager==101.0.0.25182333",
+    "VMware.Sdk.Vr==101.0.0.25182333",
+    "VMware.Sdk.vSphere==101.0.0.25182333",
+    "VMware.Vcf.SddcManager==101.0.0.25182333",
+    "VMware.Vcf.Sso==101.0.0.25182333",
+    "VMware.Vim==9.0.0.25182333",
+    "VMware.VimAutomation.Cis.Core==101.0.0.25182333",
+    "VMware.VimAutomation.Cloud==101.0.0.25182333",
+    "VMware.VimAutomation.Common==101.0.0.25182333",
+    "VMware.VimAutomation.Core==101.0.0.25182333",
+    "VMware.VimAutomation.Hcx==101.0.0.25182333",
+    "VMware.VimAutomation.License==101.0.0.25182333",
+    "VMware.VimAutomation.Nsxt==101.0.0.25182333",
+    "VMware.VimAutomation.Sdk==101.0.0.25182333",
+    "VMware.VimAutomation.Security==101.0.0.25182333",
+    "VMware.VimAutomation.Srm==101.0.0.25182333",
+    "VMware.VimAutomation.Storage==101.0.0.25182333",
+    "VMware.VimAutomation.StorageUtility==1.6.1",
+    "VMware.VimAutomation.Vds==101.0.0.25182333",
+    "VMware.VimAutomation.Vmc==101.0.0.25182333",
+    "VMware.VimAutomation.Vpc==101.0.0.25182333",
+    "VMware.VimAutomation.vROps==101.0.0.25182333",
+    "VMware.VimAutomation.WorkloadManagement==101.0.0.25182333",
+    "VMware.VumAutomation==101.0.0.25182333"
+   ],
+   "powershell": "7.4.11"
+  },
+  "py_current": {
+   "contextKeys": [
+    "basedir",
+    "environment",
+    "executionId",
+    "getToken",
+    "memoryLimit",
+    "returnType",
+    "runnerId",
+    "starter",
+    "timeout",
+    "vcoUrl"
+   ],
+   "contextType": "dict",
+   "distributions": [
+    "debugpy==1.8.21",
+    "pip==24.3.1",
+    "setuptools==69.0.3",
+    "truststore==0.10.4"
+   ],
+   "getToken": {
+    "ok": true,
+    "type": "str"
+   },
+   "implementation": "CPython",
+   "python": "3.11.13"
+  },
+  "py_stale": {
+   "contextKeys": [
+    "basedir",
+    "environment",
+    "executionId",
+    "getToken",
+    "memoryLimit",
+    "returnType",
+    "runnerId",
+    "starter",
+    "timeout",
+    "vcoUrl"
+   ],
+   "contextType": "dict",
+   "distributions": [
+    "debugpy==1.8.21",
+    "pip==24.3.1",
+    "setuptools==69.0.3",
+    "truststore==0.10.4"
+   ],
+   "getToken": {
+    "ok": true,
+    "type": "str"
+   },
+   "implementation": "CPython",
+   "python": "3.11.13"
+  }
+ },
+ "run": {
+  "exception": null,
+  "seconds": 38,
+  "state": "completed"
+ },
+ "runtimes": [
+  "node:24",
+  "powercli:9.0.0-powershell-7.4",
+  "powershell:7.4",
+  "python:3.11"
+ ],
+ "selectors": {
+  "powercli": "powercli:9.0.0-powershell-7.4",
+  "ps_stale": "powercli:13-powershell-7.4",
+  "py_current": "python:3.11",
+  "py_stale": "python:3.10"
+ }
+}

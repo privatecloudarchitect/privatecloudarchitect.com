@@ -1,0 +1,45 @@
+{
+ "counts": {
+  "actions": 723,
+  "environments": 4,
+  "plugins": 22,
+  "policies": 0,
+  "polyglotActions": 18,
+  "polyglotScriptableTasks": 9,
+  "scheduledTasks": 0,
+  "workflows": 742,
+  "workflowsRead": 742
+ },
+ "findings": {
+  "R10": {
+   "CHECK": 3
+  },
+  "R12": {
+   "CHECK": 23
+  },
+  "R2": {
+   "CHECK": 13
+  },
+  "R5": {
+   "CHECK": 1
+  },
+  "R6": {
+   "CHECK": 3
+  }
+ },
+ "orchestrator": "9.1.1.0.25643527",
+ "runtimesHere": [
+  "node:24",
+  "powercli:9.1.1-powershell-7.6",
+  "powershell:7.6",
+  "python:3.14"
+ ],
+ "runtimesThere": [
+  "node:24",
+  "powercli:9.1.1-powershell-7.6",
+  "powershell:7.6",
+  "python:3.14"
+ ],
+ "target": "VCF 9.1.1.0",
+ "targetOrchestrator": "9.1.1.0.25643527"
+}
