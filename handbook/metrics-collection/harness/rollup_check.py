@@ -12,7 +12,7 @@ For one VM over the last three hours:
      busiest instance's 5-minute average, by the adapter's own definitions.
 
 Usage:  python3 rollup_check.py [--vm <name>]      (default: the busiest VM by latest CPU MHz)
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE, ...)
 Exit:   0 roll-ups exact · 1 a roll-up did not match · 2 a read failed
 """
 

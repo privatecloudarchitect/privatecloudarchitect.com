@@ -29,7 +29,8 @@ Read-only throughout. No token or password value is printed. With --record FILE 
 every host name, identifier and object name left out, which is the shape of the record the chapter renders.
 
 Env:   SDDC_HOSTS (comma-separated, one SDDC Manager per instance), SDDC_USER, SDDC_PASSWORD
-       OPS_HOST, OPS_API_TOKEN (OPS_BROKER_HOST and OPS_REALM optional), for the fleet; omit them to skip it
+       OPS_HOST, OPS_API_TOKEN_FILE (a file of mode 0600 holding the api-token; or OPS_API_TOKEN, the value),
+       OPS_BROKER_HOST and OPS_REALM optional, for the fleet; omit them to skip it
        VCFO_HOSTS (comma-separated, optional): standalone VCF Operations orchestrator appliances
        TLS_VERIFY=false on a self-signed lab CA
 Flags: --record FILE    write the record
@@ -57,6 +58,22 @@ DOMAIN_ADAPTERS = ("VMWARE", "NSXTAdapter", "VirtualAndPhysicalSANAdapter")   # 
 def ctx():
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
+
+
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list. A file open to group or other is
+    refused before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
 
 
 def call(method, url, headers, body=None, form=None):
@@ -209,7 +226,7 @@ def ops_bearer():
     host = os.environ["OPS_HOST"]
     broker, realm = os.environ.get("OPS_BROKER_HOST", host), os.environ.get("OPS_REALM", "CUSTOMER")
     st, b = call("POST", f"https://{broker}/acs/t/{realm}/token", {"Content-Type": "application/x-www-form-urlencoded"},
-                 form={"grant_type": GRANT, "api_token": os.environ["OPS_API_TOKEN"]})
+                 form={"grant_type": GRANT, "api_token": secret("OPS_API_TOKEN")})
     return need(st, b, "the identity broker's api-token exchange")["access_token"]
 
 
@@ -328,6 +345,10 @@ def main():
     if not sddc:
         print("set SDDC_HOSTS to one SDDC Manager per instance"); sys.exit(2)
     user, password = os.environ["SDDC_USER"], os.environ["SDDC_PASSWORD"]
+    try:
+        ops_token = secret("OPS_API_TOKEN") if os.environ.get("OPS_HOST") else None
+    except OSError as e:   # a token file that is missing, unreadable or open to group or other
+        print(f"FAILED: {e}"); sys.exit(2)
     print("inventory.py: your estate on the platform map, read-only\n")
     instances, seen = [], set()
     for host in sddc:
@@ -361,7 +382,7 @@ def main():
             print(f"          Supervisor services {len(vc['services'])}: " + ", ".join(f"{v['name']} {v['version']}" for v in vc["services"].values()))
             print(f"          namespaces {vc['namespaces']['total']}, {vc['namespaces']['system']} of them the platform's own (svc-)")
     fleet, collection = [], None
-    if os.environ.get("OPS_HOST") and os.environ.get("OPS_API_TOKEN"):
+    if ops_token:
         fleet, collection, names = read_fleet(instances); seen |= names
         print("\nfleet  (the Fleet lifecycle service's component list)")
         print(f"  {'component':<20} {'version':<21} {'hosted as':<9} {'scope':<9} {'size':<12} {'nodes':<36} instance")
@@ -378,7 +399,7 @@ def main():
                   f"{collection['on_analytics_node']} on the analytics node's own collector; vCenter, NSX and vSAN adapters: "
                   f"{collection['domain_adapters_remote']} remote, {collection['domain_adapters_on_analytics_node']} on the analytics node")
     else:
-        print("\nfleet  skipped: set OPS_HOST and OPS_API_TOKEN to read it")
+        print("\nfleet  skipped: set OPS_HOST and OPS_API_TOKEN_FILE to read it")
     standalone = []
     vcfo = [h.strip() for h in os.environ.get("VCFO_HOSTS", "").split(",") if h.strip()]
     if vcfo:

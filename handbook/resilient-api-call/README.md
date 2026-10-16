@@ -16,7 +16,8 @@ estate, read-only unless you ask it to write. Stdlib Python only; no token value
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>          # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>              # OPS_REALM defaults to CUSTOMER
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_API_TOKEN_FILE=~/.vcf/ops-api-token     # mode 0600; OPS_REALM defaults to CUSTOMER
 export TLS_VERIFY=false                            # only on a self-signed lab CA; the client warns every run
 export CACHE_FILE=/path/to/cache.json              # optional; written atomically, owner-only
 
@@ -28,6 +29,10 @@ python3 demo.py                # steps 1 to 7, read-only
 python3 demo.py --write        # adds step 8: one throwaway custom group, created, confirmed and deleted
 python3 test_resilient.py      # offline: the write guarantees, no estate needed
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 ## Scope, stated plainly
 

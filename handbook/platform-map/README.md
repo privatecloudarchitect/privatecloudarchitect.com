@@ -19,7 +19,8 @@ record in this folder.
 export SDDC_HOSTS=<sddc-manager-1-fqdn>,<sddc-manager-2-fqdn>   # one SDDC Manager per VCF instance
 export SDDC_USER=<user@sso-domain>                             # also signs in to each vCenter they list
 read -rs SDDC_PASSWORD && export SDDC_PASSWORD                 # typed, never in the shell history
-export OPS_HOST=<operations-fqdn> OPS_API_TOKEN=<api-token>    # for the fleet; omit both to skip it
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # for the fleet: paste your api-token, then Ctrl-D
+export OPS_HOST=<operations-fqdn> OPS_API_TOKEN_FILE=~/.vcf/ops-api-token    # omit both to skip the fleet
 export OPS_BROKER_HOST=<broker-fqdn>                           # omit if the broker shares the Operations FQDN
 export VCFO_HOSTS=<orchestrator-fqdn>                          # standalone Orchestrators only; omit if you have none
 export TLS_VERIFY=false                                        # only on a self-signed lab CA
@@ -28,6 +29,10 @@ python3 inventory.py --bom bom-9.1.1.json
 python3 inventory.py --bom bom-9.1.1.json --record inventory.json   # also write the record, with no names
 python3 inventory.py --no-vcenter                                   # skip the vCenter reads
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 ## Scope, stated plainly
 

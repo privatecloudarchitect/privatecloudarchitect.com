@@ -22,7 +22,7 @@ survived), and prints a summary. Not covered: the proxy-side data persistence se
 (`fqDataForwarder*` in the proxy's `collector.properties`), which only a root shell on the proxy can read, and Log
 Management's replica count, which Fleet LCM does not report.
 
-Environment (as the metrics harness): OPS_HOST, OPS_API_TOKEN; optional OPS_BROKER_HOST, OPS_REALM,
+Environment (as the metrics harness): OPS_HOST, OPS_API_TOKEN_FILE (or OPS_API_TOKEN); optional OPS_BROKER_HOST, OPS_REALM,
 OPS_TLS_VERIFY. Usage: python3 log_paths.py [--out DIR] [--verify-sources [--minutes N]]
 """
 

@@ -25,7 +25,8 @@ Standard library Python 3. The sign-in, the Log Management token and the search 
 `log-collection/`; the tool finds them in the folders beside this one, so run it from this folder of a full clone.
 
 ```
-export OPS_HOST=<operations fqdn>  OPS_API_TOKEN=<api token>  OPS_TLS_VERIFY=false   # optional OPS_BROKER_HOST, OPS_REALM
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_HOST=<operations fqdn>  OPS_API_TOKEN_FILE=~/.vcf/ops-api-token  OPS_TLS_VERIFY=false   # optional OPS_BROKER_HOST, OPS_REALM
 
 # what the store keeps, sends, masks and drops, and how far back it reaches
 python3 lifecycle.py census --size medium
@@ -39,6 +40,10 @@ python3 lifecycle.py trial filter    --target ssl://<a syslog listener>:<port> -
 python3 lifecycle.py trial partition --target ssl://<a syslog listener>:<port> --retention-days 1 --send
 python3 lifecycle.py trial forwarder --host <your SIEM> --port 6514 --protocol RAW --tls
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 The listener is any syslog-over-TLS listener whose events reach this Log Management, such as a unified cloud proxy's
 (the `log-collection` folder's `log_paths.py` names each host's). `--out ./records` writes a scrubbed record of any

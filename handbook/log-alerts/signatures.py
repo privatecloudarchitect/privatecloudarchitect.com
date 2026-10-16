@@ -47,7 +47,7 @@ Every subcommand prints a summary and, with --out DIR, writes `signatures-<subco
 with --grep writes `signatures-catalog-grep.record.json`, a try with --label NAME `signatures-try-NAME.record.json`) with every
 estate value (host, vCenter, cluster and datastore names, device and filesystem identifiers, addresses) replaced by
 a placeholder; it refuses to write a record in which one survived. The environment for `seen` and `try` is
-lmlib.py's (OPS_HOST, OPS_API_TOKEN, ...).
+lmlib.py's (OPS_HOST, OPS_API_TOKEN_FILE, ...).
 
   python3 signatures.py catalog [--family PREFIX ...] [--grep WORD] [--out DIR]
   python3 signatures.py seen    [--days N] [--out DIR]

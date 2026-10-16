@@ -68,12 +68,17 @@ checks:
 Then converge, dry-run first:
 
 ```
-export OPS_HOST=ops.example.com  OPS_API_TOKEN=<your-token>  OPS_TLS_VERIFY=false   # for a self-signed CA
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_HOST=ops.example.com  OPS_API_TOKEN_FILE=~/.vcf/ops-api-token  OPS_TLS_VERIFY=false   # for a self-signed CA
 
 python reconcile_checks.py             # DRY-RUN: the exact plan, no changes
 python reconcile_checks.py --execute   # create or update the instance, start it, wait for the checks
 python reconcile_checks.py --status    # read-only: every check with its loss and latency
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 `--status` is your first look at the pulse in the terminal, with zero extra setup. To push a large
 address set, either let `--execute` set the list over the API (nothing to upload), or run `--config-file`

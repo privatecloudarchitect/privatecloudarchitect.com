@@ -8,7 +8,7 @@ N VMs x 4 statkeys over 1 day. Resources with no data in a window are omitted fr
 so the omitted count is reported as absence, not as an error. Calls run one at a time.
 
 Usage:  python3 extract_measure.py [--vm <name>] [--vms N]
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE, ...)
 Exit:   0 measured · 2 a read failed
 """
 

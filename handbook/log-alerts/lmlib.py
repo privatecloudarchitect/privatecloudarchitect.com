@@ -10,7 +10,7 @@ The Operations sign-in (`opslib.py`) and the service-JWT exchange (`rtmlib.py`) 
 harness's, and the scrubber is the log-collection harness's; each is imported from its folder beside this one, never
 copied, so the auth flow and the record contract have one source.
 
-Environment, as the metrics harness: OPS_HOST, OPS_API_TOKEN; optional OPS_BROKER_HOST, OPS_REALM, OPS_TLS_VERIFY.
+Environment, as the metrics harness: OPS_HOST, OPS_API_TOKEN_FILE (or OPS_API_TOKEN); optional OPS_BROKER_HOST, OPS_REALM, OPS_TLS_VERIFY.
 """
 
 from __future__ import annotations

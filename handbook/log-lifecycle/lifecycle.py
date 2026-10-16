@@ -19,7 +19,7 @@ Three commands, for the chapter at privatecloudarchitect.com/handbook/log-lifecy
 
 Standard library Python 3. The sign-in, the Log Management token and the search are the log-alerts folder's lmlib.py
 (which takes the metrics-collection sign-in and the log-collection scrubber), found beside this folder. Environment:
-OPS_HOST, OPS_API_TOKEN; optional OPS_BROKER_HOST, OPS_REALM, OPS_TLS_VERIFY.
+OPS_HOST, OPS_API_TOKEN_FILE (or OPS_API_TOKEN); optional OPS_BROKER_HOST, OPS_REALM, OPS_TLS_VERIFY.
 
   python3 lifecycle.py census [--size small|medium|large] [--replicas N] [--out DIR]
   python3 lifecycle.py plan --size medium --replicas 3 --partitions 4 [--retention NAME=DAYS ...]

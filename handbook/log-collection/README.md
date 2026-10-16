@@ -28,10 +28,15 @@ Every call is a read, plus the token exchanges the platform requires to issue a 
 ## Run it
 
 ```
-export OPS_HOST=<operations fqdn> OPS_API_TOKEN=<api token> OPS_TLS_VERIFY=false   # optional OPS_BROKER_HOST, OPS_REALM
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_HOST=<operations fqdn> OPS_API_TOKEN_FILE=~/.vcf/ops-api-token OPS_TLS_VERIFY=false   # optional OPS_BROKER_HOST, OPS_REALM
 python3 log_paths.py --out ./records --verify-sources
 python3 log_paths.py --out ./records --verify-sources --minutes 4320   # when a host reads zero
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 Standard library only. The Operations sign-in and request helpers are the metrics-collection harness's, which ships
 in this repository at `../metrics-collection/harness/`; the script finds them there, so run it from this folder of a

@@ -19,7 +19,7 @@ This reads every VirtualMachine resource, groups them by that surviving identifi
 It is read-only.
 
 Usage:  python3 identity_continuity.py [--metric cpu|demandmhz] [--days 30]
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE, ...)
 Exit:   0 every entity resolves to one resource
         1 at least one entity is split, so the pipeline needs a continuity ledger
         2 a read failed

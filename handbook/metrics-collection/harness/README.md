@@ -47,7 +47,8 @@ instance, read-only:
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN=<your-api-token>        # OPS_REALM defaults to CUSTOMER
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_API_TOKEN_FILE=~/.vcf/ops-api-token   # mode 0600; OPS_REALM defaults to CUSTOMER
 export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
 
 python3 collection_planes.py
@@ -59,6 +60,10 @@ python3 identity_continuity.py                              # estate-wide; exit 
 export RTM_HOST=<your-vcf-instance-services-fqdn>   # fronts /data-query-service
 python3 rtm_query.py --source-id <vcenter-instance-uuid>   # VMEntityVCID from identity_keys.py
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 Stdlib Python only. `opslib.py` holds the broker exchange (the api-token flow the handbook's
 Part 0 identity chapter teaches); `rtmlib.py` holds the per-service JWT exchange that the

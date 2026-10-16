@@ -13,7 +13,7 @@ policy (what the decisions measure against). A retention value that differs from
 is flagged, because the numbers the sheet quotes are the defaults.
 
 Usage:  python3 collection_planes.py
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE, ...)
 Exit:   0 every retention key at its default · 1 a tuned retention value · 2 a read failed
 """
 

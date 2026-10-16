@@ -7,7 +7,7 @@ the global object key the sheet recommends: (vcenter_instance_uuid, moid). The m
 ID alone repeats in every vCenter; the pair is what the platform itself marks as unique.
 
 Usage:  python3 identity_keys.py --vm <name>
-Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN, ...)
+Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE, ...)
 Exit:   0 both halves present · 1 a half is missing · 2 a read failed
 """
 

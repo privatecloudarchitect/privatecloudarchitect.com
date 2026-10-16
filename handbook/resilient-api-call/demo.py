@@ -21,7 +21,7 @@ fails. Nothing prints a token value or an identifier. The one file touched is th
 atomically at owner-only permissions (CACHE_FILE, optional) and, if the platform answers a refresh-token grant with a
 different refresh token, VCFA_REFRESH_TOKEN_FILE.
 
-Env:  OPS_HOST, OPS_API_TOKEN (OPS_BROKER_HOST, OPS_REALM optional); TLS_VERIFY=false on a self-signed lab CA
+Env:  OPS_HOST, OPS_API_TOKEN_FILE or OPS_API_TOKEN (OPS_BROKER_HOST, OPS_REALM optional); TLS_VERIFY=false on a self-signed lab CA
       VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE (optional, step 4); CACHE_FILE (optional)
 Run:  python3 demo.py            steps 1 to 7, read-only
       python3 demo.py --write    adds step 8: one throwaway custom group, created, confirmed and deleted
@@ -40,10 +40,29 @@ from resilient import ApiError, Client, EffectError, ShapeError, confirm, confir
 GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
 
 
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list. A file open to group or other is
+    refused before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
 def broker_mint():
     """The broker exchange the identity chapter teaches; returns (bearer, lifetime in seconds)."""
     host = os.environ["OPS_HOST"]; broker = os.environ.get("OPS_BROKER_HOST", host); realm = os.environ.get("OPS_REALM", "CUSTOMER")
-    body = urllib.parse.urlencode({"grant_type": GRANT, "api_token": os.environ["OPS_API_TOKEN"]}).encode()
+    token = secret("OPS_API_TOKEN")
+    if not token:
+        raise KeyError("OPS_API_TOKEN_FILE (or OPS_API_TOKEN) is not set")
+    body = urllib.parse.urlencode({"grant_type": GRANT, "api_token": token}).encode()
     req = urllib.request.Request(f"https://{broker}/acs/t/{realm}/token", data=body, method="POST", headers={"Content-Type": "application/x-www-form-urlencoded"})
     with urllib.request.urlopen(req, context=tls_context(), timeout=30) as r:
         d = json.loads(r.read())

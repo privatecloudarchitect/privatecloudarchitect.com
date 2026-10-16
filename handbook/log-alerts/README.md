@@ -29,11 +29,13 @@ and the scrubber is the log-collection harness's; the scripts find them in the f
 this folder of a full clone. `signatures.py catalog` also needs pyVmomi (`pip install pyvmomi`).
 
 ```
-export OPS_HOST=<operations fqdn>  OPS_API_TOKEN=<api token>  OPS_TLS_VERIFY=false   # optional OPS_BROKER_HOST, OPS_REALM
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_HOST=<operations fqdn>  OPS_API_TOKEN_FILE=~/.vcf/ops-api-token  OPS_TLS_VERIFY=false   # optional OPS_BROKER_HOST, OPS_REALM
 
 # find the identifier
 python3 signatures.py seen --days 7
-export VC_HOST=<vcenter fqdn>  VC_USER=<account>  VC_PASSWORD=<password>  VC_TLS_VERIFY=false
+export VC_HOST=<vcenter fqdn>  VC_USER=<account>  VC_TLS_VERIFY=false
+read -rs VC_PASSWORD && export VC_PASSWORD     # typed, never in the shell history
 python3 signatures.py catalog --grep permanently
 python3 signatures.py fields --check appname,text,vc_event_type
 python3 signatures.py monitor --name "PCA - Storage Path - Host - All paths down started, host record"
@@ -55,6 +57,10 @@ python3 prove.py --scope scope.json --host <esx fqdn> --target ssl://<the host's
 # remove it: the scope's policy and group, or with --all the definitions every scope shares
 python3 deploy.py teardown --scope scope.json --all --yes
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 `--only SP-02,SP-08` limits `plan`, `apply` and `prove.py` to those alerts. `--out ./records` writes a scrubbed record
 from `signatures.py`, `deploy.py status` and `prove.py`.
