@@ -1,0 +1,135 @@
+{
+ "actions": {
+  "com.broadcom.vcf.specialists.scan-automation.actions/check_vm_customization_status": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/delete_asset_from_site": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/evaluate_deployment_policy": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/generate_scan_summary": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/generate_vulnerability_report": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/get_asset_vulnerabilities": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/get_site_by_name": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/parse_cleanup_event": {
+   "behaves": "pass",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/parse_domain_join_values": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/parse_provision_event": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/poll_scan_status": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/search_asset_by_ip": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  },
+  "com.broadcom.vcf.specialists.scan-automation.actions/trigger_adhoc_scan": {
+   "behaves": "no cases",
+   "case_failures": [],
+   "findings": [],
+   "loads": "pass",
+   "ran_on": "Python 3.14.5",
+   "selector": "python:3.11",
+   "target": "python:3.14"
+  }
+ },
+ "environments": [
+  {
+   "install": "UP_TO_DATE",
+   "packages": {
+    "requests": "",
+    "urllib3": ""
+   },
+   "source": "scan_automation_python_3_11_runtime",
+   "target": "python:3.14"
+  }
+ ],
+ "measuredAt": "2026-10-16T19:56:34Z",
+ "residue": [],
+ "target": "9.1.1.0.25643527"
+}

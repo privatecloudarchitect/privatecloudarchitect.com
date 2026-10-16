@@ -2,17 +2,21 @@
 
 Companion to field note 04,
 [Aria Automation 8.18 to VCF Automation 9.1.1](https://privatecloudarchitect.com/notes/aria-automation-8-18-to-vcf-automation-9-1-1),
-section 07, the Orchestrator. Two scripts answer the question an admin team asks before the upgrade:
+section 07, the Orchestrator. Three scripts answer the question an admin team asks before the upgrade:
 which of our workflows, actions and environments stop working on the release we are moving to, and
-what do we change. One reads, the other measures.
+what do we change. One reads your content, one measures the runtimes, and one runs your own actions on
+the runtime you are moving to, because an action written years ago and fine on every past release is
+not proven on the one you are about to get.
 
 | File | What it is |
 |---|---|
 | `upgrade_risk.py` | Read-only, stdlib Python. Reads every action environment, action, workflow definition, plug-in, plug-in host, scheduled task and policy on your Orchestrator and checks them against the release you are moving to (R1 to R12, below). With `--files` it runs the script checks on exported `.py`, `.ps1` and `.js` files, so content kept in source control is checked with no instance at all. With `--compare` it diffs two probe records. Exit 0 nothing at risk, 1 at least one finding, 2 a read failed, 5 unknown option. |
 | `probe.py` | Measures what each runtime actually provides, on throwaway objects. Plan by default. With `--execute` it creates up to four action environments, five actions in a new action module and one workflow in a new folder, runs the workflow once, prints and records the Python version and distributions, the PowerShell version and modules (with an import test of the names older scripts use), which JavaScript constructs the engine accepts and what each returns, and what an environment on a selector the instance no longer offers does. Then it deletes every object it created and reads each one back. Exit 0 clean, 1 an object it created is still there (its id is printed), 2 a call failed, 5 unknown option. |
+| `qualify.py` | Runs your own actions on the target runtime, on throwaway copies. Reads each named action from the source instance (script, inputs, its environment's packages), builds a throwaway environment on the target instance's newest runtime of that family with the same packages and reports whether the install settles, copies the actions there, compiles each one and resolves its imports on that runtime, runs the cases you give it, then deletes everything and reads each object back. Source and target can be one instance or two. Plan by default. Exit 0 every action loaded and every case passed, 1 something did not or a throwaway survived, 2 a call failed, 5 unknown option. |
 | `targets/9.1.1.json`, `targets/9.1.0.0400.json` | What each release was measured to offer on the reference estate on 2026-10-16: runtime selectors, default memory, plug-ins, the Python distributions, the PowerCLI modules and the JavaScript constructs. `upgrade_risk.py --target` reads one. For another release, run `probe.py` on an instance of it and build the file the same way, or point `--target-host` at that instance. |
-| `records/` | The two probe records and the two scan records (counts only) behind the tables below. |
+| `records/` | The two probe records, the two scan records (counts only) and the two qualification records behind the tables below. |
 | `examples/at-risk/`, `examples/fixed/` | Three scripts, a Python port check, a PowerCLI report and a JavaScript lookup, each as written for an older release and as fixed. `upgrade_risk.py --files` flags every at-risk one and clears the fixed ones. |
+| `examples/cases.json` | The case file format `qualify.py --cases` reads, with the two cases the reference estate ran: an action's own input names, and the fields its result must hold. |
 | `expected-output.md` | Transcripts of every command on this page, from the reference estate. |
 
 ## What the upgrade does to a script, measured
@@ -61,6 +65,14 @@ Three more measurements belong beside them:
   same call failed on a fresh token with `CERTIFICATE_VERIFY_FAILED`. The two instances present
   certificates from different issuers, so the run does not separate the release from the
   certificate as the cause: run `probe.py` on your target and read the line.
+- **A package that installed on the old runtime can stop installing on the new one, and the
+  environment reports it only in its status.** `qualify.py` rebuilt the reference estate's DNS actions'
+  environment (`pykerberos` 1.2.4, `pywinrm` 0.5.0, `requests` 2.28.1, `urllib3` 1.26.15,
+  `requests-credssp`) on Python 3.14: it settled at `STALE_BUNDLE` in 11 seconds and held it, so the
+  actions never loaded. Split across throwaway environments, `pykerberos`, pinned or unpinned, stopped
+  at `STALE_BUNDLE`, and the other four installed (`UP_TO_DATE` in 22 seconds). The same run on the
+  scan-automation module (`requests` and `urllib3` unpinned) installed, and all 13 actions compiled and
+  resolved their imports on Python 3.14.5, with both cases in `examples/cases.json` passing.
 - **The JavaScript engine still refuses classes and async functions, and `let` in a loop is not
   per iteration.** The probe's closure test answers 2 on both releases, the pre-2015 behavior, so
   code that relies on a fresh binding per pass gets the last value on either engine.
@@ -91,7 +103,18 @@ export TLS_VERIFY=false                         # only on a self-signed lab CA
    python3 upgrade_risk.py --target targets/9.1.1.json --files src/**/*.py src/**/*.ps1 src/**/*.js
    ```
 
-3. **Measure, if you have a lab instance on each side.** `probe.py` writes, on throwaway objects
+3. **Run your own actions on the target runtime, before the production upgrade.** After it, they
+   are already running there. Point the target at a lab instance on the release you are moving to (or
+   use one instance, if it is already there). `qualify.py` writes, on throwaway copies only. Give a case
+   to every action whose inputs touch nothing outside the Orchestrator; the rest are load-checked.
+
+   ```bash
+   export VRO_TARGET_HOST=<lab-fqdn-on-the-target-release> VRO_TARGET_TOKEN=<bearer>
+   python3 qualify.py --module com.example.dns                                   # plan: nothing is created
+   python3 qualify.py --module com.example.dns --cases cases.json --execute --record q.json
+   ```
+
+4. **Measure the runtimes, if you have a lab instance on each side.** `probe.py` writes, on throwaway objects
    only. Run it once on each release, compare, and give the scan the source record so it can name
    JavaScript constructs the two engines answer differently.
 
@@ -102,8 +125,9 @@ export TLS_VERIFY=false                         # only on a self-signed lab CA
    python3 upgrade_risk.py --target targets/9.1.1.json --source-probe probe-source.json
    ```
 
-4. **After the upgrade, scan again with the same target.** Every R1 line should now be an R2 line:
-   kept, flagged, and running on the new runtime. Work that list down.
+5. **After the upgrade, scan again with the same target.** Every R1 line should now be an R2 line:
+   kept, flagged, and running on the new runtime. Repoint each one you qualified, and do not repoint one
+   that failed: fix the code or the package first.
 
 ## Reading the output
 
@@ -124,17 +148,26 @@ export TLS_VERIFY=false                         # only on a self-signed lab CA
 | R11 CHECK | Scheduled tasks and policies, to confirm each runs as its user after the upgrade. |
 | R12 CHECK | Scripts with characters outside ASCII: the 9.1.1.0 release notes list such characters as encoded on package export. |
 
+`qualify.py` reports per source environment the install it ended in (`UP_TO_DATE`, or the status it
+settled in, such as `STALE_BUNDLE`), and per action `loads pass on <runtime>` or why not, then `behaves
+pass`, `fail` with the expected and actual fields, or `no cases`.
+
 ## Patterns that fix what it finds
 
-- **Repoint after the upgrade, never before.** The target's selector does not exist on the source, so
-  the change waits for the upgraded instance. Hold the subscriptions that start workflows, upgrade,
-  set each environment R1 named to the new selector (the REST call is `PUT /vco/api/environments/{id}`,
-  which answers 202 and rebuilds the dependencies), read the environment's `status`, run one action
-  per environment, then release the subscriptions. A scriptable task or an action with a runtime of
-  its own is changed in its editor or re-imported with the new selector.
-- **Resolve the selector at deploy time.** Content in source control that names `python:3.11` will
-  name it forever. Read `GET /vco/api/server-configuration/polyglot-runtimes` when you deploy, take
-  the newest selector of the family, and refuse when the family is missing.
+- **Qualify before the upgrade, repoint after it.** The upgrade runs your content on the new runtime
+  the moment it completes, so the proof has to come first, on an instance already at the target
+  release: `qualify.py` for what is on an instance, or the same three checks in your pipeline for what
+  is in source control (the packages install on the new selector, the code compiles and its imports
+  resolve there, its cases pass). After the upgrade, hold the subscriptions that start workflows, set
+  each environment R1 named to the new selector (`PUT /vco/api/environments/{id}`, which answers 202
+  and rebuilds the dependencies), read the environment's `status` until `UP_TO_DATE` (`STALE_BUNDLE` is
+  a package that did not install), run one action per environment, then release the subscriptions. A
+  scriptable task or an action with a runtime of its own is changed in its editor or re-imported.
+- **Resolve the selector at deploy time, and admit it only on proof.** Content in source control that
+  names `python:3.11` will name it forever, and resolving to the newest selector alone deploys code
+  nobody has run there. Read `GET /vco/api/server-configuration/polyglot-runtimes` when you deploy,
+  take the newest selector of the family, refuse when the family is missing, and refuse when this
+  version of the content has no passing qualification on that selector.
 - **Python: use what every Python 3 ships.** `socket` in place of `telnetlib`, `shlex.quote` in place
   of `pipes.quote` (see `examples/`). Pin dependencies to releases that publish builds for the
   target's Python, or leave them unpinned and record what the rebuild resolved.
@@ -162,6 +195,12 @@ export TLS_VERIFY=false                         # only on a self-signed lab CA
   same selector on both releases, and a stale plain-PowerShell selector was not tested.
 - Whether a dependency bundle built for one Python loads under the next was not measured; R6 says
   rebuild and read the log, because that is the only answer this run supports.
+- `qualify.py` proves that an action loads on the target runtime (it compiles and every import outside a
+  `try` resolves) for every action it copies, and that it behaves only where you gave it a case. A
+  case runs the real action, so give one only to an action whose inputs reach nothing outside the
+  Orchestrator. JavaScript actions have no runtime selector and are not copied; `probe.py` measures the
+  engine. It installs the source environment's packages on the target, so the target needs a reachable
+  package repository, as any rebuild does.
 - `probe.py` installs no dependency, so it needs no package repository. It prints no token value:
   for getToken it records only whether a token came back and its type.
 - `upgrade_risk.py` prints object names unless you pass `--redact`; `--record` writes counts only.

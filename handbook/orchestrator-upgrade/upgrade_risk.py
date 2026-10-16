@@ -12,8 +12,8 @@ MISSING_RUNTIME and still runs, on the newest runtime of the same family the tar
 selector does not stop your content; the code meeting a newer runtime is what breaks.
 
   R1  CHECK   a selector the target does not offer: the object will run on the target's runtime of
-              that family. An action bound to such an environment reports nothing of its own, so it
-              is listed under its environment.
+              that family, unproven. An action bound to such an environment reports nothing of its own,
+              so it is listed under its environment. qualify.py runs it there before you trust it.
   R2  CHECK   a selector this instance already does not offer: it already runs on the newest.
   R3  BREAKS  a Python standard-library module the target's Python no longer ships.
   R4  BREAKS  the Command scripting object, removed from the JavaScript API.
@@ -338,7 +338,8 @@ def scan(r: Reader, target: dict, sprobe: dict, tprobe: dict, names: Names) -> t
         if sel not in here_rt:
             add("R2", "CHECK", label, f"{sel} is not offered here (MISSING_RUNTIME); {runs_on(sel, here_rt, there_rt)}{tail}")
         elif sel not in there_rt:
-            add("R1", "CHECK", label, f"{sel} -> runs on {successor(sel, there_rt) or 'no runtime of this family'}{tail}")
+            add("R1", "CHECK", label, f"{sel} -> runs on {successor(sel, there_rt) or 'no runtime of this family'}, "
+                f"unproven: qualify it there{tail}")
     for s in scripts:
         if s["via_env"] or not s["selector"]:
             continue
@@ -347,7 +348,8 @@ def scan(r: Reader, target: dict, sprobe: dict, tprobe: dict, names: Names) -> t
                 f"{runs_on(s['selector'], here_rt, there_rt)}")
         elif s["selector"] not in there_rt:
             add("R1", "CHECK", s["label"],
-                f"{s['selector']} -> runs on {successor(s['selector'], there_rt) or 'no runtime of this family'}")
+                f"{s['selector']} -> runs on {successor(s['selector'], there_rt) or 'no runtime of this family'}, "
+                "unproven: qualify it there")
 
     check_scripts(scripts, target, sprobe, tprobe, add)
 
@@ -399,7 +401,7 @@ def scan(r: Reader, target: dict, sprobe: dict, tprobe: dict, names: Names) -> t
 
 
 TITLES = {
-    "R1": "a selector the target does not offer: kept, flagged, and run on the target's own runtime",
+    "R1": "a selector the target does not offer: kept, flagged, and run on the target's own runtime unproven",
     "R2": "a selector this instance already does not offer",
     "R3": "a Python module the target's Python removed",
     "R4": "the Command scripting object",

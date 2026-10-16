@@ -1,0 +1,33 @@
+{
+ "actions": {
+  "com.vmware.specialists.dns.utilities/MsDnsAddRemoveHost": {
+   "detail": "environment install STALE_BUNDLE",
+   "loads": "skipped"
+  },
+  "com.vmware.specialists.dns.utilities/MsDnsAdddRemoveEntry": {
+   "detail": "environment install STALE_BUNDLE",
+   "loads": "skipped"
+  },
+  "com.vmware.specialists.dns.utilities/testPython": {
+   "detail": "environment install STALE_BUNDLE",
+   "loads": "skipped"
+  }
+ },
+ "environments": [
+  {
+   "install": "STALE_BUNDLE",
+   "packages": {
+    "pykerberos": "1.2.4",
+    "pywinrm": "0.5.0",
+    "requests": "2.28.1",
+    "requests-credssp": "",
+    "urllib3": "1.26.15"
+   },
+   "source": "pythonWithLibs",
+   "target": "python:3.14"
+  }
+ ],
+ "measuredAt": "2026-10-16T19:59:12Z",
+ "residue": [],
+ "target": "9.1.1.0.25643527"
+}

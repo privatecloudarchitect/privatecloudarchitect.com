@@ -1,6 +1,6 @@
 # Expected output
 
-Transcripts from the reference estate on 2026-10-16: an embedded Orchestrator on VCF 9.1.1 (9.1.1.0.25643527, inside VCF Automation 9.1.1.0100) and a standalone Orchestrator one release behind (9.1.0.0400.25545107). Object names are redacted with `--redact`; the counts and selectors are the estate's own.
+Transcripts from the reference estate on 2026-10-16: an embedded Orchestrator on VCF 9.1.1 (9.1.1.0.25643527, inside VCF Automation 9.1.1.0100) and a standalone Orchestrator one release behind (9.1.0.0400.25545107). Scan transcripts redact object names with `--redact`; the counts and selectors are the estate's own. The qualification transcripts name the actions, which are the reference estate's sample content.
 
 ## 1. probe.py on the 9.1.1 instance
 
@@ -181,7 +181,7 @@ powercli: powershell 7.4.11 -> 7.6.2; 44 -> 44 modules
 
 ## 3. The standalone instance, scanned against 9.1.1 before its upgrade
 
-`python3 upgrade_risk.py --target targets/9.1.1.json --source-probe records/probe-9.1.0.0400.json --redact`. Exit 1: nothing breaks outright, and 39 objects need a check because their content will run on Python 3.14, PowerShell 7.6 and PowerCLI 9.1.1.
+`python3 upgrade_risk.py --target targets/9.1.1.json --source-probe records/probe-9.1.0.0400.json --redact`. Exit 1: nothing breaks outright, and 39 objects need a check because their content will run on Python 3.14, PowerShell 7.6 and PowerCLI 9.1.1, unproven until qualified.
 
 ```text
 orchestrator 9.1.0.0400.25545107 -> target VCF 9.1.1.0 (orchestrator 9.1.1.0.25643527)
@@ -190,23 +190,23 @@ runtimes there: node:24, powercli:9.1.1-powershell-7.6, powershell:7.6, python:3
 selectors that do not carry: powercli:9.0.0-powershell-7.4 -> powercli:9.1.1-powershell-7.6, powershell:7.4 -> powershell:7.6, python:3.11 -> python:3.14
 read: 736 workflows (9 polyglot scriptable tasks), 724 actions (17 polyglot), 4 environments, 22 plug-ins, 0 scheduled tasks, 0 policies
 
-CHECK  R1 a selector the target does not offer: kept, flagged, and run on the target's own runtime: 8
+CHECK  R1 a selector the target does not offer: kept, flagged, and run on the target's own runtime unproven: 8
   environment environment-2
-      python:3.11 -> runs on python:3.14; 4 bound: action action-1, action action-2, action action-3, action action-4
+      python:3.11 -> runs on python:3.14, unproven: qualify it there; 4 bound: action action-1, action action-2, action action-3, action action-4
   environment environment-3
-      python:3.11 -> runs on python:3.14; 12 bound: action action-5, action action-6, action action-7, action action-8, action action-9, action action-10 ...
+      python:3.11 -> runs on python:3.14, unproven: qualify it there; 12 bound: action action-5, action action-6, action action-7, action action-8, action action-9, action action-10 ...
   environment environment-4
-      python:3.11 -> runs on python:3.14
+      python:3.11 -> runs on python:3.14, unproven: qualify it there
   scriptable task workflow-2 / Scriptable task
-      python:3.11 -> runs on python:3.14
+      python:3.11 -> runs on python:3.14, unproven: qualify it there
   scriptable task workflow-3 / Scriptable task
-      powershell:7.4 -> runs on powershell:7.6
+      powershell:7.4 -> runs on powershell:7.6, unproven: qualify it there
   scriptable task workflow-5 / Scriptable task
-      python:3.11 -> runs on python:3.14
+      python:3.11 -> runs on python:3.14, unproven: qualify it there
   scriptable task workflow-6 / Scriptable task
-      python:3.11 -> runs on python:3.14
+      python:3.11 -> runs on python:3.14, unproven: qualify it there
   scriptable task workflow-7 / prepare command
-      python:3.11 -> runs on python:3.14
+      python:3.11 -> runs on python:3.14, unproven: qualify it there
 
 CHECK  R2 a selector this instance already does not offer: 5
   environment environment-1
@@ -436,4 +436,87 @@ CHECK  R7 Python that calls getToken: 1
       uses getToken: run it on the target on a fresh token and again after the token refreshes; probe.py makes the same call
 
 summary: 0 BREAKS, 1 CHECK
+```
+
+## 6. qualify.py, the plan
+
+`python3 qualify.py --module com.vmware.specialists.dns.utilities`. Reads the actions and the target's runtimes, groups the actions by the environment they share, and creates nothing.
+
+```text
+target orchestrator 9.1.1.0.25643527; runtimes node:24, powercli:9.1.1-powershell-7.6, powershell:7.6, python:3.14
+  pythonWithLibs [python:3.11 here -> python:3.14 there], 5 package(s): com.vmware.specialists.dns.utilities/testPython, com.vmware.specialists.dns.utilities/MsDnsAddRemoveHost, com.vmware.specialists.dns.utilities/MsDnsAdddRemoveEntry
+
+plan only: nothing created. Add --execute to copy, build, load, run and delete.
+```
+
+## 7. qualify.py, an environment whose packages no longer install
+
+`python3 qualify.py --module com.vmware.specialists.dns.utilities --execute --record records/qualify-dns-9.1.1.json`. Exit 1. The environment these three actions share pins `pykerberos`, and on Python 3.14 its install settled at `STALE_BUNDLE`; the actions were never loaded. Split across throwaway environments, `pykerberos` alone, pinned or unpinned, settled at `STALE_BUNDLE` and the other four packages installed, so the remedy is that one package, not the runtime.
+
+```text
+target orchestrator 9.1.1.0.25643527; runtimes node:24, powercli:9.1.1-powershell-7.6, powershell:7.6, python:3.14
+  pythonWithLibs [python:3.11 here -> python:3.14 there], 5 package(s): com.vmware.specialists.dns.utilities/testPython, com.vmware.specialists.dns.utilities/MsDnsAddRemoveHost, com.vmware.specialists.dns.utilities/MsDnsAdddRemoveEntry
+  environment for pythonWithLibs: PENDING_DOWNLOAD after 0s
+  environment for pythonWithLibs: STALE_BUNDLE after 11s
+
+cleanup:
+  delete environment 0          204  read back 404
+  delete action module          204  read back 404
+  residue: none
+
+results:
+  environment from pythonWithLibs on python:3.14: install STALE_BUNDLE
+  com.vmware.specialists.dns.utilities/testPython: loads skipped; behaves -  (environment install STALE_BUNDLE)
+  com.vmware.specialists.dns.utilities/MsDnsAddRemoveHost: loads skipped; behaves -  (environment install STALE_BUNDLE)
+  com.vmware.specialists.dns.utilities/MsDnsAdddRemoveEntry: loads skipped; behaves -  (environment install STALE_BUNDLE)
+
+```
+
+## 8. qualify.py, a module that is ready
+
+`python3 qualify.py --module com.broadcom.vcf.specialists.scan-automation.actions --cases examples/cases.json --execute --record records/qualify-scan-9.1.1.json`. Exit 0. The install settled, all 13 actions compiled and resolved their imports on Python 3.14.5, and both cases for `parse_cleanup_event` returned what they expect; the other 12 call out to a scanner and are load-checked only.
+
+```text
+target orchestrator 9.1.1.0.25643527; runtimes node:24, powercli:9.1.1-powershell-7.6, powershell:7.6, python:3.14
+  scan_automation_python_3_11_runtime [python:3.11 here -> python:3.14 there], 2 package(s): com.broadcom.vcf.specialists.scan-automation.actions/evaluate_deployment_policy, com.broadcom.vcf.specialists.scan-automation.actions/generate_scan_summary, com.broadcom.vcf.specialists.scan-automation.actions/parse_domain_join_values, com.broadcom.vcf.specialists.scan-automation.actions/check_vm_customization_status, com.broadcom.vcf.specialists.scan-automation.actions/generate_vulnerability_report, com.broadcom.vcf.specialists.scan-automation.actions/delete_asset_from_site, com.broadcom.vcf.specialists.scan-automation.actions/parse_cleanup_event (+2 cases), com.broadcom.vcf.specialists.scan-automation.actions/get_asset_vulnerabilities, com.broadcom.vcf.specialists.scan-automation.actions/trigger_adhoc_scan, com.broadcom.vcf.specialists.scan-automation.actions/parse_provision_event, com.broadcom.vcf.specialists.scan-automation.actions/search_asset_by_ip, com.broadcom.vcf.specialists.scan-automation.actions/poll_scan_status, com.broadcom.vcf.specialists.scan-automation.actions/get_site_by_name
+  environment for scan_automation_python_3_11_runtime: PENDING_DOWNLOAD after 0s
+  environment for scan_automation_python_3_11_runtime: UP_TO_DATE after 11s
+
+cleanup:
+  delete workflow               200  read back 404
+  delete workflow folder        204  read back 404
+  delete action get_site_by_name 200  read back 404
+  delete action poll_scan_status 200  read back 404
+  delete action search_asset_by_ip 200  read back 404
+  delete action parse_provision_event 200  read back 404
+  delete action trigger_adhoc_scan 200  read back 404
+  delete action get_asset_vulnerabilities 200  read back 404
+  delete action parse_cleanup_event 200  read back 404
+  delete action delete_asset_from_site 200  read back 404
+  delete action generate_vulnerability_report 200  read back 404
+  delete action check_vm_customization_status 200  read back 404
+  delete action parse_domain_join_values 200  read back 404
+  delete action generate_scan_summary 200  read back 404
+  delete action evaluate_deployment_policy 200  read back 404
+  delete action pcaqual_loader_0 200  read back 404
+  delete environment 0          204  read back 404
+  delete action module          204  read back 404
+  residue: none
+
+results:
+  environment from scan_automation_python_3_11_runtime on python:3.14: install UP_TO_DATE
+  com.broadcom.vcf.specialists.scan-automation.actions/evaluate_deployment_policy: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/generate_scan_summary: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/parse_domain_join_values: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/check_vm_customization_status: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/generate_vulnerability_report: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/delete_asset_from_site: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/parse_cleanup_event: loads pass on Python 3.14.5; behaves pass
+  com.broadcom.vcf.specialists.scan-automation.actions/get_asset_vulnerabilities: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/trigger_adhoc_scan: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/parse_provision_event: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/search_asset_by_ip: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/poll_scan_status: loads pass on Python 3.14.5; behaves no cases
+  com.broadcom.vcf.specialists.scan-automation.actions/get_site_by_name: loads pass on Python 3.14.5; behaves no cases
+
 ```

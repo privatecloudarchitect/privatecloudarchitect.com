@@ -1,0 +1,15 @@
+{
+  "com.broadcom.vcf.specialists.scan-automation.actions/parse_cleanup_event": [
+    {
+      "name": "a running machine's deletion event",
+      "inputs": {"inputProperties": {"resourceNames": ["web01"], "addresses": [["192.0.2.10"]], "deploymentId": "dep-9",
+                                     "customProperties": {"rapid7.site.name": "Lab-Site"}}},
+      "expect": {"vmIP": "192.0.2.10", "vmName": "web01", "deploymentId": "dep-9", "siteName": "Lab-Site"}
+    },
+    {
+      "name": "a machine powered off before deletion has no address",
+      "inputs": {"inputProperties": {"resourceNames": ["web02"], "addresses": [[null]], "deploymentId": "dep-10", "customProperties": {}}},
+      "expect": {"vmName": "web02", "deploymentId": "dep-10", "siteName": ""}
+    }
+  ]
+}
