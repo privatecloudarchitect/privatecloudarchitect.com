@@ -12,7 +12,7 @@ not proven on the one you are about to get.
 |---|---|
 | `upgrade_risk.py` | Read-only, stdlib Python. Reads every action environment, action, workflow definition, plug-in, plug-in host, scheduled task and policy on your Orchestrator and checks them against the release you are moving to (R1 to R12, below). With `--files` it runs the script checks on exported `.py`, `.ps1` and `.js` files, so content kept in source control is checked with no instance at all. With `--compare` it diffs two probe records. Exit 0 nothing at risk, 1 at least one finding, 2 a read failed, 5 unknown option. |
 | `probe.py` | Measures what each runtime actually provides, on throwaway objects. Plan by default. With `--execute` it creates up to four action environments, five actions in a new action module and one workflow in a new folder, runs the workflow once, prints and records the Python version and distributions, the PowerShell version and modules (with an import test of the names older scripts use), which JavaScript constructs the engine accepts and what each returns, and what an environment on a selector the instance no longer offers does. Then it deletes every object it created and reads each one back. Exit 0 clean, 1 an object it created is still there (its id is printed), 2 a call failed, 5 unknown option. |
-| `qualify.py` | Runs your own actions on the target runtime, on throwaway copies. Reads each named action from the source instance (script, inputs, its environment's packages), builds a throwaway environment on the target instance's newest runtime of that family with the same packages and reports whether the install settles, copies the actions there, compiles each one and resolves its imports on that runtime, runs the cases you give it, then deletes everything and reads each object back. Source and target can be one instance or two. Plan by default. Exit 0 every action loaded and every case passed, 1 something did not or a throwaway survived, 2 a call failed, 5 unknown option. |
+| `qualify.py` | Runs your own actions on the target runtime, on throwaway copies. Reads each named action from the source instance (script, inputs, its environment's packages), builds a throwaway environment on the target instance's newest runtime of that family with the same packages and reports whether the install settles, copies the actions there, compiles each one and resolves its imports on that runtime, runs the cases you give it, then deletes everything and reads each object back. Source and target can be one instance or two. `--without` and `--pin` try a candidate package set on the copies, never on the source. Plan by default. Exit 0 every action loaded and every case passed, 1 something did not or a throwaway survived, 2 a call failed, 5 unknown option. |
 | `targets/9.1.1.json`, `targets/9.1.0.0400.json` | What each release was measured to offer on the reference estate on 2026-10-16: runtime selectors, default memory, plug-ins, the Python distributions, the PowerCLI modules and the JavaScript constructs. `upgrade_risk.py --target` reads one. For another release, run `probe.py` on an instance of it and build the file the same way, or point `--target-host` at that instance. |
 | `records/` | The two probe records, the two scan records (counts only) and the two qualification records behind the tables below. |
 | `examples/at-risk/`, `examples/fixed/` | Three scripts, a Python port check, a PowerCLI report and a JavaScript lookup, each as written for an older release and as fixed. `upgrade_risk.py --files` flags every at-risk one and clears the fixed ones. |
@@ -70,7 +70,10 @@ Three more measurements belong beside them:
   environment (`pykerberos` 1.2.4, `pywinrm` 0.5.0, `requests` 2.28.1, `urllib3` 1.26.15,
   `requests-credssp`) on Python 3.14: it settled at `STALE_BUNDLE` in 11 seconds and held it, so the
   actions never loaded. Split across throwaway environments, `pykerberos`, pinned or unpinned, stopped
-  at `STALE_BUNDLE`, and the other four installed (`UP_TO_DATE` in 22 seconds). The same run on the
+  at `STALE_BUNDLE`, and the other four installed (`UP_TO_DATE` in 22 seconds). None of the four
+  actions on that environment uses Kerberos (three connect over CredSSP, one over NTLM), so the remedy
+  was that one package: `qualify.py --without pykerberos` loaded all four on Python 3.14.5, and the
+  environment was then rebuilt on `python:3.14` without it. The same run on the
   scan-automation module (`requests` and `urllib3` unpinned) installed, and all 13 actions compiled and
   resolved their imports on Python 3.14.5, with both cases in `examples/cases.json` passing.
 - **The JavaScript engine still refuses classes and async functions, and `let` in a loop is not
@@ -112,6 +115,7 @@ export TLS_VERIFY=false                         # only on a self-signed lab CA
    export VRO_TARGET_HOST=<lab-fqdn-on-the-target-release> VRO_TARGET_TOKEN=<bearer>
    python3 qualify.py --module com.example.dns                                   # plan: nothing is created
    python3 qualify.py --module com.example.dns --cases cases.json --execute --record q.json
+   python3 qualify.py --module com.example.dns --without pykerberos --execute    # a candidate package set
    ```
 
 4. **Measure the runtimes, if you have a lab instance on each side.** `probe.py` writes, on throwaway objects
@@ -170,7 +174,11 @@ pass`, `fail` with the expected and actual fields, or `no cases`.
   version of the content has no passing qualification on that selector.
 - **Python: use what every Python 3 ships.** `socket` in place of `telnetlib`, `shlex.quote` in place
   of `pipes.quote` (see `examples/`). Pin dependencies to releases that publish builds for the
-  target's Python, or leave them unpinned and record what the rebuild resolved.
+  target's Python, or leave them unpinned and record what the rebuild resolved. When one package has
+  no build there, prove the set without it (`--without NAME`) or at another version
+  (`--pin NAME==VERSION`) before you change the real environment, and change it by sending back the
+  body you read with only the runtime and dependencies altered: on 9.1.1 a `PUT` that leaves
+  `runtimeMemoryLimit` out resets it to 0 (measured on throwaway environments).
 - **PowerShell: import the module you use, by name, without a version.** `VMware.VimAutomation.Core`
   rather than `VMware.PowerCLI`; `VMware.Sdk.Nsx.Policy` rather than PowerNSX; REST calls rather
   than PowervRA. A pin written against one release's numbering (101.0.0) fails on the next (13.5.1).

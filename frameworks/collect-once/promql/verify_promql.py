@@ -8,7 +8,7 @@ JWT. Credentials are read in-process from the catalog payload or from the enviro
 
   python verify_promql.py                      # full run (about two minutes on a Medium instance)
   python verify_promql.py --no-crossplane      # skip the Operations stats comparison
-  OPS_HOST=... RTM_HOST=... OPS_API_TOKEN=... OPS_BROKER_HOST=... python verify_promql.py
+  OPS_HOST=... RTM_HOST=... OPS_API_TOKEN_FILE=... OPS_BROKER_HOST=... python verify_promql.py
 
 Every emitted "verified" block carries the date, the source, the HTTP status, and the series count the
 engine answered with, so a future build can be re-verified by re-running this file.
@@ -21,14 +21,31 @@ GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
 CTX = ssl._create_unverified_context()  # self-signed lab CA (CLAUDE.md: allowed)
 
 # ----------------------------------------------------------------------------------------------- auth + http
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list. A file open to group or other is
+    refused before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
 def load_env():
-    if "OPS_API_TOKEN" not in os.environ:
+    if not secret("OPS_API_TOKEN"):   # OPS_API_TOKEN_FILE, or the value; else the catalog payload
         tf = os.path.join(ROOT, "secrets", "credentials", "vidb", "vcf-ops.api-token.json")
         if os.path.exists(tf):
             t = json.load(open(tf)); os.environ.setdefault("OPS_API_TOKEN", t["api_token"])
             os.environ.setdefault("OPS_BROKER_HOST", t["broker_fqdn"]); os.environ.setdefault("OPS_REALM", t.get("realm", "CUSTOMER"))
     # OPS_HOST and RTM_HOST come from the environment in the public cut
-    for k in ("OPS_API_TOKEN", "OPS_HOST", "RTM_HOST"):
+    if not secret("OPS_API_TOKEN"): raise SystemExit("missing OPS_API_TOKEN_FILE (or OPS_API_TOKEN)")
+    for k in ("OPS_HOST", "RTM_HOST"):
         if not os.environ.get(k): raise SystemExit("missing " + k)
 def http(host, path, method="GET", body=None, headers=None, form=None):
     hd = {"Accept": "application/json"}; hd.update(headers or {}); data = None
@@ -42,7 +59,7 @@ def http(host, path, method="GET", body=None, headers=None, form=None):
     except Exception: return st, {"raw": raw.decode(errors="replace")[:300]}
 def bearer():
     st, j = http(os.environ.get("OPS_BROKER_HOST", os.environ["OPS_HOST"]), "/acs/t/%s/token" % os.environ.get("OPS_REALM", "CUSTOMER"), "POST",
-                 form={"grant_type": GRANT, "api_token": os.environ["OPS_API_TOKEN"]})
+                 form={"grant_type": GRANT, "api_token": secret("OPS_API_TOKEN")})
     if st != 200 or "access_token" not in j: raise SystemExit("broker exchange failed: HTTP %s" % st)
     return j["access_token"]
 def ops(tok, method, path, body=None):

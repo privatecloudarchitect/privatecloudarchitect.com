@@ -28,11 +28,17 @@ Dependencies: Python 3 plus exactly one library, `PyYAML` (`pip install pyyaml`)
 
 ```bash
 # VCF Operations (all Operations steps) - the api-token flow the handbook's Part 0 chapter teaches
-export OPS_HOST=<ops-fqdn> OPS_BROKER_HOST=<broker-fqdn> OPS_API_TOKEN=<api-token>
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_HOST=<ops-fqdn> OPS_BROKER_HOST=<broker-fqdn> OPS_API_TOKEN_FILE=~/.vcf/ops-api-token
 # vCenter (the tag-definition step only)
-export VCENTER_HOST=<vcenter-fqdn> VCENTER_USERNAME=<sso-user> VCENTER_PASSWORD=<password>
+export VCENTER_HOST=<vcenter-fqdn> VCENTER_USERNAME=<sso-user>
+read -rs VCENTER_PASSWORD && export VCENTER_PASSWORD   # typed, never in the shell history
 export OPS_TLS_VERIFY=false  # only on a self-signed lab CA
 ```
+
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
+The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
+keep it for a throwaway credential.
 
 `OPS_REALM` defaults to `CUSTOMER`; `VCENTER_TLS_VERIFY` defaults to `OPS_TLS_VERIFY`.
 

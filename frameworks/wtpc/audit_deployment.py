@@ -29,7 +29,7 @@ Run:
   export OPS_HOST=<operations-fqdn>
   export OPS_BROKER_HOST=<identity-broker-fqdn>   # omit if the broker shares the Ops FQDN
   export OPS_REALM=CUSTOMER
-  export OPS_API_TOKEN=<api-token>
+  export OPS_API_TOKEN_FILE=~/.vcf/ops-api-token    # a file of mode 0600 holding the api-token
   export WTPC_PREFIX="PCA - WTPC"                 # the prefix your framework content carries
   export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
   python3 audit_deployment.py

@@ -520,3 +520,38 @@ results:
   com.broadcom.vcf.specialists.scan-automation.actions/get_site_by_name: loads pass on Python 3.14.5; behaves no cases
 
 ```
+
+## 9. qualify.py, the same environment without the package that stopped it
+
+`python3 qualify.py --actions com.vmware.specialists.dns.utilities/MsDnsAddRemoveHost com.vmware.specialists.dns.utilities/MsDnsAdddRemoveEntry com.vmware.specialists.dns.utilities/testPython com.vmware.specialists.powershell.utilities/runPowershellCommand --without pykerberos --execute --record qualify-dns-without-pykerberos.json`, the record kept here as `records/qualify-dns-9.1.1-without-pykerberos.json`. Exit 0. The four actions that share the environment from section 7 connect over CredSSP and NTLM, never Kerberos, so the run drops `pykerberos` from the copy and keeps the source as it is. The install settles at `UP_TO_DATE` and every action loads; with no cases given, behaves is not claimed.
+
+```text
+candidate packages for every copy: without pykerberos
+target orchestrator 9.1.1.0.25643527; runtimes node:24, powercli:9.1.1-powershell-7.6, powershell:7.6, python:3.14
+  pythonWithLibs [python:3.11 here -> python:3.14 there], 4 package(s): com.vmware.specialists.powershell.utilities/runPowershellCommand, com.vmware.specialists.dns.utilities/testPython, com.vmware.specialists.dns.utilities/MsDnsAddRemoveHost, com.vmware.specialists.dns.utilities/MsDnsAdddRemoveEntry
+  environment for pythonWithLibs: PENDING_DOWNLOAD after 0s
+  environment for pythonWithLibs: UP_TO_DATE after 11s
+
+cleanup:
+  delete workflow               200  read back 404
+  delete workflow folder        204  read back 404
+  delete action MsDnsAdddRemoveEntry 200  read back 404
+  delete action MsDnsAddRemoveHost 200  read back 404
+  delete action testPython      200  read back 404
+  delete action runPowershellCommand 200  read back 404
+  delete action pcaqual_loader_0 200  read back 404
+  delete environment 0          204  read back 404
+  delete action module          204  read back 404
+  residue: none
+
+results:
+  environment from pythonWithLibs on python:3.14: install UP_TO_DATE
+  com.vmware.specialists.powershell.utilities/runPowershellCommand: loads pass on Python 3.14.5; behaves no cases
+  com.vmware.specialists.dns.utilities/testPython: loads pass on Python 3.14.5; behaves no cases
+  com.vmware.specialists.dns.utilities/MsDnsAddRemoveHost: loads pass on Python 3.14.5; behaves no cases
+  com.vmware.specialists.dns.utilities/MsDnsAdddRemoveEntry: loads pass on Python 3.14.5; behaves no cases
+
+record written: qualify-dns-without-pykerberos.json
+```
+
+Loading proves the imports resolve, not that CredSSP works: pywinrm imports its CredSSP support only when that transport is built. A throwaway action that built the CredSSP and NTLM transports on the same package set returned both, and the reference estate's environment was then rebuilt on `python:3.14` without `pykerberos`, reaching `UP_TO_DATE` in 17 seconds with its memory limit and its four actions kept.

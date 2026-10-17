@@ -21,7 +21,9 @@ Environment:
   OPS_HOST         (required)  VCF Operations FQDN
   OPS_BROKER_HOST  (optional)  Identity Broker FQDN; defaults to OPS_HOST
   OPS_REALM        (optional)  broker realm, default CUSTOMER
-  OPS_API_TOKEN    (required)  the api-token from the operations console
+  OPS_API_TOKEN_FILE (required) a file holding the api-token from the operations console, mode 0600
+                   (or OPS_API_TOKEN, the value itself, which lands in the shell's history);
+                   a file open to group or other is refused
   OPS_TLS_VERIFY   (optional)  TLS verification on by default; false for a self-signed lab CA
   VCENTER_HOST     (tag steps) vCenter FQDN
   VCENTER_USERNAME (tag steps) vCenter SSO user
@@ -74,6 +76,22 @@ def _require(var: str) -> str:
     if not v:
         raise SystemExit(f"environment variable {var} is not set (see lib/_client.py for the contract)")
     return v
+
+
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list. A file open to group or other is
+    refused before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
 
 
 def _ctx(insecure: bool) -> ssl.SSLContext:
@@ -148,8 +166,14 @@ class OpsSession(_Session):
     def _exchange(self) -> str:
         broker = os.environ.get("OPS_BROKER_HOST", os.environ["OPS_HOST"])
         realm = os.environ.get("OPS_REALM", "CUSTOMER")
-        body = urllib.parse.urlencode({"grant_type": GRANT,
-                                       "api_token": _require("OPS_API_TOKEN")}).encode()
+        try:
+            token = secret("OPS_API_TOKEN")
+        except OSError as e:   # a token file that is missing, unreadable or open to group or other
+            raise SystemExit(str(e)) from None
+        if not token:
+            raise SystemExit("environment variable OPS_API_TOKEN_FILE (or OPS_API_TOKEN) is not set "
+                             "(see lib/_client.py for the contract)")
+        body = urllib.parse.urlencode({"grant_type": GRANT, "api_token": token}).encode()
         req = urllib.request.Request(
             f"https://{broker}/acs/t/{realm}/token", data=body, method="POST",
             headers={"Content-Type": "application/x-www-form-urlencoded"})

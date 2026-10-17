@@ -25,6 +25,11 @@ Usage:
     export TLS_VERIFY=false                                             # only on a self-signed lab CA
     python3 qualify.py --module com.example.dns                          # plan, every polyglot action in a module
     python3 qualify.py --actions com.example.dns/addRecord --cases cases.json --execute --record q.json
+    python3 qualify.py --module com.example.dns --without pykerberos --execute   # a candidate package set
+
+--without and --pin change the packages of every throwaway environment, never the source's: drop a package
+with no build for the new runtime, or move one to another version, and prove the content on that set before
+you change the real environment. The plan and the record both name the change.
 
 cases.json maps an action to its cases; each names inputs by the action's own input names:
     {"com.example.dns/parseName": [{"name": "fqdn splits", "inputs": {"fqdn": "a.b.c"}, "expect": {"host": "a"}}]}
@@ -262,7 +267,16 @@ def main() -> int:
     ap.add_argument("--execute", action="store_true", help="create, run, report, delete (default: plan only)")
     ap.add_argument("--record", help="write the result as JSON (action names, statuses, findings)")
     ap.add_argument("--timeout", type=int, default=900, help="seconds for each install and for the run (default 900)")
+    ap.add_argument("--without", nargs="+", default=[], metavar="PACKAGE", help="drop these packages from every copy")
+    ap.add_argument("--pin", nargs="+", default=[], metavar="NAME[==VERSION]",
+                    help="add or replace these packages in every copy; a bare name is unpinned")
     a = ap.parse_args()
+    pins: dict[str, str] = {}
+    for spec in a.pin:
+        name, _, version = spec.partition("==")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", name) or ("==" in spec and not version):
+            ap.error(f"--pin {spec}: give NAME or NAME==VERSION")
+        pins[name] = version
 
     src = Endpoint(os.environ.get("VRO_HOST", ""), os.environ.get("VRO_TOKEN", ""))
     dst = Endpoint(os.environ.get("VRO_TARGET_HOST") or src.host, os.environ.get("VRO_TARGET_TOKEN") or src.token)
@@ -270,6 +284,14 @@ def main() -> int:
     actions = read_actions(src, a.actions or [], a.module)
     if not actions:
         P._fail(2, "no polyglot action matched")
+    for act in actions:   # the candidate package set: the copies change, the source never does
+        act["source_dependencies"] = dict(act["dependencies"])
+        act["dependencies"] = {k: v for k, v in act["dependencies"].items() if k not in a.without} | pins
+    change = {"without": sorted(a.without), "pin": dict(sorted(pins.items()))}
+    if a.without or pins:
+        print("candidate packages for every copy: " + "; ".join(
+            ([f"without {', '.join(change['without'])}"] if a.without else [])
+            + ([f"pin {', '.join(k + ('==' + v if v else '') for k, v in change['pin'].items())}"] if pins else [])))
     _, about, _ = dst.call("GET", "/about")
     status, rt, _ = dst.call("GET", "/server-configuration/polyglot-runtimes")
     offered = list((rt or {}).get("o11n-polyglot-runtime") or []) if isinstance(rt, dict) else []
@@ -296,6 +318,8 @@ def main() -> int:
     run = P.Run()
     result: dict = {"target": (about or {}).get("version") if isinstance(about, dict) else None,
                     "measuredAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "environments": [], "actions": {}}
+    if a.without or pins:
+        result["packageChange"] = change
     rc = 0
     dst.use()
     try:
@@ -332,6 +356,7 @@ def main() -> int:
                 time.sleep(10)
             built = settled == "UP_TO_DATE"
             result["environments"].append({"source": envname, "target": target, "packages": json.loads(deps),
+                                           "sourcePackages": acts[0]["source_dependencies"],
                                            "install": settled or f"still {last} after {a.timeout}s"})
             if not built:
                 for x in acts:

@@ -34,7 +34,7 @@ than a finding.
 Read-only throughout. It reads the vCenter tagging plane and the Operations group plane and writes nothing.
 
 Run:
-  export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN=...   # as the rest of the estate
+  export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN_FILE=...   # as the rest of the estate
   export VCENTER_HOST=...
   export VCENTER_SESSION_ID=...              # or VCENTER_USERNAME + VCENTER_PASSWORD
   export OPS_TLS_VERIFY=false                                 # only on a self-signed lab CA
