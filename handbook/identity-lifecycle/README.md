@@ -79,8 +79,9 @@ organization keyed on `oid`), the person's principal name in an organization key
 below) is printed before anything is sent. A name that selects no account, or more than one, refuses the run (exit 5)
 and nothing is sent; pass the account's id from the record to choose between two. `--close-now` touches only that
 account's tokens and record. Its plan sends nothing, and two lines state it: its header reads `CLOSE-NOW PLAN, nothing sent` and
-its last line `plan only: nothing was sent and nothing was closed`, with how to close. Then remove the person at the
-provider, so the next report finds them in step.
+its last line `plan only: nothing was sent and nothing was closed`, with how to close. The account's line in the plan
+reads `close on request`; only a close that ran reads `closed on request`. Then remove the person at the provider, so
+the next report finds them in step.
 
 Under `oid`, close by the object id the leaver notice or your last report carries. An account there is named by its
 person's Entra object id, and a principal name resolves through the tenant's app (`GET /users/{principal name}`,
@@ -528,7 +529,10 @@ script itself never removes a role.
   provider while signed in kept the session bearer it held to the end of its hour; disabling a local user's account
   in VCF Automation ended the session-login bearer it held at once (one run); and `--close-now --execute` ended a
   federated user's browser-session bearer at once, 7 s after its sign-in (an All Apps OIDC organization, one run,
-  2026-10-15). It cannot tell whether a name in use again belongs to the same person; it
+  2026-10-15). A bearer already traded from the account's own API token ended at the disable too, for a local user (a
+  classic organization) and for a federated user (an All Apps OIDC organization keyed on `oid`), one run each on
+  2026-10-16, each disable sent without the revoke the close sends first. It cannot tell whether a name in use again
+  belongs to the same person; it
   flags the case and acts on nothing.
 - Measured on VCF Automation 9.1 against Entra ID with a provider bearer and a Graph certificate, and with a provider
   API token (2026-10-13: a report run held; a close was refused 403); the Graph client-secret path was not exercised
@@ -554,7 +558,8 @@ script itself never removes a role.
 `organizations` holds one entry per organization, named `{{org-1}}` and onward, with its `protocol`, its `gate`
 (whether the app requires assignment, its group claims, the groups assigned to it, the groups imported into the
 organization and which of those a sign-in can carry) and a `users` list. Each account has its `providerType`,
-`enabled`, `direct_roles` and `effective_roles` by name, its `tokens` by name and type, the `decision` and its
+`enabled`, `direct_roles` and `effective_roles` by name, its `tokens` by name and type, the `decision` (for the
+account `--close-now` names, `close on request` in its plan and `closed on request` once the close ran) and its
 `reason`, `found` (whether a lookup found its Entra user) and `matched_by` (which lookup), any `flags`, with the
 ones `--ack` covers under `acknowledged` (and an expired one under `ack_expired`), and, where the run did something or
 would, its `action`; every leaver that was open carries `confirm_reads`, the three reads that confirmed it (or, for

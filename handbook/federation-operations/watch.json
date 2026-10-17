@@ -1,7 +1,22 @@
 {
-  "captured": "2026-10-12T18:03:44Z",
+  "captured": "2026-10-16T22:44:10Z",
   "warn_days": 30,
   "exit": 1,
+  "mode": "with the tenant's app",
+  "tenant": "{{tenant-1}}",
+  "expected_tenants": 1,
+  "tenant_attested": null,
+  "credential": {
+    "kind": "provider bearer",
+    "check": null
+  },
+  "census": {
+    "listed": 11,
+    "provider_own": 0,
+    "off": 0
+  },
+  "judged": 4,
+  "run_errors": [],
   "organizations": [
     {
       "org": "{{org-1}}",
@@ -10,19 +25,19 @@
         {
           "check": "key_refresh",
           "state": "warn",
-          "detail": "refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h",
+          "detail": "refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h",
           "measure": {
             "interval_h": 24,
-            "success_age_h": 24.1
+            "success_age_h": 0.7
           }
         },
         {
           "check": "keys_held",
           "state": "ok",
-          "detail": "all 6 published keys are held",
+          "detail": "all 5 published keys are held",
           "measure": {
             "held": 6,
-            "published": 6,
+            "published": 5,
             "missing": 0
           }
         },
@@ -35,9 +50,9 @@
         {
           "check": "secret_end",
           "state": "warn",
-          "detail": "the secret the organization holds ends in 26.0 days: rotate with overlap",
+          "detail": "the secret the organization holds ends in 21.8 days: rotate with overlap",
           "measure": {
-            "days_left": 26.0,
+            "days_left": 21.8,
             "matched": true
           }
         },
@@ -68,7 +83,8 @@
         }
       ],
       "read_errors": [],
-      "protocol": "oidc"
+      "protocol": "oidc",
+      "tenant": "{{tenant-1}}"
     },
     {
       "org": "{{org-2}}",
@@ -77,9 +93,9 @@
         {
           "check": "saml_cert_end",
           "state": "ok",
-          "detail": "the active signing certificate ends in 361.0 days",
+          "detail": "the active signing certificate ends in 356.8 days",
           "measure": {
-            "days_left": 361.0
+            "days_left": 356.8
           }
         },
         {
@@ -118,7 +134,8 @@
         }
       ],
       "read_errors": [],
-      "protocol": "saml"
+      "protocol": "saml",
+      "tenant": "{{tenant-1}}"
     },
     {
       "org": "{{org-3}}",
@@ -127,19 +144,19 @@
         {
           "check": "key_refresh",
           "state": "warn",
-          "detail": "refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h",
+          "detail": "refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h",
           "measure": {
             "interval_h": 24,
-            "success_age_h": 19.1
+            "success_age_h": 19.7
           }
         },
         {
           "check": "keys_held",
           "state": "ok",
-          "detail": "all 6 published keys are held",
+          "detail": "all 5 published keys are held",
           "measure": {
             "held": 6,
-            "published": 6,
+            "published": 5,
             "missing": 0
           }
         },
@@ -152,9 +169,9 @@
         {
           "check": "secret_end",
           "state": "warn",
-          "detail": "the secret the organization holds ends in 23.2 days: rotate with overlap; 1 other listed secret(s) already expired",
+          "detail": "the secret the organization holds ends in 19.0 days: rotate with overlap; 1 other listed secret(s) already expired",
           "measure": {
-            "days_left": 23.2,
+            "days_left": 19.0,
             "matched": true
           }
         },
@@ -185,7 +202,8 @@
         }
       ],
       "read_errors": [],
-      "protocol": "oidc"
+      "protocol": "oidc",
+      "tenant": "{{tenant-1}}"
     },
     {
       "org": "{{org-4}}",
@@ -194,9 +212,9 @@
         {
           "check": "saml_cert_end",
           "state": "ok",
-          "detail": "the active signing certificate ends in 358.2 days",
+          "detail": "the active signing certificate ends in 354.1 days",
           "measure": {
-            "days_left": 358.2
+            "days_left": 354.1
           }
         },
         {
@@ -235,7 +253,8 @@
         }
       ],
       "read_errors": [],
-      "protocol": "saml"
+      "protocol": "saml",
+      "tenant": "{{tenant-1}}"
     }
   ]
 }

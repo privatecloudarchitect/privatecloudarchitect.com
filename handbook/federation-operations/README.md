@@ -10,23 +10,23 @@ secret or password is printed or written.
 | File | What it is |
 |---|---|
 | `watch.py` | Reads each organization's OIDC or SAML settings, imported groups and local administrators from VCF Automation, the keys the provider publishes, and (optionally) the app behind the organization from Microsoft Graph, then runs nine checks: key refresh, keys held, PKCE, the client secret's end date, the SAML certificate's end date, whether the organization's metadata holds every signing certificate, imported group names against the groups assigned to the app, the app's own gate, and a local user holding the organization's top role (Organization Administrator in an All Apps organization, Organization Owner in a classic one) for the day the provider refuses; a run declared `--provider-only` with `--tenant-attested` adds a tenth, `tenant_report`, the age of the tenant's last report of its rollover dates. On a provider API token the run also checks that token's own end date (`own_token`). `--expect-tenants` names every tenant a schedule covers. `--why` is the sign-in router: what a user saw in, where it was refused and what to read first out. Writes `watch.json`, and refuses to write a record carrying any estate value. |
-| `watch.json` | That record from the reference estate, 2026-10-12, four throwaway organizations (classic and All Apps, OIDC and SAML). |
+| `watch.json` | That record from the reference estate, 2026-10-16, four throwaway organizations (classic and All Apps, OIDC and SAML), read through the tenant's read-only app. |
 | `watch_passing.json`, `watch_group_renamed.json`, `watch_restored.json` | The watch on one throwaway All Apps organization over OIDC built to pass, 2026-10-13: after its first scheduled key refresh (every check ok but `secret_end`, which warned because the run gave its rotated secret 30 days, inside the 30-day window; exit 1), with the entitled group renamed at Entra (`group_names` fails; exit 2), and with the name restored (exit 1 again). The day-2 writes that set it up are the tenant-federation companion's `update_*.json`. |
 | `expected-output.md` | The transcript of that run, with what to read in it, and a replayed run. |
 | `replay/watch/` | A recorded answer set built from `watch.json`, every name a placeholder, for `--replay`: the watch runs on it with no estate and sends nothing. |
 | `inventory.py` | The provider's inventory across its Entra tenants: reads every organization's federation settings, as the watch reads them, against a file the provider keeps (each tenant's owners, its consent to the read-only app, its watch and leaver schedules, its organizations), and reports drift both ways. Read-only. See [The provider's inventory](#the-providers-inventory-tenants-consent-schedules-and-owners). |
 | `inventory.example.json` | The shape of that file, placeholders only. |
-| `replay/inventory/` | A recorded answer set built from the inventory's reference run (2026-10-16), every name a placeholder, and the inventory it was read against (`files/inventory.json`, its schedules pointed at this folder's `watch.json` and the identity-lifecycle companion's `leavers.json`), for `--replay`. |
+| `replay/inventory/` | A recorded answer set built from the inventory's reference run (2026-10-16), every name a placeholder, and the inventory it was read against (`files/inventory.json`), its two schedules pointed at copies beside it of the records that run read (`files/watch.json`, the watch's record of 2026-10-12, and `files/leavers.json`, the leaver report's of 2026-10-15), for `--replay`. |
 
 ## Try it without an estate
 
 `--replay DIR` answers every request from a recorded set instead of the estate, so you can run the watch before you
 hold a provider credential or the tenant's read-only app, or see what it prints for a shape your estate has not shown
-you. The set beside this README, `replay/watch/`, is the reference run of 2026-10-12 (`watch.json`) made into
+you. The set beside this README, `replay/watch/`, is the reference run of 2026-10-16 (`watch.json`) made into
 answers, with a placeholder for every name: four organizations federated to one Entra tenant, read through the
 tenant's app, beside the provider's own System organization, which the watch leaves out. `replay/inventory/` is the
-inventory's reference run of 2026-10-16: ten organizations, and the provider's file it was read against, which the set
-names itself.
+inventory's reference run of 2026-10-16: ten organizations, the provider's file it was read against, which the set
+names itself, and copies of the two schedule records that run read.
 
 ```bash
 python3 watch.py --replay replay/watch            # read, print, and write watch.replay.json; exits 1, as the record did
@@ -312,11 +312,13 @@ the run returned. Organizations are `{{org-1}}` and onward, tenants `{{tenant-1}
 run under `--replay` writes `inventory.replay.json` and marks it `"replay": true` at its top level; a live run's record
 carries no such key.
 
-**Scope.** Run once, read-only, on 2026-10-16 against the reference estate's VCF Automation and the lab's one Entra
-tenant, on a provider bearer: ten organizations listed and nine read (four federated to the tenant, one over OIDC to
-another provider, one on VCF single sign-on, three with neither protocol on and no Entra tenant stored), every request
-a GET. The tenant's watch schedule, pointed at this folder's `watch.json`, read as a missed run (its record about 95
-hours old, and lacking `mode`, `judged` and `run_errors`); its leaver schedule, pointed at the identity-lifecycle
-companion's `leavers.json`, read as on time and from a run that read; exit 1. A second tenant, a tenant that withholds
-the app, a switched-off organization holding a stored tenant, a reused name and a refused read are held by the
-companion's tests, not by a run.
+**Scope.** Run read-only on 2026-10-16 against the reference estate's VCF Automation and the lab's one Entra tenant,
+on a provider bearer: ten organizations listed and nine read (four federated to the tenant, one over OIDC to another
+provider, one on VCF single sign-on, three with neither protocol on and no Entra tenant stored), every request a GET.
+The tenant's watch schedule, pointed at the `watch.json` this folder then held (written on 2026-10-12), read as a
+missed run (its record about 95 hours old, and lacking `mode`, `judged` and `run_errors`); its leaver schedule,
+pointed at the identity-lifecycle companion's `leavers.json`, read as on time and from a run that read; exit 1. Run
+again that evening against the `watch.json` a new watch run had just written, it read the watch schedule as on time and
+from a run that read and the consent as the file states, and the leaver schedule's record, by then 25.5 hours old, as
+a missed run; exit 1. A second tenant, a tenant that withholds the app, a switched-off organization holding a stored
+tenant, a reused name and a refused read are held by the companion's tests, not by a run.

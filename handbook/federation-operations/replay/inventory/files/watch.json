@@ -1,0 +1,241 @@
+{
+  "captured": "2026-10-12T18:03:44Z",
+  "warn_days": 30,
+  "exit": 1,
+  "organizations": [
+    {
+      "org": "{{org-1}}",
+      "org_type": "all-apps",
+      "checks": [
+        {
+          "check": "key_refresh",
+          "state": "warn",
+          "detail": "refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h",
+          "measure": {
+            "interval_h": 24,
+            "success_age_h": 24.1
+          }
+        },
+        {
+          "check": "keys_held",
+          "state": "ok",
+          "detail": "all 6 published keys are held",
+          "measure": {
+            "held": 6,
+            "published": 6,
+            "missing": 0
+          }
+        },
+        {
+          "check": "pkce",
+          "state": "ok",
+          "detail": "PKCE is off",
+          "measure": {}
+        },
+        {
+          "check": "secret_end",
+          "state": "warn",
+          "detail": "the secret the organization holds ends in 26.0 days: rotate with overlap",
+          "measure": {
+            "days_left": 26.0,
+            "matched": true
+          }
+        },
+        {
+          "check": "app_gate",
+          "state": "ok",
+          "detail": "the app is enabled and requires assignment",
+          "measure": {}
+        },
+        {
+          "check": "group_names",
+          "state": "ok",
+          "detail": "every imported group (1) is assigned to the app by that name",
+          "measure": {
+            "imported": 1,
+            "assigned": 1,
+            "unmatched": 0
+          }
+        },
+        {
+          "check": "break_glass",
+          "state": "ok",
+          "detail": "1 enabled local user(s) holding Organization Administrator",
+          "measure": {
+            "local_admins": 1,
+            "role": "Organization Administrator"
+          }
+        }
+      ],
+      "read_errors": [],
+      "protocol": "oidc"
+    },
+    {
+      "org": "{{org-2}}",
+      "org_type": "all-apps",
+      "checks": [
+        {
+          "check": "saml_cert_end",
+          "state": "ok",
+          "detail": "the active signing certificate ends in 361.0 days",
+          "measure": {
+            "days_left": 361.0
+          }
+        },
+        {
+          "check": "saml_cert_held",
+          "state": "ok",
+          "detail": "the organization's metadata holds every signing certificate on the app",
+          "measure": {
+            "stored": 1,
+            "others_not_held": 0
+          }
+        },
+        {
+          "check": "app_gate",
+          "state": "ok",
+          "detail": "the app is enabled and requires assignment",
+          "measure": {}
+        },
+        {
+          "check": "group_names",
+          "state": "ok",
+          "detail": "every imported group (1) is assigned to the app by that name",
+          "measure": {
+            "imported": 1,
+            "assigned": 1,
+            "unmatched": 0
+          }
+        },
+        {
+          "check": "break_glass",
+          "state": "warn",
+          "detail": "no enabled local user holds Organization Administrator: when the provider refuses the organization, nobody can sign in to it",
+          "measure": {
+            "local_admins": 0,
+            "role": "Organization Administrator"
+          }
+        }
+      ],
+      "read_errors": [],
+      "protocol": "saml"
+    },
+    {
+      "org": "{{org-3}}",
+      "org_type": "classic",
+      "checks": [
+        {
+          "check": "key_refresh",
+          "state": "warn",
+          "detail": "refresh every 24 h: an emergency roll at the provider stops sign-in for up to that long; set 1 h",
+          "measure": {
+            "interval_h": 24,
+            "success_age_h": 19.1
+          }
+        },
+        {
+          "check": "keys_held",
+          "state": "ok",
+          "detail": "all 6 published keys are held",
+          "measure": {
+            "held": 6,
+            "published": 6,
+            "missing": 0
+          }
+        },
+        {
+          "check": "pkce",
+          "state": "ok",
+          "detail": "PKCE is off",
+          "measure": {}
+        },
+        {
+          "check": "secret_end",
+          "state": "warn",
+          "detail": "the secret the organization holds ends in 23.2 days: rotate with overlap; 1 other listed secret(s) already expired",
+          "measure": {
+            "days_left": 23.2,
+            "matched": true
+          }
+        },
+        {
+          "check": "app_gate",
+          "state": "ok",
+          "detail": "the app is enabled and requires assignment",
+          "measure": {}
+        },
+        {
+          "check": "group_names",
+          "state": "ok",
+          "detail": "every imported group (1) is assigned to the app by that name",
+          "measure": {
+            "imported": 1,
+            "assigned": 1,
+            "unmatched": 0
+          }
+        },
+        {
+          "check": "break_glass",
+          "state": "warn",
+          "detail": "no enabled local user holds Organization Owner: when the provider refuses the organization, nobody can sign in to it",
+          "measure": {
+            "local_admins": 0,
+            "role": "Organization Owner"
+          }
+        }
+      ],
+      "read_errors": [],
+      "protocol": "oidc"
+    },
+    {
+      "org": "{{org-4}}",
+      "org_type": "classic",
+      "checks": [
+        {
+          "check": "saml_cert_end",
+          "state": "ok",
+          "detail": "the active signing certificate ends in 358.2 days",
+          "measure": {
+            "days_left": 358.2
+          }
+        },
+        {
+          "check": "saml_cert_held",
+          "state": "warn",
+          "detail": "1 other signing certificate(s) on the app are not in the organization's metadata: making one active stops sign-in until metadata carrying it is loaded",
+          "measure": {
+            "stored": 1,
+            "others_not_held": 1
+          }
+        },
+        {
+          "check": "app_gate",
+          "state": "ok",
+          "detail": "the app is enabled and requires assignment",
+          "measure": {}
+        },
+        {
+          "check": "group_names",
+          "state": "ok",
+          "detail": "every imported group (1) is assigned to the app by that name",
+          "measure": {
+            "imported": 1,
+            "assigned": 1,
+            "unmatched": 0
+          }
+        },
+        {
+          "check": "break_glass",
+          "state": "warn",
+          "detail": "no enabled local user holds Organization Owner: when the provider refuses the organization, nobody can sign in to it",
+          "measure": {
+            "local_admins": 0,
+            "role": "Organization Owner"
+          }
+        }
+      ],
+      "read_errors": [],
+      "protocol": "saml"
+    }
+  ]
+}

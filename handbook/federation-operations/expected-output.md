@@ -1,25 +1,25 @@
 # What a run looks like
 
-The reference estate, 2026-10-12 (UTC), four throwaway organizations: an All Apps and a classic organization over
-OIDC, and one of each over SAML, all federated to one Entra ID tenant. Run with `--redact`, so the names are
-placeholders. Exit 1: warnings, nothing broken now. Each transcript on this page is a run of the date it gives; the
+The reference estate, 2026-10-16 (UTC), four throwaway organizations: an All Apps and a classic organization over
+OIDC, and one of each over SAML, all federated to one Entra ID tenant and read through the tenant's read-only app. Run
+with `--redact`, so the names are placeholders. Exit 1: warnings, nothing broken now. Each transcript on this page is a run of the date it gives; the
 lines this version prints differently (the `read:` line of a run without the tenant's app, the closing count of
 organizations judged, the line for a run that judged none, the `key_refresh` warning's bound, and an organization left
 out because its federation is off) are shown as it prints them now.
 
 ```
-$ ORGS=<the four organizations> python3 watch.py --redact
+$ ORGS=<the four organizations> python3 watch.py --redact --expect-tenants <the tenant>
 {{org-1}}  (oidc, all-apps)
   WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
-  OK      keys_held       all 6 published keys are held
+  OK      keys_held       all 5 published keys are held
   OK      pkce            PKCE is off
-  WARN    secret_end      the secret the organization holds ends in 26.0 days: rotate with overlap
+  WARN    secret_end      the secret the organization holds ends in 21.8 days: rotate with overlap
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
   OK      break_glass     1 enabled local user(s) holding Organization Administrator
 
 {{org-2}}  (saml, all-apps)
-  OK      saml_cert_end   the active signing certificate ends in 361.0 days
+  OK      saml_cert_end   the active signing certificate ends in 356.8 days
   OK      saml_cert_held  the organization's metadata holds every signing certificate on the app
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
@@ -27,15 +27,15 @@ $ ORGS=<the four organizations> python3 watch.py --redact
 
 {{org-3}}  (oidc, classic)
   WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
-  OK      keys_held       all 6 published keys are held
+  OK      keys_held       all 5 published keys are held
   OK      pkce            PKCE is off
-  WARN    secret_end      the secret the organization holds ends in 23.2 days: rotate with overlap; 1 other listed secret(s) already expired
+  WARN    secret_end      the secret the organization holds ends in 19.0 days: rotate with overlap; 1 other listed secret(s) already expired
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
   WARN    break_glass     no enabled local user holds Organization Owner: when the provider refuses the organization, nobody can sign in to it
 
 {{org-4}}  (saml, classic)
-  OK      saml_cert_end   the active signing certificate ends in 358.2 days
+  OK      saml_cert_end   the active signing certificate ends in 354.1 days
   WARN    saml_cert_held  1 other signing certificate(s) on the app are not in the organization's metadata: making one active stops sign-in until metadata carrying it is loaded
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
@@ -47,15 +47,14 @@ $ ORGS=<the four organizations> python3 watch.py --redact
 ## What to read in it
 
 - **`key_refresh` warns on both OIDC organizations.** They refresh Entra's keys every 24 hours, the interval they
-  were built with. Every key Entra publishes is held today (`keys_held`), so sign-in works; but when Entra rolls a
-  key in an emergency, sign-in stops until the next successful refresh, at most the interval plus an hour after the
-  last one: a day and an hour on this setting. The chapter's
-  practice is one hour with strategy ADD. The run was taken minutes after an hourly refresh attempt that left one
-  organization's last success a full day old; that is on schedule (the refresh waits until a full interval has
-  passed, and the next hourly run did refresh it), so the check warns on the interval and does not fail on the age.
+  were built with. Every key Entra publishes is held today (`keys_held`: the five Entra publishes, among the six key ids
+  each organization stores), so sign-in works; but when Entra rolls a key in an emergency, sign-in stops until the
+  next successful refresh, at most the interval plus an hour after the last one: a day and an hour on this setting.
+  The chapter's practice is one hour with strategy ADD. The last successful refreshes were 0.7 and 19.7 hours old,
+  inside the interval plus an hour, so the check warns on the interval and does not fail on the age.
 - **`secret_end` names the secret the organization holds,** matched by Graph's hint, not the one that ends last.
-  `{{org-3}}` lists two secrets: one ends in 23 days and is the one it uses; the other expired six days before the
-  run and is unused, so it is reported, not judged. A secret the hint matches whose end date does not read is never
+  `{{org-3}}` lists two secrets: one ends in 19 days and is the one it uses; the other has already expired and is
+  unused, so it is reported, not judged. A secret the hint matches whose end date does not read is never
   dropped: it reads `UNKNOWN secret_end ... has an end date that does not read`, exit 3, unless another matched
   secret has already ended (the companion's tests hold this; no run on the reference estate showed it).
 - **`saml_cert_held` warns on `{{org-4}}`.** Its Entra app carries a second signing certificate that the
@@ -270,15 +269,15 @@ the watch's own credential
 
 org-01  (oidc, all-apps)
   WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
-  OK      keys_held       all 6 published keys are held
+  OK      keys_held       all 5 published keys are held
   OK      pkce            PKCE is off
-  WARN    secret_end      the secret the organization holds ends in 26.0 days: rotate with overlap
+  WARN    secret_end      the secret the organization holds ends in 21.8 days: rotate with overlap
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
   OK      break_glass     1 enabled local user(s) holding Organization Administrator
 
 org-02  (saml, all-apps)
-  OK      saml_cert_end   the active signing certificate ends in 361.0 days
+  OK      saml_cert_end   the active signing certificate ends in 356.8 days
   OK      saml_cert_held  the organization's metadata holds every signing certificate on the app
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
@@ -286,15 +285,15 @@ org-02  (saml, all-apps)
 
 org-03  (oidc, classic)
   WARN    key_refresh     refresh every 24 h: an emergency roll at the provider stops sign-in for up to the interval plus an hour (25 h); set 1 h
-  OK      keys_held       all 6 published keys are held
+  OK      keys_held       all 5 published keys are held
   OK      pkce            PKCE is off
-  WARN    secret_end      the secret the organization holds ends in 23.2 days: rotate with overlap; 1 other listed secret(s) already expired
+  WARN    secret_end      the secret the organization holds ends in 19.0 days: rotate with overlap; 1 other listed secret(s) already expired
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
   WARN    break_glass     no enabled local user holds Organization Owner: when the provider refuses the organization, nobody can sign in to it
 
 org-04  (saml, classic)
-  OK      saml_cert_end   the active signing certificate ends in 358.2 days
+  OK      saml_cert_end   the active signing certificate ends in 354.1 days
   WARN    saml_cert_held  1 other signing certificate(s) on the app are not in the organization's metadata: making one active stops sign-in until metadata carrying it is loaded
   OK      app_gate        the app is enabled and requires assignment
   OK      group_names     every imported group (1) is assigned to the app by that name
@@ -314,8 +313,10 @@ The record is `watch.replay.json`, marked `"replay": true`. A request the set ho
 
 `inventory.py` on the reference estate, 2026-10-16 (UTC), read-only, on a provider bearer. The file declared the lab's
 one Entra tenant, the four organizations federated to it with their ids, placeholder owners, consent `consented`, and
-the tenant's two schedules pointed at the records committed in the companions: this folder's `watch.json` and the
-identity-lifecycle companion's `leavers.json`. Exit 1: the watch's record is four days old.
+the tenant's two schedules pointed at the records then committed in the companions: this folder's `watch.json` of
+2026-10-12 and the identity-lifecycle companion's `leavers.json`. Exit 1: the watch's record is four days old. Run
+again that evening against the `watch.json` a new watch run had just written, the inventory read `OK watch` and `OK
+consent`, and `DRIFT leavers` on the leaver record, by then 25.5 hours old; exit 1.
 
 ```
 $ INVENTORY_FILE=<the provider's file> python3 inventory.py --redact
@@ -341,7 +342,7 @@ outside every row
 10 organization(s) listed, 9 judged; 1 drift, 0 unread; exit 1; record written with every estate value replaced
 ```
 
-- **The schedules are judged by their records.** The committed `watch.json`, written on 2026-10-12, lacks `mode`,
+- **The schedules are judged by their records.** The `watch.json` then committed, written on 2026-10-12, lacks `mode`,
   `judged` and `run_errors`, which the watch records now. It is past its interval plus its slack, so the schedule
   missed its run (drift), and it also fails the record check, so the inventory does not read the tenant's consent from
   it. The
@@ -403,9 +404,10 @@ outside every row
 ### A replayed run
 
 `python3 inventory.py --replay replay/inventory` from this folder: the reference run above, every name a placeholder,
-read from recorded answers with nothing sent, against the inventory the set names (`replay/inventory/files/`, its two
-schedules pointed at this folder's `watch.json` and the identity-lifecycle companion's `leavers.json`). Each record's
-age is judged as of the recorded run's time, so every line and the exit are the recorded run's. The first line is
+read from recorded answers with nothing sent, against the inventory the set names (`replay/inventory/files/inventory.json`,
+its two schedules pointed at copies beside it of the two records the recorded run read, `files/watch.json` and
+`files/leavers.json`). Each record's age is judged as of the recorded run's time, so every line and the exit are the
+recorded run's. The first line is
 written to standard error. The record is `inventory.replay.json`, marked `"replay": true`.
 
 ```

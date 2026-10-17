@@ -1,5 +1,5 @@
 {
- "_about": "The inventory the replay set beside it was recorded against (X-280's file, every name a placeholder): one Entra tenant, the four organizations federated to it, declared with their ids, and the tenant's two schedules pointed at the records committed in the companions, as the recorded run pointed them.",
+ "_about": "The inventory the replay set beside it was recorded against (X-280's file, every name a placeholder): one Entra tenant, the four organizations federated to it, declared with their ids, and the tenant's two schedules pointed at copies, beside this file, of the two records the recorded run read: the watch's watch.json of 2026-10-12 and the leaver report's leavers.json of 2026-10-15, so the set replays that run whatever the companions' records hold now.",
  "tenants": [
   {
    "tenant": "00000000-0000-4000-8000-0000000000e1",
@@ -11,12 +11,12 @@
    "schedules": {
     "watch": {
      "every_hours": 24,
-     "record": "../../../watch.json",
+     "record": "watch.json",
      "slack_hours": 1
     },
     "leavers": {
      "every_hours": 24,
-     "record": "../../../../identity-lifecycle/leavers.json",
+     "record": "leavers.json",
      "slack_hours": 1
     }
    },

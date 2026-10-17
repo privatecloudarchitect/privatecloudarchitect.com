@@ -304,6 +304,8 @@ PAGE_SIZE = 128     # items per page of a cloudapi list asked for; a list is rea
 MAX_PAGES = 10000   # a bound on one list read: a list that has not reached its stated total by then did not read
 SWITCHED_OFF = "federation switched off (OIDC and SAML both disabled)"
 PLAN_ONLY = "plan only: nothing was sent and nothing was closed"
+# The urgent close's decision: the plan names what it would do, and only a close that ran says it closed.
+CLOSE_ON_REQUEST, CLOSED_ON_REQUEST = "close on request", "closed on request"
 OID_EXECUTE = ("the organization is keyed on oid, so --execute takes an object id or the account's id "
                "(urn:vcloud:user:...), never a name: {given} is refused before it is resolved and before anything is "
                "sent, whatever Entra holds under it. Run the plan without --execute, with --left-on (the departure date "
@@ -1736,7 +1738,7 @@ def close_now(vcfa: Vcfa, org_name: str, account: str, execute: bool, make_graph
     if m.get("unread") or m.get("refused"):
         return stop(unread=m.get("unread", ""), refused=m.get("refused", ""))
     mine = [t for t in tokens if (t.get("owner") or {}).get("id") == user.get("id")]
-    row = {**keep(user, USER), "tokens": keep(mine, TOKEN), "decision": "closed on request",
+    row = {**keep(user, USER), "tokens": keep(mine, TOKEN), "decision": CLOSED_ON_REQUEST if execute else CLOSE_ON_REQUEST,
            "reason": "named with --close-now; Entra was not asked whether the person has left",
            "direct_roles": sorted(str(r.get("name")) for r in user.get("roleEntityRefs") or []),
            "effective_roles": sorted(str(r.get("name")) for r in user.get("effectiveRoleEntityRefs") or []),

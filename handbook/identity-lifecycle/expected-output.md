@@ -165,7 +165,7 @@ Leavers · CLOSE-NOW PLAN, nothing sent · one named account, to be closed witho
   --user {{user-2}} (resolved Graph GET /users/{principal name}, Entra user {{user-2}}, object id {{user-1}}, created 2025-01-10T10:00:00Z) selects account {{user-1}}, created 2025-02-01T08:00:00.000Z
   {{org-1}}: one account named for --close-now; Entra not asked
     direct role assignments on federated accounts: none
-    {{user-1}}: closed on request (named with --close-now; Entra was not asked whether the person has left) -> planned: revoke 0 token(s) (DELETE /cloudapi/1.0.0/tokens/{id} each), then disable the account (PUT /cloudapi/1.0.0/users/{id} with enabled false); nothing sent
+    {{user-1}}: close on request (named with --close-now; Entra was not asked whether the person has left) -> planned: revoke 0 token(s) (DELETE /cloudapi/1.0.0/tokens/{id} each), then disable the account (PUT /cloudapi/1.0.0/users/{id} with enabled false); nothing sent
   totals: keep 0, leaver 0, out of scope 0, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 0, direct role 0, name in use again 0, acknowledged 0, flagged 0
   exit 0: plan only: nothing was sent and nothing was closed; to close, run it again with --user {{user-1}} (the object id, never the name) and --execute
 ```
@@ -391,7 +391,7 @@ Leavers · CLOSE-NOW PLAN, nothing sent · one named account, to be closed witho
   --user user-4@domain-1.example.test (resolved as given) selects account user-4@domain-1.example.test
   org-3: one account named for --close-now; Entra not asked
     direct role assignments on federated accounts: user-4@domain-1.example.test (Service Broker User)
-    user-4@domain-1.example.test: closed on request (named with --close-now; Entra was not asked whether the person has left) -> planned: revoke 0 token(s) (DELETE /cloudapi/1.0.0/tokens/{id} each), then disable the account (PUT /cloudapi/1.0.0/users/{id} with enabled false); nothing sent
+    user-4@domain-1.example.test: close on request (named with --close-now; Entra was not asked whether the person has left) -> planned: revoke 0 token(s) (DELETE /cloudapi/1.0.0/tokens/{id} each), then disable the account (PUT /cloudapi/1.0.0/users/{id} with enabled false); nothing sent
   totals: keep 0, leaver 0, out of scope 0, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 0, direct role 0, name in use again 0, acknowledged 0, flagged 0
   exit 0: plan only: nothing was sent and nothing was closed; to close, run it again with --execute
 

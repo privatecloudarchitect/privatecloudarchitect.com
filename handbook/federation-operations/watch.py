@@ -5,8 +5,8 @@ provider's next change? Read-only.
 An organization federated to Entra ID keeps working only while a few things on two sides stay in step: the signing
 keys it stores against the keys Entra publishes, the SAML certificate in its metadata against the one Entra signs
 with, the client secret against its end date, and every imported group's name against a group assigned to the app.
-None of them fails loudly. Entra's sign-in log records a success for every refusal that is VCF Automation's, and
-the page a user sees names no cause. This script reads both sides and says which of them is out of step, now or at
+None of them fails loudly. Entra's sign-in log recorded a success for every refusal of VCF Automation's read against
+it, and the page a user sees names no cause. This script reads both sides and says which of them is out of step, now or at
 the next roll, with an exit code a scheduler can act on.
 
 Every call is a GET. It changes nothing on VCF Automation or on Entra.
@@ -176,6 +176,10 @@ EXIT_OK, EXIT_WARN, EXIT_FAIL, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
 # `hints` are loose words a person might type. `teaches` names the chapter section that teaches the fix.
 SSO_FAILED = "Your Single Sign-On attempt failed"
 SSO_FAILURE_URL = "/login/ssoFailure"
+# What Entra's sign-in log shows for a refusal by the organization: a success, on every such refusal read against the
+# log (an OIDC signing key missing, a group renamed over OIDC and SAML, a SAML certificate not held, an expired OIDC
+# secret). Two cases were not read against it, so their rows say that rather than borrow the others' answer.
+LOG_READ, LOG_NOT_READ = "a success", "not read for this case; each refusal by the organization that was read showed a success"
 SIGN_IN_ROUTER = [
     {"id": "not-assigned", "seen": ["AADSTS50105", "to block users unless they are specifically granted"],
      "hints": ["nested group", "not assigned"], "protocol": "any", "refused_by": "provider",
@@ -205,39 +209,40 @@ SIGN_IN_ROUTER = [
      "look_at": "admin consent on the app for openid, profile and email",
      "then": "grant admin consent once, so no user is asked", "teaches": "assignment"},
     {"id": "oidc-key-missing", "seen": [SSO_FAILED, SSO_FAILURE_URL], "hints": ["signing key", "key roll"],
-     "protocol": "oidc", "refused_by": "organization", "entra_log": "a success",
+     "protocol": "oidc", "refused_by": "organization", "entra_log": LOG_READ,
      "look_at": "the organization's stored signing keys against the keys Entra publishes, and the age of its last successful refresh (watch.py: keys_held, key_refresh)",
      "then": "write Entra's current keys into the organization; sign-in works at the next attempt. Waiting means the next successful refresh, at most the interval plus an hour after the last one, and about five minutes more",
      "teaches": "key-rollover"},
     {"id": "oidc-group-renamed", "seen": [SSO_FAILED, SSO_FAILURE_URL], "hints": ["group renamed", "rename"],
-     "protocol": "oidc", "refused_by": "organization", "entra_log": "a success",
+     "protocol": "oidc", "refused_by": "organization", "entra_log": LOG_READ,
      "look_at": "the imported group's name against the name of the group assigned to the app (watch.py: group_names)",
      "then": "restore the group's name at Entra; change it only together with the imported group", "teaches": "group-rename"},
     {"id": "oidc-secret-expired", "seen": [SSO_FAILED, SSO_FAILURE_URL], "hints": ["secret expired", "client secret"],
-     "protocol": "oidc", "refused_by": "organization", "entra_log": "a success",
+     "protocol": "oidc", "refused_by": "organization", "entra_log": LOG_READ,
      "look_at": "the end date of the client secret the organization holds (watch.py: secret_end)",
      "then": "write a valid secret into the organization; next time rotate with overlap", "teaches": "secret-rotation"},
     {"id": "oidc-pkce", "seen": [SSO_FAILED, SSO_FAILURE_URL], "hints": ["pkce"],
-     "protocol": "oidc", "refused_by": "organization", "entra_log": "a success",
+     "protocol": "oidc", "refused_by": "organization", "entra_log": LOG_NOT_READ,
      "look_at": "usePKCE in the organization's OIDC settings (watch.py: pkce)",
      "then": "switch it off, then prove several sign-ins spread over minutes", "teaches": "pkce"},
     {"id": "saml-certificate", "seen": ["An error occurred during login"], "hints": ["certificate", "signing certificate"],
-     "protocol": "saml", "refused_by": "organization", "entra_log": "a success",
+     "protocol": "saml", "refused_by": "organization", "entra_log": LOG_READ,
      "look_at": "the organization's stored metadata against the app's active signing certificate (watch.py: saml_cert_held)",
      "then": "load Entra's current metadata for the app into the organization", "teaches": "saml-certificate"},
     {"id": "saml-group-renamed", "seen": [SSO_FAILURE_URL], "hints": ["group renamed", "rename"],
-     "protocol": "saml", "refused_by": "organization", "entra_log": "a success",
+     "protocol": "saml", "refused_by": "organization", "entra_log": LOG_READ,
      "look_at": "the imported group's name against the name of the group assigned to the app (watch.py: group_names)",
      "then": "restore the group's name at Entra; change it only together with the imported group", "teaches": "group-rename"},
     {"id": "saml-upn-renamed", "seen": [SSO_FAILURE_URL], "hints": ["upn", "renamed user", "user name changed"],
-     "protocol": "saml", "refused_by": "organization", "entra_log": "a success",
+     "protocol": "saml", "refused_by": "organization", "entra_log": LOG_NOT_READ,
      "look_at": "whether the user's UPN changed: the organization matches a returning SAML user on its user name, so the renamed user is refused and no account is made",
      "then": "restore the user's principal name at Entra: the next sign-in reached the same account. If the new name must "
              "stay, delete the old VCF Automation account: the next sign-in made a new account holding its groups' roles. Each "
              "was run once, on an All Apps organization; the run granted the old account no direct role, so what deleting it drops "
              "was not measured. Plan the next rename as a leaver and a joiner", "teaches": "upn-rename"},
     {"id": "oidc-upn-renamed", "seen": [], "hints": ["roles gone", "second account", "lost my roles", "upn", "renamed user"],
-     "protocol": "oidc", "refused_by": "none: admitted as a second user", "entra_log": "a success",
+     "protocol": "oidc", "refused_by": "none: admitted as a second user",
+     "entra_log": "a success, since the user was admitted; not read against the log",
      "look_at": "the organization's subject mapping: keyed on preferred_username, a renamed user signs in as a new user holding only its groups' roles; keyed on oid, as the same user",
      "then": "grant roles only through groups; plan a rename as a leaver and a joiner and disable the first account",
      "teaches": "upn-rename"},
