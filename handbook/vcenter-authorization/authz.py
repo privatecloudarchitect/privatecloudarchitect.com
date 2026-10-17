@@ -39,14 +39,32 @@ The probes' roles are not throwaway. On a vCenter joined to VCF single sign-on, 
 probe that created and deleted its roles on every run would leave one empty group per role per run. The
 probes use six roles named ``authz-probe-<what it holds>``, created the first time they are needed, reconciled
 to their declared privileges on every run, and granted only on the probe's own objects for the length of a
-case. A probe role is one of those six names, matched whole, and its own reserved group is
-``vcf_reserved_<that role's id>`` in the local domain, matched whole: a role an operator named with the same prefix,
-another role's reserved group, and a directory group of that name are never taken for them. ``--remove-probe-roles``
-removes the six and reports the reserved groups VCF leaves; removing those takes the vCenter's SSO administrator. A
-role removed takes every grant of it along, so it refuses, with nothing sent, while a probe role is granted to anyone
-but its own reserved group, and reads the role list back after (exit 2 for either). It works one vCenter at a time and
-prints each one's result as it is done, so a run that stops shows which were done; a vCenter it could not finish is
-recorded with what it removed before the error (exit 3).
+case. A role's own reserved group is ``vcf_reserved_<that role's id>`` in the local domain, matched whole: another
+role's reserved group and a directory group of that name are never taken for it, and a role an operator named
+``authz-probe-<anything else>`` is never counted, reconciled or removed.
+
+A probe role is this companion's only when its ledger names it. The ledger, ``authz-probe-roles.state.json`` beside this
+script (PROBE_LEDGER names another file; mode 0600; never published), holds each probe role a run created, by vCenter,
+whole name and role id, written the moment the role is made. It names a vCenter by a digest of its instance UUID, never
+the UUID or the host's name, so an entry is read only on the vCenter that made it. A probe reuses and reconciles a role
+only when the ledger names it on that vCenter with the id the vCenter lists under that name. Where a role a probe needs
+carries its name and the ledger does not name it so (an operator's role, a role made again under the name, or one a run
+made before the ledger existed), the probe sends nothing and says which (exit 3). ``--remove-probe-roles`` removes only
+the ledger's roles on each vCenter, by whole name and role id, forgets each one read back gone, and reports the reserved
+groups VCF leaves; removing those takes the vCenter's SSO administrator. A role carrying one of the six names that the
+ledger does not name with that id is left alone and reported as kept (exit 2). A role removed takes every grant of it
+along, so it refuses, with nothing sent, while one of the ledger's roles is granted to anyone but its own reserved
+group, and reads the role list back after (exit 2 for either). It works one vCenter at a time and prints each one's
+result as it is done, so a run that stops shows which were done; a vCenter it could not finish is recorded with what it
+removed before the error (exit 3).
+
+  --adopt-probe-role NAME=ID
+                   on the one vCenter VC_HOSTS names: record in the ledger, as this companion's, a probe role a run
+                   made before the ledger existed (that run's record names it without a role id), so the probes reuse
+                   it and --remove-probe-roles removes it. Checked before the census and every probe: the vCenter must
+                   list a role under that name with that id and exactly the privileges the name declares, or the run
+                   stops with nothing written (exit 5). It writes the ledger only, never vCenter. Name only a role you
+                   know a run of this companion made.
 
   --probe-grants   on PROBE_VCENTER: a one-privilege role (Folder.Create) on a throwaway folder, granted in turn
                    to TEST_USER and to TEST_GROUP, each in the directory and the realm spelling, measured from
@@ -169,17 +187,21 @@ Environment:
   SUPERVISOR_VCENTER  the vCenter for --supervisor-vm (default PROBE_VCENTER)
   OUT_DIR             where authz.json is written (default: this folder; under --replay, authz.replay.json, in the
                       directory the run starts in unless OUT_DIR names one)
+  PROBE_LEDGER        the probe-role ledger (default: authz-probe-roles.state.json in this folder, whatever OUT_DIR
+                      says, so every run reads the one ledger); the probes write it and --remove-probe-roles reads it
 
 Run:  python3 authz.py [--where-realm] [--probe-grants] [--probe-tags] [--supervisor-vm NAME]
+      python3 authz.py [--adopt-probe-role NAME=ID ...] [--remove-probe-roles]
       python3 authz.py --remove ID[,ID...] [--execute]
       python3 authz.py --save-permissions FILE
       python3 authz.py --compare-permissions BEFORE AFTER
       python3 authz.py --replay replay/authz [--where-realm]
                        without an estate: every request answered from the recorded set beside this script (its hosts
                        and names are placeholders); nothing is sent and no credential is read, and a request the set
-                       holds no answer for is a read that failed (exit 3). The session list, the probes and
-                       --remove-probe-roles go through pyVmomi, which a set does not answer: the session list is not
-                       read (with REALM_DOMAIN set, exit 3), the probes and --remove-probe-roles are refused (exit 5),
+                       holds no answer for is a read that failed (exit 3). The session list, the probes,
+                       --adopt-probe-role and --remove-probe-roles go through pyVmomi, which a set does not answer: the
+                       session list is not read (with REALM_DOMAIN set, exit 3), the probes, --adopt-probe-role and
+                       --remove-probe-roles are refused (exit 5),
                        and --remove runs its plan alone (--execute is turned off) and stops where the plan reads who is
                        signed in (exit 3), with nothing sent. --save-permissions writes its file; --compare-permissions
                        reads no vCenter either way. The record and a saved file a replayed run writes carry
@@ -188,10 +210,12 @@ Run:  python3 authz.py [--where-realm] [--probe-grants] [--probe-tags] [--superv
       Python 3.10 or later.
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 a removal (--remove --execute) that did not hold on read-back: a named grant still there, or another grant
-        moved; --remove-probe-roles refused (a probe role granted to someone other than its reserved group: removing
-        the role would remove that grant with it, so nothing is sent) or not held (a probe role still listed after it);
+        moved; --remove-probe-roles refused (one of the ledger's roles granted to someone other than its reserved
+        group: removing the role would remove that grant with it, so nothing is sent), not held (a role it removed
+        still listed after it), or leaving a role kept (one of the six names, which the ledger does not name with that
+        role id on that vCenter: an operator's, one made again under the name, or one a run made before the ledger);
         or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of
-        a probe role, one there before the probe began included, when the probe sends nothing)
+        one of the ledger's roles, one there before the probe began included, when the probe sends nothing)
       1 the census read realm-spelled grants: remove them (--where-realm names them, --remove removes them). Only
         with REALM_DOMAIN set, only when the session list of every vCenter read was read whole, and never while a live
         session is spelled in it (each of those is 3); before a realm there is no such class. With
@@ -204,9 +228,11 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         vCenter on which REALM_DOMAIN names no grant while grants of a domain in none of the domains given are there (a
         misspelled realm hides its grants there), a live session spelled in REALM_DOMAIN (a domain people sign in with,
         so a grant spelled in it may apply to them; with --remove, nothing is sent), a probe that could not run its
-        cases, stopped on an error, or whose residue was not read back, a vCenter --remove-probe-roles could not finish
-        or read back, or an error the script did not expect. With --save-permissions: a list not read whole on any
-        vCenter (nothing written). With --compare-permissions: a file unreadable, partial, written by a replayed run
+        cases (a role it needs carrying its name and not the ledger's among them: nothing sent), stopped on an error,
+        or whose residue was not read back, a vCenter --remove-probe-roles could not finish or read back, the probe-role
+        ledger unreadable, not one this script wrote, or not written, a vCenter whose instance UUID was not read (its
+        probe roles cannot then be told from another vCenter's), or an error the script did not expect. With
+        --save-permissions: a list not read whole on any vCenter (nothing written). With --compare-permissions: a file unreadable, partial, written by a replayed run
         (replay: true) or not written by --save-permissions (nothing compared), or a vCenter read in one file only (not compared, so the files are not
         shown equal). Nothing is known about what was not read
       0 nothing for a person to act on: every vCenter read and placed (with REALM_DOMAIN set, its session list read
@@ -221,8 +247,10 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         (--remove among them), a --supervisor-vm that names no VM or several (looked up before the census and every
         probe), a --save-permissions FILE that exists, has no directory or lies inside the clone, a
         --compare-permissions BEFORE saved after AFTER, a --replay directory that cannot be read or holds no replay set,
-        a probe or --remove-probe-roles under --replay (each writes as it goes and has no plan to run alone), a Python
-        older than 3.10
+        a probe or --remove-probe-roles under --replay (each writes as it goes and has no plan to run alone), an
+        --adopt-probe-role under --replay, naming a role other than the six or one name twice, with VC_HOSTS naming
+        more than one vCenter, or naming a role the vCenter does not list under that name with that id and exactly the
+        name's privileges (looked up before the census and every probe; nothing is written), a Python older than 3.10
       A record refused because an estate value or a password survived the scrub is not written, and never hides the
       run's result: the run's code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3 (its
       record was not written; the probes and --remove-probe-roles may already have written to vCenter).
@@ -231,6 +259,7 @@ import argparse
 import base64
 import collections
 import contextlib
+import hashlib
 import json
 import os
 import re
@@ -1062,14 +1091,135 @@ PROBE_ROLES = {
     "tag-on-object-modify": [ON_OBJECT, MODIFY],
 }
 SYSTEM_PRIVILEGES = {"System.Anonymous", "System.Read", "System.View"}
-# The six roles the probes keep, by their whole names. A role is a probe role only when its name is one of these: a
-# role an operator named authz-probe-<anything else> is theirs, and nothing here counts, reconciles or removes it.
+# The six roles the probes keep, by their whole names. A role an operator named authz-probe-<anything else> is theirs,
+# and nothing here counts, reconciles or removes it. A role carrying one of these names is this companion's only when
+# the ledger names it on that vCenter with that role id.
 PROBE_ROLE_NAMES = frozenset(PROBE_ROLE_PREFIX + k for k in PROBE_ROLES)
+LEDGER_NAME = "authz-probe-roles.state.json"
+LEDGER_KIND = "authz.py probe roles"
+LEDGER_ABOUT = ("the probe roles this companion made on each vCenter (vcenter: a digest of its instance UUID), by whole "
+                "name and role id; the probes reuse, and --remove-probe-roles removes, only these. Never published")
+INSTANCE_UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+ADOPT = re.compile(r"^([a-z-]+)=(-?[0-9]+)$")
+
+
+class LedgerError(ReadError):
+    """The probe-role ledger exists and is not one this script wrote, cannot be read, or cannot be written: which probe
+    roles are this companion's is then not known, so nothing that depends on it is sent (exit 3)."""
+
+
+class ProbeRolesError(Exception):
+    """Why ensure_probe_roles sent nothing, raised before any role is created or changed: a role the probe needs carries
+    its name and is not the ledger's, the role list came back empty, or the ledger cannot be written."""
+
+
+def out_dir():
+    """Where the record is written: OUT_DIR, else this folder (a replayed run's record goes to the directory it runs in)."""
+    return os.environ.get("OUT_DIR", "." if REPLAY is not None else os.path.dirname(os.path.abspath(__file__)))
+
+
+def ledger_path():
+    """The probe-role ledger: PROBE_LEDGER, else authz-probe-roles.state.json beside this script. It never follows
+    OUT_DIR, which a reader changes to keep a second record: a ledger split across folders would leave each run's
+    roles unnamed in the other's."""
+    return os.environ.get("PROBE_LEDGER", "").strip() or os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                                        LEDGER_NAME)
+
+
+def vcenter_key(si):
+    """The vCenter as the ledger names it: a digest of its instance UUID, so a role id recorded on one vCenter is never
+    read on another (a vCenter rebuilt under the same name has a new one). ReadError when the UUID was not read."""
+    uuid = str(getattr(getattr(si.content, "about", None), "instanceUuid", "") or "").strip().lower()
+    if not INSTANCE_UUID.match(uuid):
+        raise ReadError("the vCenter's instance UUID was not read, so its probe roles cannot be told from another "
+                        "vCenter's")
+    return hashlib.sha256(uuid.encode()).hexdigest()[:16]
+
+
+class Ledger:
+    """The probe roles this companion made (or an operator adopted), by vCenter, whole name and role id, kept in
+    authz-probe-roles.state.json beside this script (or PROBE_LEDGER), mode 0600. Absent, it names nothing; present and not one this script wrote
+    (another kind, an entry without its vCenter, name or integer role id, a name that is not one of the six, or one name
+    twice on one vCenter), it is refused (LedgerError). Written whole on every change, to a file beside it then moved into
+    place, so a run that stops leaves the last complete ledger."""
+
+    def __init__(self, path):
+        self.path = path
+        self.entries = self._read()
+
+    def _read(self):
+        if not os.path.exists(self.path):
+            return []
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, ValueError) as e:
+            raise LedgerError(f"the probe-role ledger {LEDGER_NAME} was not read ({type(e).__name__})") from None
+        entries = doc.get("roles") if isinstance(doc, dict) and doc.get("kind") == LEDGER_KIND else None
+        if not isinstance(entries, list):
+            raise LedgerError(f"{LEDGER_NAME} is not a probe-role ledger this script wrote")
+        seen = set()
+        for e in entries:
+            ok = (isinstance(e, dict) and isinstance(e.get("vcenter"), str) and e.get("name") in PROBE_ROLE_NAMES
+                  and isinstance(e.get("roleId"), int) and not isinstance(e.get("roleId"), bool))
+            if not ok or (e["vcenter"], e["name"]) in seen:
+                raise LedgerError(f"{LEDGER_NAME} holds an entry this script does not write (one without its vCenter, "
+                                  "a probe role's name or an integer role id, or a name twice on one vCenter)")
+            seen.add((e["vcenter"], e["name"]))
+        return entries
+
+    def ours(self, vkey):
+        """The ledger's roles on one vCenter: whole name to the role id it recorded."""
+        return {e["name"]: e["roleId"] for e in self.entries if e["vcenter"] == vkey}
+
+    def save(self):
+        doc = {"kind": LEDGER_KIND, "about": LEDGER_ABOUT, "roles": self.entries}
+        tmp = self.path + ".tmp"
+        try:
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(json.dumps(doc, indent=1) + "\n")
+            os.replace(tmp, self.path)
+        except OSError as e:
+            raise LedgerError(f"the probe-role ledger {LEDGER_NAME} was not written ({type(e).__name__})") from None
+
+    def record(self, vkey, name, role_id, how):
+        """One role made (or adopted) on one vCenter, written at once; an earlier entry for that name there is dropped,
+        since vCenter holds one role per name and the one it named is gone."""
+        self.entries = [e for e in self.entries if not (e["vcenter"] == vkey and e["name"] == name)]
+        self.entries.append({"vcenter": vkey, "name": name, "roleId": role_id, "how": how, "since": stamp()})
+        try:
+            self.save()
+        except LedgerError as e:
+            raise LedgerError(f"{e}: {name} (role id {role_id}) is on the vCenter and not in the ledger") from None
+
+    def forget(self, vkey, pairs):
+        """Drop the entries for (name, role id) pairs a read showed gone from that vCenter, and write the ledger."""
+        drop = set(pairs)
+        if drop:
+            self.entries = [e for e in self.entries if e["vcenter"] != vkey or (e["name"], e["roleId"]) not in drop]
+            self.save()
 
 
 def probe_role_ids(am):
-    """The probe roles on this vCenter, by role id: the roles whose whole name is one of PROBE_ROLE_NAMES."""
+    """The roles on this vCenter that carry one of the six probe names, whole, by role id: the ledger says which of them
+    are this companion's (our_role_ids)."""
     return {r.roleId: r.name for r in am.roleList if r.name in PROBE_ROLE_NAMES}
+
+
+def our_role_ids(am, ours):
+    """The roles on this vCenter the ledger names (``ours``: whole name to recorded role id), by role id: a role counts
+    only when it is listed under that name with that id."""
+    return {r.roleId: r.name for r in am.roleList if r.name in PROBE_ROLE_NAMES and ours.get(r.name) == r.roleId}
+
+
+def not_ours(name, role_id, recorded):
+    """Why a role carrying a probe name is not this companion's, for the terminal and the record."""
+    if recorded is None:
+        return (f"{name} (role id {role_id}): the ledger names no {name} on this vCenter, so it is an operator's role or "
+                "one a run made before the ledger existed")
+    return (f"{name} (role id {role_id}): the ledger names role id {recorded} under that name here, so this is another "
+            "role made under the name since")
 
 
 def own_reserved_group(principal, role_id):
@@ -1095,63 +1245,200 @@ def stopped(e):
     return f"{type(e).__name__}, an error the step did not expect"
 
 
-def ensure_probe_roles(am, keys):
-    """The id of each probe role, created if missing and reconciled if its privileges drifted."""
-    by_name = {r.name: r for r in am.roleList}
+def ledger_ids(am, own):
+    """The ledger's roles listed on the probe's vCenter, by role id, from the ledger and key the probe read first
+    (``own``); KeyError when it read neither, which a residue read (_read) records as not read back."""
+    return our_role_ids(am, own["led"].ours(own["vkey"]))
+
+
+def ensure_probe_roles(am, keys, led, vkey):
+    """The id of each probe role a probe needs, and what was done, for the record. A role no role carries the name of is
+    created and recorded in the ledger the moment it is made (``created <name> (role id <id>)``); a role the ledger names
+    on this vCenter, with the id the vCenter lists under that name, is reused and reconciled if its privileges drifted.
+    Every role is planned before any is sent: where a role carrying a needed name is not the ledger's, or the role list
+    came back empty (a vCenter always lists its system roles, so an empty list is a read that failed), ProbeRolesError
+    is raised with nothing created or changed. The ledger is written once before the first create, so a ledger that
+    cannot be written stops the probe before vCenter is touched; one that cannot be written after a create raises
+    LedgerError naming the role made, for the terminal."""
+    ours = led.ours(vkey)
+    listed = list(am.roleList)
+    if not listed:
+        raise ProbeRolesError("the vCenter's role list came back empty, a read that failed; nothing was sent")
+    by_name = {r.name: r for r in listed}
+    foreign = [(PROBE_ROLE_PREFIX + k, by_name[PROBE_ROLE_PREFIX + k].roleId) for k in keys
+               if PROBE_ROLE_PREFIX + k in by_name and ours.get(PROBE_ROLE_PREFIX + k) != by_name[PROBE_ROLE_PREFIX + k].roleId]
+    if foreign:
+        raise ProbeRolesError(foreign_aborted(foreign, ours))
+    if any(PROBE_ROLE_PREFIX + k not in by_name for k in keys):
+        try:
+            led.save()
+        except LedgerError as e:
+            raise ProbeRolesError(f"{e}; nothing was sent") from None
     ids, actions = {}, []
     for key in keys:
-        want, role = set(PROBE_ROLES[key]), by_name.get(PROBE_ROLE_PREFIX + key)
+        name = PROBE_ROLE_PREFIX + key
+        want, role = set(PROBE_ROLES[key]), by_name.get(name)
         if role is None:
-            ids[key] = am.AddAuthorizationRole(name=PROBE_ROLE_PREFIX + key, privIds=sorted(want))
-            actions.append("created " + PROBE_ROLE_PREFIX + key)
+            ids[key] = am.AddAuthorizationRole(name=name, privIds=sorted(want))
+            led.record(vkey, name, ids[key], "created")
+            actions.append(f"created {name} (role id {ids[key]})")
             continue
         ids[key] = role.roleId
         if set(role.privilege or []) - SYSTEM_PRIVILEGES != want:
-            am.UpdateAuthorizationRole(roleId=role.roleId, newName=PROBE_ROLE_PREFIX + key, privIds=sorted(want))
-            actions.append("reconciled " + PROBE_ROLE_PREFIX + key)
+            am.UpdateAuthorizationRole(roleId=role.roleId, newName=name, privIds=sorted(want))
+            actions.append(f"reconciled {name} (role id {role.roleId})")
     return ids, actions
 
 
-def probe_role_grants(am):
-    """Grants of a probe role to anyone but its own reserved group. A clean run leaves none."""
-    ids = probe_role_ids(am)
+def adopt_hint(pairs):
+    """The next step for roles carrying a probe name that the ledger does not name, as flags the parser takes: adopt
+    the ones a run of this companion made before the ledger existed, on that vCenter alone. ``pairs``: (name, role id)."""
+    flags = " ".join(f"--adopt-probe-role {n}={rid}" for n, rid in pairs)
+    return (f"if a run of this companion made it before the ledger existed, add {flags} to a run whose VC_HOSTS names "
+            "that vCenter alone; a role of your own under a probe name is yours to rename")
+
+
+def foreign_aborted(pairs, ours):
+    """Why a probe sent nothing: roles it needs carry their names and are not the ledger's (``pairs``: name, role id)."""
+    why = "; ".join(not_ours(n, rid, ours.get(n)) for n, rid in pairs)
+    return f"a role the probe needs carries its name and is not one the ledger names: {why}. Nothing was sent: {adopt_hint(pairs)}"
+
+
+def probe_role_grants(am, ids):
+    """Grants of the ledger's roles on this vCenter (``ids``, from our_role_ids) to anyone but each one's own reserved
+    group. A clean run leaves none; a grant of a role the ledger does not name is someone's access, never counted."""
     return sum(1 for p in am.RetrieveAllPermissions() if p.roleId in ids and not own_reserved_group(p.principal, p.roleId))
 
 
 def held_before(n):
-    """Why a probe sends nothing: a probe role is already granted to someone other than its reserved group. Reconciling
-    the role would change what that principal holds, and the residue read after the run would count the grant as the
-    probe's own. The record keeps the count as residue, so the run exits 2."""
-    return (f"{n} grant(s) of an {PROBE_ROLE_PREFIX}* role to someone other than its reserved group were there before "
+    """Why a probe sends nothing: one of the ledger's roles is already granted to someone other than its reserved group.
+    Reconciling the role would change what that principal holds, and the residue read after the run would count the
+    grant as the probe's own. The record keeps the count as residue, so the run exits 2."""
+    return (f"{n} grant(s) of a probe role the ledger names to someone other than its reserved group were there before "
             "the probe began: reconciling the role would change what they hold, so nothing was sent; remove those grants "
             "where they were made, then run again")
 
 
-def remove_probe_roles(si):
-    """Remove the six probe roles (PROBE_ROLE_NAMES, by whole name) once nothing but their own reserved groups holds
-    them, and read the role list back. RemoveAuthorizationRole with failIfUsed false removes a role with every grant of
-    it, so a grant of a probe role to anyone else is refused first, with nothing sent: that grant is someone's access,
-    removed where it was made. A probe role still listed after the removal is a removal that did not hold (exit 2). A
-    removal that stops on an error records the roles it removed before it and reads the role list back (exit 3)."""
+def remove_probe_roles(si, led):
+    """Remove the probe roles the ledger names on this vCenter, by whole name and the role id it recorded, once nothing
+    but their own reserved groups holds them, and read the role list back. A role carrying one of the six names that
+    the ledger does not name here with that id (an operator's, one made again under the name, one a run made before the
+    ledger) is left alone and reported (``kept``, exit 2). RemoveAuthorizationRole with failIfUsed false removes a role
+    with every grant of it, so a grant of one of the ledger's roles to anyone else is refused first, with nothing sent:
+    that grant is someone's access, removed where it was made. A role it removed still listed after is a removal that
+    did not hold (exit 2). A removal that stops on an error records the roles it removed before it and reads the role
+    list back (exit 3). The ledger forgets each of its roles a read showed gone, and a ledger not written is exit 3."""
     am = si.content.authorizationManager
     try:
-        held = probe_role_grants(am)
-        roles = sorted(probe_role_ids(am).items(), key=lambda kv: kv[1])
-    except Exception as e:  # noqa: BLE001  the grants not read: nothing may be sent
-        return {"removed": 0, "error": f"the probe roles' grants were not read ({stopped(e)}); nothing was sent"}
+        vkey = vcenter_key(si)
+        ours = led.ours(vkey)
+        every = list(am.roleList)
+        if not every:   # a vCenter always lists its system roles: an empty list is a read that failed
+            raise ReadError("the role list came back empty")
+        listed = {r.name: r.roleId for r in every if r.name in PROBE_ROLE_NAMES}
+        roles = sorted(((rid, n) for n, rid in listed.items() if ours.get(n) == rid), key=lambda kv: kv[1])
+        held = probe_role_grants(am, {rid for rid, _ in roles})
+    except Exception as e:  # noqa: BLE001  the roles, their grants or the vCenter's key not read: nothing may be sent
+        return {"removed": 0, "error": f"the probe roles, their grants or the vCenter's instance UUID were not read "
+                                       f"({stopped(e)}); nothing was sent"}
+    out = {"removed": 0}
+    kept = [(n, rid) for n, rid in sorted(listed.items()) if ours.get(n) != rid]
+    if kept:
+        out["kept"] = [not_ours(n, rid, ours.get(n)) for n, rid in kept]
+        out["next"] = adopt_hint(kept)
+    gone = sorted((n, rid) for n, rid in ours.items() if listed.get(n) != rid)
+    if gone:
+        out["alreadyGone"] = [n for n, _ in gone]
     if held:
-        return {"removed": 0, "refused": f"{held} grant(s) of a probe role to someone other than its reserved group: "
-                                         "removing the role would remove those grants with it, so nothing was sent"}
+        out["refused"] = (f"{held} grant(s) of a probe role the ledger names to someone other than its reserved group: "
+                          "removing the role would remove those grants with it, so nothing was sent")
+        return out
     done = []
     for rid, name in roles:
         try:
             am.RemoveAuthorizationRole(rid, False)
         except Exception as e:  # noqa: BLE001  record what was done before the error, and read the list back
-            return {"removed": len(done), "removedRoles": done, "error": f"the removal stopped at {name} ({stopped(e)})",
-                    "rolesLeft": _read(lambda: len(probe_role_ids(am)))}
+            out["error"] = f"the removal stopped at {name} ({stopped(e)})"
+            break
         done.append(name)
-    return {"removed": len(done), "removedRoles": done, "rolesLeft": _read(lambda: len(probe_role_ids(am))),
-            "reservedGroupsLeft": _read(lambda: reserved_groups_left(si, [rid for rid, _ in roles]))}
+    out.update(removed=len(done), removedRoles=done)
+    after = _read(lambda: {r.roleId for r in am.roleList})
+    out["rolesLeft"] = None if after is None else sum(1 for rid, _ in roles if rid in after)
+    if "error" not in out:
+        out["reservedGroupsLeft"] = _read(lambda: reserved_groups_left(si, [rid for rid, _ in roles]))
+    if after is not None:
+        try:
+            led.forget(vkey, gone + [(n, rid) for rid, n in roles if rid not in after])
+        except LedgerError as e:
+            out["ledger"] = f"not written: {e}"
+    return out
+
+
+def adoptions(values):
+    """--adopt-probe-role's NAME=ID values, as (whole name, role id) pairs in order: a usage error (exit 5) for a value
+    not shaped NAME=ID, a name that is not one of the six probe roles, or one name given twice."""
+    out = []
+    for v in values or []:
+        m = ADOPT.match(v.strip())
+        if not m:
+            raise UsageError(f"--adopt-probe-role takes NAME=ID, a probe role's whole name and its role id: {v!r} is not")
+        name, rid = m.group(1), int(m.group(2))
+        if name not in PROBE_ROLE_NAMES:
+            raise UsageError(f"--adopt-probe-role names {name}, which is not one of the six probe roles "
+                             f"({', '.join(sorted(PROBE_ROLE_NAMES))})")
+        if any(n == name for n, _ in out):
+            raise UsageError(f"--adopt-probe-role names {name} twice")
+        out.append((name, rid))
+    return out
+
+
+def adopt_probe_roles(host, user, password, pairs):
+    """--adopt-probe-role, before the census and every probe: record in the ledger each named role, on this vCenter, as
+    this companion's. Each must be listed under its name with that role id and hold exactly the privileges its name
+    declares (beyond the three system ones), or nothing is written (exit 5): a role holding anything else is not the
+    probe's. The ledger alone is written, never vCenter; a role the ledger already names with that id is left as it is.
+    A sign-in, a role list or a ledger that does not answer is a read that failed (exit 3), nothing written."""
+    try:
+        si = soap(host, user, password)
+    except Exception as e:
+        raise ReadError(f"--adopt-probe-role could not read its vCenter: {type(e).__name__}; nothing was written") from None
+    try:
+        try:
+            vkey = vcenter_key(si)
+            every = list(si.content.authorizationManager.roleList)
+            if not every:   # a vCenter always lists its system roles: an empty list is a read that failed
+                raise ReadError("--adopt-probe-role read an empty role list; nothing was written")
+            listed = {r.name: r for r in every if r.name in PROBE_ROLE_NAMES}
+        except ReadError:
+            raise
+        except Exception as e:
+            raise ReadError(f"--adopt-probe-role could not read the role list: {type(e).__name__}; nothing was "
+                            "written") from None
+    finally:
+        unsoap(si)
+    wrong = []
+    for name, rid in pairs:
+        role = listed.get(name)
+        held = sorted(set(role.privilege or []) - SYSTEM_PRIVILEGES) if role is not None else None
+        if role is None:
+            wrong.append(f"{name}: the vCenter lists no role of that name")
+        elif role.roleId != rid:
+            wrong.append(f"{name}: the vCenter lists it under role id {role.roleId}, not {rid}")
+        elif set(held) != set(PROBE_ROLES[name.removeprefix(PROBE_ROLE_PREFIX)]):
+            wrong.append(f"{name} (role id {rid}): it holds {held or 'no privilege'}, where the probe role of that name "
+                         f"holds {sorted(PROBE_ROLES[name.removeprefix(PROBE_ROLE_PREFIX)]) or 'no privilege'}")
+    if wrong:
+        raise UsageError("--adopt-probe-role names a role this vCenter does not hold as a probe role: "
+                         + "; ".join(wrong) + "; nothing was written")
+    led = Ledger(ledger_path())
+    ours, lines = led.ours(vkey), []
+    for name, rid in pairs:
+        if ours.get(name) == rid:
+            lines.append(f"already in the ledger: {name} (role id {rid})")
+            continue
+        led.record(vkey, name, rid, "adopted")
+        lines.append(f"adopted {name} (role id {rid})")
+    return lines
 
 
 def reserved_groups_left(si, role_ids):
@@ -1237,14 +1524,24 @@ def probe_grants(host, admin, subject, cases):
     am = si.content.authorizationManager
     made = {}
     rec = {"privilege": "Folder.Create", "cases": []}
+    own = {}
     try:
-        held = probe_role_grants(am)
+        try:
+            own["led"], own["vkey"] = Ledger(ledger_path()), vcenter_key(si)
+            held = probe_role_grants(am, ledger_ids(am, own))
+        except ReadError as e:   # the ledger or the vCenter's key not read: which roles are ours is not known
+            rec["aborted"] = f"{e}; nothing was sent"
+            return rec
         if held:   # the residue read below counts them, so the run exits 2 with nothing sent
             rec["aborted"] = held_before(held)
             return rec
-        made["folder"] = throwaway_folder(si, name)
-        ids, rec["probeRoles"] = ensure_probe_roles(am, ["folder-create"])
+        try:
+            ids, rec["probeRoles"] = ensure_probe_roles(am, ["folder-create"], own["led"], own["vkey"])
+        except ProbeRolesError as e:
+            rec["aborted"] = str(e)
+            return rec
         made["role"] = ids["folder-create"]
+        made["folder"] = throwaway_folder(si, name)
         folder = made["folder"]
         rec["baseline"] = measure_folder(host, subject, folder._moId, name, si)
         for label, principal, group in cases:
@@ -1269,7 +1566,7 @@ def probe_grants(host, admin, subject, cases):
                 wait(made["folder"].Destroy_Task())
         # read by the run's own folder name even when no create answered: a create that timed out may have landed
         rec["residue"] = {"folder": _read(lambda: folder_left(si, name)),
-                          "grantsOfProbeRoles": _read(lambda: probe_role_grants(am))}
+                          "grantsOfProbeRoles": _read(lambda: probe_role_grants(am, ledger_ids(am, own)))}
         unsoap(si)
     return rec
 
@@ -1364,13 +1661,23 @@ def probe_tags(host, admin, subject, d, r):
     made = {"roles": {}}
     rec = {"cases": []}
     lab = None
+    own = {}
     try:
-        held = probe_role_grants(am)
+        try:
+            own["led"], own["vkey"] = Ledger(ledger_path()), vcenter_key(si)
+            held = probe_role_grants(am, ledger_ids(am, own))
+        except ReadError as e:   # the ledger or the vCenter's key not read: which roles are ours is not known
+            rec["aborted"] = f"{e}; nothing was sent"
+            return rec
         if held:   # the residue read below counts them, so the run exits 2 with nothing sent
             rec["aborted"] = held_before(held)
             return rec
         keys = {"none": "none", "tag": "attach-tag", "object": "tag-on-object", "both": "tag-both"}
-        ids, rec["probeRoles"] = ensure_probe_roles(am, list(keys.values()))
+        try:
+            ids, rec["probeRoles"] = ensure_probe_roles(am, list(keys.values()), own["led"], own["vkey"])
+        except ProbeRolesError as e:
+            rec["aborted"] = str(e)
+            return rec
         made["roles"] = {k: ids[v] for k, v in keys.items()}
         made["roles"]["Admin"] = -1
         made["folder"] = throwaway_folder(si, name)
@@ -1432,7 +1739,7 @@ def probe_tags(host, admin, subject, d, r):
             with contextlib.suppress(Exception):
                 wait(made["folder"].Destroy_Task())
         rec["residue"]["folder"] = _read(lambda: folder_left(si, name))
-        rec["residue"]["grantsOfProbeRoles"] = _read(lambda: probe_role_grants(am))
+        rec["residue"]["grantsOfProbeRoles"] = _read(lambda: probe_role_grants(am, ledger_ids(am, own)))
         with contextlib.suppress(Exception):
             rest.close()
         unsoap(si)
@@ -1498,8 +1805,14 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
     made = {}
     rec = {"identities": {}, "grantAttempts": []}
     lab, vm, granted = None, None, []
+    own = {}
     try:
-        held = probe_role_grants(am)
+        try:
+            own["led"], own["vkey"] = Ledger(ledger_path()), vcenter_key(si)
+            held = probe_role_grants(am, ledger_ids(am, own))
+        except ReadError as e:   # the ledger or the vCenter's key not read: which roles are ours is not known
+            rec["aborted"] = f"{e}; nothing was sent"
+            return rec
         if held:   # the residue read below counts them, so the run exits 2 with nothing sent
             rec["aborted"] = held_before(held)
             return rec
@@ -1508,14 +1821,19 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
             rec["aborted"] = f"--supervisor-vm names {len(found)} VMs on that vCenter now, not one; nothing was sent"
             return rec
         vm = found[0]
+        # the role before the first write (the throwaway tag below), so a role that is not the ledger's stops it first
+        try:
+            ids, rec["probeRoles"] = ensure_probe_roles(am, ["tag-on-object-modify"], own["led"], own["vkey"])
+        except ProbeRolesError as e:
+            rec["aborted"] = str(e)
+            return rec
+        made["role"] = ids["tag-on-object-modify"]
         rec["managedBy"] = vm.config.managedBy.extensionKey if vm.config.managedBy else None
         obj = {"id": vm._moId, "type": "VirtualMachine"}
         lab = TagLab(rest, name, ["VirtualMachine"])
         names = {x.roleId: x.name for x in am.roleList}
         for key, cred in (("operator", operator), ("tag identity", tag_identity)):
             rec["identities"][key] = read_identity(host, cred, vm, names, lab, obj, L)
-        ids, rec["probeRoles"] = ensure_probe_roles(am, ["tag-on-object-modify"])
-        made["role"] = ids["tag-on-object-modify"]
         for label, principal, role in (("ObjectAttachable to itself, directory spelling", d_op, made["role"]),
                                        ("Admin to itself, directory spelling", d_op, -1),
                                        ("ObjectAttachable to itself, realm spelling", r_op, made["role"])):
@@ -1556,7 +1874,7 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
             rec["residue"]["grantsOnVm"] = None if left is None else len(left)
             if left:
                 rec["leftOnVm"] = sorted({str(p.principal) for p in left})   # for the terminal; popped before the record
-        rec["residue"]["grantsOfProbeRoles"] = _read(lambda: probe_role_grants(am))
+        rec["residue"]["grantsOfProbeRoles"] = _read(lambda: probe_role_grants(am, ledger_ids(am, own)))
         with contextlib.suppress(Exception):
             rest.close()
         unsoap(si)
@@ -1601,7 +1919,11 @@ def _parser():
     ap.add_argument("--probe-tags", action="store_true")
     ap.add_argument("--supervisor-vm", default="")
     ap.add_argument("--remove-probe-roles", action="store_true",
-                    help="remove the authz-probe-* roles from every vCenter in VC_HOSTS and report the groups left")
+                    help="remove the probe roles the ledger names (by whole name and role id) from every vCenter in "
+                         "VC_HOSTS, and report the roles kept and the groups left")
+    ap.add_argument("--adopt-probe-role", action="append", metavar="NAME=ID",
+                    help="record in the ledger a probe role a run made before the ledger existed, on the one vCenter "
+                         "VC_HOSTS names: checked against its name, id and privileges before anything else")
     ap.add_argument("--no-realm", action="store_true",
                     help="declare an estate with no realm yet; without it, REALM_DOMAIN is required")
     ap.add_argument("--where-realm", action="store_true",
@@ -1662,6 +1984,7 @@ def _alone(a, flag):
     """--save-permissions and --compare-permissions are runs of their own: any other flag beside one is a usage error."""
     others = [f for f, on in (("--probe-grants", a.probe_grants), ("--probe-tags", a.probe_tags),
                               ("--supervisor-vm", a.supervisor_vm), ("--remove-probe-roles", a.remove_probe_roles),
+                              ("--adopt-probe-role", a.adopt_probe_role),
                               ("--no-realm", a.no_realm), ("--where-realm", a.where_realm), ("--remove", a.remove),
                               ("--execute", a.execute), ("--save-permissions", a.save_permissions),
                               ("--compare-permissions", a.compare_permissions)) if on and f != flag]
@@ -1694,7 +2017,8 @@ def _settings(a):
     removing = bool(a.remove)
     if a.execute and not removing:
         raise UsageError("--execute goes with --remove; the census and the probes take no --execute")
-    if removing and (a.where_realm or a.probe_grants or a.probe_tags or a.supervisor_vm or a.remove_probe_roles):
+    if removing and (a.where_realm or a.probe_grants or a.probe_tags or a.supervisor_vm or a.remove_probe_roles
+                     or a.adopt_probe_role):
         raise UsageError("--remove is a run of its own: it takes only --execute")
     if removing and len(hosts) != 1:
         raise UsageError("--remove acts on one vCenter: set VC_HOSTS to the one whose grant ids you name")
@@ -1712,8 +2036,13 @@ def _settings(a):
         raise UsageError("--remove reads who is signed in on the vCenter before it acts, which needs pyVmomi")
     probing = a.probe_grants or a.probe_tags or a.supervisor_vm
     test_user = os.environ.get("TEST_USER", "")
-    if (probing or a.remove_probe_roles) and not have_pyvmomi():
-        raise UsageError("the probes and --remove-probe-roles need pyVmomi")
+    if (probing or a.remove_probe_roles or a.adopt_probe_role) and not have_pyvmomi():
+        raise UsageError("the probes, --adopt-probe-role and --remove-probe-roles need pyVmomi")
+    if a.adopt_probe_role:
+        adoptions(a.adopt_probe_role)
+        if len(hosts) != 1:
+            raise UsageError("--adopt-probe-role names a role by its id, which is one vCenter's: set VC_HOSTS to the one "
+                             "vCenter that lists it")
     if probing:
         local, _, dom = test_user.partition("@")
         if not (local and dom and realm and secret("TEST_PASSWORD")):
@@ -1744,6 +2073,10 @@ def _replayed(a):
         replay_start(a.replay)
     except (OSError, ValueError) as e:
         print(f"--replay {a.replay}: {e}; nothing was sent", file=sys.stderr)
+        return EXIT_USAGE
+    if a.adopt_probe_role:
+        print("replay: --adopt-probe-role reads the vCenter's role list through pyVmomi, which a replay set does not "
+              f"answer; nothing was read or written (exit {EXIT_USAGE})", file=sys.stderr)
         return EXIT_USAGE
     held = [flag for flag, dest in NO_PLAN if getattr(a, dest)]
     if held:
@@ -1777,9 +2110,12 @@ def _run(argv=None):
     if a.supervisor_vm:   # before the census and every probe: a name that is not one VM is found before anything is written
         supervisor_vm_check(os.environ.get("SUPERVISOR_VCENTER") or os.environ.get("PROBE_VCENTER") or hosts[0],
                             user, password, a.supervisor_vm)
+    # before the census and every probe: a role that is not the probe's is found before anything is written, and the
+    # probes and the teardown of this same run read the ledger it wrote
+    adopted = adopt_probe_roles(hosts[0], user, password, adoptions(a.adopt_probe_role)) if a.adopt_probe_role else None
     # A replayed run writes authz.replay.json, in OUT_DIR or the directory it runs in, never over the record beside this
     # script.
-    out_dir = os.environ.get("OUT_DIR", "." if REPLAY is not None else os.path.dirname(os.path.abspath(__file__)))
+    out = out_dir()
     out_name = "authz.replay.json" if REPLAY is not None else "authz.json"
     L = Labels()
     vc_label = {h: L.get("vcenter", h) for h in hosts}
@@ -1791,6 +2127,9 @@ def _run(argv=None):
     record = {**({"replay": True} if REPLAY is not None else {}), "captured_utc": stamp(), "vcenters": {}}
     if not realm:
         record["realmSpelling"] = NO_REALM
+    if adopted is not None:
+        record["probeRoleAdoption"] = {vc_label[hosts[0]]: adopted}
+        print(f"  probe roles adopted into the ledger on {vc_label[hosts[0]]}: {'; '.join(adopted)}\n")
     catalogs = {}
     pyv = have_pyvmomi() and REPLAY is None
     unread = []
@@ -1885,15 +2224,24 @@ def _run(argv=None):
     record["roleDrift"] = drift(catalogs, L)
     if a.remove_probe_roles:
         record["probeRoleTeardown"] = {}
-        print("\n  probe roles, one vCenter at a time:")
+        print(f"\n  probe roles the ledger names ({ledger_path()}), one vCenter at a time:")
+        try:
+            led, unread_ledger = Ledger(ledger_path()), None
+        except LedgerError as e:   # which roles are this companion's is not known: nothing is sent on any vCenter
+            led, unread_ledger = None, str(e)
         for h in hosts:   # each vCenter's result printed as it is done, so a run that stops shows which were
+            if led is None:
+                t = {"removed": 0, "error": f"{unread_ledger}; nothing was sent"}
+                record["probeRoleTeardown"][vc_label[h]] = t
+                print(f"     {vc_label[h]}: {teardown_line(t)}", flush=True)
+                continue
             try:
                 si = soap(h, user, password)
             except Exception as e:  # noqa: BLE001  that vCenter not reached: nothing sent there; the others still run
                 t = {"removed": 0, "error": f"the session was refused ({type(e).__name__}); nothing was sent"}
             else:
                 try:
-                    t = remove_probe_roles(si)
+                    t = remove_probe_roles(si, led)
                 finally:
                     unsoap(si)
             record["probeRoleTeardown"][vc_label[h]] = t
@@ -1948,8 +2296,8 @@ def _run(argv=None):
                   "(next line); any probe after it was not run")
         if rec.get("stopped") or probe_residue(rec) or probe_unread(rec):
             print(f"     residue {rec.get('residue')} (True or a count: left behind; None: not read back). Read the vCenter "
-                  f"for folders named authz-run-*, tag categories of that name, and grants of the {len(PROBE_ROLE_NAMES)} "
-                  "authz-probe-* roles" + (", and remove these grants the probe made on the VM (printed here only, never "
+                  "for folders named authz-run-*, tag categories of that name, and grants of the probe roles the "
+                  "ledger names" + (", and remove these grants the probe made on the VM (printed here only, never "
                                            "recorded): " + ", ".join(left_on_vm) if key == "supervisorProbe" and left_on_vm
                                            else ""))
 
@@ -1966,8 +2314,8 @@ def _run(argv=None):
                                   out_name)
     if any(s and s in text for s in (password, subject[1])):
         return refused_record("a password reached the record", code, out_name)
-    os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, out_name), "w", encoding="utf-8") as f:
+    os.makedirs(out, exist_ok=True)
+    with open(os.path.join(out, out_name), "w", encoding="utf-8") as f:
         f.write(text + "\n")
     print(f"\nwrote {out_name}: counts, classes and outcomes, with every estate name replaced")
     if unread:
@@ -1988,7 +2336,14 @@ def refused_record(why, code, name="authz.json"):
 
 
 def teardown_line(t):
-    """One vCenter's --remove-probe-roles result, as the terminal shows it the moment that vCenter is done."""
+    """One vCenter's --remove-probe-roles result, as the terminal shows it the moment that vCenter is done: the outcome,
+    then each role kept and the next step for one a run made before the ledger existed."""
+    return _teardown_outcome(t) + "".join(f"\n       KEPT: {k}" for k in t.get("kept") or []) + (
+        f"\n       a kept role is left alone (exit 2): {t['next']}" if t.get("kept") else "") + (
+        f"\n       already gone, forgotten by the ledger: {', '.join(t['alreadyGone'])}" if t.get("alreadyGone") else "")
+
+
+def _teardown_outcome(t):
     if t.get("refused"):
         return f"NOT HELD: refused, {t['refused']} (exit 2)"
     done = f"{t.get('removed', 0)} probe role(s) removed" + (f" ({', '.join(t['removedRoles'])})" if t.get("removedRoles") else "")
@@ -2000,6 +2355,8 @@ def teardown_line(t):
         return f"{done}; NOT READ: the role list was not read back (exit 3)"
     if t["rolesLeft"]:
         return f"NOT HELD: {done}, and {t['rolesLeft']} probe role(s) still listed after the removal (exit 2)"
+    if t.get("ledger"):
+        return f"{done}, none listed after; NOT READ: the ledger was {t['ledger']} (exit 3)"
     groups = t.get("reservedGroupsLeft")
     return (f"{done}, none listed after; "
             + ("NOT READ: the reserved groups VCF left were not read back (exit 3)" if groups is None
@@ -2030,9 +2387,9 @@ def probe_unread(rec):
 
 def teardown_unread(t):
     """Whether one vCenter's --remove-probe-roles did not finish or was not read back: an error, no role list read
-    after the removal, or the reserved groups VCF leaves not read (a residue not read back is never a clean run; a
-    refusal sent nothing and is exit 2, never this)."""
-    return not t.get("refused") and (bool(t.get("error")) or t.get("rolesLeft") is None
+    after the removal, the reserved groups VCF leaves not read, or the ledger not written after it (a residue not read
+    back is never a clean run; a refusal sent nothing and is exit 2, never this)."""
+    return not t.get("refused") and (bool(t.get("error")) or t.get("rolesLeft") is None or bool(t.get("ledger"))
                                      or ("reservedGroupsLeft" in t and t["reservedGroupsLeft"] is None))
 
 
@@ -2044,7 +2401,8 @@ def sessions_unread(row):
 
 
 def exit_code(record, realm):
-    """The first that applies: 2 a probe left residue, or --remove-probe-roles was refused or did not hold; 1
+    """The first that applies: 2 a probe left residue, or --remove-probe-roles was refused, did not hold, or kept a role
+    carrying a probe name that the ledger does not name (a person decides what it is); 1
     realm-spelled grants read (only with a realm, only when every vCenter read had its session list read whole, and
     none while a live session is spelled in it); 3 a vCenter not read, a session list not read whole (with a realm,
     pyVmomi missing among them: whether people sign in with the realm's domain is then not known), a vCenter whose
@@ -2053,7 +2411,8 @@ def exit_code(record, realm):
     run, or a residue not read back; else 0."""
     probes = [record.get(k) for k in ("grantProbe", "tagProbe", "supervisorProbe") if record.get(k) is not None]
     teardown = list((record.get("probeRoleTeardown") or {}).values())
-    if any(probe_residue(p) for p in probes) or any(t.get("refused") or t.get("rolesLeft") for t in teardown):
+    if any(probe_residue(p) for p in probes) or any(t.get("refused") or t.get("rolesLeft") or t.get("kept")
+                                                    for t in teardown):
         return EXIT_NOT_HELD
     rows = list((record.get("vcenters") or {}).values())
     signed_in = any(r.get("realmSignedIn") for r in rows)

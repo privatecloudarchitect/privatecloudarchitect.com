@@ -37,7 +37,10 @@ read at 21:14 UTC with the run's own provider API token 20.1 days from its end, 
 test's passing run over SAML, read at 23:57:34 UTC, seven minutes after the removal, so a 5-minute latency puts the
 deadline before the reads and the run proves nothing about it. `--execute`, alone or with `--close-now`, runs its plan
 alone under `--replay`: the run prints one line naming the plan, reads what the plan reads, sends no write, and never
-reports a close. A request the set holds no answer for is a read that failed, so the run exits 3 and names the
+reports a close. Its exit line says the run was a replay and, unless a read failed, how to run the close for real: on
+your own estate, without `--replay`, on a provider bearer, as `python3 leavers.py --execute --org <org>` or
+`python3 leavers.py --close-now --org <org> --user <account> --execute` (under `oid`, `<account>` is the object id or
+the account's id). The set's organizations and accounts are its own placeholders, so the line names yours. A request the set holds no answer for is a read that failed, so the run exits 3 and names the
 call, never a pass. The record goes to `leavers.replay.json` or `leaver-test.replay.json` unless `OUT` names a file,
 so a replayed run never overwrites a real record, and it carries `"replay": true` at its top level, a key no live
 run's record holds, so a tool that reads it never takes a replayed run for a live one. The transcripts are under "A replayed run" in `expected-output.md`.
@@ -531,7 +534,10 @@ script itself never removes a role.
   federated user's browser-session bearer at once, 7 s after its sign-in (an All Apps OIDC organization, one run,
   2026-10-15). A bearer already traded from the account's own API token ended at the disable too, for a local user (a
   classic organization) and for a federated user (an All Apps OIDC organization keyed on `oid`), one run each on
-  2026-10-16, each disable sent without the revoke the close sends first. It cannot tell whether a name in use again
+  2026-10-16, each disable sent without the revoke the close sends first. The same held for a federated user over SAML
+  in an All Apps organization and for one over OIDC in a classic organization (2026-10-17, one run each). Enabling such
+  an account again let its still-listed token trade at once, so the close revokes the account's tokens before it
+  disables it. It cannot tell whether a name in use again
   belongs to the same person; it
   flags the case and acts on nothing.
 - Measured on VCF Automation 9.1 against Entra ID with a provider bearer and a Graph certificate, and with a provider

@@ -334,7 +334,9 @@ is written to standard error, and so is the second line of a run given `--execut
 `leavers.py --replay replay/leavers` reaches every decision `leavers.json` holds, with the same 103 calls, and exits 4,
 as the recorded run did. Given `--execute`, alone or with `--close-now`, it runs the close's plan alone: the
 organization's accounts are read and judged, nothing is sent, and the plan's own exit stands (the flags here, 4; a
-`--close-now` plan, 0).
+`--close-now` plan, 0). The plan's exit line says the run was a replay and gives the close for real, a command run on
+your own estate without `--replay`, naming your own organization and account; after a read that failed it names no
+close.
 
 ```text
 $ python3 leavers.py --replay replay/leavers --redact
@@ -379,7 +381,7 @@ Leavers · EXECUTE PLAN · 1 organization(s) federated to the tenant
     user-4@domain-1.example.test: leaver (the Entra account is disabled) -> in step: already disabled, no token  FLAG direct-role
   credential: provider API token name-1, ends 2026-11-04T22:31:54Z (20.1 days; WARN_DAYS 30)  FLAG credential-ends
   totals: keep 2, leaver 1, out of scope 0, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 1, direct role 1, name in use again 0, acknowledged 0, flagged 1
-  exit 4: a flag nobody acknowledged, or this run's own API token near its end: decide and --ack the flag; rotate the token, naming its successor in VCFA_PROVIDER_TOKEN_NAME
+  exit 4: a flag nobody acknowledged, or this run's own API token near its end: decide and --ack the flag; rotate the token, naming its successor in VCFA_PROVIDER_TOKEN_NAME; a replay: every answer came from the recorded set, so nothing was sent and nothing was closed; to close for real, run it on your own estate without --replay, on a provider bearer: python3 leavers.py --execute --org <org>
 
 25 call(s), 0 refused; leavers.replay.json written with every estate value replaced; exit 4
 
@@ -393,7 +395,7 @@ Leavers · CLOSE-NOW PLAN, nothing sent · one named account, to be closed witho
     direct role assignments on federated accounts: user-4@domain-1.example.test (Service Broker User)
     user-4@domain-1.example.test: close on request (named with --close-now; Entra was not asked whether the person has left) -> planned: revoke 0 token(s) (DELETE /cloudapi/1.0.0/tokens/{id} each), then disable the account (PUT /cloudapi/1.0.0/users/{id} with enabled false); nothing sent
   totals: keep 0, leaver 0, out of scope 0, undetermined 0, open leavers 0, refused 0, closed 0, not held 0, in step 0, direct role 0, name in use again 0, acknowledged 0, flagged 0
-  exit 0: plan only: nothing was sent and nothing was closed; to close, run it again with --execute
+  exit 0: plan only: nothing was sent and nothing was closed; a replay: every answer came from the recorded set; to close for real, run it on your own estate without --replay, on a provider bearer (under oid, <account> is the object id or the account's id, never a name): python3 leavers.py --close-now --org <org> --user <account> --execute
 
 4 call(s), 0 refused; leavers.replay.json written with every estate value replaced; exit 0
 ```

@@ -988,7 +988,8 @@ class Vcfa:
     def __init__(self, host):
         self.host, self.ctx = host, _ctx()
         # The bearer wins when both are set: every write here was run on a provider bearer, and in the identity-lifecycle
-        # companion a provider API token's bearer was refused an account write that a provider bearer carried.
+        # companion a provider API token's bearer was refused the write that disables a local account, which a provider
+        # bearer carried.
         bearer = _read_file("VCFA_PROVIDER_BEARER_FILE")
         if bearer:
             self.bearer, self.kind = bearer.removeprefix("Bearer ").strip(), "provider bearer"

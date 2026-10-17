@@ -9,7 +9,7 @@ and the probes.
 
 | File | What it is |
 |---|---|
-| `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), every grant saved to a file of your own and two saves compared (`--save-permissions`, `--compare-permissions`), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
+| `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), every grant saved to a file of your own and two saves compared (`--save-permissions`, `--compare-permissions`), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design, each recorded the moment it is made in a ledger of your own, `authz-probe-roles.state.json`). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
 | `authz.json` | That record from the reference estate. The chapter's plates render it. |
 | `replay/authz/` | A recorded answer set made from `authz.json`, every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
 
@@ -31,7 +31,8 @@ failed, so the run exits 3 and names the call, never a pass. The session list is
 not answer, so a replayed run reads none; with the set's `REALM_DOMAIN` it exits 3, as a run without pyVmomi does,
 because whether anyone signs in with the realm's domain is not known. A writing mode runs its plan alone: `--remove`
 with `--execute` sends nothing and stops where its plan reads who is signed in (exit 3), and the probes and
-`--remove-probe-roles`, which write as they go and have no plan, are refused (exit 5). `--save-permissions` writes its
+`--remove-probe-roles`, which write as they go and have no plan, are refused (exit 5), as is `--adopt-probe-role`,
+which reads the role list through pyVmomi. `--save-permissions` writes its
 file from the set's answers. The record goes to `authz.replay.json`, in `OUT_DIR` or the directory you run in, so a
 replayed run never overwrites `authz.json`. The record and a list `--save-permissions` writes under `--replay` carry
 `"replay": true` at the top, so neither passes for a read of an estate: `--compare-permissions` refuses such a file
@@ -259,11 +260,11 @@ The first that applies, so a scheduler reads one state from one number:
 
 | Exit | Means | Do |
 |---|---|---|
-| 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; `--remove-probe-roles` refused (a probe role granted to someone other than its own reserved group, which removing the role would remove too; nothing is sent) or not held (a probe role still listed after it); or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of a probe role, one there before it began included, when it sends nothing) | read the vCenter's permissions before anything else |
+| 2 | a removal (`--remove --execute`) that did not hold on read-back, a named grant still there or another grant moved; `--remove-probe-roles` refused (one of the ledger's roles granted to someone other than its own reserved group, which removing the role would remove too; nothing is sent), not held (a role it removed still listed after it), or leaving a role kept (one of the six names, which the ledger does not name with that role id on that vCenter); or a probe that left residue (its folder, its tag category, a grant it made on the Supervisor VM, or a grant of one of the ledger's roles, one there before it began included, when it sends nothing) | read the vCenter's permissions before anything else; for a kept role, decide whose it is (below) |
 | 1 | the census read realm-spelled grants (only with `REALM_DOMAIN` set, only when every vCenter's session list was read whole, and never while a live session is spelled in it; before a realm there is no such class); with `--compare-permissions`, a grant added, removed or changed on a vCenter both files read | name them with `--where-realm`, remove them with `--remove`; for a compare, read each line and confirm the change was meant |
-| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a list not read whole (a permission list with no permission, an item without its id, an id answered twice, a page that adds nothing), a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing or the run is replayed), a request a `--replay` set holds no answer for, the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run, stopped on an error, or its residue was not read back, a vCenter `--remove-probe-roles` could not finish or read back, or an error the script did not expect; with `--save-permissions`, a list not read whole (nothing written); with `--compare-permissions`, a file unreadable, partial, written by a replayed run (`"replay": true`) or not written by `--save-permissions` (nothing compared), or a vCenter read in one file only | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
+| 3 | a read failed or a result is undetermined: a vCenter refused the session or a page of a list, a list not read whole (a permission list with no permission, an item without its id, an id answered twice, a page that adds nothing), a session list not read whole (refused, holding only the reader's own sessions, or, with `REALM_DOMAIN` set, not read because pyVmomi is missing or the run is replayed), a request a `--replay` set holds no answer for, the domains named no grant on a vCenter, or `REALM_DOMAIN` named none there beside an unplaced domain, or a live session is spelled in `REALM_DOMAIN` (`NOT PLACED`; with `--remove`, nothing is sent), a probe could not run (a role it needs carrying its name and not the ledger's among them: nothing sent), stopped on an error, or its residue was not read back, a vCenter `--remove-probe-roles` could not finish or read back, the ledger unreadable, not one this script wrote, or not written, a vCenter whose instance UUID was not read, or an error the script did not expect; with `--save-permissions`, a list not read whole (nothing written); with `--compare-permissions`, a file unreadable, partial, written by a replayed run (`"replay": true`) or not written by `--save-permissions` (nothing compared), or a vCenter read in one file only | nothing is known about what was not read: fix the read (or the spelling, `DIRECTORY_DOMAINS` or `OTHER_DOMAINS`) and run again |
 | 0 | nothing for a person to act on: every vCenter read and placed (with `REALM_DOMAIN` set, its session list read whole), no realm-spelled grant, every probe clean; with `--remove`, the plan printed or the removal held; with `--save-permissions`, the file written; with `--compare-permissions`, no difference and every vCenter in both files | nothing |
-| 5 | a usage error, found before anything is sent (a missing or wrong argument or variable, an abbreviated flag, since flags are taken whole and `--exec` is not `--execute`, a password file it cannot read, a `REALM_DOMAIN` equal to the broker tenant or to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, a `BROKER_TENANT` equal to a `DIRECTORY_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant (an API client's among them), pyVmomi missing for a step that needs it, `--remove` among them, a `--supervisor-vm` that names no VM or several, looked up before the census and every probe, a `--save-permissions` FILE that exists, has no directory or lies inside the clone, a `--compare-permissions` BEFORE saved after AFTER, a `--replay` directory that cannot be read or holds no replay set, a probe or `--remove-probe-roles` under `--replay`, since each writes as it goes and has no plan to run alone, a Python older than 3.10) | fix the invocation |
+| 5 | a usage error, found before anything is sent (a missing or wrong argument or variable, an abbreviated flag, since flags are taken whole and `--exec` is not `--execute`, a password file it cannot read, a `REALM_DOMAIN` equal to the broker tenant or to a `DIRECTORY_DOMAINS`, `OTHER_DOMAINS` or `LOCAL_DOMAIN` entry, a `BROKER_TENANT` equal to a `DIRECTORY_DOMAINS` or `LOCAL_DOMAIN` entry, `--remove` without `OTHER_DOMAINS` stated, an id `--remove` cannot name as a realm-spelled grant (an API client's among them), pyVmomi missing for a step that needs it, `--remove` among them, a `--supervisor-vm` that names no VM or several, looked up before the census and every probe, a `--save-permissions` FILE that exists, has no directory or lies inside the clone, a `--compare-permissions` BEFORE saved after AFTER, a `--replay` directory that cannot be read or holds no replay set, a probe or `--remove-probe-roles` under `--replay`, since each writes as it goes and has no plan to run alone, an `--adopt-probe-role` under `--replay`, naming a role other than the six or one name twice, with `VC_HOSTS` naming more than one vCenter, or naming a role the vCenter does not list under that name with that id and exactly the name's privileges, a Python older than 3.10) | fix the invocation |
 
 A record refused because an estate value or a password survived the scrub is not written, and it never hides the run's
 result: the run's own code stands when it is 1, 2 or 3, and a run that found nothing to act on exits 3, because nothing
@@ -289,6 +290,49 @@ Each grant a probe makes comes off in a `finally` the moment its case ends, the 
 (deleting the folder does not take them). A probe that meets an error it did not expect stops there: its removals still
 run, its residue is read back into the record (`stopped`), any probe after it is not run, and the run exits 2 for residue
 or 3. A grant it could not take off the Supervisor VM is named on your terminal only, with the command's other residue.
+
+### The probes' roles, and the ledger
+
+The probes keep six roles named `authz-probe-<what it holds>` (below, under Scope, for why). A role carrying one of
+those names is this companion's only when its ledger names it. The ledger is `authz-probe-roles.state.json` beside
+`authz.py`, whatever `OUT_DIR` says, so every run reads the one ledger (`PROBE_LEDGER` names another file), mode 0600
+and yours: git ignores `*.state.json`, and it is never published. It holds each probe role a run created, by vCenter, whole name and role id,
+written the moment the role is made, so a run that stops after a create still leaves it named. It names a vCenter by a
+digest of its instance UUID, never the UUID or the host's name, so an entry is read only on the vCenter that made it.
+
+- A probe reuses, and reconciles to its declared privileges, a role only when the ledger names it on that vCenter with
+  the id the vCenter lists under that name. Where a role the probe needs carries its name and the ledger does not name
+  it so (a role of yours under that name, a role deleted and made again under it, or one a run made before the ledger
+  existed), the probe sends nothing, names the role and its id, and the run exits 3.
+- `--remove-probe-roles` removes only the ledger's roles, by whole name and role id, reads the role list back, and the
+  ledger forgets each one read back gone (and each it named that is no longer listed under its id). A role carrying one
+  of the six names that the ledger does not name with that id is left alone and printed as `KEPT` (exit 2).
+- `--adopt-probe-role NAME=ID` records in the ledger a role a run made before the ledger existed: the record of such a
+  run names its roles without an id (the shipped `authz.json`, from 2026-10-06, is one), so nothing can tell them from a
+  role made again under the name. Run it with `VC_HOSTS` naming that one vCenter. Before the census and every probe, the
+  vCenter must list a role under that name with that id and exactly the privileges the name declares, or the run stops
+  with nothing written (exit 5). It writes the ledger only, never vCenter; the probes and `--remove-probe-roles` in the
+  same run then read the role as the ledger's. Name only a role you know a run of this companion made.
+
+To retire roles a run made before the ledger, take the ids the `KEPT` lines print, then adopt and remove them in one run:
+
+```bash
+python3 authz.py --remove-probe-roles     # prints each role carrying a probe name the ledger does not name, and its id
+python3 authz.py --adopt-probe-role authz-probe-none=<role id> --adopt-probe-role authz-probe-folder-create=<role id> --remove-probe-roles
+```
+
+Expected output of the first command on one vCenter holding two such roles (the ids are placeholders; the ledger's path
+is printed in full on your terminal):
+
+```text
+  probe roles the ledger names (<this folder>/authz-probe-roles.state.json), one vCenter at a time:
+     {{vcenter-1}}: 0 probe role(s) removed, none listed after; 0 reserved group(s) VCF left behind, removed by the vCenter's SSO administrator
+       KEPT: authz-probe-folder-create (role id 1002): the ledger names no authz-probe-folder-create on this vCenter, so it is an operator's role or one a run made before the ledger existed
+       KEPT: authz-probe-none (role id 1001): the ledger names no authz-probe-none on this vCenter, so it is an operator's role or one a run made before the ledger existed
+       a kept role is left alone (exit 2): if a run of this companion made it before the ledger existed, add --adopt-probe-role authz-probe-folder-create=1002 --adopt-probe-role authz-probe-none=1001 to a run whose VC_HOSTS names that vCenter alone; a role of your own under a probe name is yours to rename
+```
+
+Removing a role leaves its reserved group behind (below); removing that takes the vCenter's SSO administrator.
 
 ## What it answers
 
@@ -331,10 +375,11 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
   `--probe-tags` create a folder (and a tag category and tag) and grant roles on them for the length of one case;
   `--supervisor-vm` attaches a throwaway tag to the VM you name and tries grants on it as the administrator, removing
   any it is given. Each removes every grant and object it made except the six probe roles, kept on purpose (below),
-  reads the vCenter back for its folder, its tag category, any grant it made on the VM and every grant of a probe role,
-  and never replaces a permission that already exists (vSphere keeps one per principal per object, so a principal
-  that already holds one is skipped and recorded as skipped). A probe sends nothing while a probe role is already
-  granted to someone other than its reserved group (exit 2): reconciling the role would change what they hold.
+  reads the vCenter back for its folder, its tag category, any grant it made on the VM and every grant of the ledger's
+  roles, and never replaces a permission that already exists (vSphere keeps one per principal per object, so a
+  principal that already holds one is skipped and recorded as skipped). A probe sends nothing while one of the ledger's
+  roles is already granted to someone other than its reserved group (exit 2): reconciling the role would change what
+  they hold.
 - `--remove` was run once, on one 9.1.1 vCenter, on a grant the run made on a folder it made and removed. The pre-realm
   path, which now runs with `--no-realm`, was run (in X-197, as `REALM_DOMAIN` left unset, before a run had to declare
   it) on an estate that has a realm, not on one without. An estate with no realm yet was not run.
@@ -361,16 +406,19 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
   group `vcf_reserved_<role id>` for every role created there, and deleting the role leaves the group behind.
   So the probes use six roles named `authz-probe-<what it holds>`, created the first time they are needed and
   reconciled on every run, instead of creating and deleting roles each time. Their reserved groups hold a
-  grant of a role nobody else is given, which changes no one's access. `--remove-probe-roles` removes them and
-  reports the groups left behind; removing those takes the vCenter's SSO administrator. A role removed takes every
-  grant of it along, so it refuses, with nothing sent, while a probe role is granted to anyone but its own reserved
-  group, and it reads the role list back after (exit 2 for either). A probe role is one of the six names, matched whole,
-  and its own reserved group is `vcf_reserved_<its role id>` in the local domain, matched whole: a role you named
-  `authz-probe-<anything else>` is never reconciled, counted or removed, and a grant to another role's reserved group,
-  or to a directory group of that name, counts as someone's access. It works one vCenter at a time and prints each
-  one's result as it is done, so a run that stops shows which were done; a vCenter it could not finish is recorded with
-  the roles it removed before the error (exit 3). These guards are the script's code and its tests; no run was made
-  with them.
+  grant of a role nobody else is given, which changes no one's access. A role is the companion's only when its ledger
+  names it, by vCenter, whole name and role id (above). `--remove-probe-roles` removes the ledger's roles and reports
+  the groups left behind; removing those takes the vCenter's SSO administrator. A role removed takes every grant of it
+  along, so it refuses, with nothing sent, while one of the ledger's roles is granted to anyone but its own reserved
+  group, and it reads the role list back after (exit 2 for either). A role's own reserved group is
+  `vcf_reserved_<its role id>` in the local domain, matched whole: a role you named `authz-probe-<anything else>` is
+  never reconciled, counted or removed, and a grant to another role's reserved group, or to a directory group of that
+  name, counts as someone's access. It works one vCenter at a time and prints each one's result as it is done, so a run
+  that stops shows which were done; a vCenter it could not finish is recorded with the roles it removed before the
+  error (exit 3). These guards, the ledger and `--adopt-probe-role` are the script's code and its tests; no run was made
+  with them. A read-only read of the reference estate (X-311, 2026-10-17) found the six roles the 2026-10-06 run made
+  still there, five on one management vCenter and one on the workload vCenter, each holding the privileges its name
+  declares and granted to no one but its own reserved group, and each vCenter's instance UUID read as a UUID.
 - The census sorts a local group named `vcf_reserved_` and a role id, matched whole, as a reserved group: a group you
   named with that prefix and anything else is read as `local, other`.
 - A probe that stopped on an error, the `--supervisor-vm` lookup before the census, and `--remove-probe-roles` across
@@ -401,11 +449,16 @@ or 3. A grant it could not take off the Supervisor VM is named on your terminal 
 - `vcenters.<vc>.sessions`: sessions by class, and the local administrator's sessions by client agent; `error` when the
   list was not read whole, `not read: pyVmomi is not installed`, or, in a replayed run's `authz.replay.json`, `not read: a
   replayed run reads no session list (it is read through pyVmomi)`.
-- `probeRoleTeardown.<vc>`: with `--remove-probe-roles`, the roles removed (`removedRoles`), `rolesLeft` on the
-  read-back (`null`: not read back), the reserved groups VCF left, `refused` with nothing sent, or `error` with what was
-  removed before it.
+- `probeRoleTeardown.<vc>`: with `--remove-probe-roles`, the ledger's roles removed (`removedRoles`), `rolesLeft`, how
+  many of them are still listed on the read-back (`null`: not read back), the reserved groups VCF left, `kept` (each
+  role carrying a probe name that the ledger does not name with that id, and why) with `next`, the step for one a run
+  made before the ledger, `alreadyGone` (the ledger's roles no longer listed under their ids, forgotten), `ledger` when
+  the ledger was not written after the removal, `refused` with nothing sent, or `error` with what was removed before it.
+- `probeRoleAdoption.<vc>`: with `--adopt-probe-role`, each role recorded in the ledger (`adopted <name> (role id
+  <id>)`), or already there.
 - `roleDrift`: custom roles whose copies differ between vCenters, with what each copy holds beyond the shared
   set.
 - `grantProbe`, `tagProbe`, `supervisorProbe`: each case, its outcome, and the residue read afterwards (`true` or a
-  count: left behind; `null`: not read back); `aborted` when the probe could not run, or sent nothing; `stopped` when it
-  met an error it did not expect, with only the error's kind (its message is on the terminal).
+  count: left behind; `null`: not read back); `probeRoles`, each role the probe created or reconciled with its role id
+  (a record written before the ledger carries no id); `aborted` when the probe could not run, or sent nothing; `stopped`
+  when it met an error it did not expect, with only the error's kind (its message is on the terminal).

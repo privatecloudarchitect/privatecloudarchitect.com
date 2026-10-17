@@ -204,7 +204,9 @@ Use:  python3 leavers.py                                   report every federate
                                                            dates judged at the time it was recorded; nothing is sent and
                                                            no credential is read, a request the set holds no answer for
                                                            is a read that failed (exit 3), and --execute runs its plan
-                                                           alone (with --close-now too): nothing is closed
+                                                           alone (with --close-now too): nothing is closed, and the
+                                                           plan's last line says it was a replay and, unless a read
+                                                           failed, gives the close for real, run without --replay
 Exit, the first that applies, so a scheduler reads one state from one number:
       2 with --execute, a close that did not hold on read-back, among them a read-back that did not read; under each
         the run prints how to finish it: the close again for that one account by its id (--close-now --org ORG --user
@@ -304,6 +306,12 @@ PAGE_SIZE = 128     # items per page of a cloudapi list asked for; a list is rea
 MAX_PAGES = 10000   # a bound on one list read: a list that has not reached its stated total by then did not read
 SWITCHED_OFF = "federation switched off (OIDC and SAML both disabled)"
 PLAN_ONLY = "plan only: nothing was sent and nothing was closed"
+# Under --replay a writing mode runs its plan alone, so its last line says the run was a replay, never "run it again
+# with --execute" (which would replay the plan again), and gives the close for real as a command the parser accepts
+# (G-463): the set's organizations and accounts are its own placeholders, never the reader's, so it names the reader's.
+REPLAYED = "a replay: every answer came from the recorded set"
+REAL_CLOSE = {"close-now plan": "python3 leavers.py --close-now --org <org> --user <account> --execute",
+              "execute plan": "python3 leavers.py --execute --org <org>"}
 # The urgent close's decision: the plan names what it would do, and only a close that ran says it closed.
 CLOSE_ON_REQUEST, CLOSED_ON_REQUEST = "close on request", "closed on request"
 OID_EXECUTE = ("the organization is keyed on oid, so --execute takes an object id or the account's id "
@@ -2195,9 +2203,23 @@ EXIT_MEANS = {0: "nothing open, nothing unread, nothing flagged", EXIT_OPEN: "an
 
 def exit_means(record: dict) -> str:
     """What the run's exit means, as its last line says it. A --close-now plan that printed exits 0 like a close that
-    held, so its line says it is a plan, and how to close: under oid, by the object id the plan resolved (B11-S4)."""
+    held, so its line says it is a plan, and how to close: under oid, by the object id the plan resolved (B11-S4).
+    A plan run under --replay (--execute's, or --close-now's) says it was a replay, so nothing was sent or closed, and,
+    where the plan's exit leaves a close to run (0, 1 or 4), how to run the close for real: on the reader's own estate,
+    without --replay, as REAL_CLOSE's command, which the parser accepts; after a read that failed (3), no close."""
     code = record.get("exit")
-    if record.get("mode") == "close-now plan" and code == 0:
+    mode = record.get("mode")
+    if record.get("replay") and mode in REAL_CLOSE:
+        plan = mode == "close-now plan" and code == 0
+        said = (PLAN_ONLY + f"; {REPLAYED}" if plan
+                else f"{EXIT_MEANS.get(code, '')}; {REPLAYED}, so nothing was sent and nothing was closed")
+        if code not in (0, EXIT_OPEN, EXIT_FLAGGED):
+            return said
+        key = (" (under oid, <account> is the object id or the account's id, never a name)"
+               if mode == "close-now plan" else "")
+        return (f"{said}; to close for real, run it on your own estate without --replay, on a provider bearer{key}: "
+                + REAL_CLOSE[mode])
+    if mode == "close-now plan" and code == 0:
         m = record.get("user_match") or {}
         oid = m.get("object_id")
         if oid and str(m.get("account") or "").lower() == str(oid).lower():
