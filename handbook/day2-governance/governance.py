@@ -17,12 +17,37 @@ Nothing here writes. Every organization-specific value (names of policies, group
 and every identifier) is replaced by a stable placeholder, and the script refuses to write a record in which
 one survived. Action selectors, schema keys and enum values are the product's own vocabulary and are kept.
 
+Two read-only checks run on their own and write nothing:
+
+  --actions <deployment-id>   reads that deployment's actions as you, every five seconds, until two reads in a row
+                              agree, and prints the count it settled on: the read to trust after a policy change
+  --authority <authority>     says whether an authority is written in a form the decision log holds (its prefix,
+                              its case, the trailing at-sign a group carries), whether the platform's own check
+                              accepts a policy naming it (validationOnly, which creates nothing), and whether any
+                              decision holds a bucket for it yet
+
+Sign-in, one of:
+  VCFA_REFRESH_TOKEN_FILE   a file holding a refresh token minted for the organization, mode 0600
+  VCFA_USER and VCFA_PASSWORD_FILE   a session login as user@org (the password from a file of mode 0600, or
+                            VCFA_PASSWORD, the value itself, which lands in the shell's history)
+A file open to group or other is refused before it is read.
+
 Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-  export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
-  export TLS_VERIFY=false                                  # only on a self-signed lab CA
-  python3 governance.py
+  export VCFA_USER=<account> VCFA_PASSWORD_FILE=~/.vcf/vcfa-password    # or VCFA_REFRESH_TOKEN_FILE
+  export TLS_VERIFY=false                                               # only on a self-signed lab CA
+  python3 governance.py                       # the model, the policies and the decision log
+  python3 governance.py --rehearse            # also the platform's own dry run of one more policy
+  python3 governance.py --actions <deployment-id>
+  python3 governance.py --authority 'GROUP:Engineers@'
+
+Exit: 0 read (for --actions: the count settled; for --authority: well formed and held by a decision)
+      1 --actions: no two reads agreed within a minute; --authority: well formed, no decision holds it yet
+      2 a call failed or the sign-in was refused
+      3 --authority: written in a form the decision log never holds
+      5 an unknown argument, or a flag without its value
 """
+import base64
 import http.client
 import json
 import os
@@ -33,6 +58,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections import Counter
 
 http.client._MAXHEADERS = 1000  # a large cloudapi page answers with more headers than the stdlib allows
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -79,15 +105,52 @@ class Labels:
         return UUID.sub("{{id}}", text)
 
 
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list. A file open to group or other is
+    refused before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
 class Policy:
-    def __init__(self, host, org, refresh_token):
+    def __init__(self, host, org, refresh_token=None, user=None, password=None):
+        """A tenant bearer, from the organization's refresh token or from a session login as user@org. A refused
+        mint ends the run with the server's own answer: "invalid_grant" means the refresh token is dead, a 401 at
+        the session means the login is."""
         self.host = host
-        body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
-        req = urllib.request.Request(
-            f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
-            headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
-        with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
-            self.bearer = json.loads(r.read())["access_token"]
+        if refresh_token:
+            self.kind = "refresh token"
+            body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
+            req = urllib.request.Request(
+                f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
+                headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
+        else:
+            self.kind = "session login"
+            basic = base64.b64encode(f"{user.split('@')[0]}@{org}:{password}".encode()).decode()
+            req = urllib.request.Request(f"https://{host}/cloudapi/1.0.0/sessions", method="POST",
+                                         headers={"Authorization": f"Basic {basic}", "Accept": "application/json;version=40.0"})
+        try:
+            with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                self.bearer = (json.loads(r.read())["access_token"] if refresh_token
+                               else r.headers.get("X-VMWARE-VCLOUD-ACCESS-TOKEN"))
+        except urllib.error.HTTPError as e:
+            print(f"FATAL: the {self.kind} answered HTTP {e.code}: {e.read().decode(errors='replace')[:200]}")
+            sys.exit(2)
+        except (urllib.error.URLError, OSError) as e:
+            print(f"FATAL: the {self.kind} did not answer: {e}")
+            sys.exit(2)
+        if not self.bearer:
+            print(f"FATAL: the {self.kind} answered without a bearer")
+            sys.exit(2)
 
     def get(self, path):
         req = urllib.request.Request(f"https://{self.host}{path}",
@@ -118,11 +181,20 @@ class Policy:
         except (urllib.error.URLError, OSError) as e:
             return None, str(e), {}
 
-    def page(self, path, size=500):
-        st, body = self.get(f"{path}{'&' if '?' in path else '?'}size={size}")
-        if st == 200 and isinstance(body, dict):
-            return st, body.get("content", [])
-        return st, []
+    def page(self, path, size=200):
+        """Every page of a list, in a stable order. The plane serves at most 200 entries a page whatever size is asked
+        for (measured on 9.1.1: size=500 answered 200 of 270 decisions), so one read of a long list is partial; and
+        a list read without a sort has no stable order across pages (one unsorted read of 270 decisions returned 16
+        twice and missed 16), so every page is read sorted by id."""
+        out, number = [], 0
+        while True:
+            st, body = self.get(f"{path}{'&' if '?' in path else '?'}size={size}&page={number}&sort=id,asc")
+            if st != 200 or not isinstance(body, dict):
+                return st, out
+            out += body.get("content") or []
+            number += 1
+            if body.get("last", True) or number >= (body.get("totalPages") or 0):
+                return st, out
 
 
 def action_tree(selectors):
@@ -149,7 +221,7 @@ def action_tree(selectors):
 # naming the decisions it WOULD have produced, one per target the policy would touch. That is the only way to see
 # the regime flip and the union before they are real. This function sends that call with a grant naming a group
 # that exists nowhere, reads the rehearsal back, and then re-reads the policy list to prove nothing was created.
-def rehearse(c, org_id, project_id, L):
+def rehearse(c, org_id, project_id, L, decisions=()):
     """Ask what one more policy would do. Returns (summary, None) or (None, why)."""
     st, before = c.page("/policy/api/policies")
     if st != 200:
@@ -176,14 +248,150 @@ def rehearse(c, org_id, project_id, L):
     created = [p for p in after if p.get("name") == probe_name]
     if created:
         raise SystemExit("FATAL: the dry run created a policy; delete it by hand and do not trust this path")
+    # How many policies apply to each rehearsed target today, read from the decision log: the number the rehearsed
+    # count is to be compared with (the length of the organization's whole policy list is a different number).
+    today = {d.get("targetId"): len(d.get("policies") or []) for d in decisions}
     return {"targetsAffected": len({d.get("targetId") for d in rehearsed}),
             "policiesBefore": len(before), "policiesAfter": len(after),
             "wouldApplyPerTarget": sorted({len(d.get("policies") or []) for d in rehearsed}),
+            "applyTodayPerTarget": sorted({today[d.get("targetId")] for d in rehearsed if d.get("targetId") in today}),
+            "targetsWithoutADecisionToday": sum(1 for d in rehearsed if d.get("targetId") not in today),
             "sample": ([{"policiesThatWouldApply": len(rehearsed[0].get("policies") or []),
                          "wouldBecome": [{"authorities": [L.scrub(a) for a in (e.get("authorities") or [])],
                                           "actions": e.get("actions") or []}
                                          for e in ((rehearsed[0].get("effectivePolicyDefinition") or {}).get("allowedActions") or [])]}]
                        if rehearsed else [])}, None
+
+
+def held_authorities(decisions):
+    """Every authority the plane wrote into a decision's effective definition."""
+    return [a for d in decisions for e in ((d.get("effectivePolicyDefinition") or {}).get("allowedActions") or [])
+            for a in (e.get("authorities") or [])]
+
+
+def authority_forms(held):
+    """The forms the decision log writes authorities in, counted: prefixes, names in lower case, the trailing at-sign.
+    The prefix itself is always written in capitals, so case is judged on the name after it."""
+    def prefix(a):
+        return a.split(":", 1)[0].upper() if ":" in a else "(none)"
+    return {"total": len(held),
+            "byPrefix": dict(sorted(Counter(prefix(a) for a in held).items())),
+            "trailingAt": dict(sorted(Counter(prefix(a) for a in held if a.endswith("@")).items())),
+            "lowercaseNames": sum(1 for a in held if a.split(":", 1)[-1] == a.split(":", 1)[-1].lower())}
+
+
+def bucket_shapes(decisions):
+    """The buckets the plane computed, by shape: an empty action list (an explicit deny) and a named action beside the
+    star that already covers it (inert until the star narrows)."""
+    buckets = [e for d in decisions for e in ((d.get("effectivePolicyDefinition") or {}).get("allowedActions") or [])]
+    acts = [e.get("actions") or [] for e in buckets]
+    return {"buckets": len(buckets), "emptyActions": sum(1 for a in acts if not a),
+            "namedBesideStar": sum(1 for a in acts if "*" in a and len(a) > 1),
+            "decisionsWithEmptyActions": sum(1 for d in decisions if any(not (e.get("actions") or []) for e in
+                                             ((d.get("effectivePolicyDefinition") or {}).get("allowedActions") or [])))}
+
+
+def rank_order(decisions):
+    """Whether an organization-scoped policy is ranked ahead of every project-scoped one, counted over the log."""
+    def scoped(p):
+        return "project" if p.get("projectId") else "organization"
+    with_policies = [d for d in decisions if d.get("policies")]
+    both = [d for d in with_policies if {scoped(p) for p in d["policies"]} == {"organization", "project"}]
+    org_first = [d for d in both
+                 if max(p.get("rank", 0) for p in d["policies"] if scoped(p) == "organization")
+                 < min(p.get("rank", 0) for p in d["policies"] if scoped(p) == "project")]
+    project_only_first = [d for d in with_policies if all(scoped(p) == "project" for p in d["policies"])
+                          and any(p.get("rank") == 1 for p in d["policies"])]
+    return {"decisionsWithPolicies": len(with_policies), "bothScopes": len(both),
+            "organizationRankedFirst": len(org_first),
+            "projectHoldsRankOneWithNoOrganizationPolicy": len(project_only_first)}
+
+
+def settle_actions(c, deployment, every=5, limit=60):
+    """Read one deployment's actions as the signed-in principal until two reads in a row agree."""
+    print("governance.py: the actions you hold on one deployment, read until two reads in a row agree\n")
+    t0, last = time.time(), None
+    while True:
+        st, acts = c.get(f"/deployment/api/deployments/{urllib.parse.quote(deployment, safe='')}/actions")
+        if st != 200 or not isinstance(acts, list):
+            print(f"FATAL: the actions read answered HTTP {st}")
+            return 2
+        valid = sorted(a.get("name") or a.get("id") or "?" for a in acts if a.get("valid"))
+        print(f"  {round(time.time() - t0):>3} s   {len(valid)} of {len(acts)} actions valid for you")
+        if last is not None and len(valid) == last:
+            print(f"\n  settled at {len(valid)} after {round(time.time() - t0)} s: this is the count to trust")
+            print("  valid: " + (", ".join(valid) or "none"))
+            return 0
+        last = len(valid)
+        if time.time() - t0 + every > limit:
+            print(f"\n  no two reads agreed within {limit} s: the change is still propagating, read again")
+            return 1
+        time.sleep(every)
+
+
+def validate_only(c, text, org_id, project_id):
+    """The platform's own check of a body naming this authority, sent with validationOnly, which creates nothing:
+    the policy list is read before and after, and the run stops hard if it changed."""
+    st0, before = c.page("/policy/api/policies")
+    probe = "zz-validation-that-is-never-created"
+    body = {"name": probe, "typeId": ACTION_TYPE, "enforcementType": "HARD", "orgId": org_id, "projectId": project_id,
+            "definition": {"allowedActions": [{"actions": ["Deployment.PowerOn"], "authorities": [text]}]}}
+    st, answer, _ = c.send("POST", "/policy/api/policies?validationOnly=true", body)
+    st1, after = c.page("/policy/api/policies")
+    if st0 != 200 or st1 != 200 or len(after) != len(before) or any(p.get("name") == probe for p in after):
+        raise SystemExit("FATAL: the policy list changed across a validation-only call, or could not be read; "
+                         "check it by hand and do not trust this path")
+    return st, answer
+
+
+def check_authority(text, decisions, c=None, scope=None):
+    """Is this authority written in a form the decision log holds, does the platform's own check accept it, and does a
+    decision hold a bucket for it yet?"""
+    held = held_authorities(decisions)
+    forms = authority_forms(held)
+    print("governance.py: one authority, checked against the forms the decision log holds\n")
+    print(f"  the log holds {forms['total']} authorities in {len(decisions)} decisions; prefixes "
+          + ", ".join(f"{k}: {v}" for k, v in forms["byPrefix"].items())
+          + "; with a trailing at-sign " + (", ".join(f"{k}: {v}" for k, v in forms["trailingAt"].items()) or "none")
+          + f"; names in lower case {forms['lowercaseNames']} of {forms['total']}")
+    prefix, sep, name = text.partition(":")
+    pfx, problems = prefix.upper(), []
+    if not sep or pfx not in forms["byPrefix"]:
+        problems.append(f"its prefix ({prefix + ':' if sep else 'none'}) is not one the log holds")
+    else:
+        total, at = forms["byPrefix"][pfx], forms["trailingAt"].get(pfx, 0)
+        if at == total and not name.endswith("@"):
+            problems.append(f"every {pfx}: authority the log holds ends in an at-sign, and this one does not")
+        if at == 0 and name.endswith("@"):
+            problems.append(f"no {pfx}: authority the log holds ends in an at-sign, and this one does")
+    if c is not None and scope:
+        st, answer = validate_only(c, text, *scope)
+        if st == 200:
+            print("  the platform's own check (validationOnly) accepted a policy naming it, and created nothing")
+        elif st and 400 <= st < 500:
+            print(f"  the platform's own check (validationOnly) refused it with HTTP {st}: "
+                  + UUID.sub("{{id}}", str(answer))[:200])
+        else:
+            print(f"FATAL: the validation-only call answered HTTP {st}")
+            return 2
+    else:
+        print("  the platform's own check was not asked: no project-scoped policy to borrow an organization and project from")
+    if problems:
+        for why in problems:
+            print(f"  not a form the log holds: {why}")
+        print("  a policy naming it would match nobody")
+        return 3
+    lower = forms["lowercaseNames"] == forms["total"]
+    held_as = f"{pfx}:{name.lower()}" if lower else text
+    present = any(a == held_as or (not lower and a.lower() == text.lower()) for a in held)
+    if lower and held_as != text:
+        print(f"  the log stores every name in lower case, so this one is held as {held_as}")
+    if present:
+        print("  a decision holds a bucket for it: it matches")
+        return 0
+    print("  well formed, and no decision holds a bucket for it yet: a grant not written yet, or a principal "
+          "that matches nobody")
+    return 1
 
 
 def refuse_unknown_args(known, takes_value=()):
@@ -195,15 +403,39 @@ def refuse_unknown_args(known, takes_value=()):
         sys.exit(0)
     unknown = [a for i, a in enumerate(args) if a not in known and not (i and args[i - 1] in takes_value)]
     if unknown:
-        sys.exit(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)")
+        print(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)", file=sys.stderr)
+        sys.exit(5)
 
 
 def main():
-    refuse_unknown_args({"--rehearse"})
+    refuse_unknown_args({"--rehearse", "--actions", "--authority"}, takes_value=("--actions", "--authority"))
+    for flag in ("--actions", "--authority"):
+        if flag in sys.argv and sys.argv.index(flag) + 1 >= len(sys.argv):
+            print(f"{flag} takes a value (see --help)", file=sys.stderr)
+            sys.exit(5)
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
+    try:
+        refresh, password = secret("VCFA_REFRESH_TOKEN"), secret("VCFA_PASSWORD")
+    except OSError as e:   # a secret file that is missing, unreadable or open to group or other
+        print(f"FATAL: {e}")
+        sys.exit(2)
+    user = os.environ.get("VCFA_USER")
+    if not refresh and not (user and password):
+        print("FATAL: set VCFA_REFRESH_TOKEN_FILE, or VCFA_USER with VCFA_PASSWORD_FILE (see --help)")
+        sys.exit(2)
     out_dir = os.environ.get("OUT_DIR", ".")
-    c = Policy(host, org, refresh)
+    c = Policy(host, org, refresh, None if refresh else user, None if refresh else password)
+    if "--actions" in sys.argv:
+        sys.exit(settle_actions(c, sys.argv[sys.argv.index("--actions") + 1]))
+    if "--authority" in sys.argv:
+        st, decisions = c.page("/policy/api/policyDecisions")
+        if st != 200:
+            print(f"FATAL: the decision log answered HTTP {st}")
+            sys.exit(2)
+        st, pols = c.page("/policy/api/policies")
+        scoped = next((p for p in pols if p.get("projectId")), None) if st == 200 else None
+        scope = (scoped.get("orgId"), scoped.get("projectId")) if scoped else None
+        sys.exit(check_authority(sys.argv[sys.argv.index("--authority") + 1], decisions, c, scope))
     L = Labels()
     print("governance.py: the policy model, read from the platform through the policy plane, read-only\n")
 
@@ -253,13 +485,15 @@ def main():
         L.get("policy", p.get("name", ""))
         held.append({"type": p.get("typeId"), "scope": "project" if p.get("projectId") else "organization",
                      "enforcement": p.get("enforcementType")})
-    from collections import Counter
     print(f"\n  policies held: {len(held)}")
     print(f"     by type: {dict(Counter(h['type'].split('.')[-1] for h in held))}")
     print(f"     by scope: {dict(Counter(h['scope'] for h in held))}   by enforcement: {dict(Counter(h['enforcement'] for h in held))}")
 
     # ---- 4. the decision log: the composition rule, stated by the thing that performs it
     st, decisions = c.page("/policy/api/policyDecisions")
+    if st != 200:
+        print(f"FATAL: the decision log answered HTTP {st}")
+        sys.exit(2)
     st_all, all_page = c.get("/policy/api/policyDecisions?size=1")
     total_decisions = (all_page or {}).get("totalElements") if isinstance(all_page, dict) else None
     for d in decisions:
@@ -274,6 +508,14 @@ def main():
     print(f"\n  decisions read: {len(decisions)} of {total_decisions} held, over {len({d.get('targetId') for d in decisions})} target(s)")
     print(f"     policies applied per decision: {dict(sorted(applied.items()))}")
     print(f"     ranks the plane assigned:      {dict(sorted(ranks.items()))}")
+    forms, order, shapes = authority_forms(held_authorities(decisions)), rank_order(decisions), bucket_shapes(decisions)
+    print(f"     authorities written: {forms['total']}, by prefix {forms['byPrefix']}, with a trailing at-sign "
+          f"{forms['trailingAt']}, names in lower case {forms['lowercaseNames']}")
+    print(f"     decisions with both scopes: {order['bothScopes']}, the organization ranked first in "
+          f"{order['organizationRankedFirst']}; a project policy at rank 1 with no organization policy: "
+          f"{order['projectHoldsRankOneWithNoOrganizationPolicy']} of {order['decisionsWithPolicies']}")
+    print(f"     buckets computed: {shapes['buckets']}; an empty action list {shapes['emptyActions']} "
+          f"(in {shapes['decisionsWithEmptyActions']} decisions); a named action beside the star {shapes['namedBesideStar']}")
 
     def shape(d):
         """One decision, structurally: what applied, at what rank, and what it computed."""
@@ -306,11 +548,12 @@ def main():
             print("\n  rehearsal: skipped (no project-scoped policy to borrow an organization and project from)")
         else:
             print("\n  rehearsal: asking what one more policy would do, without creating it")
-            rehearsal, why = rehearse(c, scoped.get("orgId"), scoped.get("projectId"), L)
+            rehearsal, why = rehearse(c, scoped.get("orgId"), scoped.get("projectId"), L, decisions)
             if rehearsal is None:
                 print(f"     skipped: {why}")
             else:
-                print(f"     it would touch {rehearsal['targetsAffected']} target(s); policies applying per target would be {rehearsal['wouldApplyPerTarget']}")
+                print(f"     it would touch {rehearsal['targetsAffected']} target(s); policies applying per target would be "
+                      f"{rehearsal['wouldApplyPerTarget']}, where {rehearsal['applyTodayPerTarget']} apply today")
                 print(f"     the policy list is {rehearsal['policiesBefore']} before and {rehearsal['policiesAfter']} after: nothing was created")
     elif pols:
         print("\n  rehearsal: not asked (pass --rehearse to run the platform's own dry run; see the README)")
@@ -336,7 +579,8 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     records = {
         "policy-model.json": {"captured_utc": stamp, "types": model, "actionSelectors": {"count": len(selectors), "tree": tree}},
-        "decisions.json": {"captured_utc": stamp, "decisions": len(decisions), "decisionsHeld": total_decisions,
+        "decisions.json": {"captured_utc": stamp, "signIn": c.kind, "decisions": len(decisions), "decisionsHeld": total_decisions,
+                           "authorityForms": forms, "rankOrder": order, "bucketShapes": shapes,
                            "targets": len({d.get("targetId") for d in decisions}),
                            "policiesAppliedPerDecision": {str(k): v for k, v in sorted(applied.items())},
                            "ranksAssigned": {str(k): v for k, v in sorted(ranks.items())},
@@ -347,8 +591,8 @@ def main():
     }
     for fname, payload in records.items():
         text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
-        for secret in (c.bearer, refresh, host, org):
-            assert secret not in text, f"an estate value reached {fname}"
+        for value in (c.bearer, refresh, password, user, host, org):
+            assert not value or value not in text, f"an estate value reached {fname}"
         bare = re.sub(r"\{\{[^}]*\}\}", "", text)
         for fam, m in L.maps.items():
             for name in m:

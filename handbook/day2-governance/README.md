@@ -6,7 +6,9 @@ The runnable companion to
 Two HARD Day-2 action policies, shipped as one change, named per the sheet's convention.
 
 **Provenance:** the policy type, body shape, and regime flip were proven on a live VCF 9.1 estate
-(All Apps), 2026-08-08 through 2026-08-11.
+(All Apps), 2026-08-08 through 2026-08-11. The policy model, the decision log, the dry run, the two checks and the
+platform's validation answers were read again on VCF Automation 9.1.1.0100 on 2026-10-18
+([`expected-output.md`](expected-output.md)).
 
 ## What is here
 
@@ -15,17 +17,30 @@ Two HARD Day-2 action policies, shipped as one change, named per the sheet's con
 | 1 | [`governance.py`](governance.py) | Read-only. Asks the policy plane to describe itself: the types this build declares, the three schemas each publishes, the capability flags and limits that make them unequal, the action selectors and the tree their wildcards form, the policies your organization holds, and the decision log with the rank the plane gave each applied policy and the effective definition it computed. Writes two records with every organization value replaced by a placeholder. |
 | 2 | `--rehearse` | Optional. Runs the platform's own dry run of one more policy, reads back the decisions it would have produced, and proves the policy list is unchanged. |
 | 3 | [`policies/`](policies/) | The two-policy first change, as importable bodies. |
+| 4 | `--actions <deployment-id>` | Read-only. Reads one deployment's actions as you until two reads five seconds apart agree, and prints the count it settled on: the read to trust after a policy change. |
+| 5 | `--authority <authority>` | Holds one authority against the forms the decision log writes (prefix, case, the group's trailing `@`), sends it through the platform's own check with `validationOnly`, which creates nothing, and says whether any decision holds a bucket for it yet. |
 
 ```bash
-export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token      # mode 0600
+export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org> VCFA_USER=<account>
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vcfa-password )   # paste your password, then Ctrl-D
+export VCFA_PASSWORD_FILE=~/.vcf/vcfa-password             # mode 0600; or VCFA_REFRESH_TOKEN_FILE
 export TLS_VERIFY=false                                    # only on a self-signed lab CA
 
-python3 governance.py                # read-only
-python3 governance.py --rehearse     # also ask what one more policy would do
+python3 governance.py                          # read-only
+python3 governance.py --rehearse               # also ask what one more policy would do
+python3 governance.py --actions <deployment-id>
+python3 governance.py --authority 'GROUP:Engineers@'
 ```
 
-`policy-model.json` and `decisions.json` are what it writes, and the chapter's plates render them.
+The sign-in is a session login as `<account>@<org>`, or a refresh token minted for the organization in a file of
+mode 0600. A secret file open to group or other is refused before it is read. Exit codes: 0 read (for `--actions`
+the count settled, for `--authority` well formed and held by a decision); 1 for `--actions` no two reads agreed
+within a minute, for `--authority` well formed and held by no decision yet; 2 a call failed or the sign-in was
+refused; 3 for `--authority` a form the decision log never holds; 5 an unknown argument.
+
+`policy-model.json` and `decisions.json` are what it writes, and the chapter's plates render them. The decision
+log is read in full, every page sorted by id: the plane serves at most 200 entries a page, and a read without a
+sort has no stable order across pages.
 
 ### About `--rehearse`
 
@@ -36,11 +51,14 @@ useful call on this API.
 
 The flag sends that call with a grant naming a group that exists nowhere, follows the location, and reports how
 many targets would be affected and how many policies would then apply to each. It then re-reads the policy list
-and **stops hard if anything was created**. On the reference estate: 8 targets affected, 4 policies applying
-where 3 apply today, policy list 3 before and 3 after.
+and **stops hard if anything was created**. It compares each affected target with how many policies apply to it
+today, read from the decision log; the reference estate's numbers are in
+[`expected-output.md`](expected-output.md).
 
-There is a narrower mode the script does not use, worth knowing about: `?validationOnly=true` checks the policy
-body and returns it without creating anything, which is the cheap gate for a pipeline.
+There is a narrower mode, `?validationOnly=true`, which checks the policy body and returns it without creating
+anything: the cheap gate for a pipeline. `--authority` uses it. It refuses an action that exists nowhere and a
+missing required field by name, and accepts an authority with no prefix, which is why the authority needs its
+own check.
 
 ## Why two policies travel together
 
@@ -77,11 +95,12 @@ Field notes, all proven on the reference build:
 
 ## Verification
 
-Effects settle in roughly 16 to 20 seconds; a read inside that window reports the previous
-regime. Then read the action count as an affected principal, under their own session:
+Effects settled in roughly 16 to 20 seconds on the reference estate in August 2026; a read inside that window
+reports the previous regime. Read the action count as an affected principal, under their own session, until two
+reads agree:
 
 ```
-GET /deployment/api/deployments/<deployment-id>/actions
+python3 governance.py --actions <deployment-id>      # GET /deployment/api/deployments/<id>/actions, until stable
 ```
 
 Expected after this pair lands: tenant-group members hold the full set on their own deployments,
