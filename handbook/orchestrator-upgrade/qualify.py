@@ -342,7 +342,7 @@ def main() -> int:
                 raise RuntimeError(f"environment create answered {status}: {str(env)[:200]}")
             run.add(f"environment {i}", env["id"], f"/environments/{env['id']}")
             t0, last, settled = time.time(), None, None
-            while time.time() - t0 <= a.timeout:
+            while True:   # read before the clock is checked: every wait reads at least once
                 _, d, _ = dst.call("GET", f"/environments/{env['id']}")
                 st = str((d or {}).get("status") if isinstance(d, dict) else "")
                 if st != last:
@@ -352,6 +352,8 @@ def main() -> int:
                 # (measured: pykerberos on python:3.14 reached it in 11 s and held it); it ends the wait.
                 if st == "UP_TO_DATE" or any(w in st for w in ("FAIL", "ERROR", "STALE")):
                     settled = st
+                    break
+                if time.time() - t0 >= a.timeout:
                     break
                 time.sleep(10)
             built = settled == "UP_TO_DATE"
