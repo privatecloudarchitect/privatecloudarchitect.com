@@ -103,9 +103,10 @@ def _fmt(d: dt.timedelta) -> str:
     return f"{secs}s"
 
 
-def report(claims: dict) -> int:
-    """Print the reading. Returns 0 if the token is usable, 1 if it is not, 3 if it carries no `exp` to say."""
-    c, who = clocks(claims), identity(claims)
+def report(claims: dict, now: dt.datetime | None = None) -> int:
+    """Print the reading. Returns 0 if the token is usable, 1 if it is not, 3 if it carries no `exp` to say. `now` is
+    the moment the clocks are read at (the time now when it is not given), so a reading can be shown as it was taken."""
+    c, who = clocks(claims, now), identity(claims)
 
     print("Who it says you are")
     for k in ("subject", "issuer", "audience", "tenant", "client"):

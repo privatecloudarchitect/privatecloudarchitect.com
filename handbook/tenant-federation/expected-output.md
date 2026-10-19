@@ -359,7 +359,7 @@ This proves the organization's side. That each imported group is a group assigne
 Then prove it in a browser, at https://<automation-host>/tenant/<org>:
   - An entitled test user signs in through a browser and holds its group's role
   - A test user in no assigned group is refused at Entra with AADSTS50105
-  - The new user's stored email is its address, and a round-trip update of its record succeeds
+  - The new user's stored email is its address, and a round-trip update of its record succeeds, at a sign-in made once the app's assertion carries the email claim; where the stored email is not an address or the round trip is refused on the email, sign in again later and repeat both: a user stored with its NameID as its email was corrected at its next sign-in once the claim arrived
   - After any settings change, several sign-ins spread over minutes
 
 recorded 11 steps to prove.replay.json; every estate value replaced by a placeholder

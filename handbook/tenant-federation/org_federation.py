@@ -452,7 +452,17 @@ def proof_checklist(protocol):
         "After any settings change, several sign-ins spread over minutes",
     ]
     if protocol == "saml":
-        out.insert(2, "The new user's stored email is its address, and a round-trip update of its record succeeds")
+        # The step holds only once the app's assertion carries the email claim (C-192). A custom claims policy's claim was
+        # first seen 31 s after it was added in one run (C-192's timing), and was not in the assertion of a sign-in about a
+        # minute after the policy was written in another, whose stored email --prove then read as not an address (C-437,
+        # X-252 /steps/1d-entitled/saml/email_claim_present, /steps/1f-saml-prove/record/steps/0/saml_emails); in X-306 and
+        # X-320 the record of a user who had signed in after the --execute build, written back as the close writes it, was
+        # refused on its email field (/steps/2/disable/put_message). A user stored with its NameID as its email was
+        # corrected at its next sign-in once the claim arrived (C-192).
+        out.insert(2, "The new user's stored email is its address, and a round-trip update of its record succeeds, at a "
+                      "sign-in made once the app's assertion carries the email claim; where the stored email is not an "
+                      "address or the round trip is refused on the email, sign in again later and repeat both: a user "
+                      "stored with its NameID as its email was corrected at its next sign-in once the claim arrived")
     return out
 
 
