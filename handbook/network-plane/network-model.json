@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T07:08:08Z",
+ "captured_utc": "2026-10-19T16:15:50Z",
  "catalog": [
   {
    "group": "networking.k8s.io",
@@ -74,6 +74,15 @@
    "group": "vpc.nsx.vmware.com",
    "kind": "DistributedVLANConnection",
    "resource": "distributedvlanconnections",
+   "scope": "top level",
+   "writable": false,
+   "family": "the chain",
+   "held": 0
+  },
+  {
+   "group": "vpc.nsx.vmware.com",
+   "kind": "DistributedVXLANConnection",
+   "resource": "distributedvxlanconnections",
    "scope": "top level",
    "writable": false,
    "family": "the chain",
@@ -483,6 +492,7 @@
    "family": "the chain",
    "kinds": [
     "DistributedVLANConnection",
+    "DistributedVXLANConnection",
     "GatewayConnection",
     "Subnet",
     "TGWAttachment",
@@ -730,35 +740,127 @@
   {
    "name": "{{netobj-5}}",
    "isDefault": true,
-   "strategy": "none"
+   "strategies": [
+    "none"
+   ],
+   "northSouth": false
   },
   {
    "name": "{{netobj-7}}",
    "isDefault": false,
-   "strategy": "vpc-isolation"
+   "strategies": [
+    "vpc-isolation"
+   ],
+   "northSouth": false
   },
   {
    "name": "{{netobj-8}}",
    "isDefault": false,
-   "strategy": "vpc-isolation-with-essential-services"
+   "strategies": [
+    "vpc-isolation-with-essential-services"
+   ],
+   "northSouth": false
   },
   {
    "name": "{{netobj-9}}",
    "isDefault": false,
-   "strategy": "vpc-external-connectivity"
+   "strategies": [
+    "vpc-external-connectivity"
+   ],
+   "northSouth": false
   },
   {
    "name": "{{netobj-10}}",
    "isDefault": false,
-   "strategy": "vpc-secure-connection"
+   "strategies": [
+    "vpc-secure-connection"
+   ],
+   "northSouth": false
   }
  ],
  "attached": [
   {
    "vpc": "{{netobj-4}}",
    "profile": "{{netobj-5}}",
-   "strategy": "none"
+   "strategies": [
+    "none"
+   ],
+   "isDefault": true,
+   "created": "2026-06-12T14:53:52Z"
   }
  ],
- "predefinedServices": 415
+ "entitlement": [
+  {
+   "type": "DistributedVXLANConnection",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "Firewall.DistributedFirewall",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "Firewall.TransitGatewayFirewall",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "Firewall.VPCGatewayFirewall",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "Firewall.VPCSecurityProfile",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "IPAM.IPAllocation",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "IPAM.MultipleCIDRsPerIPBlock",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "IPSecVPN",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "NetworkSecurityGroup",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "StatelessFirewall",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "Subnet",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "TransitGateway.Manage",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "TransitGateway.NAT",
+   "state": true,
+   "reason": null
+  },
+  {
+   "type": "TransitGateway.StaticRoute",
+   "state": true,
+   "reason": null
+  }
+ ],
+ "predefinedServices": 415,
+ "signIn": "session login"
 }

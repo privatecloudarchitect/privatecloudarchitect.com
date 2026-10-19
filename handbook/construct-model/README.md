@@ -19,10 +19,9 @@ plates are rendered from the records in this folder; run the script and you have
 ## Run it
 
 ```bash
-export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token      # mode 0600; the api-token minted in the console for that org
-# or, with nothing pre-minted, a session login as <account>@<org>:
-#   export VCFA_USER=<account> && read -rs VCFA_PASSWORD && export VCFA_PASSWORD
+export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org> VCFA_USER=<account>
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vcfa-password )   # paste your password, then Ctrl-D
+export VCFA_PASSWORD_FILE=~/.vcf/vcfa-password             # mode 0600; or VCFA_REFRESH_TOKEN_FILE, an api-token for that org
 export TLS_VERIFY=false                                    # only on a self-signed lab CA
 export OUT_DIR=.
 

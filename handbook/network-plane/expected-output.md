@@ -1,17 +1,15 @@
 # What `network.py` prints
 
-One VCF 9.1 organization, 2026-09-17. Your counts will differ; the shapes should not.
-
-The addresses below are documentation ranges. The script discovers every distinct network as it reads, assigns
-each one a range reserved for documentation at the same prefix length, and names none of them in its own source.
-It prints your real ranges on screen and substitutes only in the records it writes, so what you see when you run
-it will be yours.
+Run against one VCF Automation 9.1.1.0100 organization on 2026-10-19, signed in with a session login, with
+`--publishable`, so every address below is the documentation range the records carry in place of the estate's
+own. Without the flag your own ranges print on screen; the records are substituted either way. Your counts will
+differ; the shapes should not.
 
 ```
 network.py: the network plane, read from the platform through the Cloud Consumption Interface
 
-  catalog: 54 networking kinds across 3 groups; 46 of them in the VPC group alone
-     the chain                   8 kinds, 7 with anything on this estate
+  catalog: 55 networking kinds across 3 groups; 47 of them in the VPC group alone
+     the chain                   9 kinds, 7 with anything on this estate
      addressing                  6 kinds, 3 with anything on this estate
      security                    8 kinds, 6 with anything on this estate
      routing and translation     4 kinds, 2 with anything on this estate
@@ -28,6 +26,9 @@ network.py: the network plane, read from the platform through the Cloud Consumpt
      transit gateway carries its own space: ['198.19.0.0/21']
 
   subnets: 3; the platform documents 3 access modes: Public, PrivateTGW, Private
+     {{netobj-11}}                              accessMode=Public      VLAN
+     {{netobj-12}}                              accessMode=Public      VLAN
+     {{netobj-13}}                              accessMode=Private     overlay
 
   the isolation dial: 5 strategies the platform ships, 5 profiles in this region
      none                                     0 rule(s) [no rules]
@@ -35,45 +36,31 @@ network.py: the network plane, read from the platform through the Cloud Consumpt
      vpc-isolation                            2 rule(s) [Drop/JumpToApplication]
      vpc-isolation-with-essential-services    3 rule(s) [Drop/JumpToApplication]
      vpc-secure-connection                    3 rule(s) [Drop/JumpToApplication]
-     ATTACHED: the VPC runs the none strategy
+     ATTACHED: the VPC's profile carries none (the default profile)
+     the region: 14 networking capabilities, 0 not enabled
 
   egress: 1 translation rule(s), 1 allocated address(es), 415 predefined services rules can name
+     the interface documents 5 NAT actions, and declares create on rules: True, on address allocations: True
      SNAT 192.0.2.0/16 -> 198.18.0.0 (system owned: True)
      the gateway advertises private space: False; its own SNAT: False
+
+  the walk, from each VPC's subnets outward:
+     3 subnet(s) -> VPC {{netobj-4}} -> attachment {{netobj-14}} -> profile {{netobj-5}} -> transit gateway {{netobj-5}} -> attachment {{netobj-15}} -> gateway connection {{netobj-6}}
+
+wrote network-model.json (55 kinds, 5 strategies) and chain.json (3 blocks, 3 subnets); every organization name replaced by a placeholder
 ```
 
-## Reading it
+## What each block tells you
 
-**The catalog.** Forty-six kinds in one group is more than anyone holds in their head, and the second number
-in each family row is why that is fine: most of the declared surface has nothing on it. The two rows worth
-pausing on are `bound under a project`, which is the only place a tenant creates anything, and
-`the write surface`, which exists because the group declares read and write as separate kinds.
-
-**The chain.** Three blocks, and the `visibility` on each is what the connectivity profile turns into a
-purpose. One is External, one is the VPC's own Private space and is system owned, and one is the Private block
-the transit gateway draws from. The transit gateway's own space is separate again, which is why a capture
-between two of your own workloads can show a range you do not recognize.
-
-**The subnets.** The access mode on a subnet decides two things at once: how far it can be reached, and which
-of those blocks its addresses come from. Auditing what the outside can reach is therefore one read filtered on
-`accessMode == "Public"`, not a routing exercise.
-
-**The dial.** Five strategies, ordered here alphabetically rather than by strictness. From most open to most
-closed they run: `none`, `vpc-secure-connection`, `vpc-external-connectivity`,
-`vpc-isolation-with-essential-services`, `vpc-isolation`. Each carries rule templates whose group names are
-substituted when the strategy is attached, and every one but `none` ends in a drop, so its other rules are the
-whole of what is permitted.
-
-**Egress.** The whole VPC translates to a single external address by a rule the system created, and the
-gateway connection advertises the external block while leaving private space unannounced. Under that default
-rule, per-workload source attribution outside the VPC does not exist, whatever a downstream log appears to show;
-a workload that needs an external identity of its own gets a one-to-one rule, which a tenant may create.
-
-## What this does not tell you
-
-- Whether a VPC per tenant or an NSX project per organization is the right shape. That is a design decision the
-  chapter's last plate covers, and no read answers it.
-- What is reachable inside the VPC. Every position on the dial lets workloads inside a VPC talk to each other;
-  segmentation within the boundary is a different control and a different chapter.
-- The pod and service ranges your Kubernetes clusters use. Those are declared per cluster and are not drawn from
-  any block above, so nothing in this plane holds a register of them and two clusters may pick the same range.
+- **catalog**: the networking kinds the build declares, the VPC group's held as families, and how many in each
+  family have anything on the estate. A kind the grouping does not know is printed by name.
+- **the chain**: the IP blocks with the visibility each carries, and the transit gateway's own space.
+- **subnets**: each subnet's access mode and backing, and the access modes the subnet schema documents.
+- **the isolation dial**: the strategies the platform ships, the strategy the attached profile carries (read
+  from the profile's `eastWestFirewall.securityStrategies`), and the region's networking capabilities, any that
+  are not enabled printed with the reason.
+- **egress**: the translation rule and the address it maps onto, the NAT actions the schema documents, the verbs
+  the interface declares on rules and address allocations (a declared verb is not a permission), and the gateway
+  connection's two switches.
+- **the walk**: per VPC, its subnets and each link outward to the gateway connection. A missing link prints in
+  capitals, and it is the first place to look when something cannot connect.

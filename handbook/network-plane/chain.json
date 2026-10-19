@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T07:08:08Z",
+ "captured_utc": "2026-10-19T16:15:50Z",
  "ipBlocks": [
   {
    "name": "{{netobj-1}}",
@@ -40,7 +40,9 @@
    ],
    "loadBalancerVPCEndpoint": {
     "enabled": true
-   }
+   },
+   "regionName": "{{region-1}}",
+   "created": "2026-06-12T14:53:52Z"
   }
  ],
  "connectivityProfiles": [
@@ -69,7 +71,8 @@
   {
    "name": "{{netobj-14}}",
    "vpcName": "{{netobj-4}}",
-   "vpcConnectivityProfileName": "{{netobj-5}}"
+   "vpcConnectivityProfileName": "{{netobj-5}}",
+   "created": "2026-06-12T14:53:52Z"
   }
  ],
  "tgwAttachments": [
@@ -101,6 +104,7 @@
  "subnets": [
   {
    "name": "{{netobj-11}}",
+   "vpc": ":{{netobj-4}}",
    "accessMode": "Public",
    "backing": "VLAN",
    "systemOwned": false,
@@ -116,6 +120,7 @@
   },
   {
    "name": "{{netobj-12}}",
+   "vpc": ":{{netobj-4}}",
    "accessMode": "Public",
    "backing": "VLAN",
    "systemOwned": false,
@@ -131,6 +136,7 @@
   },
   {
    "name": "{{netobj-13}}",
+   "vpc": "{{netobj-4}}",
    "accessMode": "Private",
    "backing": "overlay",
    "systemOwned": true,

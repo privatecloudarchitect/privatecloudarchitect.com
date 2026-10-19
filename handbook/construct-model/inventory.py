@@ -20,9 +20,11 @@ Every name that belongs to your estate is replaced by a stable placeholder on th
 ({{project-1}}, {{namespace-2}}, {{region-1}}, {{zone-2}}, {{class-1}}, {{vpc-1}}, {{org}}, {{id}}), so the records
 can be published and diffed; the script refuses to write a record in which any estate name survived. Stdlib only. No token is printed or written.
 
-Env:  VCFA_HOST, VCFA_ORG, and either VCFA_REFRESH_TOKEN_FILE (an api-token minted for that org) or VCFA_USER and
-      VCFA_PASSWORD (a session login as user@org, which needs nothing pre-minted); TLS_VERIFY=false on a self-signed
-      lab CA; OUT_DIR (default .)
+Env:  VCFA_HOST, VCFA_ORG, and either VCFA_REFRESH_TOKEN_FILE (an api-token minted for that org, mode 0600) or
+      VCFA_USER with VCFA_PASSWORD_FILE (a session login as user@org, which needs nothing pre-minted; the password
+      from a file of mode 0600, or VCFA_PASSWORD, the value itself, which lands in the shell's history); a secret
+      file open to group or other is refused before it is read; TLS_VERIFY=false on a self-signed lab CA; OUT_DIR
+      (default .)
 Exit: 0 the records were written · 1 the mint or the discovery failed
 """
 
@@ -70,6 +72,22 @@ class Labels:
         if name not in m:
             m[name] = f"{family}-{len(m) + 1}"
         return "{{%s}}" % m[name] if braces else m[name]
+
+
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list. A file open to group or other is
+    refused before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
 
 
 class Cci:
@@ -364,13 +382,16 @@ def refuse_unknown_args(known, takes_value=()):
 def main():
     refuse_unknown_args({"--probe-bindings"})
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip() if os.environ.get("VCFA_REFRESH_TOKEN_FILE") else None
-    user, password = os.environ.get("VCFA_USER"), os.environ.get("VCFA_PASSWORD")
+    try:
+        refresh, password = secret("VCFA_REFRESH_TOKEN"), secret("VCFA_PASSWORD")
+    except OSError as e:   # a secret file that is missing, unreadable or open to group or other
+        raise SystemExit(f"FATAL: {e}") from None
+    user = os.environ.get("VCFA_USER")
     if not refresh and not (user and password):
-        raise SystemExit("set VCFA_REFRESH_TOKEN_FILE, or VCFA_USER and VCFA_PASSWORD for a session login")
+        raise SystemExit("set VCFA_REFRESH_TOKEN_FILE, or VCFA_USER with VCFA_PASSWORD_FILE for a session login")
     out_dir = os.environ.get("OUT_DIR", ".")
     c = Cci(host, org, refresh, user, password); L = Labels(); observed = {}
-    secrets = tuple(s for s in (c.bearer, refresh, password, host, org) if s)
+    secrets = tuple(s for s in (c.bearer, refresh, password, user, host, org) if s)
     print("inventory.py: the construct model read through the Cloud Consumption Interface, read-only\n")
     # ---- 1. the taxonomy, from discovery
     st, groups = c.get("/apis")
@@ -538,8 +559,8 @@ def main():
     text = json.dumps({"captured_utc": stamp, "taxonomy": taxonomy}, indent=1, ensure_ascii=False)
     text2 = json.dumps({"captured_utc": stamp, "acquired_by": c.kind, **estate}, indent=1, ensure_ascii=False)
     text2 = UUID.sub("{{id}}", text2)
-    for secret in secrets:
-        assert secret not in text and secret not in text2, "an estate value reached a record"
+    for value in secrets:
+        assert value not in text and value not in text2, "an estate value reached a record"
     bare = re.sub(r"\{\{[^}]*\}\}", "", text2)   # the placeholders themselves are not leaks, even when a real name happens to match one
     for fam, m in L.maps.items():
         for name in m:
@@ -567,8 +588,8 @@ def main():
         wrote += " and naming.json (counts only)"
     if bindings is not None:
         text4 = UUID.sub("{{id}}", json.dumps({"captured_utc": stamp, **bindings}, indent=1, ensure_ascii=False))
-        for secret in secrets:
-            assert secret not in text4, "an estate value reached the bindings record"
+        for value in secrets:
+            assert value not in text4, "an estate value reached the bindings record"
         for fam, m in L.maps.items():
             for name in m:
                 assert not re.search(r"(?<![A-Za-z0-9-])" + re.escape(name) + r"(?![A-Za-z0-9-])", re.sub(r"\{\{[^}]*\}\}", "", text4)), f"a {fam} name reached the bindings record"

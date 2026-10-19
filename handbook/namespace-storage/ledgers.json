@@ -1,5 +1,6 @@
 {
- "captured_utc": "2026-09-21T07:58:26Z",
+ "captured_utc": "2026-10-19T16:48:05Z",
+ "signIn": "session login",
  "quotas": [
   {
    "storageClass": "{{storageclass-1}}",
@@ -10,7 +11,7 @@
   {
    "storageClass": "{{storageclass-2}}",
    "capacityMiB": 18830489,
-   "consumedMiB": 900000,
+   "consumedMiB": 1500000,
    "zones": 3
   },
   {
@@ -20,51 +21,76 @@
    "zones": 3
   }
  ],
- "namespaces": 3,
- "claims": 26,
- "tenantClaimedMiB": 512000,
- "tenantGrantedMiB": 900000,
- "namespaceLimitsMiB": 900000,
+ "namespaces": 5,
+ "claims": 27,
+ "namespacesWithClaimsUnread": [],
+ "tenantClaimedMiB": 451584,
+ "tenantGrantedMiB": 1500000,
+ "namespaceLimitsMiB": 1500000,
+ "namespacesAtTheirClassConfigsLimit": 2,
  "quotaLedgerCounts": "the namespaces' storage limits",
  "provider": [
   {
    "storageClass": "{{storageclass-4}}",
-   "capacityMiB": 6489481,
-   "consumedMiB": 12837895,
-   "ratio": 1.978,
+   "capacityMiB": 5053879,
+   "consumedMiB": 16456172,
+   "ratio": 3.256,
    "zones": 3
   },
   {
    "storageClass": "{{storageclass-2}}",
-   "capacityMiB": 18030494,
-   "consumedMiB": 36860983,
-   "ratio": 2.044,
+   "capacityMiB": 13704125,
+   "consumedMiB": 46240787,
+   "ratio": 3.374,
    "zones": 3
   },
   {
    "storageClass": "{{storageclass-3}}",
-   "capacityMiB": 18030494,
-   "consumedMiB": 36860983,
-   "ratio": 2.044,
+   "capacityMiB": 13704125,
+   "consumedMiB": 46238739,
+   "ratio": 3.374,
    "zones": 3
   }
  ],
+ "providerSorted": "none",
  "physical": {
   "datastores": 4,
-  "capacityMiB": 24519974,
-  "usedMiB": 747688,
+  "capacityMiB": 18758003,
+  "usedMiB": 855399,
   "types": [
    "NFS"
   ]
  },
- "providerClassesReportingIdenticalFigures": 1,
+ "providerClassesReportingIdenticalFigures": 0,
+ "providerClassesSharingACapacity": 1,
+ "providerConsumptionGapWithinACapacityMiB": 2048,
+ "perPlane": [
+  {
+   "plane": "tenant",
+   "storageClass": "{{storageclass-2}}",
+   "usedMiB": 1500000,
+   "capacityMiB": 18830489
+  },
+  {
+   "plane": "provider",
+   "storageClass": "{{storageclass-2}}",
+   "usedMiB": 46240787,
+   "capacityMiB": 13704125
+  },
+  {
+   "plane": "physical",
+   "storageClass": null,
+   "usedMiB": 855399,
+   "capacityMiB": 18758003
+  }
+ ],
  "figures": {
-  "tenantClaimed": 512000,
-  "tenantGranted": 900000,
-  "providerAllocation": 36860983,
-  "physicalUsed": 747688
+  "tenantClaimed": 451584,
+  "tenantGranted": 1500000,
+  "providerAllocation": 46240787,
+  "physicalUsed": 855399
  },
- "spread": 72.0,
+ "spread": 102.4,
  "ledgersRead": 4,
  "unitNote": "every figure is mebibytes; 1 TiB is 1048576 MiB, not a million"
 }
