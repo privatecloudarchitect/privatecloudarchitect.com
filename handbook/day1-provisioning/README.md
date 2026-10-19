@@ -6,6 +6,12 @@ Written for someone **brand new to All Apps and CCI** who has no template to cop
 from and wants to learn the right habits from the start, not unlearn bad ones
 later.
 
+This folder holds two things. **`day1.py`** is the harness for the handbook's
+[Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning) chapter: it reads the Day-1
+plane through both of its faces, and [its section below](#the-harness-day1py) says how to run it. The
+**templates** are the crawl-walk-run series that
+[Building blueprints](https://privatecloudarchitect.com/handbook/building-blueprints) narrates.
+
 These are not just templates. Each one is a lesson: the blueprint is densely
 commented with the design and the *why* behind every non-obvious line, and each
 stage adds **exactly one new concept** to the one before it. Read them in order
@@ -91,7 +97,7 @@ behind them, live in the handbook at
 [privatecloudarchitect.com](https://privatecloudarchitect.com):
 
 - **This series, narrated end to end** ([Building blueprints](https://privatecloudarchitect.com/handbook/building-blueprints)): the crawl-walk-run of this library as one chapter, a single idea per step from one VM to microservices, with the design reasoning and the watch points drawn out. The narrated companion to read alongside these files.
-- **What a template is, and how it deploys** ([Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning)): a blueprint becomes a per-project catalog item, and the requester owns what they deploy. The model every template here plugs into.
+- **What a template is, and how it deploys** ([Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning)): a released version becomes a catalog item whose input schema is the tenant's whole interface, and the requester owns what they deploy. The model every template here plugs into.
 - **The VM primitive**, stages 1 to 4 ([The VM Service](https://privatecloudarchitect.com/handbook/vm-service)): the class, the immutable image, the storage class, and the cloud-init Secret, which are the exact fields these blueprints set.
 - **The Kubernetes primitive**, stages 4 to 5 ([Supervisor and VKS operations](https://privatecloudarchitect.com/handbook/vks-operations)): the cluster as a spec whose nodes are outputs, the VKS resource stages 4 and 5 declare.
 
@@ -129,8 +135,25 @@ verbs it permits, the same deployments read field by field through each face, th
 the ingredients a blueprint may draw on, and, with `--probe-release`, what each face actually does when told
 to delete a released version. That last one creates a throwaway blueprint, releases a version, asks both
 faces to remove it, reads back what changed, and deletes the blueprint again; it never touches content it did
-not create. Without the flag nothing here writes. It needs `VCFA_HOST`, `VCFA_ORG` and a refresh token, and
-writes `day1.json`.
+not create. Without the flag nothing here writes. It writes `day1.json`; what a run prints, and how to read
+it, is in [`expected-output.md`](expected-output.md).
+
+```bash
+export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org> VCFA_USER=<account>
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vcfa-password )   # paste your password, then Ctrl-D
+export VCFA_PASSWORD_FILE=~/.vcf/vcfa-password             # mode 0600; or VCFA_REFRESH_TOKEN_FILE
+export TLS_VERIFY=false                                    # only on a self-signed lab CA
+
+python3 day1.py                                     # read-only: both faces, side by side
+python3 day1.py --lookup <blueprint> --project <yours>   # read-only: key on the id, refuse a name not yours
+python3 day1.py --probe-release                     # writes: a throwaway blueprint, created and deleted
+```
+
+The sign-in is a session login as `<account>@<org>`, or a refresh token minted for the organization in a file of
+mode 0600; a secret file open to group or other is refused before it is read. Exit codes: 0 read (for `--lookup`
+one match, in your project); 1 `--lookup` found no blueprint of that name; 2 a call failed or the sign-in was
+refused; 3 `--lookup` found the name outside your project or more than once, so key on the id; 5 an unknown
+argument. Classic lists are read in full, page by page sorted by id.
 
 **Running it again without the flag does not erase what the flag captured.** A run that did not probe has
 nothing to say about that section of the record, which is not the same as having found it empty. So when the

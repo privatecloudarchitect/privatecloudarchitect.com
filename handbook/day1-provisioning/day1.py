@@ -17,17 +17,32 @@ thing. This script puts them side by side and reports where they disagree:
      version. This creates a throwaway blueprint, releases a version, asks both faces to delete it, reads back
      what changed, and removes the blueprint again. It never touches content it did not create.
 
+  --lookup <name> [--project <project>]   read-only, and on its own: every blueprint of that exact name in every
+     project you can see, with its id, project and creator. Key automation on the id it prints; it refuses when
+     the name also matches outside your project, which is how a publish flow updates a colleague's template.
+
 Without --probe-release nothing here writes. Organization-specific names are replaced by stable placeholders
 and the script refuses to write a record in which one survived. Field names, verbs, HTTP statuses and the
 platform's own error strings are the product's vocabulary and are kept, because they are the lesson.
 
+Sign-in, one of:
+  VCFA_REFRESH_TOKEN_FILE   a file holding a refresh token minted for the organization, mode 0600
+  VCFA_USER and VCFA_PASSWORD_FILE   a session login as user@org (the password from a file of mode 0600, or
+                            VCFA_PASSWORD, the value itself, which lands in the shell's history)
+A file open to group or other is refused before it is read.
+
 Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-  export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
-  export TLS_VERIFY=false                                  # only on a self-signed lab CA
+  export VCFA_USER=<account> VCFA_PASSWORD_FILE=~/.vcf/vcfa-password    # or VCFA_REFRESH_TOKEN_FILE
+  export TLS_VERIFY=false                                               # only on a self-signed lab CA
   python3 day1.py
   python3 day1.py --probe-release   # also creates and deletes a throwaway blueprint, see step 5
+
+Exit: 0 read (for --lookup: one match, in your project, or the only one when no project is named); 1 --lookup
+      found no blueprint of that name; 2 a call failed or the sign-in was refused; 3 --lookup found the name
+      outside your project or more than once: key on the id, never update by name; 5 an unknown argument.
 """
+import base64
 import http.client
 import json
 import os
@@ -88,17 +103,54 @@ class Labels:
         return UUID.sub("{{id}}", text)
 
 
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    The file keeps a tier-0 token out of the shell's history and the process list. A file open to group or other is
+    refused before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
 class Vcfa:
     """One bearer, two faces: the CCI gateway under /cci/kubernetes and the classic API at the root."""
 
-    def __init__(self, host, org, refresh_token):
+    def __init__(self, host, org, refresh_token=None, user=None, password=None):
+        """A tenant bearer, from the organization's refresh token or from a session login as user@org. A refused
+        mint ends the run with the server's own answer: "invalid_grant" means the refresh token is dead, a 401 at
+        the session means the login is."""
         self.host = host
-        body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
-        req = urllib.request.Request(
-            f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
-            headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
-        with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
-            self.bearer = json.loads(r.read())["access_token"]
+        if refresh_token:
+            self.kind = "refresh token"
+            body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
+            req = urllib.request.Request(
+                f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
+                headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
+        else:
+            self.kind = "session login"
+            basic = base64.b64encode(f"{user.split('@')[0]}@{org}:{password}".encode()).decode()
+            req = urllib.request.Request(f"https://{host}/cloudapi/1.0.0/sessions", method="POST",
+                                         headers={"Authorization": f"Basic {basic}", "Accept": "application/json;version=40.0"})
+        try:
+            with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                self.bearer = (json.loads(r.read())["access_token"] if refresh_token
+                               else r.headers.get("X-VMWARE-VCLOUD-ACCESS-TOKEN"))
+        except urllib.error.HTTPError as e:
+            print(f"FATAL: the {self.kind} answered HTTP {e.code}: {e.read().decode(errors='replace')[:200]}")
+            sys.exit(2)
+        except (urllib.error.URLError, OSError) as e:
+            print(f"FATAL: the {self.kind} did not answer: {e}")
+            sys.exit(2)
+        if not self.bearer:
+            print(f"FATAL: the {self.kind} answered without a bearer")
+            sys.exit(2)
 
     def _send(self, method, url, body=None):
         headers = {"Authorization": f"Bearer {self.bearer}", "Accept": "application/json"}
@@ -125,6 +177,19 @@ class Vcfa:
     def api(self, method, path, body=None):
         """The classic VCF Automation face."""
         return self._send(method, f"https://{self.host}{path}", body)
+
+    def api_all(self, path):
+        """Every page of a classic list, sorted by id: a page holds at most 200 entries, and a list read without a
+        sort has no stable order across pages (G-634)."""
+        out, number = [], 0
+        while True:
+            st, body = self.api("GET", f"{path}{'&' if '?' in path else '?'}size=200&page={number}&sort=id,asc")
+            if st != 200 or not isinstance(body, dict):
+                return st, out
+            out += body.get("content") or []
+            number += 1
+            if body.get("last", True) or number >= (body.get("totalPages") or 0):
+                return st, out
 
     def items(self, group, resource, project=None):
         p = f"/apis/{group}/namespaces/{project}/{resource}" if project else f"/apis/{group}/{resource}"
@@ -227,6 +292,30 @@ def probe_release(c, L, project, model_content):
     return {"cases": results, "residue": residue}
 
 
+def lookup(c, name, project=None):
+    """Every blueprint named exactly ``name`` across the projects this identity can see, from the classic face, which
+    carries the id, the project and the creator; one search, one page (a name is unique within a project)."""
+    st, body = c.api("GET", f"/blueprint/api/blueprints?search={urllib.parse.quote(name)}&size=200")
+    if st != 200 or not isinstance(body, dict):
+        print(f"FATAL: the blueprint search answered HTTP {st}")
+        return 2
+    found = [b for b in (body.get("content") or []) if b.get("name") == name]
+    print(f"day1.py: blueprints named {name!r} in every project this identity can see: {len(found)}")
+    for b in found:
+        print(f"  id {b.get('id')}  project {b.get('projectName')}  created by {b.get('createdBy')}")
+    if not found:
+        print("  none: a create under that name collides with nothing")
+        return 1
+    mine = [b for b in found if project is None or b.get("projectName") == project]
+    if len(found) == 1 and mine:
+        print(f"  one match{' in ' + project if project else ''}: key on id {found[0].get('id')}, never on the name")
+        return 0
+    print("  the name is not a key here: it matches " + (f"outside {project}" if project and len(mine) < len(found)
+                                                          else "more than once") +
+          "; update only by the id of the one you own, and refuse a match by name alone")
+    return 3
+
+
 def refuse_unknown_args(known, takes_value=()):
     """Refuse any argument this script does not recognise, before a client opens: a stray flag such as --check
     must never reach a write. --help prints the usage above."""
@@ -236,15 +325,31 @@ def refuse_unknown_args(known, takes_value=()):
         sys.exit(0)
     unknown = [a for i, a in enumerate(args) if a not in known and not (i and args[i - 1] in takes_value)]
     if unknown:
-        sys.exit(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)")
+        print(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)", file=sys.stderr)
+        sys.exit(5)
 
 
 def main():
-    refuse_unknown_args({"--probe-release"})
+    refuse_unknown_args({"--probe-release", "--lookup", "--project"}, takes_value=("--lookup", "--project"))
+    for flag in ("--lookup", "--project"):
+        if flag in sys.argv and sys.argv.index(flag) + 1 >= len(sys.argv):
+            print(f"{flag} takes a value (see --help)", file=sys.stderr)
+            sys.exit(5)
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
+    try:
+        refresh, password = secret("VCFA_REFRESH_TOKEN"), secret("VCFA_PASSWORD")
+    except OSError as e:   # a secret file that is missing, unreadable or open to group or other
+        print(f"FATAL: {e}")
+        sys.exit(2)
+    user = os.environ.get("VCFA_USER")
+    if not refresh and not (user and password):
+        print("FATAL: set VCFA_REFRESH_TOKEN_FILE, or VCFA_USER with VCFA_PASSWORD_FILE (see --help)")
+        sys.exit(2)
     out_dir = os.environ.get("OUT_DIR", ".")
-    c = Vcfa(host, org, refresh)
+    c = Vcfa(host, org, refresh, None if refresh else user, None if refresh else password)
+    if "--lookup" in sys.argv:
+        proj = sys.argv[sys.argv.index("--project") + 1] if "--project" in sys.argv else None
+        sys.exit(lookup(c, sys.argv[sys.argv.index("--lookup") + 1], proj))
     L = Labels()
     print("day1.py: the Day-1 plane, read through both of its faces\n")
 
@@ -278,8 +383,7 @@ def main():
     home = projects[0]
 
     # ---- 2. the same deployments, both faces, field by field
-    st, dep = c.api("GET", "/deployment/api/deployments?size=50")
-    classic = (dep.get("content") or []) if st == 200 and isinstance(dep, dict) else []
+    st, classic = c.api_all("/deployment/api/deployments")
     st, inst = c.items(CAT, "instances", home)
     cci_keys = set()
     for i in inst:
@@ -290,12 +394,14 @@ def main():
     only_classic = sorted(classic_keys - cci_keys)
     who = sorted(k for k in only_classic if re.search(r"(?i)(by|owner)", k))
     surfaces = {"classicDeployments": len(classic), "cciInstances": len(inst),
+                "classicDeploymentsWithoutAnOwner": sum(1 for d in classic if not d.get("ownedBy")),
                 "classicFields": sorted(classic_keys), "cciFields": sorted(cci_keys),
                 "onlyOnClassic": only_classic, "onlyOnCci": sorted(cci_keys - classic_keys),
                 "identityFieldsOnlyOnClassic": who}
     print(f"\n  the same deployments, both faces: classic returns {len(classic)}, CCI returns {len(inst)}")
     print(f"     fields on the classic object only: {len(only_classic)} -> {only_classic}")
     print(f"     of those, the ones naming a person: {who}")
+    print(f"     classic deployments with no owner: {surfaces['classicDeploymentsWithoutAnOwner']} of {len(classic)}")
     print(f"     fields on the CCI object only:     {sorted(cci_keys - classic_keys)}")
 
     # ---- 3. the content tree
@@ -311,6 +417,9 @@ def main():
         byname = {}
         for v in vs:
             sp = v.get("spec") or {}
+            # A version names its blueprint by display name, which need not be the object's name; register it so
+            # the scrub replaces it and the leak check below looks for it.
+            L.get("blueprint", sp.get("blueprintName"))
             byname.setdefault(sp.get("blueprintName"), []).append(
                 {"version": sp.get("version"), "publishToCatalog": bool(sp.get("publishToCatalog")),
                  "objectName": L.scrub(v["metadata"]["name"])})
@@ -324,8 +433,7 @@ def main():
         st, ci = c.items(CAT, "catalogitems", p)
         sets.append({i["metadata"]["name"] for i in ci})
     same_everywhere = len(sets) > 1 and all(s == sets[0] for s in sets)
-    st, cat_classic = c.api("GET", "/catalog/api/items?size=50")
-    cl_items = (cat_classic.get("content") or []) if st == 200 and isinstance(cat_classic, dict) else []
+    st, cl_items = c.api_all("/catalog/api/items")
     scoping = {"identicalAcrossProjects": same_everywhere, "projectsCompared": len(projects),
                "itemsPerProject": [len(s) for s in sets],
                "markedGlobal": sum(1 for i in cl_items if i.get("global")),
@@ -368,12 +476,14 @@ def main():
                    "description: Throwaway blueprint for a handbook probe. Provisions nothing.\n"
                    "resources:\n  Secret:\n    type: Util.PasswordEntry\n    properties:\n      length: 12\n")
         release = probe_release(c, L, home, content)
+        if release is not None:
+            release["probedUtc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     else:
         print("\n  release semantics: not probed; pass --probe-release to ask each face what a delete does "
               "(it creates a throwaway blueprint and deletes it again)")
 
     # ---- write, sanitized
-    payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "signIn": c.kind,
                "vocabulary": vocab, "surfaces": surfaces, "tree": tree, "catalogScoping": scoping,
                "schema": schema_shape, "resourceTypes": types, "images": images, "release": release}
 
@@ -393,8 +503,8 @@ def main():
                       f"this run did not re-probe it and has not erased it")
 
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
-    for secret in (c.bearer, refresh, host, org):
-        assert secret not in text, "an estate value reached the record"
+    for value in (c.bearer, refresh, password, user, host, org):
+        assert not value or value not in text, "an estate value reached the record"
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():
         for nm in m:
