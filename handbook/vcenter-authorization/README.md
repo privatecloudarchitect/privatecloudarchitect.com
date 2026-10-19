@@ -10,14 +10,14 @@ and the probes.
 | File | What it is |
 |---|---|
 | `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), every grant saved to a file of your own and two saves compared (`--save-permissions`, `--compare-permissions`), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design, each recorded the moment it is made in a ledger of your own, `authz-probe-roles.state.json`). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
-| `authz.json` | That record from the reference estate. The chapter's plates render it. |
-| `replay/authz/` | A recorded answer set made from `authz.json`, every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
+| `authz.json` | That record from the reference estate, read 2026-10-19 on three vCenter 9.1.1 instances with all three probes. The chapter's plates render it. |
+| `replay/authz/` | A recorded answer set made from the reference estate's record of 2026-10-06 (the `authz.json` this folder shipped before the 9.1.1 refresh), every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
 
 ## Try it without an estate
 
 `--replay DIR` answers every request from a recorded set instead of your vCenters, so you can run the census before
 you have an estate to read, or see what it prints for a shape your estate has not shown you. The set beside this
-README, `replay/authz/`, is the reference estate's record (`authz.json`) made into the vSphere Automation API's answers
+README, `replay/authz/`, is the reference estate's record of 2026-10-06 made into the vSphere Automation API's answers
 for three vCenters, with a placeholder for every name:
 
 ```bash
@@ -42,7 +42,7 @@ replayed run never overwrites `authz.json`. The record and a list `--save-permis
 
 The first command, run in this folder: the reference estate's three vCenters, read from recorded answers with nothing
 sent. The first line is written to standard error. The counts by class and the four custom roles whose copies differ
-are the record's; the record counts local grants as one class, so the set splits them into the Administrators group's
+are that record's; it counted local grants as one class, so the set splits them into the Administrators group's
 one global grant and VCF-managed accounts. It exits 3 because no session list was read.
 
 ```text
@@ -308,7 +308,7 @@ digest of its instance UUID, never the UUID or the host's name, so an entry is r
   ledger forgets each one read back gone (and each it named that is no longer listed under its id). A role carrying one
   of the six names that the ledger does not name with that id is left alone and printed as `KEPT` (exit 2).
 - `--adopt-probe-role NAME=ID` records in the ledger a role a run made before the ledger existed: the record of such a
-  run names its roles without an id (the shipped `authz.json`, from 2026-10-06, is one), so nothing can tell them from a
+  run names its roles without an id (the reference estate's run of 2026-10-06 is one), so nothing can tell them from a
   role made again under the name. Run it with `VC_HOSTS` naming that one vCenter. Before the census and every probe, the
   vCenter must list a role under that name with that id and exactly the privileges the name declares, or the run stops
   with nothing written (exit 5). It writes the ledger only, never vCenter; the probes and `--remove-probe-roles` in the
@@ -415,10 +415,13 @@ Removing a role leaves its reserved group behind (below); removing that takes th
   never reconciled, counted or removed, and a grant to another role's reserved group, or to a directory group of that
   name, counts as someone's access. It works one vCenter at a time and prints each one's result as it is done, so a run
   that stops shows which were done; a vCenter it could not finish is recorded with the roles it removed before the
-  error (exit 3). These guards, the ledger and `--adopt-probe-role` are the script's code and its tests; no run was made
-  with them. A read-only read of the reference estate (X-311, 2026-10-17) found the six roles the 2026-10-06 run made
-  still there, five on one management vCenter and one on the workload vCenter, each holding the privileges its name
-  declares and granted to no one but its own reserved group, and each vCenter's instance UUID read as a UUID.
+  error (exit 3). These guards and `--remove-probe-roles` are the script's code and its tests; no run was made with
+  them. A read-only read of the reference estate (X-311, 2026-10-17) found the six roles the 2026-10-06 run made still
+  there, five on one management vCenter and one on the workload vCenter, each holding the privileges its name declares
+  and granted to no one but its own reserved group, and each vCenter's instance UUID read as a UUID. On 2026-10-19 the
+  six read the same again, and `--adopt-probe-role` recorded them in the reference estate's ledger, one vCenter per run
+  (five, then one), each run's own check of name, id and privileges passing first (X-339); the probes run next reused
+  all six, creating and reconciling none, and left each granted to no one but its own reserved group (X-340).
 - The census sorts a local group named `vcf_reserved_` and a role id, matched whole, as a reserved group: a group you
   named with that prefix and anything else is read as `local, other`.
 - A probe that stopped on an error, the `--supervisor-vm` lookup before the census, and `--remove-probe-roles` across
@@ -435,9 +438,9 @@ Removing a role leaves its reserved group behind (below); removing that takes th
 ## Reading the record
 
 - `vcenters.<vc>.byClass`: permission counts by class and scope (`global` or `object`). A record written before the
-  local split carries one `local` class; the shipped `authz.json` is one of those, and it predates the
-  `API client (broker tenant)` class, which a record carries only when a grant in the broker tenant was read. A vCenter
-  that was not read carries only `error`.
+  local split carries one `local` class (the reference estate's of 2026-10-06 did); the shipped `authz.json` carries the
+  three. A record carries the `API client (broker tenant)` class only when a grant in the broker tenant was read, and
+  the shipped one read none. A vCenter that was not read carries only `error`.
 - `realmSpelling`: present when the run declared `--no-realm`, saying the realm-spelled class was not applicable.
 - `replay`: `true` in a replayed run's `authz.replay.json`; a record of a read of an estate carries no such key.
 - `vcenters.<vc>.domainsNamedNothing`, `vcenters.<vc>.realmNamedNothing`, `vcenters.<vc>.realmSignedIn`: present on a

@@ -1,40 +1,44 @@
 {
- "captured_utc": "2026-10-06T08:02:42Z",
+ "captured_utc": "2026-10-19T16:31:03Z",
  "vcenters": {
   "{{vcenter-1}}": {
-   "permissions": 70,
-   "global": 64,
+   "permissions": 75,
+   "global": 69,
    "byClass": {
     "directory, global": 1,
     "directory, object": 1,
-    "local, global": 47,
-    "local, object": 5,
-    "reserved group, global": 16
+    "local, Administrators, global": 2,
+    "local, Administrators, object": 1,
+    "local, VCF-managed, global": 35,
+    "local, VCF-managed, object": 3,
+    "local, other, global": 11,
+    "local, other, object": 1,
+    "reserved group, global": 20
    },
    "directoryGrants": {
     "group, global": 1,
     "group, object": 1
    },
    "reservedGroupGrants": {
-    "Admin, global": 1,
     "NoCryptoAdmin, global": 1,
     "NoTrustedAdmin, global": 1,
     "ReadOnly, global": 1,
     "TrustedAdmin, global": 1,
-    "a custom role, global": 11
+    "a custom role, global": 16
    },
-   "roles": 77,
-   "customRoles": 69,
-   "version": "9.1.0 build 25573614",
+   "roles": 84,
+   "customRoles": 76,
+   "version": "9.1.1 build 25712839",
    "sessions": {
     "byClass": {
      "directory": 1,
-     "local": 324
+     "local, Administrators": 16,
+     "local, VCF-managed": 304
     },
     "localAdministratorByAgent": {
-     "VMware vim-java 1.0": 4,
+     "VMware vim-java 1.0": 5,
      "XML-WS Runtime 4.0.4 git-revision#50dbfd": 2,
-     "pyvmomi 8.0.3.0.1 OSS Python": 1,
+     "vAPI": 1,
      "vapi-endpoint": 8
     }
    }
@@ -45,8 +49,12 @@
    "byClass": {
     "directory, global": 1,
     "directory, object": 1,
-    "local, global": 81,
-    "local, object": 41,
+    "local, Administrators, global": 2,
+    "local, Administrators, object": 1,
+    "local, VCF-managed, global": 57,
+    "local, VCF-managed, object": 29,
+    "local, other, global": 22,
+    "local, other, object": 11,
     "reserved group, global": 20
    },
    "directoryGrants": {
@@ -65,26 +73,32 @@
    "version": "9.1.1 build 25712839",
    "sessions": {
     "byClass": {
-     "directory": 1,
-     "local": 442
+     "directory": 5,
+     "local, Administrators": 8,
+     "local, VCF-managed": 339
     },
     "localAdministratorByAgent": {
-     "XML-WS Runtime 4.0.4 git-revision#50dbfd": 2,
-     "vAPI": 1
+     "VMware vim-java 1.0": 1,
+     "XML-WS Runtime 4.0.4 git-revision#50dbfd": 3,
+     "vAPI": 4
     }
    }
   },
   "{{vcenter-3}}": {
-   "permissions": 249,
-   "global": 75,
+   "permissions": 283,
+   "global": 78,
    "byClass": {
-    "another provider, object": 8,
+    "another provider, object": 12,
     "directory, global": 2,
     "directory, object": 3,
-    "local, global": 55,
-    "local, object": 140,
-    "reserved group, global": 18,
-    "reserved group, object": 23
+    "local, Administrators, global": 2,
+    "local, Administrators, object": 71,
+    "local, VCF-managed, global": 40,
+    "local, VCF-managed, object": 65,
+    "local, other, global": 15,
+    "local, other, object": 23,
+    "reserved group, global": 19,
+    "reserved group, object": 31
    },
    "directoryGrants": {
     "group, global": 1,
@@ -93,23 +107,28 @@
     "user, object": 2
    },
    "reservedGroupGrants": {
-    "NamespacesEdit, object": 11,
-    "NamespacesView, object": 12,
+    "NamespacesEdit, object": 15,
+    "NamespacesView, object": 16,
     "NoCryptoAdmin, global": 1,
     "NoTrustedAdmin, global": 1,
     "ReadOnly, global": 1,
     "TrustedAdmin, global": 1,
-    "a custom role, global": 14
+    "a custom role, global": 15
    },
-   "roles": 84,
-   "customRoles": 76,
+   "roles": 85,
+   "customRoles": 77,
    "version": "9.1.1 build 25712839",
    "sessions": {
     "byClass": {
      "directory": 2,
-     "local": 268
+     "local, Administrators": 2,
+     "local, VCF-managed": 302,
+     "local, other": 27
     },
-    "localAdministratorByAgent": {}
+    "localAdministratorByAgent": {
+     "vAPI": 1,
+     "vSphereUI": 1
+    }
    }
   }
  },
@@ -280,9 +299,7 @@
     "restSeesFolder": false
    }
   ],
-  "probeRoles": [
-   "created authz-probe-folder-create"
-  ],
+  "probeRoles": [],
   "baseline": {
    "signIn": "vim.fault.NoPermission",
    "restSeesFolder": false
@@ -376,12 +393,7 @@
     "attached": false
    }
   ],
-  "probeRoles": [
-   "created authz-probe-none",
-   "created authz-probe-attach-tag",
-   "created authz-probe-tag-on-object",
-   "created authz-probe-tag-both"
-  ],
+  "probeRoles": [],
   "globalDeletePath": {
    "created": true,
    "deleteStatus": 204,
@@ -389,6 +401,7 @@
   },
   "residue": {
    "category": false,
+   "folder": false,
    "grantsOfProbeRoles": 0
   }
  },
@@ -438,13 +451,12 @@
     "missingPrivilege": "InventoryService.Tagging.ObjectAttachable"
    }
   ],
+  "probeRoles": [],
   "managedBy": "com.vmware.vcenter.wcp",
-  "probeRoles": [
-   "created authz-probe-tag-on-object-modify"
-  ],
   "residue": {
    "category": false,
    "grantsOfProbeRoles": 0
   }
- }
+ },
+ "exit": 0
 }
