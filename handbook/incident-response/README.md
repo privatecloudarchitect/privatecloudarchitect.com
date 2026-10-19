@@ -1,14 +1,16 @@
-# Two measurements an incident practice needs about itself
+# What is in the alert queue, and what your failure record kept
 
 Companion to the chapter
 ([privatecloudarchitect.com/handbook/incident-response](https://privatecloudarchitect.com/handbook/incident-response)):
-one read-only script that answers the two questions a response method cannot answer about itself. Stdlib
-Python only; no token is printed or written.
+one read-only script that answers the questions a response method cannot answer about itself. Stdlib Python 3 only; no
+token is printed or written.
 
 | File | What it is |
 |---|---|
-| `triage.py` | Profiles every alert instance on the platform by age, impact, concentration and control state, and audits whatever failure record you keep for what each entry retained of the method. Writes `triage.json`. |
-| `triage.json` | That record from the reference estate, 2026-09-19. The chapter's plates render it. |
+| `triage.py` | Reads every alert instance and profiles the open ones by age, impact badge, concentration and control state; ranks the definitions that fill the queue; audits whatever failure record you keep. Writes `triage.json`. |
+| `failure-record.template.md` | A record entry carrying every field the audit counts: symptom, root cause with its layer from a fixed list of five, fix, evidence, a cross-link. |
+| `triage.json` | The run on the reference estate, 2026-10-19, VCF Operations 9.1.1.0 (build 25679751). The chapter renders it. |
+| `expected-output.md` | The transcripts behind that record. |
 | `opslib.py` | The broker exchange and request helper, shared with the other Part IV harnesses. |
 
 ## Run it
@@ -16,85 +18,73 @@ Python only; no token is printed or written.
 ```bash
 export OPS_HOST=<operations-fqdn>
 export OPS_BROKER_HOST=<identity-broker-fqdn>   # omit if the broker shares the Ops FQDN
-export OPS_REALM=CUSTOMER
-export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # minted in the operations console
-export OPS_OWNER="PCA"                          # the owner prefix your content carries
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_API_TOKEN_FILE=~/.vcf/ops-api-token   # mode 0600; minted in the operations console
+export OPS_OWNER="PCA"                          # the owner prefix your own alert definitions carry
 export OPS_TLS_VERIFY=false                     # only on a self-signed lab CA
 
-python3 triage.py
+python3 triage.py --standing      # the thirty-second read: what has been open longest, oldest first
+python3 triage.py --rank          # the definitions that fill the queue, commonest first
+python3 triage.py                 # the queue profile; writes triage.json
 python3 triage.py --corpus /path/to/your/failure-record.md
 python3 triage.py --corpus record.md --entry '^### (F-\d+):'    # your own heading shape
 ```
 
-The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
-The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
-keep it for a throwaway credential.
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600; a wider mode is refused. The value itself in
+`OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so keep it for a throwaway
+credential. The identity behind it needs read access to alerts.
+
+Every mode reads the whole alert list, page by page, to its declared total. The list answers newest first, so a single
+page holds the newest alerts and none of the oldest, which are the ones the standing read exists to find. A refused or
+short read stops the run with exit 4.
 
 ## Question one: is the queue made of incidents?
 
-A response method assumes the thing in front of you started recently. That is a claim about the queue, not
-about the method, and it is one read.
+A response method assumes the thing in front of you started recently. That is a claim about the queue, not about the
+method, and it is one read. An alert counts as open while its status is anything but `CANCELED`.
 
-The script reports how many alerts are standing, their median and maximum age, how many started in the last
-week, how many have stood over a month, and how many have ever been acknowledged or suspended. It also reports
-the median lifetime of the closed ones, which is what an event actually looks like on your estate.
+`--standing` prints the open alerts oldest first, with each one's control state, impact badge and criticality, and how
+many are `OPEN`: nobody has assigned, suspended or suppressed them. The profile adds the median and oldest age, how many
+started in the last week and how many have stood over a month, and the median lifetime of the closed ones, which is
+what an event looks like on your estate. Open alerts many times older than that are conditions, not incidents.
 
-On the reference estate: 259 standing, median age 67 days, 2 started in the last week, and **none of them ever
-touched**. The closed ones lived 1.17 hours at the median. Those are two different populations and only the
-second is incidents.
+It then splits the open alerts by impact badge, because the badge predicts the treatment: a risk alert is a warning
+about the future, and it belongs to planning, not to the response queue. Severity is not a routing dimension in the same
+way; criticality is spread across the queue.
 
-It then splits the standing alerts by impact badge, because the badge predicts the treatment: health alerts
-stood 12 days at the median here and risk alerts 67. That five-fold difference is the correct handling of a
-warning about the future, and it means the badge is a usable first routing dimension. Severity is not:
-criticality is spread across the whole queue.
+## Question two: which definitions fill it?
 
-Finally it counts how few definitions produce the queue. Here 47 definitions produced all 259 standing alerts
-and the six commonest produced 116 of them, which is a routing table's first six rows for the price of a
-ranking.
+`--rank` counts the open alerts by the definition that raised them, commonest first, with each one's impact badge, how
+many objects it sits on, and its median age. A handful of definitions usually produce most of the queue, and each of
+the top rows is a routing-table row to write: the symptom, the owner who gets it, and the first read. The record keeps
+product definition names; a definition carrying your `OPS_OWNER` prefix is recorded by the prefix only.
 
-## Question two: what did the method leave in the record?
+## Question three: what did the method leave in the record?
 
-A scar corpus is the output of an incident practice, so the corpus is where the practice can be audited. Point
-the script at a markdown file of recorded failures and it reports, per entry, whether it:
+A record of failures is the output of an incident practice, so it is where the practice can be audited. Point
+`--corpus` at a markdown file of entries and it reports how many:
 
-- states the symptom, before any cause
-- names the root cause
-- **classifies that cause to a layer** (usually the weak step)
-- states a fix or a discipline
-- cites where the finding came from
-- cross-links another entry
-- claims verification in its heading
-- corrects an earlier reading
+- state the symptom, before any cause
+- name the root cause
+- **classify that cause to a layer** (usually the weak step)
+- state a fix
+- cite where the finding came from
+- cross-link another entry
 
-The heading pattern and the labels are arguments, so this audits **your** record rather than any particular
-one. It reports a funnel, not a score: the shape tells you which step of your method has become ceremonial.
+plus how many correct an earlier reading, quote an HTTP status, or mention a log. The heading pattern is an argument
+and the fields are patterns over the entry, so this audits your record rather than any particular one, and it counts
+only the labels it is given: an entry that writes its fix under another word reads as missing one. It reports a
+funnel, not a score; the step that falls away is the one your practice has stopped doing.
 
-Two ratios come out of the same pass and neither is a target:
+`failure-record.template.md` is an entry the audit reads as written. Its layer is one of five words (information
+contract, processing logic, structural design, platform configuration, infrastructure), the same five every time, so
+the audit can count them and "other wording" falls toward zero.
 
-- **Entries that correct an earlier reading** are diagnoses paid for twice. One in six here.
-- **Entries quoting an HTTP status against entries mentioning a log** is which evidence plane your practice
-  actually runs on. Four to one here, in favour of the API reads.
+**Running it again without `--corpus` does not erase what the flag captured.** A run that audited no record has nothing
+to say about that section of `triage.json`, which is not the same as having found it empty, so the run carries the
+earlier audit forward and prints that it did.
 
+## The record
 
-**Running it again without `--corpus` does not erase what the flag captured.** A run that audited no corpus has
-nothing to say about that section of the record, which is not the same as having found it empty. So when the
-record on disk holds a block this run did not produce, the block is carried forward and the script prints
-that it carried it. Writing the section as empty instead would publish a narrower record as though it were a
-newer one.
-
-## Scope, stated plainly
-
-- Read-only. The alert half issues `GET`s; the record half reads a file.
-- The corpus audit is regular expressions over labels. It measures whether a trace was kept, never whether the
-  diagnosis was good, and an entry can keep every trace and still be wrong.
-- The layer distribution counts only entries that qualify the cause at all, and reports separately how many
-  use wording outside the taxonomy rather than folding them in.
-- **No alert, object or machine is named in the record.** The queue is published as counts and ages: which of
-  an estate's machines is currently unhappy is that estate's business.
-
-## Reading the record
-
-`queue` carries the instance counts, `ageDays` for the standing alerts, `closedDurationHours` for what closed,
-`byImpact` with the median age per badge, `byLevel`, the definition and object counts with the top-six share,
-and the control states. `corpus` carries the entry count, `carrying` with one number per trace, and
-`layerTags` with `layerTagged` so the denominator is visible.
+`triage.json` carries counts, ages and product definition names. It names no object and no host: which of an
+estate's machines is unhappy is that estate's business.

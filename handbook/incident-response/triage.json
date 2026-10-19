@@ -1,80 +1,165 @@
 {
- "captured_utc": "2026-09-21T07:27:13Z",
+ "captured_utc": "2026-10-19T16:00:36Z",
  "owner": "PCA",
  "queue": {
-  "instances": 1125,
-  "active": 259,
-  "closed": 866,
-  "activeFromOwnedDefinitions": 6,
+  "instances": 3927,
+  "open": 659,
+  "closed": 3268,
+  "byStatus": {
+   "ACTIVE": 659,
+   "CANCELED": 3268
+  },
+  "openFromOwnedDefinitions": 3,
   "ageDays": {
    "min": 0,
-   "median": 68,
-   "max": 440,
-   "startedInTheLastWeek": 2,
-   "standingOverAMonth": 153,
+   "median": 14,
+   "max": 468,
+   "startedInTheLastWeek": 52,
+   "standingOverAMonth": 45,
    "standingOverAYear": 4
   },
   "closedDurationHours": {
-   "median": 1.17,
-   "underAnHour": 193,
-   "overADay": 172,
-   "counted": 858
+   "median": 1.26,
+   "underAnHour": 675,
+   "overADay": 852,
+   "counted": 3185
   },
   "byImpact": {
    "EFFICIENCY": {
-    "active": 1,
-    "medianAgeDays": 13,
-    "oldestDays": 13
+    "open": 1,
+    "medianAgeDays": 14,
+    "oldestDays": 14
    },
    "HEALTH": {
-    "active": 69,
-    "medianAgeDays": 14,
-    "oldestDays": 440
+    "open": 98,
+    "medianAgeDays": 13,
+    "oldestDays": 468
    },
    "RISK": {
-    "active": 189,
-    "medianAgeDays": 68,
-    "oldestDays": 204
+    "open": 560,
+    "medianAgeDays": 14,
+    "oldestDays": 118
    }
   },
   "byLevel": {
-   "CRITICAL": 98,
-   "IMMEDIATE": 42,
-   "WARNING": 101,
-   "INFORMATION": 18
+   "IMMEDIATE": 124,
+   "CRITICAL": 250,
+   "WARNING": 255,
+   "INFORMATION": 30
   },
-  "distinctDefinitions": 47,
-  "distinctObjects": 100,
-  "topShare": 116,
+  "distinctDefinitions": 59,
+  "distinctObjects": 175,
+  "topSixShare": 478,
   "controlStates": {
-   "OPEN": 259
+   "OPEN": 659
   },
   "suspended": 0
  },
+ "rank": [
+  {
+   "definition": "Virtual Machine is violating CIS L1 Profile (v8 and above)",
+   "open": 93,
+   "impact": "RISK",
+   "objects": 93,
+   "medianAgeDays": 14,
+   "owned": false
+  },
+  {
+   "definition": "Virtual Machine is violating CIS L1/L2 Profile (v8 and above)",
+   "open": 93,
+   "impact": "RISK",
+   "objects": 93,
+   "medianAgeDays": 14,
+   "owned": false
+  },
+  {
+   "definition": "Virtual Machine is violating HIPAA (v7 and above)",
+   "open": 93,
+   "impact": "RISK",
+   "objects": 93,
+   "medianAgeDays": 14,
+   "owned": false
+  },
+  {
+   "definition": "Virtual Machine is violating VMware vSphere Security Configuration Guide for vSphere version 8 and above",
+   "open": 92,
+   "impact": "RISK",
+   "objects": 92,
+   "medianAgeDays": 14,
+   "owned": false
+  },
+  {
+   "definition": "Virtual Machine is violating DISA (v8 and above)",
+   "open": 86,
+   "impact": "RISK",
+   "objects": 86,
+   "medianAgeDays": 14,
+   "owned": false
+  },
+  {
+   "definition": "vSphere Distributed Port Group is violating VMware vSphere Security Configuration Guide vSphere version 8 and above",
+   "open": 21,
+   "impact": "RISK",
+   "objects": 21,
+   "medianAgeDays": 14,
+   "owned": false
+  },
+  {
+   "definition": "Operational Status Down",
+   "open": 20,
+   "impact": "HEALTH",
+   "objects": 10,
+   "medianAgeDays": 42,
+   "owned": false
+  },
+  {
+   "definition": "ESX Host Disconnect",
+   "open": 11,
+   "impact": "HEALTH",
+   "objects": 11,
+   "medianAgeDays": 3,
+   "owned": false
+  },
+  {
+   "definition": "ESXi Host is violating CIS L1 Profile (v8 and above)",
+   "open": 11,
+   "impact": "RISK",
+   "objects": 11,
+   "medianAgeDays": 14,
+   "owned": false
+  },
+  {
+   "definition": "ESXi Host is violating CIS L1/L2 Profile (v8 and above)",
+   "open": 11,
+   "impact": "RISK",
+   "objects": 11,
+   "medianAgeDays": 14,
+   "owned": false
+  }
+ ],
  "corpus": {
-  "file": "gotchas.md",
-  "entries": 169,
+  "file": "failure-record.md",
+  "entries": 560,
   "carrying": {
-   "symptom": 142,
-   "root cause": 132,
-   "fix": 137,
-   "evidence": 97,
-   "cross-link": 103,
-   "heading claims verification": 87,
-   "corrects an earlier reading": 27,
-   "quotes an HTTP status": 85,
-   "layer": 61,
-   "mentions a log": 21
+   "symptom": 170,
+   "root cause": 134,
+   "fix": 216,
+   "evidence": 102,
+   "cross-link": 334,
+   "corrects an earlier reading": 42,
+   "quotes an HTTP status": 180,
+   "layer": 63,
+   "mentions a log": 64
   },
   "layerTags": {
+   "information contract": 28,
    "structural design": 27,
-   "information contract": 27,
-   "other wording": 25,
+   "other wording": 23,
    "processing logic": 5,
    "platform configuration": 2,
-   "architectural": 2
+   "architectural": 2,
+   "infrastructure": 1
   },
-  "layerTagged": 88,
-  "capturedBy": "an earlier run with --corpus"
+  "layerTagged": 88
  }
 }
