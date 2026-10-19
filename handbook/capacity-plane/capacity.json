@@ -1,10 +1,12 @@
 {
- "captured_utc": "2026-09-21T07:29:41Z",
+ "captured_utc": "2026-10-19T15:39:36Z",
+ "signIn": "session login",
  "units": {
   "cpu": "M",
   "memory": "Mi",
   "note": "cpu is SI mega (a 60000M limit is 60 GHz); memory and storage are binary mebi (a 131072Mi limit is 128 GiB). Two unit families in one object, so a figure carried without its suffix cannot be converted later."
  },
+ "zoneGetByName": 404,
  "zones": [
   {
    "name": "{{zone-1}}",
@@ -15,9 +17,9 @@
     "memoryReservation": 16384
    },
    "used": {
-    "cpu": 20000,
-    "memory": 40000,
-    "cpuReservation": 0,
+    "cpu": 48000,
+    "memory": 76384,
+    "cpuReservation": 1000,
     "memoryReservation": 0
    },
    "objectNameIsAnIdentifier": true
@@ -31,8 +33,8 @@
     "memoryReservation": 16384
    },
    "used": {
-    "cpu": 60000,
-    "memory": 120000,
+    "cpu": 10000,
+    "memory": 12000,
     "cpuReservation": 0,
     "memoryReservation": 0
    },
@@ -58,6 +60,34 @@
  "namespaces": [
   {
    "name": "{{namespace-1}}",
+   "class": "medium",
+   "zones": [
+    {
+     "zone": "{{zone-1}}",
+     "cpuLimit": 20000,
+     "cpuReservation": 0,
+     "memoryLimit": 20000,
+     "memoryReservation": 0
+    }
+   ],
+   "storage": []
+  },
+  {
+   "name": "{{namespace-2}}",
+   "class": "large",
+   "zones": [
+    {
+     "zone": "{{zone-1}}",
+     "cpuLimit": 8000,
+     "cpuReservation": 1000,
+     "memoryLimit": 16384,
+     "memoryReservation": 0
+    }
+   ],
+   "storage": []
+  },
+  {
+   "name": "{{namespace-3}}",
    "class": "large",
    "zones": [
     {
@@ -76,14 +106,14 @@
    ]
   },
   {
-   "name": "{{namespace-2}}",
+   "name": "{{namespace-4}}",
    "class": "large",
    "zones": [
     {
      "zone": "{{zone-2}}",
-     "cpuLimit": 60000,
+     "cpuLimit": 10000,
      "cpuReservation": 0,
-     "memoryLimit": 120000,
+     "memoryLimit": 12000,
      "memoryReservation": 0
     }
    ],
@@ -95,7 +125,7 @@
    ]
   },
   {
-   "name": "{{namespace-3}}",
+   "name": "{{namespace-5}}",
    "class": "large",
    "zones": [
     {
@@ -117,25 +147,31 @@
  "ledger": [
   {
    "zone": "{{zone-1}}",
-   "namespaces": 1,
-   "sumOfLimits": 20000,
-   "sumOfReservations": 0,
-   "zoneReportsUsed": 20000,
+   "namespaces": 3,
+   "sumOfLimits": 48000,
+   "sumOfReservations": 1000,
+   "zoneReportsUsed": 48000,
    "matches": "the sum of the namespaces' limits",
-   "cpuFree": 40000,
-   "memoryFree": 91072,
+   "memorySumOfLimits": 76384,
+   "memoryReportsUsed": 76384,
+   "memoryBalances": true,
+   "cpuFree": 12000,
+   "memoryFree": 54688,
    "reservationBudget": 6000,
-   "reservationDrawnDown": 0
+   "reservationDrawnDown": 1000
   },
   {
    "zone": "{{zone-2}}",
    "namespaces": 1,
-   "sumOfLimits": 60000,
+   "sumOfLimits": 10000,
    "sumOfReservations": 0,
-   "zoneReportsUsed": 60000,
+   "zoneReportsUsed": 10000,
    "matches": "the sum of the namespaces' limits",
-   "cpuFree": 0,
-   "memoryFree": 11072,
+   "memorySumOfLimits": 12000,
+   "memoryReportsUsed": 12000,
+   "memoryBalances": true,
+   "cpuFree": 50000,
+   "memoryFree": 119072,
    "reservationBudget": 6000,
    "reservationDrawnDown": 0
   },
@@ -146,6 +182,9 @@
    "sumOfReservations": 0,
    "zoneReportsUsed": 60000,
    "matches": "the sum of the namespaces' limits",
+   "memorySumOfLimits": 120000,
+   "memoryReportsUsed": 120000,
+   "memoryBalances": true,
    "cpuFree": 0,
    "memoryFree": 11072,
    "reservationBudget": 6000,
@@ -158,7 +197,7 @@
   "medium"
  ],
  "configs": {
-  "small-scoped-az3": {
+  "{{classconfig-1}}": {
    "zoneList": [
     "*"
    ],
@@ -224,31 +263,31 @@
   }
  },
  "contract": {
-  "agree": 1,
-  "total": 15,
+  "agree": 7,
+  "total": 25,
   "byField": {
    "cpuLimit": {
-    "same": 0,
-    "above": 2,
-    "below": 1
+    "same": 1,
+    "above": 1,
+    "below": 3
    },
    "cpuReservation": {
-    "same": 0,
+    "same": 1,
     "above": 0,
-    "below": 3
+    "below": 4
    },
    "memoryLimit": {
-    "same": 1,
-    "above": 2,
-    "below": 0
+    "same": 2,
+    "above": 1,
+    "below": 2
    },
    "memoryReservation": {
-    "same": 0,
+    "same": 1,
     "above": 0,
-    "below": 3
+    "below": 4
    },
    "storageLimit": {
-    "same": 0,
+    "same": 2,
     "above": 0,
     "below": 3
    }
@@ -259,56 +298,144 @@
    "promised": 40000,
    "held": 120000,
    "times": 3.0
+  },
+  "storageInherited": 2,
+  "exact": [
+   "{{namespace-1}}"
+  ]
+ },
+ "overrides": {
+  "probedUtc": "2026-10-19T15:37:45Z",
+  "project": "{{project-2}}",
+  "class": "small",
+  "cases": [
+   {
+    "case": "cpu limit above the class config",
+    "status": 200,
+    "outcome": "accepted",
+    "persisted": true,
+    "held": {
+     "cpuLimit": "20000M",
+     "memoryLimit": "10000Mi",
+     "storageLimit": null
+    }
+   },
+   {
+    "case": "cpu limit below the class config",
+    "status": 200,
+    "outcome": "accepted",
+    "persisted": true,
+    "held": {
+     "cpuLimit": "5000M",
+     "memoryLimit": "10000Mi",
+     "storageLimit": null
+    }
+   },
+   {
+    "case": "no override at all",
+    "status": 400,
+    "outcome": "refused",
+    "message": "Zone should be specified in Namespace or in Namespace class"
+   },
+   {
+    "case": "the zone named, but no numbers with it",
+    "status": 422,
+    "outcome": "refused",
+    "message": "SupervisorNamespace.infrastructure.cci.vmware.com \"probe-ovr-\" is invalid: [spec.classConfigOverrides.zones[0].memoryLimit: Required value, spec.classConfigOverrides.zones[0].cpuLimit: Required value, spec.classConfigOverrides.zones[0].memoryReservation: Required value, spec.classConfigOverrides.zones[0].cpuReservation: Required value]"
+   },
+   {
+    "case": "storage below the class config",
+    "status": 200,
+    "outcome": "accepted",
+    "persisted": true,
+    "held": {
+     "cpuLimit": "10000M",
+     "memoryLimit": "10000Mi",
+     "storageLimit": "50000Mi"
+    }
+   },
+   {
+    "case": "storage above the class config",
+    "status": 400,
+    "outcome": "refused",
+    "message": "Requested storage limit 200000MiB for {{storageclass-2}} is more than available storage limit 100000MiB. Override limits to reduce the requested value or change the namespace class selected."
+   },
+   {
+    "case": "the class config's figures, in a zone with no limit budget left",
+    "status": 400,
+    "outcome": "refused",
+    "message": "Requested CPU limit of 10000MHz exceeds the available 0MHz. Override limits to reduce the requested value or change the namespace class selected."
+   },
+   {
+    "case": "the class config's figures, sent as a dry run",
+    "status": 400,
+    "outcome": "refused",
+    "message": "dryRun value of \"All\" is not supported"
+   }
+  ],
+  "made": 3,
+  "teardownSeconds": 186,
+  "residue": [],
+  "zonesReturned": true,
+  "zonesBefore": {
+   "{{zone-1}}": {
+    "cpu": 48000,
+    "memory": 76384,
+    "cpuReservation": 1000,
+    "memoryReservation": 0
+   },
+   "{{zone-2}}": {
+    "cpu": 10000,
+    "memory": 12000,
+    "cpuReservation": 0,
+    "memoryReservation": 0
+   },
+   "{{zone-3}}": {
+    "cpu": 60000,
+    "memory": 120000,
+    "cpuReservation": 0,
+    "memoryReservation": 0
+   }
+  },
+  "zonesAfter": {
+   "{{zone-1}}": {
+    "cpu": 48000,
+    "memory": 76384,
+    "cpuReservation": 1000,
+    "memoryReservation": 0
+   },
+   "{{zone-2}}": {
+    "cpu": 10000,
+    "memory": 12000,
+    "cpuReservation": 0,
+    "memoryReservation": 0
+   },
+   "{{zone-3}}": {
+    "cpu": 60000,
+    "memory": 120000,
+    "cpuReservation": 0,
+    "memoryReservation": 0
+   }
   }
  },
- "overrides": [
+ "bindings": [
   {
-   "case": "cpu limit above the class config",
-   "status": 200,
-   "outcome": "accepted",
-   "held": {
-    "cpuLimit": "20000M",
-    "memoryLimit": "10000Mi",
-    "storageLimit": null
+   "project": "{{project-1}}",
+   "namespaces": 5,
+   "bindings": {
+    "regions": 0,
+    "classes": 0,
+    "vpcs": 0
    }
   },
   {
-   "case": "cpu limit below the class config",
-   "status": 200,
-   "outcome": "accepted",
-   "held": {
-    "cpuLimit": "5000M",
-    "memoryLimit": "10000Mi",
-    "storageLimit": null
+   "project": "{{project-2}}",
+   "namespaces": 0,
+   "bindings": {
+    "regions": 0,
+    "classes": 0,
+    "vpcs": 0
    }
-  },
-  {
-   "case": "no override at all",
-   "status": 400,
-   "outcome": "refused",
-   "message": "Zone should be specified in Namespace or in Namespace class"
-  },
-  {
-   "case": "the zone named, but no numbers with it",
-   "status": 422,
-   "outcome": "refused",
-   "message": "SupervisorNamespace.infrastructure.cci.vmware.com \"probe-ovr-\" is invalid: [spec.classConfigOverrides.zones[0].memoryLimit: Required value, spec.classConfigOverrides.zones[0].cpuLimit: Required value, spec.classConfigOverrides.zones[0].memoryReservation: Required value, spec.classConfigOverrides.zones[0].cpuReservation: Required value]"
-  },
-  {
-   "case": "storage below the class config",
-   "status": 200,
-   "outcome": "accepted",
-   "held": {
-    "cpuLimit": "10000M",
-    "memoryLimit": "10000Mi",
-    "storageLimit": "50000Mi"
-   }
-  },
-  {
-   "case": "storage above the class config",
-   "status": 400,
-   "outcome": "refused",
-   "message": "Requested storage limit 200000MiB for {{storageclass-2}} is more than available storage limit 100000MiB. Override limits to reduce the requested value or change the namespace class selected."
   }
  ],
  "storage": [
@@ -323,10 +450,10 @@
   {
    "storageClass": "{{storageclass-2}}",
    "capacity": 18830489,
-   "consumed": 900000,
+   "consumed": 1500000,
    "unit": "Mi",
    "capacityTiB": 17.96,
-   "consumedTiB": 0.86
+   "consumedTiB": 1.43
   },
   {
    "storageClass": "{{storageclass-3}}",

@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-19T05:50:12Z",
+ "captured_utc": "2026-10-19T15:03:27Z",
  "signIn": "session login",
  "vocabulary": [
   {
@@ -406,7 +406,6 @@
    }
   ],
   "residue": [],
-  "probedUtc": "2026-09-18",
-  "probedOn": "VCF Automation 9.1, recorded in commit afa86e6e"
+  "probedUtc": "2026-10-19T15:03:27Z"
  }
 }

@@ -1,0 +1,52 @@
+{
+ "cases": [
+  {
+   "case": "a version object under a name of your choosing",
+   "face": "cci",
+   "status": 422,
+   "outcome": "refused",
+   "message": "BlueprintVersion.blueprint.cci.vmware.com \"wrong-name\" is invalid: [metadata.name: metadata.name must equal 'spec.blueprintName:spec.version'. Expected 'probe-day1-release:1.0.0' but got 'wrong-name']"
+  },
+  {
+   "case": "release a version with publishToCatalog true",
+   "face": "cci",
+   "status": 200,
+   "outcome": "accepted",
+   "catalogItemsBefore": 10,
+   "catalogItemsAfter": 11
+  },
+  {
+   "case": "DELETE the version object",
+   "face": "cci",
+   "status": 200,
+   "outcome": "accepted",
+   "versionStillExists": true,
+   "publishToCatalogAfter": false,
+   "catalogItemsAfter": 10,
+   "verdict": "the object survives and publishToCatalog flips to false: this is an unrelease"
+  },
+  {
+   "case": "DELETE the same version",
+   "face": "classic",
+   "status": 405,
+   "outcome": "refused",
+   "message": "Method 'DELETE' is not supported."
+  },
+  {
+   "case": "unrelease the same version, by its own name",
+   "face": "classic",
+   "status": 200,
+   "outcome": "accepted",
+   "message": ""
+  },
+  {
+   "case": "DELETE the blueprint object",
+   "face": "cci",
+   "status": 200,
+   "outcome": "accepted"
+  }
+ ],
+ "residue": [],
+ "probedUtc": "2026-09-18",
+ "probedOn": "VCF Automation 9.1, recorded in commit afa86e6e"
+}

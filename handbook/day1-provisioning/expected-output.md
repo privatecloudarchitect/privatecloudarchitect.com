@@ -74,23 +74,26 @@ day1.py: blueprints named 'probe-day1-release' in every project this identity ca
 
 ## `--probe-release`: what each face does with a delete
 
-This writes, on a throwaway blueprint the same run creates and deletes, and reports any residue. The cases below
-were recorded on VCF Automation 9.1 on 2026-09-18 and carried forward since; a run without the flag
-keeps them and prints that it did. They have not been re-run on 9.1.1.
+This writes, on a throwaway blueprint the same run creates and deletes, and reports any residue. Run on VCF
+Automation 9.1.1.0100 on 2026-10-19:
 
-| What was asked | Face | HTTP | Outcome |
-|---|---|---|---|
-| a version object under a name of your choosing | cci | 422 | refused |
-| release a version with publishToCatalog true | cci | 200 | accepted |
-| DELETE the version object | cci | 200 | accepted |
-| DELETE the same version | classic | 405 | refused |
-| unrelease the same version, by its own name | classic | 200 | accepted |
-| DELETE the blueprint object | cci | 200 | accepted |
+```
+  release semantics, on a throwaway blueprint this run creates and deletes
+     naming a version freely                 HTTP 422  BlueprintVersion.blueprint.cci.vmware.com "wrong-name" is invalid: [metadata.name: metadata.name must equal 's
+     release version 1.0.0                   HTTP 200  catalog items 10 -> 11
+     CCI     DELETE the version              HTTP 200  version still present: True, publishToCatalog now False, catalog items 10
+     classic DELETE the same version         HTTP 405  Method 'DELETE' is not supported.
+     classic unrelease, the named action     HTTP 200  accepted, which is what the CCI delete did
+     CCI     DELETE the blueprint object     HTTP 200  (this is the one that cascades)
+     cleanup: probe residue on the estate    none
+```
 
 The Cloud Consumption delete of a released version answered 200, left the version in place with
 `publishToCatalog` false, and withdrew its catalog item: an unrelease under a delete's name. The classic face
 refused the same delete and performed unrelease when asked by that name. Deleting the blueprint object is the
-operation that cascades.
+operation that cascades. The probe on VCF Automation 9.1 on 2026-09-18 answered every case with the same status;
+it is kept in [`records/day1-release-vcf-9.1.json`](records/day1-release-vcf-9.1.json). A run without the flag
+keeps the latest probe in `day1.json` and prints that it did.
 
 ## Requesting a deployment from the catalog
 

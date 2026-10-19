@@ -1,0 +1,53 @@
+{
+ "captured_utc": "2026-09-18T15:51:22Z",
+ "overrides": [
+  {
+   "case": "cpu limit above the class config",
+   "status": 200,
+   "outcome": "accepted",
+   "held": {
+    "cpuLimit": "20000M",
+    "memoryLimit": "10000Mi",
+    "storageLimit": null
+   }
+  },
+  {
+   "case": "cpu limit below the class config",
+   "status": 200,
+   "outcome": "accepted",
+   "held": {
+    "cpuLimit": "5000M",
+    "memoryLimit": "10000Mi",
+    "storageLimit": null
+   }
+  },
+  {
+   "case": "no override at all",
+   "status": 400,
+   "outcome": "refused",
+   "message": "Zone should be specified in Namespace or in Namespace class"
+  },
+  {
+   "case": "the zone named, but no numbers with it",
+   "status": 422,
+   "outcome": "refused",
+   "message": "SupervisorNamespace.infrastructure.cci.vmware.com \"probe-ovr-\" is invalid: [spec.classConfigOverrides.zones[0].memoryLimit: Required value, spec.classConfigOverrides.zones[0].cpuLimit: Required value, spec.classConfigOverrides.zones[0].memoryReservation: Required value, spec.classConfigOverrides.zones[0].cpuReservation: Required value]"
+  },
+  {
+   "case": "storage below the class config",
+   "status": 200,
+   "outcome": "accepted",
+   "held": {
+    "cpuLimit": "10000M",
+    "memoryLimit": "10000Mi",
+    "storageLimit": "50000Mi"
+   }
+  },
+  {
+   "case": "storage above the class config",
+   "status": 400,
+   "outcome": "refused",
+   "message": "Requested storage limit 200000MiB for {{storageclass-2}} is more than available storage limit 100000MiB. Override limits to reduce the requested value or change the namespace class selected."
+  }
+ ]
+}
