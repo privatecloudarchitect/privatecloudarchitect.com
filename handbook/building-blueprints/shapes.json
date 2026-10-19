@@ -1,5 +1,6 @@
 {
- "captured_utc": "2026-09-21T07:28:08Z",
+ "captured_utc": "2026-10-19T18:31:12Z",
+ "signIn": "session login",
  "declarableTypes": [
   "CCI.Supervisor.Namespace",
   "CCI.Supervisor.Resource",
@@ -9,7 +10,7 @@
  ],
  "census": [
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 1281,
    "inputs": 1,
    "resources": 2,
@@ -19,8 +20,8 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
-   "bytes": 26198,
+   "project": "{{project-1}}",
+   "bytes": 30375,
    "inputs": 15,
    "resources": 4,
    "resourceTypes": [
@@ -29,7 +30,7 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 1596,
    "inputs": 0,
    "resources": 4,
@@ -39,7 +40,7 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 7888,
    "inputs": 5,
    "resources": 4,
@@ -49,8 +50,8 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
-   "bytes": 14291,
+   "project": "{{project-1}}",
+   "bytes": 17612,
    "inputs": 8,
    "resources": 2,
    "resourceTypes": [
@@ -59,8 +60,8 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
-   "bytes": 1000,
+   "project": "{{project-1}}",
+   "bytes": 1489,
    "inputs": 2,
    "resources": 2,
    "resourceTypes": [
@@ -69,7 +70,7 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 840,
    "inputs": 2,
    "resources": 2,
@@ -79,7 +80,7 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 16388,
    "inputs": 9,
    "resources": 4,
@@ -89,14 +90,14 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 1033,
    "inputs": 0,
    "resources": 0,
    "resourceTypes": []
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 48100,
    "inputs": 13,
    "resources": 8,
@@ -106,7 +107,7 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 3274,
    "inputs": 4,
    "resources": 3,
@@ -116,7 +117,7 @@
    ]
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "bytes": 2368,
    "inputs": 2,
    "resources": 2,
@@ -162,24 +163,56 @@
   "integer": 2,
   "boolean": 4
  },
+ "stringInputs": {
+  "total": 73,
+  "pattern": 10,
+  "enumeration": 18,
+  "default": 57,
+  "constrained": 28,
+  "unconstrained": 45
+ },
  "sizeRange": [
   840,
   48100
  ],
+ "catalogItems": 10,
+ "sameItemsUnderEveryProject": true,
+ "itemsWithoutABlueprint": 0,
  "schemaJoins": [
-  {
-   "blueprint": "{{blueprint-2}}",
-   "inputs": 15,
-   "properties": 15,
-   "identicalKeys": true,
-   "required": 1
-  },
   {
    "blueprint": "{{blueprint-4}}",
    "inputs": 5,
    "properties": 5,
    "identicalKeys": true,
    "required": 2
+  },
+  {
+   "blueprint": "{{blueprint-12}}",
+   "inputs": 2,
+   "properties": 2,
+   "identicalKeys": true,
+   "required": 2
+  },
+  {
+   "blueprint": "{{blueprint-13}}",
+   "inputs": 5,
+   "properties": 5,
+   "identicalKeys": true,
+   "required": 2
+  },
+  {
+   "blueprint": "{{blueprint-14}}",
+   "inputs": 13,
+   "properties": 13,
+   "identicalKeys": true,
+   "required": 1
+  },
+  {
+   "blueprint": "{{blueprint-2}}",
+   "inputs": 15,
+   "properties": 15,
+   "identicalKeys": true,
+   "required": 1
   },
   {
    "blueprint": "{{blueprint-5}}",
@@ -215,35 +248,79 @@
    "properties": 13,
    "identicalKeys": true,
    "required": 1
-  },
-  {
-   "blueprint": "{{blueprint-12}}",
-   "inputs": 2,
-   "properties": 2,
-   "identicalKeys": true,
-   "required": 2
-  },
-  {
-   "blueprint": "{{blueprint-13}}",
-   "inputs": 5,
-   "properties": 5,
-   "identicalKeys": true,
-   "required": 2
-  },
-  {
-   "blueprint": "{{blueprint-14}}",
-   "inputs": 13,
-   "properties": 13,
-   "identicalKeys": true,
-   "required": 1
   }
  ],
  "schemaMatches": 10,
+ "schemaProperties": 74,
  "generatorAddsPerProperty": {
   "encrypted": 64
  },
  "requiredByInputType": {
   "string|required": 13,
   "boolean|not-required": 2
+ },
+ "validation": {
+  "project": "{{project-1}}",
+  "results": [
+   {
+    "subject": "01-single-vm/single-vm.blueprint.yaml",
+    "kind": "template",
+    "valid": true,
+    "messages": []
+   },
+   {
+    "subject": "02-vm-cloud-init/vm-cloud-init.blueprint.yaml",
+    "kind": "template",
+    "valid": true,
+    "messages": []
+   },
+   {
+    "subject": "03-web-pair/web-pair.blueprint.yaml",
+    "kind": "template",
+    "valid": true,
+    "messages": []
+   },
+   {
+    "subject": "04-hybrid-3tier/hybrid-3tier.blueprint.yaml",
+    "kind": "template",
+    "valid": true,
+    "messages": []
+   },
+   {
+    "subject": "05-microservices/microservices.blueprint.yaml",
+    "kind": "template",
+    "valid": true,
+    "messages": []
+   },
+   {
+    "subject": "an unknown resource type",
+    "kind": "control",
+    "valid": false,
+    "messages": [
+     "Resource type CCI.NotAType not found"
+    ]
+   },
+   {
+    "subject": "a namespace missing its required fields",
+    "kind": "control",
+    "valid": false,
+    "messages": [
+     "Failed to match exactly one schema (matched 0 out of 2) One of: Existing namespaces require name. generateName, className, regionName, and vpcName are not allowed. New namespaces require generateName, className, regionName, and vpcName."
+    ]
+   },
+   {
+    "subject": "content that is not YAML",
+    "kind": "control",
+    "valid": false,
+    "messages": [
+     "Failed to parse blueprint: while parsing a flow sequence in 'reader', line 2, column 12: resources: [unclosed ^ expected ',' or ']', but got <stream end> in 'reader', line 3, column 1: ^"
+    ]
+   }
+  ],
+  "countsUnchanged": true,
+  "templatesValid": 5,
+  "templates": 5,
+  "controlsRefused": 3,
+  "controls": 3
  }
 }
