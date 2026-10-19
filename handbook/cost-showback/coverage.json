@@ -1,164 +1,202 @@
 {
- "captured_utc": "2026-09-20T21:15:18Z",
+ "captured_utc": "2026-10-18T20:00:20Z",
  "family": {
   "VirtualMachine": {
-   "statKeys": 331,
-   "costKeys": 28
+   "objects": 110,
+   "costKeysCollected": 34,
+   "costKeysDescribed": 34,
+   "costKeysOnTheFirstObject": 28
   },
   "HostSystem": {
-   "statKeys": 261,
-   "costKeys": 12
+   "objects": 11,
+   "costKeysCollected": 12,
+   "costKeysDescribed": 12,
+   "costKeysOnTheFirstObject": 12
   },
   "ClusterComputeResource": {
-   "statKeys": 337,
-   "costKeys": 19
+   "objects": 5,
+   "costKeysCollected": 20,
+   "costKeysDescribed": 20,
+   "costKeysOnTheFirstObject": 20
   },
   "Datastore": {
-   "statKeys": 89,
-   "costKeys": 7
+   "objects": 12,
+   "costKeysCollected": 9,
+   "costKeysDescribed": 9,
+   "costKeysOnTheFirstObject": 7
   }
  },
  "coverage": {
   "VirtualMachine": {
    "cost|additionalMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
    },
    "cost|allocation|allocationBasedCpuMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
    },
    "cost|allocation|allocationBasedDailyCpuCost": {
-    "objects": 103,
-    "reporting": 22,
-    "nonZero": 22
-   },
-   "cost|allocation|allocationBasedDailyMemoryCost": {
-    "objects": 103,
-    "reporting": 22,
-    "nonZero": 22
-   },
-   "cost|allocation|allocationBasedDailyStorageCost": {
-    "objects": 103,
-    "reporting": 20,
-    "nonZero": 20
-   },
-   "cost|allocation|allocationBasedMemoryMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|allocation|allocationBasedStorageMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 89
-   },
-   "cost|allocation|allocationBasedTotalCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|allocation|allocationBasedTotalMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|dailyAdditionalCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|demandBasedCpuMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 80
-   },
-   "cost|demandBasedDailyCpuCost": {
-    "objects": 103,
-    "reporting": 22,
-    "nonZero": 20
-   },
-   "cost|demandBasedDailyMemoryCost": {
-    "objects": 103,
-    "reporting": 22,
-    "nonZero": 20
-   },
-   "cost|demandBasedDailyStorageCost": {
-    "objects": 103,
-    "reporting": 22,
-    "nonZero": 22
-   },
-   "cost|demandBasedMemoryMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 80
-   },
-   "cost|demandBasedStorageMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveCpuMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveDailyCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveDailyCpuCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveDailyMemoryCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveDailyStorageCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveMemoryMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveProjectedTotalCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveStorageMTDCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|effectiveTotalCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|monthlyProjectedCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|monthlyTotalCost": {
-    "objects": 103,
-    "reporting": 91,
-    "nonZero": 91
-   },
-   "cost|reclaimableCost": {
-    "objects": 103,
+    "objects": 110,
     "reporting": 53,
     "nonZero": 53
+   },
+   "cost|allocation|allocationBasedDailyMemoryCost": {
+    "objects": 110,
+    "reporting": 53,
+    "nonZero": 53
+   },
+   "cost|allocation|allocationBasedDailyStorageCost": {
+    "objects": 110,
+    "reporting": 53,
+    "nonZero": 53
+   },
+   "cost|allocation|allocationBasedMemoryMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|allocation|allocationBasedStorageMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 92
+   },
+   "cost|allocation|allocationBasedTotalCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|allocation|allocationBasedTotalMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|dailyAdditionalCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|demandBasedCpuMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 81
+   },
+   "cost|demandBasedDailyCpuCost": {
+    "objects": 110,
+    "reporting": 53,
+    "nonZero": 40
+   },
+   "cost|demandBasedDailyMemoryCost": {
+    "objects": 110,
+    "reporting": 53,
+    "nonZero": 40
+   },
+   "cost|demandBasedDailyStorageCost": {
+    "objects": 110,
+    "reporting": 53,
+    "nonZero": 53
+   },
+   "cost|demandBasedMemoryMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 81
+   },
+   "cost|demandBasedStorageMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|detailedAdditionalCost:<name>": {
+    "objects": 110,
+    "reporting": 1,
+    "nonZero": 1
+   },
+   "cost|effectiveCpuMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveDailyCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveDailyCpuCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveDailyMemoryCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveDailyStorageCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveMemoryMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveProjectedTotalCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveStorageMTDCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|effectiveTotalCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|idleVMReclaimableCost": {
+    "objects": 110,
+    "reporting": 1,
+    "nonZero": 1
+   },
+   "cost|monthlyProjectedCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|monthlyTotalCost": {
+    "objects": 110,
+    "reporting": 93,
+    "nonZero": 93
+   },
+   "cost|oversizedVMReclaimableCost": {
+    "objects": 110,
+    "reporting": 33,
+    "nonZero": 33
+   },
+   "cost|potentialCostIncrease": {
+    "objects": 110,
+    "reporting": 10,
+    "nonZero": 10
+   },
+   "cost|poweroffVMReclaimableCost": {
+    "objects": 110,
+    "reporting": 13,
+    "nonZero": 13
+   },
+   "cost|reclaimableCost": {
+    "objects": 110,
+    "reporting": 58,
+    "nonZero": 58
+   },
+   "cost|snapshotVMReclaimableCost": {
+    "objects": 110,
+    "reporting": 2,
+    "nonZero": 2
    }
   },
   "HostSystem": {
@@ -299,6 +337,11 @@
     "reporting": 5,
     "nonZero": 5
    },
+   "cost|potential_savings|reclaimableHostCost": {
+    "objects": 5,
+    "reporting": 5,
+    "nonZero": 1
+   },
    "cost|totalCost": {
     "objects": 5,
     "reporting": 5,
@@ -321,6 +364,11 @@
    }
   },
   "Datastore": {
+   "cost|allocatedCost": {
+    "objects": 12,
+    "reporting": 4,
+    "nonZero": 3
+   },
    "cost|allocation|allocationBasedAllocatedCost": {
     "objects": 12,
     "reporting": 12,
@@ -355,33 +403,258 @@
     "objects": 12,
     "reporting": 12,
     "nonZero": 12
+   },
+   "cost|unAllocatedCost": {
+    "objects": 12,
+    "reporting": 4,
+    "nonZero": 4
    }
+  }
+ },
+ "spread": {
+  "VirtualMachine": {
+   "densest": "cost|monthlyTotalCost",
+   "levels": [
+    {
+     "reporting": 93,
+     "keys": 21,
+     "examples": [
+      "cost|additionalMTDCost",
+      "cost|allocation|allocationBasedCpuMTDCost",
+      "cost|allocation|allocationBasedMemoryMTDCost"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 58,
+     "keys": 1,
+     "examples": [
+      "cost|reclaimableCost"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 53,
+     "keys": 6,
+     "examples": [
+      "cost|allocation|allocationBasedDailyCpuCost",
+      "cost|allocation|allocationBasedDailyMemoryCost",
+      "cost|allocation|allocationBasedDailyStorageCost"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 33,
+     "keys": 1,
+     "examples": [
+      "cost|oversizedVMReclaimableCost"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 13,
+     "keys": 1,
+     "examples": [
+      "cost|poweroffVMReclaimableCost"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 10,
+     "keys": 1,
+     "examples": [
+      "cost|potentialCostIncrease"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 2,
+     "keys": 1,
+     "examples": [
+      "cost|snapshotVMReclaimableCost"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 1,
+     "keys": 2,
+     "examples": [
+      "cost|detailedAdditionalCost:<name>",
+      "cost|idleVMReclaimableCost"
+     ],
+     "allWithinTheDensest": true
+    }
+   ],
+   "unreachedByTheDensest": 17,
+   "unreachedThatAreTemplates": 17
+  },
+  "HostSystem": {
+   "densest": "cost|totalMTDCost",
+   "levels": [
+    {
+     "reporting": 11,
+     "keys": 12,
+     "examples": [
+      "cost|accumulatedDepreciation",
+      "cost|additionalTotalCost",
+      "cost|aggregatedDailyTotalCost"
+     ],
+     "allWithinTheDensest": true
+    }
+   ]
+  },
+  "ClusterComputeResource": {
+   "densest": "cost|totalMemoryCost",
+   "levels": [
+    {
+     "reporting": 5,
+     "keys": 18,
+     "examples": [
+      "cost|aggregatedDailyTotalCost",
+      "cost|aggregatedDeletedVmDailyTotalCost",
+      "cost|allocation|allocationBasedAllocatedCost"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 1,
+     "keys": 2,
+     "examples": [
+      "cost|allocatedCost",
+      "cost|unAllocatedCost"
+     ],
+     "allWithinTheDensest": true
+    }
+   ]
+  },
+  "Datastore": {
+   "densest": "cost|totalCost",
+   "levels": [
+    {
+     "reporting": 12,
+     "keys": 7,
+     "examples": [
+      "cost|allocation|allocationBasedAllocatedCost",
+      "cost|allocation|allocationBasedUnAllocatedCost",
+      "cost|allocation|storageRateByAllocation"
+     ],
+     "allWithinTheDensest": true
+    },
+    {
+     "reporting": 4,
+     "keys": 2,
+     "examples": [
+      "cost|allocatedCost",
+      "cost|unAllocatedCost"
+     ],
+     "allWithinTheDensest": true
+    }
+   ]
   }
  },
  "composition": {
   "consumption": {
-   "checked": 91,
-   "withinACent": 91,
-   "exactToTheFloat": 7,
-   "largestDifference": 6.631e-07,
+   "checked": 93,
+   "withinACent": 93,
+   "exactToTheFloat": 4,
+   "missingAPart": 0,
+   "largestDifference": 4.396e-07,
    "passes": true
   },
   "ownership": {
    "checked": 11,
    "withinACent": 11,
    "exactToTheFloat": 0,
-   "largestDifference": 0.0001086593,
+   "missingAPart": 0,
+   "largestDifference": 9.34005e-05,
    "passes": true
   }
  },
  "showback": {
   "groups": 63,
-  "populatedGroupFound": true,
-  "groupStatKeys": 50,
-  "groupCostKeys": 0,
+  "groupsDeclaredTotal": null,
+  "customGroups": 49,
+  "populatedCustomGroups": 32,
+  "populatedCustomGroupsWithACostKey": 0,
+  "populatedCustomGroupsWithPricedMembers": 22,
+  "worldObjects": 14,
+  "worldObjectsWithCostKeys": [
+   "VCFWorld",
+   "vSphere Private World",
+   "vSphere World"
+  ],
   "isAView": false
  },
  "currency": "USD",
+ "priceInputs": {
+  "read": true,
+  "drivers": [
+   {
+    "driver": "hardwareTotalCost",
+    "matchesReference": true,
+    "referenceIsZero": false
+   },
+   {
+    "driver": "hciHardwareCost",
+    "matchesReference": true,
+    "referenceIsZero": true
+   },
+   {
+    "driver": "storageCost",
+    "matchesReference": false,
+    "referenceIsZero": false
+   },
+   {
+    "driver": "licenseTotalCost",
+    "matchesReference": true,
+    "referenceIsZero": false
+   },
+   {
+    "driver": "applicationCost",
+    "matchesReference": false,
+    "referenceIsZero": true
+   },
+   {
+    "driver": "maintenanceTotalCost",
+    "matchesReference": true,
+    "referenceIsZero": false
+   },
+   {
+    "driver": "laborTotalCost",
+    "matchesReference": true,
+    "referenceIsZero": false
+   },
+   {
+    "driver": "networkTotalCost",
+    "matchesReference": true,
+    "referenceIsZero": false
+   },
+   {
+    "driver": "facilitiesTotalCost",
+    "matchesReference": true,
+    "referenceIsZero": false
+   },
+   {
+    "driver": "additionalCost",
+    "matchesReference": false,
+    "referenceIsZero": true
+   }
+  ],
+  "modes": {
+   "STORAGE": "DC_SPECIFIC",
+   "LICENSE": "ALL_DC",
+   "MAINTENANCE": "ALL_DC",
+   "NETWORK": "ALL_DC",
+   "LABOR": "ALL_DC",
+   "FACILITIES": "ALL_DC"
+  },
+  "lastCalculation": {
+   "status": "COMPLETED",
+   "completionTime": "10/17/2026 21:13:49",
+   "totalNoOfDatacenters": 3,
+   "failedNoOfDatacenters": 0
+  }
+ },
  "vmKeys": [
   "cost|additionalMTDCost",
   "cost|allocation|allocationBasedCpuMTDCost",
@@ -399,6 +672,7 @@
   "cost|demandBasedDailyStorageCost",
   "cost|demandBasedMemoryMTDCost",
   "cost|demandBasedStorageMTDCost",
+  "cost|detailedAdditionalCost:<name>",
   "cost|effectiveCpuMTDCost",
   "cost|effectiveDailyCost",
   "cost|effectiveDailyCpuCost",
@@ -408,9 +682,14 @@
   "cost|effectiveProjectedTotalCost",
   "cost|effectiveStorageMTDCost",
   "cost|effectiveTotalCost",
+  "cost|idleVMReclaimableCost",
   "cost|monthlyProjectedCost",
   "cost|monthlyTotalCost",
-  "cost|reclaimableCost"
+  "cost|oversizedVMReclaimableCost",
+  "cost|potentialCostIncrease",
+  "cost|poweroffVMReclaimableCost",
+  "cost|reclaimableCost",
+  "cost|snapshotVMReclaimableCost"
  ],
  "hostKeys": [
   "cost|accumulatedDepreciation",

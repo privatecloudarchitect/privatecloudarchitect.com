@@ -13,31 +13,33 @@ It reports four things:
      effective one actually in force) across cpu, memory and storage, daily and month-to-date. A
      host carries an OWNERSHIP model: hardware, facilities, labour, network, maintenance, OS
      licensing, depreciation, and their loaded total. These answer different questions and neither
-     is the other's roll-up.
+     is the other's roll-up. The family is every cost key collected on ANY object of the type, not
+     the keys of the first object listed: one machine does not collect every key its type carries.
 
   2. COVERAGE, PER KEY. The gate. Not "are prices set" but "does THIS key report for the objects I
-     am about to sum", which is a different question and the one that silently breaks a report: on
-     the estate this was written against, one daily-cost key covered 91 of 103 machines while its
-     basis-specific sibling covered 22, and the 22 were a strict subset. Summing the sparse key
-     produces a confident number that is missing four fifths of the estate.
+     am about to sum", which is the question that silently breaks a report. For the best- and
+     worst-covered keys it also says whether the sparse key's objects are a subset of the dense
+     key's, because only then does summing the sparse key simply drop the difference.
 
-  3. COMPOSITION, TO THE DECIMAL. A total that does not equal the sum of its published parts is a
+  3. COMPOSITION, TO THE CENT. A total that does not equal the sum of its published parts is a
      total you cannot explain to anyone. Checked on both models: the machine's daily cost against
      cpu plus memory plus storage plus additional, and the host's loaded cost against its seven
-     named components.
+     named components. An object missing a part is counted apart, never summed as zero.
 
   4. WHETHER SHOWBACK IS A VIEW OR A BUILD. The tempting design is to roll priced signals up the
      custom-group tree that already scopes policies and alerts. Whether that works is a property of
-     your instance, and it is one read: ask a group with members for its stat keys and count the
-     cost ones.
+     your instance: the run asks every group with members for its stat keys and counts the cost ones.
 
 Read-only throughout: resource lists, stat keys, stat values, group membership. It prices nothing,
-sets nothing, and writes nothing to the instance.
+sets nothing, and writes nothing to the instance. A read that is refused or comes back short stops
+the run (exit 4) rather than reporting an absence it did not observe.
 
 Run:
   export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN_FILE=...   # mode 0600 (or OPS_API_TOKEN, the value)
   export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
-  python3 coverage.py                          # writes coverage.json beside this file
+  python3 coverage.py                          # writes coverage.json beside this file (OUT_DIR to move it)
+
+Exit: 0 composition holds on both models - 1 composition fails on a model - 4 a read failed or came back short
 """
 
 from __future__ import annotations
@@ -47,12 +49,15 @@ import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 
-from opslib import bearer, ops
+from opslib import _ctx, bearer, ops
 
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 
 KINDS = ("VirtualMachine", "HostSystem", "ClusterComputeResource", "Datastore")
+PAGE = 1000
 
 # The machine's daily cost and the parts it is published as.
 VM_TOTAL = "cost|effectiveDailyCost"
@@ -66,173 +71,307 @@ HOST_PARTS = ["cost|hardwareTotalCost", "cost|facilitiesTotalCost", "cost|hostLa
 CENT = 0.01
 
 
-def resources(tok, kind, page=2000):
-    st, body = ops("GET", "/api/resources", tok,
-                   params={"resourceKind": kind, "pageSize": page, "_no_links": "true"})
-    if st != 200:
-        return []
-    return [r for r in ((body or {}).get("resourceList") or []) if r.get("identifier")]
+def stop(msg):
+    print(f"FATAL: {msg}; nothing is reported, because an absence this run did not observe would read as a finding")
+    sys.exit(4)
+
+
+def public(key):
+    """A key as the record and the screen show it: a cost key named after something on your estate (an additional
+    cost's own name, after a colon) is shown by its family only."""
+    return key.split(":", 1)[0] + ":<name>" if ":" in key else key
+
+
+def resources(tok, kind=None, path="/api/resources"):
+    """Every object of a kind (or every member, for a group's members path), page by page, to the declared total."""
+    out, page = [], 0
+    while True:
+        params = {"page": page, "pageSize": PAGE, "_no_links": "true"}
+        if kind:
+            params["resourceKind"] = kind
+        st, body = ops("GET", path, tok, params=params)
+        if st != 200:
+            stop(f"list {kind or path} answered HTTP {st}")
+        batch = (body or {}).get("resourceList") or []
+        out += batch
+        total = ((body or {}).get("pageInfo") or {}).get("totalCount")
+        if total is None:
+            stop(f"list {kind or path} declared no total")
+        if len(out) >= total or not batch:
+            break
+        page += 1
+    if len(out) != total:
+        stop(f"list {kind or path} read {len(out)} of the {total} it declared")
+    return [r for r in out if r.get("identifier")]
 
 
 def statkeys(tok, rid):
     """The container is `stat-key`, hyphenated. A camel-case guess returns HTTP 200 and an empty
     list, which reads as an object that collects nothing rather than as a wrong key."""
     st, body = ops("GET", f"/api/resources/{rid}/statkeys", tok, params={"_no_links": "true"})
-    return [k["key"] for k in ((body or {}).get("stat-key") or [])] if st == 200 else []
+    if st != 200:
+        stop(f"stat keys of one object answered HTTP {st}")
+    return [k["key"] for k in ((body or {}).get("stat-key") or [])]
+
+
+def described(tok, kind):
+    """The cost keys the adapter describes for the object type, whether or not any object collects them."""
+    st, body = ops("GET", f"/api/adapterkinds/VMWARE/resourcekinds/{kind}/statkeys", tok, params={"_no_links": "true"})
+    if st != 200:
+        return None
+    return sorted(k["key"] for k in (body or {}).get("resourceTypeAttributes") or []
+                  if (k.get("key") or "").startswith("cost|"))
 
 
 def latest(tok, ids, keys):
     out = {}
-    if not ids or not keys:
-        return out
-    st, body = ops("POST", "/api/resources/stats/latest/query", tok,
-                   {"resourceId": ids, "statKey": keys})
-    if st != 200:
-        return out
-    for v in (body or {}).get("values") or []:
-        d = {}
-        for s in v.get("stat-list", {}).get("stat", []):
-            k, data = s.get("statKey", {}).get("key"), (s.get("data") or [])
-            if k and data:
-                d[k] = data[-1]
-        out[v.get("resourceId")] = d
+    for i in range(0, len(ids), PAGE):
+        st, body = ops("POST", "/api/resources/stats/latest/query", tok,
+                       {"resourceId": ids[i:i + PAGE], "statKey": keys})
+        if st != 200:
+            stop(f"the latest-stats query answered HTTP {st}")
+        for v in (body or {}).get("values") or []:
+            d = {}
+            for s in v.get("stat-list", {}).get("stat", []):
+                k, data = s.get("statKey", {}).get("key"), (s.get("data") or [])
+                if k and data:
+                    d[k] = data[-1]
+            out[v.get("resourceId")] = d
     return out
 
 
+def templates_among(tok, ids):
+    """How many of these machines are templates, from the summary|config|isTemplate property; None when unread."""
+    n = 0
+    for i in range(0, len(ids), PAGE):
+        st, body = ops("POST", "/api/resources/properties/latest/query", tok,
+                       {"resourceIds": ids[i:i + PAGE], "propertyKeys": ["summary|config|isTemplate"]})
+        if st != 200:
+            return None
+        for v in (body or {}).get("values") or []:
+            for pc in v.get("property-contents", {}).get("property-content", []):
+                if pc.get("statKey") == "summary|config|isTemplate" and (pc.get("values") or [None])[-1] == "true":
+                    n += 1
+    return n
+
+
 def composition(vals, total_key, part_keys):
-    """Does the total equal the sum of its published parts, on every object that reports a total?"""
-    checked = within = exact = 0
+    """Does the total equal the sum of its published parts, on every object that reports a total and every part?"""
+    checked = within = exact = missing = 0
     worst = 0.0
     for d in vals.values():
         if total_key not in d:
             continue
+        if any(k not in d for k in part_keys):
+            missing += 1
+            continue
         checked += 1
-        diff = abs(sum(d.get(k, 0.0) for k in part_keys) - d[total_key])
+        diff = abs(sum(d[k] for k in part_keys) - d[total_key])
         worst = max(worst, diff)
-        if diff == 0:
-            exact += 1
-        if diff < CENT:
-            within += 1
-    return {"checked": checked, "withinACent": within, "exactToTheFloat": exact,
-            "largestDifference": round(worst, 10),
-            "passes": checked > 0 and within == checked}
+        exact += diff == 0
+        within += diff < CENT
+    return {"checked": checked, "withinACent": within, "exactToTheFloat": exact, "missingAPart": missing,
+            "largestDifference": round(worst, 10), "passes": checked > 0 and within == checked}
+
+
+def internal(tok, path):
+    """One GET on VCF Operations' internal API, which answers only with the X-Ops-API-use-unsupported header and keeps
+    no compatibility promise; (status, body or None)."""
+    req = urllib.request.Request(f"https://{os.environ['OPS_HOST']}/suite-api{path}", headers={
+        "Authorization": f"Bearer {tok}", "Accept": "application/json", "X-Ops-API-use-unsupported": "true"})
+    try:
+        with urllib.request.urlopen(req, context=_ctx(), timeout=60) as r:
+            raw = r.read()
+            return r.status, (json.loads(raw) if raw else None)
+    except (urllib.error.HTTPError, urllib.error.URLError, OSError, ValueError) as e:
+        return getattr(e, "code", None), None
+
+
+def price_inputs(tok):
+    """5. Which price inputs differ from the product's reference, and when the cost engine last ran. The cost-driver
+    summary carries, per driver, the monthly cost in force and the reference cost the product computes; a driver whose
+    two differ was entered or changed, one whose two match was left at the reference or entered at it. No amount is
+    kept: only whether each driver matches."""
+    st, summ = internal(tok, "/internal/costdrivers/summary")
+    if st != 200 or not isinstance(summ, dict):
+        return {"read": False, "status": st}
+    drivers = [{"driver": c.get("costDriver"),
+                "matchesReference": abs((c.get("totalCost") or 0.0) - (c.get("referenceTotalCost") or 0.0)) < CENT,
+                "referenceIsZero": not c.get("referenceTotalCost")}
+               for c in summ.get("summaryCostConfigurations") or []]
+    _, modes = internal(tok, "/internal/costdrivers/configmodes")
+    _, run = internal(tok, "/internal/costcalculation/status")
+    run = run if isinstance(run, dict) else {}
+    return {"read": True, "drivers": drivers,
+            "modes": {m.get("costDriverType"): m.get("costDriverConfigModeType")
+                      for m in (modes or {}).get("costDriverConfigModes") or []},
+            "lastCalculation": {k: run.get(k) for k in ("status", "completionTime", "totalNoOfDatacenters",
+                                                        "failedNoOfDatacenters")}}
 
 
 def main():
+    if sys.argv[1:]:
+        sys.exit(f"unknown argument {sys.argv[1]}; coverage.py takes none (OUT_DIR moves the record)")
     out_dir = os.environ.get("OUT_DIR", os.path.dirname(os.path.abspath(__file__)))
     tok = bearer()
     print("coverage.py: what does this cost number actually cover?\n")
 
-    # ---- 1. the family, per object type
-    family, sample = {}, {}
+    # ---- the objects, and the cost keys each type actually collects
+    objects, family, collected = {}, {}, {}
     for kind in KINDS:
-        rl = resources(tok, kind, page=5)
-        if not rl:
-            family[kind] = {"objects": 0, "costKeys": 0}
-            continue
-        keys = statkeys(tok, rl[0]["identifier"])
-        cost = sorted(k for k in keys if k.startswith("cost|"))
-        family[kind] = {"statKeys": len(keys), "costKeys": len(cost)}
-        sample[kind] = cost
-    print("  1. THE FAMILY: cost keys on the object type, which is not the same as cost data")
+        rl = resources(tok, kind)
+        objects[kind] = [r["identifier"] for r in rl]
+        keys = set()
+        for rid in objects[kind]:
+            keys |= {k for k in statkeys(tok, rid) if k.startswith("cost|")}
+        desc = described(tok, kind)
+        collected[kind] = sorted(keys)
+        first = objects[kind] and {k for k in statkeys(tok, objects[kind][0]) if k.startswith("cost|")}
+        family[kind] = {"objects": len(objects[kind]), "costKeysCollected": len(keys),
+                        "costKeysDescribed": len(desc) if desc is not None else None,
+                        "costKeysOnTheFirstObject": len(first) if objects[kind] else 0}
+
+    # ---- 1. the family, per object type
+    print("  1. THE FAMILY: cost keys collected on any object of the type, against the first object's own list")
     for kind in KINDS:
         f = family[kind]
-        print(f"     {kind:<24} {f.get('costKeys', 0):>3} cost key(s) of {f.get('statKeys', 0):>4}")
+        print(f"     {kind:<24} {f['costKeysCollected']:>3} collected across {f['objects']:>4} object(s); "
+              f"{f['costKeysDescribed'] if f['costKeysDescribed'] is not None else '-':>3} described; "
+              f"the first object alone shows {f['costKeysOnTheFirstObject']}")
 
-    # ---- 2. coverage, per key, on the two models that carry data
-    coverage, models = {}, {}
+    # ---- 2. coverage, per key
+    coverage, vals_by_kind, spread = {}, {}, {}
     for kind in KINDS:
-        keys = sample.get(kind, [])
-        rl = resources(tok, kind)
-        ids = [r["identifier"] for r in rl]
-        vals = latest(tok, ids, keys)
+        keys, ids = collected[kind], objects[kind]
+        vals = latest(tok, ids, keys) if ids and keys else {}
+        vals_by_kind[kind] = vals
         per = {}
         for k in keys:
-            reporting = sum(1 for d in vals.values() if k in d)
-            nonzero = sum(1 for d in vals.values() if d.get(k))
-            per[k] = {"objects": len(ids), "reporting": reporting, "nonZero": nonzero}
-        coverage[kind] = per
-        models[kind] = {"objects": len(ids), "vals": vals}
-        if not keys or not ids:
+            rep = {rid for rid, d in vals.items() if k in d}
+            per[k] = {"objects": len(ids), "reporting": len(rep), "nonZero": sum(1 for d in vals.values() if d.get(k)),
+                      "_rep": rep}
+        if not per:
+            coverage[kind] = {}
             continue
-        best = max(per.values(), key=lambda x: x["reporting"])["reporting"]
-        worst = min(per.values(), key=lambda x: x["reporting"])["reporting"]
-        print(f"\n  2. COVERAGE on {kind}: {len(ids)} object(s), {len(keys)} cost key(s)")
-        print(f"     best-covered key reports for {best}, worst-covered for {worst}")
-        if best and worst < best:
-            print(f"     the spread is the finding: summing the sparse key silently drops "
-                  f"{best - worst} object(s)")
-        for k in sorted(per, key=lambda x: -per[x]["reporting"])[:4]:
-            print(f"       {k:<52} {per[k]['reporting']:>4}/{per[k]['objects']}")
-        if len(per) > 4 and worst < best:
-            # Only worth printing when there IS a spread; on a uniformly covered object type the
-            # "worst" key is just another row already shown above.
-            k = min(per, key=lambda x: per[x]["reporting"])
-            print(f"       {'...':<52}")
-            print(f"       {k:<52} {per[k]['reporting']:>4}/{per[k]['objects']}")
+        # Keys at each coverage level, densest first, each level checked against the densest: a key whose objects are
+        # all among the densest key's drops the difference when summed; one that reports elsewhere covers other objects.
+        top = max(per, key=lambda k: (per[k]["reporting"], k))
+        levels = {}
+        for k in per:
+            levels.setdefault(per[k]["reporting"], []).append(k)
+        spread[kind] = {"densest": public(top), "levels": [
+            {"reporting": n, "keys": len(ks), "examples": [public(k) for k in sorted(ks)[:3]],
+             "allWithinTheDensest": all(per[k]["_rep"] <= per[top]["_rep"] for k in ks)}
+            for n, ks in sorted(levels.items(), reverse=True)]}
+        print(f"\n  2. COVERAGE on {kind}: {len(ids)} object(s), {len(keys)} cost key(s), by how many objects each reports for")
+        for lv in spread[kind]["levels"]:
+            note = "" if lv["reporting"] == per[top]["reporting"] else (
+                f"   within the densest key's objects: summing drops {per[top]['reporting'] - lv['reporting']}"
+                if lv["allWithinTheDensest"] else "   reports for objects the densest key does not")
+            print(f"     {lv['reporting']:>5}/{len(ids):<5} {lv['keys']:>3} key(s), e.g. {', '.join(lv['examples'][:2])}{note}")
+        if kind == "VirtualMachine":
+            unreached = [rid for rid in ids if rid not in per[top]["_rep"]]
+            tpl = templates_among(tok, unreached) if unreached else 0
+            spread[kind]["unreachedByTheDensest"] = len(unreached)
+            spread[kind]["unreachedThatAreTemplates"] = tpl
+            if unreached:
+                print(f"     {len(unreached)} machine(s) no key reaches; {tpl if tpl is not None else '?'} of them are templates,"
+                      " which carry no cost, so count machines, not templates, in the denominator")
+        coverage[kind] = {public(k): {x: v for x, v in p.items() if x != "_rep"} for k, p in per.items()}
 
     # ---- 3. composition, both models
-    vm_vals = models.get("VirtualMachine", {}).get("vals", {})
-    host_vals = models.get("HostSystem", {}).get("vals", {})
-    comp = {"consumption": composition(vm_vals, VM_TOTAL, VM_PARTS),
-            "ownership": composition(host_vals, HOST_TOTAL, HOST_PARTS)}
+    comp = {"consumption": composition(vals_by_kind["VirtualMachine"], VM_TOTAL, VM_PARTS),
+            "ownership": composition(vals_by_kind["HostSystem"], HOST_TOTAL, HOST_PARTS)}
     print("\n  3. COMPOSITION: does each total equal the sum of its published parts?")
     for name, c in comp.items():
         verdict = "PASSES" if c["passes"] else "FAILS"
-        print(f"     {name:<13} {verdict}: {c['withinACent']}/{c['checked']} within a cent, "
-              f"largest difference {c['largestDifference']:g}")
+        print(f"     {name:<13} {verdict}: {c['withinACent']}/{c['checked']} within a cent, largest difference "
+              f"{c['largestDifference']:g}" + (f"; {c['missingAPart']} object(s) missing a part, not summed"
+                                               if c["missingAPart"] else ""))
 
-    # ---- 4. is showback a view or a build?
-    st, body = ops("GET", "/api/resources/groups", tok,
-                   params={"pageSize": 500, "_no_links": "true"})
-    groups = ((body or {}).get("groups") or []) if st == 200 else []
-    populated, gkeys, gcost = None, 0, 0
-    for g in groups:
-        st, b2 = ops("GET", "/api/resources", tok,
-                     params={"parentId": g["id"], "pageSize": 1, "_no_links": "true"})
-        if st == 200 and ((b2 or {}).get("pageInfo") or {}).get("totalCount"):
-            populated = g["id"]
-            break
+    # ---- 4. is showback a view or a build? every custom group with members, asked for its cost keys
+    # The group list holds custom groups (the Container adapter's group types) and the product's own world objects
+    # (vSphere World, VCF World and the like). A world object can carry estate-wide cost; that says nothing about
+    # whether the groups you build carry it, so the two are counted apart.
+    st, body = ops("GET", "/api/resources/groups", tok, params={"pageSize": 5000, "_no_links": "true"})
+    if st != 200:
+        stop(f"list custom groups answered HTTP {st}")
+    groups = (body or {}).get("groups") or []
+    total = ((body or {}).get("pageInfo") or {}).get("totalCount")
+    if total is not None and total != len(groups):
+        stop(f"list custom groups read {len(groups)} of the {total} it declared")
+    custom = [g for g in groups if (g.get("resourceKey") or {}).get("adapterKindKey") == "Container"]
+    worlds = [g for g in groups if g not in custom]
+    populated = with_cost = members_priced = 0
+    for g in custom:
+        members = resources(tok, path=f"/api/resources/groups/{g['id']}/members")
+        if not members:
+            continue
+        populated += 1
+        if any(k.startswith("cost|") for k in statkeys(tok, g["id"])):
+            with_cost += 1
+        if {(m.get("resourceKey") or {}).get("resourceKindKey") for m in members} & set(KINDS):
+            members_priced += 1
+    world_cost = [(g.get("resourceKey") or {}).get("resourceKindKey") for g in worlds
+                  if any(k.startswith("cost|") for k in statkeys(tok, g["id"]))]
+    showback = {"groups": len(groups), "groupsDeclaredTotal": total, "customGroups": len(custom),
+                "populatedCustomGroups": populated, "populatedCustomGroupsWithACostKey": with_cost,
+                "populatedCustomGroupsWithPricedMembers": members_priced,
+                "worldObjects": len(worlds), "worldObjectsWithCostKeys": sorted(world_cost),
+                "isAView": populated > 0 and with_cost == populated}
+    print(f"\n  4. SHOWBACK over the custom-group tree: {len(custom)} custom group(s), {populated} with members"
+          + ("" if total is not None else " (the group list declares no total; it was read in one page of 5000)"))
     if populated:
-        ks = statkeys(tok, populated)
-        gkeys, gcost = len(ks), len([k for k in ks if k.startswith("cost|")])
-    showback = {"groups": len(groups), "populatedGroupFound": bool(populated),
-                "groupStatKeys": gkeys, "groupCostKeys": gcost,
-                "isAView": bool(populated) and gcost > 0}
-    print(f"\n  4. SHOWBACK over the custom-group tree: {len(groups)} group(s)")
-    if populated:
-        print(f"     a group with members carries {gkeys} stat key(s), of which {gcost} are cost keys")
-        print("     " + ("cost rolls up the group tree: showback is a view"
-                         if gcost else
-                         "the group tree carries NO cost: showback is a build, not a view. Aggregate"
-                         " over members deliberately (a super metric that sums the members' cost),"
-                         " and say so rather than pointing at an existing tree."))
+        print(f"     {with_cost} of the {populated} with members carry a cost key; {members_priced} of them hold "
+              f"members of a priced type")
+        print("     " + ("cost rolls up the group tree: showback is a view" if showback["isAView"] else
+                         "the custom groups do not carry cost: showback is a build, not a view. Aggregate over members"
+                         " deliberately (a super metric that sums the members' cost), and say so rather than pointing"
+                         " at an existing tree."))
     else:
-        print("     no populated group to test against; stand one up before designing showback on it")
+        print("     no custom group has members to test against; stand one up before designing showback on it")
+    print(f"     the product's own world objects: {len(world_cost)} of {len(worlds)} carry cost keys"
+          + (f" ({', '.join(sorted(world_cost))}), the estate-wide totals, not a showback by your groups"
+             if world_cost else ""))
 
-    # ---- the currency, which is the one pricing fact the suite API serves on this build
+    # ---- 5. the price inputs: which differ from the reference, and when the cost engine last ran
     st, cur = ops("GET", "/api/costconfig/currency", tok, params={"_no_links": "true"})
     currency = (cur or {}).get("code") if st == 200 else None
-    print(f"\n  currency: {currency or 'not served'}. The price inputs themselves are not on this "
-          f"API surface here,")
-    print(f"  which is why this gate measures coverage from the outputs rather than reading a "
-          f"settings page.")
+    prices = price_inputs(tok)
+    print(f"\n  5. PRICE INPUTS (currency {currency or 'not served'}): the public API serves the currency only; the internal")
+    print("     cost-driver summary carries each driver's cost in force beside the product's reference")
+    if prices["read"]:
+        changed = [d["driver"] for d in prices["drivers"] if not d["matchesReference"]]
+        same = [d["driver"] for d in prices["drivers"] if d["matchesReference"]]
+        print(f"     {len(changed)} of {len(prices['drivers'])} driver(s) differ from the reference, so were entered or "
+              f"changed: {', '.join(changed) or 'none'}")
+        print(f"     {len(same)} match it, left at the reference or entered at it: {', '.join(same) or 'none'}")
+        lc = prices["lastCalculation"]
+        print(f"     the cost engine last ran {lc.get('status') or '?'} at {lc.get('completionTime') or '?'} (the "
+              f"instance's own clock and format), {lc.get('failedNoOfDatacenters')} of "
+              f"{lc.get('totalNoOfDatacenters')} datacenter(s) failed; print this beside every figure")
+    else:
+        print(f"     the internal summary was not read (HTTP {prices['status']}): confirming the inputs is a person's step")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-               "family": family, "coverage": coverage, "composition": comp,
-               "showback": showback, "currency": currency,
-               "vmKeys": sample.get("VirtualMachine", []),
-               "hostKeys": sample.get("HostSystem", [])}
+               "family": family, "coverage": coverage, "spread": spread, "composition": comp,
+               "showback": showback, "currency": currency, "priceInputs": prices,
+               "vmKeys": [public(k) for k in collected["VirtualMachine"]],
+               "hostKeys": [public(k) for k in collected["HostSystem"]]}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
     for var in ("OPS_HOST", "OPS_BROKER_HOST"):
         v = os.environ.get(var)
         assert not v or v not in text, f"{var} reached the record"
+    for kind in KINDS:
+        for k in collected[kind]:
+            if ":" in k:
+                assert k.split(":", 1)[1] not in text, "an estate-named cost key reached the record"
     # No object is named anywhere in this record: it carries key names and counts only.
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "coverage.json"), "w", encoding="utf-8") as fh:
         fh.write(text + "\n")
     print("\nwrote coverage.json; it carries key names and counts, and names no object")
-    return 0
+    return 0 if all(c["passes"] for c in comp.values()) else 1
 
 
 if __name__ == "__main__":

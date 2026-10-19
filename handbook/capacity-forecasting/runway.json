@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-20T20:39:20Z",
+ "captured_utc": "2026-10-18T19:26:27Z",
  "clusters": 5,
  "models": [
   "alloc",
@@ -11,49 +11,250 @@
   "diskspace"
  ],
  "capDays": 366,
- "criticalDays": 90.0,
- "warningDays": 120.0,
- "severitySource": "the policy's own TIME_REMAINING block (inherited)",
- "atCap": 4,
+ "keysInFamily": 14,
+ "keysAsked": 14,
+ "effectivePolicyRead": true,
+ "policies": [
+  {
+   "policy": 1,
+   "governs": 1,
+   "builtInDefault": false,
+   "ratios": {
+    "cpu": 1.5,
+    "memory": 1.0,
+    "diskspace": 2.0,
+    "poweredOffVmsConsidered": true
+   },
+   "ratiosInherited": false,
+   "buffers": {
+    "cpu": {
+     "demand": 0.0,
+     "allocation": 0.0
+    },
+    "memory": {
+     "demand": 0.0,
+     "allocation": 0.0
+    },
+    "diskspace": {
+     "demand": 0.0,
+     "allocation": 0.0
+    }
+   },
+   "buffersInherited": true,
+   "thresholds": {
+    "critical": 90.0,
+    "warning": 120.0
+   },
+   "thresholdsInherited": true
+  },
+  {
+   "policy": 2,
+   "governs": 2,
+   "builtInDefault": false,
+   "ratios": {
+    "cpu": 8.0,
+    "memory": 2.5,
+    "diskspace": 4.0,
+    "poweredOffVmsConsidered": true
+   },
+   "ratiosInherited": false,
+   "buffers": {
+    "cpu": {
+     "demand": 0.0,
+     "allocation": 0.0
+    },
+    "memory": {
+     "demand": 0.0,
+     "allocation": 0.0
+    },
+    "diskspace": {
+     "demand": 0.0,
+     "allocation": 0.0
+    }
+   },
+   "buffersInherited": true,
+   "thresholds": {
+    "critical": 90.0,
+    "warning": 120.0
+   },
+   "thresholdsInherited": true
+  },
+  {
+   "policy": 3,
+   "governs": 2,
+   "builtInDefault": true,
+   "ratios": {
+    "cpu": 4.0,
+    "memory": 1.0,
+    "diskspace": 2.0,
+    "poweredOffVmsConsidered": false
+   },
+   "ratiosInherited": false,
+   "buffers": {
+    "cpu": {
+     "demand": 0.0,
+     "allocation": 0.0
+    },
+    "memory": {
+     "demand": 0.0,
+     "allocation": 0.0
+    },
+    "diskspace": {
+     "demand": 0.0,
+     "allocation": 0.0
+    }
+   },
+   "buffersInherited": false,
+   "thresholds": {
+    "critical": 90.0,
+    "warning": 120.0
+   },
+   "thresholdsInherited": true
+  }
+ ],
+ "atCap": 3,
  "pairsCompared": 30,
  "pairsDivergent": 0,
  "reservations": {
-  "machines": 103,
+  "machines": 110,
   "withAReservation": 0
  },
- "estateRunwayDays": 0.0,
- "boundBy": "alloc.cpu",
+ "estate": {
+  "alloc": {
+   "runwayDays": 0.0,
+   "atCap": false,
+   "boundBy": [
+    {
+     "cluster": 1,
+     "axes": [
+      "cpu"
+     ]
+    }
+   ]
+  },
+  "demand": {
+   "runwayDays": 0.0,
+   "atCap": false,
+   "boundBy": [
+    {
+     "cluster": 4,
+     "axes": [
+      "cpu"
+     ]
+    }
+   ]
+  }
+ },
  "rows": [
   {
    "cluster": 1,
-   "binding": "alloc.cpu",
-   "runwayDays": 0.0,
-   "atCap": false
+   "policy": 1,
+   "criticalDays": 90.0,
+   "warningDays": 120.0,
+   "models": {
+    "alloc": {
+     "runwayDays": 0.0,
+     "binding": [
+      "cpu"
+     ],
+     "atCap": false
+    },
+    "demand": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    }
+   },
+   "platformRollupDays": 0.0,
+   "keysReturned": 14,
+   "severity": "critical"
   },
   {
    "cluster": 2,
-   "binding": null,
-   "runwayDays": 366.0,
-   "atCap": true
+   "policy": 2,
+   "criticalDays": 90.0,
+   "warningDays": 120.0,
+   "models": {
+    "alloc": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    },
+    "demand": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    }
+   },
+   "platformRollupDays": 366.0,
+   "keysReturned": 14,
+   "severity": "healthy"
   },
   {
    "cluster": 3,
-   "binding": null,
-   "runwayDays": 366.0,
-   "atCap": true
+   "policy": 2,
+   "criticalDays": 90.0,
+   "warningDays": 120.0,
+   "models": {
+    "alloc": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    },
+    "demand": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    }
+   },
+   "platformRollupDays": 366.0,
+   "keysReturned": 14,
+   "severity": "healthy"
   },
   {
    "cluster": 4,
-   "binding": null,
-   "runwayDays": 366.0,
-   "atCap": true
+   "policy": 3,
+   "criticalDays": 90.0,
+   "warningDays": 120.0,
+   "models": {
+    "alloc": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    },
+    "demand": {
+     "runwayDays": 0.0,
+     "binding": [
+      "cpu"
+     ],
+     "atCap": false
+    }
+   },
+   "platformRollupDays": 0.0,
+   "keysReturned": 14,
+   "severity": "critical"
   },
   {
    "cluster": 5,
-   "binding": null,
-   "runwayDays": 366.0,
-   "atCap": true
+   "policy": 3,
+   "criticalDays": 90.0,
+   "warningDays": 120.0,
+   "models": {
+    "alloc": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    },
+    "demand": {
+     "runwayDays": 366.0,
+     "binding": [],
+     "atCap": true
+    }
+   },
+   "platformRollupDays": 366.0,
+   "keysReturned": 14,
+   "severity": "healthy"
   }
  ],
- "keysInFamily": 14
+ "exit": 2
 }

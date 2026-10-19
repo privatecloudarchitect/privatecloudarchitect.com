@@ -1,65 +1,67 @@
 # Cost coverage gate
 
-Backs the cost and showback sheet
+Backs the cost and showback chapter
 ([privatecloudarchitect.com/handbook/cost-showback](https://privatecloudarchitect.com/handbook/cost-showback)).
 
-A cost metric computes whether or not anyone set the prices, and it computes whether or not it has
-anything to say about the object you are about to sum. So the first question about a cost figure is
-never "how much" but "over what". `coverage.py` answers it read-only, from the outputs, because on
-this build the price inputs are not on the suite API surface (ten candidate paths probed; one serves
-the currency).
+A cost metric computes whether or not anyone set the prices, and it computes whether or not it has anything to say
+about the object you are about to sum. So the first question about a cost figure is never "how much" but "over what".
+`coverage.py` answers it read-only, from the outputs, and says which price inputs differ from the product's reference.
 
 ## Run it
 
 ```bash
 export OPS_HOST=<your-ops-fqdn>
 export OPS_BROKER_HOST=<your-broker-fqdn>    # omit if the broker shares the Ops FQDN
-export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>   # OPS_REALM defaults to CUSTOMER
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/ops-api-token )   # paste your api-token, then Ctrl-D
+export OPS_API_TOKEN_FILE=~/.vcf/ops-api-token   # mode 0600; OPS_REALM defaults to CUSTOMER
 export OPS_TLS_VERIFY=false                  # only on a self-signed lab CA
 
-python3 coverage.py                          # writes coverage.json beside the script
+python3 coverage.py                          # writes coverage.json beside the script (OUT_DIR to move it)
 ```
 
-The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
-The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
-keep it for a throwaway credential.
+The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600; a wider mode is refused. The value itself in
+`OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so keep it for a throwaway
+credential.
 
-Stdlib Python only; `opslib.py` holds the broker exchange. The script reads resource lists, stat
-keys, stat values and group membership. It prices nothing and writes nothing to the instance.
+Stdlib Python 3 only; `opslib.py` holds the broker exchange. The script reads resource lists, stat keys, stat values,
+properties, group membership and the cost-driver summary. It prices nothing and writes nothing to the instance. The
+identity behind the api-token needs read access to those.
+
+| exit | meaning |
+|---|---|
+| 0 | composition holds on both models |
+| 1 | a total did not equal the sum of its published parts on a model: wiring, not pricing |
+| 4 | a read was refused or came back short, so nothing was reported |
+
+See [`expected-output.md`](expected-output.md) for a full run.
 
 ## What it reports
 
-**1. The family, per object type.** Cost is not one metric and it is not one vocabulary. Four object
-types carry cost, and they answer four different questions:
+**1. The family, per object type.** Cost is not one metric and it is not one vocabulary. Four object types carry cost,
+and they answer four different questions:
 
-| object type | keys | vocabulary | what it is |
-|---|---|---|---|
-| `VirtualMachine` | 28 | three bases (allocation, demand, effective) across cpu, memory and storage, daily and month-to-date, plus reclaimable and a projection | **the charge** |
-| `HostSystem` | 12 | hardware, facilities, host labour, network, maintenance, OS licensing, additional, summing to a loaded total, with depreciation separate | **the basis** |
-| `ClusterComputeResource` | 19 | `cpuBaseRate`, `memoryBaseRate`, total cost split allocated against unallocated | **the price** |
-| `Datastore` | 7 | `storageRate`, `storageRateByAllocation`, and the same allocated/unallocated pair | **the price, for storage** |
+| object type | vocabulary | what it is |
+|---|---|---|
+| `VirtualMachine` | three bases (allocation, demand, effective) across cpu, memory and storage, daily and month-to-date, plus reclaimable costs and a projection | **the charge** |
+| `HostSystem` | hardware, facilities, host labour, network, maintenance, OS licensing, additional, summing to a loaded total, with depreciation separate | **the basis** |
+| `ClusterComputeResource` | `cpuBaseRate`, `memoryBaseRate`, total cost split allocated against unallocated | **the price** |
+| `Datastore` | `storageRate`, `storageRateByAllocation`, and the same allocated/unallocated pair | **the price, for storage** |
 
-None of them is another's roll-up: the machine total is not a share of the host total, and the
-cluster total is not the sum of its machines. The useful division is that **the rates sit on the
-infrastructure objects and the charges sit on the workload objects**, which is price-times-signal
-already implemented, and which means a cost figure can be attacked at either factor. Quoting one
-object type's answer when somebody asked another's is a category error both sides will accept.
+None of them is another's roll-up: the machine total is not a share of the host total, and the cluster total is not the
+sum of its machines. The rates sit on the infrastructure objects and the charges on the workload objects. The family is
+read as the union of the keys every object of the type collects, because one object does not collect every key its
+type carries.
 
-**2. Coverage, per key.** The gate, and the reason it is per key rather than per estate: a fully
-priced instance can still have cost keys that report for a fifth of it, because collection and the
-pricing model are different mechanisms. On the estate this was written against, the best-covered
-machine cost key reported for 91 of 103 and the worst for 20, with the sparse set a strict subset of
-the dense one. Summing the sparse key produces a confident total missing most of the estate, and
-nothing in the response distinguishes them: same shape, same units, same plausible values.
+**2. Coverage, by level.** The gate, and the reason it is per key rather than per estate: collection and the pricing
+model are different mechanisms, so a priced instance can still have keys that report for part of it. The run groups the
+keys by how many objects each reports for and checks each level against the densest key. A sparse key whose objects all
+sit inside the densest key's drops the difference when summed, and nothing in its values marks it: same shape, same
+units, plausible amounts. Some keys are sparse by design, such as a reclaimable cost, which exists only where something
+is reclaimable; the basis keys are the ones to watch. The run also counts how many of the machines no key reaches are
+templates, which carry no cost, so the denominator can be machines rather than everything the list returns.
 
-Sweep rather than sample, and then re-read what the sample already infected. Sampling two of a
-cluster's nineteen cost keys was enough to reach the wrong conclusion that clusters carry no cost
-data; seventeen other keys report for every cluster. The first correction fixed the table and left
-the generalisation standing elsewhere, which is the more expensive half of that mistake.
-
-**3. Composition, to the decimal.** A total that does not equal the sum of its published parts is a
-total you cannot explain to anyone, and a decomposable total is a negotiable one: the component that
-surprises somebody is the one to discuss. Checked on both models:
+**3. Composition, to the cent.** A total that does not equal the sum of its published parts is a total you cannot
+explain, and a decomposable total is a negotiable one. Checked on both models:
 
 ```
 consumption   effectiveDailyCpuCost + Memory + Storage + dailyAdditionalCost == effectiveDailyCost
@@ -67,43 +69,34 @@ ownership     hardware + facilities + hostLabor + network + maintenance
               + hostOsl + additional                                        == totalLoadedCost
 ```
 
-Both pass to float precision on the reference estate. A failure here is wiring rather than pricing:
-a metric built on the wrong signal still produces plausible money, it just stops summing.
+An object missing a part is counted apart rather than summed as zero.
 
-**4. Whether showback is a view or a build.** The tempting design is to roll priced signals up the
-custom-group tree that already scopes policies and alerts. Whether that works is a property of your
-instance and it is one read. On the reference estate a group **with members** carries 50 stat keys
-and **zero** cost keys, while all 66 cost keys sit on the four inventory object types beneath it. So
-the group tree is the right scope and not a carrier: showback needs an explicit aggregation over
-members (a super metric summing a chosen cost key), which is a modest build with an owner rather
-than a view over something that already exists.
+**4. Whether showback is a view or a build.** The tempting design is to roll priced signals up the custom-group tree
+that already scopes policies and alerts. The run asks every custom group with members (the group types the `Container`
+adapter holds) for its stat keys and counts the cost ones. The product's own world objects (vSphere World, VCF World
+and the like) are counted apart: they can carry the estate-wide totals, which says nothing about whether the groups
+you build carry cost. When the custom groups carry none, showback needs an explicit aggregation over members (a super
+metric summing a chosen cost key), a modest build with an owner rather than a view over something that exists.
 
-Test against a group that has members. An empty group cannot distinguish a missing metric from a
-missing membership.
-
-## Two decisions the gate surfaces but does not make
-
-- **Powered-off machines report no cost.** On the reference estate every machine that no cost key
-  reached was powered off. That is a showback boundary decision, not a gap: a machine that is off
-  still holds storage and a licence.
-- **Reference inputs compute as convincingly as entered ones.** The ownership model is fully
-  populated, every component present, the total decomposing exactly, whether or not anybody entered
-  a real price. Since the inputs are not readable from this API, confirming they were entered is a
-  human step, and the date they were entered belongs beside every figure derived from them.
+**5. The price inputs.** The public API serves one pricing fact, the currency (`GET /api/costconfig/currency`). The
+internal API's cost-driver summary (`GET /suite-api/internal/costdrivers/summary`, which answers only with the header
+`X-Ops-API-use-unsupported: true` and keeps no compatibility promise) carries each cost
+driver's monthly cost in force beside the reference cost the product computes. A driver whose two differ was entered or
+changed; one whose two match was left at the reference, or entered at it, which the summary cannot tell apart. The run
+prints which drivers are which and when the cost engine last ran (`GET /suite-api/internal/costcalculation/status`),
+the date to print beside any figure built on those inputs. It keeps no amount. If your instance refuses the internal
+API, the run prints the refusal, and confirming the inputs stays a person's step.
 
 ## The record
 
-`coverage.json` carries key names and counts only; it names no object and publishes no amount.
-Amounts on any estate are its own, and on a lab they are the platform's reference inputs rather than
-a purchase record.
+`coverage.json` carries key names, counts and which drivers match their reference; it names no object and keeps no
+amount. A cost key named after something on your estate (an additional cost's own name, after a colon) is recorded by
+its family only. `coverage.json` in this folder is the reference estate's run of 2026-10-18 on VCF Operations 9.1.1.0
+(build 25679751), the record the chapter renders.
 
 ## Scope
 
-These keys price a VMware estate and the workloads on it, which is the question this gate answers
-well. A VMware estate hosted in a public cloud presents the same object types, so the four
-vocabularies, the coverage gate and the composition checks carry over unchanged.
-
-Setting any of it beside a native public-cloud list price is a different exercise: a different unit
-of accounting, and evidence that is a dated vendor price for a matched workload shape rather than
-anything an instance can be asked. That belongs with whoever owns the commercial argument, with its
-references attached, and it is out of this gate's scope rather than queued behind it.
+These keys price a VMware estate and the workloads on it. A VMware estate hosted in a public cloud presents the same
+object types, so the four vocabularies, the coverage gate and the composition checks carry over unchanged. Setting any
+of it beside a native public-cloud list price is a different exercise, with a different unit of accounting and evidence
+an instance cannot be asked for, and it is out of this gate's scope.
