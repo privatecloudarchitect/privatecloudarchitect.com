@@ -1,20 +1,21 @@
 # Expected output
 
-One run of each script on the reference instance (VCF Operations 9.1.0, proven 2026-09-15). Names
-and identifiers are replaced with placeholders; your adapters, VMs, figures, and UUIDs will differ.
+One run of each script on the reference instance: `collection_planes.py` and `rollup_check.py` on VCF Operations
+9.1.1.0 (build 25679751) on 2026-10-19, the others on VCF Operations 9.1.0 on 2026-09-15. Names and identifiers are
+replaced with placeholders; your adapters, VMs, figures, and UUIDs will differ.
 
 ## collection_planes.py
 
 ```
 $ python3 collection_planes.py
-COLLECTION PLANES - read 2026-09-15 01:03 UTC
+COLLECTION PLANES - read 2026-10-19 17:05 UTC
 
   plane 1 · the vCenter adapters (pull, through vStats where enabled)
   adapter                        interval  vStats  sample   metrics  objects
   --------------------------------------------------------------------------
-  vcenter-workload-01               5 min    true    20 s      7212      210
-  vcenter-secondary-01              5 min    true    20 s      2603       40
-  vcenter-management-01             5 min    true    20 s      9610      143
+  vcenter-management-01             5 min    true    20 s     10423      149
+  vcenter-workload-01               5 min    true    20 s      8686      261
+  vcenter-secondary-01              5 min    true    20 s      2622       42
   the interval is the stored cadence; the sample is the vStats rate the adapter averages
   into it. Neither depends on the vCenter statistics level.
 
@@ -47,7 +48,7 @@ Exit code 0. A tuned retention value prints `TUNED` beside it and the exit code 
 
 ```
 $ python3 rollup_check.py
-ROLL-UP CHECK - vm-busy-01, cpu|usagemhz_average, last 3 hours, read 2026-09-15 01:05 UTC
+ROLL-UP CHECK - vm-busy-01, cpu|usagemhz_average, last 3 hours, read 2026-10-19 17:05 UTC
 
   native points: 36, spacing 300 to 302 s (median 300 s)
   explicit 5-minute buckets: 36 common timestamps; MIN and MAX equal AVG at 36 of them
@@ -55,8 +56,8 @@ ROLL-UP CHECK - vm-busy-01, cpu|usagemhz_average, last 3 hours, read 2026-09-15 
 
   hour bucket (end, UTC)         AVG  native mean       MAX  native max   result
   ------------------------------------------------------------------------------
-  2026-09-14 23:59:59      16092.589    16092.589 17310.801   17310.801   exact
-  2026-09-15 00:59:59      16747.472    16747.472 18109.268   18109.268   exact
+  2026-10-19 15:59:59      23785.700    23785.700 25031.000   25031.000   exact
+  2026-10-19 16:59:59      24027.861    24027.861 25497.867   25497.867   exact
   ------------------------------------------------------------------------------
 
   peak keys on this VM (13): 20_sec_peak_* keep a within-cycle maximum; peak_* are the busiest instance's 5-minute average

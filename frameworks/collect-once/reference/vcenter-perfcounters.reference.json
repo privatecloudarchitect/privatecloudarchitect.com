@@ -1,700 +1,702 @@
 {
  "what": "vCenter PerformanceManager counters for the VM utilization families, read live through the vSphere Web Services API (PerformanceManager.perfCounter); the level is the vCenter statistics level at which vCenter keeps the counter beyond the real-time window (1 is the default)",
- "vcenter": "VMware vCenter Server 9.1.0.0200.25573614",
- "read": "2026-09-16",
+ "vcenter": "VMware vCenter Server 9.1.1 build 25712839",
+ "vcenters": 3,
+ "read": "2026-10-19",
+ "missing": [],
  "counters": {
-  "cpu.usage": [
+  "cpu.costop": [
    {
-    "rollup": "none",
-    "unit": "percent",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage",
-    "summary": "CPU usage as a percentage during the interval"
-   },
-   {
-    "rollup": "average",
-    "unit": "percent",
-    "level": 1,
+    "label": "Co-stop",
+    "level": 2,
     "per_device_level": 3,
-    "label": "Usage",
-    "summary": "CPU usage as a percentage during the interval"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "percent",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage",
-    "summary": "CPU usage as a percentage during the interval"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "percent",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage",
-    "summary": "CPU usage as a percentage during the interval"
-   }
-  ],
-  "cpu.usagemhz": [
-   {
-    "rollup": "none",
-    "unit": "megaHertz",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage in MHz",
-    "summary": "CPU usage in megahertz during the interval"
-   },
-   {
-    "rollup": "average",
-    "unit": "megaHertz",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Usage in MHz",
-    "summary": "CPU usage in megahertz during the interval"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "megaHertz",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage in MHz",
-    "summary": "CPU usage in megahertz during the interval"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "megaHertz",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage in MHz",
-    "summary": "CPU usage in megahertz during the interval"
-   }
-  ],
-  "cpu.ready": [
-   {
     "rollup": "summation",
-    "unit": "millisecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Ready",
-    "summary": "Time that the virtual machine was ready, but could not get scheduled to run on the physical CPU during last measurement interval"
-   }
-  ],
-  "mem.usage": [
-   {
-    "rollup": "none",
-    "unit": "percent",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Host consumed %",
-    "summary": "Percentage of host physical memory that has been consumed"
-   },
-   {
-    "rollup": "average",
-    "unit": "percent",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Host consumed %",
-    "summary": "Percentage of host physical memory that has been consumed"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "percent",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Host consumed %",
-    "summary": "Percentage of host physical memory that has been consumed"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "percent",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Host consumed %",
-    "summary": "Percentage of host physical memory that has been consumed"
-   }
-  ],
-  "mem.active": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Active",
-    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytes",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Active",
-    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Active",
-    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Active",
-    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi"
-   }
-  ],
-  "mem.shared": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Shared",
-    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytes",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Shared",
-    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Shared",
-    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Shared",
-    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines"
-   }
-  ],
-  "mem.swapped": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Swapped",
-    "summary": "Amount of guest physical memory that is swapped out to the swap space"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytes",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Swapped",
-    "summary": "Amount of guest physical memory that is swapped out to the swap space"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Swapped",
-    "summary": "Amount of guest physical memory that is swapped out to the swap space"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Swapped",
-    "summary": "Amount of guest physical memory that is swapped out to the swap space"
-   }
-  ],
-  "mem.swapinRate": [
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Swap in rate",
-    "summary": "Rate at which guest physical memory is swapped in from the swap space"
-   }
-  ],
-  "mem.swapoutRate": [
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Swap out rate",
-    "summary": "Rate at which guest physical memory is swapped out to the swap space"
-   }
-  ],
-  "mem.vmmemctl": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Ballooned memory",
-    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytes",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Ballooned memory",
-    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Ballooned memory",
-    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Ballooned memory",
-    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest"
-   }
-  ],
-  "mem.consumed": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Consumed",
-    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytes",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Consumed",
-    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Consumed",
-    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Consumed",
-    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages"
-   }
-  ],
-  "mem.overhead": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Overhead consumed",
-    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytes",
-    "level": 1,
-    "per_device_level": 1,
-    "label": "Overhead consumed",
-    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Overhead consumed",
-    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytes",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Overhead consumed",
-    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines"
-   }
-  ],
-  "mem.compressed": [
-   {
-    "rollup": "average",
-    "unit": "kiloBytes",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Compressed",
-    "summary": "Guest physical memory pages that have undergone memory compression"
-   }
-  ],
-  "disk.usage": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytesPerSecond",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "usage",
-    "summary": "usage"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "usage",
-    "summary": "usage"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytesPerSecond",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "usage",
-    "summary": "usage"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytesPerSecond",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "usage",
-    "summary": "usage"
-   }
-  ],
-  "disk.maxTotalLatency": [
-   {
-    "rollup": "latest",
-    "unit": "millisecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "maxTotalLatency",
-    "summary": "maxTotalLatency"
-   }
-  ],
-  "net.usage": [
-   {
-    "rollup": "none",
-    "unit": "kiloBytesPerSecond",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage",
-    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval"
-   },
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Usage",
-    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval"
-   },
-   {
-    "rollup": "minimum",
-    "unit": "kiloBytesPerSecond",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage",
-    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval"
-   },
-   {
-    "rollup": "maximum",
-    "unit": "kiloBytesPerSecond",
-    "level": 4,
-    "per_device_level": 4,
-    "label": "Usage",
-    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval"
-   }
-  ],
-  "net.packetsRx": [
-   {
-    "rollup": "summation",
-    "unit": "number",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Packets received",
-    "summary": "Number of packets received during the interval"
-   }
-  ],
-  "net.packetsTx": [
-   {
-    "rollup": "summation",
-    "unit": "number",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Packets transmitted",
-    "summary": "Number of packets transmitted during the interval"
-   }
-  ],
-  "net.received": [
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Data receive rate",
-    "summary": "Average rate at which data was received during the interval"
-   }
-  ],
-  "net.transmitted": [
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Data transmit rate",
-    "summary": "Average rate at which data was transmitted during the interval"
-   }
-  ],
-  "sys.uptime": [
-   {
-    "rollup": "latest",
-    "unit": "second",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Uptime",
-    "summary": "Total time elapsed, in seconds, since last system startup"
-   }
-  ],
-  "power.power": [
-   {
-    "rollup": "average",
-    "unit": "watt",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Usage",
-    "summary": "Current power usage"
-   }
-  ],
-  "virtualDisk.numberReadAveraged": [
-   {
-    "rollup": "average",
-    "unit": "number",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Average read requests per second",
-    "summary": "Average number of read commands issued per second to the virtual disk during the collection interval"
-   }
-  ],
-  "virtualDisk.numberWriteAveraged": [
-   {
-    "rollup": "average",
-    "unit": "number",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Average write requests per second",
-    "summary": "Average number of write commands issued per second to the virtual disk during the collection interval"
-   }
-  ],
-  "virtualDisk.read": [
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 2,
-    "per_device_level": 2,
-    "label": "Read rate",
-    "summary": "Rate of reading data from the virtual disk"
-   }
-  ],
-  "virtualDisk.write": [
-   {
-    "rollup": "average",
-    "unit": "kiloBytesPerSecond",
-    "level": 2,
-    "per_device_level": 2,
-    "label": "Write rate",
-    "summary": "Rate of writing data to the virtual disk"
-   }
-  ],
-  "virtualDisk.totalReadLatency": [
-   {
-    "rollup": "average",
-    "unit": "millisecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Read latency",
-    "summary": "The average time a read from the virtual disk takes"
-   }
-  ],
-  "virtualDisk.totalWriteLatency": [
-   {
-    "rollup": "average",
-    "unit": "millisecond",
-    "level": 1,
-    "per_device_level": 3,
-    "label": "Write latency",
-    "summary": "The average time a write to the virtual disk takes"
-   }
-  ],
-  "disk.used": [
-   {
-    "rollup": "latest",
-    "unit": "kiloBytes",
-    "level": 1,
-    "per_device_level": 1,
-    "label": "used",
-    "summary": "used"
-   }
-  ],
-  "disk.provisioned": [
-   {
-    "rollup": "latest",
-    "unit": "kiloBytes",
-    "level": 1,
-    "per_device_level": 1,
-    "label": "provisioned",
-    "summary": "provisioned"
-   }
-  ],
-  "disk.unshared": [
-   {
-    "rollup": "latest",
-    "unit": "kiloBytes",
-    "level": 1,
-    "per_device_level": 1,
-    "label": "unshared",
-    "summary": "unshared"
-   }
-  ],
-  "virtualDisk.readOIO": [
-   {
-    "rollup": "latest",
-    "unit": "number",
-    "level": 2,
-    "per_device_level": 2,
-    "label": "Average number of outstanding read requests",
-    "summary": "Average number of outstanding read requests to the virtual disk during the collection interval"
-   }
-  ],
-  "virtualDisk.writeOIO": [
-   {
-    "rollup": "latest",
-    "unit": "number",
-    "level": 2,
-    "per_device_level": 2,
-    "label": "Average number of outstanding write requests",
-    "summary": "Average number of outstanding write requests to the virtual disk during the collection interval"
-   }
-  ],
-  "cpu.swapwait": [
-   {
-    "rollup": "summation",
-    "unit": "millisecond",
-    "level": 3,
-    "per_device_level": 3,
-    "label": "Swap wait",
-    "summary": "CPU time spent waiting for swap-in"
-   }
-  ],
-  "cpu.latency": [
-   {
-    "rollup": "average",
-    "unit": "percent",
-    "level": 2,
-    "per_device_level": 3,
-    "label": "Latency",
-    "summary": "Percent of time the virtual machine is unable to run because it is contending for access to the physical CPU(s)"
+    "summary": "Time the virtual machine is ready to run, but is unable to run due to co-scheduling constraints",
+    "unit": "millisecond"
    }
   ],
   "cpu.demand": [
    {
-    "rollup": "average",
-    "unit": "megaHertz",
+    "label": "Demand",
     "level": 2,
     "per_device_level": 3,
-    "label": "Demand",
-    "summary": "The amount of CPU resources a virtual machine would use if there were no CPU contention or CPU limit"
+    "rollup": "average",
+    "summary": "The amount of CPU resources a virtual machine would use if there were no CPU contention or CPU limit",
+    "unit": "megaHertz"
    }
   ],
-  "cpu.costop": [
+  "cpu.latency": [
    {
-    "rollup": "summation",
-    "unit": "millisecond",
+    "label": "Latency",
     "level": 2,
     "per_device_level": 3,
-    "label": "Co-stop",
-    "summary": "Time the virtual machine is ready to run, but is unable to run due to co-scheduling constraints"
+    "rollup": "average",
+    "summary": "Percent of time the virtual machine is unable to run because it is contending for access to the physical CPU(s)",
+    "unit": "percent"
    }
   ],
   "cpu.overlap": [
    {
-    "rollup": "summation",
-    "unit": "millisecond",
+    "label": "Overlap",
     "level": 3,
     "per_device_level": 3,
-    "label": "Overlap",
-    "summary": "Time the virtual machine was interrupted to perform system services on behalf of itself or other virtual machines"
+    "rollup": "summation",
+    "summary": "Time the virtual machine was interrupted to perform system services on behalf of itself or other virtual machines",
+    "unit": "millisecond"
    }
   ],
   "cpu.readiness": [
    {
-    "rollup": "average",
-    "unit": "percent",
+    "label": "Readiness",
     "level": 4,
     "per_device_level": 4,
-    "label": "Readiness",
-    "summary": "Percentage of time that the virtual machine was ready, but could not get scheduled to run on the physical CPU"
+    "rollup": "average",
+    "summary": "Percentage of time that the virtual machine was ready, but could not get scheduled to run on the physical CPU",
+    "unit": "percent"
+   }
+  ],
+  "cpu.ready": [
+   {
+    "label": "Ready",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "summation",
+    "summary": "Time that the virtual machine was ready, but could not get scheduled to run on the physical CPU during last measurement interval",
+    "unit": "millisecond"
+   }
+  ],
+  "cpu.swapwait": [
+   {
+    "label": "Swap wait",
+    "level": 3,
+    "per_device_level": 3,
+    "rollup": "summation",
+    "summary": "CPU time spent waiting for swap-in",
+    "unit": "millisecond"
+   }
+  ],
+  "cpu.usage": [
+   {
+    "label": "Usage",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "CPU usage as a percentage during the interval",
+    "unit": "percent"
+   },
+   {
+    "label": "Usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "CPU usage as a percentage during the interval",
+    "unit": "percent"
+   },
+   {
+    "label": "Usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "CPU usage as a percentage during the interval",
+    "unit": "percent"
+   },
+   {
+    "label": "Usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "CPU usage as a percentage during the interval",
+    "unit": "percent"
+   }
+  ],
+  "cpu.usagemhz": [
+   {
+    "label": "Usage in MHz",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "CPU usage in megahertz during the interval",
+    "unit": "megaHertz"
+   },
+   {
+    "label": "Usage in MHz",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "CPU usage in megahertz during the interval",
+    "unit": "megaHertz"
+   },
+   {
+    "label": "Usage in MHz",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "CPU usage in megahertz during the interval",
+    "unit": "megaHertz"
+   },
+   {
+    "label": "Usage in MHz",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "CPU usage in megahertz during the interval",
+    "unit": "megaHertz"
+   }
+  ],
+  "disk.maxTotalLatency": [
+   {
+    "label": "maxTotalLatency",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "latest",
+    "summary": "maxTotalLatency",
+    "unit": "millisecond"
+   }
+  ],
+  "disk.provisioned": [
+   {
+    "label": "provisioned",
+    "level": 1,
+    "per_device_level": 1,
+    "rollup": "latest",
+    "summary": "provisioned",
+    "unit": "kiloBytes"
+   }
+  ],
+  "disk.unshared": [
+   {
+    "label": "unshared",
+    "level": 1,
+    "per_device_level": 1,
+    "rollup": "latest",
+    "summary": "unshared",
+    "unit": "kiloBytes"
+   }
+  ],
+  "disk.usage": [
+   {
+    "label": "usage",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "usage",
+    "unit": "kiloBytesPerSecond"
+   },
+   {
+    "label": "usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "usage",
+    "unit": "kiloBytesPerSecond"
+   },
+   {
+    "label": "usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "usage",
+    "unit": "kiloBytesPerSecond"
+   },
+   {
+    "label": "usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "usage",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "disk.used": [
+   {
+    "label": "used",
+    "level": 1,
+    "per_device_level": 1,
+    "rollup": "latest",
+    "summary": "used",
+    "unit": "kiloBytes"
+   }
+  ],
+  "mem.active": [
+   {
+    "label": "Active",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Active",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Active",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Active",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Amount of guest physical memory that is being actively read or written by guest. Activeness is estimated by ESXi",
+    "unit": "kiloBytes"
+   }
+  ],
+  "mem.compressed": [
+   {
+    "label": "Compressed",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Guest physical memory pages that have undergone memory compression",
+    "unit": "kiloBytes"
+   }
+  ],
+  "mem.consumed": [
+   {
+    "label": "Consumed",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Consumed",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Consumed",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Consumed",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Amount of host physical memory consumed for backing up guest physical memory pages",
+    "unit": "kiloBytes"
    }
   ],
   "mem.latency": [
    {
-    "rollup": "average",
-    "unit": "percent",
+    "label": "Page-fault latency",
     "level": 2,
     "per_device_level": 3,
-    "label": "Page-fault latency",
-    "summary": "Percentage of time the virtual machine spent waiting to swap in or decompress guest physical memory"
+    "rollup": "average",
+    "summary": "Percentage of time the virtual machine spent waiting to swap in or decompress guest physical memory",
+    "unit": "percent"
+   }
+  ],
+  "mem.overhead": [
+   {
+    "label": "Overhead consumed",
+    "level": 1,
+    "per_device_level": 1,
+    "rollup": "average",
+    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Overhead consumed",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Overhead consumed",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Overhead consumed",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Host physical memory consumed by ESXi data structures for running the virtual machines",
+    "unit": "kiloBytes"
+   }
+  ],
+  "mem.shared": [
+   {
+    "label": "Shared",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Shared",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Shared",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Shared",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Amount of guest physical memory that is shared within a single virtual machine or across virtual machines",
+    "unit": "kiloBytes"
+   }
+  ],
+  "mem.swapinRate": [
+   {
+    "label": "Swap in rate",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Rate at which guest physical memory is swapped in from the swap space",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "mem.swapoutRate": [
+   {
+    "label": "Swap out rate",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Rate at which guest physical memory is swapped out to the swap space",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "mem.swapped": [
+   {
+    "label": "Swapped",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Amount of guest physical memory that is swapped out to the swap space",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Swapped",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Amount of guest physical memory that is swapped out to the swap space",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Swapped",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Amount of guest physical memory that is swapped out to the swap space",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Swapped",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Amount of guest physical memory that is swapped out to the swap space",
+    "unit": "kiloBytes"
+   }
+  ],
+  "mem.usage": [
+   {
+    "label": "Host consumed %",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Percentage of host physical memory that has been consumed",
+    "unit": "percent"
+   },
+   {
+    "label": "Host consumed %",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Percentage of host physical memory that has been consumed",
+    "unit": "percent"
+   },
+   {
+    "label": "Host consumed %",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Percentage of host physical memory that has been consumed",
+    "unit": "percent"
+   },
+   {
+    "label": "Host consumed %",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Percentage of host physical memory that has been consumed",
+    "unit": "percent"
+   }
+  ],
+  "mem.vmmemctl": [
+   {
+    "label": "Ballooned memory",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Ballooned memory",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Ballooned memory",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest",
+    "unit": "kiloBytes"
+   },
+   {
+    "label": "Ballooned memory",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Amount of guest physical memory reclaimed from the virtual machine by the balloon driver in the guest",
+    "unit": "kiloBytes"
    }
   ],
   "net.droppedRx": [
    {
-    "rollup": "summation",
-    "unit": "number",
+    "label": "Receive packets dropped",
     "level": 2,
     "per_device_level": 3,
-    "label": "Receive packets dropped",
-    "summary": "Number of receives dropped"
+    "rollup": "summation",
+    "summary": "Number of receives dropped",
+    "unit": "number"
    }
   ],
   "net.droppedTx": [
    {
-    "rollup": "summation",
-    "unit": "number",
+    "label": "Transmit packets dropped",
     "level": 2,
     "per_device_level": 3,
-    "label": "Transmit packets dropped",
-    "summary": "Number of transmits dropped"
+    "rollup": "summation",
+    "summary": "Number of transmits dropped",
+    "unit": "number"
+   }
+  ],
+  "net.packetsRx": [
+   {
+    "label": "Packets received",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "summation",
+    "summary": "Number of packets received during the interval",
+    "unit": "number"
+   }
+  ],
+  "net.packetsTx": [
+   {
+    "label": "Packets transmitted",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "summation",
+    "summary": "Number of packets transmitted during the interval",
+    "unit": "number"
+   }
+  ],
+  "net.received": [
+   {
+    "label": "Data receive rate",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Average rate at which data was received during the interval",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "net.transmitted": [
+   {
+    "label": "Data transmit rate",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Average rate at which data was transmitted during the interval",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "net.usage": [
+   {
+    "label": "Usage",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval",
+    "unit": "kiloBytesPerSecond"
+   },
+   {
+    "label": "Usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "maximum",
+    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval",
+    "unit": "kiloBytesPerSecond"
+   },
+   {
+    "label": "Usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "minimum",
+    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval",
+    "unit": "kiloBytesPerSecond"
+   },
+   {
+    "label": "Usage",
+    "level": 4,
+    "per_device_level": 4,
+    "rollup": "none",
+    "summary": "Network utilization (combined transmit-rates and receive-rates) during the interval",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "power.power": [
+   {
+    "label": "Usage",
+    "level": 2,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Current power usage",
+    "unit": "watt"
    }
   ],
   "sys.osUptime": [
    {
-    "rollup": "latest",
-    "unit": "second",
+    "label": "OS Uptime",
     "level": 4,
     "per_device_level": 4,
-    "label": "OS Uptime",
-    "summary": "Total time elapsed, in seconds, since last operating system boot-up"
+    "rollup": "latest",
+    "summary": "Total time elapsed, in seconds, since last operating system boot-up",
+    "unit": "second"
+   }
+  ],
+  "sys.uptime": [
+   {
+    "label": "Uptime",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "latest",
+    "summary": "Total time elapsed, in seconds, since last system startup",
+    "unit": "second"
+   }
+  ],
+  "virtualDisk.numberReadAveraged": [
+   {
+    "label": "Average read requests per second",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Average number of read commands issued per second to the virtual disk during the collection interval",
+    "unit": "number"
+   }
+  ],
+  "virtualDisk.numberWriteAveraged": [
+   {
+    "label": "Average write requests per second",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "Average number of write commands issued per second to the virtual disk during the collection interval",
+    "unit": "number"
+   }
+  ],
+  "virtualDisk.read": [
+   {
+    "label": "Read rate",
+    "level": 2,
+    "per_device_level": 2,
+    "rollup": "average",
+    "summary": "Rate of reading data from the virtual disk",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "virtualDisk.readOIO": [
+   {
+    "label": "Average number of outstanding read requests",
+    "level": 2,
+    "per_device_level": 2,
+    "rollup": "latest",
+    "summary": "Average number of outstanding read requests to the virtual disk during the collection interval",
+    "unit": "number"
+   }
+  ],
+  "virtualDisk.totalReadLatency": [
+   {
+    "label": "Read latency",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "The average time a read from the virtual disk takes",
+    "unit": "millisecond"
+   }
+  ],
+  "virtualDisk.totalWriteLatency": [
+   {
+    "label": "Write latency",
+    "level": 1,
+    "per_device_level": 3,
+    "rollup": "average",
+    "summary": "The average time a write to the virtual disk takes",
+    "unit": "millisecond"
+   }
+  ],
+  "virtualDisk.write": [
+   {
+    "label": "Write rate",
+    "level": 2,
+    "per_device_level": 2,
+    "rollup": "average",
+    "summary": "Rate of writing data to the virtual disk",
+    "unit": "kiloBytesPerSecond"
+   }
+  ],
+  "virtualDisk.writeOIO": [
+   {
+    "label": "Average number of outstanding write requests",
+    "level": 2,
+    "per_device_level": 2,
+    "rollup": "latest",
+    "summary": "Average number of outstanding write requests to the virtual disk during the collection interval",
+    "unit": "number"
    }
   ]
  }

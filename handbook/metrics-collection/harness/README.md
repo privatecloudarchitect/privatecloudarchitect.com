@@ -74,7 +74,8 @@ build it was proven on and is minted fresh every run). Nothing here writes.
 ## Scope, stated plainly
 
 - Everything was proven on one VCF Operations 9.1.0 instance with Real-Time Metrics deployed
-  (proven 2026-09-15). Retention and policy values print beside their defaults because the
+  (proven 2026-09-15); `collection_planes.py` and `rollup_check.py` were re-run on VCF Operations 9.1.1.0
+  (build 25679751) on 2026-10-19: the same cadence, sample rate, retention defaults and roll-up behaviour. Retention and policy values print beside their defaults because the
   sheet's figures are the defaults; if yours are tuned, the sheet's numbers change accordingly.
 - The coefficients `extract_measure.py` prints are inputs to your own sizing estimate, not facts
   about the product: bytes per point and latency depend on your node and your network. Run it for a
