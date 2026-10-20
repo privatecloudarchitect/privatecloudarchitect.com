@@ -1,6 +1,6 @@
 {
- "generated": "2026-09-16",
- "build": "VCF Operations 9.1 (<host on the reference estate>)",
+ "generated": "2026-10-19",
+ "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)",
  "sources": {
   "vcenter": [
    "<source id>",
@@ -16,8 +16,8 @@
  "catalog_names": 437,
  "per_source_names": {
   "<source id>": 171,
-  "<source id>": 175,
   "<source id>": 171,
+  "<source id>": 175,
   "<source id>": 254,
   "<source id>": 262,
   "<source id>": 0
@@ -1639,10 +1639,12 @@
    "TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS"
   ],
   "net.throughput.receiveRate.PNIC": [
-   "ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS"
+   "ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS",
+   "TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS"
   ],
   "net.throughput.transmitRate.PNIC": [
-   "ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS"
+   "ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS",
+   "TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS"
   ],
   "net.throughput.usage.HOST": [
    "TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS"
@@ -18544,7 +18546,8 @@
      "esxtop_2s": "No"
     }
    ]
-  }
+  },
+  "carried_from": "2026-09-16"
  },
  "not_in_catalog_by_family": {
   "mem": 114,

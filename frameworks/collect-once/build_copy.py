@@ -6,7 +6,7 @@ sources build_dashboard.py syncs verbatim into editorData; edit the copy here, r
 Universal by construction (2026-09-16 pass): the guide teaches the VM utilization catalog any warehouse asks for,
 not one customer's list. The live lists are the importing instance's own VMs; the text carries rules, and cites
 the reference estate only as the place where a number was measured. Every Operations statkey the copy names is
-checked against reference/vm-statkeys.reference.json (a powered-on VM's statkey list read live) and every vCenter
+checked against reference/vm-statkeys.reference.json (the union of every powered-on VM's statkey list, read live) and every vCenter
 counter against reference/vcenter-perfcounters.reference.json (PerformanceManager.perfCounter read live), so the
 catalog cannot name a key that does not exist. The PromQL tables are generated from the promql folder beside the generators: .
 Every metric definition in quotation marks is the sentence in VMware guidance.
@@ -44,12 +44,13 @@ SRC_VC = "vSphere Web Services API, PerformanceManager.perfCounter, read live on
 # ---------------------------------------------------------------- reference lists: every key named below must exist
 _SK = json.load(open(os.path.join(REFD, "vm-statkeys.reference.json"), encoding="utf-8")); STATKEYS = set(_SK["keys"])
 _PC = json.load(open(os.path.join(REFD, "vcenter-perfcounters.reference.json"), encoding="utf-8")); COUNTERS = _PC["counters"]
-# catalog keys the reference VM does not carry: named only with the words "not collected on the reference estate"
-NOT_COLLECTED = {"mem|vmmemctl_average", "mem|latency_average", "virtualDisk|readOIO_latest", "virtualDisk|writeOIO_latest", "net|droppedRx_summation", "guestfilesystem|freespace_total", "cost|reclaimableCost", "cpu|20_sec_peak_swapwaitPct"}
+# catalog keys no powered-on reference VM carries: named only with the words "not collected on the reference estate", and
+# asserted absent from the reference list, so a key that starts being collected fails the build instead of staying mislabelled
+NOT_COLLECTED = {"mem|vmmemctl_average", "mem|latency_average", "virtualDisk|readOIO_latest", "virtualDisk|writeOIO_latest", "net|droppedRx_summation", "guestfilesystem|freespace_total", "cpu|20_sec_peak_swapwaitPct"}
 def K(key, nc=False):
-    """An Operations statkey, checked against the reference VM's statkey list (or the explicit not-collected set)."""
-    if nc: assert key in NOT_COLLECTED, key
-    else: assert key in STATKEYS, "statkey not on the reference VM: " + key
+    """An Operations statkey, checked against the reference statkey list (or the explicit not-collected set, and absent from it)."""
+    if nc: assert key in NOT_COLLECTED and key not in STATKEYS, "not-collected key is collected on the reference estate: " + key
+    else: assert key in STATKEYS, "statkey not on the reference list: " + key
     return m(key)
 def P(key): return "property " + m(key)
 def VC(name, rollup=None):
@@ -126,7 +127,7 @@ rows = [
  ["<b>Decisions only Operations carries</b>", "", "", "", "", ""],
  ["oversized, undersized", "no counter (analytics)", K("summary|oversized") + ", " + K("summary|oversized|vcpus") + ", " + K("summary|oversized|memory") + " (KB); " + K("summary|undersized") + ", " + K("summary|undersized|vcpus") + ", " + K("summary|undersized|memory"), "daily analytics", T(GOLD, "gold"), "the rightsizing verdict per VM with the reclaimable amounts"],
  ["recommended size", "no counter (analytics)", K("OnlineCapacityAnalytics|cpu|recommendedSize") + " (MHz), " + K("OnlineCapacityAnalytics|mem|recommendedSize") + " (KB), " + K("OnlineCapacityAnalytics|diskspace|recommendedSize") + " (GB)", "daily analytics", T(GOLD, "gold"), "the projected size under the policy's risk level; read it, never recompute it"],
- ["idle, reclaimable cost", "no counter (analytics)", K("summary|idle") + "; " + K("cost|reclaimableCost", nc=True) + " where costing is configured", "daily analytics", T(GOLD, "gold"), "the reclaim inputs; the datacenter reclaim and rightsize lists carry the same numbers in different units"],
+ ["idle, reclaimable cost", "no counter (analytics)", K("summary|idle") + "; " + K("cost|reclaimableCost") + " where costing is configured", "daily analytics", T(GOLD, "gold"), "the reclaim inputs; the datacenter reclaim and rightsize lists carry the same numbers in different units"],
 ]
 W["mapping"] = wrap(
  h1("The VM utilization catalog, mapped to Operations"),
@@ -139,7 +140,7 @@ W["mapping"] = wrap(
  callout("Reading a dash: three causes, none of them zero",
   "A zero is a value and shows as 0. A dash is absence, with three causes. <b>No data for the object:</b> a powered-off VM emits no counters, so most of its performance keys are blank while its configuration keys still read; a few keys carry a 0 for it instead (CPU demand, the network byte rates, guest filesystem used), so the rows of powered-off VMs mix dashes and zeros. <b>A conditional source:</b> the guest family and Guest Usage need VMware Tools. <b>A key the resource does not collect:</b> the catalog lists more keys than the adapter emits under the effective policy, and an instanced family (virtual disk latency, IOPS, outstanding IO; network packets and drops) carries its VM-level value under the <b>Aggregate of all instances</b> instance, so the plain key returns nothing. The lists on this dashboard bind the collected names; ask a resource's own statkey list before assuming any other key is collected."),
  p("Units come from the platform: KB for memory, MHz for CPU, KBps for throughput, ms for latency, GB for disk space; normalize in the warehouse, never by a super metric. Keys marked (DEP) on 9.1 still serve values where they are collected; prefer the current key beside them."),
- source(SRC_DOC + "; " + SRC_VC + "; statkey and property presence read live on the reference estate, 2026-09-16 (every key above is checked against that list at build time)."))
+ source(SRC_DOC + "; " + SRC_VC + "; statkey presence read live on the reference estate on " + _SK["read"] + ", as the union over its " + str(_SK["machines"]) + " powered-on VMs (every key above is checked against that list at build time)."))
 # ---------------------------------------------------------------- 3. configuration
 W["config"] = wrap(
  h1("Configuration and state"),

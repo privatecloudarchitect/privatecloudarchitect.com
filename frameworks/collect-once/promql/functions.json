@@ -13,7 +13,7 @@
    "by and without both work. Vector matching modifiers (on, ignoring, group_left) are parse errors."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 1,
@@ -21,7 +21,7 @@
    "error": "",
    "warnings": [],
    "query": "sum(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -36,7 +36,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 1,
@@ -44,7 +44,7 @@
    "error": "",
    "warnings": [],
    "query": "min(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -59,7 +59,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 1,
@@ -67,7 +67,7 @@
    "error": "",
    "warnings": [],
    "query": "max(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -82,7 +82,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 1,
@@ -90,7 +90,7 @@
    "error": "",
    "warnings": [],
    "query": "avg(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -105,7 +105,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 1,
@@ -113,7 +113,7 @@
    "error": "",
    "warnings": [],
    "query": "count(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -130,7 +130,7 @@
    "Evaluated per step: over a range the answer is the union of every step's top k (6 series for k=3 over 30 minutes on 6 hosts) and the legend changes as leaders change. by (label) is accepted."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -138,7 +138,7 @@
    "error": "",
    "warnings": [],
    "query": "topk(3, cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -155,7 +155,7 @@
    "Per step, as topk; the union of every step's bottom k."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -163,7 +163,7 @@
    "error": "",
    "warnings": [],
    "query": "bottomk(3, cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -180,7 +180,7 @@
    "VCF-specific. Selects the n series with the highest sum over the whole query range and returns their raw values (checked against a manual sum over 6 hosts): exactly n series, stable legend. by (label) is accepted and ignored; VMware guidance says by and without are unsupported."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -188,7 +188,7 @@
    "error": "",
    "warnings": [],
    "query": "topn_sum(3, cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -205,7 +205,7 @@
    "VCF-specific. Mirror of topn_sum: the n series with the lowest sum over the range, raw values returned."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -213,7 +213,7 @@
    "error": "",
    "warnings": [],
    "query": "bottomn_sum(3, cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -230,7 +230,7 @@
    "The range must sit inside a function: a bare range vector is a parse error in a range query, and the PromQL Viewer widget always runs a range query."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -238,7 +238,7 @@
    "error": "",
    "warnings": [],
    "query": "avg_over_time(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -253,7 +253,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -261,7 +261,7 @@
    "error": "",
    "warnings": [],
    "query": "min_over_time(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -276,7 +276,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -284,7 +284,7 @@
    "error": "",
    "warnings": [],
    "query": "max_over_time(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -299,7 +299,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -307,7 +307,7 @@
    "error": "",
    "warnings": [],
    "query": "sum_over_time(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -324,7 +324,7 @@
    "Counts raw samples: 3 per minute on the 20-second profiles, 30 on the ESX Top profile. The cadence instrument."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -332,7 +332,7 @@
    "error": "",
    "warnings": [],
    "query": "count_over_time(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -347,7 +347,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -355,7 +355,7 @@
    "error": "",
    "warnings": [],
    "query": "last_over_time(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -370,7 +370,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -378,7 +378,7 @@
    "error": "",
    "warnings": [],
    "query": "abs(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -393,7 +393,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -401,7 +401,7 @@
    "error": "",
    "warnings": [],
    "query": "ceil(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -416,7 +416,7 @@
   "on_guidance_page": true,
   "cautions": [],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -424,7 +424,7 @@
    "error": "",
    "warnings": [],
    "query": "floor(cpu.usagemhz.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -438,11 +438,11 @@
   "listed_in_widget": true,
   "on_guidance_page": true,
   "cautions": [
-   "Counter semantics apply on this build: on a gauge (cpu.usagemhz.HOST, 84 decreases in 181 samples) rate() returned no negative value and matched a reset-adding computation (mean absolute error 4 against 282 for a plain first-to-last delta). The example in VMware guidance rate(cpu.capacity.usage.HOST{host='host-17'}[5m]) applies it to a gauge and overstates change.",
+   "Counter semantics apply: on a gauge (cpu.usagemhz.HOST, a series with many decreases) rate() returned no negative value and sat far closer to a reset-adding computation than to a plain first-to-last delta; the dialect block of examples.json records this run's counts and errors. The example in VMware guidance rate(cpu.capacity.usage.HOST{host='host-17'}[5m]) applies it to a gauge and overstates change.",
    "Use avg_over_time or max_over_time for a level; rate and increase only on cumulative names (vmop.*.CLSTR and DCENTER, envoy_*_total)."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -450,7 +450,7 @@
    "error": "",
    "warnings": [],
    "query": "rate(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -467,7 +467,7 @@
    "Equals the number of decreases inside the window (167 of 181 buckets exact on a gauge); on a gauge it counts dips, not counter resets."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -475,7 +475,7 @@
    "error": "",
    "warnings": [],
    "query": "resets(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -492,7 +492,7 @@
    "Returns one series valued 1 when the selector matches nothing (an unknown name or an unmatched label), and nothing when it matches. The reconcile-absence guard for a scoped extract."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 1,
@@ -500,7 +500,7 @@
    "error": "",
    "warnings": [],
    "query": "absent(no.such.metric.HOST)",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -517,7 +517,7 @@
    "As absent, over the range."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 1,
@@ -525,7 +525,7 @@
    "error": "",
    "warnings": [],
    "query": "absent_over_time(no.such.metric.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -542,7 +542,7 @@
    "Same counter semantics as rate; on a gauge it returned no negative value and did not match a last-two-points delta."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -550,7 +550,7 @@
    "error": "",
    "warnings": [],
    "query": "irate(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  },
  {
@@ -567,7 +567,7 @@
    "Correct on the cumulative vmop.* names (vmop.vmotion.CLSTR stepped 2227 to 2230 over 24 h on the management source); returns 0 on a quiet cluster."
   ],
   "verified": {
-   "date": "2026-09-16",
+   "date": "2026-10-19",
    "source": "<source id>",
    "http": 200,
    "series": 3,
@@ -575,7 +575,7 @@
    "error": "",
    "warnings": [],
    "query": "increase(cpu.usagemhz.HOST[5m])",
-   "build": "VCF Operations 9.1 (<host on the reference estate>)"
+   "build": "VCF Operations 9.1.1.0 build 25679751 (<host on the reference estate>)"
   }
  }
 ]

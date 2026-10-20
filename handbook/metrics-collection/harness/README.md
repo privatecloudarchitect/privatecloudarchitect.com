@@ -1,9 +1,11 @@
 # Metrics collection harness
 
-Step 3 of the folder above: the read-only scripts. Backs the two collection chapters: the planes, the roll-up and
+Step 3 of the folder above: the read-only scripts. Backs the three collection chapters: the planes, the roll-up and
 retention in [privatecloudarchitect.com/handbook/metrics-collection](https://privatecloudarchitect.com/handbook/metrics-collection),
-then the extraction coefficients, the identity key and the real-time path in
-[privatecloudarchitect.com/handbook/metrics-extraction](https://privatecloudarchitect.com/handbook/metrics-extraction).
+the extraction coefficients, the identity key and the real-time path in
+[privatecloudarchitect.com/handbook/metrics-extraction](https://privatecloudarchitect.com/handbook/metrics-extraction),
+then the collection topology in
+[privatecloudarchitect.com/handbook/metrics-topology](https://privatecloudarchitect.com/handbook/metrics-topology).
 The chapters' claims about what VCF Operations collects, keeps, and serves, runnable against your own
 instance, read-only:
 
@@ -41,6 +43,12 @@ instance, read-only:
    changes at a 2-second step: 2 seconds for the ESX Top profile, 20 for the 20-second profiles.
    A range vector is printed last as the contrast, because it returns a 20-second grid for every
    profile and hides the 2-second data.
+7. **The collection topology** (`topology.py`): every collector (each unified cloud proxy and the
+   node's own internal collector) with its state, its data-persistence flag, its last heartbeat and
+   the adapter kinds it runs, then every collector group with its members and whether HA is on. It
+   exits 1 when a proxy is down, a proxy has persistence off (a link outage then loses data at once),
+   or a vCenter, NSX or vSAN adapter sits on the node's own collector; a proxy alone in its group is
+   a note, because failover is a choice. A refused or short read exits 4.
 
 ## Run it
 
@@ -56,6 +64,7 @@ python3 rollup_check.py                      # or --vm <name>; default: the busi
 python3 extract_measure.py --vms 50          # --vms is optional; calls run one at a time
 python3 identity_keys.py --vm <name>
 python3 identity_continuity.py                              # estate-wide; exit 1 if any entity is split
+python3 topology.py                          # collectors, persistence, groups; exit 1 on a finding
 
 export RTM_HOST=<your-vcf-instance-services-fqdn>   # fronts /data-query-service
 python3 rtm_query.py --source-id <vcenter-instance-uuid>   # VMEntityVCID from identity_keys.py

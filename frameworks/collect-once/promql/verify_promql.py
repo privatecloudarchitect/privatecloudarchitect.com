@@ -121,7 +121,7 @@ EXTRA_FUNCTIONS = [  # served on the build but absent from the widget's list; ir
 FORMS = {"topk": "topk(3, X)", "bottomk": "bottomk(3, X)", "topn_sum": "topn_sum(3, X)", "bottomn_sum": "bottomn_sum(3, X)", "rate": "rate(X[5m])", "irate": "irate(X[5m])",
          "increase": "increase(X[5m])", "resets": "resets(X[5m])", "absent": "absent(no.such.metric.HOST)", "absent_over_time": "absent_over_time(no.such.metric.HOST[5m])"}
 CAUTIONS = {
- "rate": ["Counter semantics apply on this build: on a gauge (cpu.usagemhz.HOST, 84 decreases in 181 samples) rate() returned no negative value and matched a reset-adding computation (mean absolute error 4 against 282 for a plain first-to-last delta). The example in VMware guidance rate(cpu.capacity.usage.HOST{host='host-17'}[5m]) applies it to a gauge and overstates change.",
+ "rate": ["Counter semantics apply: on a gauge (cpu.usagemhz.HOST, a series with many decreases) rate() returned no negative value and sat far closer to a reset-adding computation than to a plain first-to-last delta; the dialect block of examples.json records this run's counts and errors. The example in VMware guidance rate(cpu.capacity.usage.HOST{host='host-17'}[5m]) applies it to a gauge and overstates change.",
           "Use avg_over_time or max_over_time for a level; rate and increase only on cumulative names (vmop.*.CLSTR and DCENTER, envoy_*_total)."],
  "irate": ["Same counter semantics as rate; on a gauge it returned no negative value and did not match a last-two-points delta."],
  "increase": ["Correct on the cumulative vmop.* names (vmop.vmotion.CLSTR stepped 2227 to 2230 over 24 h on the management source); returns 0 on a quiet cluster."],
@@ -221,7 +221,10 @@ def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--no-crossplane", action="store_true")
     ap.add_argument("--guidance-xlsx", default="", help="path to VMware guidance's VODAP-9.1-Metrics-List-Per-Provider.xlsx (kept out of the repository); adds the per-provider classification")
     args = ap.parse_args(); guidance = guidance_list(args.guidance_xlsx) if args.guidance_xlsx else {}
-    load_env(); tok = bearer(); rtm = RTM(service_jwt(tok)); build = "VCF Operations 9.1 (%s)" % os.environ["OPS_HOST"]
+    load_env(); tok = bearer(); rtm = RTM(service_jwt(tok))
+    st, ver = ops(tok, "GET", "/api/versions/current")  # the build this run read, never a constant
+    if st != 200 or not ver.get("releaseName"): raise SystemExit("version read failed: HTTP %s" % st)
+    build = "%s build %s (%s)" % (ver["releaseName"], ver.get("buildNumber"), os.environ["OPS_HOST"])
     # sources
     st, j = rtm.get("/api/v1/vcenters/metrics_config", {}); vcs = [c["id"] for c in (j if isinstance(j, list) else [])]
     st, j = ops(tok, "GET", "/api/resources?resourceKind=TransportNode&pageSize=500")
@@ -357,6 +360,24 @@ def main():
                {"doc_name": "CPU Privileged", "key": "vcResources.priviledgedcpuusage.VCRES", "finding": "misspelled in the widget's copyable key and, with --guidance-xlsx, checked against the VMware guidance per-provider list: the list carries the same misspelled key (VC sheet, VERBOSE profile, 300-second sampling), so the misspelling is in the metric definition itself, not a transcription error of the widget; neither spelling is served on this Essentials-only deployment.", "guidance_rows": guidance.get("vcResources.priviledgedcpuusage.VCRES")},
                {"doc_name": "mem.swapIn.HOST and three siblings", "key": "mem.swapIn.HOST", "finding": "with --guidance-xlsx: the VMware guidance list carries both mem.swapIn.HOST (VERBOSE, 300-second sampling, label equal to the key) and mem.swapin.HOST (ESSENTIAL, 20-second sampling, label 'Memory Swapped In') as distinct definitions; the mixed-case keys are Verbose-profile metrics this deployment does not collect, not typos of the served keys, and their label is the raw key.", "guidance_rows": {"mem.swapIn.HOST": guidance.get("mem.swapIn.HOST"), "mem.swapin.HOST": guidance.get("mem.swapin.HOST")}}]}
     # ---- emit
+    if not args.guidance_xlsx:
+        # the guidance spreadsheet is a doc read kept out of the repository: without it, carry the last read forward, dated,
+        # rather than drop the classification a run with the file made
+        try: prev = json.load(open(os.path.join(HERE, "reconciliation.json"), encoding="utf-8"))
+        except (OSError, ValueError): prev = {}
+        if prev.get("guidance_list"):
+            g = dict(prev["guidance_list"]); g["carried_from"] = g.get("carried_from") or prev.get("generated"); recon["guidance_list"] = g
+            old = {c["doc_key"]: c for c in prev.get("case_mismatch", [])}
+            for c in recon["case_mismatch"]:
+                o = old.get(c["doc_key"])
+                if o and o.get("live_key") == c["live_key"]:
+                    c["guidance_rows_for_doc_key"], c["guidance_rows_for_live_key"] = o.get("guidance_rows_for_doc_key"), o.get("guidance_rows_for_live_key")
+            olds = {f.get("key"): f for f in prev.get("semantic_findings", [])}
+            for f in recon.get("semantic_findings", []):
+                was, now = olds.get(f.get("key"), {}).get("guidance_rows"), f.get("guidance_rows")
+                if now is None and was is not None: f["guidance_rows"] = was
+                elif isinstance(now, dict) and isinstance(was, dict):
+                    f["guidance_rows"] = {k: (v if v is not None else was.get(k)) for k, v in now.items()}
     for fn, obj in (("functions.json", functions), ("examples.json", {"generated": TODAY, "build": build, "placeholders": subs, "examples": examples, "dialect": dialect, "crossplane": crossplane}), ("reconciliation.json", recon)):
         with open(os.path.join(HERE, fn), "w", encoding="utf-8") as f: json.dump(obj, f, indent=1, ensure_ascii=True); f.write("\n")
         print("wrote", fn)

@@ -1,7 +1,6 @@
 # Expected output
 
-One run of each script on the reference instance: `collection_planes.py` and `rollup_check.py` on VCF Operations
-9.1.1.0 (build 25679751) on 2026-10-19, the others on VCF Operations 9.1.0 on 2026-09-15. Names and identifiers are
+One run of each script on the reference instance, on VCF Operations 9.1.1.0 (build 25679751) on 2026-10-19. Names and identifiers are
 replaced with placeholders; your adapters, VMs, figures, and UUIDs will differ.
 
 ## collection_planes.py
@@ -86,14 +85,14 @@ partial bucket at the window's edge is skipped rather than judged.
 
 ```
 $ python3 extract_measure.py --vms 50
-EXTRACTION COEFFICIENTS - read 2026-09-15 01:05 UTC, sequential calls
+EXTRACTION COEFFICIENTS - read 2026-10-19 18:22 UTC, sequential calls
 
   call                                            points       bytes    secs    B/pt     pts/s
   --------------------------------------------------------------------------------------------
-  1 VM x 1 key, 7 d, native 5-minute               2,012      59,868    0.63    29.8     3,219
-  1 VM x 1 key, 7 d, hourly AVG (server-side)        169       5,753    0.84    34.0       201
-  50 VMs x 4 keys, 1 d, native                    41,336   1,200,197    2.33    29.0    17,776  omitted 14 of 50 resources
-  50 VMs x 4 keys, 1 d, hourly AVG                 3,600     135,880    0.93    37.7     3,876  omitted 14 of 50 resources
+  1 VM x 1 key, 7 d, native 5-minute               2,014      58,581    0.65    29.1     3,099
+  1 VM x 1 key, 7 d, hourly AVG (server-side)        169       5,683    0.53    33.6       317
+  50 VMs x 4 keys, 1 d, native                    46,042   1,336,658    0.91    29.0    50,758  omitted 10 of 50 resources
+  50 VMs x 4 keys, 1 d, hourly AVG                 4,000     152,041    0.67    38.0     6,001  omitted 10 of 50 resources
   --------------------------------------------------------------------------------------------
 
   sample VM: vm-busy-01. Latency has a fixed floor per call; batch wide rather than loop deep.
@@ -102,8 +101,40 @@ EXTRACTION COEFFICIENTS - read 2026-09-15 01:05 UTC, sequential calls
 ```
 
 Exit code 0. Bytes per point stay near 30 at either resolution; points per second rise with the
-size of the call, which is the batch-wide rule in numbers. The fourteen omitted resources were
-powered off or newly created in that window, not an error.
+size of the call, which is the batch-wide rule in numbers. An omitted resource had no data in the
+window (powered off, or created inside it); the run reports it and never lands it as zero.
+
+## topology.py
+
+```
+$ python3 topology.py
+COLLECTION TOPOLOGY - read 2026-10-19 21:40 UTC
+
+  collector                    type                 state  persist  heartbeat  adapters  kinds
+  --------------------------------------------------------------------------------------------------------
+  node-collector-01            INTERNAL             UP     off      4 s ago          10  ManagementPackBuilderAdapter 1, vCenter Operations Adapter 1, DiagnosticsAdapter 1, VMWARE_INFRA_MANAGEMENT 1 ...
+                               the node's own adapters: Container, DiagnosticsAdapter, ManagementPackBuilderAdapter, OrchestratorAdapter, PingAdapter, SERVICENOW_ADAPTER, VMWARE_INFRA_HEALTH, VMWARE_INFRA_MANAGEMENT, vCenter Operations Adapter, vRealizeOpsMgrAPI
+  proxy-site-b-01              UNIFIED_CLOUD_PROXY  UP     on       15 s ago         13  LogAssistAdapter 1, VMWARE_INFRA_HEALTH 1, APPOSUCP 1, NSXTAdapter 1 ...
+  proxy-site-a-01              UNIFIED_CLOUD_PROXY  UP     on       7 s ago          35  VMSP 2, NSXTAdapter 2, VMWARE_INFRA_MANAGEMENT 2, VirtualAndPhysicalSANAdapter 2 ...
+
+  collector group                  members  HA   LB   system-defined
+  ----------------------------------------------------------------
+  Default collector group                1  off  off  yes
+  Example Collector Group                0  off  off  no
+  site-b collector group                 1  off  off  no
+  site-a collector group                 1  off  off  no
+
+  note: proxy proxy-site-b-01 has no partner in a group: no failover (a choice, not a defect)
+  note: proxy proxy-site-a-01 has no partner in a group: no failover (a choice, not a defect)
+  every proxy is up with persistence on, and the node's own collector holds no vCenter, NSX or vSAN adapter:
+  the documented per-site pattern. A link outage under an hour is buffered; past it, the gap is real.
+```
+
+Exit code 0. Every proxy is up with persistence on, and the node's own collector runs only the platform's own
+adapters (health, management, the integrations it hosts), none of them vCenter, NSX or vSAN. Each proxy is alone in its
+group, so a site has no failover: that prints as a note and leaves the exit code at 0, because a second proxy and a 10-minute
+failover are a choice. A proxy with persistence off, a proxy that is down, or a site adapter on the node's collector
+prints FINDING and exits 1; a refused or short read exits 4.
 
 ## identity_keys.py
 
@@ -114,13 +145,13 @@ IDENTITY KEYS - vm-example-01
   Operations identifier     value                                     part of uniqueness
   ----------------------------------------------------------------------------------
   VMEntityVCID              <vcenter-instance-uuid>                   yes
-  VMEntityObjectID          vm-20081                                  yes
+  VMEntityObjectID          vm-20066                                  yes
   VMEntityInstanceUUID      <vm-instance-uuid>                        no
   VMEntityName              vm-example-01                             no
   Operations resource id    <operations-resource-id>                  (internal to this instance)
   vCenter adapter VCURL     vcenter-management-01.example             (a name, resolves to the UUID above)
 
-  composite key: (vcenter_instance_uuid, moid) = (<vcenter-instance-uuid>, vm-20081)
+  composite key: (vcenter_instance_uuid, moid) = (<vcenter-instance-uuid>, vm-20066)
   Real-Time Metrics carries the moid as a label and the vCenter half only as the query's
   sourceId; the CMDB stores the same pair as vcenter_uuid and object_id (or morid).
   both halves present: key every row on this pair, and carry the instance UUID as an attribute.
@@ -132,13 +163,13 @@ Exit code 0.
 
 ```
 $ python3 rtm_query.py --source-id <vcenter-instance-uuid>
-REAL-TIME METRICS QUERY - read 2026-09-15 06:25 UTC, service JWT minted for this run (35-minute lifetime)
+REAL-TIME METRICS QUERY - read 2026-10-19 18:22 UTC, service JWT minted for this run (35-minute lifetime)
 
-  metrics config: ESX Top (2-second) on 5 host MOID(s) of this source (0.47 s)
-  metadata: 175 metric names collected for this source (0.35 s)
+  metrics config: ESX Top (2-second) on 5 host MOID(s) of this source (0.40 s)
+  metadata: 175 metric names collected for this source (0.41 s)
     e.g. cpu.capacity.contention.HOST, cpu.capacity.contention.VM, cpu.capacity.usage.HOST, cpu.capacity.usage.VM, cpu.corecount.contention.HOST
 
-  instant query cpu.utilization.PCORE: 101 series returned (0.56 s)
+  instant query cpu.utilization.PCORE: 101 series returned (0.55 s)
     labels: cluster, core, datacenter, feature, host, host_fqdn, host_ip, profile, provider, vc_ip
     object identity is the MOID label (vm, host, cluster, datacenter); the vCenter half
     is the sourceId you passed, so stamp every row with it.
@@ -151,10 +182,10 @@ REAL-TIME METRICS QUERY - read 2026-09-15 06:25 UTC, service JWT minted for this
     (a label matcher such as {host="host-123"}), and treat the warning as an error in a pipeline.
 
   cadence, cpu.utilization.PCORE at step 2s over 3 minutes, first series per profile:
-    ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS: 91 points, 86 value changes, 2 s between changes: the served cadence (0.82 s)
-    TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS: 91 points, 9 value changes, 20 s between changes: the served cadence (0.73 s)
+    ESX_TOP_ESXi_SPEC_2_ESSENTIAL_ESX_METRICS: 91 points, 88 value changes, 2 s between changes: the served cadence (0.83 s)
+    TROUBLESHOOTING_ESXi_SPEC_20_ESSENTIAL_ESX_METRICS: 91 points, 9 value changes, 20 s between changes: the served cadence (0.75 s)
 
-  contrast, range vector cpu.utilization.PCORE[3m]: 10 raw samples in the first series, spacing 20 to 20 s (0.59 s)
+  contrast, range vector cpu.utilization.PCORE[3m]: 10 raw samples in the first series, spacing 20 to 20 s (0.60 s)
     a range vector returns the 20-second grid for every profile; it cannot show the 2-second data.
 ```
 
