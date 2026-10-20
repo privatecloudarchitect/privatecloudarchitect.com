@@ -1,7 +1,7 @@
 # Expected output
 
-One run of `inventory.py` against a VCF Automation 9.1.1 organization on 2026-10-12, signed in with a session login
-(`VCFA_USER`, `VCFA_PASSWORD`), with `naming-standard.json` beside it so the naming audit runs. Every estate name is a placeholder the script assigned in the order it met
+One run of `inventory.py` against a VCF Automation 9.1.1 organization on 2026-10-20, signed in with a session login
+(`VCFA_USER`, `VCFA_PASSWORD`) and given a provider bearer for the provider edges (`VCFA_PROVIDER_BEARER_FILE`), with `naming-standard.json` beside it so the naming audit runs. Every estate name is a placeholder the script assigned in the order it met
 the object; the audit prints conformance counts and never a name. The kind counts are distinct kinds:
 SupervisorNamespace is served in two API versions and counts once, so `taxonomy.json` holds 101 entries and 100 kinds.
 
@@ -11,11 +11,11 @@ inventory.py: the construct model read through the Cloud Consumption Interface, 
   taxonomy: 13 VMware API groups, 100 kinds; 61 published at the top level, 39 under a project
   published: 1 region(s), 3 zone(s), 3 namespace class(es), 1 VPC(s), 3 subnet(s), 3 storage-class quota(s), 16 VM class summaries
   {{project-1}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 4, 'roles': ['admin', 'edit', 'edit_adv'], 'fields': ['roleRef', 'subjects']}; images 3; catalog items 10; namespaces 5
-     {{namespace-1}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-3}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 2, 'vksClusters': 1}
-     {{namespace-2}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 4, 'vksClusters': 1}
-     {{namespace-3}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-3}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 0, 'vksClusters': 0}
-     {{namespace-4}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-2}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 3, 'vksClusters': 1}
-     {{namespace-5}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 3, 'vksClusters': 0}
+     {{namespace-1}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-3}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 2, 'vksClusters': 1, 'vmServices': 1}
+     {{namespace-2}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 4, 'vksClusters': 1, 'vmServices': 3}
+     {{namespace-3}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-3}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 0, 'vksClusters': 0, 'vmServices': 0}
+     {{namespace-4}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-2}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 3, 'vksClusters': 1, 'vmServices': 2}
+     {{namespace-5}}: phase Created; bound {'region': '{{region-1}}', 'zone': '{{zone-1}}', 'class': '{{class-1}}', 'vpc': '{{vpc-1}}', 'storageClasses': 1, 'vmClasses': 4, 'classOverrides': True, 'sharedSubnets': 0, 'infraPolicies': 0}; workloads {'virtualMachines': 3, 'vksClusters': 0, 'vmServices': 0}
   {{project-2}}: bindings {'regions': 0, 'classes': 0, 'vpcs': 0, 'subnets': 0, 'serviceEngineGroups': 0, 'infraPolicies': 0}; role bindings {'count': 2, 'roles': ['edit'], 'fields': ['roleRef', 'subjects']}; images 3; catalog items 10; namespaces 0
 
   naming: 6 of 49 names conform to the standard, across 10 constructs
@@ -30,9 +30,42 @@ inventory.py: the construct model read through the Cloud Consumption Interface, 
      virtualmachine           1 of 12  refine  <app>-<role>-<ordinal>  e.g. checkout-web-01
      vks-cluster              2 of 3   refine  <app>-<env>-vks  e.g. checkout-prod-vks
 
+  edges: 31 read, 31 with instances on this estate, 0 with none, 0 not read; every observed cardinality holds
+     Organization           1 : 0+  Project                live      1 -> 2; to per from [2, 2], from per to [1, 1]
+     Project                1 : 0+  Supervisor Namespace   live      2 -> 5; to per from [0, 5], from per to [1, 1]
+     Supervisor Namespace   N : 1   Region                 live      5 -> 1; to per from [1, 1], from per to [5, 5]
+     Supervisor Namespace   N : 1   Namespace Class        live      5 -> 2; to per from [1, 1], from per to [1, 4]
+     Supervisor Namespace   N : 1   VPC                    live      5 -> 1; to per from [1, 1], from per to [5, 5]
+     Supervisor Namespace   N : N   Zone                   live      5 -> 3; to per from [1, 1], from per to [1, 3]
+     Supervisor Namespace   N : N   Storage Class          live      5 -> 1; to per from [1, 1], from per to [5, 5]
+     Supervisor Namespace   N : N   VM Class               live      5 -> 4; to per from [4, 4], from per to [5, 5]
+     Supervisor Namespace   1 : 0+  VirtualMachine         live      5 -> 12; to per from [0, 4], from per to [1, 1]
+     Supervisor Namespace   1 : 0+  VKS Cluster            live      5 -> 3; to per from [0, 1], from per to [1, 1]
+     Region                 1 : N   Zone                   live      1 -> 3; to per from [3, 3], from per to [1, 1]
+     Region                 1 : 0+  VPC                    live      1 -> 1; to per from [1, 1], from per to [1, 1]
+     Region                 1 : 0+  VM Class               live      1 -> 16; to per from [16, 16], from per to [1, 1]
+     VirtualMachine         N : 1   VM Class               live      12 -> 3; to per from [1, 1], from per to [2, 8]
+     VirtualMachine         N : 1   VM Image               live      12 -> 4; to per from [1, 1], from per to [2, 6]
+     VirtualMachine         N : 1   Storage Class          live      12 -> 1; to per from [1, 1], from per to [12, 12]
+     VirtualMachine         N : N   Network                live      8 -> 3; to per from [1, 1], from per to [2, 3]
+     VirtualMachine         N : 1   Zone                   live      12 -> 2; to per from [1, 1], from per to [3, 9]
+     VKS Cluster            1 : N   Node VirtualMachine    live      3 -> 8; to per from [2, 3], from per to [1, 1]
+     VirtualMachineService  N : N   VirtualMachine         live      6 -> 8; to per from [1, 2], from per to [1, 1]
+     VirtualMachineService  1 : 0+  Load balancer address  live      6 -> 5; to per from [0, 1], from per to [1, 1]
+     Region                 1 : N   Supervisor             live      1 -> 1; to per from [1, 1], from per to [1, 1]
+     Supervisor             N : 1   Region                 live      1 -> 1; to per from [1, 1], from per to [1, 1]
+     Region                 1 : 1   NSX Manager            live      1 -> 1; to per from [1, 1], from per to [1, 1]
+     Region                 1 : N   Storage Policy         live      1 -> 3; to per from [3, 3], from per to [1, 1]
+     Supervisor             N : 1   vCenter                live      1 -> 1; to per from [1, 1], from per to [1, 1]
+     Supervisor             1 : N   Supervisor Zone        live      1 -> 3; to per from [3, 3], from per to [1, 1]
+     Supervisor Zone        1 : 1   vSphere Zone           live      3 -> 3; to per from [1, 1], from per to [1, 1]
+     Organization           1 : 0+  Content Library        live      1 -> 1; to per from [1, 1], from per to [1, 1]
+     Organization           N : N   Region                 live      5 -> 1; to per from [1, 1], from per to [5, 5]
+     Regional networking    N : 1   Provider Gateway       live      4 -> 1; to per from [1, 1], from per to [4, 4]
+
   bindings: not asked (pass --probe-bindings to send the refused attempts; see the README)
 
-wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only); every estate name replaced by a stable label
+wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (counts only) and edges.json (31 edges, counts only); every estate name replaced by a stable label
 ```
 
 Read the `bound` map as the namespace's four create-time bindings. `zone` is not a `zoneName` field on the
@@ -42,9 +75,14 @@ config carries them and the namespace reports the effective set in its status, w
 shows one storage class and four machine classes rather than the zeroes an earlier run of this script printed
 against field names that no longer exist.
 
-The three records it wrote are [`taxonomy.json`](taxonomy.json) (every VMware API group and kind the interface
-declared, with scope, verbs, and the count of each top-level kind), [`estate.json`](estate.json) (the tree), and
-[`naming.json`](naming.json) (per construct, how many of that estate's names conform to the standard).
+The four records it wrote are [`taxonomy.json`](taxonomy.json) (every VMware API group and kind the interface
+declared, with scope, verbs, and the count of each top-level kind), [`estate.json`](estate.json) (the tree),
+[`naming.json`](naming.json) (per construct, how many of that estate's names conform to the standard), and
+[`edges.json`](edges.json) (every edge between constructs with the field that proves it).
+
+Read an edge line as From, its cardinality, To, the tier, then how many objects stood on each side, how many To each
+From held, and how many From each To had. Every declared cardinality held on this run; one that did not would end its
+line with `NOT AS DECLARED`.
 
 Six of fifty-one names conformed on that run, which is the ordinary result for an estate that grew before it had a
 standard: the region and the projects conform, and the namespaces, zones, classes, VPC, subnets, and VM classes do

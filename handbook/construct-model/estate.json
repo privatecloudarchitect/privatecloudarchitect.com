@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-13T04:08:22Z",
+ "captured_utc": "2026-10-20T16:11:48Z",
  "acquired_by": "session",
  "organization": "{{org}}",
  "published": {
@@ -107,7 +107,8 @@
      ],
      "workloads": {
       "virtualMachines": 2,
-      "vksClusters": 1
+      "vksClusters": 1,
+      "vmServices": 1
      }
     },
     {
@@ -134,7 +135,8 @@
      ],
      "workloads": {
       "virtualMachines": 4,
-      "vksClusters": 1
+      "vksClusters": 1,
+      "vmServices": 3
      }
     },
     {
@@ -161,7 +163,8 @@
      ],
      "workloads": {
       "virtualMachines": 0,
-      "vksClusters": 0
+      "vksClusters": 0,
+      "vmServices": 0
      }
     },
     {
@@ -188,7 +191,8 @@
      ],
      "workloads": {
       "virtualMachines": 3,
-      "vksClusters": 1
+      "vksClusters": 1,
+      "vmServices": 2
      }
     },
     {
@@ -215,7 +219,8 @@
      ],
      "workloads": {
       "virtualMachines": 3,
-      "vksClusters": 0
+      "vksClusters": 0,
+      "vmServices": 0
      }
     }
    ],

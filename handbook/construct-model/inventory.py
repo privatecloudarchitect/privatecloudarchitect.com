@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """inventory.py - the construct model, read from your own estate.
 
-Two records, both read-only through the Cloud Consumption Interface with an organization's OAuth bearer:
+Records, all read-only, through the Cloud Consumption Interface with an organization's bearer:
 
   taxonomy.json   what the interface declares: every VMware API group, its kinds, whether a kind is published
                   at the top level (cluster-scoped) or lives under a project (namespaced), the verbs it allows,
@@ -15,6 +15,10 @@ Two records, both read-only through the Cloud Consumption Interface with an orga
                   its Supervisor namespaces with the fields each one bound at create (region, zone, class, VPC,
                   storage classes, VM classes) and its phase, and behind each namespace's endpoint the virtual
                   machines and VKS clusters it holds
+  edges.json      the edge map: every relationship between constructs, one row each, with its declared cardinality,
+                  the field that establishes it, how many objects stood on each side, and whether the estate bore the
+                  cardinality out. The provider edges (regions, Supervisors, zones, content libraries, regional
+                  networking) are read through the Tenant Manager when VCFA_PROVIDER_BEARER_FILE is set. Counts only
 
 Every name that belongs to your estate is replaced by a stable placeholder on the way into the records
 ({{project-1}}, {{namespace-2}}, {{region-1}}, {{zone-2}}, {{class-1}}, {{vpc-1}}, {{org}}, {{id}}), so the records
@@ -24,7 +28,7 @@ Env:  VCFA_HOST, VCFA_ORG, and either VCFA_REFRESH_TOKEN_FILE (an api-token mint
       VCFA_USER with VCFA_PASSWORD_FILE (a session login as user@org, which needs nothing pre-minted; the password
       from a file of mode 0600, or VCFA_PASSWORD, the value itself, which lands in the shell's history); a secret
       file open to group or other is refused before it is read; TLS_VERIFY=false on a self-signed lab CA; OUT_DIR
-      (default .)
+      (default .); VCFA_PROVIDER_BEARER_FILE (optional, mode 0600) for the provider edges
 Exit: 0 the records were written · 1 the mint or the discovery failed
 """
 
@@ -228,6 +232,155 @@ def audit_names(standard, observed):
 # reads the namespace before and after and refuses to write a record if one byte of its spec moved.
 SENTINEL = "zz-probe-value-that-exists-nowhere"
 IMMUTABLE_FIELDS = ("className", "regionName", "vpcName")
+
+
+# ---- the edge map: every relationship between constructs, with the field that proves it, read rather than drawn
+#
+# Every pair is (From, To). "a : b" says how many From each To has (a) and how many To each From has (b): in
+# "Supervisor Namespace N : 1 Region" each namespace names exactly one region and a region holds many namespaces.
+# "0+" allows none. A cardinality is a claim about the model, so the record keeps it beside what the run observed
+# and says whether the estate bears it out, instead of publishing the claim on its own.
+CARDINALITY = {   # (From per To, To per From), each as (minimum, maximum or None)
+    "1 : 1": ((1, 1), (1, 1)), "1 : N": ((1, 1), (1, None)), "1 : 0+": ((1, 1), (0, None)),
+    "N : 1": ((1, None), (1, 1)), "N : N": ((1, None), (1, None)),
+}
+
+
+def edge(frm, card, to, field, surface, pairs, froms=None, read=True, why=None):
+    """One edge. `pairs` is every (From, To) the run read for it; `froms` is every From there is, so a From with no
+    To still counts where the cardinality allows none. Names stay in memory: the row carries counts only. A row the
+    run could not read says so and why; a row read with no instance on this estate says that, rather than looking
+    empty."""
+    row = {"from": frm, "cardinality": card, "to": to, "field": field, "surface": surface}
+    if not read:
+        return {**row, "tier": "not read", "why": why}
+    pairs = sorted({(str(x), str(y)) for x, y in pairs if x and y})
+    xs = sorted(set(map(str, froms or [])) | {x for x, _ in pairs})
+    ys = sorted({y for _, y in pairs})
+    to_per_from = [sum(1 for x, _ in pairs if x == f) for f in xs]
+    from_per_to = [sum(1 for _, y in pairs if y == t) for t in ys]
+    span = lambda v: [min(v), max(v)] if v else None
+    (fmin, fmax), (tmin, tmax) = CARDINALITY[card]
+    within = lambda v, lo, hi: all(lo <= n and (hi is None or n <= hi) for n in v)
+    holds = (within(from_per_to, fmin, fmax) and within(to_per_from, tmin, tmax)) if pairs else None
+    return {**row, "tier": "live" if pairs else "none here", "fromCount": len(xs), "toCount": len(ys),
+            "toPerFrom": span(to_per_from), "fromPerTo": span(from_per_to), "holds": holds}
+
+
+def edge_map(org, projects, namespaces, regions, zones, vpcs, vmcs, workloads, provider):
+    """The construct edges, from what the run already read. `namespaces` is (project, namespace object);
+    `workloads` maps a namespace to its machines, VKS clusters and VirtualMachineServices; `provider` is the
+    Tenant Manager read, or the reason there is none. The access-control edges (roles, rights, groups) are the
+    access-control chapter's; the overlay above the VPC is the network plane's."""
+    T, P = "tenant, Cloud Consumption Interface", "provider, Tenant Manager"
+    name = lambda o: o["metadata"]["name"]
+    sp = lambda o: o.get("spec") or {}
+    stt = lambda o: o.get("status") or {}
+    labels = lambda o: (o.get("metadata") or {}).get("labels") or {}
+    nss = [n for _, n in namespaces]
+    vms = [(ns, v) for ns, w in workloads.items() for v in w["vms"]]
+    clusters = [(ns, k) for ns, w in workloads.items() for k in w["clusters"]]
+    services = [(ns, x) for ns, w in workloads.items() for x in w["services"]]
+    vm_id = lambda ns, v: ns + "/" + name(v)
+    region_names = [name(r) for r in regions]
+    rows = [
+        edge("Organization", "1 : 0+", "Project", "the project lives in the organization the sign-in is scoped to", T,
+             [(org, p) for p in projects], froms=[org]),
+        edge("Project", "1 : 0+", "Supervisor Namespace", "the namespace is listed under its project (metadata.namespace)", T,
+             [(p, name(n)) for p, n in namespaces], froms=projects),
+        edge("Supervisor Namespace", "N : 1", "Region", "spec.regionName", T, [(name(n), sp(n).get("regionName")) for n in nss]),
+        edge("Supervisor Namespace", "N : 1", "Namespace Class", "spec.className", T, [(name(n), sp(n).get("className")) for n in nss]),
+        edge("Supervisor Namespace", "N : 1", "VPC", "spec.vpcName", T,
+             [(name(n), sp(n).get("vpcName") or stt(n).get("vpcName")) for n in nss]),
+        edge("Supervisor Namespace", "N : N", "Zone", "status.zones[].name", T,
+             [(name(n), z.get("name")) for n in nss for z in stt(n).get("zones") or []]),
+        edge("Supervisor Namespace", "N : N", "Storage Class", "status.storageClasses[].name", T,
+             [(name(n), x.get("name")) for n in nss for x in stt(n).get("storageClasses") or []]),
+        edge("Supervisor Namespace", "N : N", "VM Class", "status.vmClasses[].name", T,
+             [(name(n), x.get("name")) for n in nss for x in stt(n).get("vmClasses") or []]),
+        edge("Supervisor Namespace", "1 : 0+", "VirtualMachine", "metadata.namespace, behind the namespace's endpoint", T,
+             [(ns, vm_id(ns, v)) for ns, v in vms], froms=list(workloads)),
+        edge("Supervisor Namespace", "1 : 0+", "VKS Cluster", "metadata.namespace, behind the namespace's endpoint", T,
+             [(ns, vm_id(ns, k)) for ns, k in clusters], froms=list(workloads)),
+        edge("Region", "1 : N", "Zone", "Zone spec.regionName", T,
+             [(sp(z).get("regionName"), sp(z).get("zoneName") or name(z)) for z in zones], froms=region_names),
+        edge("Region", "1 : 0+", "VPC", "VPC spec.regionName", T, [(sp(v).get("regionName"), name(v)) for v in vpcs], froms=region_names),
+        edge("Region", "1 : 0+", "VM Class", "RegionVirtualMachineClassSummary spec.regionName", T,
+             [(sp(m).get("regionName"), sp(m).get("vmClassName") or name(m)) for m in vmcs], froms=region_names),
+        edge("VirtualMachine", "N : 1", "VM Class", "spec.className", T, [(vm_id(ns, v), sp(v).get("className")) for ns, v in vms]),
+        edge("VirtualMachine", "N : 1", "VM Image", "spec.imageName", T,
+             [(vm_id(ns, v), sp(v).get("imageName") or (sp(v).get("image") or {}).get("name")) for ns, v in vms]),
+        edge("VirtualMachine", "N : 1", "Storage Class", "spec.storageClass", T, [(vm_id(ns, v), sp(v).get("storageClass")) for ns, v in vms]),
+        edge("VirtualMachine", "N : N", "Network", "spec.network.interfaces[].network.name", T,
+             [(vm_id(ns, v), (i.get("network") or {}).get("name")) for ns, v in vms for i in (sp(v).get("network") or {}).get("interfaces") or []]),
+        edge("VirtualMachine", "N : 1", "Zone", "label topology.kubernetes.io/zone", T,
+             [(vm_id(ns, v), labels(v).get("topology.kubernetes.io/zone")) for ns, v in vms]),
+        edge("VKS Cluster", "1 : N", "Node VirtualMachine", "label cluster.x-k8s.io/cluster-name on each node", T,
+             [(ns + "/" + labels(v)["cluster.x-k8s.io/cluster-name"], vm_id(ns, v)) for ns, v in vms if labels(v).get("cluster.x-k8s.io/cluster-name")],
+             froms=[vm_id(ns, k) for ns, k in clusters]),
+        edge("VirtualMachineService", "N : N", "VirtualMachine", "spec.selector matched against each machine's labels", T,
+             [(vm_id(ns, x), vm_id(ns, v)) for ns, x in services for ns2, v in vms if ns2 == ns and sp(x).get("selector")
+              and all(labels(v).get(k) == val for k, val in sp(x)["selector"].items())],
+             froms=[vm_id(ns, x) for ns, x in services]),
+        edge("VirtualMachineService", "1 : 0+", "Load balancer address", "status.loadBalancer.ingress[].ip", T,
+             [(vm_id(ns, x), i.get("ip")) for ns, x in services for i in ((stt(x).get("loadBalancer") or {}).get("ingress") or [])],
+             froms=[vm_id(ns, x) for ns, x in services]),
+    ]
+    if isinstance(provider, str):
+        return rows + [edge(f, c, t, fld, P, [], read=False, why=provider) for f, c, t, fld in PROVIDER_EDGES]
+    ref = lambda o, k: (o.get(k) or {}).get("id") if isinstance(o.get(k), dict) else None
+    regs, sups, szs, libs, nets, rsps = (provider[k] for k in ("regions", "supervisors", "zones", "libraries", "networking", "storagePolicies"))
+    pairs = {
+        "Region.supervisors[]": ([(r["id"], x.get("id") if isinstance(x, dict) else x) for r in regs for x in r.get("supervisors") or []], [r["id"] for r in regs]),
+        "Supervisor.region": ([(x.get("supervisorId"), ref(x, "region")) for x in sups], None),
+        "Region.nsxManager": ([(r["id"], ref(r, "nsxManager")) for r in regs], None),
+        "RegionStoragePolicy.region": ([(ref(x, "region"), x["id"]) for x in rsps], [r["id"] for r in regs]),
+        "Supervisor.virtualCenter": ([(x.get("supervisorId"), ref(x, "virtualCenter")) for x in sups], None),
+        "SupervisorZone.supervisor": ([(ref(z, "supervisor"), z["id"]) for z in szs], [x.get("supervisorId") for x in sups]),
+        "SupervisorZone.zone": ([(z["id"], ref(z, "zone")) for z in szs], None),
+        "ContentLibrary.org": ([(ref(lib, "org"), lib["id"]) for lib in libs], None),
+        "RegionalNetworkingSetting.orgRef and regionRef": ([(ref(x, "orgRef"), ref(x, "regionRef")) for x in nets], None),
+        "RegionalNetworkingSetting.providerGatewayRef": ([(x["id"], ref(x, "providerGatewayRef")) for x in nets], None),
+    }
+    return rows + [edge(f, c, t, fld, P, pairs[fld][0], froms=pairs[fld][1]) for f, c, t, fld in PROVIDER_EDGES]
+
+
+PROVIDER_EDGES = (   # (From, cardinality, To, the field that proves it), read through the Tenant Manager
+    ("Region", "1 : N", "Supervisor", "Region.supervisors[]"),
+    ("Supervisor", "N : 1", "Region", "Supervisor.region"),
+    ("Region", "1 : 1", "NSX Manager", "Region.nsxManager"),
+    ("Region", "1 : N", "Storage Policy", "RegionStoragePolicy.region"),
+    ("Supervisor", "N : 1", "vCenter", "Supervisor.virtualCenter"),
+    ("Supervisor", "1 : N", "Supervisor Zone", "SupervisorZone.supervisor"),
+    ("Supervisor Zone", "1 : 1", "vSphere Zone", "SupervisorZone.zone"),
+    ("Organization", "1 : 0+", "Content Library", "ContentLibrary.org"),
+    ("Organization", "N : N", "Region", "RegionalNetworkingSetting.orgRef and regionRef"),
+    ("Regional networking", "N : 1", "Provider Gateway", "RegionalNetworkingSetting.providerGatewayRef"),
+)
+
+
+def read_provider(host, bearer):
+    """The provider side of the map, through the Tenant Manager with a provider bearer, read-only. Each list is read
+    to its end. The vCenter list is never read: it carries its connection's username and password."""
+    def page(path):
+        out, n = [], 1
+        while True:
+            req = urllib.request.Request(f"https://{host}/cloudapi{path}?page={n}&pageSize=128",
+                                         headers={"Authorization": f"Bearer {bearer}", "Accept": "application/json;version=40.0"})
+            with urllib.request.urlopen(req, context=ctx(), timeout=60) as r:
+                body = json.loads(r.read())
+            out += body.get("values") or []
+            if n >= (body.get("pageCount") or 1):
+                return out
+            n += 1
+    try:
+        return {"regions": page("/v1/regions"), "supervisors": page("/v1/supervisors"), "zones": page("/v1/supervisorZones"),
+                "libraries": page("/v1/contentLibraries"), "networking": page("/v1/regionalNetworkingSettings"),
+                "storagePolicies": page("/v1/regionStoragePolicies")}
+    except urllib.error.HTTPError as e:
+        return f"the Tenant Manager answered HTTP {e.code}"
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return f"the Tenant Manager did not answer ({type(e).__name__})"
 
 
 def probe_bindings(c, project, namespace, other_project, L):
@@ -474,6 +627,7 @@ def main():
     observed["projects"] = [p["metadata"]["name"] for p in projects]
     observed["namespaces"], observed["virtual-machines"], observed["vks-clusters"] = [], [], []
     first_ns = None
+    all_ns, workloads = [], {}   # for the edge map: (project, namespace object), and each namespace's workload objects
     for p in projects:
         pname = p["metadata"]["name"]; label = L.get("project", pname)
         proj = {"name": label, "bindings": {}, "roleBindings": None, "namespaces": []}
@@ -500,6 +654,7 @@ def main():
         if nss and first_ns is None:
             first_ns = (pname, nss[0]["metadata"]["name"])
         for n in nss:
+            all_ns.append((pname, n))
             sp, stt = n.get("spec") or {}, n.get("status") or {}
             ns = {"name": L.get("namespace", n["metadata"]["name"]), "phase": stt.get("phase"),
                   "bound": {"region": L.get("region", sp["regionName"]) if sp.get("regionName") else None,
@@ -511,12 +666,16 @@ def main():
             ep = stt.get("namespaceEndpointURL")
             if ep:
                 supervisor_ns = n["metadata"]["name"]
+                held = workloads.setdefault(supervisor_ns, {"vms": [], "clusters": [], "services": []})
                 for wl, family, path in (("virtualMachines", "virtual-machines", f"/apis/vmoperator.vmware.com/v1alpha5/namespaces/{supervisor_ns}/virtualmachines"),
-                                         ("vksClusters", "vks-clusters", f"/apis/cluster.x-k8s.io/v1beta1/namespaces/{supervisor_ns}/clusters")):
+                                         ("vksClusters", "vks-clusters", f"/apis/cluster.x-k8s.io/v1beta1/namespaces/{supervisor_ns}/clusters"),
+                                         ("vmServices", None, f"/apis/vmoperator.vmware.com/v1alpha5/namespaces/{supervisor_ns}/virtualmachineservices")):
                     st, items = c.items(ep.rstrip("/") + path, absolute=True)
                     ns["workloads"][wl] = len(items) if st == 200 else f"HTTP {st}"
                     if st == 200:
-                        observed[family] += [i["metadata"]["name"] for i in items]
+                        held[{"virtualMachines": "vms", "vksClusters": "clusters", "vmServices": "services"}[wl]] = items
+                        if family:
+                            observed[family] += [i["metadata"]["name"] for i in items]
             proj["namespaces"].append(ns)
         estate["projects"].append(proj)
         print(f"  {label}: bindings {proj['bindings']}; role bindings {proj['roleBindings']}; images {proj['images']}; catalog items {proj['catalogItems']}; namespaces {len(nss)}")
@@ -532,6 +691,23 @@ def main():
             print(f"     {construct:<22} {v['conform']:>3} of {v['objects']:<3} {v['verdict']:<7} {v['convention']}  e.g. {v['example']}")
     else:
         print(f"\n  naming: skipped ({STANDARD_FILE} is not beside this script)")
+
+    # ---- 4a. the edge map: tenant edges from what was read above, provider edges when a provider bearer is given
+    try:
+        prov_bearer = secret("VCFA_PROVIDER_BEARER")
+    except OSError as e:
+        raise SystemExit(f"FATAL: {e}") from None
+    provider = read_provider(host, prov_bearer) if prov_bearer else "no provider bearer was given (VCFA_PROVIDER_BEARER_FILE)"
+    edges = edge_map(org, [p["metadata"]["name"] for p in projects], all_ns, regions, zones, vpcs, vmcs, workloads, provider)
+    live = [e for e in edges if e["tier"] == "live"]
+    broken = [e for e in edges if e.get("holds") is False]
+    print(f"\n  edges: {len(edges)} read, {len(live)} with instances on this estate, "
+          f"{sum(1 for e in edges if e['tier'] == 'none here')} with none, {sum(1 for e in edges if e['tier'] == 'not read')} not read"
+          + (f"; {len(broken)} whose cardinality the estate contradicts" if broken else "; every observed cardinality holds"))
+    for e in edges:
+        seen = (f"{e['fromCount']} -> {e['toCount']}; to per from {e['toPerFrom']}, from per to {e['fromPerTo']}"
+                + ("" if e["holds"] is not False else "; NOT AS DECLARED") if e["tier"] != "not read" else e["why"])
+        print(f"     {e['from']:<22} {e['cardinality']:<7} {e['to']:<22} {e['tier']:<9} {seen}")
 
     # ---- 4b. optional: ask whether the bindings and the parent can be changed (every attempt is one the server refuses)
     bindings = None
@@ -551,13 +727,12 @@ def main():
                     if a["answer"]:
                         print(f"           {a['answer'][:170]}")
                 print(f"     the namespace is unchanged: phase {bindings['phase']}, conditions {bindings['conditions']}")
-            prov_file = os.environ.get("VCFA_PROVIDER_BEARER_FILE")
-            if bindings is not None and prov_file and os.path.exists(prov_file):
+            if bindings is not None and prov_bearer:
                 def scrub_all(text):
                     # No boundary here: the Tenant Manager's answers carry names inside longer tokens, and a name
                     # left inside one is a leak. One pass all the same, so no placeholder is rewritten (G-646).
                     return L.scrub(text, edge="")
-                tm_rec, why = probe_tenant_manager(host, open(prov_file, encoding="utf-8").read().strip(), first_ns[1], scrub_all)
+                tm_rec, why = probe_tenant_manager(host, prov_bearer, first_ns[1], scrub_all)
                 if tm_rec is None:
                     print(f"     the Tenant Manager surface: skipped ({why})")
                 else:
@@ -604,6 +779,19 @@ def main():
         text3 = json.dumps({"captured_utc": stamp, "audited_objects": sum(v["objects"] for v in naming.values()), "constructs": naming}, indent=1, ensure_ascii=False)
         open(os.path.join(out_dir, "naming.json"), "w", encoding="utf-8").write(text3 + "\n")
         wrote += " and naming.json (counts only)"
+    keys = {"from", "cardinality", "to", "field", "surface", "tier", "why", "fromCount", "toCount", "toPerFrom", "fromPerTo", "holds"}
+    for e in edges:
+        assert set(e) <= keys and e["tier"] in ("live", "none here", "not read"), e
+        assert all(isinstance(e.get(k), int) for k in ("fromCount", "toCount") if k in e), e
+    text5 = json.dumps({"captured_utc": stamp, "cardinality": {k: {"fromPerTo": list(v[0]), "toPerFrom": list(v[1])} for k, v in CARDINALITY.items()},
+                        "edges": edges}, indent=1, ensure_ascii=False)
+    for value in secrets + ((prov_bearer,) if prov_bearer else ()):
+        assert value not in text5, "an estate value reached the edge record"
+    for fam, m in L.maps.items():
+        for name in m:
+            assert not re.search(r"(?<![A-Za-z0-9-])" + re.escape(name) + r"(?![A-Za-z0-9-])", text5), f"a {fam} name reached the edge record"
+    open(os.path.join(out_dir, "edges.json"), "w", encoding="utf-8").write(text5 + "\n")
+    wrote += " and edges.json (%d edges, counts only)" % len(edges)
     if bindings is not None:
         text4 = UUID.sub("{{id}}", json.dumps({"captured_utc": stamp, **bindings}, indent=1, ensure_ascii=False))
         for value in secrets:
