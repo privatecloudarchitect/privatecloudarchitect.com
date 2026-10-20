@@ -1,0 +1,291 @@
+{
+ "captured_utc": "2026-09-21T13:46:04Z",
+ "project": "{{project-1}}",
+ "needs": {
+  "direct": [
+   {
+    "need": "a Supervisor namespace, vended to you",
+    "kind": "SupervisorNamespace",
+    "present": 3,
+    "usable": 3,
+    "note": "usable means it publishes its own namespaceEndpointURL; that URL is the door"
+   },
+   {
+    "need": "a VM image bound to THAT namespace",
+    "kind": "VirtualMachineImage",
+    "present": 2,
+    "usable": 3,
+    "note": "images are namespace scoped here, so a namespace with none cannot build a VM even though the cluster catalogue is large"
+   },
+   {
+    "need": "storage quota with room for the boot disk",
+    "kind": "StoragePolicyQuota",
+    "present": 2,
+    "usable": 3,
+    "note": "the refusal arrives from an admission webhook at the create call and names the reason"
+   }
+  ],
+  "automation": [
+   {
+    "need": "everything the direct door needs, unchanged",
+    "kind": "-",
+    "present": null,
+    "usable": null,
+    "note": "the blueprint applies the same object into the same namespace; nothing above goes away"
+   },
+   {
+    "need": "a project you are a member of",
+    "kind": "Project",
+    "present": 1,
+    "usable": 1,
+    "note": "the deployment is scoped to it and the catalog item is published to it"
+   },
+   {
+    "need": "a blueprint holding the manifest",
+    "kind": "Blueprint",
+    "present": 12,
+    "usable": null,
+    "note": "authoring changes nothing; it is a document until a version is released"
+   },
+   {
+    "need": "a released version",
+    "kind": "BlueprintVersion",
+    "present": 21,
+    "usable": null,
+    "note": "the version object's name is derived, not chosen: it must equal '<blueprint>:<version>'"
+   },
+   {
+    "need": "a catalog item, for the catalog door only",
+    "kind": "CatalogItem",
+    "present": 10,
+    "usable": null,
+    "note": "released with publishToCatalog true; the API door does not need this one"
+   }
+  ]
+ },
+ "namespaces": [
+  {
+   "namespace": "{{namespace-1}}",
+   "imagesBound": 3,
+   "classes": 4,
+   "quotaGiB": 293.0,
+   "usedGiB": 159.0,
+   "freeGiB": 134.0,
+   "couldBuildAVm": true
+  },
+  {
+   "namespace": "{{namespace-2}}",
+   "imagesBound": 0,
+   "classes": 4,
+   "quotaGiB": 293.0,
+   "usedGiB": 63.0,
+   "freeGiB": 230.0,
+   "couldBuildAVm": false
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "imagesBound": 3,
+   "classes": 4,
+   "quotaGiB": 293.0,
+   "usedGiB": 278.0,
+   "freeGiB": 15.0,
+   "couldBuildAVm": false
+  }
+ ],
+ "claimBuys": {
+  "deploymentActions": [
+   "ChangeLease",
+   "Delete",
+   "EditDeployment",
+   "PowerOff",
+   "PowerOn"
+  ],
+  "resourceActions": [
+   "VirtualMachine.Add.Disk",
+   "VirtualMachine.Create.Snapshot",
+   "VirtualMachine.Delete.Snapshot",
+   "VirtualMachine.Get.Password",
+   "VirtualMachine.PowerOff",
+   "VirtualMachine.PowerOn",
+   "VirtualMachine.RemoteConsole",
+   "VirtualMachine.Remove.Disk",
+   "VirtualMachine.Resize",
+   "VirtualMachine.Revert.Snapshot",
+   "VirtualMachine.Suspend",
+   "VirtualMachine.WebConsole"
+  ],
+  "linkShape": "cci:{{project-1}}:{{namespace-1}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:{{machine-16}}",
+  "recordFields": [
+   "blueprintId",
+   "blueprintVersion",
+   "catalogItemId",
+   "catalogItemVersion",
+   "createdAt",
+   "createdBy",
+   "iconId",
+   "id",
+   "inputs",
+   "lastUpdatedAt",
+   "lastUpdatedBy",
+   "leaseGracePeriodDays",
+   "name",
+   "orgId",
+   "ownedBy",
+   "ownerType",
+   "projectId",
+   "status"
+  ]
+ },
+ "credentials": {
+  "credentialHeld": "a tenant bearer, minted from a refresh token at /oauth/tenant/<org>/token",
+  "doors": [
+   {
+    "door": "VCF Automation, API",
+    "surface": "/deployment/api",
+    "answeredTheTenantBearer": 200,
+    "identityDomain": "the organization's identity provider"
+   },
+   {
+    "door": "VCF Automation, catalog",
+    "surface": "/catalog/api",
+    "answeredTheTenantBearer": 200,
+    "identityDomain": "the organization's identity provider"
+   },
+   {
+    "door": "Supervisor, direct",
+    "surface": "the namespace's own Kubernetes endpoint",
+    "answeredTheTenantBearer": 200,
+    "identityDomain": "the organization's identity provider"
+   },
+   {
+    "door": "vCenter",
+    "surface": "/api/vcenter",
+    "answeredTheTenantBearer": 401,
+    "identityDomain": "vCenter's own single sign-on, not the organization's",
+    "takesInstead": "a session id from POST /api/session, or Basic, as an SSO principal"
+   }
+  ],
+  "doorsThatTakeIt": 3,
+  "note": "a door answering 200 here is answering this identity; what it then PERMITS is the project role tier and the four dials, which the access-control chapter covers"
+ },
+ "probe": {
+  "direct": {
+   "createStatus": 201,
+   "secondsToPoweredOn": 20,
+   "machine": {
+    "labelKeys": [
+     "app.kubernetes.io/name",
+     "handbook-probe",
+     "topology.kubernetes.io/zone"
+    ],
+    "annotationKeys": [
+     "mgmt.proxy.vmware.com/allowlist",
+     "mgmt.proxy.vmware.com/watermark",
+     "virtualmachine.vmoperator.vmware.com/first-boot-done",
+     "vmoperator.vmware.com/backup-version",
+     "vmoperator.vmware.com/bootstrap-hash-customspec",
+     "vmoperator.vmware.com/created-at-build-version",
+     "vmoperator.vmware.com/created-at-schema-version",
+     "vmoperator.vmware.com/last-resized-vm-class",
+     "vmoperator.vmware.com/manager-id",
+     "vmoperator.vmware.com/upgraded-to-build-version",
+     "vmoperator.vmware.com/upgraded-to-feature-version",
+     "vmoperator.vmware.com/upgraded-to-schema-version"
+    ],
+    "ownerReferences": [],
+    "powerState": "PoweredOn",
+    "specKeys": [
+     "biosUUID",
+     "className",
+     "hardware",
+     "image",
+     "imageName",
+     "instanceUUID",
+     "network",
+     "powerOffMode",
+     "powerState",
+     "promoteDisksMode",
+     "restartMode",
+     "storageClass",
+     "suspendMode",
+     "volumes"
+    ]
+   }
+  },
+  "catalog": {
+   "blueprintStatus": 200,
+   "releaseStatus": 200,
+   "requestStatus": 200,
+   "secondsToCreateSuccessful": 30,
+   "secondsToPoweredOn": 20,
+   "machine": {
+    "labelKeys": [
+     "app.kubernetes.io/name",
+     "handbook-probe",
+     "topology.kubernetes.io/zone"
+    ],
+    "annotationKeys": [
+     "mgmt.proxy.vmware.com/allowlist",
+     "mgmt.proxy.vmware.com/watermark",
+     "virtualmachine.vmoperator.vmware.com/first-boot-done",
+     "vmoperator.vmware.com/backup-version",
+     "vmoperator.vmware.com/bootstrap-hash-customspec",
+     "vmoperator.vmware.com/created-at-build-version",
+     "vmoperator.vmware.com/created-at-schema-version",
+     "vmoperator.vmware.com/last-resized-vm-class",
+     "vmoperator.vmware.com/manager-id",
+     "vmoperator.vmware.com/upgraded-to-build-version",
+     "vmoperator.vmware.com/upgraded-to-feature-version",
+     "vmoperator.vmware.com/upgraded-to-schema-version"
+    ],
+    "ownerReferences": [],
+    "powerState": "PoweredOn",
+    "specKeys": [
+     "biosUUID",
+     "className",
+     "hardware",
+     "image",
+     "imageName",
+     "instanceUUID",
+     "network",
+     "powerOffMode",
+     "powerState",
+     "promoteDisksMode",
+     "restartMode",
+     "storageClass",
+     "suspendMode",
+     "volumes"
+    ]
+   },
+   "claimedBy": "cci:{{project-1}}:{{namespace-1}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:handbook-doors-catalog"
+  },
+  "identical": {
+   "annotationKeys": true,
+   "annotationCount": 12,
+   "labelKeysIgnoringName": true,
+   "ownerReferencesBoth": [],
+   "specKeys": true,
+   "markerOnEither": []
+  },
+  "teardown": {
+   "catalogSecondsToVmGone": 378,
+   "catalogSecondsToDeploymentGone": 388,
+   "directSecondsToVmGone": 20
+  },
+  "residue": {
+   "machinesNamedByThisRun": [],
+   "catalogItemsNamedByThisRun": []
+  }
+ },
+ "fourthDoor": {
+  "created": 201,
+  "declaredByANamespace": false,
+  "claimedByADeployment": false,
+  "tenantQuotaDeltaBytes": 0,
+  "deleted": [
+   204,
+   true
+  ],
+  "namespacesAsked": 3
+ }
+}

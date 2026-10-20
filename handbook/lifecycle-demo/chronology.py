@@ -66,6 +66,25 @@ def reserved_domain(host: str) -> bool:
     return any(host == d or host.endswith("." + d) for d in RESERVED_DOMAINS)
 
 
+PLACEHOLDER = re.compile(r"(\{\{[^}]*\}\})")
+
+
+def one_pass(text, known, edge="A-Za-z0-9-"):
+    """Replace every (real, label) pair in one pass, the longest real name first, on a boundary of `edge` characters
+    (none when empty), and never inside a placeholder already written. Replacing one name at a time lets a project
+    named project-2 match inside the {{project-2}} just written for the project named project-1 (G-646). When a name
+    is given twice, its first label wins."""
+    label_of = {}
+    for real, label in known:
+        label_of.setdefault(real, label)
+    if not label_of:
+        return text
+    names = "|".join(map(re.escape, sorted(label_of, key=len, reverse=True)))
+    rx = re.compile(rf"(?<![{edge}])({names})(?![{edge}])" if edge else f"({names})")
+    return "".join(part if i % 2 else rx.sub(lambda m: "{{%s}}" % label_of[m.group(1)], part)
+                   for i, part in enumerate(PLACEHOLDER.split(text)))
+
+
 class Labels:
     """Estate coordinates become readable placeholders; the demo's own example names do not."""
 
@@ -93,9 +112,7 @@ class Labels:
         # hyphen-excluding boundary leaves it there, and the stem check below catches that as a leak.
         # Rendering it as `{{app}}-dev-{{project}}` keeps the convention legible and the estate out
         # of it.
-        for real, label in sorted(self.pairs, key=lambda kv: -len(kv[0])):
-            text = re.sub(r"(?<![A-Za-z0-9])" + re.escape(real) + r"(?![A-Za-z0-9])",
-                          "{{%s}}" % label, text)
+        text = one_pass(text, self.pairs, edge="A-Za-z0-9")
         text = UUID.sub("{{id}}", text)
         text = VMI.sub("{{image-id}}", text)
         text = IPV4.sub("{{ip}}", text)

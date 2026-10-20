@@ -1,27 +1,28 @@
 {
- "captured_utc": "2026-09-21T13:46:04Z",
+ "captured_utc": "2026-10-19T21:44:42Z",
+ "signIn": "session login",
  "project": "{{project-1}}",
  "needs": {
   "direct": [
    {
     "need": "a Supervisor namespace, vended to you",
     "kind": "SupervisorNamespace",
-    "present": 3,
-    "usable": 3,
+    "present": 5,
+    "usable": 5,
     "note": "usable means it publishes its own namespaceEndpointURL; that URL is the door"
    },
    {
     "need": "a VM image bound to THAT namespace",
     "kind": "VirtualMachineImage",
-    "present": 2,
-    "usable": 3,
-    "note": "images are namespace scoped here, so a namespace with none cannot build a VM even though the cluster catalogue is large"
+    "present": 3,
+    "usable": 5,
+    "note": "images are namespace scoped here, so a namespace with none cannot build a VM, whatever the cluster-scoped list holds"
    },
    {
     "need": "storage quota with room for the boot disk",
     "kind": "StoragePolicyQuota",
-    "present": 2,
-    "usable": 3,
+    "present": 5,
+    "usable": 5,
     "note": "the refusal arrives from an admission webhook at the create call and names the reason"
    }
   ],
@@ -50,7 +51,7 @@
    {
     "need": "a released version",
     "kind": "BlueprintVersion",
-    "present": 21,
+    "present": 29,
     "usable": null,
     "note": "the version object's name is derived, not chosen: it must equal '<blueprint>:<version>'"
    },
@@ -66,32 +67,65 @@
  "namespaces": [
   {
    "namespace": "{{namespace-1}}",
-   "imagesBound": 3,
+   "imagesBound": 0,
    "classes": 4,
-   "quotaGiB": 293.0,
-   "usedGiB": 159.0,
-   "freeGiB": 134.0,
-   "couldBuildAVm": true
+   "quotaStated": true,
+   "quotaGiB": 195.3,
+   "usedGiB": 45.6,
+   "freeGiB": 149.7,
+   "couldBuildAVm": false
   },
   {
    "namespace": "{{namespace-2}}",
+   "imagesBound": 3,
+   "classes": 4,
+   "quotaStated": true,
+   "quotaGiB": 390.6,
+   "usedGiB": 88.0,
+   "freeGiB": 302.6,
+   "couldBuildAVm": true
+  },
+  {
+   "namespace": "{{namespace-3}}",
+   "imagesBound": 3,
+   "classes": 4,
+   "quotaStated": true,
+   "quotaGiB": 293.0,
+   "usedGiB": 9.0,
+   "freeGiB": 284.0,
+   "couldBuildAVm": true
+  },
+  {
+   "namespace": "{{namespace-4}}",
    "imagesBound": 0,
    "classes": 4,
+   "quotaStated": true,
    "quotaGiB": 293.0,
    "usedGiB": 63.0,
    "freeGiB": 230.0,
    "couldBuildAVm": false
   },
   {
-   "namespace": "{{namespace-3}}",
+   "namespace": "{{namespace-5}}",
    "imagesBound": 3,
    "classes": 4,
+   "quotaStated": true,
    "quotaGiB": 293.0,
-   "usedGiB": 278.0,
-   "freeGiB": 15.0,
-   "couldBuildAVm": false
+   "usedGiB": 238.0,
+   "freeGiB": 55.0,
+   "couldBuildAVm": true
   }
  ],
+ "imageScope": {
+  "clusterListStatus": 200,
+  "clusterImages": 138,
+  "namespaceImages": 3,
+  "sharedById": 0,
+  "sharedByDisplayName": 0,
+  "clusterNodeImages": 138,
+  "clusterUbuntu": 64,
+  "clusterUbuntuNodeImages": 64
+ },
  "claimBuys": {
   "deploymentActions": [
    "ChangeLease",
@@ -114,7 +148,7 @@
    "VirtualMachine.Suspend",
    "VirtualMachine.WebConsole"
   ],
-  "linkShape": "cci:{{project-1}}:{{namespace-1}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:{{machine-16}}",
+  "linkShape": "cci:{{project-1}}:{{namespace-5}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:{{machine-11}}",
   "recordFields": [
    "blueprintId",
    "blueprintVersion",
@@ -122,6 +156,7 @@
    "catalogItemVersion",
    "createdAt",
    "createdBy",
+   "description",
    "iconId",
    "id",
    "inputs",
@@ -137,38 +172,35 @@
   ]
  },
  "credentials": {
-  "credentialHeld": "a tenant bearer, minted from a refresh token at /oauth/tenant/<org>/token",
+  "credentialHeld": "a tenant bearer, from a session login",
   "doors": [
    {
     "door": "VCF Automation, API",
     "surface": "/deployment/api",
-    "answeredTheTenantBearer": 200,
-    "identityDomain": "the organization's identity provider"
+    "answeredTheTenantBearer": 200
    },
    {
     "door": "VCF Automation, catalog",
     "surface": "/catalog/api",
-    "answeredTheTenantBearer": 200,
-    "identityDomain": "the organization's identity provider"
+    "answeredTheTenantBearer": 200
    },
    {
     "door": "Supervisor, direct",
     "surface": "the namespace's own Kubernetes endpoint",
-    "answeredTheTenantBearer": 200,
-    "identityDomain": "the organization's identity provider"
+    "answeredTheTenantBearer": 200
    },
    {
     "door": "vCenter",
     "surface": "/api/vcenter",
     "answeredTheTenantBearer": 401,
-    "identityDomain": "vCenter's own single sign-on, not the organization's",
-    "takesInstead": "a session id from POST /api/session, or Basic, as an SSO principal"
+    "takesInstead": "a session id from POST /api/session, or Basic, as a vCenter single sign-on principal"
    }
   ],
   "doorsThatTakeIt": 3,
   "note": "a door answering 200 here is answering this identity; what it then PERMITS is the project role tier and the four dials, which the access-control chapter covers"
  },
  "probe": {
+  "probedUtc": "2026-10-19T21:37:21Z",
   "direct": {
    "createStatus": 201,
    "secondsToPoweredOn": 20,
@@ -209,14 +241,17 @@
      "storageClass",
      "suspendMode",
      "volumes"
-    ]
+    ],
+    "promoteDisksMode": "Online",
+    "diskPromotion": "DiskPromotionPending",
+    "deleting": false
    }
   },
   "catalog": {
    "blueprintStatus": 200,
    "releaseStatus": 200,
    "requestStatus": 200,
-   "secondsToCreateSuccessful": 30,
+   "secondsToCreateSuccessful": 40,
    "secondsToPoweredOn": 20,
    "machine": {
     "labelKeys": [
@@ -255,29 +290,40 @@
      "storageClass",
      "suspendMode",
      "volumes"
-    ]
+    ],
+    "promoteDisksMode": "Online",
+    "diskPromotion": "DiskPromotionPending",
+    "deleting": false
    },
-   "claimedBy": "cci:{{project-1}}:{{namespace-1}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:handbook-doors-catalog"
+   "claimedBy": "cci:{{project-1}}:{{namespace-2}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:handbook-doors-catalog"
   },
   "identical": {
-   "annotationKeys": true,
-   "annotationCount": 12,
-   "labelKeysIgnoringName": true,
    "ownerReferencesBoth": [],
-   "specKeys": true,
-   "markerOnEither": []
+   "markerOnEither": [],
+   "annotationKeysEqual": true,
+   "annotationCount": 12,
+   "specKeysEqual": true,
+   "indistinguishable": true
   },
   "teardown": {
-   "catalogSecondsToVmGone": 378,
-   "catalogSecondsToDeploymentGone": 388,
-   "directSecondsToVmGone": 20
+   "catalogDiskPromotionAtDelete": "DiskPromotionPending",
+   "catalogSecondsToVmGone": 324,
+   "catalogSecondsToDeploymentGone": 335,
+   "directDiskPromotionAtDelete": "True",
+   "directSecondsToVmGone": 30
   },
   "residue": {
-   "machinesNamedByThisRun": [],
-   "catalogItemsNamedByThisRun": []
-  }
+   "machines": [],
+   "catalogItems": [],
+   "classicCatalogItems": [],
+   "blueprint": false,
+   "version": false,
+   "deployment": false
+  },
+  "clean": true
  },
  "fourthDoor": {
+  "probedUtc": "2026-10-19T21:37:20Z",
   "created": 201,
   "declaredByANamespace": false,
   "claimedByADeployment": false,
@@ -286,6 +332,6 @@
    204,
    true
   ],
-  "namespacesAsked": 3
+  "namespacesAsked": 5
  }
 }

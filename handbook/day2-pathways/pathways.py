@@ -98,6 +98,25 @@ def ctx():
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+PLACEHOLDER = re.compile(r"(\{\{[^}]*\}\})")
+
+
+def one_pass(text, known, edge="A-Za-z0-9-"):
+    """Replace every (real, label) pair in one pass, the longest real name first, on a boundary of `edge` characters
+    (none when empty), and never inside a placeholder already written. Replacing one name at a time lets a project
+    named project-2 match inside the {{project-2}} just written for the project named project-1 (G-646). When a name
+    is given twice, its first label wins."""
+    label_of = {}
+    for real, label in known:
+        label_of.setdefault(real, label)
+    if not label_of:
+        return text
+    names = "|".join(map(re.escape, sorted(label_of, key=len, reverse=True)))
+    rx = re.compile(rf"(?<![{edge}])({names})(?![{edge}])" if edge else f"({names})")
+    return "".join(part if i % 2 else rx.sub(lambda m: "{{%s}}" % label_of[m.group(1)], part)
+                   for i, part in enumerate(PLACEHOLDER.split(text)))
+
+
 class Labels:
     """Estate names become placeholders. The product's own vocabulary never does."""
 
@@ -119,8 +138,7 @@ class Labels:
         if not isinstance(text, str):
             return text
         known = [(real, label) for m in self.maps.values() for real, label in m.items()]
-        for real, label in sorted(known, key=lambda kv: -len(kv[0])):
-            text = re.sub(r"(?<![A-Za-z0-9-])" + re.escape(real) + r"(?![A-Za-z0-9-])", "{{%s}}" % label, text)
+        text = one_pass(text, known)
         return UUID.sub("{{id}}", text)
 
 
