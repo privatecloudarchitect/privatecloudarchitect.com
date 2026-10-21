@@ -1,13 +1,66 @@
 # Expected output
 
-Transcripts from one VCF 9.1.0 instance with Real-Time Metrics deployed, 2026-09-16, host names and identifiers
-replaced, and the broker and fleet-plane half of `doors.py` read again on VCF 9.1.1 on 2026-10-15; the last section
-replays that 9.1.1 run from the sets beside the scripts. Your rows will differ where your surfaces differ; the shape
-is what to expect.
+Transcripts from one VCF 9.1.0 instance with Real-Time Metrics deployed, 2026-09-16, and from the same estate on
+VCF 9.1.1, host names and identifiers replaced: `doors.py` on every login path the reference catalog signs in by,
+read on VCF 9.1.1 on 2026-10-21 (the first section); the 9.1.0 run, the only one that read the tenant OAuth grant;
+and the broker and fleet-plane half of `doors.py` read on VCF 9.1.1 on 2026-10-15, which the last section replays from
+the sets beside the scripts. Your rows will differ where your surfaces differ; the shape is what to expect.
+
+## doors.py on VCF 9.1.1, every path the catalog signs in by
+
+The run of 2026-10-21, on VCF Operations 9.1.1.0, VCF Automation 9.1.1.0100, NSX 9.1.1.0, vCenter 9.1.1.0 and SDDC
+Manager 9.1.1.0, with every surface configured but the tenant OAuth grant: the reference catalog holds no tenant API
+token for it, so its rows and the arrival rule's numbers are the 9.1.0 run's, in the next section. Every verdict is
+the one the chapter states. The provider api-token path ran for the first time; its refresh token came back unchanged,
+so no file was written. With one tenant path run, no arrival-rule line prints: that line compares one principal's
+OAuth grant with its Basic session, and the provider is another principal, so its count stays on its own row. The
+same organization user's Basic session read 136 effective rights on the 9.1.0 run and 144 here; what changed was
+not read.
+
+```text
+doors.py: one harmless read per pair; tokens minted per run and never printed
+
+broker bearer minted from the api-token
+
+  VCF Operations                     broker bearer               200  accepted  MATCH
+  NSX                                broker bearer               200  accepted  MATCH
+  Real-Time Metrics                  broker bearer               401  refused   MATCH                      the fleet plane refuses the broker's bearer
+  Real-Time Metrics                  service JWT (VCF_VODAP)     200  accepted  MATCH
+  Fleet lifecycle, components        service JWT (VCF_FLEET_LCM)  200  accepted  MATCH
+  Fleet lifecycle, components        the metrics service's JWT   401  refused   MATCH                      minted per service, so another service's is refused here
+  Fleet lifecycle, health probe      the metrics service's JWT   200  accepted                             the health probe answers any service's JWT
+  Real-Time Metrics                  the fleet service's JWT     200  accepted  MATCH                      accepted here, while Fleet lifecycle refuses another service's
+  Log management                     service JWT (VCF_OPS_LI)    200  accepted  MATCH                      sent as X-JWT-Token
+
+  VCF Automation, tenant OAuth grant   skipped: VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE not all set
+
+VCF Automation, the Basic session login
+  VCF Automation, session login      Basic (user@org)            200  accepted  MATCH                      bearer returned in a response header
+  VCF Automation, rights             session bearer              200  accepted  MATCH                      144 effective rights
+
+VCF Automation, the provider api-token
+  /oauth/provider/token: bearer minted; a refresh token came back with it and is the same value you sent (no rotation on this build)
+  VCF Automation, provider rights    provider bearer             200  accepted  MATCH                      422 effective rights
+  VCF Automation, control plane      provider bearer             401  refused   MATCH                      a tenant surface
+
+vCenter, its own session
+  vCenter, session mint              Basic                       201  accepted  MATCH                      a session id in the body, no Bearer prefix
+  vCenter API                        session id                  200  accepted  MATCH
+
+SDDC Manager, its own bearer
+  SDDC Manager, token mint           username and password       200  accepted  MATCH
+  SDDC Manager API                   its bearer                  200  accepted  MATCH
+
+17 pairs read; 0 differ from the chapter; 0 without an answer
+
+exit 0
+```
 
 ## doors.py
 
-Every surface configured; the provider api-token path skipped because no provider refresh token was supplied.
+The run of 2026-09-16 on VCF 9.1.0, the only one that read the tenant OAuth grant, and so the only one whose
+arrival-rule line compares one principal's two tenant paths. Every surface configured; the provider api-token path
+skipped because no provider refresh token was supplied.
 The one DIFFERS row is a finding, not a fault: it corrected the Platform identity chapter the same day (Fleet
 lifecycle refuses a JWT minted for another service, and the metrics service's metadata read does not). The notes
 are kept as they were recorded; the next section says why they now read differently. Run today, a skipped path names

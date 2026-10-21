@@ -1346,6 +1346,8 @@ UUIDISH = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{
 RESERVED = {"Organization Administrator", "Organization User", "Organization Member", "Organization Auditor", "Organization Owner",
             "Administrator", "administrator", "admin", "System", "OAUTH", "SAML", "LOCAL"}
 HOSTISH = re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}\b", re.I)
+PLACEHOLDER = re.compile(r"\{\{[a-z-]+(?:-\d+)?\}\}")  # every placeholder this script writes: {{org-1}}, {{estate}}
+OWN = re.compile(f"({PLACEHOLDER.pattern})")  # splits a text into what lies outside the placeholders and each one
 
 
 class ScrubError(Exception):
@@ -1362,16 +1364,29 @@ def placeholders(results: list[dict], run_tenant: str | None = None) -> dict:
     return names
 
 
+def one_pass(table: dict):
+    """A text with every value in `table` replaced by its placeholder in one pass: one alternation, the longest value
+    first, matched as spelled and with no boundary, and only outside the placeholders already in the text. The record
+    carries each organization's placeholder before it is scrubbed, so an organization named org-1 would otherwise
+    rewrite the {{org-1}} another was given; and a second scrub changes nothing. A value is in `table` once, under the
+    first placeholder it got."""
+    rx = re.compile("|".join(re.escape(k) for k in sorted(table, key=len, reverse=True))) if table else None
+    if rx is None:
+        return lambda text: text
+    return lambda text: "".join(part if i % 2 else rx.sub(lambda m: table[m.group(0)], part)
+                                for i, part in enumerate(OWN.split(text)))
+
+
 def scrub(text: str, names: dict, seen: set) -> str:
-    """Every estate value replaced in one longest-first pass; refuse when one survives."""
+    """Every estate value replaced in one longest-first pass outside the placeholders (one_pass); refuse when one
+    survives outside them."""
     seen = {v for v in seen if len(v) >= 4 and v not in RESERVED}
     table = dict(names)
     for v in sorted(seen, key=len, reverse=True):
         table.setdefault(v, "{{estate}}")
-    if table:
-        rx = re.compile("|".join(re.escape(k) for k in sorted(table, key=len, reverse=True)))
-        text = rx.sub(lambda m: table[m.group(0)], text)
-    left = [v for v in seen if v and v in text] + UUIDISH.findall(text) + HOSTISH.findall(text)
+    text = one_pass(table)(text)
+    bare = PLACEHOLDER.sub(" ", text)   # a placeholder's own letters are not a surviving value
+    left = [v for v in seen if v and v in bare] + UUIDISH.findall(bare) + HOSTISH.findall(bare)
     if left:
         raise ScrubError(f"refusing to write: {len(left)} estate value(s) survived the scrub")
     return text

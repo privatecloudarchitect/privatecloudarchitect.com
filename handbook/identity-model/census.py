@@ -81,7 +81,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         session POST with no session id, a list read whose answer holds no list (a 200 without its list key is
         not an empty list), a paged list not read whole (no stated total, a page empty or short before the total, a
         total that changed between pages), an organization listed without isClassicTenant (its type prints "type not
-        read") or without isProviderConsumptionOrg (it prints "provider consumption not read"), a list of no broker
+        read") or without isProviderConsumptionOrg (it prints "provider consumption not read"), a broker listed
+        without its healthy flag (it prints "health not read"), a list of no broker
         (the census's own bearer came from one) or, as the provider, of no organization (the provider's own System
         organization is one) (the record is still written and names the call; a fleet read refused or read in part
         opens the print with NOT READ, so its counts are not taken for the estate's), the credential could
@@ -679,6 +680,11 @@ def brokers(ops: Reader) -> list[dict]:
     found = [keep(v, BROKER) for v in items(ops, ops.get(f"{IAM}/vidbs"), "vidbs")]
     if not found:   # the bearer this census reads on came from a broker, so a list of none did not read the plane
         shape_error(ops.calls, "no broker in the list, where the census's own bearer came from one")
+    # A broker listed without its healthy flag was not read for health: it prints "health not read", never NOT HEALTHY
+    # and never healthy, and the run exits 3, as an organization listed without its type does.
+    unread = sum(1 for b in found if not isinstance(b.get("healthy"), bool))
+    if unread:
+        shape_error(ops.calls, f"{unread} broker(s) in the list without healthy, so their health is not read")
     return sorted(found, key=lambda b: b.get("fqdn") or "")
 
 
@@ -1121,13 +1127,20 @@ def org_report(s: dict) -> list[str]:
     return lines
 
 
+def health(flag: object) -> str:
+    """A broker's healthy flag as its line prints it: nothing when true, NOT HEALTHY when false, and "health not read"
+    when the list entry carried no such flag (the run then exits 3: an absent flag is not false). What the flag
+    measures is the identity plane's; the census prints it and judges nothing."""
+    return "" if flag is True else "  NOT HEALTHY" if flag is False else "  health not read"
+
+
 def report(s: dict) -> list[str]:
     """The summary as the lines the census prints."""
     n = Counter(b["kind"] for b in s["brokers"])
     lines = [f"Brokers, from the identity plane: {len(s['brokers'])} "
              f"({', '.join(f'{v} {k}' for k, v in sorted(n.items()))})"]
     lines += [f"  {b['fqdn']}  {b['kind']}  " + (f"holds realm {b['realm']}" if b["realm"] else "holds no realm")
-              + ("" if b["healthy"] else "  NOT HEALTHY") for b in s["brokers"]]
+              + health(b["healthy"]) for b in s["brokers"]]
     lines += [f"Realm {r['name']} on the {r['broker_kind']} broker {r['broker']}: covers {len(r['instances'])} VCF "
               f"instance(s) ({', '.join(r['instances'])}), {r['components']} component(s); "
               f"issues: {', '.join(r['issues']) or 'none'}" for r in s["realms"]]
@@ -1194,6 +1207,7 @@ PATTERNS = [("id", re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-
             ("name", re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\b"))]
 NOT_SHAPED = {"version"}  # a version string is shaped like an address and is not one
 PLACEHOLDER = re.compile(r"\{\{[a-z-]+-\d+\}\}")
+OWN = re.compile(f"({PLACEHOLDER.pattern})")  # splits a text into what lies outside the placeholders and each one
 
 
 def _strings(obj: object, field: str | None = None):
@@ -1245,16 +1259,35 @@ def _pattern(table: dict) -> re.Pattern | None:
     return re.compile(rf"(?<![A-Za-z0-9])(?:{alt})(?![A-Za-z0-9])", re.I)
 
 
-def scrub(obj: object, table: dict) -> object:
-    """The record with every registered value replaced by its placeholder in one pass. Keys are never touched."""
-    rx, lower = _pattern(table), {k.lower(): v for k, v in table.items()}
+def one_pass(table: dict):
+    """A text with every registered value replaced by its placeholder in one pass: one alternation, the longest value
+    first, on _pattern's boundary, and only outside the placeholders already in the text. A value spelled like a
+    placeholder (an organization named org-1) never rewrites the {{org-1}} another value was given, and a second scrub
+    changes nothing. A value registered twice, in two cases, keeps its first placeholder."""
+    rx, label = _pattern(table), {}
+    for value, placeholder in table.items():
+        label.setdefault(value.lower(), placeholder)
     if rx is None:
+        return lambda text: text
+    return lambda text: "".join(part if i % 2 else rx.sub(lambda m: label[m.group(0).lower()], part)
+                                for i, part in enumerate(OWN.split(text)))
+
+
+def scrub(obj: object, table: dict) -> object:
+    """The record with every registered value replaced by its placeholder in one pass (one_pass). Keys are never
+    touched."""
+    if not table:
         return obj
-    if isinstance(obj, dict):
-        return {k: scrub(v, table) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [scrub(v, table) for v in obj]
-    return rx.sub(lambda m: lower[m.group(0).lower()], obj) if isinstance(obj, str) else obj
+    replace = one_pass(table)
+
+    def walk(o: object) -> object:
+        if isinstance(o, dict):
+            return {k: walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        return replace(o) if isinstance(o, str) else o
+
+    return walk(obj)
 
 
 def leaks(obj: object, table: dict) -> list[str]:

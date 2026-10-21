@@ -549,12 +549,32 @@ def jwks_keys(jwks):
 # ── the record contract: estate values out, refuse a record that keeps one ─────────────────────────────────────
 UUID_RX = re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")
 IPV4_RX = re.compile(r"(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?![\d.])")
+PLACEHOLDER = re.compile(r"\{\{[a-z-]+\}\}")  # every placeholder this script writes: {{org}}, {{org-id}}, {{id}}
+OWN = re.compile(f"({PLACEHOLDER.pattern})")  # splits a text into what lies outside the placeholders and each one
+
+
+def one_pass(values):
+    """A text with every (value, placeholder) pair replaced in one pass: one alternation, the longest value first,
+    matched without regard to case and with no boundary (a value inside a longer token is a value), then any uuid left
+    with {{id}}, all only outside the placeholders already in the text. A plan's own {{org-id}} and {{group}}, and a
+    placeholder written before, are never rewritten by a value spelled like part of one (an organization named org),
+    and a second scrub changes nothing. A value registered twice, in two cases, keeps its first placeholder."""
+    label = {}
+    for value, placeholder in values.items():
+        label.setdefault(value.lower(), placeholder)
+    rx = re.compile("|".join(re.escape(v) for v in sorted(values, key=len, reverse=True)), re.I) if label else None
+
+    def outside(part):
+        return UUID_RX.sub("{{id}}", rx.sub(lambda m: label[m.group(0).lower()], part) if rx else part)
+
+    return lambda text: "".join(part if i % 2 else outside(part) for i, part in enumerate(OWN.split(text)))
 
 
 class Scrubber:
     """Replaces each registered estate value with its placeholder in one longest-first pass, then any remaining
-    uuid with {{id}}, and refuses text in which a registered value or an address survived. Product vocabulary
-    (role names, AADSTS codes, Microsoft endpoints, claim names) is never registered."""
+    uuid with {{id}}, outside the placeholders already in the text (one_pass), and refuses text in which a registered
+    value or an address survived outside them. Product vocabulary (role names, AADSTS codes, Microsoft endpoints,
+    claim names) is never registered."""
 
     def __init__(self):
         self.values = {}
@@ -566,15 +586,12 @@ class Scrubber:
             self.values[str(value)] = placeholder
 
     def scrub(self, text):
-        if self.values:
-            rx = re.compile("|".join(re.escape(v) for v in sorted(self.values, key=len, reverse=True)), re.I)
-            lower = {k.lower(): p for k, p in self.values.items()}
-            text = rx.sub(lambda m: lower[m.group(0).lower()], text)
-        return UUID_RX.sub("{{id}}", text)
+        return one_pass(self.values)(text)
 
     def check(self, text):
-        left = [v for v in self.values if v.lower() in text.lower()]
-        left += IPV4_RX.findall(text)
+        bare = PLACEHOLDER.sub(" ", text)   # a placeholder's own letters are not a surviving value
+        left = [v for v in self.values if v.lower() in bare.lower()]
+        left += IPV4_RX.findall(bare)
         if left:
             raise ScrubError(f"refusing to write the record: {len(left)} estate value(s) survived the scrub")
 

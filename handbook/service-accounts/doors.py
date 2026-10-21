@@ -382,9 +382,12 @@ def _run():
             row("VCF Automation, control plane", "provider bearer", st, "refused", "a tenant surface")
     else:
         print("\n  VCF Automation, provider api-token    skipped: VCFA_HOST, VCFA_PROVIDER_REFRESH_TOKEN_FILE not both set")
-    if len(counts) > 1:
+    # The arrival rule is one principal's two tenant paths, so the line compares the OAuth grant with the Basic session
+    # and prints only when both ran; the provider api-token is another principal, and its count stays on its own row.
+    tenant = {k: counts[k] for k in ("OAuth grant", "Basic session") if k in counts}
+    if len(tenant) == 2:
         print("\n  the arrival rule, in numbers: "
-              + " · ".join(f"{k}: {v if v is not None else 'not read'}" for k, v in counts.items()))
+              + " · ".join(f"{k}: {v if v is not None else 'not read'}" for k, v in tenant.items()))
     # ---- components with a flow of their own
     if os.environ.get("VC_HOST") and os.environ.get("VC_USER") and secret("VC_PASSWORD"):
         print("\nvCenter, its own session")

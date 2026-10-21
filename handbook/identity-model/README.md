@@ -89,7 +89,7 @@ without it. Give `catalog_check.py` the same file.
 | Exit | Means | What a scheduler does |
 |---|---|---|
 | 0 | the record is written and every call answered | nothing |
-| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`) or without `isProviderConsumptionOrg` (it prints `provider consumption not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); under `--replay`, a request the set holds no answer for; or an error the script did not expect | fix the read; take no count from this run |
+| 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`) or without `isProviderConsumptionOrg` (it prints `provider consumption not read`), a broker listed without `healthy` (it prints `health not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); under `--replay`, a request the set holds no answer for; or an error the script did not expect | fix the read; take no count from this run |
 | 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a `--replay` directory that cannot be read or holds no replay set; a Python older than 3.10); nothing is written | fix the invocation |
 
 These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
@@ -130,7 +130,10 @@ identity plane was not tried.
   providers again after the requests and records any difference; on the reference run there was none.
 - Brokers come from `GET .../iam/vidbs`. The fleet inventory lists the instance broker's appliance; an embedded
   broker lives inside a management vCenter and has no inventory row, so a count taken from the inventory is short.
-  The API's `EXTERNAL` is the instance broker, and the census prints it as `instance`.
+  The API's `EXTERNAL` is the instance broker, and the census prints it as `instance`. Each broker's line ends in
+  `NOT HEALTHY` when the list gives it `healthy` false, in nothing when true, and in `health not read` when its entry
+  carries no such flag, which fails the read (exit 3), as an absent flag is not false. What the flag measures is the
+  identity plane's; the census prints it and judges nothing. In the committed record every broker read `healthy` true.
 - Secrets die where they arrive. The fleet IAM API returns an emergency client's access token, an identity
   provider's client secret and bind password, and an API token's value; VCF Automation returns an organization's
   OIDC client secret. The reader deletes each from the body before any function sees it, and the record keeps only
@@ -167,7 +170,8 @@ identity plane was not tried.
 
 ## Reading the record
 
-`summary` holds the lines the run prints: `brokers` (each with its `kind` and the `realm` it holds, or none),
+`summary` holds the lines the run prints: `brokers` (each with its `kind`, the `realm` it holds, or none, and
+`healthy` as the list gave it, null when the entry carried no such flag),
 `realms` (the broker holding each, the VCF `instances` it covers, its component count and issues), `providers`
 (`type`, `protocol`, `provisioning`), `directories` (`domains`, `protocol`, `port`, `host`, sync state; a directory
 with a `host` is one the broker binds, and its domains in capitals are the directory spelling the print shows beside

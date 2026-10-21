@@ -993,6 +993,8 @@ PATTERNS = [("id", re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-
             ("ip", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
             ("name", re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\b"))]
 NOT_SHAPED = {"issued_token_type", "token_type"}
+PLACEHOLDER = re.compile(r"\{\{[a-z-]+-\d+\}\}")
+OWN = re.compile(f"({PLACEHOLDER.pattern})")  # splits a text into what lies outside the placeholders and each one
 
 
 def _strings(obj, field=None):
@@ -1032,26 +1034,50 @@ def estate_values(record: dict, given: list[tuple[str, str]]) -> dict[str, str]:
     return table
 
 
-def scrub(obj, table: dict):
-    if not table:
-        return obj
+def one_pass(table: dict):
+    """A text with every registered value replaced by its placeholder in one pass: one alternation, the longest value
+    first, matched without regard to case where it is not part of a longer word, and only outside the placeholders
+    already in the text. A value spelled like a placeholder (a principal named name-1) never rewrites the {{name-1}}
+    another value was given, and a second scrub changes nothing. A value registered twice, in two cases, keeps its
+    first placeholder."""
+    label = {}
+    for value, placeholder in table.items():
+        label.setdefault(value.lower(), placeholder)
+    if not label:
+        return lambda text: text
     rx = re.compile(r"(?<![A-Za-z0-9])(?:" + "|".join(re.escape(v) for v in sorted(table, key=len, reverse=True))
                     + r")(?![A-Za-z0-9])", re.I)
-    lower = {k.lower(): v for k, v in table.items()}
-    if isinstance(obj, dict):
-        return {scrub(k, table): scrub(v, table) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [scrub(v, table) for v in obj]
-    return rx.sub(lambda m: lower[m.group(0).lower()], obj) if isinstance(obj, str) else obj
+    return lambda text: "".join(part if i % 2 else rx.sub(lambda m: label[m.group(0).lower()], part)
+                                for i, part in enumerate(OWN.split(text)))
+
+
+def scrub(obj, table: dict):
+    """The record with every registered value replaced by its placeholder in one pass (one_pass), in its keys too: a
+    session's principal can be a key."""
+    if not table:
+        return obj
+    replace = one_pass(table)
+
+    def walk(o):
+        if isinstance(o, dict):
+            return {walk(k): walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        return replace(o) if isinstance(o, str) else o
+
+    return walk(obj)
 
 
 def leaks(obj, table: dict) -> list[str]:
+    """Every registered value, and the kind of anything shaped like an estate value, still in a scrubbed record, read
+    outside the placeholders: a placeholder's own letters are not a surviving value."""
     found = []
     lower = {k.lower() for k in table}
     for field, s in _strings(obj):
-        found += [k for k in lower if re.search(r"(?<![A-Za-z0-9])" + re.escape(k) + r"(?![A-Za-z0-9])", s, re.I)]
+        rest = PLACEHOLDER.sub(" ", s)
+        found += [k for k in lower if re.search(r"(?<![A-Za-z0-9])" + re.escape(k) + r"(?![A-Za-z0-9])", rest, re.I)]
         if field not in NOT_SHAPED:
-            found += [kind for kind, p in PATTERNS for m in p.findall(s) if m.lower() not in PRODUCT]
+            found += [kind for kind, p in PATTERNS for m in p.findall(rest) if m.lower() not in PRODUCT]
     return found
 
 

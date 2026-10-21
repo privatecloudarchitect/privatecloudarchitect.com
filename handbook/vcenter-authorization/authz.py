@@ -1883,6 +1883,9 @@ def probe_supervisor(host, operator, tag_identity, vm_name, d_op, r_op, L):
 
 # ---------------------------------------------------------------- scrubbing
 
+PLACEHOLDER = re.compile(r"\{\{[a-z-]+-\d+\}\}")  # every placeholder Labels writes: {{vcenter-1}}, {{role-2}}
+
+
 class Labels:
     def __init__(self):
         self.maps = {}
@@ -2307,8 +2310,11 @@ def _run(argv=None):
                            os.environ.get("TEST_LOCAL_GROUP", ""),
                            user.partition("@")[0]} | set(directories) | declared | set(L.words())
     estate |= {h.split(".")[0] for h in hosts}
+    # Read outside the placeholders: a placeholder's own letters are not a surviving value, and a vCenter whose short
+    # name is vcenter-1 must not refuse the record because another vCenter's placeholder is {{vcenter-1}}.
+    bare = PLACEHOLDER.sub(" ", text)
     for value in sorted({v for v in estate if v and v not in PRODUCT_ROLES | PRODUCT_LOCAL}, key=len, reverse=True):
-        if re.search(r"(?<![A-Za-z0-9-])" + re.escape(value) + r"(?![A-Za-z0-9-])", text, re.IGNORECASE):
+        if re.search(r"(?<![A-Za-z0-9-])" + re.escape(value) + r"(?![A-Za-z0-9-])", bare, re.IGNORECASE):
             shape = re.sub(r"[A-Za-z]", "a", re.sub(r"[0-9]", "9", value))
             return refused_record(f"an estate value ({len(value)} characters, shape {shape}) reached the record", code,
                                   out_name)

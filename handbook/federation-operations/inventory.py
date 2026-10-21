@@ -1097,6 +1097,7 @@ RESERVED = {"Organization Administrator", "Organization User", "Organization Mem
             "Organization Owner", "Administrator", "administrator", "admin", "System", "OAUTH", "SAML", "LOCAL", "OIDC"}
 HOSTISH = re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}\b", re.I)
 PLACEHOLDER = re.compile(r"\{\{[a-z-]+(?:-\d+)?\}\}")
+OWN = re.compile(f"({PLACEHOLDER.pattern})")  # splits a text into what lies outside the placeholders and each one
 
 
 class ScrubError(Exception):
@@ -1115,18 +1116,30 @@ def placeholders(rows: list[dict], census: list[dict]) -> dict:
     return names
 
 
+def one_pass(table: dict):
+    """A text with every value in `table` replaced by its placeholder in one pass: one alternation, the longest value
+    first, matched as spelled and with no boundary, and only outside the placeholders already in the text (this
+    script's, and those of the records it reads). An organization named org-1 never rewrites the {{org-1}} a record
+    gave another, and a second scrub changes nothing. A value is in `table` once, under the first placeholder it got."""
+    rx = re.compile("|".join(re.escape(k) for k in sorted(table, key=len, reverse=True))) if table else None
+    if rx is None:
+        return lambda text: text
+    return lambda text: "".join(part if i % 2 else rx.sub(lambda m: table[m.group(0)], part)
+                                for i, part in enumerate(OWN.split(text)))
+
+
 def scrub(obj: object, names: dict, seen: set) -> object:
-    """Every estate value replaced in every string, in one longest-first pass per string; refuse (ScrubError) when one
-    survives: a value read or given, an id, or a host name."""
+    """Every estate value replaced in every string, in one longest-first pass per string outside the placeholders
+    (one_pass); refuse (ScrubError) when one survives outside them: a value read or given, an id, or a host name."""
     seen = {v for v in seen if isinstance(v, str) and len(v) >= 4 and v not in RESERVED}
     table = dict(names)
     for v in sorted(seen, key=len, reverse=True):
         table.setdefault(v, "{{estate}}")
-    rx = re.compile("|".join(re.escape(k) for k in sorted(table, key=len, reverse=True))) if table else None
+    replace = one_pass(table)
     left: list[str] = []
 
     def one(s: str) -> str:
-        s = rx.sub(lambda m: table[m.group(0)], s) if rx else s
+        s = replace(s)
         bare = PLACEHOLDER.sub(" ", s)
         left.extend([v for v in seen if v in bare] + UUIDISH.findall(bare) + HOSTISH.findall(bare))
         return s

@@ -121,8 +121,10 @@ so keep it for a throwaway credential.
 
 ## Scope, stated plainly
 
-- Everything was proven on one VCF Operations 9.1.0 instance with Real-Time Metrics deployed, on 2026-09-16:
-  eighteen pairs read, seventeen matching the chapter and one correcting it.
+- Proven on the reference estate. On VCF 9.1.1 on 2026-10-21: seventeen pairs, every login path its catalog signs in
+  by but the tenant OAuth grant, all matching the chapter. On one VCF Operations 9.1.0 instance with Real-Time Metrics
+  deployed, on 2026-09-16: eighteen pairs, the tenant OAuth grant among them, seventeen matching the chapter and one
+  correcting it.
 - The provider api-token path runs only when you supply a provider refresh token minted in the console; the
   provider federation login (the `tm_ui` bearer) is a browser flow the harness does not reproduce.
 - The Basic session login sends a password. Use a dedicated account, and read the count it prints beside the
@@ -152,8 +154,9 @@ so keep it for a throwaway credential.
 - `doors.py` prints one row per pair. `accepted` is a status below 400, `refused` is 401 or 403. `MATCH` and
   `DIFFERS` compare the row with the chapter's matrix; `DIFFERS` is a finding to report, because the matrix is
   built from these reads and grows by them.
-- The line `the arrival rule, in numbers` prints the effective-rights count per login path when more than one
-  path ran.
+- The line `the arrival rule, in numbers` prints when both tenant login paths ran, the OAuth grant and the Basic
+  session: one principal's two effective-rights counts side by side. The provider api-token's count is another
+  principal's and stays on its own row.
 
 ## Expected output
 
