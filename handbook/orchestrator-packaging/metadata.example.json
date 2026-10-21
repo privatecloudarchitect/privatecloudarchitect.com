@@ -1,0 +1,16 @@
+{
+  "name": "tag_machine",
+  "description": "Applies a set of tags to one machine and reports what it applied.",
+  "runtime": "python",
+  "version": "1.0.0",
+  "inputs": [
+    {"name": "vmName", "type": "string", "description": "The machine to tag, by its name in the inventory", "required": true},
+    {"name": "tags", "type": "Properties", "description": "Category name to tag value, one entry per tag", "required": true},
+    {"name": "dryRun", "type": "boolean", "description": "Report what would be applied without applying it", "required": false}
+  ],
+  "outputs": [
+    {"name": "success", "type": "boolean", "description": "True when every tag was applied, or would have been in a dry run"},
+    {"name": "applied", "type": "Array/string", "description": "The tags applied, as category:value"},
+    {"name": "error_message", "type": "string", "description": "The reason when success is false"}
+  ]
+}

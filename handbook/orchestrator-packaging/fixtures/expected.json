@@ -1,0 +1,20 @@
+[
+  ["broken-rules-workflow.xml", 3, "R1", "error"],
+  ["broken-rules-workflow.xml", 4, "R3", "error"],
+  ["broken-rules-workflow.xml", 10, "R5", "error"],
+  ["broken-rules-workflow.xml", 13, "R2", "error"],
+  ["broken-rules-workflow.xml", 13, "R2", "error"],
+  ["broken-rules-workflow.xml", 13, "R2", "warning"],
+  ["broken-rules-workflow.xml", 17, "R4", "warning"],
+  ["broken-rules-workflow.xml", 23, "R7", "warning"],
+  ["broken-rules-workflow.xml", 25, "R3", "error"],
+  ["clean.action", 1, "R9", "note"],
+  ["does-not-parse.xml", 5, "R6", "error"],
+  ["metadata.json", 1, "R12", "error"],
+  ["metadata.json", 1, "R12", "error"],
+  ["mismatch.action", 1, "R10", "error"],
+  ["mismatch.action", 1, "R11", "warning"],
+  ["mismatch.action", 1, "R8", "error"],
+  ["mismatch.action", 1, "R9", "note"],
+  ["mismatch.action", 3, "R11", "warning"]
+]

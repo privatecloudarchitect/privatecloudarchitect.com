@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<workflow xmlns="http://vmware.com/vco/workflow" root-name="item1" object-name="workflow:name=generic" id="00000000-0000-4000-8000-000000000002" version="1.0.0" api-version="6.0.0">
+  <display-name>Written as text (R1)</display-name>
+  <position y="50" x="100.0"/>
+  <input>
+    <param name="vmName" type="string">
+      <description><![CDATA[The machine to act on]]></description>
+    </param>
+  </input>
+  <attrib name="token" type="SecureString" read-only="false">
+    <value encoded="n"><![CDATA[]]></value>
+  </attrib>
+  <workflow-item name="item1" out-name="item2" type="custom-condition">
+    <display-name><![CDATA[Ready?]]></display-name>
+    <script encoded="false"><![CDATA[var x = 1;]]></script>
+    <in-binding>
+      <bind name="ready" type="boolean" export-name="notDeclared"/>
+    </in-binding>
+    <position y="60.0" x="140.0"/>
+  </workflow-item>
+  <workflow-item name="item2" out-name="item0" type="task">
+    <display-name><![CDATA[Act]]></display-name>
+    <script encoded="false"><![CDATA[System.log("done ✓");]]></script>
+    <out-binding/>
+    <position y="60.0" x="260"/>
+  </workflow-item>
+  <workflow-item name="item0" type="end" end-mode="0">
+    <position y="60.0" x="380.0"/>
+  </workflow-item>
+</workflow>

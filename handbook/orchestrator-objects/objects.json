@@ -1,21 +1,22 @@
 {
+ "captured_utc": "2026-10-21T21:07:44Z",
  "objects": {
-  "packages": 749,
+  "packages": 750,
   "actions": 724,
-  "workflows": 736,
-  "categories": 401,
-  "configurationElements": 15,
+  "workflows": 744,
+  "categories": 420,
+  "configurationElements": 17,
   "actionEnvironments": 4
  },
  "packageNaming": {
-  "total": 749,
-  "humanNamed": 34,
+  "total": 750,
+  "humanNamed": 35,
   "generatedName": 715
  },
  "categoryTypes": {
-  "WorkflowCategory": 244,
+  "WorkflowCategory": 246,
   "ScriptModuleCategory": 110,
-  "ResourceElementCategory": 35,
+  "ResourceElementCategory": 52,
   "ConfigurationElementCategory": 9,
   "PolicyTemplateCategory": 3
  },
@@ -28,24 +29,39 @@
   "total": 4,
   "runtimes": [
    "powercli:13-powershell-7.4",
-   "python:3.11"
+   "python:3.11",
+   "python:3.14"
   ],
-  "unresolved": 1,
+  "notOffered": 3,
   "withUnpinnedDependencies": 2,
   "fullyPinned": 1,
   "noDependencies": 1
  },
  "sweep": {
-  "workflowsRead": 736,
+  "workflowsRead": 744,
   "unreadable": 0,
-  "withConfigBinding": 50,
-  "withActionCall": 318,
-  "inlineOnly": 405,
-  "empty": 13,
-  "items": 3739,
-  "itemsCallingAction": 627,
-  "itemsInlineScript": 1592,
-  "attributes": 2145,
-  "attributesBoundToConfig": 149
+  "withConfigBinding": 52,
+  "withActionCall": 361,
+  "withActionElement": 319,
+  "withScriptedActionCall": 110,
+  "inlineOnly": 368,
+  "empty": 15,
+  "items": 3824,
+  "itemsCallingAction": 759,
+  "itemsActionElement": 640,
+  "itemsScriptedActionCall": 119,
+  "itemsInlineScript": 1530,
+  "attributes": 2217,
+  "attributesBoundToConfig": 163
+ },
+ "package": {
+  "actions": 13,
+  "workflows": 5,
+  "configurations": 2,
+  "environments": 1,
+  "resources": 0,
+  "policy-templates": 0,
+  "environment-repositories": 0,
+  "workflowTokens": 0
  }
 }

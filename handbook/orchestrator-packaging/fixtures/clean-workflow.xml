@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<workflow xmlns="http://vmware.com/vco/workflow" root-name="item1" object-name="workflow:name=generic" id="00000000-0000-4000-8000-000000000001" version="1.0.0" api-version="6.0.0">
+  <display-name><![CDATA[Clean example]]></display-name>
+  <description><![CDATA[Passes every rule: wrapped text, a complete decision, decimal positions, resolved bindings, a self-closing secret.]]></description>
+  <position y="50.0" x="100.0"/>
+  <input>
+    <param name="vmName" type="string">
+      <description><![CDATA[The machine to act on]]></description>
+    </param>
+  </input>
+  <attrib name="token" type="SecureString" read-only="false"/>
+  <attrib name="ready" type="boolean" read-only="false">
+    <value encoded="n"><![CDATA[false]]></value>
+  </attrib>
+  <workflow-item name="item1" out-name="item2" alt-out-name="item0" type="custom-condition">
+    <display-name><![CDATA[Ready?]]></display-name>
+    <script encoded="false"><![CDATA[return ready == true;]]></script>
+    <in-binding>
+      <bind name="ready" type="boolean" export-name="ready"/>
+    </in-binding>
+    <out-binding/>
+    <position y="60.0" x="140.0"/>
+  </workflow-item>
+  <workflow-item name="item2" out-name="item0" type="task">
+    <display-name><![CDATA[Act]]></display-name>
+    <script encoded="false"><![CDATA[System.log("acting on " + vmName);]]></script>
+    <in-binding>
+      <bind name="vmName" type="string" export-name="vmName"/>
+    </in-binding>
+    <out-binding/>
+    <position y="60.0" x="260.0"/>
+  </workflow-item>
+  <workflow-item name="item0" type="end" end-mode="0">
+    <position y="60.0" x="380.0"/>
+  </workflow-item>
+</workflow>

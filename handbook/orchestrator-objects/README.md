@@ -11,28 +11,37 @@ It **creates nothing, imports nothing, and changes nothing.** Every call it make
 | Command | Answers |
 |---|---|
 | `--inventory` | how many of each object kind you have, how many packages carry a name somebody chose, and how your categories are typed across the five namespaces |
-| `--runtimes` | every action environment: its runtime, its dependency pins, whether the appliance can resolve it, and whether its bundle has been built |
-| `--bindings <workflow-id>` | for one workflow: which attributes read a configuration element, which actions it calls, and how many items are inline script |
+| `--runtimes` | every action environment: its runtime, its dependency pins, whether the appliance offers that runtime, and whether its bundle has been built |
+| `--bindings <workflow-id>` | for one workflow: which attributes read a configuration element, which actions it calls (by an action element or from a script), and how many items are inline script |
+| `--package <name>` | what one package carries, bucket by bucket. A package that lists nothing exports nothing, and the export succeeds anyway |
 | `--sweep [limit]` | reads **every** workflow definition and counts how the estate is actually built. This is the number that says how much of Part IX applies to you |
-| `--record` | the counts, as the JSON the chapters render. Includes the sweep unless you pass `--no-sweep` |
+| `--record <file>` | the counts, as the JSON the chapters render. Includes the sweep unless you pass `--no-sweep`; `--with-package <name>` adds one package's bucket counts, not its name |
 
 ## Running it
 
 ```bash
 export VRO_HOST=orchestrator.example.net
-export VRO_TOKEN=<a bearer this appliance accepts>
+export VRO_TOKEN_FILE=~/.secrets/vro-token     # a bearer this appliance accepts, in a file of mode 0600
+export TLS_VERIFY=false                         # only if the appliance carries a private CA you have not installed
 
-python objects.py --inventory
-python objects.py --runtimes
-python objects.py --bindings 00000000-0000-0000-0000-000000000000
-python objects.py --sweep
+python3 objects.py --inventory
+python3 objects.py --runtimes
+python3 objects.py --bindings 00000000-0000-0000-0000-000000000000
+python3 objects.py --package com.example.platform
+python3 objects.py --sweep
 ```
 
-No dependencies beyond the Python standard library. TLS verification is disabled because lab
-appliances commonly carry a private CA; if yours carries a public one, remove the two `CTX` lines.
+No dependencies beyond the Python standard library. A token file open to group or other is refused
+before it is read. `VRO_TOKEN`, the value itself, is still read when no file is named.
 
 `--sweep` makes one request per workflow, so on an appliance with several hundred it takes minutes
 rather than seconds. `--record` includes it by default; pass `--no-sweep` for the fast answer.
+
+| Exit | Meaning |
+|---|---|
+| 0 | answered |
+| 2 | usage error, or a token file open to group or other |
+| 3 | a read failed |
 
 ## Why it exists
 
@@ -50,6 +59,8 @@ content; the runtime binding lives inside a packaged action, so it is not on tha
 
 ## Reading the record
 
+`expected-output.md` shows what each command printed on the reference estate, and `objects.json` is the record behind the handbook's Part IX.
+
 `--record` emits counts and product vocabulary only, by construction. No host name, object name,
 identifier or credential from your estate appears in it, which is why it is the thing the published
 chapters render.
@@ -60,8 +71,10 @@ chapters render.
 | `packageNaming` | `humanNamed` against `generatedName`: how much of the package namespace is yours to navigate |
 | `categoryTypes` | the five typed namespaces and how many categories sit in each |
 | `actionCategoryAgreement` | the count of action categories read two ways. They should be equal; a difference means a category holds no actions, or an action has no category |
-| `runtimes` | how many environments cannot be resolved, how many leave dependencies unpinned, and how many pin everything |
-| `sweep` | `inlineOnly` against `withActionCall` is the headline: a workflow that calls no action needs no runtime and no packaging, so the dependency-order and packaging chapters are not yours yet |
+| `runtimes` | how many environments name a runtime the appliance does not offer (`notOffered`, the `MISSING_RUNTIME` flag an upgrade leaves on a kept selector), how many leave dependencies unpinned, and how many pin everything. On VCF Automation 9.1.1 a flagged environment ran its action on the newest runtime of the same family, so the flag is not a failure; the code meeting that newer runtime is what to prove |
+| `sweep` | `inlineOnly` against `withActionCall` is the headline: a workflow that calls no action needs no runtime and no packaging, so the dependency-order and packaging chapters are not yours yet. A call counts whether it is an action element or a script calling `System.getModule(...)`; the two forms are counted apart (`withActionElement`, `withScriptedActionCall`, and the same for items) and never overlap |
+| `package` | with `--with-package`: one package's bucket counts |
+| `captured_utc` | when the record was read |
 
 The interactive commands are different. `--bindings` deliberately prints your own attribute names,
 configuration keys and action paths to your own terminal, because that is what makes the binding

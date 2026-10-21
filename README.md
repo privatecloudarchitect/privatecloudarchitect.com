@@ -148,6 +148,8 @@ Framework estates carry five further clauses:
 | Folder | Chapter | What it does |
 |---|---|---|
 | [`handbook/orchestrator-objects/`](handbook/orchestrator-objects/) | [The Orchestrator object model](https://privatecloudarchitect.com/handbook/orchestrator-objects) | Reads your Orchestrator's object tree and prints the three binding mechanisms that hold it together, the thing the console never shows |
+| [`handbook/orchestrator-packaging/`](handbook/orchestrator-packaging/) | [Packaging](https://privatecloudarchitect.com/handbook/orchestrator-packaging) | Holds every workflow and action to the format rules on your machine, offline, so a format error fails a build with its file and line before any import |
+| [`handbook/orchestrator-drift/`](handbook/orchestrator-drift/) | [Keeping content from rotting](https://privatecloudarchitect.com/handbook/orchestrator-drift) | Keeps a committed copy of each workflow in step with what runs: a diff that fails the day they disagree, and a restore that checks references and unfinished runs before it writes |
 
 ### Part X · Identity and access
 

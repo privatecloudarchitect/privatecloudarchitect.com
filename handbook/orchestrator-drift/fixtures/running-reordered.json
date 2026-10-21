@@ -1,0 +1,54 @@
+{
+ "workflow-item": [
+  {
+   "script": {
+    "encoded": false,
+    "value": "var limit = System.getModule(\"com.example.platform.util\").clamp(threshold, 0, 100);\nSystem.log('acting on ' + vmName + ' under ' + limit);"
+   },
+   "position": {
+    "y": 30.0,
+    "x": 140.0
+   },
+   "display-name": "Act",
+   "out-name": "item0",
+   "type": "task",
+   "name": "item1"
+  },
+  {
+   "position": {
+    "y": 30.0,
+    "x": 260.0
+   },
+   "end-mode": 0,
+   "type": "end",
+   "name": "item0"
+  }
+ ],
+ "input": {
+  "param": [
+   {
+    "description": "The machine to act on",
+    "type": "string",
+    "name": "vmName"
+   }
+  ]
+ },
+ "root-name": "item1",
+ "version": "1.0.1",
+ "display-name": "Example workflow",
+ "id": "00000000-0000-4000-8000-000000000010",
+ "attrib": [
+  {
+   "name": "threshold",
+   "type": "number",
+   "description": "Read from a configuration element",
+   "value": {
+    "attribute-reference": {
+     "config-id": "11111111-2222-3333-4444-555555555555",
+     "config-key": "threshold",
+     "config-name": "Example/settings"
+    }
+   }
+  }
+ ]
+}

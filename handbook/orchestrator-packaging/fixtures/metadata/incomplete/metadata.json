@@ -1,0 +1,12 @@
+{
+  "name": "2fast",
+  "description": "Fails R12 twice: a name that starts with a digit, and an input with no description.",
+  "runtime": "python",
+  "inputs": [
+    {"name": "vmName", "type": "string", "description": "The machine to act on"},
+    {"name": "dryRun", "type": "boolean"}
+  ],
+  "outputs": [
+    {"name": "result", "type": "Properties", "description": "What the action did"}
+  ]
+}

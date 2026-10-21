@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='UTF-16'?>
+<dunes-script-module name="tag_machine" result-type="Properties" api-version="6.0.0" id="00000000-0000-4000-8000-000000000003" version="1.0.0">
+  <description><![CDATA[Packaged with a creator of our own and every parameter described.]]></description>
+  <param n="vmName" t="string"><![CDATA[The machine to tag]]></param>
+  <param n="tags" t="Properties"><![CDATA[The tags to apply]]></param>
+  <script encoded="false"><![CDATA[return { tagged: vmName };]]></script>
+</dunes-script-module>

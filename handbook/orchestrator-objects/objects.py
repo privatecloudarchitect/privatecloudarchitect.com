@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """objects.py: read your own Orchestrator's object tree, and the bindings that hold it together.
 
-Read-only. It creates nothing, imports nothing, and changes nothing. Four answers:
+Read-only. It creates nothing, imports nothing, and changes nothing. Every call is a GET.
 
-  --inventory   how many of each object kind you have, and how your categories are typed
-  --runtimes    every action environment, its runtime, its dependency pins, and whether it resolves
-  --bindings    for one workflow: the configuration elements and the actions it actually references
-  --record      the counts, written as JSON in the shape the handbook chapter renders
+  --inventory        how many of each object kind you have, and how your categories are typed
+  --runtimes         every action environment, its runtime, its dependency pins, and whether it resolves
+  --bindings ID      for one workflow: the configuration elements and the actions it actually references
+  --package NAME     what one package carries, bucket by bucket (an empty package exports nothing)
+  --sweep [LIMIT]    every workflow definition read, and how the estate is built
+  --record FILE      the counts, written as JSON in the shape the handbook chapter renders
 
 Why this exists: Orchestrator is a tree of seven object kinds held together by three different
 binding mechanisms that use three different keys, and nothing in the console shows you the
@@ -15,23 +17,45 @@ by UUID plus key name; a workflow points at an action by name path. Two of those
 content moves between appliances, and the third does not. Read your own tree before you author
 into it.
 
-Usage:
-    export VRO_HOST=orchestrator.example.net
-    export VRO_TOKEN=<a bearer this appliance accepts>
-    python objects.py --inventory
-    python objects.py --bindings <workflow-uuid>
+A workflow calls an action in one of two ways: an action element (an item that names the action), or
+a script item that calls System.getModule("<module>").<name>(...). Both are counted as calling an
+action; only a script with neither is inline.
+
+Env:   VRO_HOST; VRO_TOKEN_FILE, a bearer this appliance accepts in a file of mode 0600 (VRO_TOKEN, the value
+       itself, is still read when no file is named); TLS_VERIFY=false for an appliance whose private CA you
+       have not installed
+Usage: python3 objects.py --inventory | --runtimes | --bindings WORKFLOW_ID | --package NAME | --sweep [LIMIT]
+       python3 objects.py --record objects.json [--no-sweep] [--with-package NAME]
+Exit:  0 answered · 2 usage error, or a token file open to group or other · 3 a read failed
 """
 from __future__ import annotations
-import argparse, json, os, re, ssl, sys
+import argparse, json, os, re, ssl, sys, time
 from collections import Counter
-from urllib import request as _rq
+from urllib import error as _er, parse as _ps, request as _rq
 
-HOST = os.environ.get("VRO_HOST", "")
-TOKEN = os.environ.get("VRO_TOKEN", "")
 BASE = "/vco/api"
 CTX = ssl.create_default_context()
-CTX.check_hostname = False
-CTX.verify_mode = ssl.CERT_NONE          # lab appliances commonly carry a private CA
+if os.environ.get("TLS_VERIFY", "true").strip().lower() in ("0", "false", "no", "off"):
+    CTX.check_hostname, CTX.verify_mode = False, ssl.CERT_NONE     # a private CA you have not installed
+CALL = re.compile(r'System\.getModule\("([^"]+)"\)\.([A-Za-z_][A-Za-z0-9_]*)')
+
+
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    A file open to group or other is refused before it is read; the refusal names the variable and the fix."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
+HOST, TOKEN = "", ""
 
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
@@ -48,8 +72,6 @@ PACKAGE_BUCKETS = ("actions", "workflows", "configurations", "environments",
 
 
 def get(path: str):
-    if not HOST or not TOKEN:
-        sys.exit("set VRO_HOST and VRO_TOKEN first")
     req = _rq.Request(f"https://{HOST}{BASE}{path}", headers={
         "Authorization": f"Bearer {TOKEN}", "Accept": "application/json"})
     with _rq.urlopen(req, context=CTX, timeout=120) as r:
@@ -66,6 +88,16 @@ def listing(path: str) -> list[dict]:
     j = get(path)
     return [{a["name"]: a.get("value") for a in li.get("attributes", [])}
             for li in j.get("link", [])]
+
+
+def action_calls(item: dict) -> tuple[set, set]:
+    """(by element, by script): the actions one workflow item calls, as <module>/<name>. An action element also
+    carries a generated script that makes the same call, so a script call is counted only on an item that is not
+    an element, and the two forms never overlap."""
+    if item.get("script-module"):
+        return {item["script-module"]}, set()
+    text = (item.get("script") or {}).get("value") if isinstance(item.get("script"), dict) else item.get("script")
+    return set(), {f"{m}/{n}" for m, n in CALL.findall(text or "")}
 
 
 def inventory() -> dict:
@@ -117,8 +149,9 @@ def runtimes() -> list[dict]:
             "pinned": sorted(k for k, v in deps.items() if v),
             "memoryLimit": d.get("runtimeMemoryLimit"),
             "timeout": d.get("runtimeTimeout"),
-            # Present only when the appliance cannot resolve the runtime this environment names.
-            # The environment still exists, still lists, and still gets referenced by actions.
+            # Present when the appliance does not offer the runtime this environment names, typically a
+            # selector an upgrade left in place (MISSING_RUNTIME). On 9.1.1 such an environment still ran
+            # its action, on the newest runtime of the same family: the flag is not a failure.
             "validationMessage": d.get("validationMessage"),
             "bundleBuilt": bool(d.get("bundleHash")),
         })
@@ -142,13 +175,20 @@ def bindings(workflow_id: str) -> dict:
         else:
             plain += 1
     items = c.get("workflow-item") or []
-    to_action = sorted({it.get("script-module") for it in items if it.get("script-module")})
-    scripted = sum(1 for it in items if it.get("script") and not it.get("script-module"))
+    by_element, by_script, calling, inline = set(), set(), 0, 0
+    for it in items:
+        e, sc = action_calls(it)
+        by_element |= e
+        by_script |= sc
+        calling += bool(e or sc)
+        inline += bool(it.get("script") and not (e or sc))
     return {
         "attributes": {"total": len(atts), "boundToConfigurationElement": len(to_config), "plain": plain},
         "configurationBindings": to_config,
-        "actionBindings": to_action,
-        "items": {"total": len(items), "callingAnAction": len(to_action), "inlineScript": scripted},
+        "actionBindings": sorted(by_element | by_script),
+        "actionsByElement": sorted(by_element),
+        "actionsByScript": sorted(by_script),
+        "items": {"total": len(items), "callingAnAction": calling, "inlineScript": inline},
     }
 
 
@@ -164,9 +204,10 @@ def sweep(limit: int = 0) -> dict:
     if limit:
         wfs = wfs[:limit]
     stats = {"workflowsRead": 0, "unreadable": 0,
-             "withConfigBinding": 0, "withActionCall": 0, "inlineOnly": 0, "empty": 0,
-             "items": 0, "itemsCallingAction": 0, "itemsInlineScript": 0,
-             "attributes": 0, "attributesBoundToConfig": 0}
+             "withConfigBinding": 0, "withActionCall": 0, "withActionElement": 0, "withScriptedActionCall": 0,
+             "inlineOnly": 0, "empty": 0,
+             "items": 0, "itemsCallingAction": 0, "itemsActionElement": 0, "itemsScriptedActionCall": 0,
+             "itemsInlineScript": 0, "attributes": 0, "attributesBoundToConfig": 0}
     for w in wfs:
         try:
             c = get(f"/workflows/{w['id']}/content")
@@ -179,13 +220,20 @@ def sweep(limit: int = 0) -> dict:
                     if isinstance(a.get("value"), dict)
                     and ((a["value"].get("attribute-reference") or {}).get("config-id")))
         items = c.get("workflow-item") or []
-        calls = sum(1 for it in items if it.get("script-module"))
-        inline = sum(1 for it in items if it.get("script") and not it.get("script-module"))
+        found = [action_calls(it) for it in items]
+        by_element = sum(1 for e, _ in found if e)
+        by_script = sum(1 for _, sc in found if sc)
+        calls = sum(1 for e, sc in found if e or sc)
+        inline = sum(1 for it, (e, sc) in zip(items, found) if it.get("script") and not (e or sc))
         stats["attributes"] += len(atts)
         stats["attributesBoundToConfig"] += bound
         stats["items"] += len(items)
         stats["itemsCallingAction"] += calls
+        stats["itemsActionElement"] += by_element
+        stats["itemsScriptedActionCall"] += by_script
         stats["itemsInlineScript"] += inline
+        stats["withActionElement"] += bool(by_element)
+        stats["withScriptedActionCall"] += bool(by_script)
         if bound:
             stats["withConfigBinding"] += 1
         if calls:
@@ -201,11 +249,13 @@ def show_sweep(limit: int) -> None:
     s = sweep(limit)
     n = s["workflowsRead"]
     print(f"Read {n} workflow definitions ({s['unreadable']} unreadable)\n")
-    print(f"  {s['withActionCall']:5d}  call at least one action")
+    print(f"  {s['withActionCall']:5d}  call at least one action ({s['withActionElement']} by an action element, "
+          f"{s['withScriptedActionCall']} from a script)")
     print(f"  {s['inlineOnly']:5d}  are inline script only (no action, no runtime, no packaging)")
     print(f"  {s['empty']:5d}  have neither")
     print(f"  {s['withConfigBinding']:5d}  bind at least one attribute to a configuration element")
-    print(f"\n  items: {s['items']} total, {s['itemsCallingAction']} call an action, "
+    print(f"\n  items: {s['items']} total, {s['itemsCallingAction']} call an action "
+          f"({s['itemsActionElement']} elements, {s['itemsScriptedActionCall']} scripts), "
           f"{s['itemsInlineScript']} are inline script")
     print(f"  attributes: {s['attributes']} total, {s['attributesBoundToConfig']} bound to a configuration element")
     if n:
@@ -243,7 +293,7 @@ def show_runtimes() -> None:
     rs = runtimes()
     print(f"{len(rs)} action environments\n")
     for r in rs:
-        flag = "  <- UNRESOLVED: " + str(r["validationMessage"]) if r["validationMessage"] else ""
+        flag = "  <- NOT OFFERED: " + str(r["validationMessage"]) if r["validationMessage"] else ""
         print(f"  runtime={r['runtime']}{flag}")
         print(f"      dependencies {r['dependencies']}  pinned {len(r['pinned'])}  unpinned {len(r['unpinned'])}"
               f"   bundle {'built' if r['bundleBuilt'] else 'not built'}")
@@ -251,10 +301,11 @@ def show_runtimes() -> None:
         if r["unpinned"]:
             print(f"      unpinned: {', '.join(r['unpinned'])}"
                   "   <- builds against whatever the index serves that day")
-    broken = [r for r in rs if r["validationMessage"]]
-    if broken:
-        print(f"\n{len(broken)} environment(s) name a runtime this appliance cannot resolve. They still")
-        print("list, and an action can still reference one. The failure surfaces when the action runs.")
+    flagged = [r for r in rs if r["validationMessage"]]
+    if flagged:
+        print(f"\n{len(flagged)} environment(s) name a runtime this appliance does not offer. On VCF Automation 9.1.1")
+        print("such an environment ran its action on the newest runtime of the same family, so the flag is not")
+        print("a failure. What can fail is the code meeting that newer runtime: prove it there before relying on it.")
 
 
 def show_bindings(workflow_id: str) -> None:
@@ -265,16 +316,38 @@ def show_bindings(workflow_id: str) -> None:
     print("    key = config-id (a UUID) + config-key (a name inside that element)")
     for c in b["configurationBindings"]:
         print(f"      {c['attribute']}  ({c['type']})  <- {c['configKey']}")
-    print(f"\n  Action bindings: {it['callingAnAction']} distinct actions across {it['total']} items")
-    print("    key = <category>/<name>, a name path. No UUID.")
+    print(f"\n  Action bindings: {len(b['actionBindings'])} distinct actions, called by {it['callingAnAction']} "
+          f"of {it['total']} items")
+    print("    key = <module>/<name>, a name path. No UUID.")
     for m in b["actionBindings"]:
-        print(f"      {m}")
-    print(f"\n  Inline scripted items (no action, JavaScript in the workflow): {it['inlineScript']}")
+        how = "element" if m in b["actionsByElement"] else "script"
+        print(f"      {m}   ({how})")
+    print(f"\n  Inline scripted items (JavaScript that calls no action): {it['inlineScript']}")
     print("\n  Two of these bindings carry a UUID and one carries a name. That is the whole reason")
     print("  content has to be deployed in dependency order rather than in any order you like.")
 
 
-def show_record(with_sweep: bool = True) -> None:
+def package(name: str) -> dict:
+    """What one package carries, bucket by bucket. A package is a manifest of references: the objects exist
+    whether or not a package lists them, and an export carries only what is listed."""
+    req = _rq.Request(f"https://{HOST}{BASE}/packages/{_ps.quote(name, safe='')}", headers={
+        "Authorization": f"Bearer {TOKEN}", "Accept": "application/json"})
+    with _rq.urlopen(req, context=CTX, timeout=120) as r:
+        j = json.loads(r.read().decode())
+    return {b: len(j.get(b) or []) for b in PACKAGE_BUCKETS}
+
+
+def show_package(name: str) -> None:
+    buckets = package(name)
+    total = sum(buckets.values())
+    print(f"Package: {total} references\n")
+    for b, n in buckets.items():
+        print(f"  {n:5d}  {b}")
+    if not total:
+        print("\n  EMPTY: an export of this package carries nothing. Add each object's category to it.")
+
+
+def show_record(path: str, with_sweep: bool = True, with_package: str | None = None) -> None:
     """The record the chapter renders. Counts and product vocabulary only, by construction.
 
     The sweep is included by default because the chapter's opening claim is the split between
@@ -284,7 +357,8 @@ def show_record(with_sweep: bool = True) -> None:
     inv = inventory()
     rs = runtimes()
     sw = sweep() if with_sweep else {}
-    print(json.dumps({
+    rec = {
+        "captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "objects": inv["objects"],
         "packageNaming": inv["packageNaming"],
         "categoryTypes": inv["categoryTypes"],
@@ -292,29 +366,57 @@ def show_record(with_sweep: bool = True) -> None:
         "runtimes": {
             "total": len(rs),
             "runtimes": sorted({r["runtime"] for r in rs if r["runtime"]}),
-            "unresolved": sum(1 for r in rs if r["validationMessage"]),
+            "notOffered": sum(1 for r in rs if r["validationMessage"]),
             "withUnpinnedDependencies": sum(1 for r in rs if r["unpinned"]),
             "fullyPinned": sum(1 for r in rs if r["pinned"] and not r["unpinned"]),
             "noDependencies": sum(1 for r in rs if not r["pinned"] and not r["unpinned"]),
         },
         "sweep": sw,
-    }, indent=1))
+    }
+    if with_package:
+        rec["package"] = package(with_package)    # bucket counts only; the name stays out of the record
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps(rec, indent=1) + "\n")
+    print(f"wrote {path}: counts and product vocabulary only, no name, host or identifier from the appliance")
+
+
+def main(a) -> int:
+    global HOST, TOKEN
+    HOST, TOKEN = os.environ.get("VRO_HOST", ""), secret("VRO_TOKEN")
+    if not HOST or not TOKEN:
+        print("objects.py: set VRO_HOST and VRO_TOKEN_FILE (or VRO_TOKEN)", file=sys.stderr)
+        return 2
+    if a.inventory: show_inventory()
+    elif a.runtimes: show_runtimes()
+    elif a.bindings: show_bindings(a.bindings)
+    elif a.package: show_package(a.package)
+    elif a.sweep is not None: show_sweep(a.sweep)
+    else: show_record(a.record, not a.no_sweep, a.with_package)
+    return 0
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--inventory", action="store_true")
-    ap.add_argument("--runtimes", action="store_true")
-    ap.add_argument("--bindings", metavar="WORKFLOW_ID")
-    ap.add_argument("--sweep", nargs="?", type=int, const=0, metavar="LIMIT",
-                    help="read every workflow definition and count how the estate is built")
-    ap.add_argument("--record", action="store_true")
+    one = ap.add_mutually_exclusive_group(required=True)
+    one.add_argument("--inventory", action="store_true")
+    one.add_argument("--runtimes", action="store_true")
+    one.add_argument("--bindings", metavar="WORKFLOW_ID")
+    one.add_argument("--package", metavar="NAME")
+    one.add_argument("--sweep", nargs="?", type=int, const=0, metavar="LIMIT",
+                     help="read every workflow definition and count how the estate is built")
+    one.add_argument("--record", metavar="FILE")
     ap.add_argument("--no-sweep", action="store_true",
                     help="with --record: skip the per-workflow sweep (faster, fewer answers)")
-    a = ap.parse_args()
-    if a.inventory: show_inventory()
-    elif a.runtimes: show_runtimes()
-    elif a.bindings: show_bindings(a.bindings)
-    elif a.sweep is not None: show_sweep(a.sweep)
-    elif a.record: show_record(not a.no_sweep)
-    else: ap.print_help()
+    ap.add_argument("--with-package", metavar="NAME",
+                    help="with --record: add one package's bucket counts (not its name) to the record")
+    args = ap.parse_args()
+    if (args.no_sweep or args.with_package) and not args.record:
+        ap.error("--no-sweep and --with-package go with --record")
+    try:
+        sys.exit(main(args))
+    except PermissionError as e:
+        print(f"objects.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except (_er.URLError, OSError, ValueError) as e:
+        print(f"objects.py: a read failed: {getattr(e, 'code', '') or e}", file=sys.stderr)
+        sys.exit(3)

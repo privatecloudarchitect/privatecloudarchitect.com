@@ -1,0 +1,13 @@
+{
+ "captured_utc": "2026-10-21T20:26:49Z",
+ "operation": "deploy",
+ "items": 39,
+ "references": {
+  "actions": 7,
+  "actionsMissing": 0,
+  "configurationReads": 3,
+  "configurationReadsMissing": 0
+ },
+ "inflight": 0,
+ "changedLines": 0
+}

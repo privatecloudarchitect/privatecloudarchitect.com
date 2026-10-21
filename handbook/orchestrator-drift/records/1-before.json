@@ -1,0 +1,18 @@
+{
+ "captured_utc": "2026-10-21T19:51:44Z",
+ "operation": "diff",
+ "items": 31,
+ "drift": true,
+ "diffLines": 858,
+ "diffLinesShown": 60,
+ "committed": {
+  "version": "1.4.0",
+  "items": 39,
+  "attributes": 62
+ },
+ "running": {
+  "version": "1.2.0",
+  "items": 31,
+  "attributes": 35
+ }
+}

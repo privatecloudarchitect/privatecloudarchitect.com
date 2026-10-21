@@ -1,0 +1,20 @@
+{
+ "captured_utc": "2026-10-21T19:34:30Z",
+ "scanned": {
+  "action metadata": 10,
+  "action package": 12,
+  "unparsed document": 1,
+  "unparsed package": 1,
+  "workflow document": 3,
+  "workflow package": 4
+ },
+ "findings": {
+  "R6 error": 2,
+  "R7 warning": 16,
+  "R9 note": 16
+ },
+ "creators": {
+  "another": 4,
+  "the platform's default": 12
+ }
+}
