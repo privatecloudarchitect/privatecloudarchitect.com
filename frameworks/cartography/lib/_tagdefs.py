@@ -1,10 +1,10 @@
 """frameworks/cartography/lib/_tagdefs - tag-category definition + URN resolution on the vCenter native plane.
 
 WHY NATIVE. VCF Operations centralized Tag Management is the north-star create plane: one API defines
-a category once and Operations mirrors it to every managed vCenter. But the Ops-to-vCenter projection
-of a NEWLY created category is unreliable on current builds (a fresh category is not mirrored into the
-vCenter tagging service for an unbounded time, so it cannot be attached). Until that is fixed, the
-estate DEFINES categories natively on the vCenter (instant, projection-proof). Consumers reference
+a category once and Operations mirrors it to every managed vCenter. On 9.1 a NEWLY created category was
+not mirrored into the vCenter tagging service in time to be attached. On 9.1.1 the documented Push To
+Adapter call delivers it on demand (seconds on the reference estate, G-073). The estate still DEFINES
+categories natively on the vCenter (instant, and no Operations access needed). Consumers reference
 categories BY NAME and never see the plane, so a future switch back to the centralized API changes
 this module, not the estate.
 

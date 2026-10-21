@@ -68,7 +68,13 @@ python3 writeback_tags.py --recommendations recs.json --approve recommended     
 python3 writeback_tags.py --recommendations recs.json --approve recommended --execute    # write
 python3 writeback_tags.py --recommendations recs.json --approve recommended --teardown            # preview the un-write
 python3 writeback_tags.py --recommendations recs.json --approve recommended --teardown --execute   # reverse it
+python3 writeback_tags.py --recommendations recs.json --coverage                # read-only: the unclassified backlog
+python3 writeback_tags.py --probe-tag-authority-define                         # the least-privilege split, put to the test
 ```
+
+Add `--record run.json` to any of these (and `--record classify.json` to the classifier) for a counts-only record of
+what the run did: the categories it defined, the decisions, how many attaches were applied and verified, the coverage
+counts. A record never carries a workload's or a namespace's name; the script refuses to write one that does.
 
 `--approve recommended` takes only the safe-to-approve subset (declared apps, cluster nodes,
 unambiguous components); `--approve-file` picks an explicit `vm:category` list; `env` proposals
@@ -80,9 +86,19 @@ assign identity cannot bind Supervisor-managed VM classes: re-run with
 The write reverses. `--teardown` detaches exactly the tags a matching write would have attached:
 value-matched, so a value a human changed after the write is held and never removed, and each
 detach is read back from vCenter to confirm the tag is gone. Dry-run by default; the tag
-categories and values stay defined, since they are estate vocabulary and not per-run artifacts.
+categories and values stay defined, since they are estate vocabulary and not per-run artifacts,
+unless `--remove-categories` is added, which deletes the approved concepts' categories this
+framework defined (its marker in the description) and never one it did not.
 That is the scoped reversibility the framework-estate contract asks of anything that writes to
 your estate: it removes exactly what it created, and nothing else.
+
+Two reads keep the write honest. `--coverage` counts, against every workload the classifier walked,
+how many carry a value in each governed category, how many carry none (the unclassified backlog, with
+the workloads the classifier held for lack of a signal), and how many of the governed axes have a
+category on this vCenter at all. `--probe-tag-authority-define` asks the tag-authority identity to
+create one category; it should be refused, and if it is not, the category is deleted at once and the
+run exits 3, because the split did not hold. `records/governance/` holds both reads and a round trip
+on a throwaway VM from the reference estate, with what each run printed.
 
 The handoff this slice exists for: once `function` (and your declared `env` and `sla`) are on a
 workload, the tuning estate's posture groups absorb it on the next membership re-resolution, with

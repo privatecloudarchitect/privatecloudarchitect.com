@@ -1,0 +1,40 @@
+{
+ "captured_utc": "2026-10-21T14:05:36Z",
+ "verb": "write-back",
+ "execute": true,
+ "approved": 4,
+ "assignedAs": "tag authority",
+ "define": [
+  {
+   "category": "app",
+   "action": "create",
+   "valuesCreated": 0,
+   "valuesExisting": 0
+  },
+  {
+   "category": "app-layer",
+   "action": "create",
+   "valuesCreated": 3,
+   "valuesExisting": 0
+  },
+  {
+   "category": "env-observed",
+   "action": "create",
+   "valuesCreated": 6,
+   "valuesExisting": 0
+  },
+  {
+   "category": "function",
+   "action": "create",
+   "valuesCreated": 6,
+   "valuesExisting": 0
+  }
+ ],
+ "vms": 1,
+ "skippedVms": 0,
+ "decisions": {
+  "attach": 4
+ },
+ "appliedVerified": 4,
+ "failedVerification": 0
+}

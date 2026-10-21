@@ -1,0 +1,35 @@
+{
+ "captured_utc": "2026-10-21T14:06:40Z",
+ "verb": "teardown",
+ "execute": true,
+ "approved": 4,
+ "vms": 1,
+ "skippedVms": 0,
+ "decisions": {
+  "detach": 4
+ },
+ "detachedVerified": 4,
+ "assignedAs": "tag authority",
+ "categories": [
+  {
+   "category": "app",
+   "action": "delete",
+   "note": null
+  },
+  {
+   "category": "app-layer",
+   "action": "delete",
+   "note": null
+  },
+  {
+   "category": "env-observed",
+   "action": "delete",
+   "note": null
+  },
+  {
+   "category": "function",
+   "action": "delete",
+   "note": null
+  }
+ ]
+}

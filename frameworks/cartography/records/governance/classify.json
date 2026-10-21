@@ -1,0 +1,16 @@
+{
+ "captured_utc": "2026-10-21T14:10:52Z",
+ "source": "supervisor-lens",
+ "namespaces": 3,
+ "total_vms": 11,
+ "tag_ready_vms": 9,
+ "held_for_review": 2,
+ "recommended_count": 11,
+ "confirm_count": 11,
+ "category_distribution": {
+  "app": 3,
+  "env": 7,
+  "function": 9,
+  "tier": 3
+ }
+}

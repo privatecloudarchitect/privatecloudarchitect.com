@@ -21,6 +21,7 @@ Recommendation semantics, deliberately conservative:
 Usage (from frameworks/cartography/):
   python3 classify_supervisor.py                          # live: discover namespaces, classify, summarize
   python3 classify_supervisor.py --export recs.json       # also write the ratification queue
+  python3 classify_supervisor.py --record classify.json   # a counts-only record (no VM or namespace name)
   python3 classify_supervisor.py --project <cci-project>  # limit discovery to one project
   python3 classify_supervisor.py --namespace ns=https://<vcfa>/proxy/...   # explicit, repeatable
   python3 classify_supervisor.py --fixture fixtures/supervisor-vms.json --export recs.json  # offline
@@ -152,6 +153,7 @@ def main() -> int:
                     help="explicit namespace + its CCI proxy base (repeatable; skips discovery)")
     ap.add_argument("--fixture", help="classify a recorded fixture file instead of the live estate")
     ap.add_argument("--export", help="write the recommendations JSON (the ratification queue)")
+    ap.add_argument("--record", help="write a counts-only record of this classification (no VM or namespace name)")
     ap.add_argument("--self-test", action="store_true",
                     help="offline: classify the shipped fixture and compare against the golden output")
     args = ap.parse_args()
@@ -198,6 +200,15 @@ def main() -> int:
             f.write("\n")
         print(f"\nexported {args.export} - review it, then apply the approved subset with "
               f"writeback_tags.py --recommendations {args.export} --approve recommended (dry-run first)")
+    if args.record:
+        import time
+        counts = {k: v for k, v in report.items() if k != "recommendations"}
+        text = json.dumps({"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **counts}, indent=1)
+        for r in report["recommendations"]:
+            assert r["vm"] not in text and r["namespace"] not in text, "an estate name reached the record"
+        with open(args.record, "w", encoding="utf-8") as f:
+            f.write(text + "\n")
+        print(f"wrote {args.record} (counts only)")
     return 0
 
 

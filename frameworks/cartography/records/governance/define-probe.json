@@ -1,0 +1,8 @@
+{
+ "captured_utc": "2026-10-21T14:05:56Z",
+ "verb": "define-as-tag-authority",
+ "status": 403,
+ "refused": true,
+ "createdThenDeleted": false,
+ "absentAfter": true
+}

@@ -34,6 +34,10 @@ Usage (from frameworks/cartography/):
   python3 writeback_tags.py --recommendations recs.json --approve recommended --execute
   python3 writeback_tags.py --recommendations recs.json --approve-file picks.txt --execute
      (picks.txt: one `vm:category` per line; # comments allowed)
+  python3 writeback_tags.py --recommendations recs.json --approve-file picks.txt --teardown --remove-categories --execute
+  python3 writeback_tags.py --probe-tag-authority-define      # one category create as the tag authority, expected refused
+  python3 writeback_tags.py --recommendations recs.json --coverage   # read-only: the unclassified backlog
+  add --record run.json to any of these for a counts-only record of what the run did (no VM name in it)
 """
 from __future__ import annotations
 
@@ -42,14 +46,18 @@ import json
 import sys
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 from lib import _taxonomy
-from lib._client import VcSession, vcenter_client
+from lib._client import HttpError, VcSession, vcenter_client
 from lib._models import DesiredTag, TagAction, reconcile_actions, reconcile_teardown
-from lib._tagdefs import CategoryReport, NativeVcenterTagProvider
+from lib._tagdefs import DEF_MARKER, CategoryReport, NativeVcenterTagProvider
 from lib._tagging import attach_tag, detach_tag
 
 REC_CONCEPT = {"app": "app", "tier": "app-layer", "env": "env-observed", "function": "function"}
+# What this run did, in counts and taxonomy names; written by --record, and never a VM name.
+RECORD: dict = {}
+PROBE_CATEGORY = "cartography-define-probe"   # the one name --probe-tag-authority-define tries to create
 
 
 def _tag_id_from_urn(urn: str) -> str:
@@ -179,10 +187,14 @@ def render_define(reports: list[CategoryReport]) -> None:
 
 
 def apply(plane: NativeTagPlane, verifier: VcVerifier, approved: list[dict], *,
-          execute: bool, allow_change: bool, actuator: VcSession | None = None) -> int:
+          execute: bool, allow_change: bool, actuator: VcSession | None = None, as_tag_authority: bool = False) -> int:
     concepts_present = sorted({REC_CONCEPT[r["category"]] for r in approved})
     def_reports = [plane.ensure_category(c, dry_run=not execute) for c in concepts_present]
     render_define(def_reports)
+    RECORD.update({"verb": "write-back", "execute": execute, "approved": len(approved),
+                   "assignedAs": "tag authority" if actuator is not None or as_tag_authority else "vCenter identity",
+                   "define": [{"category": r.name, "action": r.category_action, "valuesCreated": len(r.values_created),
+                               "valuesExisting": len(r.values_existing)} for r in def_reports]})
     conflicts = [r for r in def_reports if r.category_action == "conflict"]
     if conflicts:
         for r in conflicts:
@@ -230,6 +242,7 @@ def apply(plane: NativeTagPlane, verifier: VcVerifier, approved: list[dict], *,
                 failed += 1
                 print(f"  {a.object_ref[:28]:28} {a.category[:16]:16} {a.value[:16]:16} "
                       f"{(a.current or '-'):12} {a.action} FAILED verification")
+                RECORD.update({"decisions": counts, "appliedVerified": applied, "failedVerification": failed})
                 return _did_not_land(a)
         print(f"  {a.object_ref[:28]:28} {a.category[:16]:16} {a.value[:16]:16} "
               f"{(a.current or '-'):12} {note}")
@@ -238,12 +251,15 @@ def apply(plane: NativeTagPlane, verifier: VcVerifier, approved: list[dict], *,
         print(f"  {name[:28]:28} {'-':16} {'-':16} {'-':12} SKIPPED: not on this vCenter")
 
     writes = sum(counts.get(k, 0) for k in ("attach", "change"))
+    RECORD.update({"vms": len(resolvable), "skippedVms": len(skipped), "decisions": counts,
+                   "appliedVerified": applied, "failedVerification": failed})
     print(f"\n  summary: {len(actions)} decision(s) over {len(resolvable)} resolvable VM(s) "
           f"({len(skipped)} skipped): "
           + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
     if not execute and writes:
-        via = ("the tag-authority identity" if actuator is not None else "the VCENTER_* identity")
-        hint = ("" if actuator is not None else
+        tag_auth = actuator is not None or as_tag_authority
+        via = ("the tag-authority identity" if tag_auth else "the VCENTER_* identity")
+        hint = ("" if tag_auth else
                 "; to land on Supervisor-managed VMs, re-run with --actuate-as-tag-authority")
         print(f"  DRY-RUN: {writes} native tag(s) would be attached via {via}. "
               f"Re-run with --execute{hint}.")
@@ -279,12 +295,15 @@ def _did_not_land(a: TagAction) -> int:
 
 
 def teardown(plane: NativeTagPlane, verifier: VcVerifier, approved: list[dict], *,
-             execute: bool, actuator: VcSession | None = None) -> int:
+             execute: bool, actuator: VcSession | None = None, remove_categories: bool = False,
+             as_tag_authority: bool = False) -> int:
     """The scoped inverse of apply: detach exactly the tags a matching write would have attached.
 
     Value-matched (a human's different value is held, never removed), read back from the vCenter
     source of truth to confirm the tag is GONE, and dry-run by default. Categories and values are
-    left defined by design - they are estate vocabulary, not per-run artifacts."""
+    left defined by default - they are estate vocabulary, not per-run artifacts; --remove-categories
+    also deletes the approved concepts' categories this framework defined (its marker in the
+    description), after the detach, and never a category it did not define."""
     cat_name = {c: _taxonomy.category_name(c) for c in REC_CONCEPT.values()}
     names = sorted({r["vm"] for r in approved})
     resolvable, skipped = [], []
@@ -334,18 +353,31 @@ def teardown(plane: NativeTagPlane, verifier: VcVerifier, approved: list[dict], 
         print(f"  {name[:28]:28} {'-':16} {'-':16} {'-':12} SKIPPED: not on this vCenter")
 
     detaches = counts.get("detach", 0)
+    RECORD.update({"verb": "teardown", "execute": execute, "approved": len(approved), "vms": len(resolvable),
+                   "skippedVms": len(skipped), "decisions": counts, "detachedVerified": removed,
+                   "assignedAs": "tag authority" if actuator is not None or as_tag_authority else "vCenter identity"})
+    if remove_categories:
+        index = plane.provider.cat_index(plane.vc)   # read again: the detach above changed nothing here, a define might have
+        reports = [plane.provider.teardown_category(plane.vc, plane.vc_name, cat_name[c], index, dry_run=not execute)
+                   for c in sorted({REC_CONCEPT[r["category"]] for r in approved})]
+        print("\n  CATEGORIES (this framework's only):")
+        for r in reports:
+            print(f"    {r.name[:36]:36} {r.category_action}" + (f"  ! {r.note}" if r.note else ""))
+        RECORD["categories"] = [{"category": r.name, "action": r.category_action, "note": r.note or None} for r in reports]
     print(f"\n  summary: {len(actions)} decision(s) over {len(resolvable)} resolvable VM(s) "
           f"({len(skipped)} skipped): "
           + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
     if not execute and detaches:
-        via = ("the tag-authority identity" if actuator is not None else "the VCENTER_* identity")
-        hint = ("" if actuator is not None else
+        tag_auth = actuator is not None or as_tag_authority
+        via = ("the tag-authority identity" if tag_auth else "the VCENTER_* identity")
+        hint = ("" if tag_auth else
                 "; to detach from Supervisor-managed VMs, add --actuate-as-tag-authority")
         print(f"  DRY-RUN: {detaches} native tag(s) would be detached via {via}. "
               f"Re-run with --teardown --execute{hint}.")
     elif execute and detaches:
-        print(f"  Detached {removed} native tag(s), each verified gone from the vCenter source of "
-              "truth. The tag categories and values remain defined (estate vocabulary).")
+        print(f"  Detached {removed} native tag(s), each verified gone from the vCenter source of truth. "
+              + ("The categories this framework defined were then deleted (above)." if remove_categories else
+                 "The tag categories and values remain defined (estate vocabulary)."))
     elif not detaches:
         print("  nothing to remove: none of the approved values are currently attached "
               "(already absent, or a human changed them and they were held).")
@@ -370,6 +402,65 @@ def _detach_did_not_land(a: TagAction) -> int:
           "Supervisor-managed VM shadows a plain vCenter grant). Re-run with "
           "--actuate-as-tag-authority using an identity that holds a global tag-assign role.")
     return 2
+
+
+def coverage(plane: NativeTagPlane, verifier: VcVerifier, report: dict) -> int:
+    """The drift loop's number, read-only: of the workloads the classifier walked, how many carry a governed tag,
+    per category and overall. The unclassified backlog is every walked VM with no governed tag, plus the VMs the
+    classifier held because their labels gave it no signal. Counts only."""
+    census = sorted({r["vm"] for r in report.get("recommendations", [])})
+    held = int(report.get("held_for_review") or 0)
+    resolvable = [n for n in census if verifier.moref(n)]
+    per_cat = {name: 0 for name in sorted(plane.owned_categories())}
+    with_any = with_all = 0
+    for name in resolvable:
+        got: dict[str, str] = {}
+        for tid in verifier.attached_tag_ids(verifier.moref(name)):
+            cv = plane.interpret(tid)
+            if cv:
+                got[cv[0]] = cv[1]
+        for k in got:
+            per_cat[k] = per_cat.get(k, 0) + 1
+        with_any += bool(got)
+        with_all += set(got) >= set(per_cat)
+    backlog = (len(resolvable) - with_any) + held
+    defined = sorted(c for c in per_cat if c in plane._index)
+    print(f"coverage · {len(census) + held} workload(s) walked ({held} held, no signal); {len(resolvable)} found on this vCenter")
+    print(f"  governed categories defined here: {len(defined)} of {len(per_cat)}")
+    for k, n in per_cat.items():
+        print(f"    {k[:36]:36} {n} of {len(resolvable)}")
+    print(f"  with any governed tag {with_any}, with every one {with_all}; unclassified backlog {backlog}")
+    RECORD.update({"verb": "coverage", "walked": len(census) + held, "heldNoSignal": held, "onThisVcenter": len(resolvable),
+                   "categoriesDefined": len(defined), "categoriesGoverned": len(per_cat), "perCategory": per_cat,
+                   "withAnyGovernedTag": with_any, "withEveryGovernedTag": with_all, "unclassifiedBacklog": backlog})
+    return 0
+
+
+def probe_tag_authority_define() -> int:
+    """One category create as the tag-authority identity, which holds only the tag-assign role: the least-privilege
+    split says it is refused. The name is checked absent first; if the create is NOT refused, the category is deleted
+    as the vCenter identity at once and the run reports it, because the split did not hold."""
+    with vcenter_client() as vc:
+        if PROBE_CATEGORY in NativeVcenterTagProvider().cat_index(vc):
+            raise SystemExit(f"a category named {PROBE_CATEGORY!r} already exists; nothing was tried")
+        with vcenter_client(tag_authority=True) as ta:
+            try:
+                cid = ta.post("/cis/tagging/category", json={
+                    "name": PROBE_CATEGORY, "description": f"{DEF_MARKER} least-privilege probe",
+                    "cardinality": "SINGLE", "associable_types": ["VirtualMachine"]}).json()
+                cid = cid.get("value", cid) if isinstance(cid, dict) else cid
+                status, created = 201, True
+            except HttpError as e:
+                status, created, cid = e.status_code, False, None
+        if created:
+            vc.delete(f"/cis/tagging/category/{quote(str(cid), safe='')}")
+        gone = PROBE_CATEGORY not in NativeVcenterTagProvider().cat_index(vc)
+    refused = status in (401, 403)
+    RECORD.update({"verb": "define-as-tag-authority", "status": status, "refused": refused,
+                   "createdThenDeleted": created, "absentAfter": gone})
+    print(f"define as the tag authority: HTTP {status}, " + ("refused, as the split says" if refused else
+          "NOT refused: the category was deleted at once as the vCenter identity") + f"; absent afterwards: {gone}")
+    return 0 if refused and gone else 3
 
 
 def self_test() -> int:
@@ -415,6 +506,13 @@ def main() -> int:
                     help="permit overwriting a different existing value (default: hold and surface)")
     ap.add_argument("--teardown", action="store_true",
                     help="reverse: detach exactly the approved tags this framework attached (value-matched, verified gone)")
+    ap.add_argument("--remove-categories", action="store_true",
+                    help="with --teardown: also delete the approved concepts' categories this framework defined")
+    ap.add_argument("--probe-tag-authority-define", action="store_true",
+                    help="try one category create as the tag-authority identity (expected refused), then exit")
+    ap.add_argument("--record", type=Path, help="write a counts-only record of what this run did")
+    ap.add_argument("--coverage", action="store_true",
+                    help="read-only: count the walked workloads carrying each governed tag, and the unclassified backlog")
     ap.add_argument("--execute", action="store_true", help="apply (default: dry-run)")
     ap.add_argument("--self-test", action="store_true",
                     help="offline check of the write and teardown decision cores; no vCenter, then exit")
@@ -422,10 +520,19 @@ def main() -> int:
 
     if args.self_test:
         return self_test()
+    if args.probe_tag_authority_define:
+        rc = probe_tag_authority_define()
+        write_record(args.record, [])
+        return rc
 
     if args.recommendations is None:
         raise SystemExit("--recommendations is required (or pass --self-test for the offline check)")
     report = load_recommendations(args.recommendations)
+    if args.coverage:
+        with vcenter_client() as vc:
+            rc = coverage(NativeTagPlane(vc, vc_name="vcenter"), VcVerifier(vc), report)
+        write_record(args.record, sorted({r["vm"] for r in report.get("recommendations", [])}))
+        return rc
     approved = select_approved(report, args.approve, args.approve_file)
     if not approved:
         print("the approval selected zero recommendations; nothing to do")
@@ -434,20 +541,37 @@ def main() -> int:
     mode = "EXECUTE" if args.execute else "DRY-RUN"
     print(f"{verb} · {mode} · {len(approved)} approved recommendation(s) from {args.recommendations}")
 
+    if args.remove_categories and not args.teardown:
+        raise SystemExit("--remove-categories goes with --teardown")
     with vcenter_client() as vc:
         plane = NativeTagPlane(vc, vc_name="vcenter")
         verifier = VcVerifier(vc)
         if args.actuate_as_tag_authority and args.execute:
             with vcenter_client(tag_authority=True) as actuator:
                 if args.teardown:
-                    return teardown(plane, verifier, approved, execute=True, actuator=actuator)
-                return apply(plane, verifier, approved, execute=True,
-                             allow_change=args.allow_change, actuator=actuator)
-        if args.teardown:
-            return teardown(plane, verifier, approved, execute=args.execute, actuator=None)
-        return apply(plane, verifier, approved, execute=args.execute,
-                     allow_change=args.allow_change,
-                     actuator=None)
+                    rc = teardown(plane, verifier, approved, execute=True, actuator=actuator,
+                                  remove_categories=args.remove_categories)
+                else:
+                    rc = apply(plane, verifier, approved, execute=True, allow_change=args.allow_change, actuator=actuator)
+        elif args.teardown:
+            rc = teardown(plane, verifier, approved, execute=args.execute, actuator=None,
+                          remove_categories=args.remove_categories, as_tag_authority=args.actuate_as_tag_authority)
+        else:
+            rc = apply(plane, verifier, approved, execute=args.execute, allow_change=args.allow_change, actuator=None,
+                       as_tag_authority=args.actuate_as_tag_authority)
+    write_record(args.record, sorted({r["vm"] for r in approved}))
+    return rc
+
+
+def write_record(path: Path | None, vm_names: list[str]) -> None:
+    """The counts-only record of this run. A VM's name is an estate value and never enters it."""
+    if path is None:
+        return
+    text = json.dumps({"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **RECORD}, indent=1)
+    for name in vm_names:
+        assert name not in text, "a VM name reached the record; nothing was written"
+    path.write_text(text + "\n", encoding="utf-8")
+    print(f"wrote {path} (counts only)")
 
 
 if __name__ == "__main__":
