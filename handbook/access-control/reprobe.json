@@ -1,0 +1,86 @@
+{
+ "build": "VCF Automation 9.1.1.0100",
+ "import": {
+  "role": "Organization User",
+  "automation_grant": {
+   "status": null,
+   "note": "the refresh token was refused at /oauth (HTTP 400)"
+  },
+  "session_login": {
+   "status": 201,
+   "message": ""
+  },
+  "read_back": {
+   "status": 200,
+   "providerType": "LDAP",
+   "roles": [
+    "Organization User"
+   ],
+   "members_status": 200,
+   "members": 0
+  },
+  "delete": {
+   "status": 204
+  },
+  "absent_after": true,
+  "captured_utc": "2026-10-21T18:16:46Z"
+ },
+ "project_scope": {
+  "access_review": {
+   "create any": true,
+   "update the foreign project": true,
+   "delete the foreign project": true
+  },
+  "create": {
+   "status": 403,
+   "message": "Access denied for create projects.project.cci.vmware.com"
+  },
+  "update_foreign_dry_run": {
+   "status": 403,
+   "message": "Access denied for create projects.project.cci.vmware.com"
+  },
+  "delete_foreign_dry_run": {
+   "status": 404,
+   "message": "projects.project.cci.vmware.com \"{{foreign-project}}\" not found"
+  },
+  "foreign_unchanged": true,
+  "captured_utc": "2026-10-21T18:17:42Z"
+ },
+ "namespace": {
+  "conditions": {
+   "class_bindings_in_project": 0,
+   "classes_listed_by_org_admin": 3,
+   "class_list_as_project_admin": 403
+  },
+  "create_as_edit_adv": {
+   "status": 403,
+   "message": "supervisornamespaces.infrastructure.cci.vmware.com is forbidden: User \"{{test-advanced}}\" cannot create resource \"supervisornamespaces\" in API group \"infrastructure.cci.vmware.com\" in the namespace \"{{project}}\""
+  },
+  "create_as_admin": {
+   "status": 400,
+   "message": "Namespace class '{{class}}' not found"
+  },
+  "create_as_org_admin": {
+   "status": 200,
+   "message": ""
+  },
+  "endpoint_after_s": 42,
+  "workload_plane": {
+   "admin can read after_s": 11,
+   "advanced creates its own": 201,
+   "admin creates its own": 201,
+   "advanced edits the admin's": 200,
+   "admin edits the advanced's": 200,
+   "member lists them": 403,
+   "advanced deletes the admin's": 200,
+   "admin deletes the advanced's": 200,
+   "the advanced's afterwards": 404,
+   "the admin's afterwards": 404
+  },
+  "teardown_s": {
+   "namespace 1": 60
+  },
+  "residue": 0,
+  "captured_utc": "2026-10-21T18:25:31Z"
+ }
+}

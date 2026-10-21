@@ -22,7 +22,9 @@ write one that does. Stdlib only; no token is printed or written.
 Env:  VCFA_HOST, VCFA_ORG, and VCFA_REFRESH_TOKEN_FILE (a tenant refresh token, traded for a bearer) or
       VCFA_BEARER_FILE (a bearer you already hold, such as one from a session login); each file mode 0600;
       VC_HOST to present the same bearer to vCenter; TLS_VERIFY=false on a self-signed lab CA; OUT (derivation.json)
-Exit: 0 recorded · 1 a call failed
+Exit: 0 recorded · 1 the record would carry an estate value, so it was not written · 3 a read failed or no
+      project was visible · 5 usage: an option (it takes none), an unset variable, or a credential file missing or
+      open to group or other
 """
 
 import hashlib
@@ -123,7 +125,11 @@ def read_secret(var):
 
 
 def main():
-    host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
+    try:
+        host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
+    except KeyError as e:
+        print(f"whoami.py: {e.args[0]} is not set", file=sys.stderr)
+        sys.exit(5)
     if os.environ.get("VCFA_BEARER_FILE"):
         refresh, held = None, read_secret("VCFA_BEARER_FILE")
     else:
@@ -152,7 +158,7 @@ def main():
     st, projects = api.call("GET", f"{G}/apis/project.cci.vmware.com/v1alpha2/projects")
     proj = (projects.get("items") or [{}])[0].get("metadata", {}).get("name") if st == 200 else None
     if not proj:
-        print("FATAL: no project is visible to this bearer"); sys.exit(1)
+        print("FATAL: no project is visible to this bearer"); sys.exit(3)
     st, rb = api.call("GET", f"{G}/apis/authorization.cci.vmware.com/v1alpha1/namespaces/{proj}/projectrolebindings")
     bindings = rb.get("items") or []
     rec["authority"] = {"kind": "ProjectRoleBinding", "status": st, "bindings": len(bindings),
@@ -288,4 +294,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # The option check belongs to the command line, not to main(): a test that calls main() in process carries
+    # its own runner's arguments in sys.argv.
+    if sys.argv[1:]:
+        print(f"whoami.py: unknown option {sys.argv[1]}; it takes none, only the environment", file=sys.stderr)
+        sys.exit(5)
+    try:
+        main()
+    except (PermissionError, FileNotFoundError) as e:   # a credential file missing or open to group or other
+        print(f"whoami.py: {e}", file=sys.stderr)
+        sys.exit(5)
+    except (urllib.error.URLError, OSError) as e:
+        print(f"whoami.py: a call failed: {type(e).__name__}", file=sys.stderr)
+        sys.exit(3)

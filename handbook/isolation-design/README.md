@@ -44,13 +44,16 @@ newer one.
 
 ## Prerequisites
 
-- A VCF Automation 9.1 (All Apps) org with an identity provider holding four test users
+- A VCF Automation 9.1 or 9.1.1 (All Apps) org with an identity provider holding four test users
   (`user1..user4` by default) that share one password, plus one member of your operators' group. The org's
   groups and users must come from a directory: a user federated straight to an identity provider such as
   Entra ID carries no provider group into the namespace plane and cannot be named in a binding, so the
   per-user bindings here do not apply to such an org as written.
 - `kubectl` and Python 3 (standard library only).
-- The environment variables listed at the top of `verify.py`. Nothing secret touches disk.
+- The environment variables listed at the top of `verify.py` and `isolation.py`. Every password comes from a file of
+  mode 0600 (`VCFA_TEST_PASSWORD_FILE`, `VCFA_OPERATOR_PASSWORD_FILE`, and for `isolation.py` either a session login,
+  `VCFA_USER` with `VCFA_PASSWORD_FILE`, or a tenant refresh token in `VCFA_REFRESH_TOKEN_FILE`); a file open to
+  group or other is refused before it is read.
 
 ## The runbook (mirrors the sheet's six steps)
 
@@ -61,7 +64,7 @@ Project RBAC writes go to the Cloud Consumption Interface, not the REST membersh
 
 ```bash
 kubectl config set-cluster vcfa-cci --server=https://<vcfa-fqdn>/cci/kubernetes
-kubectl config set-credentials vcfa-cci-user --token=<access-token>
+kubectl config set-credentials vcfa-cci-user --token="$(cat ~/.vcf/cci-token)"   # a file of mode 0600: no token in history
 kubectl config set-context vcfa-cci --cluster=vcfa-cci --user=vcfa-cci-user
 ```
 
@@ -126,10 +129,12 @@ deployment is a ConfigMap marker or a real VM.
 ### 4. Run the matrix
 
 ```bash
-python3 verify.py matrix
+python3 verify.py matrix --record matrix.json
 ```
 
-Every cell is a live HTTP call as that principal. Expected shape: `expected-output.md`.
+Every cell is a live HTTP call as that principal. Expected shape: `expected-output.md`. With `--record` it also
+writes the matrix by role (edit-1, edit-2, edit_adv, admin, operator), with no user name and no deployment id;
+`matrix.json` here is that record from the reference estate, read on VCF Automation 9.1.1.
 A cross-user `not-visible(404)` is the design holding, not a failure.
 
 ### 5. The flip: prove what governance changes

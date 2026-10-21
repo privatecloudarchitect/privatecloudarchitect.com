@@ -14,7 +14,8 @@ readable, and most of them are checkable, so this asks:
   4. the SELF RULES: what this identity may do in a project, exhaustively, as the platform computes it;
   5. the VISIBILITY FLOOR: how many deployments this identity sees and how many of them it owns. Isolation is a
      property of principals below the organization-administrator role, and this is what that looks like from
-     above it;
+     above it; and the ACTION REGIME: every Day-2 action policy in force, its scope, HARD or SOFT, whom it names
+     and whether it grants every action;
   6. with --probe-membership, the SILENT NO-OP: the REST project membership arrays accept a write, answer 200,
      and persist nothing. This sends one and reads it back, restoring anything that did persist;
   7. with --probe-writes, the NAMING RULE proved: bindings created under each candidate name shape against a
@@ -28,13 +29,15 @@ which one survived. Field names, verbs, HTTP statuses and the platform's own err
 
 Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-  export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
+  export VCFA_USER=<org-admin> VCFA_PASSWORD_FILE=/path/to/password   # mode 0600: a session login
+  #   or a tenant refresh token instead: export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token   (mode 0600)
   export TLS_VERIFY=false                                  # only on a self-signed lab CA
   python3 isolation.py                       # reads only
   python3 isolation.py --probe-membership    # also step 6: one membership-array write, read back, restored
   python3 isolation.py --probe-writes        # also step 7: name-shape bindings against nobody, then deleted
 """
 import argparse
+import base64
 import collections
 import http.client
 import json
@@ -123,8 +126,17 @@ class Labels:
 
 
 class Vcfa:
-    def __init__(self, host, org, refresh_token):
+    def __init__(self, host, org, refresh_token=None, user=None, password=None):
+        """A bearer from a session login as user@org when a user and password are given, else from the refresh
+        token. A refused login or a refused token ends the run with the server's status."""
         self.host = host
+        if user and password:
+            basic = base64.b64encode(f"{user}@{org}:{password}".encode()).decode()
+            req = urllib.request.Request(f"https://{host}/cloudapi/1.0.0/sessions", method="POST",
+                                         headers={"Authorization": f"Basic {basic}", "Accept": "application/json;version=9.1.0"})
+            with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                self.bearer = next(v for k, v in r.headers.items() if k.lower() == "x-vmware-vcloud-access-token")
+            return
         body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
         req = urllib.request.Request(
             f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
@@ -246,9 +258,11 @@ def main():
                          "nowhere, then delete them")
     args = ap.parse_args()
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = read_secret("VCFA_REFRESH_TOKEN_FILE")
+    user = os.environ.get("VCFA_USER")
+    password = read_secret("VCFA_PASSWORD_FILE") if user and os.environ.get("VCFA_PASSWORD_FILE") else None
+    refresh = None if password else read_secret("VCFA_REFRESH_TOKEN_FILE")
     out_dir = os.environ.get("OUT_DIR", ".")
-    c = Vcfa(host, org, refresh)
+    c = Vcfa(host, org, refresh, user, password)
     L = Labels()
     print("isolation.py: the assembled design, checked rather than described\n")
 
@@ -362,6 +376,32 @@ def main():
     print(f"\n  visibility floor: this identity sees {len(deps)} deployment(s) owned by {len(owners)} distinct "
           f"principal(s). Isolation is a property of principals below this role, not of the platform")
 
+    # ---- 5b. the action regime: which Day-2 action policies are in force, and whom they name
+    # The list answers summaries; each policy's members and actions are on its own record. Paged sorted (G-634).
+    st, pol = c.api("GET", "/policy/api/policies?size=200&sort=id,asc")
+    summaries = [p for p in ((pol.get("content") or []) if st == 200 and isinstance(pol, dict) else [])
+                 if "deployment.action" in (p.get("typeId") or "")]
+    regime = []
+    for p in summaries:
+        st_d, full = c.api("GET", f"/policy/api/policies/{p['id']}")
+        allowed = ((full or {}).get("definition") or {}).get("allowedActions") or [] if st_d == 200 else []
+        for a in allowed:
+            for auth in a.get("authorities") or []:
+                kind, _, name = auth.partition(":")
+                L.get("group" if kind == "GROUP" else "user", name.rstrip("@"))
+        regime.append({"scope": "project" if p.get("projectId") else "organization",
+                       "deploymentsInItsScope": sum(1 for d in deps if not p.get("projectId") or d.get("projectId") == p.get("projectId")),
+                       "enforcement": p.get("enforcementType"),
+                       "names": [{"kind": auth.partition(":")[0], "subject": L.get("group" if auth.startswith("GROUP:") else "user",
+                                                                                   auth.partition(":")[2].rstrip("@"))}
+                                 for a in allowed for auth in (a.get("authorities") or [])],
+                       "actions": "all" if any("*" in (a.get("actions") or []) for a in allowed)
+                                  else sorted({x for a in allowed for x in (a.get("actions") or [])})})
+    print(f"\n  action regime: {len(regime)} Day-2 action polic{'y' if len(regime) == 1 else 'ies'} in force, "
+          f"{sum(1 for r in regime if r['enforcement'] == 'HARD')} HARD; "
+          + "; ".join(f"{r['scope']} {r['enforcement']} naming {len(r['names'])} subject(s), actions {r['actions'] if r['actions'] == 'all' else len(r['actions'])}"
+                      for r in regime))
+
     # ---- 6. the silent no-op on the REST membership arrays
     ARRAYS = ("administrators", "users", "auditors", "advancedUsers")
     noop = None
@@ -401,7 +441,7 @@ def main():
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "roles": role_rows, "rolesSharingADescription": shared,
                "bindings": bindings, "bindingNameRuleHolds": all(rule_holds) if rule_holds else None,
-               "reviewKinds": review, "selfRules": rules_summary, "visibility": visibility,
+               "reviewKinds": review, "selfRules": rules_summary, "visibility": visibility, "actionRegime": regime,
                "membershipArrays": noop, "naming": naming}
     # Scrub the WHOLE serialized record, not field by field. A name registered anywhere can surface in a
     # message written by the platform (an authorization refusal quotes the calling user), and a per-field
@@ -423,8 +463,10 @@ def main():
                       f"this run did not re-probe it and has not erased it")
 
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
-    for secret in (c.bearer, refresh, host, org):
-        assert secret not in text, "an estate value reached the record"
+    # The signing-in user is not in this list: it may share a name with a product role ("admin"), and the
+    # labels below already replace a user wherever it is not the product's word.
+    for secret in (c.bearer, refresh, password, host, org):
+        assert not secret or secret not in text, "an estate value reached the record"
     # The scrub can fail the other way too: over-match and blank a word the product owns. A page-level check
     # cannot tell that from a sanitized name shown on purpose, but here the vocabulary is known, so assert it
     # survived. This is the check that would have caught a role rendered as {{user-3}}.

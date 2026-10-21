@@ -44,3 +44,66 @@ Five things in that output carry the chapter:
   `admin` bindings, `users` the `edit` bindings, `advancedUsers` the `edit_adv` bindings, and `auditors` the
   `view` bindings, which are empty here. The arrays are the authority projected, which is why a write to them
   persists nothing; the isolation-design companion's `isolation.py` sends that write and reads it back.
+
+## reprobe.py: the writes, re-asked on 9.1.1
+
+Three runs on 2026-10-21 against the same organization on VCF Automation 9.1.1.0100, on the operator's go, each on
+throwaway objects: `--probe-import <GROUP>` with a directory group that held no members, `--probe-project-scope`, and
+`--probe-namespace`. The test users are three directory users bound edit (through a group), edit_adv and admin in one
+project; the foreign project is one the administrator is not bound in. Every password came from a file of mode 0600.
+The three runs are shown in that order. One line is marked: the run printed the readiness wait with an HTTP label,
+which the script has since corrected to seconds.
+
+```text
+G-094, the group import:
+  import under the automation grant:   the refresh token was refused at /oauth (HTTP 400)
+  import under a session login:        HTTP 201
+  read back HTTP 200, members 0; deleted HTTP 204
+  absent afterwards: True
+
+  wrote reprobe.json (statuses, counts and scrubbed messages)
+
+G-126, a project administrator and projects:
+  access reviews as the project administrator: {'create any': True, 'update the foreign project': True, 'delete the foreign project': True}
+  project create:                      HTTP 403
+  update of the foreign project, dry:  HTTP 403
+  delete of the foreign project, dry:  HTTP 404
+  the foreign project unchanged afterwards: True
+
+  wrote reprobe.json (statuses, counts and scrubbed messages)
+
+G-127 and the management ladder, in a throwaway namespace:
+  conditions: {'class_bindings_in_project': 0, 'classes_listed_by_org_admin': 3, 'class_list_as_project_admin': 403}
+  namespace create as edit_adv:        HTTP 403
+  namespace create as admin:           HTTP 400
+  namespace create as the org admin:   HTTP 200
+    admin can read after_s             11 s   (printed as HTTP 11 by that run)
+    advanced creates its own           HTTP 201
+    admin creates its own              HTTP 201
+    advanced edits the admin's         HTTP 200
+    admin edits the advanced's         HTTP 200
+    member lists them                  HTTP 403
+    advanced deletes the admin's       HTTP 200
+    admin deletes the advanced's       HTTP 200
+    the advanced's afterwards          HTTP 404
+    the admin's afterwards             HTTP 404
+  teardown: {'namespace 1': 60}; probe namespaces left in the project: 0
+
+  wrote reprobe.json (statuses, counts and scrubbed messages)
+```
+
+What the record holds, and what it says:
+
+- **The import works under a session login on 9.1.1: 201, read back, removed, absent.** The automation-grant leg
+  was not asked: the stored refresh token was refused at the token endpoint, so the 403 on that path is the
+  2026-08-07 reading on 9.1, not a 9.1.1 one.
+- **An access review overclaims for a project administrator.** It answers allowed for creating any project and for
+  updating and deleting one the administrator does not belong to; the create is refused (403), the update of the
+  spec is refused (403), and the delete answers 404, because that project is not visible to it. An update outside
+  the spec is refused before any of that, with "Only project spec can be updated".
+- **The namespace's workload plane has no per-user ownership.** The edit_adv member and the administrator each
+  created a ConfigMap, edited the other's and deleted it; the edit member was refused the list.
+- **A namespace create is refused by role for edit_adv (403) and by class for the administrator (400, "class not
+  found") in a project with no class binding, where the administrator also could not list the cluster's classes.**
+  The organization administrator's create, with the same spec, succeeded. The record states the conditions beside
+  the refusal and does not claim which of them caused it.

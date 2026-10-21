@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T07:30:02Z",
+ "captured_utc": "2026-10-21T19:03:07Z",
  "roles": [
   {
    "name": "view",
@@ -28,7 +28,7 @@
  ],
  "bindings": [
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "role": "edit",
    "subjectKind": "Group",
    "subjectEndsWithAt": true,
@@ -36,7 +36,7 @@
    "nameFollowsRule": true
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "role": "admin",
    "subjectKind": "Group",
    "subjectEndsWithAt": true,
@@ -44,7 +44,7 @@
    "nameFollowsRule": true
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "role": "edit_adv",
    "subjectKind": "User",
    "subjectEndsWithAt": false,
@@ -52,7 +52,7 @@
    "nameFollowsRule": true
   },
   {
-   "project": "{{{{project-2}}}}",
+   "project": "{{project-1}}",
    "role": "admin",
    "subjectKind": "User",
    "subjectEndsWithAt": false,
@@ -108,15 +108,15 @@
   }
  ],
  "selfRules": {
-  "rules": 145,
+  "rules": 153,
   "incomplete": false,
   "byGroup": {
-   "vpc.nsx.vmware.com": 156,
+   "vpc.nsx.vmware.com": 164,
    "infrastructure.cci.vmware.com": 34,
+   "topology.cci.vmware.com": 12,
    "catalog.cci.vmware.com": 12,
    "apiextensions.k8s.io": 9,
    "blueprint.cci.vmware.com": 9,
-   "topology.cci.vmware.com": 8,
    "dataprotection.management.kubernetes.vmware.com": 6,
    "authorization.cci.vmware.com": 6,
    "avi.vmware.com": 5,
@@ -124,11 +124,51 @@
   }
  },
  "visibility": {
-  "deploymentsVisible": 8,
-  "distinctOwners": 4,
+  "deploymentsVisible": 4,
+  "distinctOwners": 3,
   "projectsSpanned": 1,
-  "largestOwnerShare": 3
+  "largestOwnerShare": 2
  },
+ "actionRegime": [
+  {
+   "scope": "organization",
+   "deploymentsInItsScope": 4,
+   "enforcement": "HARD",
+   "names": [
+    {
+     "kind": "GROUP",
+     "subject": "{{group-3}}"
+    }
+   ],
+   "actions": "all"
+  },
+  {
+   "scope": "project",
+   "deploymentsInItsScope": 4,
+   "enforcement": "HARD",
+   "names": [
+    {
+     "kind": "GROUP",
+     "subject": "{{group-4}}"
+    }
+   ],
+   "actions": "all"
+  },
+  {
+   "scope": "project",
+   "deploymentsInItsScope": 4,
+   "enforcement": "HARD",
+   "names": [
+    {
+     "kind": "GROUP",
+     "subject": "{{group-3}}"
+    }
+   ],
+   "actions": [
+    "CCI.Supervisor.Resource.VirtualMachine.Add.Disk"
+   ]
+  }
+ ],
  "membershipArrays": {
   "patchStatus": 200,
   "persisted": false,

@@ -15,7 +15,9 @@ Subcommands:
   flip-on  - create the HARD policy allowing all actions only for the operators group
   flip-off - delete that policy
 
-Configuration is environment-only; nothing secret touches disk:
+Configuration is environment-only; each password comes from a file of mode 0600, and a file open to
+group or other is refused before it is read. `matrix --record matrix.json` also writes the matrix with
+the actors named by role, never by user, and no deployment id:
   VCFA_HOST              VCF Automation FQDN
   VCFA_ORG               organization name
   VCFA_ORG_ID            organization id, bare UUID, not the urn: form (flip-on needs it)
@@ -24,10 +26,11 @@ Configuration is environment-only; nothing secret touches disk:
   VCFA_CATALOG_ITEM      catalog item name (default: isolation-proof)
   VCFA_TEST_USERS        comma list (default: user1,user2,user3,user4, whose roles
                          mirror manifests/10-rolebindings.yaml: edit, edit, edit_adv, admin)
-  VCFA_TEST_PASSWORD     the test users' shared password
+  VCFA_TEST_PASSWORD_FILE the test users' shared password, in a file of mode 0600
+                         (VCFA_TEST_PASSWORD, the value itself, is still read when no file is named)
   VCFA_OPERATOR_USER     a member of the operators group; runs flip-on/flip-off and
                          appears as the matrix's last row (optional for matrix)
-  VCFA_OPERATOR_PASSWORD the operator's password
+  VCFA_OPERATOR_PASSWORD_FILE the operator's password, in a file of mode 0600 (or VCFA_OPERATOR_PASSWORD)
   VCFA_OPERATORS_GROUP   the group the flip policy allows (for example: Platform Operators)
   VCFA_INSECURE          set to 1 only for estates on a self-signed CA
 
@@ -42,7 +45,9 @@ import argparse
 import base64
 import json
 import os
+import re
 import ssl
+import time
 import urllib.error
 import urllib.request
 
@@ -53,9 +58,24 @@ PROJECT_ID = os.environ.get("VCFA_PROJECT_ID")
 NS = os.environ.get("VCFA_NAMESPACE")
 ITEM = os.environ.get("VCFA_CATALOG_ITEM", "isolation-proof")
 USERS = [u.strip() for u in os.environ.get("VCFA_TEST_USERS", "user1,user2,user3,user4").split(",") if u.strip()]
-TEST_PASSWORD = os.environ.get("VCFA_TEST_PASSWORD")
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    A file open to group or other is refused before it is read; the refusal names the variable and the fix."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
+TEST_PASSWORD = secret("VCFA_TEST_PASSWORD")
 OPERATOR_USER = os.environ.get("VCFA_OPERATOR_USER")
-OPERATOR_PASSWORD = os.environ.get("VCFA_OPERATOR_PASSWORD")
+OPERATOR_PASSWORD = secret("VCFA_OPERATOR_PASSWORD")
 OPERATORS_GROUP = os.environ.get("VCFA_OPERATORS_GROUP")
 
 CLOUDAPI_ACCEPT = "application/json;version=9.1.0"
@@ -156,13 +176,13 @@ def create_policy(operator_token):
 
 
 def cmd_login():
-    _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG, "VCFA_TEST_PASSWORD": TEST_PASSWORD})
+    _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG, "VCFA_TEST_PASSWORD_FILE": TEST_PASSWORD})
     for u in USERS:
         print(f"[login] {u} role={ROLE[u]:16s} whoami={whoami(login(u, TEST_PASSWORD))}")
 
 
 def cmd_deploy():
-    _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG, "VCFA_TEST_PASSWORD": TEST_PASSWORD,
+    _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG, "VCFA_TEST_PASSWORD_FILE": TEST_PASSWORD,
               "VCFA_PROJECT_ID": PROJECT_ID, "VCFA_NAMESPACE": NS})
     os.makedirs(CAP, exist_ok=True)
     out = {}
@@ -185,8 +205,8 @@ def _cell(tok, dep):
     return f"HTTP{st}"
 
 
-def cmd_matrix():
-    _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG, "VCFA_TEST_PASSWORD": TEST_PASSWORD})
+def cmd_matrix(record=None):
+    _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG, "VCFA_TEST_PASSWORD_FILE": TEST_PASSWORD})
     deps = json.load(open(DEPS_FILE))
     tg = [(a, deps[a]["owner"], deps[a]["id"]) for a in ("alpha", "beta") if deps[a]["id"]]
     print("targets: " + ", ".join(f"{a}(owner={o})" for a, o, _ in tg))
@@ -195,13 +215,39 @@ def cmd_matrix():
     rows = [(u, ROLE[u], login(u, TEST_PASSWORD)) for u in USERS]
     if OPERATOR_USER and OPERATOR_PASSWORD:
         rows.append((OPERATOR_USER, OPERATORS_GROUP or "operator", operator_login()))
+    table = []
     for name, role, tok in rows:
-        print(f"{name:12s} {role:18s} | " + " | ".join(_cell(tok, i) for _a, _o, i in tg))
+        cells = [_cell(tok, i) for _a, _o, i in tg]
+        table.append((name, role, cells))
+        print(f"{name:12s} {role:18s} | " + " | ".join(cells))
+    if record:
+        write_matrix(record, tg, table)
+
+
+def write_matrix(path, tg, table):
+    """The matrix with every actor named by its role and every target by its owner's role: no user name, no
+    deployment id. The same two edit users become edit-1 and edit-2, in the order the run took them."""
+    roles = set(ROLE.values())
+    kind = {name: (role if role in roles else "operator") for name, role, _ in table}   # a group name is the estate's
+    seen, label = {}, {}
+    for name, _, _ in table:
+        r = kind[name]
+        seen[r] = seen.get(r, 0) + 1
+        label[name] = r if list(kind.values()).count(r) == 1 else f"{r}-{seen[r]}"
+    rec = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+           "targets": {a: f"owned by {label.get(o, ROLE.get(o, 'a member'))}" for a, o, _ in tg},
+           "rows": [{"actor": label[name], "cells": dict(zip([a for a, _, _ in tg], cells))} for name, _, cells in table]}
+    text = json.dumps(rec, indent=1)
+    for real in [n for n, _, _ in table] + [i for _, _, i in tg] + [ORG, HOST, OPERATORS_GROUP]:
+        if real and real not in ROLE.values() and re.search(r"(?<![\w.-])" + re.escape(real) + r"(?![\w.-])", text):
+            raise SystemExit("FATAL: a user name, an id or an estate value reached the matrix record; not writing it")
+    open(path, "w", encoding="utf-8").write(text + "\n")
+    print(f"\nwrote {path}: the matrix by role, no user name and no id")
 
 
 def cmd_flip_on():
     _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG, "VCFA_ORG_ID": ORG_ID, "VCFA_PROJECT_ID": PROJECT_ID,
-              "VCFA_OPERATOR_USER": OPERATOR_USER, "VCFA_OPERATOR_PASSWORD": OPERATOR_PASSWORD,
+              "VCFA_OPERATOR_USER": OPERATOR_USER, "VCFA_OPERATOR_PASSWORD_FILE": OPERATOR_PASSWORD,
               "VCFA_OPERATORS_GROUP": OPERATORS_GROUP})
     os.makedirs(CAP, exist_ok=True)
     st, pid = create_policy(operator_login())
@@ -213,7 +259,7 @@ def cmd_flip_on():
 
 def cmd_flip_off():
     _require({"VCFA_HOST": HOST, "VCFA_ORG": ORG,
-              "VCFA_OPERATOR_USER": OPERATOR_USER, "VCFA_OPERATOR_PASSWORD": OPERATOR_PASSWORD})
+              "VCFA_OPERATOR_USER": OPERATOR_USER, "VCFA_OPERATOR_PASSWORD_FILE": OPERATOR_PASSWORD})
     pid = open(POLICY_FILE).read().strip() if os.path.exists(POLICY_FILE) else ""
     if not pid:
         print("flip-off: no policy id recorded")
@@ -225,7 +271,10 @@ def cmd_flip_off():
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["login", "deploy", "matrix", "flip-on", "flip-off"])
+    ap.add_argument("--record", help="with matrix: write the matrix by role to this file")
     a = ap.parse_args()
-    dispatch = {"login": cmd_login, "deploy": cmd_deploy, "matrix": cmd_matrix,
+    if a.record and a.cmd != "matrix":
+        ap.error("--record belongs to matrix")
+    dispatch = {"login": cmd_login, "deploy": cmd_deploy, "matrix": lambda: cmd_matrix(a.record),
                 "flip-on": cmd_flip_on, "flip-off": cmd_flip_off}
     dispatch[a.cmd]()
