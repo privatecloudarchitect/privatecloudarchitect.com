@@ -1,0 +1,196 @@
+{
+  "source": "arbitration",
+  "window_hours": 24,
+  "total_vms": 7,
+  "tag_ready_vms": 5,
+  "held_for_review": 0,
+  "address_only": 1,
+  "recommended_count": 4,
+  "confirm_count": 9,
+  "category_distribution": {
+    "app": 5,
+    "env": 5,
+    "tier": 3
+  },
+  "recommendations": [
+    {
+      "vm": "mon-01",
+      "namespace": null,
+      "category": "app",
+      "value": "monitoring",
+      "confidence": "high",
+      "recommended": true,
+      "lenses": [
+        "confirmed"
+      ],
+      "justification": "app from confirmed; in inventory but no flows observed in the window | env=prod | zone=internal | confirmed: app=monitoring, env=prod"
+    },
+    {
+      "vm": "mon-01",
+      "namespace": null,
+      "category": "env",
+      "value": "prod",
+      "confidence": "high",
+      "recommended": true,
+      "lenses": [
+        "confirmed"
+      ],
+      "justification": "env from confirmed; in inventory but no flows observed in the window | env=prod | zone=internal | confirmed: app=monitoring, env=prod"
+    },
+    {
+      "vm": "shop-web-01",
+      "namespace": null,
+      "category": "app",
+      "value": "shop",
+      "confidence": "high",
+      "recommended": true,
+      "lenses": [
+        "declared",
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "justification": "app from declared; declared app 'shop' | env=prod | zone=dmz"
+    },
+    {
+      "vm": "shop-web-01",
+      "namespace": null,
+      "category": "tier",
+      "value": "presentation",
+      "confidence": "high",
+      "recommended": true,
+      "lenses": [
+        "declared",
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "justification": "tier from declared; declared app 'shop' | env=prod | zone=dmz"
+    },
+    {
+      "vm": "order-app-01",
+      "namespace": null,
+      "category": "app",
+      "value": "order",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "flow",
+        "metadata"
+      ],
+      "justification": "app from derived; app 'order' / unknown tier | env=prod | zone=internal"
+    },
+    {
+      "vm": "order-app-01",
+      "namespace": null,
+      "category": "env",
+      "value": "prod",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "flow",
+        "metadata"
+      ],
+      "justification": "env from metadata; app 'order' / unknown tier | env=prod | zone=internal"
+    },
+    {
+      "vm": "order-db-01",
+      "namespace": null,
+      "category": "app",
+      "value": "order",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "confirmed",
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "justification": "app from derived; app 'order' / data tier | env=prod | zone=internal | confirmed: zone=internal, accepted"
+    },
+    {
+      "vm": "order-db-01",
+      "namespace": null,
+      "category": "tier",
+      "value": "data",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "confirmed",
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "justification": "tier from derived; app 'order' / data tier | env=prod | zone=internal | confirmed: zone=internal, accepted"
+    },
+    {
+      "vm": "order-db-01",
+      "namespace": null,
+      "category": "env",
+      "value": "prod",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "confirmed",
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "justification": "env from metadata; app 'order' / data tier | env=prod | zone=internal | confirmed: zone=internal, accepted"
+    },
+    {
+      "vm": "shop-db-01",
+      "namespace": null,
+      "category": "app",
+      "value": "shop",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "flow",
+        "metadata"
+      ],
+      "justification": "app from derived; app 'shop' / data tier | env=prod | zone=internal"
+    },
+    {
+      "vm": "shop-db-01",
+      "namespace": null,
+      "category": "tier",
+      "value": "data",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "flow",
+        "metadata"
+      ],
+      "justification": "tier from derived; app 'shop' / data tier | env=prod | zone=internal"
+    },
+    {
+      "vm": "shop-db-01",
+      "namespace": null,
+      "category": "env",
+      "value": "prod",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "flow",
+        "metadata"
+      ],
+      "justification": "env from metadata; app 'shop' / data tier | env=prod | zone=internal"
+    },
+    {
+      "vm": "shop-web-01",
+      "namespace": null,
+      "category": "env",
+      "value": "prod",
+      "confidence": "medium",
+      "recommended": false,
+      "lenses": [
+        "declared",
+        "flow",
+        "metadata",
+        "zone"
+      ],
+      "justification": "env from declared; declared app 'shop' | env=prod | zone=dmz"
+    }
+  ]
+}

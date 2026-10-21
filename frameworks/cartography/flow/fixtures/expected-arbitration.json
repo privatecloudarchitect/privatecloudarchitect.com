@@ -32,7 +32,10 @@
         "data-tier workload in dmz zone, verify exposure is intended"
       ],
       "basis": "app 'order' / data tier | env=prod | zone=dmz",
-      "app_source": "derived"
+      "app_source": "derived",
+      "tier_source": "derived",
+      "env_source": "metadata",
+      "resolved": []
     },
     {
       "vm": "mon-01",
@@ -46,7 +49,10 @@
       "lenses": [],
       "conflicts": [],
       "basis": "in inventory but no flows observed in the window | env=unknown | zone=internal",
-      "app_source": null
+      "app_source": null,
+      "tier_source": null,
+      "env_source": null,
+      "resolved": []
     },
     {
       "vm": "dns-01",
@@ -62,7 +68,10 @@
       ],
       "conflicts": [],
       "basis": "shared-service, 4 distinct sources | env=unknown | zone=unknown",
-      "app_source": null
+      "app_source": null,
+      "tier_source": null,
+      "env_source": null,
+      "resolved": []
     },
     {
       "vm": "order-app-01",
@@ -79,7 +88,10 @@
       ],
       "conflicts": [],
       "basis": "app 'order' / unknown tier | env=prod | zone=internal",
-      "app_source": "derived"
+      "app_source": "derived",
+      "tier_source": "derived",
+      "env_source": "metadata",
+      "resolved": []
     },
     {
       "vm": "shop-db-01",
@@ -96,7 +108,10 @@
       ],
       "conflicts": [],
       "basis": "app 'shop' / data tier | env=prod | zone=internal",
-      "app_source": "derived"
+      "app_source": "derived",
+      "tier_source": "derived",
+      "env_source": "metadata",
+      "resolved": []
     },
     {
       "vm": "shop-web-01",
@@ -115,7 +130,10 @@
       ],
       "conflicts": [],
       "basis": "declared app 'shop' | env=prod | zone=dmz",
-      "app_source": "declared"
+      "app_source": "declared",
+      "tier_source": "declared",
+      "env_source": "declared",
+      "resolved": []
     },
     {
       "vm": "10.0.0.11",
@@ -132,7 +150,10 @@
       ],
       "conflicts": [],
       "basis": "identified VCF component (esxi-host), 5 distinct sources | env=unknown | zone=unknown",
-      "app_source": null
+      "app_source": null,
+      "tier_source": null,
+      "env_source": null,
+      "resolved": []
     }
   ]
 }

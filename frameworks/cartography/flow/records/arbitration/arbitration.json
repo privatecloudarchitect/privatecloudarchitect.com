@@ -1,0 +1,55 @@
+{
+ "captured_utc": "2026-10-21T17:04:58Z",
+ "window_hours": 168,
+ "search_cap_hit": false,
+ "total_vms": 110,
+ "identity": {
+  "typed": 27,
+  "roles": {
+   "esxi-host": 7,
+   "nsx-edge": 2,
+   "nsx-manager": 2,
+   "nsx-transport-node": 13,
+   "vcenter": 3
+  }
+ },
+ "roles": {
+  "application": 21,
+  "isolated": 52,
+  "shared-service": 37
+ },
+ "confidence": {
+  "high": 28,
+  "low": 4,
+  "medium": 38,
+  "none": 40
+ },
+ "lenses": {
+  "declared": 9,
+  "flow": 55,
+  "identity": 18,
+  "metadata": 12,
+  "zone": 7
+ },
+ "needs_review": 44,
+ "conflicts": {
+  "ambiguous-fan-in": 4
+ },
+ "declared_vms": 9,
+ "confirmations": {
+  "applied": 0,
+  "stale": 0
+ },
+ "handoff": {
+  "tag_ready_vms": 23,
+  "held_for_review": 44,
+  "address_only": 26,
+  "recommended_count": 6,
+  "confirm_count": 36,
+  "category_distribution": {
+   "app": 17,
+   "env": 12,
+   "tier": 13
+  }
+ }
+}

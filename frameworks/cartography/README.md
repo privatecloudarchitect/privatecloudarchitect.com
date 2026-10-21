@@ -123,6 +123,6 @@ The flow lens (east-west traffic analysis: shared-services extraction and bounda
 clustering) now ships alongside this one, at [`flow/`](flow/). Where this supervisor lens reads a
 classification a workload declares, the flow lens infers one from behaviour: the two halves of the
 same framework. The fuller triangulation (the environment and zone overlay, the identity anchor, and
-the arbitration that fuses the lenses into one confidence-scored classification) remains in the
-platform's `pca vcf-opsnet discover-*` commands, the next slice. Nothing in this slice depends on the
-flow lens, and everything this slice writes is exactly what that lens corroborates.
+the arbitration that fuses the lenses into one confidence-scored classification) ships there too, as
+`flow/discover_arbitration.py`, which reads this lens's export (`--declared recs.json`) as its
+authoritative lens. Nothing in this lens depends on the flow lens.

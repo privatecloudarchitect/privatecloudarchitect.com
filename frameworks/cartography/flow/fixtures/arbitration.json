@@ -1,5 +1,5 @@
 {
-  "_comment": "Synthetic input for the arbitration self-test. Exercises: the identity anchor (an ESXi host typed by vRNI, corroborating a shared-service verdict), a DNS shared service (flow only), a clean multi-tier app confirmed by a declared label (high confidence across four lenses), an exposed database that trips the data-tier-in-dmz conflict (review queue), and an isolated management VM. Generic names + documentation IPs; no estate specifics.",
+  "_comment": "Synthetic input for the arbitration self-test. Exercises: the identity anchor (an ESXi host typed by vRNI, corroborating a shared-service verdict), a DNS shared service (flow only), a clean multi-tier app confirmed by a declared label (high confidence across four lenses), an exposed database that trips the data-tier-in-dmz conflict (review queue), and an isolated management VM. The confirmations exercise the hand-off: the exposed database accepted with its zone set by a person, the isolated VM given an application and an environment, and one line for a workload the run does not see. Generic names + documentation IPs; no estate specifics.",
   "hours": 24,
   "min_fan_in": 3,
   "min_edge_weight": 1,
@@ -31,5 +31,6 @@
   ],
   "declared": [
     {"vm": "shop-web-01", "app": "shop", "tier": "web", "env": "prod"}
-  ]
+  ],
+  "confirmations": ["order-db-01 zone internal", "order-db-01 accept", "mon-01 app monitoring", "mon-01 env prod", "retired-vm-01 accept"]
 }

@@ -29,37 +29,43 @@ lives in the chapters; this is the structure you can hold in your head.
 
 | Lens | Reads | Says | Certainty |
 |---|---|---|---|
-| **Flow** (VCF Operations for Networks) | east-west traffic: source, destination, port, volume | dependency edges and fan-in | traffic, not identity |
-| **Process** (Operations Service Discovery) | listening services inside the guest | what an endpoint *is* | identity, where VMware Tools is current |
-| **Metadata + security** (vCenter, NSX) | names, placement, groups, firewall rules | prior human intent | asserted, and often stale |
 | **Declared** (Supervisor labels) | the app, tier, and function a Kubernetes-managed workload states about itself | an authoritative self-declaration | certain, where it exists |
+| **Identity** (VCF Operations for Networks inventory) | the hosts, vCenter, NSX managers, edges and transport nodes Operations for Networks types, with their addresses | that a flow endpoint *is* VCF infrastructure | certain, for infrastructure |
+| **Flow** (VCF Operations for Networks) | east-west traffic: source, destination, port, volume | dependency edges and fan-in | traffic, not identity |
+| **Metadata** (as Operations for Networks collects it) | names, folders, resource pools, segments, security groups and tags | environment and security zone, a prior team's intent | asserted, and often stale |
+
+These are the four lenses the scripts read. A fifth, the services listening inside a guest as VCF Operations
+discovers them, would name what an endpoint runs; no script here reads it.
 
 The **flow lens** is the primary instrument: it is the only one that shows the real east-west
 dependency graph, and it is the evidence for both boundaries and fan-in. The **declared lens** is the
 cleanest to adopt first, because its source is authoritative rather than inferred. This repo ships both:
-the supervisor lens at the root, and the flow lens's Phase 4-5 core in [`flow/`](flow/).
+the supervisor lens at the root, and the flow lens, Phases 4 through 7, in [`flow/`](flow/).
 
 ## The ten phases
 
 | Phase | Goal | Primary lens | In this repo |
 |---|---|---|---|
 | 0 · Frame | decide the target taxonomy before you look at a single flow | a decision, ratified with the estate owner | `taxonomy.yaml` (the four discovery-owned axes) |
-| 1 · Substrate | turn the lenses on, prove they flow, start the accumulation window | flow + process | operator step |
-| 2 · Census | enumerate everything, so coverage has a denominator | inventory | operator step |
+| 1 · Substrate | turn the lenses on, prove they flow, start the accumulation window | flow + metadata | operator step |
+| 2 · Census | enumerate everything, so coverage has a denominator | inventory | operator step; the coverage read counts only the workloads the classifier walks |
 | 3 · Multi-modal | gather raw evidence from every lens, conclude nothing yet | all four | **the supervisor lens reads the declared column** |
 | 4 · Shared services | quarantine high-fan-in common services before boundary math | flow + identity | **the flow lens, [`flow/`](flow/)** |
 | 5 · Boundaries + tiers | cluster the shared-service-free graph into apps, assign tiers | flow | **the flow lens, [`flow/`](flow/)** |
 | 6 · Env + zone | overlay environment and security zone, orthogonal to identity | metadata | **the flow lens, [`flow/`](flow/)**; the supervisor lens observes environment |
 | 7 · Arbitrate | collapse the lenses into one confidence-scored classification per workload | all four | **the flow lens, [`flow/`](flow/)** |
-| 8 · Persist | write the confident classifications back as durable, governed tags | the write | **the supervisor lens writes back today** |
-| 9 · Govern | re-run on a cadence; drive the unclassified backlog to zero and hold | census delta | operator cadence |
+| 8 · Persist | write the confident classifications back as durable, governed tags | the write | **the supervisor lens's write-back**, from the classifier's export or the arbitration's hand-off |
+| 9 · Govern | re-run on a cadence; drive the unclassified backlog to zero and hold | census delta | **`writeback_tags.py --coverage`** counts the backlog; the cadence is yours |
 
 Read the columns honestly: the supervisor lens covers the declared evidence of Phase 3 and the write-back
 of Phase 8; the flow lens in [`flow/`](flow/) now covers Phases 4 through 7 end to end: shared-services extraction
 with the identity anchor, boundary-plus-tier clustering, the environment and zone overlay, and the
-arbitration that fuses them into one confidence-scored classification per VM. Nothing of the read-only
-discovery pipeline is left in the CLI. Phases 0, 1, 2, and 9 are operator steps the method
-frames but no tool performs for you.
+arbitration that fuses them into one confidence-scored classification per VM. Phase 9's count ships in the
+write-back (`--coverage`), over the workloads the classifier walks. The substrate of Phase 1, a census of every
+VM for Phase 2 and the cadence of Phase 9 are operator steps the method frames but no tool performs for you. The
+arbitration hands the rows that need no review to the write-back in the classifier's schema
+(`--export-recommendations`), and a person's decisions on its review queue live in a confirmations file
+(`--confirmations`) that every later run reads.
 
 ## The target taxonomy
 
@@ -117,8 +123,9 @@ point tuning, micro-segmentation, and capacity planning all inherit a map they c
   clusters the remaining VM-to-VM graph into tiered candidate applications (Phases 4-5).
   `discover_arbitration.py` runs the whole pipeline through Phase 7: it adds the identity anchor, the
   environment and zone overlay, and the arbitration that fuses every lens into one confidence-scored
-  classification per VM, with the conflicts a human must confirm. Read-only, each with an offline
-  `--self-test`.
+  classification per VM, with the conflicts a human must confirm; `--confirmations` keeps a person's decisions
+  and `--export-recommendations` hands the rows that need no review to the write-back. Read-only, each with an
+  offline `--self-test`.
 
 Every claim on the site carries an evidence tier, defined on the [method page](https://privatecloudarchitect.com/method).
 This repo is the `repo` tier: what you can run and read for yourself.

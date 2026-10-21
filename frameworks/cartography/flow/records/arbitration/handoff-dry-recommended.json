@@ -1,0 +1,29 @@
+{
+ "captured_utc": "2026-10-21T17:06:17Z",
+ "verb": "write-back",
+ "execute": false,
+ "approved": 6,
+ "assignedAs": "vCenter identity",
+ "define": [
+  {
+   "category": "identity.app",
+   "action": "exists",
+   "valuesCreated": 0,
+   "valuesExisting": 0
+  },
+  {
+   "category": "identity.app-layer",
+   "action": "would-create",
+   "valuesCreated": 3,
+   "valuesExisting": 0
+  }
+ ],
+ "vms": 3,
+ "skippedVms": 0,
+ "decisions": {
+  "attach": 3,
+  "already-set": 3
+ },
+ "appliedVerified": 0,
+ "failedVerification": 0
+}
