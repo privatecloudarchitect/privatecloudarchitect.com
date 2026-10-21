@@ -33,6 +33,7 @@ Operations' unified identity, so you need nothing but an account.
 ```bash
 python3 discover_flows.py                                  # Phases 4-5: shared services + boundaries
 python3 discover_flows.py --hours 168 --export findings.json
+python3 discover_flows.py --hours 168 --record flows.json        # counts only: no name or address
 
 python3 discover_arbitration.py                            # Phases 4-7: one scored classification per VM
 python3 discover_arbitration.py --declared recs.json       # fuse the supervisor lens's export
@@ -47,6 +48,11 @@ the VM-to-VM graph decomposes into once the shared services are quarantined, eac
 `app-cluster-N` when there is none). Flows are a sampled behavioural signal: budget a full business
 cycle, two to four weeks, before you trust a "no dependency" conclusion, because absence of a flow is
 only evidence once you have watched long enough for it to have appeared.
+
+The findings file names workloads and addresses, so it stays with you. `--record` writes the run in counts and
+protocol vocabulary instead: the window, whether the search cap was hit, the flow totals, each quarantined
+service's fan-in and ports, and the boundaries' sizes and tiers; the script refuses to write one in which a name
+or an address survived. `records/` holds that record from the reference estate and what the run printed.
 
 ## The offline self-test
 

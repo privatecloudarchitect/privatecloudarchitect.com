@@ -1,0 +1,460 @@
+{
+ "captured_utc": "2026-10-21T16:01:28Z",
+ "window_hours": 168,
+ "total_flows": 1851,
+ "projected_flows": 1330,
+ "distinct_sources": 155,
+ "distinct_destinations": 579,
+ "search_cap_hit": false,
+ "shared_services": [
+  {
+   "fan_in": 89,
+   "well_known": [
+    "53/DNS",
+    "88/Kerberos",
+    "389/LDAP",
+    "443/HTTPS",
+    "636/LDAPS",
+    "3268/GC-LDAP",
+    "3389/RDP"
+   ],
+   "ports": [
+    53,
+    88,
+    389,
+    443,
+    636,
+    3268,
+    3389,
+    5986,
+    10001
+   ]
+  },
+  {
+   "fan_in": 24,
+   "well_known": [
+    "443/HTTPS",
+    "514/syslog",
+    "1514/syslog-tls"
+   ],
+   "ports": [
+    443,
+    514,
+    1514,
+    9543
+   ]
+  },
+  {
+   "fan_in": 19,
+   "well_known": [
+    "5353/mDNS"
+   ],
+   "ports": [
+    5353
+   ]
+  },
+  {
+   "fan_in": 15,
+   "well_known": [
+    "67/DHCP"
+   ],
+   "ports": [
+    67,
+    10001,
+    30008,
+    38899
+   ]
+  },
+  {
+   "fan_in": 12,
+   "well_known": [
+    "443/HTTPS",
+    "4505/Salt-pub",
+    "4506/Salt-ret"
+   ],
+   "ports": [
+    443,
+    4505,
+    4506,
+    9543
+   ]
+  },
+  {
+   "fan_in": 11,
+   "well_known": [
+    "443/HTTPS",
+    "2055/IPFIX"
+   ],
+   "ports": [
+    443,
+    2055
+   ]
+  },
+  {
+   "fan_in": 8,
+   "well_known": [
+    "443/HTTPS",
+    "902/ESXi-NFC",
+    "1443/vSAN-SPS"
+   ],
+   "ports": [
+    443,
+    902,
+    1443,
+    8182
+   ]
+  },
+  {
+   "fan_in": 8,
+   "well_known": [
+    "443/HTTPS",
+    "1234/NSX-RPC",
+    "1235/NSX-CCP"
+   ],
+   "ports": [
+    443,
+    1234,
+    1235
+   ]
+  },
+  {
+   "fan_in": 7,
+   "well_known": [
+    "443/HTTPS",
+    "902/ESXi-NFC",
+    "1443/vSAN-SPS"
+   ],
+   "ports": [
+    443,
+    902,
+    1443,
+    8182
+   ]
+  },
+  {
+   "fan_in": 7,
+   "well_known": [
+    "443/HTTPS",
+    "902/ESXi-NFC",
+    "1443/vSAN-SPS"
+   ],
+   "ports": [
+    443,
+    902,
+    1443,
+    8182
+   ]
+  },
+  {
+   "fan_in": 7,
+   "well_known": [
+    "2049/NFS"
+   ],
+   "ports": [
+    2049
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "443/HTTPS",
+    "1234/NSX-RPC",
+    "1235/NSX-CCP"
+   ],
+   "ports": [
+    443,
+    1234,
+    1235
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "443/HTTPS",
+    "902/ESXi-NFC"
+   ],
+   "ports": [
+    443,
+    902
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "22/SSH",
+    "123/NTP",
+    "443/HTTPS",
+    "8443/HTTPS-alt"
+   ],
+   "ports": [
+    22,
+    123,
+    443,
+    8443
+   ]
+  },
+  {
+   "fan_in": 6,
+   "well_known": [
+    "443/HTTPS",
+    "902/ESXi-NFC"
+   ],
+   "ports": [
+    443,
+    902
+   ]
+  },
+  {
+   "fan_in": 5,
+   "well_known": [
+    "443/HTTPS",
+    "902/ESXi-NFC",
+    "1443/vSAN-SPS"
+   ],
+   "ports": [
+    443,
+    902,
+    1443,
+    8182
+   ]
+  },
+  {
+   "fan_in": 5,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 5,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 5,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 5,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 5,
+   "well_known": [
+    "123/NTP"
+   ],
+   "ports": [
+    123
+   ]
+  },
+  {
+   "fan_in": 5,
+   "well_known": [
+    "443/HTTPS",
+    "902/ESXi-NFC"
+   ],
+   "ports": [
+    443,
+    902,
+    8182
+   ]
+  }
+ ],
+ "review": [
+  {
+   "fan_in": 16,
+   "ports": [
+    22,
+    443,
+    1025,
+    1645,
+    1701,
+    1830,
+    2171,
+    3306,
+    5722,
+    8008,
+    8080
+   ]
+  },
+  {
+   "fan_in": 15,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 9,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 8,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 8,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 7,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 7,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 6,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 6,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 6,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 6,
+   "ports": [
+    80
+   ]
+  },
+  {
+   "fan_in": 6,
+   "ports": [
+    80
+   ]
+  },
+  {
+   "fan_in": 6,
+   "ports": [
+    80
+   ]
+  },
+  {
+   "fan_in": 5,
+   "ports": [
+    443,
+    6443
+   ]
+  },
+  {
+   "fan_in": 5,
+   "ports": [
+    10093
+   ]
+  },
+  {
+   "fan_in": 5,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 5,
+   "ports": [
+    443
+   ]
+  },
+  {
+   "fan_in": 5,
+   "ports": [
+    80,
+    443
+   ]
+  }
+ ],
+ "vm_flows": 49,
+ "shared_services_excluded": 26,
+ "applications": [
+  {
+   "size": 16,
+   "tiers": {
+    "app": 3,
+    "data": 1,
+    "unknown": 3,
+    "web": 9
+   },
+   "internal_edges": 23
+  },
+  {
+   "size": 2,
+   "tiers": {
+    "app": 1,
+    "unknown": 1
+   },
+   "internal_edges": 1
+  }
+ ],
+ "singletons": 0
+}

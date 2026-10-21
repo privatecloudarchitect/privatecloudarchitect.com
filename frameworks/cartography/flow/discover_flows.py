@@ -11,6 +11,7 @@ hand-off to the supervisor lens's write-back.
 
   python3 discover_flows.py                       # pull the last 24h, print the findings
   python3 discover_flows.py --hours 168 --export findings.json
+  python3 discover_flows.py --hours 168 --record flows.json     # a counts-only record: no name or address
   python3 discover_flows.py --self-test           # offline: reproduce the golden from the fixture
 
 Dependencies: Python 3 plus `pydantic`. One plane, from the environment (see lib/_client.py):
@@ -46,6 +47,37 @@ def run_analysis(raw_flows: list[dict], *, hours: int, min_fan_in: int,
 def findings_dict(shared: SharedServicesReport, boundaries: BoundariesReport) -> dict:
     return {"shared_services": shared.model_dump(mode="json"),
             "boundaries": boundaries.model_dump(mode="json")}
+
+
+def counts_record(shared: SharedServicesReport, boundaries: BoundariesReport, *, cap_hit: bool) -> dict:
+    """The run in counts and protocol vocabulary: the window, the flow totals, each quarantined shared service's
+    fan-in and ports, and the boundaries' sizes. No destination, workload, application id or address enters it."""
+    return {
+        "window_hours": shared.window_hours, "total_flows": shared.total_flows, "projected_flows": shared.projected_flows,
+        "distinct_sources": shared.distinct_sources, "distinct_destinations": shared.distinct_destinations,
+        "search_cap_hit": cap_hit,
+        "shared_services": [{"fan_in": c.distinct_sources, "well_known": list(c.well_known), "ports": list(c.ports)}
+                            for c in shared.quarantine],
+        "review": [{"fan_in": c.distinct_sources, "ports": list(c.ports)} for c in shared.candidates if c.verdict == "review"],
+        "vm_flows": boundaries.vm_flows, "shared_services_excluded": boundaries.shared_services_excluded,
+        "applications": [{"size": a.size, "tiers": dict(sorted(a.tiers.items())), "internal_edges": a.internal_edges}
+                         for a in boundaries.applications],
+        "singletons": len(boundaries.singletons),
+    }
+
+
+def write_record(path: Path, record: dict, shared: SharedServicesReport, boundaries: BoundariesReport) -> None:
+    """Write the counts-only record, refusing one in which any name or address from the run survived."""
+    import re
+    import time
+    text = json.dumps({"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **record}, indent=1)
+    names = {c.destination for c in shared.candidates} | set(boundaries.singletons)
+    for a in boundaries.applications:
+        names |= {a.app_id} | {m.vm for m in a.members}
+    leaked = [n for n in names if n and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w.-])", text)]
+    assert not leaked and not re.search(r"\b\d{1,3}(\.\d{1,3}){3}\b", text), "a name or an address reached the record; nothing was written"
+    path.write_text(text + "\n", encoding="utf-8")
+    print(f"  record written to {path} (counts only)")
 
 
 def render_summary(shared: SharedServicesReport, boundaries: BoundariesReport) -> None:
@@ -114,6 +146,7 @@ def main() -> int:
                     help="minimum flow count for a VM-to-VM edge to count toward a boundary")
     ap.add_argument("--max-flows", type=int, default=5000, help="search cap (a hit is reported LOUD)")
     ap.add_argument("--export", type=Path, help="also write the full findings as JSON to this path")
+    ap.add_argument("--record", type=Path, help="write a counts-only record of the run (no name or address)")
     ap.add_argument("--self-test", action="store_true",
                     help="offline: reproduce the golden findings from the fixture, then exit")
     ap.add_argument("--update", action="store_true", help="with --self-test: refresh the golden")
@@ -132,6 +165,8 @@ def main() -> int:
     if args.export:
         args.export.write_text(json.dumps(findings_dict(shared, boundaries), indent=2) + "\n")
         print(f"\n  findings written to {args.export}")
+    if args.record:
+        write_record(args.record, counts_record(shared, boundaries, cap_hit=len(raw) >= args.max_flows), shared, boundaries)
     return 0
 
 
