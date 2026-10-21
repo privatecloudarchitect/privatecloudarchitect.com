@@ -1,0 +1,37 @@
+[
+ {
+  "uuid": "00000000-0000-4000-8000-000000000001",
+  "name": "shop-db-01",
+  "inheritedFrom": "",
+  "labels": {
+   "app.kubernetes.io/component": "database",
+   "app.kubernetes.io/part-of": "shop",
+   "environment": "production"
+  }
+ },
+ {
+  "uuid": "00000000-0000-4000-8000-000000000002",
+  "name": "shop-web-01",
+  "inheritedFrom": "",
+  "labels": {
+   "app.kubernetes.io/component": "cache",
+   "app.kubernetes.io/part-of": "billing",
+   "environment": "dev"
+  }
+ },
+ {
+  "uuid": "00000000-0000-4000-8000-000000000003",
+  "name": "shop-cluster-node-a",
+  "inheritedFrom": "shop-cluster",
+  "labels": {
+   "example.com/tier": "gold",
+   "app.kubernetes.io/component": "web"
+  }
+ },
+ {
+  "uuid": "00000000-0000-4000-8000-000000000004",
+  "name": "scratch-01",
+  "inheritedFrom": "",
+  "labels": {}
+ }
+]

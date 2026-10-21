@@ -1,0 +1,15 @@
+{
+ "identity.function": {
+  "db": "urn:tag:fn-db",
+  "web": "urn:tag:fn-web",
+  "app": "urn:tag:fn-app"
+ },
+ "identity.app": {
+  "shop": "urn:tag:app-shop",
+  "crm": "urn:tag:app-crm"
+ },
+ "lifecycle.environment": {
+  "prod": "urn:tag:env-prod",
+  "dev": "urn:tag:env-dev"
+ }
+}

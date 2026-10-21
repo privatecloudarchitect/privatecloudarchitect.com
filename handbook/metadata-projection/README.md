@@ -9,6 +9,7 @@ carries no Kubernetes label on a machine object at all. So the label is the decl
 a projection of it, and something has to perform that projection repeatedly.
 
 `content.py` measures whether yours does. It is read-only and writes nothing to any plane.
+`project.py` performs the projection, on a schedule, and gates on it: a plan by default, `--apply` to write.
 
 ## Before the numbers: why there are several stores at all
 
@@ -80,6 +81,47 @@ It writes `content.json` beside itself. Every estate value is replaced with a st
 before the file is written, longest name first, and the script refuses to write a record in which
 one survived.
 
+## Projecting: `project.py`
+
+It reads what each machine declares, what your mapping says each label means, and what each machine
+carries, and puts every (machine, concept) a machine declares in one of four outcomes:
+
+| outcome | meaning | who fixes it |
+|---|---|---|
+| covered | the tag is present and correct | nobody; this is the goal |
+| drifted | the tag is absent, or another value is there | the projection: `--apply` |
+| unmapped | the label holds a value the mapping refuses | the mapping file; no run can fix it |
+| undefined | the category or the tag does not exist on the vCenter | whoever defines categories; usually the mapping asked for a concept nobody activated |
+
+The verdict is GREEN, RED, or INDETERMINATE when a plane could not be read or no live machine
+declares anything: a ratio over nothing has not passed. Machines are joined by instance UUID, never
+by name, and a cluster's nodes inherit the cluster's labels through vCenter's folder tree.
+
+```bash
+cp projection.example.json projection.json     # your labels, your categories, the values each accepts
+python3 project.py --self-test                 # the decision on the shipped fixtures, offline
+python3 project.py --mapping projection.json   # the plan: outcomes, and the writes that would fix the drift
+python3 project.py --mapping projection.json --apply              # attach, then read every write back
+python3 project.py --mapping projection.json --record plan.json   # counts only, no name
+```
+
+The mapping names, per concept, the label it is read from, the category it renders to, the
+category's cardinality, and the values it accepts. A closed concept accepts only its listed values;
+an open one renders an unlisted value as a tag of the same name. A MULTIPLE category asks about
+membership, so another value there conflicts with nothing. A SINGLE category holding another value
+is held, not changed, unless you pass `--allow-change`, which detaches the old value first.
+
+| Exit | Meaning |
+|---|---|
+| 0 | GREEN |
+| 1 | RED |
+| 2 | usage error, a bad mapping, or a password file open to group or other |
+| 3 | INDETERMINATE |
+| 4 | an `--apply` write that did not read back |
+
+It writes vSphere tags only. NSX tags and custom attributes are further planes a full projection
+fans out to, with their own credentials, and are not in this script.
+
 ## Reading the record
 
 - **`reached`** which planes answered. Read this first: every count below is scoped to the planes
@@ -126,8 +168,8 @@ one survived.
   values then landed is the projection question, and the loop answers it per machine.
 - **It does not judge whether a declared value is correct**, only whether it arrived. A machine
   labelled with the wrong application is projected faithfully.
-- **It writes nothing.** Converging the estate is a separate tool, and it is deliberately not in
-  this folder: a script that reports and a script that changes things should not be the same script.
+- **It writes nothing.** Converging the estate is `project.py`, a separate script on purpose: a script
+  that reports and a script that changes things should not be the same script.
 
 ## Four ways this answers wrongly
 

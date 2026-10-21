@@ -1,0 +1,40 @@
+{
+ "concepts": {
+  "function": {
+   "label": "app.kubernetes.io/component",
+   "category": "identity.function",
+   "cardinality": "single",
+   "closed": true,
+   "values": {
+    "database": "db",
+    "web": "web",
+    "api": "app"
+   }
+  },
+  "app": {
+   "label": "app.kubernetes.io/part-of",
+   "category": "identity.app",
+   "cardinality": "multiple",
+   "closed": false
+  },
+  "environment": {
+   "label": "environment",
+   "category": "lifecycle.environment",
+   "cardinality": "single",
+   "closed": true,
+   "values": {
+    "production": "prod",
+    "dev": "dev"
+   }
+  },
+  "tier": {
+   "label": "example.com/tier",
+   "category": "topology.tier",
+   "cardinality": "single",
+   "closed": true,
+   "values": {
+    "gold": "gold"
+   }
+  }
+ }
+}

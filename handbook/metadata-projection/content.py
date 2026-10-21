@@ -72,6 +72,7 @@ import os
 import re
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -563,6 +564,7 @@ def main() -> int:
         )
 
     record = {
+        "captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "reached": reached,
         "grammar": grammar or {},
         "workloads": {

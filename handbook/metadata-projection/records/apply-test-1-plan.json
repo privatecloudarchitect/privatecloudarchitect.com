@@ -1,0 +1,26 @@
+{
+ "captured_utc": "2026-10-21T22:02:47Z",
+ "reached": {
+  "automation": "read",
+  "vcenter": "read",
+  "vcenter-namespaces": "read"
+ },
+ "verdict": "RED",
+ "population": {
+  "declaredMachines": 3,
+  "declaredFoundOnVcenter": 1,
+  "clusterNodes": 6,
+  "nodesInheriting": 6,
+  "nodesWithNothingToInherit": 0
+ },
+ "machinesDeclaring": 7,
+ "assignments": 7,
+ "outcomes": {
+  "covered": 0,
+  "drifted": 7,
+  "unmapped": 0,
+  "undefined": 0
+ },
+ "held": 0,
+ "writesPlanned": 7
+}

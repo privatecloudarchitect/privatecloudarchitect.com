@@ -1,0 +1,12 @@
+{
+ "outcomes": {
+  "covered": 2,
+  "drifted": 3,
+  "unmapped": 1,
+  "undefined": 2
+ },
+ "held": 1,
+ "writes": 2,
+ "writesWithChange": 3,
+ "verdictEmpty": "INDETERMINATE"
+}
