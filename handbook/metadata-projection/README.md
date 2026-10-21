@@ -69,9 +69,9 @@ export VCFA_USER=<username>                 # the bare account, not the UPN
 export VCFA_PASSWORD_FILE=/path/to/pw       # mode 0600
 export VC_HOST=<vcenter-fqdn>
 export VC_USER=<username@domain>            # tag read, plus namespace read for the population
-export VC_PASSWORD_FILE=/path/to/pw
+export VC_PASSWORD_FILE=/path/to/pw         # mode 0600
 export OPS_HOST=<operations-fqdn>
-export OPS_TOKEN_FILE=/path/to/bearer
+export OPS_TOKEN_FILE=/path/to/bearer       # mode 0600
 export TLS_VERIFY=false                     # only on a self-signed lab CA
 python3 content.py
 ```

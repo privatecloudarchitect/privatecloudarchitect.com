@@ -109,9 +109,21 @@ class Labels:
         return UUID.sub("{{id}}", text)
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def main():
     host = os.environ["SDDC_HOST"]
-    token = open(os.environ["SDDC_TOKEN_FILE"], encoding="utf-8").read().strip()
+    token = read_secret("SDDC_TOKEN_FILE")
     out_dir = os.environ.get("OUT_DIR", ".")
     L = Labels()
 

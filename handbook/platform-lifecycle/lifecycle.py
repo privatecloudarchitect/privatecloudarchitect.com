@@ -195,13 +195,25 @@ def read_instance(host, token, L, label):
                "join": joined, "workloadDomainRefusal": refusal, "depot": depot}
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def main():
     """Read the instance you are asked about, and, when a second is named, the one you rehearse on."""
     out_dir = os.environ.get("OUT_DIR", ".")
     L = Labels()
     print("lifecycle.py: is the upgrade the registry is offering actually available?")
     primary = read_instance(os.environ["SDDC_HOST"],
-                            open(os.environ["SDDC_TOKEN_FILE"], encoding="utf-8").read().strip(),
+                            read_secret("SDDC_TOKEN_FILE"),
                             L, "the instance asked about")
     instances = [primary]
     # The chapter's discipline is a rehearsal instance kept a cycle ahead of production. Comparing the two is the
