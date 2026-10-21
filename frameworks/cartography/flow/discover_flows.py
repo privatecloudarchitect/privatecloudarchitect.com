@@ -14,7 +14,8 @@ hand-off to the supervisor lens's write-back.
   python3 discover_flows.py --self-test           # offline: reproduce the golden from the fixture
 
 Dependencies: Python 3 plus `pydantic`. One plane, from the environment (see lib/_client.py):
-  export VRNI_HOST=<vrni-fqdn> VRNI_USERNAME=<user> VRNI_PASSWORD=<password>
+  ( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vrni-password )   # paste the password, then Ctrl-D
+  export VRNI_HOST=<vrni-fqdn> VRNI_USERNAME=<user> VRNI_PASSWORD_FILE=~/.vcf/vrni-password
   export VRNI_INSECURE=1     # only on a self-signed lab CA
 """
 from __future__ import annotations

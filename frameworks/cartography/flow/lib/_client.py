@@ -9,7 +9,7 @@ VCF Operations' unified identity, so an adopter needs nothing but an account.
 Environment:
   VRNI_HOST       (required)  VCF Operations for Networks FQDN
   VRNI_USERNAME   (required)  vRNI user (a LOCAL user, or a domain user with VRNI_DOMAIN=LDAP:<domain>)
-  VRNI_PASSWORD   (required)  its password
+  VRNI_PASSWORD_FILE (required) a file of mode 0600 holding its password (or VRNI_PASSWORD, the value)
   VRNI_DOMAIN     (optional)  LOCAL (default) or LDAP:<domain>, e.g. LDAP:example.com
   VRNI_INSECURE=1 (optional)  skip TLS verification (self-signed lab CA only)
 """
@@ -43,6 +43,24 @@ def _require(var: str) -> str:
         raise SystemExit(f"environment variable {var} is not set (see flow/lib/_client.py for the contract)")
     return v
 
+def _secret(var: str) -> str:
+    """A secret from {var}_FILE, a file of mode 0600 holding it, or else from {var} itself. The file keeps the
+    password out of the shell's history, the process list and every child's environment; a file open to group or
+    other is refused before it is read, naming the variable and the fix, never the content."""
+    path = os.environ.get(f"{var}_FILE")
+    if not path:
+        return _require(var)
+    with open(path, encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise SystemExit(f"{var}_FILE names a file of mode {mode:04o}, open to group or other: "
+                             f'run chmod 600 "${var}_FILE" and try again (the file was not read)')
+        value = f.read().strip()
+    if not value:
+        raise SystemExit(f"{var}_FILE names an empty file")
+    return value
+
 
 def _ctx(insecure: bool) -> ssl.SSLContext:
     return ssl._create_unverified_context() if insecure else ssl.create_default_context()
@@ -70,7 +88,7 @@ class VrniSession:
             domain = {"domain_type": "LDAP", "value": value}
         else:
             domain = {"domain_type": "LOCAL"}
-        payload = {"username": _require("VRNI_USERNAME"), "password": _require("VRNI_PASSWORD"),
+        payload = {"username": _require("VRNI_USERNAME"), "password": _secret("VRNI_PASSWORD"),
                    "domain": domain}
         body = self._request("POST", "/auth/token", json=payload, authed=False)
         token = body.get("token") if isinstance(body, dict) else None

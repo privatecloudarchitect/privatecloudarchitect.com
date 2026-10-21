@@ -14,10 +14,12 @@ or to their own tagging. It leaves your estate exactly as it found it.
 
 ## Dependencies and environment
 
-Python 3 plus exactly `pydantic`. One plane, from the environment:
+Python 3 plus exactly `pydantic`. One plane, configured from the environment, with the password read from a file
+of mode 0600 (a file open to group or other is refused before it is read):
 
 ```bash
-export VRNI_HOST=<vrni-fqdn> VRNI_USERNAME=<user> VRNI_PASSWORD=<password>
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vrni-password )       # paste the password, then Ctrl-D
+export VRNI_HOST=<vrni-fqdn> VRNI_USERNAME=<user> VRNI_PASSWORD_FILE=~/.vcf/vrni-password
 export VRNI_INSECURE=1     # only on a self-signed lab CA
 # VRNI_DOMAIN defaults to LOCAL; for a directory user use LDAP:<domain>, e.g. LDAP:example.com
 ```

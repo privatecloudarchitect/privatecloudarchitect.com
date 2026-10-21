@@ -16,7 +16,8 @@ Nothing is written. The review queue (conflicts + low confidence) is the actiona
 those, then the confident rows are safe to hand to the supervisor lens's write-back or your tagging.
 
 Dependencies: Python 3 plus `pydantic`. One plane, from the environment (see lib/_client.py):
-  export VRNI_HOST=<vrni-fqdn> VRNI_USERNAME=<user> VRNI_PASSWORD=<password>
+  ( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vrni-password )   # paste the password, then Ctrl-D
+  export VRNI_HOST=<vrni-fqdn> VRNI_USERNAME=<user> VRNI_PASSWORD_FILE=~/.vcf/vrni-password
   export VRNI_INSECURE=1     # only on a self-signed lab CA
 """
 from __future__ import annotations

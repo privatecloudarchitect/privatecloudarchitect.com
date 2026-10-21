@@ -35,17 +35,24 @@ proposal for you to classify, and the closed component map never grows by guessw
 
 ## Dependencies and environment
 
-Python 3 plus exactly `PyYAML`. Two planes, both from the environment:
+Python 3 plus exactly `PyYAML`. Two planes, configured from the environment, with each password read from a
+file of mode 0600 so it never sits on a command line, in the shell's history or in an exported variable:
 
 ```bash
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vcfa-password )      # paste the password, then Ctrl-D
+( umask 077; cat > ~/.vcf/vcenter-password )                       # and the same for each identity below
+
 # VCF Automation - the Consumption Interface reads (org session, the access-control chapter's flow)
-export VCFA_HOST=<vcfa-fqdn> VCFA_ORG=<org> VCFA_USER=<user> VCFA_PASSWORD=<password>
+export VCFA_HOST=<vcfa-fqdn> VCFA_ORG=<org> VCFA_USER=<user> VCFA_PASSWORD_FILE=~/.vcf/vcfa-password
 # vCenter - the tag planes (define, assign, verify)
-export VCENTER_HOST=<vcenter-fqdn> VCENTER_USERNAME=<sso-user> VCENTER_PASSWORD=<password>
+export VCENTER_HOST=<vcenter-fqdn> VCENTER_USERNAME=<sso-user> VCENTER_PASSWORD_FILE=~/.vcf/vcenter-password
 export VCFA_INSECURE=1     # only on a self-signed lab CA
 # optional: a least-privilege assign identity for Supervisor-managed VM classes
-export VCENTER_TAGAUTH_USERNAME=<user> VCENTER_TAGAUTH_PASSWORD=<password>
+export VCENTER_TAGAUTH_USERNAME=<user> VCENTER_TAGAUTH_PASSWORD_FILE=~/.vcf/vcenter-tagauth-password
 ```
+
+A password file open to group or other is refused before it is read. Each `*_PASSWORD_FILE` variable falls back
+to the matching `*_PASSWORD` holding the value itself, for an existing setup; the file is the form to use.
 
 If your estate namespaces its category names, edit `taxonomy.yaml` (or point
 `CARTOGRAPHY_TAXONOMY` at an alternate copy); scripts resolve concepts through it and are never

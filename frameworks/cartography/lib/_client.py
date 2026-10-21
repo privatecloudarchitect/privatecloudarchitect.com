@@ -17,13 +17,13 @@ Environment:
   VCFA_HOST         (required)  VCF Automation FQDN
   VCFA_ORG          (required)  organization name
   VCFA_USER         (required)  user (without the org suffix)
-  VCFA_PASSWORD     (required)  its password
+  VCFA_PASSWORD_FILE (required) a file of mode 0600 holding its password (or VCFA_PASSWORD, the value)
   VCFA_INSECURE=1   (optional)  skip TLS verification (self-signed lab CA only)
   VCENTER_HOST      (tag steps) vCenter FQDN
   VCENTER_USERNAME  (tag steps) vCenter SSO user
-  VCENTER_PASSWORD  (tag steps) its password
+  VCENTER_PASSWORD_FILE (tag steps) a file of mode 0600 holding its password (or VCENTER_PASSWORD)
   VCENTER_INSECURE  (optional)  defaults to VCFA_INSECURE
-  VCENTER_TAGAUTH_USERNAME / VCENTER_TAGAUTH_PASSWORD
+  VCENTER_TAGAUTH_USERNAME / VCENTER_TAGAUTH_PASSWORD_FILE (or VCENTER_TAGAUTH_PASSWORD)
                     (optional)  a least-privilege tag-authority identity on the same vCenter,
                                 used when the actuator is asked to assign as that identity
 """
@@ -65,6 +65,24 @@ def _require(var: str) -> str:
     if not v:
         raise SystemExit(f"environment variable {var} is not set (see lib/_client.py for the contract)")
     return v
+
+def _secret(var: str) -> str:
+    """A secret from {var}_FILE, a file of mode 0600 holding it, or else from {var} itself. The file keeps the
+    password out of the shell's history, the process list and every child's environment; a file open to group or
+    other is refused before it is read, naming the variable and the fix, never the content."""
+    path = os.environ.get(f"{var}_FILE")
+    if not path:
+        return _require(var)
+    with open(path, encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise SystemExit(f"{var}_FILE names a file of mode {mode:04o}, open to group or other: "
+                             f'run chmod 600 "${var}_FILE" and try again (the file was not read)')
+        value = f.read().strip()
+    if not value:
+        raise SystemExit(f"{var}_FILE names an empty file")
+    return value
 
 
 def _ctx(insecure: bool) -> ssl.SSLContext:
@@ -123,7 +141,7 @@ class VcfaSession(_Session):
         self._token = self._login()
 
     def _login(self) -> str:
-        cred = f"{_require('VCFA_USER')}@{_require('VCFA_ORG')}:{_require('VCFA_PASSWORD')}"
+        cred = f"{_require('VCFA_USER')}@{_require('VCFA_ORG')}:{_secret('VCFA_PASSWORD')}"
         req = urllib.request.Request(
             self.base + "/cloudapi/1.0.0/sessions", data=b"", method="POST",
             headers={"Authorization": "Basic " + base64.b64encode(cred.encode()).decode(),
@@ -157,7 +175,7 @@ class VcSession(_Session):
         self._sid = self._login()
 
     def _login(self) -> str:
-        cred = f"{_require(self._user_var)}:{_require(self._pass_var)}"
+        cred = f"{_require(self._user_var)}:{_secret(self._pass_var)}"
         req = urllib.request.Request(
             self.base + "/session", data=b"", method="POST",
             headers={"Authorization": "Basic " + base64.b64encode(cred.encode()).decode()})
