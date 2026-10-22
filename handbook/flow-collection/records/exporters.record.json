@@ -1,0 +1,205 @@
+{
+ "exporters": [
+  {
+   "address": "{{address-7}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-3}}",
+   "packets": 18583,
+   "records": 149386,
+   "sequence_failures": 14433
+  },
+  {
+   "address": "{{address-12}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-4}}",
+   "packets": 4658,
+   "records": 27792,
+   "sequence_failures": 3349
+  },
+  {
+   "address": "{{address-1}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-1}}",
+   "packets": 12408,
+   "records": 139861,
+   "sequence_failures": 5767
+  },
+  {
+   "address": "{{address-37}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-9}}",
+   "packets": 1439,
+   "records": 4579,
+   "sequence_failures": 557
+  },
+  {
+   "address": "{{address-37}}",
+   "domain": 38416,
+   "files_with_packets": 0,
+   "host": "{{esx-9}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-37}}",
+   "domain": 38417,
+   "files_with_packets": 0,
+   "host": "{{esx-9}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-32}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-8}}",
+   "packets": 2341,
+   "records": 4664,
+   "sequence_failures": 1934
+  },
+  {
+   "address": "{{address-32}}",
+   "domain": 38416,
+   "files_with_packets": 60,
+   "host": "{{esx-8}}",
+   "packets": 2964,
+   "records": 26062,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-32}}",
+   "domain": 38417,
+   "files_with_packets": 0,
+   "host": "{{esx-8}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-27}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-7}}",
+   "packets": 3467,
+   "records": 16180,
+   "sequence_failures": 2692
+  },
+  {
+   "address": "{{address-27}}",
+   "domain": 38416,
+   "files_with_packets": 60,
+   "host": "{{esx-7}}",
+   "packets": 4854,
+   "records": 43055,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-27}}",
+   "domain": 38417,
+   "files_with_packets": 0,
+   "host": "{{esx-7}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-22}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-6}}",
+   "packets": 3446,
+   "records": 19559,
+   "sequence_failures": 2593
+  },
+  {
+   "address": "{{address-22}}",
+   "domain": 38416,
+   "files_with_packets": 0,
+   "host": "{{esx-6}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-22}}",
+   "domain": 38417,
+   "files_with_packets": 0,
+   "host": "{{esx-6}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-17}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-5}}",
+   "packets": 1255,
+   "records": 2420,
+   "sequence_failures": 564
+  },
+  {
+   "address": "{{address-17}}",
+   "domain": 38416,
+   "files_with_packets": 0,
+   "host": "{{esx-5}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-17}}",
+   "domain": 38417,
+   "files_with_packets": 0,
+   "host": "{{esx-5}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-42}}",
+   "domain": 0,
+   "files_with_packets": 60,
+   "host": "{{esx-10}}",
+   "packets": 3178,
+   "records": 14305,
+   "sequence_failures": 2500
+  },
+  {
+   "address": "{{address-42}}",
+   "domain": 38416,
+   "files_with_packets": 0,
+   "host": "{{esx-10}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  },
+  {
+   "address": "{{address-42}}",
+   "domain": 38417,
+   "files_with_packets": 0,
+   "host": "{{esx-10}}",
+   "packets": 0,
+   "records": 0,
+   "sequence_failures": 0
+  }
+ ],
+ "exporting_addresses_no_vcenter_named": [],
+ "harness": "exporters.py",
+ "hosts_sending_nothing": [
+  "{{esx-11}}",
+  "{{esx-2}}"
+ ],
+ "read_at": "2026-10-22T04:38:10Z",
+ "window": {
+  "first": "nfcapd.202610220338",
+  "last": "nfcapd.202610220437",
+  "minute_files": 60
+ }
+}

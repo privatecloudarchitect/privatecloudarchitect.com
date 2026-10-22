@@ -10,7 +10,9 @@ Read-only. Every call is a GET, plus Operations for Networks' token request, a f
      the host each endpoint runs on (`POST /search` for the hour's flows, then `POST /entities/fetch` in batches
      of 100 for each flow's source and destination host; a flow counts once for each host it names). A flow
      names where its endpoints run, never the host that exported it.
-  2. NSX (`/policy/api/v1/infra/ipfix-*`), when NSX_HOSTS is set: the IPFIX collector and switch profiles.
+  2. NSX (`/policy/api/v1/infra/ipfix-*`), when NSX_HOSTS is set: the collector and IPFIX profiles of both kinds,
+     the distributed firewall's and the switch's, and which kind is in use (Operations for Networks enables the
+     firewall's where a security licence is installed and the firewall is on, the switch's otherwise).
   3. vSphere (pyVmomi, when installed and VC_HOSTS is set): each distributed switch's own IPFIX settings
      (collector address and port, sampling rate, timeouts, internal flows only), how many of its port
      groups export, and its member hosts, each with the hour's flows that name an endpoint on it. A host at zero
@@ -18,13 +20,20 @@ Read-only. Every call is a GET, plus Operations for Networks' token request, a f
      The collector's own exporter list tells the two apart.
 
 Writes `flow-paths.record.json` with every estate value replaced by a placeholder (and refuses to write if one
-survived), and prints a summary. Not covered: which hosts export (the collector's exporter list) and the
-collector's on-disk buffer use, both of which need a root shell on the collector VM.
+survived), and prints a summary, each source with its vcfManaged flag (VCF Operations owns a change to a source
+that reads true). Not covered here: which hosts export, read on the collector by exporters.py beside this file;
+and the collector's on-disk buffer use.
 
 Environment:
-  NI_HOST, NI_USER, NI_PASSWORD   Operations for Networks; NI_DOMAIN_TYPE LOCAL (default) or LDAP, NI_DOMAIN for LDAP
-  NSX_HOSTS, NSX_USER, NSX_PASSWORD   optional, comma-separated NSX Manager FQDNs
-  VC_HOSTS, VC_USER, VC_PASSWORD      optional, comma-separated vCenter FQDNs (needs pyVmomi)
+  NI_HOST, NI_USER, NI_PASSWORD_FILE    Operations for Networks; NI_DOMAIN_TYPE LOCAL (default) or LDAP, NI_DOMAIN
+                                        for LDAP
+  NSX_HOSTS                             optional, comma-separated NSX Manager FQDNs, read with either
+  NSX_BEARER_FILE                       a file, mode 0600, holding a VCF single sign-on bearer for NSX (a
+                                        VCF 9.1 SSO user signs in to NSX with a bearer, not Basic), or
+  NSX_USER, NSX_PASSWORD_FILE           a local NSX user
+  VC_HOSTS, VC_USER, VC_PASSWORD_FILE      optional, comma-separated vCenter FQDNs (needs pyVmomi)
+  Each *_PASSWORD_FILE names a file of mode 0600 holding the password; a file open to group or other is refused
+  before it is read. The bare *_PASSWORD variable is read only when no file is named.
   OPS_TLS_VERIFY                      TLS verification, on by default; false for a self-signed CA
 Usage: python3 flow_paths.py [--out DIR]
 """
@@ -66,7 +75,7 @@ if LIB is None:
 sys.path.insert(0, str(LIB))
 sys.path.insert(0, str(HERE))
 
-from opslib import _ctx  # noqa: E402
+from opslib import _ctx, secret  # noqa: E402
 from scrub import Scrubber  # noqa: E402
 
 NI_SAFE = {
@@ -78,6 +87,7 @@ NI_SAFE = {
     "proxy_id",
     "ipfix_enabled",
     "is_vmc",
+    "vcfManaged",
 }
 
 
@@ -97,6 +107,14 @@ def http(method: str, url: str, headers: dict, body: dict | None = None) -> tupl
         return e.code, {}
 
 
+def password(name: str) -> str:
+    """NAME_FILE (mode 0600, refused when open to group or other) or else NAME, through the metrics harness's reader."""
+    value = secret(name)
+    if not value:
+        raise SystemExit(f"FATAL: {name}_FILE (or {name}) is not set")
+    return value
+
+
 def ni_session() -> tuple[str, dict]:
     host = os.environ["NI_HOST"]
     domain = {"domain_type": os.environ.get("NI_DOMAIN_TYPE", "LOCAL").upper()}
@@ -108,7 +126,7 @@ def ni_session() -> tuple[str, dict]:
         {},
         {
             "username": os.environ["NI_USER"],
-            "password": os.environ["NI_PASSWORD"],
+            "password": password("NI_PASSWORD"),
             "domain": domain,
         },
     )
@@ -225,10 +243,16 @@ def read_nsx(scrub: Scrubber) -> list[dict]:
     hosts = [h.strip() for h in os.environ.get("NSX_HOSTS", "").split(",") if h.strip()]
     if not hosts:
         return []
-    basic = base64.b64encode(
-        f"{os.environ['NSX_USER']}:{os.environ['NSX_PASSWORD']}".encode()
-    ).decode()
-    auth = {"Authorization": f"Basic {basic}"}
+    # A VCF 9.1 single sign-on user cannot sign in to NSX with Basic; it takes the realm's bearer. A local NSX user
+    # still can.
+    bearer = secret("NSX_BEARER")
+    if bearer:
+        auth = {"Authorization": f"Bearer {bearer}"}
+    else:
+        basic = base64.b64encode(
+            f"{os.environ['NSX_USER']}:{password('NSX_PASSWORD')}".encode()
+        ).decode()
+        auth = {"Authorization": f"Basic {basic}"}
     out = []
     for host in hosts:
         scrub.add_host(host, "nsx")
@@ -256,12 +280,17 @@ def read_nsx(scrub: Scrubber) -> list[dict]:
                             "export_overlay_flow",
                             "active_flow_export_timeout",
                             "idle_timeout_for_flow",
+                            "observation_domain_id",
+                            "priority",
                             "_create_user",
                         )
                         if k in it
                     }
                 )
             entry[kind] = {"status": st, "profiles": rows}
+        dfw = entry["ipfix-dfw-profiles"]["profiles"]
+        l2 = entry["ipfix-l2-profiles"]["profiles"]
+        entry["in_use"] = "distributed firewall" if dfw else ("switch" if l2 else "none")
         out.append(entry)
     return out
 
@@ -279,7 +308,7 @@ def read_vsphere(scrub: Scrubber) -> list[dict] | str:
     for host in hosts:
         scrub.add_host(host, "vcenter")
         si = SmartConnect(
-            host=host, user=os.environ["VC_USER"], pwd=os.environ["VC_PASSWORD"], sslContext=_ctx()
+            host=host, user=os.environ["VC_USER"], pwd=password("VC_PASSWORD"), sslContext=_ctx()
         )
         try:
             content = si.RetrieveContent()
@@ -379,15 +408,20 @@ def main(argv: list[str] | None = None) -> int:
         state = ", ".join(s.get("ipfix_enabled_for") or []) or s.get("ipfix_enabled")
         if s.get("ipfix_enabling_failed"):
             state = f"{state}; enabling failed for {', '.join(s['ipfix_enabling_failed'])}"
-        say(f"    {s.get('entity_type'):<22} IPFIX: {state}")
+        say(f"    {s.get('entity_type'):<22} IPFIX: {state}; VCF-managed: {s.get('vcfManaged')}")
     say(f"  flows in the last hour: {ni['flows_last_hour']}")
     say(
         f"  flows read for the host tally: {ni['flows_read']}, naming an endpoint on {len(ni['flows_by_host'])} "
         f"host(s), {ni['flows_without_host']} naming no host"
     )
     for entry in record["nsx"]:
-        counts = {k: len(v["profiles"]) for k, v in entry.items() if k != "nsx"}
-        say(f"  NSX IPFIX profiles: {counts}")
+        counts = {k: len(v["profiles"]) for k, v in entry.items() if k not in ("nsx", "in_use")}
+        domains = [p.get("observation_domain_id") for p in entry["ipfix-dfw-profiles"]["profiles"]]
+        say(
+            f"  NSX IPFIX in use: {entry['in_use']}"
+            + (f", observation domain {', '.join(map(str, domains))}" if domains else "")
+            + f"; profiles {counts}"
+        )
     switches = record["switches"]
     if isinstance(switches, str):
         say(f"  switches: {switches}")
