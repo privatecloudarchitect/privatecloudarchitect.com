@@ -8,28 +8,37 @@ Two pieces, and **run them in this order**:
 - **`posture.py`** reads what your org's posture actually is and, before that, whether this region
   is entitled to enforce one at all. Read-only.
 - **`run.sh`** proves the three write disciplines by round-tripping a rule. It writes (safely, and
-  it tears down), and it cannot succeed where the firewall capabilities are not entitled.
+  it tears down), and it cannot succeed where the firewall capabilities are not entitled. It does not test
+  enforcement on traffic: its group has no members.
 
 ## posture.py: what is attached, and what the region is entitled to enforce
 
 ```bash
-export VCFA_HOST=<your-org-gateway-fqdn>
-export VCFA_TOKEN=<a bearer for /cci/kubernetes>
+export VCFA_HOST=<your-org-gateway-fqdn> VCFA_ORG=<organization>
+export VCFA_USER=<account> VCFA_PASSWORD_FILE=~/.secrets/vcfa   # mode 0600: a session login
+# or instead: export VCFA_TOKEN_FILE=~/.secrets/vcfa-bearer      # mode 0600, a bearer for /cci/kubernetes
 export VCFA_TLS_VERIFY=false        # only on a self-signed lab CA
 python3 posture.py                  # writes posture.json beside the script
 ```
+
+A secret file open to group or other is refused before it is read. A stored API token exchanged for a bearer
+can stop granting, so the session login is the default.
 
 Four reads, in the order that fails fastest:
 
 1. **Entitlement.** `regionnetworkingcapabilities/<region>` carries a capability list: a type, a
    state, and where the state is false the platform's own reason and the licence it wants. **This
    is the pre-write read.** The chapter's `Realized` check verifies a write that was accepted; it
-   cannot tell you a write was never going to be. On the reference estate four capabilities are
-   unavailable and all four are firewall capabilities (distributed, VPC gateway, transit-gateway,
-   and the security profile itself), while `NetworkSecurityGroup` is entitled: **the vocabulary a
-   rule speaks works, and every surface that could enforce a rule reports itself unentitled.**
+   cannot tell you a write was never going to be. On the reference estate on 2026-09-20 (VCF 9.1.0)
+   four capabilities were unavailable and all four were firewall capabilities (distributed, VPC
+   gateway, transit-gateway, and the security profile itself), while `NetworkSecurityGroup` was
+   entitled: **the vocabulary a rule speaks worked, and every surface that could enforce a rule
+   reported itself unentitled.** That read is kept as `records/posture-2026-09-20.json`. On
+   2026-10-22 (VCF 9.1.1) the same region read every capability enabled, firewall included, while
+   every object in the chain read the same as before; what changed it was not established. Read the
+   list at every design and on every audit, not once.
 
-   Shape trap: the capability list sits at the **top level** of the object, beside `metadata`, not
+   Shape detail: the capability list sits at the **top level** of the object, beside `metadata`, not
    under `spec` or `status` where a reader of this API looks first. Read the wrong key and the
    object looks like a region reporting nothing.
 
@@ -44,11 +53,13 @@ Four reads, in the order that fails fastest:
    that `SecurityProfileAttachment` carries **no status conditions** on this build, so there is no
    `Realized` to verify an attachment against.
 
-4. **The floor**: the default section's rules with the disabled flag on each. Shape trap, and this
-   one is about which call you make: the **collection view trims `rules[]`**, so a floor audited
+4. **The floor**: the default section's rules with the disabled flag on each. A second shape
+   detail, and this one is about which call you make: the **collection view trims `rules[]`**, so a floor audited
    from the list reads as a section with no rules in it. `posture.py` reads every section by name.
 
-Exit code 0 when the firewall capabilities are entitled, 1 when they are not.
+Exit codes: 0 the firewall capabilities are entitled; 1 a firewall capability is off, with the platform's own
+reason; 2 a setting is missing or a secret file is open to group or other; 3 the sign-in or a read failed; 4 the
+record refused to write because an estate value survived. Exit 1 is the one to page on from a schedule.
 
 ## run.sh: the write disciplines
 
@@ -75,10 +86,13 @@ to keep them for inspection instead.
 
 **If `Firewall.DistributedFirewall` is not entitled on your region, step 2 fails** with an HTTP 500
 naming the licence, and the group from step 1 is the only thing that was created. Run `posture.py`
-first and you will know before you start. Re-run against the reference estate on 2026-09-20, that
-is exactly what happened: the group created and Realized in under five seconds, the section create
+first and you will know before you start. Run against the reference estate on 2026-09-20, that is
+exactly what happened: the group created and Realized in under five seconds, the section create
 returned `operation not supported in Region <region>: NSX licenses must have all of [DFW]`, and the
-teardown left no residue.
+teardown left no residue. On 2026-10-22, on VCF 9.1.1 with the region entitled, the round trip ran
+end to end: both objects Realized at every step and a read afterwards found neither
+([`expected-output.md`](expected-output.md)). Realized is the platform accepting the configuration;
+with no members in the group, no packet met the rule, so enforcement on traffic was not tested.
 
 ## Prereqs
 
@@ -109,7 +123,8 @@ the three files under `manifests/` directly and apply them by hand in order.
 
 All four surfaced by first-party writes on a live 9.1 estate on 2026-08-14, and the harness is built around
 them. On 2026-09-20 the firewall create was refused for entitlement before most of them could be reached
-again, so each carries the date it was last confirmed:
+again, and the 2026-10-22 round trip does not ask any of them again, so each carries the date it was last
+confirmed:
 
 - **Server-side dry-run is NOT dry on this plane.** `kubectl apply --dry-run=server` against
   `vpc.nsx` kinds at the org gateway **persists the object** when it passes NSX validation (the
@@ -120,30 +135,35 @@ again, so each carries the date it was last confirmed:
 - **Field managers are not persisted**, so every apply over an existing `vpc.nsx` object reports
   a conflict with `before-first-apply` even when your manager applied it seconds ago.
   `--force-conflicts` is the standard update idiom on this plane, not an override of another
-  owner. (Creates apply cleanly either way.) 2026-08-14.
+  owner. (Creates apply cleanly either way.) 2026-08-14; `run.sh` always passes the flag, so its runs
+  do not show the conflict.
 - **Tenant rules accept `ipProtocol: IPV4` only.** The platform's own default rules carry
   `IPV4_IPV6`, but that value is rejected on a tenant create. Re-confirmed 2026-09-20: validation runs
   before the entitlement check, so the rejection still arrives first.
 - **Tenant priority must be 0-999999.** The default section sits at max-int priority; that is a
-  system special you cannot use. 2026-08-14; on 2026-09-20 the attempt met the entitlement refusal first.
+  system special you cannot use. 2026-08-14; on 2026-09-20 the attempt met the entitlement refusal first,
+  and on 2026-10-22 the harness's priority, 900000, was accepted, which says nothing of the bound.
 
 One more read-path detail: the **list** view of `firewallpolicies` trims `rules[]` (you see
 `RULE COUNT` but no rules). Fetch the single object (`-o yaml`) to see the full rule grammar.
 
 ## Expected output
 
-See [`expected-output.md`](expected-output.md) for the transcript shape a healthy run produces.
+See [`expected-output.md`](expected-output.md) for both transcripts from the reference estate on 2026-10-22:
+`posture.py` read-only, and `./run.sh round-trip` on throwaway objects.
 
 ## Where a rule about a pod belongs
 
 The objects above segment virtual machines at the VPC boundary. A rule about a **pod** has three
 documented homes, and the choice is architectural rather than tactical. None of the three was
-exercised here (the firewall capabilities on the reference estate are not entitled), so what follows
-is a reading of the published references, each of which is linked from the sheet:
+exercised here, so what follows is a reading of the published references: the VCF 9.0 administration
+guide's procedure for converting Kubernetes network policies to distributed firewall policies, the
+vDefend design library's page on securing VKS (linked from the sheet), and a practitioner's write-up
+of Antrea's tiers:
 
 | placement | what it is | what it costs |
 |---|---|---|
-| Firewall rules on the namespace's addresses | a rule per namespace, written against the addresses that namespace occupies | addresses again: it hard-codes today's allocation, which is the failure the sheet opens on |
+| Firewall rules on the namespace's addresses | a rule per namespace, written against the addresses that namespace occupies | addresses again: it hard-codes today's allocation, which is why the sheet's rules speak groups |
 | Convert Kubernetes NetworkPolicy to DFW | an import API takes policy UUIDs and produces vDefend DFW policies plus Antrea groups | documented as one-way, and the originals are deleted from the cluster on import |
 | Antrea-native, with tiers | cluster and namespace policies evaluated on their own tier ladder inside the cluster | a second enforcement engine with a second precedence model |
 
@@ -161,7 +181,8 @@ Three things worth carrying from those references into any design:
 
 **The invisibility is measurable; the ordering is not, from here.** On a 9.1 estate a tenant token
 lists exactly one firewall policy, the VPC default section, and the transit-gateway and VPC-gateway
-firewall collections return HTTP 200 with no items at all. So a tenant-side audit is structurally
+firewall collections return HTTP 200 with no items at all; read again on 9.1.1 on 2026-10-22 with the
+region entitled, the same. So a tenant-side audit is structurally
 partial: correct about the level it covers, silent about everything above it, with nothing in the
 response marking the gap.
 
@@ -179,7 +200,7 @@ provider's allow.
 
 ## Version currency
 
-This estate runs 9.1, and the product has been renamed: what older corpuses call the NSX distributed
+This estate runs 9.1.1, and the product has been renamed: what older corpuses call the NSX distributed
 firewall is documented on the current line as **vDefend Firewall**. Two 9.1 changes matter to anyone
 who hits the entitlement refusal above:
 

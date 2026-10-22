@@ -1,32 +1,16 @@
 {
- "captured_utc": "2026-09-20T21:31:12Z",
+ "captured_utc": "2026-10-22T06:14:27Z",
  "capabilities": {
-  "total": 13,
-  "enabled": 9,
-  "disabled": 4,
-  "disabledList": [
-   {
-    "type": "Firewall.DistributedFirewall",
-    "reason": "InsufficientEntitlement",
-    "message": "NSX licenses must have all of [DFW]"
-   },
-   {
-    "type": "Firewall.TransitGatewayFirewall",
-    "reason": "InsufficientEntitlement",
-    "message": "NSX licenses must have all of [EDGEFW_SECURITY]"
-   },
-   {
-    "type": "Firewall.VPCGatewayFirewall",
-    "reason": "InsufficientEntitlement",
-    "message": "NSX licenses must have all of [VPC_SECURITY]"
-   },
-   {
-    "type": "Firewall.VPCSecurityProfile",
-    "reason": "InsufficientEntitlement",
-    "message": "NSX licenses must have all of [VPC_SECURITY]"
-   }
-  ],
+  "total": 14,
+  "enabled": 14,
+  "disabled": 0,
+  "disabledList": [],
   "enabledList": [
+   "DistributedVXLANConnection",
+   "Firewall.DistributedFirewall",
+   "Firewall.TransitGatewayFirewall",
+   "Firewall.VPCGatewayFirewall",
+   "Firewall.VPCSecurityProfile",
    "IPAM.IPAllocation",
    "IPAM.MultipleCIDRsPerIPBlock",
    "IPSecVPN",
@@ -119,5 +103,5 @@
   }
  ],
  "listTrimsRules": 1,
- "enforceable": false
+ "entitled": true
 }

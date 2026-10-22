@@ -12,13 +12,13 @@ It asks four questions, in the order that saves the most time:
      PRE-WRITE read. The chapter's "Realized" check is a post-write verification and it cannot tell
      you that a write was never going to be accepted.
 
-     One shape trap, and it is not the one you would guess. The capability list sits at the TOP
+     One shape surprise, and it is not the one you would guess. The capability list sits at the TOP
      LEVEL of the object, beside `metadata`, and not under `spec` or `status` where a Kubernetes
      reader looks first. Read the wrong key and the object comes back looking empty, which reads as
      "this region reports no capabilities" rather than as "you looked in the wrong place". The list
      view carries it too, so this is about where you look, not which call you make.
 
-     Step 4 has the trap that IS about which call you make.
+     Step 4 has the surprise that IS about which call you make.
 
   2. THE STRATEGY LADDER. Not one strategy but several, and the differences between them are the
      design decision. Printed with each one's own description, verbatim, because a paraphrase of a
@@ -41,14 +41,19 @@ Read-only throughout. It creates nothing, attaches nothing and enables nothing.
 
 Run:
   export VCFA_HOST=...            # the org gateway FQDN
-  export VCFA_TOKEN=...           # a bearer for /cci/kubernetes (see README)
+  export VCFA_ORG=... VCFA_USER=... VCFA_PASSWORD_FILE=/path/to/password   # mode 0600: a session login
+  # or, instead: export VCFA_TOKEN_FILE=/path/to/bearer   (mode 0600; VCFA_TOKEN, the value itself, still works)
   export VCFA_REGION=...          # optional; discovered from the VPC list when omitted
   export VCFA_TLS_VERIFY=false    # only on a self-signed lab CA
   python3 posture.py
+Exit: 0 the region can enforce a firewall posture · 1 it cannot: a firewall capability is off, with the platform's
+      own reason · 2 a setting is missing or a secret file is open to group or other · 3 the sign-in or a read failed
+      · 4 the record refused to write because an estate value survived
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -67,11 +72,54 @@ def _ctx():
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+class ReadFailed(Exception):
+    """A read the answer depends on did not succeed; the run says so rather than reporting an empty plane."""
+
+
+def secret(name):
+    """A secret from NAME_FILE (a file, mode 0600, its value stripped) or else NAME itself; None when neither is set.
+    A file open to group or other is refused before it is read; the refusal names the variable and the fix."""
+    path = os.environ.get(f"{name}_FILE")
+    if path:
+        with open(path, encoding="utf-8") as f:
+            mode = os.fstat(f.fileno()).st_mode & 0o777
+            # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+            if mode & 0o077 and os.name != "nt":
+                raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                      f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+            return f.read().strip()
+    return os.environ.get(name) or None
+
+
+_BEARER = {}
+
+
+def bearer():
+    """A session login as VCFA_USER@VCFA_ORG when a password file is named, else VCFA_TOKEN(_FILE). Cached."""
+    if "v" not in _BEARER:
+        user, org = os.environ.get("VCFA_USER"), os.environ.get("VCFA_ORG")
+        password = secret("VCFA_PASSWORD") if user and org else None
+        if password:
+            basic = base64.b64encode(f"{user}@{org}:{password}".encode()).decode()
+            req = urllib.request.Request(f"https://{os.environ['VCFA_HOST']}/cloudapi/1.0.0/sessions", method="POST",
+                                         headers={"Authorization": f"Basic {basic}",
+                                                  "Accept": "application/json;version=9.1.0"})
+            with urllib.request.urlopen(req, context=_ctx(), timeout=30) as r:
+                _BEARER["v"] = next(v for k, v in r.headers.items() if k.lower() == "x-vmware-vcloud-access-token")
+            _BEARER["password"] = password
+        else:
+            token = secret("VCFA_TOKEN")
+            if not token:
+                raise KeyError("VCFA_USER, VCFA_ORG and VCFA_PASSWORD_FILE, or VCFA_TOKEN_FILE")
+            _BEARER["v"] = token
+    return _BEARER["v"]
+
+
 def cci(path):
     """One read against the org gateway. Returns (status, parsed-or-None)."""
     host = os.environ["VCFA_HOST"]
     req = urllib.request.Request(f"https://{host}/cci/kubernetes{path}", headers={
-        "Authorization": f"Bearer {os.environ['VCFA_TOKEN']}", "Accept": "application/json"})
+        "Authorization": f"Bearer {bearer()}", "Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, context=_ctx(), timeout=60) as r:
             return r.status, json.loads(r.read() or b"null")
@@ -92,7 +140,10 @@ def main():
     out_dir = os.environ.get("OUT_DIR", os.path.dirname(os.path.abspath(__file__)))
     print("posture.py: what is attached, and what can this org actually enforce?\n")
 
-    vpcs = items(f"{GV}/vpcs")
+    st_v, vpc_body = cci(f"{GV}/vpcs")
+    if st_v != 200:
+        raise ReadFailed(f"the VPC list answered {st_v}")
+    vpcs = (vpc_body or {}).get("items") or []
     region = os.environ.get("VCFA_REGION") or (
         (vpcs[0].get("spec", {}) or {}).get("regionName") if vpcs else None)
     if not region:
@@ -172,7 +223,7 @@ def main():
     print(f"\n  4. THE FLOOR: {len(sections)} firewall section(s)")
     if trimmed:
         print(f"     {trimmed} of them came back from the LIST with no rules at all; the rules are on "
-              f"the single-object read, the same shape trap as the capability list in step 1")
+              f"the single-object read, so every section is read by name")
     floor = []
     for s in sections:
         sp = s.get("spec") or {}
@@ -214,21 +265,36 @@ def main():
                "unattachedProfiles": len(unattached), "profilesWithNorthSouth": len(ns_any),
                "posture": posture_rows, "sections": floor,
                "listTrimsRules": trimmed,
-               "enforceable": enforceable}
+               "entitled": entitled}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
     # The region name is the operator's, not ours: it is never written to the record, and no VPC,
     # profile or group name is either. What ships is the shape and the platform's own wording.
     if region:
         text = text.replace(region, "{{region}}")
-    for var in ("VCFA_HOST", "VCFA_TOKEN"):
-        v = os.environ.get(var)
-        assert not v or v not in text, f"{var} reached the record"
+    for v in (os.environ.get("VCFA_HOST"), _BEARER.get("v"), _BEARER.get("password")):
+        if v and v in text:
+            raise SystemExit("FATAL: an estate value or a credential reached the record; nothing was written")
     os.makedirs(out_dir, exist_ok=True)
     with open(os.path.join(out_dir, "posture.json"), "w", encoding="utf-8") as fh:
         fh.write(text + "\n")
     print("\nwrote posture.json; no VPC, profile, group or region name is recorded")
-    return 0 if enforceable else 1
+    return 0 if entitled else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyError as e:
+        print(f"posture.py: set {e.args[0]} (see the Run block at the top of this file)", file=sys.stderr)
+        sys.exit(2)
+    except PermissionError as e:
+        print(f"posture.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except (ReadFailed, urllib.error.URLError, OSError) as e:
+        print(f"posture.py: the sign-in or a read failed: {getattr(e, 'code', '') or e}", file=sys.stderr)
+        sys.exit(3)
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            sys.exit(4 if e.code.startswith("FATAL") else 3)
+        raise

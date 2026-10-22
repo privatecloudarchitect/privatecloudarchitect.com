@@ -1,0 +1,123 @@
+{
+ "captured_utc": "2026-09-20T21:31:12Z",
+ "capabilities": {
+  "total": 13,
+  "enabled": 9,
+  "disabled": 4,
+  "disabledList": [
+   {
+    "type": "Firewall.DistributedFirewall",
+    "reason": "InsufficientEntitlement",
+    "message": "NSX licenses must have all of [DFW]"
+   },
+   {
+    "type": "Firewall.TransitGatewayFirewall",
+    "reason": "InsufficientEntitlement",
+    "message": "NSX licenses must have all of [EDGEFW_SECURITY]"
+   },
+   {
+    "type": "Firewall.VPCGatewayFirewall",
+    "reason": "InsufficientEntitlement",
+    "message": "NSX licenses must have all of [VPC_SECURITY]"
+   },
+   {
+    "type": "Firewall.VPCSecurityProfile",
+    "reason": "InsufficientEntitlement",
+    "message": "NSX licenses must have all of [VPC_SECURITY]"
+   }
+  ],
+  "enabledList": [
+   "IPAM.IPAllocation",
+   "IPAM.MultipleCIDRsPerIPBlock",
+   "IPSecVPN",
+   "NetworkSecurityGroup",
+   "StatelessFirewall",
+   "Subnet",
+   "TransitGateway.Manage",
+   "TransitGateway.NAT",
+   "TransitGateway.StaticRoute"
+  ],
+  "onSingleObjectReadOnly": false
+ },
+ "strategies": [
+  {
+   "name": "none",
+   "description": "'None' security strategy implies the attached VPC would not have any security strategy attached to it. This strategy will be marked as the 'Default' security strategy by the system by default",
+   "ruleTemplates": [],
+   "displayNameSet": false
+  },
+  {
+   "name": "vpc-external-connectivity",
+   "description": "Allow only Outgoing Communications, deny all incoming connections. VPC to VPC communication is blocked",
+   "ruleTemplates": [
+    "Allow-Essential-Services",
+    "Allow-OUT",
+    "Deny-All"
+   ],
+   "displayNameSet": false
+  },
+  {
+   "name": "vpc-isolation",
+   "description": "Deny any communication between VPCs within the project. All workloads within the VPC to be allowed to communicate",
+   "ruleTemplates": [
+    "Allow-within-VPC",
+    "Deny-All"
+   ],
+   "displayNameSet": false
+  },
+  {
+   "name": "vpc-isolation-with-essential-services",
+   "description": "Deny all communication to VPCs except for essential services like ICMP, DNS, NTP and DHCP. All workloads within the VPC to be allowed to communicate",
+   "ruleTemplates": [
+    "Allow-Essential-Services",
+    "Allow-within-VPC",
+    "Deny-All"
+   ],
+   "displayNameSet": false
+  },
+  {
+   "name": "vpc-secure-connection",
+   "description": "Allow all outgoing communications, deny incoming connections. Allow VPC to VPC within project",
+   "ruleTemplates": [
+    "Allow-Essential-Services",
+    "Allow_within_Project",
+    "Deny-All"
+   ],
+   "displayNameSet": false
+  }
+ ],
+ "vpcs": 1,
+ "profiles": 5,
+ "attachments": 1,
+ "unattachedProfiles": 4,
+ "profilesWithNorthSouth": 0,
+ "posture": [
+  {
+   "strategies": [
+    "none"
+   ],
+   "northSouth": false,
+   "attachmentConditions": []
+  }
+ ],
+ "sections": [
+  {
+   "priority": 2147483646,
+   "rules": 5,
+   "disabledRules": 5,
+   "realized": "True",
+   "ruleNames": [
+    "default-ndp-rule-allow",
+    "default-dhcp-rule-allow",
+    "default-dhcpv6-rule-allow",
+    "default-rule-allow",
+    "default-rule-drop"
+   ],
+   "ipProtocols": [
+    "IPV4_IPV6"
+   ]
+  }
+ ],
+ "listTrimsRules": 1,
+ "enforceable": false
+}
