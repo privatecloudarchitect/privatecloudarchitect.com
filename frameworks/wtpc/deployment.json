@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-08T03:31:46Z",
+ "captured_utc": "2026-10-22T22:11:52Z",
  "prefix": "PCA - WTPC",
  "groups": [
   {
@@ -26,7 +26,7 @@
   {
    "group": "test-dev-traditional (VMs)",
    "mechanism": "tag rule",
-   "members": 1,
+   "members": 0,
    "policy": "PCA - WTPC - test-dev-traditional",
    "autoResolve": true
   },
@@ -75,7 +75,7 @@
   {
    "group": "test-dev-traditional (Clusters)",
    "mechanism": "static list",
-   "members": 2,
+   "members": 1,
    "policy": null,
    "autoResolve": true
   },
@@ -89,7 +89,7 @@
   {
    "group": "test-dev-traditional (Hosts)",
    "mechanism": "static list",
-   "members": 4,
+   "members": 1,
    "policy": null,
    "autoResolve": true
   }
@@ -99,21 +99,18 @@
   "tag rule": 8
  },
  "emptyByMechanism": {
-  "tag rule": 5
+  "tag rule": 6
  },
  "governance": {
   "VirtualMachine": {
-   "objects": 139,
-   "resolved": 139,
+   "objects": 169,
+   "resolved": 169,
    "byFamily": {
-    "outside the framework": 138,
-    "posture": 1
+    "outside the framework": 169
    },
    "expectedFamily": "posture",
    "wrongFamily": 0,
-   "byPolicy": {
-    "test-dev-traditional": 1
-   }
+   "byPolicy": {}
   },
   "HostSystem": {
    "objects": 11,
@@ -161,7 +158,7 @@
  "policies": 6,
  "parity": {
   "prod-latency-critical-db": 0,
-  "test-dev-traditional": 1,
+  "test-dev-traditional": 0,
   "dedicated tier": 3,
   "density tier": 0,
   "standard tier": 6,
@@ -233,8 +230,8 @@
    },
    "superMetrics": 68,
    "superMetricsEnabled": 42,
-   "alerts": 6,
-   "alertsEnabled": 5
+   "alerts": 7,
+   "alertsEnabled": 6
   },
   "standard tier": {
    "overcommit": {
@@ -271,5 +268,5 @@
    "alertsEnabled": 0
   }
  },
- "policiesGoverningSomething": 3
+ "policiesGoverningSomething": 2
 }

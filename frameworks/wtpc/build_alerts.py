@@ -17,7 +17,7 @@ which is what scopes them to posture members (never "all objects"). This generat
 anywhere; enablement is the operator's controlled, posture-scoped step. NOTIFICATIONS are out of scope
 (Ops-only). Both facts are asserted from alerts.yaml at validate().
 
-Usage:  python build_alerts.py        (from deploy/vcf-ops-content/wtpc/; no live API calls)
+Usage:  python build_alerts.py        (from this folder; no live API calls)
 """
 import json
 import os

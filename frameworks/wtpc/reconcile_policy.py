@@ -33,7 +33,7 @@ Endpoints verified against the VCF Operations 9.1 public API specification:
   PUT  /api/policies/{id}/assign {groupIds*: [...]}                  — group assignment (NOT the older
                                                                         custom-groups path, which 404s on 9.1)
 
-Usage (from deploy/vcf-ops-content/wtpc/):
+Usage (from this folder):
   python reconcile_policy.py                                   # DRY-RUN: converge the LIVE posture policies
   python reconcile_policy.py --execute                         # apply the convergence
   python reconcile_policy.py --create test-dev-traditional --execute   # bootstrap a NEW posture policy

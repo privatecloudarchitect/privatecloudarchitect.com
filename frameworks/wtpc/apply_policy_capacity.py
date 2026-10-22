@@ -11,7 +11,7 @@ Idempotent (skips a posture already in parity); dry-run by default. Read side is
 `GET /api/policies/{id}/settings`; write side is `PATCH` the same endpoint (the shape build.py's payload
 is generated for). Confirm afterwards with `governance.py --config-parity`.
 
-Usage (from deploy/vcf-ops-content/wtpc/):
+Usage (from this folder):
   python apply_policy_capacity.py            # dry-run: current effective vs catalog, per posture
   python apply_policy_capacity.py --execute  # PATCH the capacity-allocation to match the catalog
 """

@@ -25,6 +25,10 @@ Four reads, in the order a deployment fails:
 
 Read-only throughout. Nothing here tags, converges, or edits a policy.
 
+Exit status: 0 when no object sits in the wrong family and every framework policy governs at least one object; 1
+when either fails (each printed under "findings"); 2 when the read did not complete. What it prints is built from
+the record it writes (`report`), so a run can be re-read from its deployment.json.
+
 Run:
   export OPS_HOST=<operations-fqdn>
   export OPS_BROKER_HOST=<identity-broker-fqdn>   # omit if the broker shares the Ops FQDN
@@ -42,6 +46,7 @@ import io
 import json
 import os
 import re
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -139,11 +144,51 @@ def enforced_envelope(ops, policy_id):
     return out
 
 
+def findings(record: dict) -> list[str]:
+    """What a scheduled run alarms on: an object in the wrong family, a framework policy that governs nothing."""
+    out = [f"{v['wrongFamily']} {kind} object(s) governed by the wrong family"
+           for kind, v in record["governance"].items() if v["wrongFamily"]]
+    out += [f"{short} governs no object" for short, n in sorted(record["parity"].items()) if not n]
+    return out
+
+
+def report(record: dict) -> list[str]:
+    """What a run prints, built from its record."""
+    lines = [f"audit_deployment.py: what the framework prefixed {record['prefix']!r} is currently governing", ""]
+    rows, by_mech, empty = record["groups"], record["groupsByMechanism"], record["emptyByMechanism"]
+    lines.append(f"  GROUPS: {len(rows)} carrying the prefix; {dict(by_mech)}")
+    for r in sorted(rows, key=lambda x: (x["mechanism"], x["group"])):
+        lines.append(f"     {r['group'][:44]:<44} {r['mechanism']:<12} members={r['members']}")
+    for mech in by_mech:
+        lines.append(f"     {empty.get(mech, 0)} of {by_mech[mech]} {mech} group(s) are empty")
+    for kind, v in record["governance"].items():
+        lines += ["", f"  {kind}: {v['objects']} object(s); expected family {v['expectedFamily']!r}"]
+        for f, n in sorted(v["byFamily"].items(), key=lambda kv: (-kv[1], kv[0])):
+            lines.append(f"     {n:>4}  {f}")
+        if v["wrongFamily"]:
+            lines.append(f"     {v['wrongFamily']} object(s) governed by the WRONG family, which the two-unit model forbids")
+    envelopes = record["envelopes"]
+    lines += ["", f"  ENVELOPE, AS ENFORCED ({len(envelopes)} framework policies, three surfaces each):"]
+    dials = sorted({k for v in envelopes.values() for k in v["overcommit"]})
+    if dials:
+        lines.append(f"     {'policy':<34} " + "".join(f"{d:<17}" for d in dials) + "metrics  alerts")
+        for short, v in envelopes.items():
+            row = "".join(f"{str(v['overcommit'].get(d, '-')):<17}" for d in dials)
+            lines.append(f"     {short[:32]:<34} {row}{v['superMetricsEnabled']:>3}/{v['superMetrics']:<5}"
+                         f"{v['alertsEnabled']:>3}/{v['alerts']}")
+    parity = record["parity"]
+    lines += ["", f"  PARITY: {record['policiesGoverningSomething']} of {len(parity)} framework policies govern at least one object"]
+    for short, n in sorted(parity.items(), key=lambda kv: (-kv[1], kv[0])):
+        lines.append(f"     {n:>4}  object(s) under {short[:52]}")
+    found = findings(record)
+    lines += ["", f"  findings: {len(found)}"] + [f"     {f}" for f in found]
+    return lines
+
+
 def main():
     prefix = os.environ.get("WTPC_PREFIX", "PCA - WTPC")
     out_dir = os.environ.get("OUT_DIR", ".")
     ops = OpsSession()
-    print(f"audit_deployment.py: what the framework prefixed {prefix!r} is currently governing\n")
 
     policies = {p["id"]: p["name"] for p in
                 ((ops.get("/api/policies", params={"_no_links": "true"}).json() or {})
@@ -168,11 +213,6 @@ def main():
                      "autoResolve": bool(g.get("autoResolveMembership"))})
     by_mech = collections.Counter(r["mechanism"] for r in rows)
     empty = collections.Counter(r["mechanism"] for r in rows if not r["members"])
-    print(f"  GROUPS: {len(rows)} carrying the prefix; {dict(by_mech)}")
-    for r in sorted(rows, key=lambda x: (x["mechanism"], x["group"])):
-        print(f"     {r['group'][:44]:<44} {r['mechanism']:<12} members={r['members']}")
-    for mech in by_mech:
-        print(f"     {empty.get(mech, 0)} of {by_mech[mech]} {mech} group(s) are empty")
 
     # ---- 2: what governs each object
     governance, misplaced = {}, []
@@ -189,24 +229,11 @@ def main():
         governance[kind] = {"objects": len(ids), "resolved": len(eff), "byFamily": dict(fams),
                             "expectedFamily": want, "wrongFamily": wrong,
                             "byPolicy": {str(k)[len(prefix):].strip(" -"): v for k, v in names.items()}}
-        print(f"\n  {kind}: {len(ids)} object(s); expected family {want!r}")
-        for f, n in fams.most_common():
-            print(f"     {n:>4}  {f}")
-        if wrong:
-            print(f"     {wrong} object(s) governed by the WRONG family, which the two-unit model forbids")
 
     # ---- 3: the envelope, as enforced, across the three surfaces that carry it
     envelopes = {}
     for pid, name in sorted(mine.items(), key=lambda kv: kv[1]):
         envelopes[str(name)[len(prefix):].strip(" -")] = enforced_envelope(ops, pid)
-    print(f"\n  ENVELOPE, AS ENFORCED ({len(envelopes)} framework policies, three surfaces each):")
-    dials = sorted({k for v in envelopes.values() for k in v["overcommit"]})
-    if dials:
-        print(f"     {'policy':<34} " + "".join(f"{d:<17}" for d in dials) + "metrics  alerts")
-        for short, v in envelopes.items():
-            row = "".join(f"{str(v['overcommit'].get(d, '-')):<17}" for d in dials)
-            print(f"     {short[:32]:<34} {row}{v['superMetricsEnabled']:>3}/{v['superMetrics']:<5}"
-                  f"{v['alertsEnabled']:>3}/{v['alerts']}")
 
     # ---- 4: the parity, restated
     parity = {}
@@ -215,9 +242,6 @@ def main():
         total = sum(v["byPolicy"].get(short, 0) for v in governance.values())
         parity[short] = total
     governing = sum(1 for v in parity.values() if v)
-    print(f"\n  PARITY: {governing} of {len(parity)} framework policies govern at least one object")
-    for short, n in sorted(parity.items(), key=lambda kv: (-kv[1], kv[0])):
-        print(f"     {n:>4}  object(s) under {short[:52]}")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "prefix": prefix,
                "groups": rows,
@@ -233,9 +257,26 @@ def main():
     # host or cluster is named anywhere in this record.
     os.makedirs(out_dir, exist_ok=True)
     open(os.path.join(out_dir, "deployment.json"), "w", encoding="utf-8").write(text + "\n")
-    print(f"\nwrote deployment.json; only framework object names appear, and no machine, host or cluster "
-          f"is named")
+    for line in report(payload):
+        print(line)
+    print("\nwrote deployment.json; only framework object names appear, and no machine, host or cluster "
+          "is named")
+    return 1 if findings(payload) else 0
+
+
+def run() -> int:
+    """main() with the exit contract: 2 when the read did not complete."""
+    try:
+        return main()
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            return 2
+        raise
+    except Exception as e:  # noqa: BLE001 - any failed read is "did not complete", named on stderr
+        print(f"FATAL: {type(e).__name__}: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(run())

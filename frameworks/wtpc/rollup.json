@@ -1,0 +1,53 @@
+{
+ "captured_utc": "2026-10-22T22:10:34Z",
+ "rows": [
+  {
+   "posture": "prod-latency-critical-db",
+   "clustersGroup": true,
+   "clusters": 0,
+   "hosts": 0,
+   "memberVms": 0,
+   "worstMem": null,
+   "worstCpu": null,
+   "hostCompliancePct": null,
+   "floor": "EMPTY",
+   "finding": true
+  },
+  {
+   "posture": "prod-business-critical-vm",
+   "clustersGroup": false,
+   "floor": "-",
+   "finding": false
+  },
+  {
+   "posture": "prod-business-critical-vdi",
+   "clustersGroup": false,
+   "floor": "-",
+   "finding": false
+  },
+  {
+   "posture": "prod-standard-vm",
+   "clustersGroup": false,
+   "floor": "-",
+   "finding": false
+  },
+  {
+   "posture": "stage-business-critical-vm",
+   "clustersGroup": false,
+   "floor": "-",
+   "finding": false
+  },
+  {
+   "posture": "test-dev-traditional",
+   "clustersGroup": true,
+   "clusters": 1,
+   "hosts": 2,
+   "memberVms": 0,
+   "worstMem": 0.09,
+   "worstCpu": 0.16,
+   "hostCompliancePct": 100,
+   "floor": "PASS",
+   "finding": false
+  }
+ ]
+}

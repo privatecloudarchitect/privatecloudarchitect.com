@@ -21,7 +21,7 @@ gb/percent/currency/7004/blank, XML-escaped text via ElementTree serialization).
 View ids are STABLE HARDCODED uuids (deterministic output - rerunning the generator never mints a
 new identity; re-import updates in place).
 
-Usage:  python build_views.py          (from deploy/vcf-ops-content/wtpc/; no live API calls)
+Usage:  python build_views.py          (from this folder; no live API calls)
 
 Emits + self-validates: ET.parse of every file and column-count/sort/resolution assertions.
 """

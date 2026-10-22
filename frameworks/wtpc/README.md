@@ -124,6 +124,14 @@ python3 reconcile_infra_groups.py --analyze   # occupancy, mixed-posture feasibi
 python3 compliance_rollup.py              # one ranked row per posture on the normalized scale
 ```
 
+`compliance_rollup.py` scores each deployed posture over its cluster group's members as a **position**: the
+observed value over the posture's own breach, so 1.0 is at breach for every posture and the rows compare. A posture
+whose cluster group has no member reads `EMPTY`, never a pass: nothing was scored, which is a membership finding
+`audit_adoption.py` walks. It exits 1 when a posture is past its breach, its availability floor reads `BREACH` or
+`UNVERIF`, or it is `EMPTY`, and 0 otherwise; a proposed posture with no cluster group on the instance is not
+deployed and not a finding. `--out rollup.json` writes the rows (posture names only, no cluster or host). It reads
+this instance's generated `supermetrics.<posture>.yaml`, so it runs after `apply.py`.
+
 ### How far did adoption get? `audit_adoption.py`
 
 `audit_deployment.py` reports what the result governs. This reports the thing between converge and result:
@@ -184,8 +192,13 @@ Those gates check a posture you name. This one asks the estate-wide question tha
 is the question a content inventory cannot answer:
 
 ```bash
-python3 audit_deployment.py               # read-only, estate-wide, no posture argument
+python3 audit_deployment.py; echo $?      # read-only, estate-wide, no posture argument
 ```
+
+It needs a token whose role can read policy exports and the effective-policy query: a viewer is refused both
+(403). What it prints is built from the record it writes, and it exits 0 when no object sits in the wrong family
+and every framework policy governs at least one object, 1 when either fails (each printed under `findings`), and 2
+when the read did not complete, so it can run on a schedule.
 
 Four reads, in the order a deployment fails:
 
@@ -202,7 +215,7 @@ Four reads, in the order a deployment fails:
    posture can have the right dials and compute none of the metrics its scorecard renders. Note that the
    settings endpoint does **not** serve the overcommit dials; it serves time-remaining criticality thresholds.
 4. **The ratio worth publishing**: how many framework policies govern at least one object, over how many
-   exist. On the reference estate it read **3 of 6** on 2026-10-08 (`deployment.json`), while every other count in
+   exist. On the reference estate it read **2 of 6** on 2026-10-22 (`deployment.json`), while every other count in
    the inventory read healthy.
 
 It writes `deployment.json`, names no machine, host or cluster, and changes nothing.
