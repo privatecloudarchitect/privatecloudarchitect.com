@@ -1,0 +1,14 @@
+{
+ "schema_version": 1,
+ "metadata": {"name": "pca-deptest", "version": "1.0.0", "owner": "you",
+              "description": "A rehearsal set: one of each object the six layers create, every name prefixed pca-deptest (pca_deptest where a name cannot carry a dash), so a deploy, a second run and a teardown can be tried on an appliance without touching anything else."},
+ "package": {"name": "pca-deptest-package"},
+ "categories": {"configurations": "pca-deptest-configs", "actions": "pca-deptest-actions",
+                "workflows": "pca-deptest-workflows"},
+ "configurations": [{"name": "pca-deptest-config", "file": "configurations/pca-deptest-config.json",
+                     "description": "one variable the workflow reads"}],
+ "environments": [{"name": "pca_deptest_env", "runtime": "python:3.11", "version": "1.0.0", "packages": [],
+                   "description": "a Python runtime with no dependency pins"}],
+ "actions": [{"source": "actions/pca_deptest_hello", "environment_ref": "pca_deptest_env"}],
+ "workflows": [{"source": "workflows/pca-deptest-workflow"}]
+}

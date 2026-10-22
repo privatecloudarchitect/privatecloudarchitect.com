@@ -11,11 +11,11 @@ whole reason the design exists, so this checks it instead of repeating it:
   2. the ACCESS OBJECTS: what a ProjectRoleBinding and a ProjectRole can carry, read from the kinds' published
      schema and checked against the objects themselves, so "there is nowhere to put an expiry" is an
      enumeration rather than an impression;
-  3. the SCOPE-AXIS MECHANISM (with --probe-elevation NAME): whether a binding's role can be changed in
-     place and changed back, which decides whether a guaranteed revert is possible at all. This ELEVATES A
-     REAL BINDING for a few seconds and puts it back. It refuses to run without a binding named explicitly,
-     captures the prior role, restores it, and verifies the restore with a direct read of the object rather
-     than a listing;
+  3. the SCOPE-AXIS MECHANISM (with --probe-elevation NAME --project PROJECT): whether a binding's role can be
+     changed in place and changed back, which decides whether a guaranteed revert is possible at all. This
+     ELEVATES A REAL BINDING for a few seconds and puts it back. It refuses to run unless both the binding and
+     its project are named, captures the prior role, restores it, and verifies the restore with a direct read of
+     the object rather than a listing. Make the binding for the test and delete it afterwards;
   4. the REHEARSAL CHECK, in the same pass: whether this plane honours a server-side dry run. It does not,
      and it does not refuse one either, which is the most expensive fact in this chapter.
 
@@ -24,11 +24,16 @@ previous run captured: an optional probe fills a section of the record, and it d
 
 Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-  export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
+  export VCFA_USER=<account> VCFA_PASSWORD_FILE=/path/to/password   # mode 0600: a session login
+  # or, instead: export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token   (mode 0600; a stored token can stop granting)
   export TLS_VERIFY=false                                  # only on a self-signed lab CA
   python3 elevation.py
-  python3 elevation.py --probe-elevation cci:group:SomeTestGroup   # elevates that binding and reverts it
+  python3 elevation.py --probe-elevation cci:group:SomeTestGroup --project some-test-project
+Exit: 0 the reads succeeded (and a probe, if asked for, put the binding back) · 1 a probe's revert did NOT restore the
+      binding's role: put it back by hand · 2 a setting or argument is missing, or a secret file is open to group or
+      other · 3 the sign-in or a read failed · 4 the record refused to write because an estate value survived
 """
+import base64
 import http.client
 import json
 import os
@@ -143,15 +148,31 @@ class Labels:
         return UUID.sub("{{id}}", text)
 
 
+class ReadFailed(Exception):
+    """A read the record depends on did not succeed; the run says so rather than reporting an empty plane."""
+
+
 class Vcfa:
-    def __init__(self, host, org, refresh_token):
+    def __init__(self, host, org, refresh_token=None, user=None, password=None):
+        """A session login as user@org when a password is given, else the refresh-token exchange."""
         self.host = host
-        body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
-        req = urllib.request.Request(
-            f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
-            headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
-        with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
-            self.bearer = json.loads(r.read())["access_token"]
+        try:
+            if password:
+                basic = base64.b64encode(f"{user}@{org}:{password}".encode()).decode()
+                req = urllib.request.Request(f"https://{host}/cloudapi/1.0.0/sessions", method="POST",
+                                             headers={"Authorization": f"Basic {basic}",
+                                                      "Accept": "application/json;version=9.1.0"})
+                with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                    self.bearer = next(v for k, v in r.headers.items() if k.lower() == "x-vmware-vcloud-access-token")
+            else:
+                body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
+                req = urllib.request.Request(
+                    f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
+                    headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
+                with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                    self.bearer = json.loads(r.read())["access_token"]
+        except urllib.error.HTTPError as e:
+            raise ReadFailed(f"the sign-in answered HTTP {e.code}") from None
 
     def _send(self, method, url, body=None, ctype=None):
         headers = {"Authorization": f"Bearer {self.bearer}", "Accept": "application/json"}
@@ -280,22 +301,43 @@ def read_secret(var):
         return f.read().strip()
 
 
+def arg(flag):
+    """The value after FLAG, or None when the flag is absent; a flag given without a value is a usage error."""
+    if flag not in sys.argv:
+        return None
+    i = sys.argv.index(flag)
+    if len(sys.argv) <= i + 1 or sys.argv[i + 1].startswith("--"):
+        raise KeyError(f"{flag} needs a value")
+    return sys.argv[i + 1]
+
+
 def main():
-    refuse_unknown_args({"--probe-elevation"}, {"--probe-elevation"})
+    refuse_unknown_args({"--probe-elevation", "--project"}, {"--probe-elevation", "--project"})
+    target, probe_project = arg("--probe-elevation"), arg("--project")
+    if target and not probe_project:
+        raise KeyError("--probe-elevation needs --project as well: name the project the binding lives in. This "
+                       "script will not choose one for you, because the probe writes to the binding")
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = read_secret("VCFA_REFRESH_TOKEN_FILE")
+    user = os.environ.get("VCFA_USER")
+    password = read_secret("VCFA_PASSWORD_FILE") if user and os.environ.get("VCFA_PASSWORD_FILE") else None
+    refresh = None if password else read_secret("VCFA_REFRESH_TOKEN_FILE")
     out_dir = os.environ.get("OUT_DIR", ".")
-    c = Vcfa(host, org, refresh)
+    c = Vcfa(host, org, refresh_token=refresh, user=user, password=password)
     L = Labels()
     print("elevation.py: what this platform can and cannot time-box\n")
 
     st, projects = c.k8s("GET", f"/apis/{PROJ}/projects")
-    projects = [p["metadata"]["name"] for p in ((projects.get("items") or []) if st == 200 else [])]
+    if st != 200:
+        raise ReadFailed(f"the project list answered HTTP {st}")
+    projects = [p["metadata"]["name"] for p in (projects.get("items") or [])]
     for p in projects:
         L.get("project", p)
     if not projects:
         raise SystemExit("no project is visible to this identity")
-    home = projects[0]
+    if probe_project and probe_project not in projects:
+        raise KeyError("--project names a project this identity cannot see")
+    # The access kinds are read in the probe's project when one is named, else in the first project visible.
+    home = probe_project or projects[0]
 
     # ---- 1. the time-box inventory
     st, pt = c.api("GET", "/policy/api/policyTypes?size=100")
@@ -381,13 +423,11 @@ def main():
     # ---- 4. the elevation mechanism
     elevation = None
     flag = "--probe-elevation"
-    if flag in sys.argv:
-        i = sys.argv.index(flag)
-        target = sys.argv[i + 1] if len(sys.argv) > i + 1 else None
-        if not target:
-            raise SystemExit(f"{flag} needs the name of the binding to elevate, for example "
-                             f"{flag} cci:group:SomeTestGroup. This script will not choose one for you.")
+    if target:
         elevation = probe_elevation(c, L, home, target)
+        if elevation is None:
+            raise KeyError("the probe could not run on the binding named (see the line above); nothing was written")
+        elevation["capturedUtc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     else:
         print(f"\n  elevation: not probed. Pass {flag} <binding name> to move ONE binding up a role and back, "
               f"which is the only way to learn whether a revert is possible. It writes to a live access "
@@ -407,17 +447,21 @@ def main():
             if kept:
                 elevation = dict(kept)
                 elevation.setdefault("capturedBy", "an earlier run with the probe flag")
-                print(f"\n  elevation: carrying forward the probe block captured earlier; this run did not "
-                      f"re-probe and has not erased it")
+                print("\n  elevation: carrying forward the probe block captured earlier; this run did not "
+                      "re-probe and has not erased it")
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "policyTypes": types, "access": access, "deploymentLeaseFields": lease_fields,
                "elevation": elevation}
+    if target:
+        L.get("binding", target)
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
-    for secret in (c.bearer, refresh, host, org):
-        assert secret not in text, "an estate value reached the record"
+    for secret in (c.bearer, refresh, password, host, org, user):
+        if secret and secret in text:
+            raise SystemExit("FATAL: an estate value reached the record")
     for word in sorted(access["roles"]):
-        assert re.search(r"(?<![A-Za-z0-9-])" + re.escape(word) + r"(?![A-Za-z0-9-])", text), (
-            f"the scrub replaced the project role {word!r}, which is the product's word; add it to RESERVED")
+        if not re.search(r"(?<![A-Za-z0-9-])" + re.escape(word) + r"(?![A-Za-z0-9-])", text):
+            raise SystemExit(f"FATAL: the scrub replaced the project role {word!r}, which is the product's word; "
+                             f"add it to RESERVED")
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():
         for nm in m:
@@ -430,7 +474,22 @@ def main():
     print(f"\nwrote elevation.json ({len(types)} policy types, {timed} with a time-bounded field; "
           f"{len(access['anyExpiryField'])} expiry field(s) on the access kinds); every organization name replaced "
           f"by a placeholder")
+    if target and not elevation.get("restored"):
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        sys.exit(main())
+    except (KeyError, PermissionError) as e:
+        print(f"elevation.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except (ReadFailed, urllib.error.URLError, OSError) as e:
+        print(f"READ FAILED: {e}", file=sys.stderr)
+        sys.exit(3)
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            sys.exit(4 if e.code.startswith("FATAL") else 2 if e.code.startswith("unknown argument") else 3)
+        raise

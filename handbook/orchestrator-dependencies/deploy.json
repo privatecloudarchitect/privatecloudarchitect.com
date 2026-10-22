@@ -1,0 +1,194 @@
+{
+ "capturedUtc": "2026-10-22T10:39:54Z",
+ "appliance": {
+  "version": "9.1.0.0400.25545107",
+  "apiVersion": "9.1.0.0"
+ },
+ "run1": {
+  "deployedUtc": "2026-10-22T10:39:29Z",
+  "layers": [
+   {
+    "layer": 1,
+    "name": "package",
+    "status": "ok",
+    "summary": "created package 'pca-deptest-package'",
+    "items": []
+   },
+   {
+    "layer": 2,
+    "name": "categories",
+    "status": "ok",
+    "summary": "ensured 3 categories",
+    "items": [
+     "created pca-deptest-configs",
+     "created pca-deptest-actions",
+     "created pca-deptest-workflows"
+    ]
+   },
+   {
+    "layer": 3,
+    "name": "configuration elements",
+    "status": "ok",
+    "summary": "upserted 1",
+    "items": [
+     "pca-deptest-config created"
+    ]
+   },
+   {
+    "layer": 4,
+    "name": "environments",
+    "status": "ok",
+    "summary": "upserted 1",
+    "items": [
+     "pca_deptest_env created on python:3.11"
+    ]
+   },
+   {
+    "layer": 5,
+    "name": "actions",
+    "status": "ok",
+    "summary": "imported 1",
+    "items": [
+     "pca-deptest-actions/pca_deptest_hello imported, environment pca_deptest_env written into it"
+    ]
+   },
+   {
+    "layer": 6,
+    "name": "workflows",
+    "status": "ok",
+    "summary": "imported 1",
+    "items": [
+     "pca-deptest-workflow imported, 1 configuration binding(s) rebound"
+    ]
+   }
+  ],
+  "packageLinks": [
+   "configuration: HTTP 204",
+   "environment: HTTP 204",
+   "action: HTTP 404",
+   "workflow: HTTP 204"
+  ],
+  "readback": [
+   {
+    "kind": "action",
+    "name": "pca_deptest_hello",
+    "ok": true,
+    "says": "reports ['actionEnvironmentName']; wants pca_deptest_env"
+   },
+   {
+    "kind": "workflow",
+    "name": "pca-deptest-workflow",
+    "ok": true,
+    "says": "conf-id names element 'pca-deptest-config' here, key greeting"
+   }
+  ]
+ },
+ "run2": {
+  "deployedUtc": "2026-10-22T10:39:54Z",
+  "layers": [
+   {
+    "layer": 1,
+    "name": "package",
+    "status": "ok",
+    "summary": "package 'pca-deptest-package' exists",
+    "items": []
+   },
+   {
+    "layer": 2,
+    "name": "categories",
+    "status": "ok",
+    "summary": "ensured 3 categories",
+    "items": [
+     "pca-deptest-configs exists",
+     "pca-deptest-actions exists",
+     "pca-deptest-workflows exists"
+    ]
+   },
+   {
+    "layer": 3,
+    "name": "configuration elements",
+    "status": "ok",
+    "summary": "upserted 1",
+    "items": [
+     "pca-deptest-config updated in place"
+    ]
+   },
+   {
+    "layer": 4,
+    "name": "environments",
+    "status": "ok",
+    "summary": "upserted 1",
+    "items": [
+     "pca_deptest_env updated in place on python:3.11"
+    ]
+   },
+   {
+    "layer": 5,
+    "name": "actions",
+    "status": "ok",
+    "summary": "imported 1",
+    "items": [
+     "pca-deptest-actions/pca_deptest_hello imported over the existing action, environment pca_deptest_env written into it"
+    ]
+   },
+   {
+    "layer": 6,
+    "name": "workflows",
+    "status": "ok",
+    "summary": "imported 1",
+    "items": [
+     "pca-deptest-workflow imported, 1 configuration binding(s) rebound"
+    ]
+   }
+  ],
+  "packageLinks": [
+   "configuration: HTTP 204",
+   "environment: HTTP 204",
+   "action: HTTP 404",
+   "workflow: HTTP 204"
+  ],
+  "readback": [
+   {
+    "kind": "action",
+    "name": "pca_deptest_hello",
+    "ok": true,
+    "says": "reports ['actionEnvironmentName']; wants pca_deptest_env"
+   },
+   {
+    "kind": "workflow",
+    "name": "pca-deptest-workflow",
+    "ok": true,
+    "says": "conf-id names element 'pca-deptest-config' here, key greeting"
+   }
+  ]
+ },
+ "counts": {
+  "afterRun1": {
+   "actions named pca_deptest_hello": 1,
+   "workflows named pca-deptest-workflow": 1,
+   "environments named pca_deptest_env": 1
+  },
+  "afterRun2": {
+   "actions named pca_deptest_hello": 1,
+   "workflows named pca-deptest-workflow": 1,
+   "environments named pca_deptest_env": 1
+  }
+ },
+ "teardown": [
+  "deleted   package pca-deptest-package: HTTP 204",
+  "deleted   workflow pca-deptest-workflow: HTTP 200",
+  "deleted   action pca-deptest-actions/pca_deptest_hello: HTTP 200",
+  "deleted   environment pca_deptest_env: HTTP 204",
+  "deleted   configuration pca-deptest-config: HTTP 204",
+  "deleted   category pca-deptest-workflows: HTTP 204",
+  "deleted   category pca-deptest-actions: HTTP 204",
+  "deleted   category pca-deptest-configs: HTTP 204"
+ ],
+ "residue": {
+  "package HTTP": 404,
+  "categories left": [],
+  "actions named pca_deptest_hello": 0,
+  "workflows named pca-deptest-workflow": 0,
+  "environments named pca_deptest_env": 0
+ }
+}

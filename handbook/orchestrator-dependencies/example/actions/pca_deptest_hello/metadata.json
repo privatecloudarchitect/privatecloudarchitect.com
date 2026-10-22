@@ -1,0 +1,2 @@
+{"name": "pca_deptest_hello", "version": "1.0.0", "description": "returns a greeting; exists to carry an environment binding",
+ "inputs": [{"name": "who", "type": "string", "description": "who to greet"}]}

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<workflow xmlns="http://vmware.com/vco/workflow" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://vmware.com/vco/workflow http://vmware.com/vco/workflow/Workflow-v4.xsd" root-name="item0" object-name="workflow:name=generic" id="5b0d2c3e-1f6a-4c8e-9a51-7e2f0d4b6c18" version="1.0.0" api-version="6.0.0" editor-version="1.6" restartMode="1" resumeFromFailedMode="0">
+  <display-name><![CDATA[pca-deptest-workflow]]></display-name>
+  <description><![CDATA[Reads one configuration variable. The conf-id below is the authoring appliance's; a deploy rewrites it to the element of the same name on the target.]]></description>
+  <position y="50.0" x="100.0"/>
+  <input/>
+  <output>
+    <param name="greeting" type="string"/>
+  </output>
+  <attrib name="configuredGreeting" type="string" read-only="false" conf-id="00000000-0000-4000-8000-000000000000" conf-key="greeting" conf-name="pca-deptest-config">
+    <value encoded="n"><![CDATA[]]></value>
+  </attrib>
+  <workflow-item name="item0" out-name="item1" type="task">
+    <display-name><![CDATA[Read the configured greeting]]></display-name>
+    <script encoded="false"><![CDATA[greeting = configuredGreeting;]]></script>
+    <in-binding>
+      <bind name="configuredGreeting" type="string" export-name="configuredGreeting"/>
+    </in-binding>
+    <out-binding>
+      <bind name="greeting" type="string" export-name="greeting"/>
+    </out-binding>
+    <position y="60.0" x="200.0"/>
+  </workflow-item>
+  <workflow-item name="item1" type="end" end-mode="0">
+    <position y="60.0" x="340.0"/>
+  </workflow-item>
+  <presentation/>
+</workflow>

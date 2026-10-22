@@ -1,0 +1,4 @@
+{"attributes": [
+ {"name": "greeting", "type": "string", "description": "the value the workflow reads through its conf-id and conf-key",
+  "value": {"string": {"value": "hello from the rehearsal set"}}}
+]}
