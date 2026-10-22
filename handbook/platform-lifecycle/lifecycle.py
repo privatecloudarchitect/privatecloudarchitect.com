@@ -21,8 +21,13 @@ Read-only throughout. Nothing here stages, prechecks or upgrades anything.
 Run:
   export SDDC_HOST=<sddc-manager-fqdn>
   export SDDC_TOKEN_FILE=/path/to/bearer      # mode 0600
+  export SDDC_REHEARSAL_HOST=<fqdn> SDDC_REHEARSAL_TOKEN_FILE=/path/to/bearer   # optional, mode 0600: the stagger
   export TLS_VERIFY=false                     # only on a self-signed lab CA
   python3 lifecycle.py
+Exit: 0 nothing to act on: every offered upgrade has its content staged, or nothing is offered · 1 an offered upgrade's
+      content is not staged on the instance asked about (the weekly alert keys on this) · 2 an argument was given, a
+      setting is missing, or a token file is open to group or other · 3 a read failed, so the answer is unknown
+      · 4 the record refused to write because an estate name survived the scrub
 """
 import collections
 import json
@@ -83,6 +88,10 @@ class Labels:
         return UUID.sub("{{id}}", text)
 
 
+class ReadFailed(Exception):
+    """A read the answer depends on did not succeed; the run says so rather than reporting an empty plane."""
+
+
 def read_instance(host, token, L, label):
     """Every lifecycle plane on one instance, plus the join between what is offered and what is staged."""
 
@@ -102,7 +111,13 @@ def read_instance(host, token, L, label):
             return None, {}
 
     print(f"\n=== {label} ===")
+    st, sm = get("/v1/sddc-managers")
+    versions = sorted({e.get("version") for e in ((sm.get("elements") or []) if isinstance(sm, dict) else [])
+                       if e.get("version")})
+    print(f"  SDDC Manager: {', '.join(versions) or 'version not read'}")
     st, dom = get("/v1/domains")
+    if st != 200:
+        raise ReadFailed(f"{label}: the domain list answered {st or 'nothing'}")
     domains = (dom.get("elements") or []) if isinstance(dom, dict) else []
     mgmt = [d for d in domains if str(d.get("type")).upper() == "MANAGEMENT"]
     workload = [d for d in domains if str(d.get("type")).upper() != "MANAGEMENT"]
@@ -110,11 +125,13 @@ def read_instance(host, token, L, label):
         L.get("domain", d.get("name"))
     print(f"  domains: {len(domains)} ({len(mgmt)} management, {len(workload)} workload)")
     if not mgmt:
-        raise SystemExit("no management domain visible; the upgradable read keys on it")
+        raise ReadFailed(f"{label}: no management domain visible; the upgradable read keys on it")
 
     st, rel = get("/v1/releases")
     releases = (rel.get("elements") or []) if isinstance(rel, dict) else []
     st, bun = get("/v1/bundles")
+    if st != 200:
+        raise ReadFailed(f"{label}: the bundle list answered {st or 'nothing'}")
     bundles = (bun.get("elements") or []) if isinstance(bun, dict) else []
     by_status = collections.Counter(b.get("downloadStatus") for b in bundles)
     by_id = {b.get("id"): b for b in bundles}
@@ -122,6 +139,8 @@ def read_instance(host, token, L, label):
     print(f"  bundles: {len(bundles)} -> {dict(by_status)}")
 
     st, up = get(f"/v1/upgradables/domains/{mgmt[0].get('id')}")
+    if st != 200:
+        raise ReadFailed(f"{label}: the management domain's upgradable read answered {st or 'nothing'}")
     ups = (up.get("elements") or []) if isinstance(up, dict) else []
     print(f"  upgradables on the management domain: {len(ups)}")
 
@@ -187,7 +206,7 @@ def read_instance(host, token, L, label):
     else:
         print(f"\n  depot settings: HTTP {st_d}")
 
-    return {"label": label,
+    return {"label": label, "sddcManagerVersions": versions,
                "domains": {"total": len(domains), "management": len(mgmt), "workload": len(workload)},
                "releases": len(releases), "bundles": {"total": len(bundles), "byStatus": dict(by_status)},
                "upgradables": len(ups), "distinctBundlesOffered": distinct,
@@ -219,22 +238,24 @@ def main():
     # The chapter's discipline is a rehearsal instance kept a cycle ahead of production. Comparing the two is the
     # read that shows whether the stagger still exists, so the script takes a second host when you have one.
     rh, rt = os.environ.get("SDDC_REHEARSAL_HOST"), os.environ.get("SDDC_REHEARSAL_TOKEN_FILE")
-    if rh and rt and os.path.exists(rt):
-        instances.append(read_instance(rh, open(rt, encoding="utf-8").read().strip(), L, "the rehearsal instance"))
+    if rh and rt:
+        instances.append(read_instance(rh, read_secret("SDDC_REHEARSAL_TOKEN_FILE"), L, "the rehearsal instance"))
     else:
         print("\n  rehearsal instance: not read; set SDDC_REHEARSAL_HOST and SDDC_REHEARSAL_TOKEN_FILE to compare")
     if len(instances) > 1:
         a, b = instances[0], instances[1]
-        print(f"\n  the stagger: {a['upgradables']} upgradable(s) on the instance asked about, "
+        print(f"\n  the stagger: SDDC Manager {', '.join(a['sddcManagerVersions']) or '?'} against "
+              f"{', '.join(b['sddcManagerVersions']) or '?'}"
+              + ("; the same build, so no stagger today" if a["sddcManagerVersions"] == b["sddcManagerVersions"] else ""))
+        print(f"     {a['upgradables']} upgradable(s) on the instance asked about, "
               f"{b['upgradables']} on the rehearsal instance; staged bundles "
               f"{a['bundles']['byStatus'].get('SUCCESSFUL', 0)} against "
               f"{b['bundles']['byStatus'].get('SUCCESSFUL', 0)}")
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "instances": instances}
-    token = ""
-    host = ""
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
     for secret in (os.environ.get("SDDC_HOST", ""), os.environ.get("SDDC_REHEARSAL_HOST", "")):
-        assert secret and secret not in text or not secret, "an estate value reached the record"
+        if secret and secret in text:
+            raise SystemExit("FATAL: a host name reached the record; nothing was written")
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():
         for nm in m:
@@ -245,7 +266,29 @@ def main():
     open(os.path.join(out_dir, "lifecycle.json"), "w", encoding="utf-8").write(text + "\n")
     print(f"\nwrote lifecycle.json ({len(instances)} instance(s) read); "
           f"every instance name replaced by a placeholder")
+    unstaged = primary["upgradables"] and primary["offeredAndStaged"] < primary["distinctBundlesOffered"]
+    return 1 if unstaged else 0
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if sys.argv[1:]:
+        print(f"lifecycle.py: takes no arguments (got {' '.join(sys.argv[1:])}); it is configured by the environment",
+              file=sys.stderr)
+        sys.exit(2)
+    try:
+        sys.exit(main())
+    except KeyError as e:
+        print(f"lifecycle.py: set {e.args[0]} (see the Run block at the top of this file)", file=sys.stderr)
+        sys.exit(2)
+    except PermissionError as e:
+        print(f"lifecycle.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except ReadFailed as e:
+        print(f"lifecycle.py: a read failed, so the answer is unknown: {e}", file=sys.stderr)
+        sys.exit(3)
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            sys.exit(4)
+        raise

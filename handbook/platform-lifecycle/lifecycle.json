@@ -1,8 +1,11 @@
 {
- "captured_utc": "2026-09-21T07:33:05Z",
+ "captured_utc": "2026-10-21T23:44:53Z",
  "instances": [
   {
    "label": "the instance asked about",
+   "sddcManagerVersions": [
+    "9.1.1.0.25713928"
+   ],
    "domains": {
     "total": 2,
     "management": 1,
@@ -10,47 +13,18 @@
    },
    "releases": 19,
    "bundles": {
-    "total": 327,
+    "total": 368,
     "byStatus": {
-     "PENDING": 297,
+     "PENDING": 338,
      "SUCCESSFUL": 29,
      "FAILED": 1
     }
    },
-   "upgradables": 4,
-   "distinctBundlesOffered": 3,
+   "upgradables": 0,
+   "distinctBundlesOffered": 0,
    "offeredAndStaged": 0,
-   "unstagedGB": 33.2,
-   "join": [
-    {
-     "upgradableStatus": "PENDING",
-     "bundleType": "VMWARE_SOFTWARE",
-     "downloadStatus": "PENDING",
-     "sizeMB": 7229.5,
-     "staged": false
-    },
-    {
-     "upgradableStatus": "PENDING",
-     "bundleType": "VMWARE_SOFTWARE",
-     "downloadStatus": "PENDING",
-     "sizeMB": 26051.6,
-     "staged": false
-    },
-    {
-     "upgradableStatus": "PENDING",
-     "bundleType": "VMWARE_SOFTWARE",
-     "downloadStatus": "PENDING",
-     "sizeMB": 699.5,
-     "staged": false
-    },
-    {
-     "upgradableStatus": "PENDING",
-     "bundleType": "VMWARE_SOFTWARE",
-     "downloadStatus": "PENDING",
-     "sizeMB": 7229.5,
-     "staged": false
-    }
-   ],
+   "unstagedMB": 0,
+   "join": [],
    "workloadDomainRefusal": {
     "status": 400,
     "message": "Management Domain with ID {{id}} not found."
@@ -67,6 +41,9 @@
   },
   {
    "label": "the rehearsal instance",
+   "sddcManagerVersions": [
+    "9.1.1.0.25713928"
+   ],
    "domains": {
     "total": 1,
     "management": 1,
@@ -74,16 +51,16 @@
    },
    "releases": 19,
    "bundles": {
-    "total": 325,
+    "total": 366,
     "byStatus": {
-     "PENDING": 298,
+     "PENDING": 339,
      "SUCCESSFUL": 27
     }
    },
    "upgradables": 0,
    "distinctBundlesOffered": 0,
    "offeredAndStaged": 0,
-   "unstagedGB": 0.0,
+   "unstagedMB": 0,
    "join": [],
    "workloadDomainRefusal": null,
    "depot": {

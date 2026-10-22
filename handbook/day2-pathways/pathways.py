@@ -43,13 +43,19 @@ vocabulary and are kept, because they are the lesson.
 
 Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-  export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
+  export VCFA_USER=<account> VCFA_PASSWORD_FILE=/path/to/password   # mode 0600: a session login as account@org
+  # or, instead: export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token  (mode 0600; a stored grant can stop granting)
   export PATHWAYS_PROJECT=<project>                        # optional; first visible project otherwise
   export PATHWAYS_NAMESPACE=<namespace>                    # required for --probe-pathways
   export TLS_VERIFY=false                                  # only on a self-signed lab CA
   python3 pathways.py [--probe-pathways]
   python3 pathways.py --versions                           # read-only; writes versions.json only
+Exit: 0 no claimed machine drifted silently and no tombstone holds a resource · 1 one did (the scheduled audit keys on
+      this) · 2 an unknown argument, a missing setting, or a secret file open to group or other · 3 the sign-in or a
+      read failed, or the run stopped short of its answer (it says why) · 4 the record refused to write because an
+      estate name survived the scrub
 """
+import base64
 import collections
 import http.client
 import json
@@ -143,8 +149,18 @@ class Labels:
 
 
 class Estate:
-    def __init__(self, host, org, refresh_token):
+    def __init__(self, host, org, refresh_token=None, user=None, password=None):
+        """A bearer from a session login as user@org when a user and password are given, else from the refresh
+        token. The session login needs nothing pre-minted; a stored refresh token can stop granting."""
         self.host = host
+        if user and password:
+            basic = base64.b64encode(f"{user}@{org}:{password}".encode()).decode()
+            req = urllib.request.Request(f"https://{host}/cloudapi/1.0.0/sessions", method="POST",
+                                         headers={"Authorization": f"Basic {basic}",
+                                                  "Accept": "application/json;version=9.1.0"})
+            with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                self.bearer = next(v for k, v in r.headers.items() if k.lower() == "x-vmware-vcloud-access-token")
+            return
         body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
         req = urllib.request.Request(
             f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
@@ -635,7 +651,8 @@ def refuse_unknown_args(known, takes_value=()):
         sys.exit(0)
     unknown = [a for i, a in enumerate(args) if a not in known and not (i and args[i - 1] in takes_value)]
     if unknown:
-        sys.exit(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)")
+        print(f"unknown argument(s) {unknown}: this script takes {', '.join(sorted(known))} (see --help)", file=sys.stderr)
+        sys.exit(2)
 
 
 def read_secret(var):
@@ -653,10 +670,12 @@ def read_secret(var):
 def main():
     refuse_unknown_args({"--probe-pathways", "--versions"})
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = read_secret("VCFA_REFRESH_TOKEN_FILE")
+    user = os.environ.get("VCFA_USER")
+    password = read_secret("VCFA_PASSWORD_FILE") if user and os.environ.get("VCFA_PASSWORD_FILE") else None
+    refresh = None if password else read_secret("VCFA_REFRESH_TOKEN_FILE")
     out_dir = os.environ.get("OUT_DIR", ".")
     want = "--probe-pathways" in sys.argv[1:]
-    e = Estate(host, org, refresh)
+    e = Estate(host, org, refresh, user, password)
     L = Labels()
     print("pathways.py: the same Day-2 change through each plane, and what stays true\n")
 
@@ -693,8 +712,9 @@ def main():
         payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                    "group": VMOP, "measuredLine": MEASURED_LINE, "namespaces": vrows}
         text = L.scrub(json.dumps(payload, indent=1, ensure_ascii=False))
-        for secret in (e.bearer, refresh, host, org):
-            assert not secret or secret not in text, "an estate value reached the record"
+        for secret in (e.bearer, refresh, password, host, org):
+            if secret and secret in text:
+                raise SystemExit("FATAL: an estate value or a credential reached the record; nothing was written")
         bare = re.sub(r"\{\{[^}]*\}\}", "", text)
         for fam, m in L.maps.items():
             for nm in m:
@@ -703,7 +723,7 @@ def main():
         os.makedirs(out_dir, exist_ok=True)
         open(os.path.join(out_dir, "versions.json"), "w", encoding="utf-8").write(text + "\n")
         print(f"\nwrote versions.json ({len(vrows)} namespace(s)); nothing else was read or written")
-        return
+        return 0
 
     rows, tombstones, observed = audit(e, L, endpoints)
     agree = sum(1 for r in rows if r["agrees"])
@@ -797,8 +817,9 @@ def main():
                                "driftProvableFromTheRecordAlone": len(from_record_alone)},
                "probe": probed}
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
-    for secret in (e.bearer, refresh, host, org, os.environ.get("PATHWAYS_NAMESPACE")):
-        assert not secret or secret not in text, "an estate value reached the record"
+    for secret in (e.bearer, refresh, password, host, org, os.environ.get("PATHWAYS_NAMESPACE")):
+        if secret and secret in text:
+            raise SystemExit("FATAL: an estate value or a credential reached the record; nothing was written")
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():
         for nm in m:
@@ -809,7 +830,23 @@ def main():
     open(os.path.join(out_dir, "pathways.json"), "w", encoding="utf-8").write(text + "\n")
     print(f"\nwrote pathways.json ({len(rows)} claimed machine(s) audited, {len(tombstones)} tombstone(s)"
           f"{', probe included' if probed else ''}); every estate name replaced by a placeholder")
+    return 1 if silent or tombstones else 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        sys.exit(main())
+    except KeyError as e:
+        print(f"pathways.py: set {e.args[0]} (see the Run block at the top of this file)", file=sys.stderr)
+        sys.exit(2)
+    except PermissionError as e:
+        print(f"pathways.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except (urllib.error.URLError, OSError) as e:
+        print(f"pathways.py: the sign-in or a read failed: {getattr(e, 'code', '') or e}", file=sys.stderr)
+        sys.exit(3)
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            sys.exit(4 if e.code.lstrip().startswith("FATAL") else 3)
+        raise

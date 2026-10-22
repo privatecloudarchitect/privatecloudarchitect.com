@@ -16,9 +16,12 @@ The two that stick are the same mechanism. Automation is not a parallel control 
 
 ## Run it
 
+`expected-output.md` shows what the read-only audit printed on the reference estate; `records/pathways-2026-09-21.json` is the probe run of 2026-09-21. Exit 0: nothing to act on. Exit 1: a claimed machine drifted silently or a deleted deployment still holds a resource. Exit 2: usage or a secret file open to group or other. Exit 3: the sign-in or a read failed. Exit 4: the record refused to write.
+
 ```bash
 export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
+export VCFA_USER=<account> VCFA_PASSWORD_FILE=/path/to/password   # mode 0600: a session login as account@org
+# or instead: export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token   (mode 0600; a stored grant can stop granting)
 export PATHWAYS_PROJECT=<project>                        # optional; first visible project otherwise
 export TLS_VERIFY=false                                  # only on a self-signed lab CA
 python3 pathways.py

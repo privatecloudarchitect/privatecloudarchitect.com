@@ -24,6 +24,9 @@ Run:
   export AVI_PASSWORD_FILE=/path/to/password     # mode 0600
   export TLS_VERIFY=false                        # only on a self-signed lab CA
   python3 vip.py
+Exit: 0 every pool holds a member · 1 a pool is empty: expected during a build, the failure after one, so schedule the
+      check outside build windows · 2 an argument was given, a setting is missing, or a password file is open to group
+      or other · 3 the login or a read failed · 4 the record refused to write because an estate name survived the scrub
 """
 import collections
 import http.cookiejar
@@ -100,7 +103,7 @@ class Avi:
                                      headers={"Content-Type": "application/json", "Accept": "application/json"})
         with self.op.open(req, timeout=45) as r:
             if r.status != 200:
-                raise SystemExit(f"login refused: HTTP {r.status}")
+                raise ConnectionError(f"login refused: HTTP {r.status}")
         self.csrf = {c.name: c.value for c in self.jar}.get("csrftoken", "")
 
     def get(self, path):
@@ -204,8 +207,10 @@ def main():
                "note": "a virtual service reaches its pools through an l4 policy set, not a direct reference, "
                        "so one virtual service can front several pools chosen per port"}
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
-    for secret in (password, host, user):
-        assert secret not in text, "an estate value reached the record"
+    # Not the user name: a local account is commonly called admin, a word the record can legitimately carry.
+    for secret in (password, host):
+        if secret and secret in text:
+            raise SystemExit("FATAL: an estate value or a credential reached the record; nothing was written")
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():
         for nm in m:
@@ -216,7 +221,28 @@ def main():
     open(os.path.join(out_dir, "vip.json"), "w", encoding="utf-8").write(text + "\n")
     print(f"\nwrote vip.json ({len(vss)} virtual services, {len(pools)} pools); "
           f"every object name replaced by a placeholder")
+    return 1 if empty else 0
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if sys.argv[1:]:
+        print(f"vip.py: takes no arguments (got {' '.join(sys.argv[1:])}); it is configured by the environment",
+              file=sys.stderr)
+        sys.exit(2)
+    try:
+        sys.exit(main())
+    except KeyError as e:
+        print(f"vip.py: set {e.args[0]} (see the Run block at the top of this file)", file=sys.stderr)
+        sys.exit(2)
+    except PermissionError as e:
+        print(f"vip.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except (ConnectionError, urllib.error.URLError, OSError) as e:
+        print(f"vip.py: the login or a read failed: {getattr(e, 'code', '') or e}", file=sys.stderr)
+        sys.exit(3)
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            sys.exit(4)
+        raise

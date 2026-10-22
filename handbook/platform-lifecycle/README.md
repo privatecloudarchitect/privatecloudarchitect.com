@@ -19,10 +19,20 @@ export TLS_VERIFY=false                     # only on a self-signed lab CA
 
 # optional, to compare the instance you rehearse on:
 export SDDC_REHEARSAL_HOST=<other-sddc-manager-fqdn>
-export SDDC_REHEARSAL_TOKEN_FILE=/path/to/other-bearer
+export SDDC_REHEARSAL_TOKEN_FILE=/path/to/other-bearer   # mode 0600
 
 python3 lifecycle.py
 ```
+
+| Exit | Meaning |
+|---|---|
+| 0 | nothing to act on: every offered upgrade has its content staged, or nothing is offered |
+| 1 | an offered upgrade's content is not staged on the instance asked about: the weekly alert keys on this |
+| 2 | an argument was given, a setting is missing, or a token file is open to group or other |
+| 3 | a read failed, so the answer is unknown |
+| 4 | the record refused to write because an estate name survived the scrub |
+
+`expected-output.md` shows what it printed on the reference estate, and `records/lifecycle-2026-09-21.json` is the reading from a day an upgrade was on offer with nothing staged.
 
 ## The join is the point
 

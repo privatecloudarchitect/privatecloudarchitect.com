@@ -21,6 +21,16 @@ export TLS_VERIFY=false                      # only on a self-signed lab CA
 python3 vip.py
 ```
 
+| Exit | Meaning |
+|---|---|
+| 0 | every pool holds a member |
+| 1 | a pool is empty: expected during a build, the failure after one, so schedule the check outside build windows |
+| 2 | an argument was given, a setting is missing, or a password file is open to group or other |
+| 3 | the login or a read failed |
+| 4 | the record refused to write because an estate name survived the scrub |
+
+`expected-output.md` shows what it printed on the reference estate.
+
 The controller's API is a **session login, not a bearer**: `POST /login` with a username and password, then
 carry the session cookie together with the CSRF token it sets and a `Referer` header on every read. A script
 written against the bearer habit fails here in a way that looks like an authorization problem.
