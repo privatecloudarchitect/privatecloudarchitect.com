@@ -10,7 +10,7 @@ shapes.py: every blueprint on this estate, measured rather than described
 
   census: 14 blueprint(s) across 2 project(s) parsed (0 would not parse)
      size 840 to 48,100 bytes, a 57 times range
-     49 resource declaration(s) using 2 distinct type(s): {'CCI.Supervisor.Namespace': 13, 'CCI.Supervisor.Resource': 13}
+     49 resource declaration(s) of 2 distinct type(s); blueprints declaring each type: {'CCI.Supervisor.Namespace': 13, 'CCI.Supervisor.Resource': 13}
      declarable but never used here: ['CCI.VPC', 'CCI.VPC.Configuration', 'Util.PasswordEntry']
      input types: {'string': 73, 'integer': 2, 'boolean': 4}
      string inputs: 73; 28 carry a pattern or an enumeration (10 a pattern, 18 an enumeration), 57 a default, 45 neither a pattern nor an enumeration

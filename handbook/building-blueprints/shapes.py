@@ -317,7 +317,7 @@ def main():
     sizes = sorted(x["bytes"] for x in census) or [0]
     print(f"  census: {len(census)} blueprint(s) across {len(projects)} project(s) parsed ({unparsed} would not parse)")
     print(f"     size {sizes[0]:,} to {sizes[-1]:,} bytes, a {round(sizes[-1] / sizes[0]) if sizes[0] else '?'} times range")
-    print(f"     {decls} resource declaration(s) using {len(restypes)} distinct type(s): {dict(restypes)}")
+    print(f"     {decls} resource declaration(s) of {len(restypes)} distinct type(s); blueprints declaring each type: {dict(restypes)}")
     print(f"     declarable but never used here: {sorted(set(declarable) - set(restypes))}")
     print(f"     input types: {dict(intypes)}")
     print(f"     string inputs: {strings['total']}; {strings['constrained']} carry a pattern or an enumeration "
