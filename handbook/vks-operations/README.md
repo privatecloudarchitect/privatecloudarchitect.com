@@ -14,11 +14,21 @@ Stdlib Python only; no token is printed or written.
 
 ```bash
 export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token   # mode 0600
+export VCFA_USER=<account> VCFA_PASSWORD_FILE=/path/to/password   # mode 0600: a session login as account@org
+# or instead: export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token   (mode 0600; a stored grant can stop granting)
 export TLS_VERIFY=false                                 # only on a self-signed lab CA
 
 python3 vks.py
 ```
+
+| Exit | Meaning |
+|---|---|
+| 0 | answered, and `vks.json` written |
+| 1 | the run stopped: no project is visible to this identity, or an estate name survived the scrub (nothing written) |
+| 2 | an argument was given, a setting is missing, or a secret file is open to group or other |
+| 3 | the sign-in or a read failed |
+
+`expected-output.md` shows what it printed on the reference estate.
 
 ## Two surfaces, and they are not the same surface
 

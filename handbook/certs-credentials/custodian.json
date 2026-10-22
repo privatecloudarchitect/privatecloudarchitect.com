@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T07:32:59Z",
+ "captured_utc": "2026-10-21T23:20:07Z",
  "credentials": {
   "total": 49,
   "byResourceType": {
@@ -59,9 +59,9 @@
      "the instance's own CA": 8,
      "another chain": 1
     },
-    "nearestDays": 242,
-    "furthestDays": 607,
-    "within365": 2
+    "nearestDays": 211,
+    "furthestDays": 576,
+    "within365": 3
    },
    {
     "domain": "{{domain-2}}",
@@ -70,8 +70,8 @@
     "issuers": {
      "the instance's own CA": 10
     },
-    "nearestDays": 322,
-    "furthestDays": 1724,
+    "nearestDays": 291,
+    "furthestDays": 1693,
     "within365": 3
    }
   ],
@@ -82,30 +82,30 @@
    "DISABLED": 17,
    "None": 2
   },
-  "nearestDays": 242,
-  "furthestDays": 1724,
-  "within365": 5,
+  "nearestDays": 211,
+  "furthestDays": 1693,
+  "within365": 6,
   "within90": 0,
   "daysSorted": [
-   242,
-   252,
-   322,
-   322,
-   332,
-   373,
-   424,
-   435,
-   436,
-   478,
-   601,
-   607,
-   619,
-   1427,
-   1427,
-   1724,
-   1724,
-   1724,
-   1724
+   211,
+   222,
+   291,
+   291,
+   302,
+   342,
+   393,
+   405,
+   405,
+   447,
+   570,
+   576,
+   588,
+   1396,
+   1396,
+   1693,
+   1693,
+   1693,
+   1693
   ]
  }
 }

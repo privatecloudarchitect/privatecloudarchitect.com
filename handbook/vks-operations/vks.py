@@ -17,7 +17,7 @@ day-2 actually edits. This reads both and reports where they differ:
   4. the OWNERSHIP CHAIN: every node virtual machine walked back through its controller owner to the cluster.
      This is the chapter's central claim made structural rather than asserted: a node is an output, and a
      controller owns it;
-  5. the SCOPE TRAP: the same list refused at cluster scope and served under a namespace, because the first
+  5. the SCOPE CHECK: the same list refused at cluster scope and served under a namespace, because the first
      reading of that refusal is "I am not allowed" and the correct one is "I asked in the wrong place".
 
 Everything here is read-only. There is no probe flag and no write of any kind: this plane runs live workload
@@ -25,10 +25,14 @@ clusters, and the questions worth asking about it are all answerable by reading.
 
 Run:
   export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
-  export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token    # mode 0600
+  export VCFA_USER=<account> VCFA_PASSWORD_FILE=/path/to/password   # mode 0600: a session login as account@org
+  # or, instead: export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token  (mode 0600; a stored grant can stop granting)
   export TLS_VERIFY=false                                  # only on a self-signed lab CA
   python3 vks.py
+Exit: 0 answered · 1 the run stopped: no project is visible, or an estate name survived the scrub · 2 usage error, a
+      missing setting, or a secret file open to group or other · 3 the sign-in or a read failed
 """
+import base64
 import collections
 import http.client
 import json
@@ -111,8 +115,18 @@ class Labels:
 class Surface:
     """One bearer, two endpoints: the org gateway, and a Supervisor namespace's own Kubernetes endpoint."""
 
-    def __init__(self, host, org, refresh_token):
+    def __init__(self, host, org, refresh_token=None, user=None, password=None):
+        """A bearer from a session login as user@org when a user and password are given, else from the refresh
+        token. The session login needs nothing pre-minted; a stored refresh token can stop granting."""
         self.host = host
+        if user and password:
+            basic = base64.b64encode(f"{user}@{org}:{password}".encode()).decode()
+            req = urllib.request.Request(f"https://{host}/cloudapi/1.0.0/sessions", method="POST",
+                                         headers={"Authorization": f"Basic {basic}",
+                                                  "Accept": "application/json;version=9.1.0"})
+            with urllib.request.urlopen(req, context=ctx(), timeout=30) as r:
+                self.bearer = next(v for k, v in r.headers.items() if k.lower() == "x-vmware-vcloud-access-token")
+            return
         body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": refresh_token}).encode()
         req = urllib.request.Request(
             f"https://{host}/oauth/tenant/{org}/token", data=body, method="POST",
@@ -167,9 +181,11 @@ def read_secret(var):
 
 def main():
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = read_secret("VCFA_REFRESH_TOKEN_FILE")
+    user = os.environ.get("VCFA_USER")
+    password = read_secret("VCFA_PASSWORD_FILE") if user and os.environ.get("VCFA_PASSWORD_FILE") else None
+    refresh = None if password else read_secret("VCFA_REFRESH_TOKEN_FILE")
     out_dir = os.environ.get("OUT_DIR", ".")
-    s = Surface(host, org, refresh)
+    s = Surface(host, org, refresh, user, password)
     L = Labels()
     GW = f"https://{host}{CCI}"
     print("vks.py: the Kubernetes estate, read from both places it answers from\n")
@@ -203,7 +219,7 @@ def main():
     print(f"  fleet surface: {len(fleet)} kind(s); {sum(1 for f in fleet if f['declaresWrite'])} declare a write "
           f"verb and {sum(1 for f in fleet if f['permitsWrite'])} actually permit one")
     print(f"     kinds whose declaration promises more than the plane allows: {len(misleading)}")
-    for f in fleet[:6]:
+    for f in misleading:
         print(f"       {f['resource']:<34} declares {','.join(f['declared'])[:34]:<36} allows {','.join(f['allowed'])}")
 
     # ---- 2. the fleet content
@@ -297,7 +313,7 @@ def main():
               f"workers={[w['replicas'] for w in d['workerPools']]} variables={d['variables']} phase={d['phase']}")
     print(f"\n  ownership: {chain['machines']} machine(s) owned by {chain['owners']}; "
           f"{chain['vmsOwned']} of {chain['vms']} virtual machines carry a controller owner")
-    print(f"  the scope trap: the same list answers HTTP {scope['clusterScoped']} at cluster scope and "
+    print(f"  the scope check: the same list answers HTTP {scope['clusterScoped']} at cluster scope and "
           f"HTTP {scope['namespaced']} under a namespace")
     print(f"  self-rules: org gateway {rules['orgGateway']['rules']} rules "
           f"(incomplete={rules['orgGateway']['incomplete']}); namespace endpoint "
@@ -308,8 +324,10 @@ def main():
                "managedComponents": addons, "declaredClusters": declared, "ownership": chain,
                "scope": scope, "selfRules": rules}
     text = L.scrub(UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False)))
-    for secret in (s.bearer, refresh, host, org):
-        assert secret not in text, "an estate value reached the record"
+    # Not the user name: an account can be called admin, a word the rules legitimately carry.
+    for secret in (s.bearer, refresh, password, host, org):
+        if secret and secret in text:
+            raise SystemExit("FATAL: an estate value or a credential reached the record; nothing was written")
     for word in {d["class"] for d in declared} | {d["version"] for d in declared}:
         if word:
             assert word in text, f"the scrub replaced {word!r}, which is the product's own vocabulary"
@@ -326,4 +344,24 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if sys.argv[1:]:
+        print(f"vks.py: takes no arguments (got {' '.join(sys.argv[1:])}); it is configured by the environment",
+              file=sys.stderr)
+        sys.exit(2)
+    try:
+        main()
+    except KeyError as e:
+        print(f"vks.py: set {e.args[0]} (see the Run block at the top of this file)", file=sys.stderr)
+        sys.exit(2)
+    except PermissionError as e:
+        print(f"vks.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except (urllib.error.URLError, OSError) as e:
+        print(f"vks.py: the sign-in or a read failed: {getattr(e, 'code', '') or e}", file=sys.stderr)
+        sys.exit(3)
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            sys.exit(1)
+        raise

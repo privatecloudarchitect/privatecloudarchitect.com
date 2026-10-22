@@ -12,6 +12,8 @@ instance from metadata alone. Stdlib Python only. **No secret can reach its outp
 
 ## Run it
 
+`expected-output.md` shows what it printed on the reference estate.
+
 ```bash
 export SDDC_HOST=<sddc-manager-fqdn>
 export SDDC_TOKEN_FILE=/path/to/bearer    # mode 0600
