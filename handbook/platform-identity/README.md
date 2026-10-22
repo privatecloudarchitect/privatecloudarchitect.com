@@ -46,7 +46,7 @@ Standard library only, except `--kubeconfig`, which needs PyYAML.
 | 0 | the token is usable; with `--kubeconfig`, every credential of every user entry was judged and none has run out: an exec plugin with a command renews itself, and each token's, token file's and client certificate's end date was read |
 | 1 | it is expired or inside the clock-skew margin; with `--kubeconfig`, a user entry whose soonest end, among every credential it holds, has passed or falls inside the margin, and this comes first |
 | 3 | undetermined: it is not a JWT, or it carries no `exp` claim, so nothing here can say when it expires; with `--kubeconfig`, and none run out, a credential it could not judge, which it names (an opaque token, a certificate or token file it could not read, an exec entry that is not a plugin with a command, an auth-provider entry, a user name and password, an entry with none of these), even beside one it judged, or a kubeconfig that declares no users; or an error the script did not expect |
-| 5 | a usage error: no token given, a file it cannot read, a kubeconfig it cannot read or that is not one, PyYAML missing for `--kubeconfig`, an argument it does not take, a Python older than 3.10 |
+| 5 | a usage error: no token given, a file it cannot read, a kubeconfig it cannot read or that is not one (any file `KUBECONFIG` lists), a `KUBECONFIG` none of whose files exists, a `--file`, a kubeconfig or a token file a kubeconfig names that is open to group or other (refused unread, with the fix: `chmod 600`), PyYAML missing for `--kubeconfig`, an argument it does not take, a Python older than 3.10 |
 
 0, 3 and 5 mean what they mean on every identity companion; 1 is this script's own finding. A token with no `exp`
 exits 3 rather than 0, because a token that does not say when it dies is not known to work.
@@ -93,6 +93,17 @@ kubeconfig that declares no users exits 3 as well: a run that judged nothing has
 
 It reads the file directly rather than shelling out, because `kubectl config view` redacts token
 values and would report nothing at all wrong.
+
+`KUBECONFIG` is read as kubectl reads it: a list of files, colon-delimited (semicolon-delimited on Windows), empty
+names ignored, merged by user name, the first file to name a user winning; a later file's entry of the same name is
+not read, and the run says how many it set aside. A file an entry names is read relative to the kubeconfig that holds
+the entry. A file the list names that does not exist is named in the output and read as holding nothing; when none of
+them exists, or one does not parse as a kubeconfig, the run exits 5. Without `KUBECONFIG`, it reads `~/.kube/config`.
+
+A kubeconfig holds live credentials, so one open to group or other is refused before it is read, every file
+`KUBECONFIG` lists among them, and so is a token file one of its entries names, before any of them is read: the run
+prints the fix (`chmod 600` on that file), judges nothing and exits 5. A run that read it and exited 0 would say nothing is left to do while every other account on the
+machine can read the credential.
 
 ## What it does not do
 

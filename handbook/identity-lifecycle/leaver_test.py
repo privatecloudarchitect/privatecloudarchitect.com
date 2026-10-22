@@ -29,7 +29,7 @@ Exit, the first that applies:
      holds no answer for, or an error it did not expect. Never a pass, never a finding.
   0  every check passed, its evidence at or before the deadline
   5  a usage error: a missing or bad argument or environment variable, a token file that cannot be read, a credential
-     file open to group or other (refused unread, with the fix: chmod 600), a --user that
+     file that is empty or open to group or other (refused unread, with the fix: chmod 600), a --user that
      selects no account or more than one, a --replay directory that cannot be read or holds no replay set, or a Python
      older than 3.10; nothing is sent
 The contract every identity companion keeps: 0 nothing for a person to act on, 3 a read failed or a result is
@@ -1211,15 +1211,22 @@ def _run(argv: list[str] | None = None) -> int:
         if REPLAY is None and os.environ.get(name) and not os.access(os.environ[name], os.R_OK):
             print(f"{name}: the file cannot be read", file=sys.stderr)
             return EXIT_USAGE
+        if REPLAY is None and name == "ENTRA_CERT_FILE" and os.environ.get(name) \
+                and not Path(os.environ["ENTRA_CERT_FILE"]).read_bytes().strip():   # public: no mode, but not empty
+            print(f"{name} is empty; nothing was sent", file=sys.stderr)
+            return EXIT_USAGE
         if REPLAY is None and os.environ.get(name) and name != "ENTRA_CERT_FILE":   # the certificate is public
-            try:   # read once through the run's reader: one open to group or other is refused unread
-                _secret_file(name)
-            except PermissionError as e:
-                if e.errno is None:   # the refusal names the variable, the mode and the fix
-                    print(f"{e}; nothing was sent", file=sys.stderr)
+            try:   # read once through the run's reader: one open to group or other is refused unread, an empty one too
+                if not _secret_file(name):
+                    print(f"{name} is empty; nothing was sent", file=sys.stderr)
                     return EXIT_USAGE
-            except (OSError, UnicodeDecodeError):
-                pass   # left to the read that needs it, as before
+            except (OSError, UnicodeDecodeError) as e:
+                # the refusal names the variable, the mode and the fix; any other failure is a file that cannot be
+                # read, the operator's setup like the rest (batch 12)
+                refused = isinstance(e, PermissionError) and e.errno is None
+                said = str(e) if refused else f"{name}: the file cannot be read"
+                print(f"{said}; nothing was sent", file=sys.stderr)
+                return EXIT_USAGE
     try:
         record, calls = run(a)
     except UsageError as e:

@@ -20,9 +20,20 @@ as a placeholder with its length.
 Env:  VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE (flow A); VCFA_USER (user@org), VCFA_PASSWORD (flow B);
       VCFA_PROVIDER_REFRESH_TOKEN_FILE (optional); TLS_VERIFY=false on a self-signed lab CA; OUT (default calls.json).
       Each token file is mode 0600: one open to group or other is refused unread, before anything is sent.
-Exit: 0 recorded · 1 a call failed · 5 a token file missing or open to group or other (nothing sent)
+Use:  python3 capture.py          it takes no option but --help
+Exit: 0 recorded
+      3 a read failed or did not answer: the tenant grant did not answer 200 (nothing more is sent and no record is
+        written), the session login's answer carried no access-token header (the record is written, with that answer),
+        a secret, the host or the organization survived the placeholders (no record is written), or an error the
+        script did not expect (a host that did not answer among them), printed on one line
+      5 a usage error, with nothing sent: an option it does not take, VCFA_HOST, VCFA_ORG or VCFA_REFRESH_TOKEN_FILE
+        unset, or a token file that cannot be read, is empty or is open to group or other (refused unread, with the
+        fix: chmod 600)
+      1, 2 and 4 are not used. The contract every identity companion keeps: 0 nothing for a person to act on, 3 a read
+      failed or a result is undetermined, 5 a usage error; an error the script did not expect is 3, never 1.
 """
 
+import argparse
 import base64
 import json
 import os
@@ -35,6 +46,7 @@ import urllib.parse
 import urllib.request
 
 ACCEPT = "application/json;version=9.1.0"
+EXIT_OK, EXIT_UNREAD, EXIT_USAGE = 0, 3, 5
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 KEEP_HEADERS = ("content-type", "x-vmware-vcloud-access-token", "x-vmware-vcloud-request-id", "link", "cache-control", "x-frame-options", "strict-transport-security")
 RECORD = []
@@ -146,16 +158,69 @@ def rights_all(san, host, bearer):
         page += 1
 
 
-def main():
+class _Parser(argparse.ArgumentParser):
+    """argparse exits 2 on a usage error; it exits 5 here, as on every identity companion."""
+
+    def __init__(self, *args, **kwargs):  # an abbreviation never parses as a whole flag name
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
+    def error(self, message: str):  # type: ignore[override]
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
+def token_files() -> tuple[str | None, str | None]:
+    """Both token files, read before anything is sent, or a usage error (SystemExit 5) naming what to fix: a variable
+    unset, or a file that cannot be read, is empty or is open to group or other (refused unread, with the fix)."""
+    out = []
+    for var, needed in (("VCFA_REFRESH_TOKEN_FILE", True), ("VCFA_PROVIDER_REFRESH_TOKEN_FILE", False)):
+        if not os.environ.get(var):
+            if needed:
+                print(f"capture.py: set {var}, the file holding the organization's refresh token (mode 0600); nothing "
+                      "was sent", file=sys.stderr)
+                raise SystemExit(EXIT_USAGE)
+            out.append(None)
+            continue
+        try:
+            value = read_secret(var)
+        except (OSError, UnicodeDecodeError) as e:   # the refusal (no errno) names the variable, the mode and the fix
+            why = str(e) if isinstance(e, PermissionError) and e.errno is None else \
+                f"{var} names a file that cannot be read ({type(e).__name__})"
+            print(f"capture.py: {why}; nothing was sent", file=sys.stderr)
+            raise SystemExit(EXIT_USAGE) from None
+        if not value:
+            print(f"capture.py: {var} is empty; nothing was sent", file=sys.stderr)
+            raise SystemExit(EXIT_USAGE)
+        out.append(value)
+    return out[0], out[1]
+
+
+def main(argv: list[str] | None = None) -> int:
+    """The run, with its guard: an option it does not take is a usage error (5), and an error the script did not
+    expect exits 3 on one line, never 1 and never a traceback."""
+    try:
+        _Parser(prog="capture.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+                ).parse_args(sys.argv[1:] if argv is None else argv)
+        return _run()
+    except SystemExit as e:  # the parser's own exits (5 on a usage error, 0 after --help) and the usage refusals
+        return e.code if isinstance(e.code, int) else EXIT_USAGE
+    except Exception as e:  # the last guard: whatever was not expected is not known, so exit 3
+        print(f"capture.py: the run stopped on an error it did not expect: {type(e).__name__}: {str(e)[:160]}; no "
+              "record was written (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
+
+
+def _run() -> int:
+    missing = [k for k in ("VCFA_HOST", "VCFA_ORG") if not os.environ.get(k)]
+    if missing:
+        print(f"capture.py: set {' and '.join(missing)} (see the header); nothing was sent", file=sys.stderr)
+        return EXIT_USAGE
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
     user_at_org = os.environ.get("VCFA_USER", ""); user = user_at_org.split("@")[0] if user_at_org else "{{user}}"
     domain = os.environ.get("VCFA_DOMAIN", "")
-    try:   # both token files are read before anything is sent
-        refresh = read_secret("VCFA_REFRESH_TOKEN_FILE")
-        prov = read_secret("VCFA_PROVIDER_REFRESH_TOKEN_FILE") if os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE") else None
-    except (PermissionError, FileNotFoundError) as e:   # a token file missing or open to group or other
-        print(f"capture.py: {e}; nothing was sent", file=sys.stderr)
-        sys.exit(5)
+    refresh, prov = token_files()   # both token files are read before anything is sent
     password = os.environ.get("VCFA_PASSWORD", "")
     san = Sanitizer(host, org, user, domain, [refresh, password, prov])
     failed = 0
@@ -165,7 +230,8 @@ def main():
                        {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}, form={"grant_type": "refresh_token", "refresh_token": refresh},
                        note="the bearer lives expires_in seconds; a refresh token comes back beside it: store the value that comes back")
     if st != 200:
-        print("FATAL: the tenant grant failed"); sys.exit(1)
+        print(f"FATAL: the tenant grant answered {st}, not 200; nothing more was sent and no record was written (exit 3)")
+        return EXIT_UNREAD
     bearer_a = body["access_token"]; san.secrets.append(bearer_a)
     if body.get("refresh_token") and body["refresh_token"] != refresh:
         san.secrets.append(body["refresh_token"]); print("   (a different refresh token came back; store it: the old value is dead)")
@@ -218,14 +284,18 @@ def main():
         print("  P   skipped: VCFA_PROVIDER_REFRESH_TOKEN_FILE not set (a provider api-token minted in the console)")
     out = os.environ.get("OUT", "calls.json")
     text = json.dumps({"captured": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "calls": RECORD}, indent=2, ensure_ascii=False)
-    for sec in san.secrets:
-        assert sec not in text, "a secret reached the record"
-    assert host not in text and org not in text
+    if any(sec in text for sec in san.secrets) or host in text or org in text:   # the record contract: never written
+        print(f"\nrefusing to write {out}: a secret, the host or the organization survived the placeholders; {out} "
+              "not written (exit 3)", file=sys.stderr)
+        return EXIT_UNREAD
     with open(out, "w", encoding="utf-8") as f:
         f.write(text + "\n")
     print(f"\nrecorded {len(RECORD)} exchanges to {out}; every host, organization, user, token, and id replaced by a placeholder")
-    sys.exit(1 if failed else 0)
+    if failed:
+        print(f"the session login's answer carried no access-token header, so flow B was not recorded whole (exit {EXIT_UNREAD})")
+        return EXIT_UNREAD
+    return EXIT_OK
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

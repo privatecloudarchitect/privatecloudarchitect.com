@@ -116,7 +116,8 @@ state (anything but `ACTIVE`, `EXPIRED` or `REVOKED`) or end date the record doe
 prints `unread`, and the run exits 3 unless a failure (exit 2) comes first, so a warning never hides it.
 
 Every password and token is read from `NAME_FILE`, a file of mode 0600, when it is set; a file open to group or other
-is refused unread, with the fix (`chmod 600` on the file), as a usage error (exit 5) with nothing sent. The value itself in `NAME`
+is refused unread, with the fix (`chmod 600` on the file), and an empty one is refused too, each as a usage error (exit
+5) with nothing sent. The value itself in `NAME`
 (`OPS_API_TOKEN`, `VC_PASSWORD` and the rest) still works, but it lands in the shell's history and the process list,
 so keep it for a throwaway credential.
 

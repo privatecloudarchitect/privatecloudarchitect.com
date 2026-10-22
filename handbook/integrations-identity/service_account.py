@@ -67,9 +67,10 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         it the token is not tried, and the record notes it). An account of that name in another organization is not
         read: the organization is the one you name
       5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
-        exists for a create or does not for a teardown, with --execute a provider credential file that cannot be read,
-        is empty or is open to group or other (refused unread, with the fix: chmod 600), a --replay directory that
-        cannot be read or holds no replay set), or a Python older than 3.10; nothing is written
+        exists for a create or does not for a teardown, with --execute a provider credential file, or a teardown's
+        --token-file, that cannot be read, is empty or is open to group or other (refused unread, with the fix: chmod
+        600; the stored token is read before anything is sent), a --replay directory that cannot be read or holds no
+        replay set), or a Python older than 3.10; nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
       the run's code stands when it is 1, 2 or 3, and a run that held exits 3 (its writes were made; the record was not
       written).
@@ -747,7 +748,7 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
                              "the STATE, its create wrote")
         return EXIT_REFUSED
     client_id = next((client_id_of(r) for r in rows if client_id_of(r)), None)
-    token = _secret_from(a.token_file) if a.token_file and os.path.exists(a.token_file) and rows else None
+    token = _stored_token(a) if rows else None
     checks: dict[str, list[dict]] = {}
     revokes = []
     for acct in rows:
@@ -793,10 +794,41 @@ def teardown(vcfa: Vcfa, a: argparse.Namespace, record: dict) -> int:
 
 
 def _secret_from(path: str) -> str:
+    """The refresh token in the file a teardown's --token-file names. A file open to group or other is refused before
+    it is read; the refusal names the flag and the fix, never the file's content. A replayed run reads none."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
     with open(path, encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"--token-file names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "{path}" and try again (the file was not read)')
         return f.read().strip()
+
+
+def _stored_token(a: argparse.Namespace) -> str | None:
+    """A teardown's stored refresh token: the one _run read before anything was sent (stored_token_problem), or, for
+    a caller that did not run _run, read here through the same refusal; None without --token-file or its file."""
+    held = getattr(a, "stored_token", None)
+    if held is not None:
+        return held
+    return _secret_from(a.token_file) if a.token_file and os.path.exists(a.token_file) else None
+
+
+def stored_token_problem(a: argparse.Namespace) -> str | None:
+    """With --teardown --execute: the --token-file read once, before anything is sent, into a.stored_token. A file
+    that cannot be read, is empty or is open to group or other (refused unread, with the fix) is a usage error (exit
+    5), never a refusal met between the account's reads and its revoke."""
+    a.stored_token = None
+    if not (a.teardown and a.token_file):
+        return None
+    try:
+        a.stored_token = _secret_from(a.token_file)
+    except (OSError, UnicodeDecodeError) as e:   # the refusal (no errno) names the flag and the fix
+        refused = isinstance(e, PermissionError) and e.errno is None
+        return str(e) if refused else f"--token-file could not be read: {type(e).__name__}"
+    return None if a.stored_token else "--token-file is empty"
 
 
 # ── the record contract: every estate value replaced, or nothing written ─────────────────────────────────────────
@@ -1041,7 +1073,7 @@ def _run(argv: list[str] | None = None) -> int:
         print("VCFA_HOST and a provider credential (VCFA_PROVIDER_REFRESH_TOKEN_FILE or VCFA_PROVIDER_BEARER_FILE) are required",
               file=sys.stderr)
         return EXIT_USAGE
-    problem = credential_problem()
+    problem = credential_problem() or stored_token_problem(a)
     if problem:
         print(f"{problem}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE

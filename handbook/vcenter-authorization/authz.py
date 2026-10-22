@@ -303,6 +303,7 @@ PRODUCT_LOCAL = {"Administrator", "Administrators"}
 # access: the census names its class and the advice below, and --remove, which removes only realm-spelled grants,
 # never removes one.
 BROKER_DEFAULT = "CUSTOMER"
+LOCAL_DEFAULT = "VSPHERE.LOCAL"   # the vCenter's own SSO domain when LOCAL_DOMAIN is unset
 BROKER_CLASS = "API client (broker tenant)"
 BROKER_ADVICE = "an integration's own access: review it with the integration's owner, never remove it as clutter"
 
@@ -772,7 +773,7 @@ def norm(domain):
 
 
 def local_domain():
-    return norm(os.environ.get("LOCAL_DOMAIN") or "VSPHERE.LOCAL").upper()
+    return norm(os.environ.get("LOCAL_DOMAIN") or LOCAL_DEFAULT).upper()
 
 
 def broker_tenant():
@@ -806,7 +807,7 @@ def rule_table():
     default and the domains it may never equal travel with them."""
     return {"rules": [{"domain": w, "name": p, "class": c} for w, p, c in CLASS_RULES],
             "nameFlags": "i", "domainCompare": "trimmed, trailing dots dropped, without regard to case",
-            "localDefault": "VSPHERE.LOCAL", "realmMustDiffer": list(REALM_MUST_DIFFER),
+            "localDefault": LOCAL_DEFAULT, "realmMustDiffer": list(REALM_MUST_DIFFER),
             "brokerDefault": BROKER_DEFAULT, "brokerMustDiffer": list(BROKER_MUST_DIFFER)}
 
 
@@ -872,14 +873,14 @@ def realm_overlap(realm, directories, others=(), local="", broker=""):
     if not norm(r):
         return None
     lo, b = (local or "").strip(), (broker or "").strip()
-    given = {"DIRECTORY_DOMAINS": list(directories), "OTHER_DOMAINS": list(others), "LOCAL_DOMAIN": [lo or "VSPHERE.LOCAL"],
+    given = {"DIRECTORY_DOMAINS": list(directories), "OTHER_DOMAINS": list(others), "LOCAL_DOMAIN": [lo or LOCAL_DEFAULT],
              "BROKER_TENANT": [b or BROKER_DEFAULT]}
     for var in REALM_MUST_DIFFER:
         for entry in given[var]:
             if norm(entry) != norm(r):
                 continue
             if var == "LOCAL_DOMAIN":
-                return (f"REALM_DOMAIN ({r}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same domain. "
+                return (f"REALM_DOMAIN ({r}) and LOCAL_DOMAIN ({lo or LOCAL_DEFAULT + ', the default'}) name the same domain. "
                         f"{REALM_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in that domain "
                         "sorts as local and no realm-spelled grant could be found. Set REALM_DOMAIN to the realm's name")
             if var == "BROKER_TENANT":
@@ -903,13 +904,13 @@ def broker_overlap(broker, directories, local=""):
     ``broker`` empty is CUSTOMER and ``local`` empty is VSPHERE.LOCAL, the defaults."""
     b, lo = (broker or "").strip(), (local or "").strip()
     shown = b or BROKER_DEFAULT + ", the default"
-    given = {"DIRECTORY_DOMAINS": list(directories), "LOCAL_DOMAIN": [lo or "VSPHERE.LOCAL"]}
+    given = {"DIRECTORY_DOMAINS": list(directories), "LOCAL_DOMAIN": [lo or LOCAL_DEFAULT]}
     for var in BROKER_MUST_DIFFER:
         for entry in given[var]:
             if norm(entry) != norm(b or BROKER_DEFAULT):
                 continue
             if var == "LOCAL_DOMAIN":
-                return (f"BROKER_TENANT ({shown}) and LOCAL_DOMAIN ({lo or 'VSPHERE.LOCAL, the default'}) name the same "
+                return (f"BROKER_TENANT ({shown}) and LOCAL_DOMAIN ({lo or LOCAL_DEFAULT + ', the default'}) name the same "
                         f"domain. {BROKER_IS}; LOCAL_DOMAIN is the vCenter's own SSO domain. Read as one, every grant in "
                         "that domain sorts as local and no API client's grant could be told. Set BROKER_TENANT to the "
                         "broker tenant's name")

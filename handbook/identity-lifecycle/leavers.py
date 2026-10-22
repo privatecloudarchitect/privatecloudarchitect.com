@@ -216,10 +216,10 @@ Exit, the first that applies, so a scheduler reads one state from one number:
       1 an open leaver: an account to close (still enabled or holding a token) that three reads agree on, including
         one --execute refused
       3 a read failed, or an account is undetermined (among them a leaver whose reads disagree): nothing is known about
-        what was not read (a credential that could not be obtained is one, a tenant no organization names is one, an
-        organization --expect-tenants leaves uncovered is one, an organization with its federation switched off that
-        still holds an enabled federated account or a token of one is one, a list read in part is one, and so is an
-        error the script did not expect: nothing is read, or nothing is trusted, and nothing is written); also the
+        what was not read (a credential the provider or Entra did not grant is one, a tenant no organization names is
+        one, an organization --expect-tenants leaves uncovered is one, an organization with its federation switched off
+        that still holds an enabled federated account or a token of one is one, a list read in part is one, and so is
+        an error the script did not expect: nothing is read, or nothing is trusted, and nothing is written); also the
         run's own provider API token's end date unread (two REFRESH tokens of its user and no
         VCFA_PROVIDER_TOKEN_NAME among the causes), a --close-now name guard that could not read a date, and a
         request a --replay set holds no answer for
@@ -227,9 +227,11 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         inside WARN_DAYS of its end (rotate it; that flag is not acknowledged, the rotation clears it)
       0 nothing open, nothing unread, nothing flagged (with --close-now: the close held, or the plan printed, which
         says it sent nothing and closed nothing)
-      5 a usage error, a Python older than 3.10, an unreadable --ack file, a credential file open to group or other
-        (refused unread, with the fix: chmod 600), a --user that names no account or more than
-        one, an --expect-tenants list that leaves out this run's tenant or names no tenant, a bad WARN_DAYS or
+      5 a usage error, a Python older than 3.10, an unreadable --ack file, no provider credential set, the tenant's
+        read-only app without its secret or its certificate pair (for a report always; for --close-now when the
+        tenant's ids are set), a credential file that cannot be read, is empty or is open to group or other (refused
+        unread, with the fix: chmod 600), each checked before anything is sent, a --user that names no account or
+        more than one, an --expect-tenants list that leaves out this run's tenant or names no tenant, a bad WARN_DAYS or
         --left-on, and with --close-now an account that is not federated, under oid a --user given to --execute that
         is not an object id or the account's id, a principal name without --left-on, one the name guard refuses, or
         one no Entra user holds while an account carries it, and a name that selects an account whose protocol is
@@ -829,22 +831,48 @@ SECRET_FILES = ("VCFA_PROVIDER_BEARER_FILE", "VCFA_PROVIDER_REFRESH_TOKEN_FILE",
 
 
 def refused_secret_file() -> str:
-    """The refusal of the first secret's file open to group or other, or "": each the environment names is read once,
-    through the reader the run uses, before anything is sent, so the refusal is a usage error (exit 5) with nothing
-    sent. A file that cannot be read is left to the read that needs it (a credential not obtained, exit 3). The
-    certificate is public and read as given; a replayed run reads none."""
+    """The refusal of the first credential file the environment names that cannot be read, or of a secret's file open
+    to group or other, or "": each secret's file is read once, through the reader the run uses, and the certificate is
+    checked to be a readable file, before anything is sent, so either is a usage error (exit 5) with nothing sent, as
+    on every identity companion (batch 12): a file the operator named that is missing or unreadable is the run's
+    setup, never a read of the estate. A credential the provider or Entra refuses stays a read that failed (exit 3).
+    The certificate is public and judged by no mode; a replayed run reads none."""
     if REPLAY is not None:
         return ""
     for k in SECRET_FILES:
         if os.environ.get(k):
             try:
-                _secret_file(k)
-            except PermissionError as e:
-                if e.errno is None:   # the refusal names the variable, the mode and the fix
+                if not _secret_file(k):
+                    return f"{k} is empty"
+            except (OSError, UnicodeDecodeError) as e:
+                if isinstance(e, PermissionError) and e.errno is None:   # names the variable, the mode and the fix
                     return str(e)
-            except (OSError, UnicodeDecodeError):
-                pass
+                return f"{k} names a file that cannot be read ({type(e).__name__})"
+    cert = os.environ.get("ENTRA_CERT_FILE")
+    if cert and not (os.path.isfile(cert) and os.access(cert, os.R_OK)):   # public: checked, read where it is used
+        return "ENTRA_CERT_FILE names a file that cannot be read"
+    if cert and not Path(cert).read_bytes().strip():
+        return "ENTRA_CERT_FILE is empty"
     return ""
+
+
+def credential_problem(graph: bool) -> str:
+    """Every credential the run will need, checked before its first send, or "" (batch 12): a provider credential
+    variable set at all (VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE), and, when the run reads Graph
+    (`graph`: a report always, --close-now when the tenant's ids are set), the tenant's read-only app's secret or its
+    certificate pair; then every file the environment names, through refused_secret_file. Any of them missing is a
+    usage error (exit 5) with nothing sent, never a credential not obtained after the provider's trade. A replayed run
+    reads none."""
+    if REPLAY is not None:
+        return ""
+    if not (os.environ.get("VCFA_PROVIDER_BEARER_FILE") or os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE")):
+        return ("set VCFA_PROVIDER_BEARER_FILE or VCFA_PROVIDER_REFRESH_TOKEN_FILE, the provider credential (see the "
+                "header)")
+    if graph and not (os.environ.get("ENTRA_CLIENT_SECRET_FILE")
+                      or (os.environ.get("ENTRA_CERT_FILE") and os.environ.get("ENTRA_KEY_FILE"))):
+        return ("the tenant's read-only app needs ENTRA_CLIENT_SECRET_FILE, or ENTRA_CERT_FILE and ENTRA_KEY_FILE (see "
+                "the header)")
+    return refused_secret_file()
 
 
 def _message(e: urllib.error.HTTPError) -> str:
@@ -2349,8 +2377,9 @@ def _write(record: dict, calls: list, redact: bool) -> int:
 
 
 def _no_credential(e: Exception) -> int:
-    """A credential that could not be obtained is a read that failed: nothing was read, so nothing is known (exit 3),
-    and nothing is written. The message names the error's kind and phrase, never a secret."""
+    """A credential the provider or Entra did not grant is a read that failed: nothing was read, so nothing is known
+    (exit 3), and nothing is written. A credential file that cannot be read never reaches here: refused_secret_file
+    refuses it first (exit 5). The message names the error's kind and phrase, never a secret."""
     why = getattr(e, "reason", "") or getattr(e, "code", "")
     print(f"could not obtain a credential: {type(e).__name__} {str(why)[:160]}".rstrip(), file=sys.stderr)
     return EXIT_UNREAD
@@ -2363,7 +2392,8 @@ def _close_now_main(a: argparse.Namespace) -> int:
     if not os.environ.get("VCFA_HOST"):
         print("set VCFA_HOST (see the header); --close-now needs no Graph credential", file=sys.stderr)
         return EXIT_USAGE
-    refused = refused_secret_file()
+    graph_set = all(os.environ.get(k) for k in ("ENTRA_TENANT_ID", "ENTRA_CLIENT_ID"))
+    refused = credential_problem(graph=graph_set)
     if refused:
         print(f"{refused}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE
@@ -2373,7 +2403,6 @@ def _close_now_main(a: argparse.Namespace) -> int:
         vcfa = Vcfa(os.environ["VCFA_HOST"], calls)
     except (urllib.error.URLError, OSError, KeyError, ValueError) as e:
         return _no_credential(e)
-    graph_set = all(os.environ.get(k) for k in ("ENTRA_TENANT_ID", "ENTRA_CLIENT_ID"))
     record = close_now(vcfa, a.org, a.user, a.execute, make_graph=(lambda: Graph(calls)) if graph_set else None,
                        announce=_announcer(a.redact), left_on=a.left_on)
     record["exit"] = EXIT_USAGE if record.get("refused") else exit_code(record["summary"], a.execute)
@@ -2519,7 +2548,7 @@ def _run(argv: list[str] | None = None) -> int:
     if not warn.isdigit():
         print(f"WARN_DAYS {warn!r}: a whole number of days, 0 or more", file=sys.stderr)
         return EXIT_USAGE
-    refused = refused_secret_file()
+    refused = credential_problem(graph=True)
     if refused:
         print(f"{refused}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE

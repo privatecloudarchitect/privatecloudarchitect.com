@@ -30,8 +30,10 @@ Exit: 0 the token is usable (or, with --kubeconfig, every credential of every us
         certificate or token file it could not read, an exec entry that is not a plugin with a command, an
         auth-provider, a user name and password, or an entry with none of these, even beside one it judged; or a
         kubeconfig that declares no users), or an error the script did not expect
-      5 a usage error: no token given, a --file or kubeconfig that cannot be read or is not one, PyYAML missing for
-        --kubeconfig, an argument it does not take, or a Python older than 3.10
+      5 a usage error: no token given, a --file or kubeconfig that cannot be read or is not one (any file KUBECONFIG
+        lists), a KUBECONFIG none of whose files exists, a --file, a kubeconfig or a token file a kubeconfig names that
+        is open to group or other (refused unread, with the fix: chmod 600), PyYAML missing for --kubeconfig, an
+        argument it does not take, or a Python older than 3.10
 These are the codes every identity companion uses for 0, 3 and 5; 1 is this script's own finding.
 """
 from __future__ import annotations
@@ -39,6 +41,24 @@ import argparse, base64, json, os, sys, datetime as dt
 
 SKEW = dt.timedelta(minutes=2)          # clocks disagree; do not call a token dead on the second
 EXIT_UNREAD, EXIT_USAGE = 3, 5
+
+
+def read_private(path: str, named: str) -> bytes:
+    """The bytes of the credential file at PATH, which NAMED names (--file, the kubeconfig, a user entry's tokenFile).
+    A file open to group or other is refused before it is read: the refusal names what named it, its mode and the fix,
+    never the file's content. Every identity companion refuses such a file the same way (exit 5)."""
+    with open(path, "rb") as fh:
+        mode = os.fstat(fh.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{named} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "{path}" and try again (the file was not read)')
+        return fh.read()
+
+
+def refused(e: OSError) -> bool:
+    """read_private's refusal, told apart from a system permission denial by its errno, which is None."""
+    return isinstance(e, PermissionError) and e.errno is None
 
 
 def _seg(part: str) -> dict:
@@ -244,45 +264,114 @@ def from_kubeconfig() -> int:
     clock-skew margin; else 3 when any user carries a credential that was not judged (an opaque token, no `exp`, a
     certificate or file it could not read, an exec entry that is not a plugin with a command, an auth-provider, a user
     name and password, an entry with none of these) or the file declares no users at all; else 0.
+
+    A kubeconfig holds live credentials (a static token, a client key), so one open to group or other is refused before
+    it is read, and so is a token file one of its user entries names, before any is read: 5, with the fix, and nothing
+    judged. Exit 0 says nothing is left for a person to do, and a credential other local accounts can read is.
+
+    KUBECONFIG is read as kubectl reads it: a list of files, colon-delimited (semicolon-delimited on Windows), empty
+    names ignored, every file held to the refusal before any is parsed, a file that does not parse refused (5). The
+    files are merged by user name, the first file to name a user wins, and a later file's entry of that name is not
+    read; a file a user entry names is read relative to the kubeconfig that holds the entry. A file the list names that
+    does not exist is named and read as holding nothing; when none exists, the run is a usage error (5).
     """
     try:
         import yaml
     except ImportError:
         print("this mode needs PyYAML (pip install pyyaml)"); return EXIT_USAGE
-    path = os.environ.get("KUBECONFIG") or os.path.expanduser("~/.kube/config")
-    if not os.path.exists(path):
-        print(f"no kubeconfig at {path}"); return EXIT_USAGE
-    try:
-        with open(path, encoding="utf-8") as fh:
-            cfg = yaml.safe_load(fh) or {}
-    except (OSError, ValueError, yaml.YAMLError) as e:
-        print(f"could not read the kubeconfig at {path}: {type(e).__name__}")
+    listed = os.environ.get("KUBECONFIG")
+    if listed:
+        paths, named = [x for x in listed.split(os.pathsep) if x], "KUBECONFIG"
+    else:
+        paths, named = [os.path.expanduser("~/.kube/config")], "--kubeconfig, with KUBECONFIG unset,"
+    found = [x for x in dict.fromkeys(paths) if os.path.exists(x)]
+    if not found:
+        print(f"no kubeconfig at {', '.join(paths) or 'any file KUBECONFIG names'}"); return EXIT_USAGE
+    absent = [x for x in dict.fromkeys(paths) if x not in found]
+    where = found[0] if len(found) == 1 else f"the {len(found)} files KUBECONFIG lists"
+    # Every file read through the refusal before any is parsed: one open to group or other refuses the run unjudged.
+    raw: dict[str, bytes] = {}
+    loose: list[str] = []
+    for x in found:
+        try:
+            raw[x] = read_private(x, named)
+        except OSError as e:
+            if not refused(e):
+                print(f"could not read the kubeconfig at {x}: {type(e).__name__}"); return EXIT_USAGE
+            loose.append(str(e))
+    if loose:
+        print("\n".join(loose) + f"\nno credential in {where} was judged (exit {EXIT_USAGE})")
         return EXIT_USAGE
-    if not isinstance(cfg, dict) or not isinstance(cfg.get("users") or [], list):
-        print(f"{path} is not a kubeconfig: no mapping with a users list")
-        return EXIT_USAGE
-    users = cfg.get("users") or []
+    users: list[tuple[dict, str]] = []   # each entry with the folder its file names paths from
+    taken: set[str] = set()
+    shadowed = 0
+    for x in found:
+        try:
+            cfg = yaml.safe_load(raw[x].decode("utf-8")) or {}
+        except (ValueError, yaml.YAMLError) as e:   # a UnicodeDecodeError is a ValueError
+            print(f"could not read the kubeconfig at {x}: {type(e).__name__}"); return EXIT_USAGE
+        if not isinstance(cfg, dict) or not isinstance(cfg.get("users") or [], list):
+            print(f"{x} is not a kubeconfig: no mapping with a users list"); return EXIT_USAGE
+        for u in cfg.get("users") or []:
+            u = u if isinstance(u, dict) else {}
+            key = u.get("name") if isinstance(u.get("name"), str) else None
+            if key is not None and key in taken:   # the first file to name a user wins
+                shadowed += 1
+                continue
+            if key is not None:
+                taken.add(key)
+            users.append((u, os.path.dirname(os.path.abspath(x))))
     if not users:
-        print(f"{path} declares no users, so no credential was judged (exit 3)")
+        print(f"{where} declares no users, so no credential was judged (exit 3)")
         return EXIT_UNREAD
-    here = os.path.dirname(os.path.abspath(path))
+
+    def at(ref: object, here: str) -> str | None:   # a file a kubeconfig names, relative to that kubeconfig's folder
+        return os.path.join(here, os.path.expanduser(ref)) if isinstance(ref, str) and ref else None
+
+    # Every token file the user entries name, read once through the refusal before anything is judged. One that
+    # cannot be read is judged below as a credential not judged (3); one open to group or other refuses the run (5).
+    held: dict[str, bytes | None] = {}
+    for u, here in users:
+        token_file = at((u.get("user") if isinstance(u.get("user"), dict) else {}).get("tokenFile"), here)
+        if token_file and token_file not in held:
+            try:
+                held[token_file] = read_private(token_file, f"the tokenFile of user {str(u.get('name', '?'))[:52]}")
+            except OSError as e:
+                held[token_file] = None
+                if refused(e):
+                    loose.append(str(e))
+    if loose:
+        print("\n".join(loose) + f"\nno credential in {where} was judged (exit {EXIT_USAGE})")
+        return EXIT_USAGE
     bad, unjudged = 0, []
     now = dt.datetime.now(dt.timezone.utc)
-    print(f"{len(users)} user entr{'y' if len(users) == 1 else 'ies'} in {path}, each judged by every credential it holds\n")
+    print(f"{len(users)} user entr{'y' if len(users) == 1 else 'ies'} in {where}, each judged by every credential it holds")
+    if len(found) > 1:
+        print(f"  read in this order: {', '.join(found)}")
+    if absent:
+        print(f"  listed and not found, so read as holding nothing: {', '.join(absent)}")
+    if shadowed:
+        print(f"  {shadowed} user entr{'y' if shadowed == 1 else 'ies'} a later file names again, not read: the first "
+              "file to name a user wins")
+    print()
 
-    def read(ref: object) -> bytes | None:   # a file a kubeconfig names, relative to the kubeconfig's own folder
-        if not isinstance(ref, str) or not ref:
-            return None
-        try:
-            with open(os.path.join(here, os.path.expanduser(ref)), "rb") as fh:
-                return fh.read()
-        except OSError:
-            return None
+    def reader(here: str):
+        def read(ref: object) -> bytes | None:   # a token file read above, or a certificate, which is public
+            path = at(ref, here)
+            if path is None:
+                return None
+            if path in held:
+                return held[path]
+            try:
+                with open(path, "rb") as fh:
+                    return fh.read()
+            except OSError:
+                return None
+        return read
 
-    for u in users:
-        u = u if isinstance(u, dict) else {}
+    for u, here in users:
         name, user = str(u.get("name", "?")), (u.get("user") if isinstance(u.get("user"), dict) else {})
-        parts = user_credentials(user, read)
+        parts = user_credentials(user, reader(here))
         said = []
         for what, end in parts:
             if isinstance(end, dt.datetime):
@@ -354,10 +443,9 @@ def _run(argv: list[str] | None = None) -> int:
         raw = sys.stdin.read()
     elif a.file:
         try:
-            with open(a.file, encoding="utf-8") as fh:
-                raw = fh.read()
-        except (OSError, UnicodeDecodeError) as e:
-            print(f"could not read {a.file}: {type(e).__name__}")
+            raw = read_private(a.file, "--file").decode("utf-8")
+        except (OSError, UnicodeDecodeError) as e:   # the refusal names the flag, the mode and the fix
+            print(str(e) if isinstance(e, OSError) and refused(e) else f"could not read {a.file}: {type(e).__name__}")
             return EXIT_USAGE
     else:
         raw = os.environ.get("TOKEN", "")

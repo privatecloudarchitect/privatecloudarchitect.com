@@ -89,9 +89,9 @@ Exit, the first that applies: 3 the run judged no organization (a wrong host, a 
       record missing, unreadable or from a run that did not read, a tenant's domain not resolved, a record the scrub
       refused (no record is written), or a request a --replay set holds no answer for · 0 nothing for a person to act
       on · 5 a usage error: an unknown or abbreviated flag, a missing environment variable or a file that cannot be
-      read, a credential file open to group or other (refused unread, with the fix: chmod 600), a --replay directory
-      that cannot be read or holds no replay set, an inventory that is not valid JSON or not
-      the shape above, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, a tenant
+      read, a credential file that is empty or open to group or other (refused unread, with the fix: chmod 600), a
+      --replay directory that cannot be read or holds no replay set, an inventory that is not valid JSON or not the
+      shape above, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, a tenant
       or an organization declared twice, OUT naming the inventory or a schedule's record, a Python older than 3.9.
       An error the run did not expect exits 3, never 1. A record the scrub refuses never hides a 1, and turns a 0 into
       a 3.
@@ -1270,15 +1270,16 @@ def usage_problem(env: dict) -> str:
 
 
 def refused_secret_file() -> str:
-    """The refusal of the first provider credential file open to group or other, or "": each is read once, through the
-    reader the run uses, before any call, so the refusal is a usage error (exit 5), never a read that failed. A
-    replayed run reads none."""
+    """The refusal of the first provider credential file open to group or other, or empty, or "": each is read once,
+    through the reader the run uses, before any call, so the refusal is a usage error (exit 5), never a read that
+    failed (batch 12: an empty file the operator names is the run's setup). A replayed run reads none."""
     if REPLAY is not None:
         return ""
     for k in ("VCFA_PROVIDER_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_BEARER_FILE"):
         if os.environ.get(k):
             try:
-                _secret_file(k)
+                if not _secret_file(k):
+                    return f"{k} is empty"
             except PermissionError as e:
                 if e.errno is None:   # the refusal names the variable, the mode and the fix
                     return str(e)

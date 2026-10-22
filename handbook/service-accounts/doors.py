@@ -61,9 +61,9 @@ Exit: 0 every door of every surface configured was read and returned an HTTP sta
         token, session or bearer could not be minted so the doors behind it were not read, a request a --replay set
         holds no answer for, or an error the script did not expect
       5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, a credential file (any NAME_FILE,
-        VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read or is open to group or other
-        (refused unread, with the fix: chmod 600), a --replay directory that cannot be read or holds no replay set, or
-        a Python older than 3.10
+        VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read, is empty or is open to group or
+        other (refused unread, with the fix: chmod 600), a --replay directory that cannot be read or holds no replay
+        set, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
 run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190).
 """
@@ -241,17 +241,20 @@ def refusal(e, var):
 
 
 def credentials_readable():
-    """The first credential file named but unreadable or open to group or other, as the line to print, or None. Read
-    before any call."""
+    """The first credential file named but unreadable, empty or open to group or other, as the line to print, or None.
+    Read before any call: an empty file the operator names is the run's setup (batch 12), as on every identity
+    companion."""
     for name in SECRET_NAMES:
         try:
-            secret(name)
+            if os.environ.get(f"{name}_FILE") and not secret(name):
+                return f"{name}_FILE is empty"
         except OSError as e:
             return refusal(e, f"{name}_FILE")
     for var in TOKEN_FILES:
         if os.environ.get(var):
             try:
-                read_file_token(var)
+                if not read_file_token(var):
+                    return f"{var} is empty"
             except OSError as e:
                 return refusal(e, var)
     return None

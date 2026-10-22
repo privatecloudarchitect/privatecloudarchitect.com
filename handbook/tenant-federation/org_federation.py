@@ -131,8 +131,8 @@ Exit: 0 done · 1 a check failed, or a write refused while building, configuring
       user has signed in), a teardown whose residue could not be read, a record the scrub refused to write on a run that
       would have exited 0, a request a --replay set holds no answer for, or an error it did not expect (never 1) · 5
       not run as asked: an unknown, missing or malformed argument (--enable without --configure, --groups-only without --group or with --enable or --user-key
-      among them), a missing environment variable or a file that cannot be read, a secret's file open to group or
-      other (refused unread, with the fix: chmod 600), ENTRA_CLIENT_ID without its
+      among them), a missing environment variable or a file that cannot be read or is empty, a secret's file open to
+      group or other (refused unread, with the fix: chmod 600), ENTRA_CLIENT_ID without its
       credential, an ENTRA_TENANT_ID that is neither a tenant id nor a domain Entra names a tenant for, metadata that
       is not the tenant's or names no certificate that reads, SECRET_DAYS of a year or more, a --replay directory that
       cannot be read or holds no replay set, or a Python older than 3.9. Nothing is sent on a 5. A record the scrub refuses is not written and never hides the run's code: 1, 2 and 3
@@ -1034,13 +1034,20 @@ def _read_file(var):
 
 
 def check_secret_files():
-    """Every secret's file the environment names, read once before anything is sent, so one that cannot be read or is
-    open to group or other is a usage error (exit 5) with nothing sent, never an error met after a call. A replayed
-    run reads none."""
+    """Every secret's file the environment names, read once before anything is sent, so one that cannot be read, is
+    empty or is open to group or other is a usage error (exit 5) with nothing sent, never an error met after a call;
+    the certificate, which is public, is held to being a readable file that is not empty (batch 12). A replayed run
+    reads none."""
     if REPLAY is not None:
         return
     for var in SECRET_FILES:
-        _read_file(var)
+        if _read_file(var) == "":
+            raise UsageError(f"{var} is empty")
+    cert = os.environ.get("ENTRA_CERT_FILE")
+    if cert and not (os.path.isfile(cert) and os.access(cert, os.R_OK)):
+        raise UsageError("ENTRA_CERT_FILE names a file that cannot be read")
+    if cert and not _read_text(cert):   # public, read as given: judged by no mode, but an empty file is no credential
+        raise UsageError("ENTRA_CERT_FILE is empty")
 
 
 class Vcfa:

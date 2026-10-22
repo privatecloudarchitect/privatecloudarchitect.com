@@ -93,8 +93,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a
         teardown, no client and no token left, in the fleet's only realm or the realm the state file records)
       5 a usage error (a missing or bad argument or environment variable, a lifetime outside the bounds, a token file
-        that exists, with --execute an operator credential file that cannot be read, is empty or is open to group or
-        other (refused unread, with the fix: chmod 600), a fleet holding more than one realm with no --realm, a
+        that exists, with --execute an operator credential file or the --old-token-file that cannot be read, is empty
+        or is open to group or other (refused unread, with the fix: chmod 600; the old token is read before anything is
+        sent, so a rotation never issues a new token first), a fleet holding more than one realm with no --realm, a
         --realm that names none of the fleet's realms or more than one, a --replay directory that cannot be read or
         holds no replay set), or a Python older than 3.10; nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
@@ -403,6 +404,21 @@ def credential_problem() -> str | None:
                 refused = isinstance(e, PermissionError) and e.errno is None
                 return str(e) if refused else f"{name}_FILE could not be read: {type(e).__name__}"
     return None
+
+
+def old_token_problem(a: argparse.Namespace) -> str | None:
+    """With --execute: --old-token-file read once, before anything is sent, into a.old_token. A file that cannot be
+    read, is empty or is open to group or other (refused unread, with the fix) is a usage error (exit 5), never a
+    refusal met after a rotation's new token is issued."""
+    a.old_token = None
+    if not a.old_token_file:
+        return None
+    try:
+        a.old_token = _read(a.old_token_file)
+    except (OSError, UnicodeDecodeError) as e:   # the refusal (no errno) names the flag and the fix
+        refused = isinstance(e, PermissionError) and e.errno is None
+        return str(e) if refused else f"--old-token-file could not be read: {type(e).__name__}"
+    return None if a.old_token else "--old-token-file is empty"
 
 
 def _send(method: str, url: str, body: object | None = None, headers: dict | None = None,
@@ -958,7 +974,7 @@ def rotate(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> int:
     overlap = readback(fleet, rid, a.client_id)
     record["overlap"] = {"active_tokens": sum(1 for t in overlap.get("tokens") or [] if t["status"] == "ACTIVE")}
     if a.old_token_file:
-        old = _read(a.old_token_file)
+        old = _old_token(a)
         record["old_token_in_overlap"] = {"status": prove(old)["status"]}
         del old
     record["readback"] = overlap
@@ -1016,7 +1032,7 @@ def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> i
                              "integration holds: point the integration at the token you mean to keep, and retire the "
                              "others in the console")
         return EXIT_REFUSED
-    old = _read(a.old_token_file) if a.old_token_file else None
+    old = _old_token(a)
     if old:
         record["old_token_before_delete"] = {"status": prove(old)["status"]}
     gone = 0
@@ -1044,11 +1060,27 @@ def retire_old(fleet: Fleet, rid: str, a: argparse.Namespace, record: dict) -> i
 
 
 def _read(path: str) -> str:
-    """A token file's value (an old token, to show it trading or refused). A replayed run reads none."""
+    """The token in the file --old-token-file names (an old token, to show it trading or refused). A file open to
+    group or other is refused before it is read; the refusal names the flag and the fix, never the file's content. A
+    replayed run reads none."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
     with open(path, encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"--old-token-file names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "{path}" and try again (the file was not read)')
         return f.read().strip()
+
+
+def _old_token(a: argparse.Namespace) -> str | None:
+    """--old-token-file's token: the one _run read before anything was sent (old_token_problem), or, for a caller
+    that did not run _run, read here through the same refusal."""
+    if not a.old_token_file:
+        return None
+    held = getattr(a, "old_token", None)
+    return held if held is not None else _read(a.old_token_file)
 
 
 def teardown(fleet: Fleet, rid: str, client_id: str, record: dict) -> int:
@@ -1349,7 +1381,7 @@ def _run(argv: list[str] | None = None) -> int:
         print("\n".join(lines))
         print("\nplan only: nothing was sent (--execute sends it)")
         return EXIT_OK
-    problem = credential_problem()
+    problem = credential_problem() or old_token_problem(a)
     if problem:
         print(f"{problem}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE

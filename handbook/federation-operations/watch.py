@@ -127,8 +127,8 @@ Exit: 0 every check this run owns ran and is ok, on at least one organization ·
       schedule reads, a run whose tenant no organization names, a run that judged no organization, the watch's own
       token's end date unread, a record that could not be written, or a request a --replay set holds no answer for
       · 5 a usage error: an unknown or missing argument, a missing or inconsistent environment variable, a credential
-      or key file that cannot be read, a secret's file open to group or other (refused unread, with the fix:
-      chmod 600), a tenant or date that names nothing, a --replay directory that cannot be read or holds no replay
+      or key file that cannot be read or is empty, a secret's file open to group or other (refused unread, with the
+      fix: chmod 600), a tenant or date that names nothing, a --replay directory that cannot be read or holds no replay
       set, a Python older than 3.9. An error the watch did not expect exits 3, never 1. --why: 0 a row matched; 1 none did, and it prints the first reads for a message no run
       showed.
 """
@@ -161,6 +161,10 @@ ENTRA_HOST = "login.microsoftonline.com"
 # last success, and a run 0.4 s short did not: on schedule, a success's age reaches the interval plus up to an hour.
 # Past the interval plus an hour, counted in whole minutes, refreshes are not succeeding (IAM-F86).
 REFRESH_GRACE = timedelta(hours=1)
+# The defaults the header names: the days before an end date a check warns (WARN_DAYS unset), and the greatest age of
+# a tenant's attested report before it warns (--attested-max-days not given).
+WARN_DAYS_DEFAULT = 30
+ATTESTED_MAX_DAYS = 30
 # Every list is read page by page; a page of this size is the most the platform was asked for at once.
 PAGE_SIZE = 128
 SECRET_KEYS = ("clientSecret", "password", "secretText", "hint", "privateKey")
@@ -1483,7 +1487,7 @@ def usage_problem(env: dict, provider_only: bool = False) -> str:
         return "set VCFA_HOST"
     if not credential_given(env, "VCFA_PROVIDER_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_BEARER_FILE"):
         return "set VCFA_PROVIDER_REFRESH_TOKEN_FILE or VCFA_PROVIDER_BEARER_FILE"
-    days = env.get("WARN_DAYS", "30")
+    days = env.get("WARN_DAYS", str(WARN_DAYS_DEFAULT))
     if not days.isdigit():
         return f"WARN_DAYS must be a whole number of days, not {days!r}"
     graph = [k for k in GRAPH_ENV if env.get(k)]
@@ -1503,6 +1507,8 @@ def usage_problem(env: dict, provider_only: bool = False) -> str:
               "ENTRA_CERT_FILE", "ENTRA_KEY_FILE"):
         if REPLAY is None and env.get(k) and not (Path(env[k]).is_file() and os.access(env[k], os.R_OK)):
             return f"{k} names a file that cannot be read"
+        if REPLAY is None and env.get(k) and k == "ENTRA_CERT_FILE" and not Path(env[k]).read_bytes().strip():
+            return f"{k} is empty"   # the certificate is public: judged by no mode, but an empty file is no credential
     return refused_secret_file()
 
 
@@ -1511,15 +1517,17 @@ SECRET_FILES = ("VCFA_PROVIDER_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_BEARER_FILE",
 
 
 def refused_secret_file() -> str:
-    """The refusal of the first secret's file open to group or other, or "": each is read once, through the reader the
-    run uses, before any call, so the refusal is a usage error (exit 5), never a read that failed. The certificate is
-    public and read as given; a replayed run reads none."""
+    """The refusal of the first secret's file open to group or other, or empty, or "": each is read once, through the
+    reader the run uses, before any call, so the refusal is a usage error (exit 5), never a read that failed (batch 12:
+    an empty file the operator names is the run's setup, as on every identity companion). The certificate is public
+    and read as given; a replayed run reads none."""
     if REPLAY is not None:
         return ""
     for k in SECRET_FILES:
         if os.environ.get(k):
             try:
-                _secret_file(k)
+                if not _secret_file(k):
+                    return f"{k} is empty"
             except PermissionError as e:
                 if e.errno is None:   # the refusal names the variable, the mode and the fix
                     return str(e)
@@ -1585,7 +1593,7 @@ def build_parser() -> _Parser:
     ap.add_argument("--tenant-attested", metavar="YYYY-MM-DD", help="with --provider-only: the date of the tenant's "
                     "last report of its rollover dates")
     ap.add_argument("--attested-max-days", type=int, metavar="N", help="with --tenant-attested: the report's "
-                    "greatest age before it warns (default 30)")
+                    f"greatest age before it warns (default {ATTESTED_MAX_DAYS})")
     ap.add_argument("--replay", metavar="DIR",
                     help="answer every request from the recorded set in DIR (replay/watch beside this script is "
                          "one): nothing is sent and no credential is read")
@@ -1622,12 +1630,12 @@ def _run(argv: list[str]) -> int:
     if problem:
         print(f"{problem} (see the header); nothing was read", file=sys.stderr)
         return EXIT_USAGE
-    warn_days = int(os.environ.get("WARN_DAYS", "30"))
+    warn_days = int(os.environ.get("WARN_DAYS", str(WARN_DAYS_DEFAULT)))
     wanted = [o.strip() for o in os.environ.get("ORGS", "").split(",") if o.strip()]
     attested = None
     if a.tenant_attested is not None:
         attested = {"date": date.fromisoformat(a.tenant_attested), "today": now.date(),
-                    "max_days": a.attested_max_days or 30}
+                    "max_days": a.attested_max_days or ATTESTED_MAX_DAYS}
     # The run's tenant and the tenant list, as ids: a domain Entra names no tenant for is a usage error; a resolution
     # that does not answer is a read that failed (exit 3, no record).
     try:
