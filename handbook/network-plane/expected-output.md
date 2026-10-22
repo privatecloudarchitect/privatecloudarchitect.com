@@ -64,3 +64,36 @@ wrote network-model.json (55 kinds, 5 strategies) and chain.json (3 blocks, 3 su
   connection's two switches.
 - **the walk**: per VPC, its subnets and each link outward to the gateway connection. A missing link prints in
   capitals, and it is the first place to look when something cannot connect.
+
+# What `overlay.py` prints
+
+Run on 2026-10-22 against the workload domain's NSX Manager with a provider credential, and against its vCenter for
+the zones, with `--project` naming the reference organization's NSX project (shown as yours). Every object name is a
+label; the HA modes and visibilities are the product's own words.
+
+```
+$ python3 overlay.py --project <your project>
+overlay.py: what the provider runs above a VPC
+
+  NSX 9.1.1.0.25691509, vCenter 9.1.1.0
+  tier0-1: ACTIVE_STANDBY, NON_PREEMPTIVE, on edge-cluster-1 (2 nodes)
+  gateway-connection-1 -> tier0-1: 1 transit gateway(s) attached
+  gateway-connection-2 -> tier0-1: 4 transit gateway(s) attached
+  project-1: 1 VPC(s); transit-gateway-1 -> gateway-connection-2; profile-1 (1 external block(s), service gateway on); names a Tier-0 itself: 0
+  project-2 [default]: 2 VPC(s); transit-gateway-2 -> gateway-connection-1; profile-2 (1 external block(s), service gateway on); names a Tier-0 itself: 0
+  project-3 [yours]: 1 VPC(s); transit-gateway-3 -> gateway-connection-2; profile-3 (1 external block(s), service gateway on); names a Tier-0 itself: 0
+  project-4: 1 VPC(s); transit-gateway-4 -> NO ATTACHMENT; profile-4 (0 external block(s), service gateway off); names a Tier-0 itself: 0
+  project-5: 1 VPC(s); transit-gateway-5 -> gateway-connection-2; profile-5 (1 external block(s), service gateway on); names a Tier-0 itself: 0
+  project-6: 1 VPC(s); transit-gateway-6 -> gateway-connection-2; profile-6 (1 external block(s), service gateway on); names a Tier-0 itself: 0
+  ip blocks: 11, {'EXTERNAL': 7, 'PRIVATE': 3, 'unset': 1}
+  zone-1 -> cluster-1
+  zone-2 -> cluster-2
+  zone-3 -> cluster-3
+  clusters in a zone: 3 of 3; a cluster in two zones: False
+
+wrote overlay.json; every object name replaced by a label
+```
+
+Read the gateway-connection lines first: the second one carries four organizations' transit gateways to the one Tier-0,
+so those organizations share a path north while each keeps its own transit gateway. The project with no attachment
+has no path north at all.

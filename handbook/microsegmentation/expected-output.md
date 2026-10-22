@@ -1,6 +1,6 @@
 # Expected output
 
-What the two scripts printed on the reference estate on 2026-10-22: VCF 9.1.1, one organization, the region's
+What the three scripts printed on the reference estate on 2026-10-22: VCF 9.1.1, one organization, the region's
 name replaced by a placeholder.
 
 ## `posture.py`, read-only, 2026-10-22T06:14:27Z
@@ -105,3 +105,44 @@ Round-trip complete: land disabled -> Realized -> one-field enable -> Realized -
 
 Both objects were deleted and a read afterwards found neither. The group had no members, so no traffic changed at
 any step; enforcement on traffic is not what this run tests.
+
+## `traffic.py --project <project> --like <like project>/<like namespace> --attach-library`, on throwaway objects, 17:46Z
+
+```
+[17:46:09Z] namespace create {"status": 200, "refused": null}
+[17:47:02Z] namespace ready {"seconds": 52}
+[17:47:02Z] namespace offers a VM class {"secondsAfterReady": 0, "chosenClass": "best-effort-xsmall"}
+[17:48:07Z] library attach, the tenant way: a ContentLibrary in the namespace {"status": 403, "refused": "contentlibraries.imageregistry.vmware.com is forbidden: User \"<user>\" cannot create resource \"contentlibraries\" in API group \"imageregistry.vmware.com\" in the namespace \"<throwaway namespace>\""}
+[17:48:09Z] library attach, vCenter's namespace setting {"status": 204}
+[17:48:20Z] namespace offers an Ubuntu image {"secondsAfterAttach": 11}
+[17:48:21Z] vm create (server) {"status": 201, "refused": null}
+[17:49:13Z] vm up (server) {"seconds": 52}
+[17:49:13Z] vm create (client) {"status": 201, "refused": null}
+[17:50:07Z] vm up (client) {"seconds": 53}
+[17:50:07Z] baseline: the client reaches the server {"secondsUntilReady": 1, "samples": [["True", "True"]]}
+[17:50:10Z] group create (client) {"status": 201, "refused": null}
+[17:50:12Z] group Realized (client) {"seconds": 2}
+[17:50:12Z] group create (server) {"status": 201, "refused": null}
+[17:50:19Z] group Realized (server) {"seconds": 7}
+[17:50:54Z] policy landed with its rule disabled {"applyStatus": 201, "realizedAfterSeconds": 3, "trafficHeldFor30Seconds": true, "interruptions": []}
+[17:51:35Z] rule enabled {"applyStatus": 200, "realizedAfterSeconds": 1, "secondsFromApplyToBlocked": 10, "blockedThroughout30Seconds": true, "samples": [["True", "True"], ["False", "NotReady"]], "gotThrough": []}
+[17:51:46Z] rule disabled again {"applyStatus": 200, "realizedAfterSeconds": 1, "secondsFromApplyToReached": 11, "samples": [["False", "NotReady"], ["True", "True"]]}
+[17:51:47Z] teardown policy {"status": 200}
+[17:51:49Z] teardown group (client) {"status": 200}
+[17:51:51Z] teardown group (server) {"status": 200}
+[17:51:52Z] teardown vm (server) {"status": 200}
+[17:51:52Z] teardown vm (client) {"status": 200}
+[17:52:05Z] teardown namespace {"status": 200}
+[17:53:08Z] namespace gone {"seconds": 63}
+[17:53:09Z] namespace task timeline {"tasks": [{"op": "Created", "start": "17:46:14", "end": "17:46:48", "status": "success"}, {"op": "Updated", "start": "17:47:01", "end": "17:47:05", "status": "success"}, {"op": "Deleted", "start": "17:52:14", "end": "17:52:49", "status": "success"}]}
+[17:53:12Z] residue {"segProofNamespaces": 0, "segProofGroups": 0, "segProofPolicies": 0, "vcenterSegProofNamespaces": 0}
+wrote traffic.json; no project, namespace, user, organization or host name is recorded; exit 0
+```
+
+It exited 0: the rule stopped the client reaching the server when its one field was enabled, and released it when
+the field went back. The two runs before it, at 17:30Z and 17:38Z, made by the same measurement before its printed lines were redacted,
+gave the same verdict, blocked within 11 and 9
+seconds of the apply and released within 8 and 4; their records are `records/traffic-2026-10-22T1730Z.json` and
+`records/traffic-2026-10-22T1738Z.json`. The seconds are upper bounds that include the measurement's own lag. The
+library attach went through vCenter because the tenant way was refused; on a namespace that already offers an image,
+the three lines from the tenant attempt to the image become one: `namespace offers an Ubuntu image {"attachedBy": "already attached"}`.

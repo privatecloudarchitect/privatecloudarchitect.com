@@ -1,0 +1,211 @@
+{
+ "capturedUtc": "2026-10-22T17:38:27Z",
+ "steps": [
+  {
+   "at": "17:38:31Z",
+   "step": "namespace create",
+   "status": 200,
+   "refused": null
+  },
+  {
+   "at": "17:39:15Z",
+   "step": "namespace ready",
+   "seconds": 44
+  },
+  {
+   "at": "17:39:28Z",
+   "step": "namespace offers a VM class",
+   "secondsAfterReady": 13,
+   "chosenClass": "best-effort-xsmall"
+  },
+  {
+   "at": "17:40:34Z",
+   "step": "library attach, the tenant way: a ContentLibrary in the namespace",
+   "status": 403,
+   "refused": "contentlibraries.imageregistry.vmware.com is forbidden: User \"<user>\" cannot create resource \"contentlibraries\" in API group \"imageregistry.vmware.com\" in the namespace \"<throwaway namespace>\""
+  },
+  {
+   "at": "17:40:37Z",
+   "step": "library attach, vCenter's namespace setting",
+   "status": 204
+  },
+  {
+   "at": "17:40:49Z",
+   "step": "namespace offers an Ubuntu image",
+   "secondsAfterAttach": 11
+  },
+  {
+   "at": "17:40:50Z",
+   "step": "vm create (server)",
+   "status": 201,
+   "refused": null
+  },
+  {
+   "at": "17:41:43Z",
+   "step": "vm up (server)",
+   "seconds": 53
+  },
+  {
+   "at": "17:41:44Z",
+   "step": "vm create (client)",
+   "status": 201,
+   "refused": null
+  },
+  {
+   "at": "17:42:37Z",
+   "step": "vm up (client)",
+   "seconds": 53
+  },
+  {
+   "at": "17:42:37Z",
+   "step": "baseline: the client reaches the server",
+   "secondsUntilReady": 0,
+   "samples": [
+    [
+     "True",
+     "True"
+    ]
+   ]
+  },
+  {
+   "at": "17:42:40Z",
+   "step": "group create (client)",
+   "status": 201,
+   "refused": null
+  },
+  {
+   "at": "17:42:45Z",
+   "step": "group Realized (client)",
+   "seconds": 6
+  },
+  {
+   "at": "17:42:46Z",
+   "step": "group create (server)",
+   "status": 201,
+   "refused": null
+  },
+  {
+   "at": "17:42:52Z",
+   "step": "group Realized (server)",
+   "seconds": 6
+  },
+  {
+   "at": "17:43:27Z",
+   "step": "policy landed with its rule disabled",
+   "applyStatus": 201,
+   "realizedAfterSeconds": 3,
+   "trafficHeldFor30Seconds": true,
+   "interruptions": []
+  },
+  {
+   "at": "17:44:07Z",
+   "step": "rule enabled",
+   "applyStatus": 200,
+   "realizedAfterSeconds": 0,
+   "secondsFromApplyToBlocked": 9,
+   "blockedThroughout30Seconds": true,
+   "samples": [
+    [
+     "True",
+     "True"
+    ],
+    [
+     "False",
+     "NotReady"
+    ]
+   ],
+   "gotThrough": []
+  },
+  {
+   "at": "17:44:11Z",
+   "step": "rule disabled again",
+   "applyStatus": 200,
+   "realizedAfterSeconds": 3,
+   "secondsFromApplyToReached": 4,
+   "samples": [
+    [
+     "True",
+     "True"
+    ]
+   ]
+  },
+  {
+   "at": "17:44:12Z",
+   "step": "teardown policy",
+   "status": 200
+  },
+  {
+   "at": "17:44:12Z",
+   "step": "teardown group (client)",
+   "status": 200
+  },
+  {
+   "at": "17:44:13Z",
+   "step": "teardown group (server)",
+   "status": 200
+  },
+  {
+   "at": "17:44:14Z",
+   "step": "teardown vm (server)",
+   "status": 200
+  },
+  {
+   "at": "17:44:14Z",
+   "step": "teardown vm (client)",
+   "status": 200
+  },
+  {
+   "at": "17:44:36Z",
+   "step": "teardown namespace",
+   "status": 200
+  },
+  {
+   "at": "17:45:38Z",
+   "step": "namespace gone",
+   "seconds": 62
+  },
+  {
+   "at": "17:45:39Z",
+   "step": "namespace task timeline",
+   "tasks": [
+    {
+     "op": "Created",
+     "start": "17:38:34",
+     "end": "17:39:03",
+     "status": "success"
+    },
+    {
+     "op": "Updated",
+     "start": "17:39:19",
+     "end": "17:39:23",
+     "status": "success"
+    },
+    {
+     "op": "Deleted",
+     "start": "17:44:45",
+     "end": "17:45:21",
+     "status": "success"
+    }
+   ]
+  },
+  {
+   "at": "17:45:41Z",
+   "step": "residue",
+   "segProofNamespaces": 0,
+   "segProofGroups": 0,
+   "segProofPolicies": 0,
+   "vcenterSegProofNamespaces": 0
+  }
+ ],
+ "verdict": {
+  "landedDisabledLeftTrafficAlone": true,
+  "enabledBlocked": true,
+  "disabledReleased": true
+ },
+ "residue": {
+  "segProofNamespaces": 0,
+  "segProofGroups": 0,
+  "segProofPolicies": 0,
+  "vcenterSegProofNamespaces": 0
+ }
+}

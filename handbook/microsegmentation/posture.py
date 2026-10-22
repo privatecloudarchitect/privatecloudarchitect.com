@@ -73,7 +73,7 @@ def _ctx():
 
 
 class ReadFailed(Exception):
-    """A read the answer depends on did not succeed; the run says so rather than reporting an empty plane."""
+    """A read the answer depends on did not succeed; the run reports the failure rather than an empty plane."""
 
 
 def secret(name):

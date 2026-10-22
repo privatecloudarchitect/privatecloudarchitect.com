@@ -1,15 +1,18 @@
-# Microsegmentation: posture audit + firewall-policy round-trip
+# Microsegmentation: posture audit, firewall-policy round-trip, traffic test
 
 Backs the microsegmentation sheet
 ([privatecloudarchitect.com/handbook/microsegmentation](https://privatecloudarchitect.com/handbook/microsegmentation)).
 
-Two pieces, and **run them in this order**:
+Three pieces, and **run them in this order**:
 
 - **`posture.py`** reads what your org's posture actually is and, before that, whether this region
   is entitled to enforce one at all. Read-only.
 - **`run.sh`** proves the three write disciplines by round-tripping a rule. It writes (safely, and
   it tears down), and it cannot succeed where the firewall capabilities are not entitled. It does not test
   enforcement on traffic: its group has no members.
+- **`traffic.py`** tests enforcement: two throwaway VMs in a throwaway namespace, a drop rule between them
+  landed disabled, enabled by its one field, then disabled again, with the client's reach to the server read
+  at each step. It writes more than `run.sh` and tears all of it down.
 
 ## posture.py: what is attached, and what the region is entitled to enforce
 
@@ -57,7 +60,7 @@ Four reads, in the order that fails fastest:
    detail, and this one is about which call you make: the **collection view trims `rules[]`**, so a floor audited
    from the list reads as a section with no rules in it. `posture.py` reads every section by name.
 
-Exit codes: 0 the firewall capabilities are entitled; 1 a firewall capability is off, with the platform's own
+`posture.py`'s exit codes: 0 the firewall capabilities are entitled; 1 a firewall capability is off, with the platform's own
 reason; 2 a setting is missing or a secret file is open to group or other; 3 the sign-in or a read failed; 4 the
 record refused to write because an estate value survived. Exit 1 is the one to page on from a schedule.
 
@@ -92,7 +95,64 @@ returned `operation not supported in Region <region>: NSX licenses must have all
 teardown left no residue. On 2026-10-22, on VCF 9.1.1 with the region entitled, the round trip ran
 end to end: both objects Realized at every step and a read afterwards found neither
 ([`expected-output.md`](expected-output.md)). Realized is the platform accepting the configuration;
-with no members in the group, no packet met the rule, so enforcement on traffic was not tested.
+with no members in the group, no packet met the rule. `traffic.py`, next, is the test with packets in it.
+
+## traffic.py: does the rule stop traffic?
+
+```bash
+export VCFA_HOST=gw.example VCFA_ORG=<organization>
+export VCFA_USER=<account> VCFA_PASSWORD_FILE=~/.secrets/vcfa    # mode 0600: a session login
+# only with --attach-library, the workload domain's vCenter:
+export VC_HOST=vc.example VC_USER=<account> VC_PASSWORD_FILE=~/.secrets/vc   # mode 0600
+python3 traffic.py --project <a project to put the test in> --like <project>/<a namespace to copy>; echo "exit $?"
+```
+
+It copies the `--like` namespace's spec (class, region, VPC, service-engine group and limits) into a new namespace in
+`--project`, so the test sits in the same VPC and under the same posture as the workloads it stands for. Then:
+
+1. **Two small VMs.** A server answering HTTP on TCP 8080; a client that tries the server every second or two and
+   writes curl's exit code into its own guestinfo. The client's readiness probe matches that key against `^0$`, so
+   the client's `Ready` condition reads True while it reaches the server and False while it cannot.
+2. **One group per VM**, each naming exactly that VM by instance UUID, and **one firewall policy**: drop, client to
+   server, TCP 8080, IPV4, applied to those two groups only, in the Application category at priority 900000.
+3. **The sequence.** The policy lands with its rule disabled and the traffic is watched for 30 seconds; the one field
+   goes to enabled and the script times how long until the client loses the server, then watches 30 seconds more;
+   the field goes back and it times how long until the client reaches it again.
+4. **Teardown**, always, policy first, then groups, VMs and the namespace, then a residue read; with `VC_HOST` set,
+   vCenter's list of namespaces is read too.
+
+| Object | Kind | Why it is safe |
+|---|---|---|
+| `seg-proof-<suffix>` | `SupervisorNamespace` | new, in the project you name; the platform picks the suffix |
+| `seg-proof-server`, `seg-proof-client` | `VirtualMachine` | the smallest class offered, in that namespace only |
+| `seg-proof-server`, `seg-proof-client` | `NetworkSecurityGroup` | each names one of those two VMs and nothing else |
+| `seg-proof-drop` | `FirewallPolicy` | one rule, scoped to the two groups, so no other traffic meets it |
+
+Three things the reference estate taught it, each found by a run that failed first:
+
+- **A namespace made through the API gets VM classes but may get no VM images.** The organization's library was
+  not attached to the new namespace, and the tenant cannot attach it: creating the `ContentLibrary` object in the
+  namespace is refused with 403. With `--attach-library` the script adds the library the `--like` namespace carries
+  to the throwaway namespace alone, through vCenter's namespace setting; without it, it stops and names the missing attachment.
+- **Guest operations on a VM service VM are refused**, even to vCenter's SSO administrator, so nothing here runs a
+  command in a guest. The result travels out through guestinfo and the readiness probe instead.
+- **A namespace deleted in its first moments can be left stranded**: deleted while the platform's own post-create
+  update ran, it kept a deletion timestamp with no delete task, and vCenter kept running it, until a second delete.
+  The script waits until the namespace is two minutes old, sends the delete again once if it is still there three
+  minutes on, and records the namespace's task timeline.
+
+Exit: 0 the rule stopped the traffic when enabled and released it when disabled; 1 it did not, and the record says
+which step; 2 a setting is missing or a secret file is open to group or other; 3 a read or write failed, including no
+image without `--attach-library`; 4 the record refused to write because an estate value survived. The record,
+`traffic.json`, and every printed line carry labels in place of the project, namespace, user, organization and host
+names, and no address or object id. The timings are upper bounds: the client tries every one to three seconds, the
+probe reads every two and the script every two.
+
+On the reference estate on 2026-10-22, on VCF 9.1.1, three runs gave the same verdict: the landed-disabled rule left
+the traffic alone for 30 seconds, the enabled rule stopped it within 11, 9 and 10 seconds of the apply and held for
+the next 30, and the disabled rule released it within 8, 4 and 11. Each run left no residue in VCF Automation or in
+vCenter. The last run's output is in [`expected-output.md`](expected-output.md); the records are `traffic.json` and
+the two under `records/`.
 
 ## Prereqs
 
@@ -149,8 +209,8 @@ One more read-path detail: the **list** view of `firewallpolicies` trims `rules[
 
 ## Expected output
 
-See [`expected-output.md`](expected-output.md) for both transcripts from the reference estate on 2026-10-22:
-`posture.py` read-only, and `./run.sh round-trip` on throwaway objects.
+See [`expected-output.md`](expected-output.md) for the three transcripts from the reference estate on 2026-10-22:
+`posture.py` read-only, `./run.sh round-trip` on throwaway objects, and `traffic.py` on throwaway objects.
 
 ## Where a rule about a pod belongs
 

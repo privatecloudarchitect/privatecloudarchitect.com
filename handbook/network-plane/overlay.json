@@ -1,0 +1,213 @@
+{
+ "capturedUtc": "2026-10-22T16:26:56Z",
+ "nsxVersion": "9.1.1.0.25691509",
+ "tier0s": [
+  {
+   "tier0": "tier0-1",
+   "haMode": "ACTIVE_STANDBY",
+   "failoverMode": "NON_PREEMPTIVE",
+   "edgeClusters": [
+    {
+     "edgeCluster": "edge-cluster-1",
+     "edgeNodes": 2
+    }
+   ]
+  }
+ ],
+ "gatewayConnections": [
+  {
+   "gatewayConnection": "gateway-connection-1",
+   "tier0": "tier0-1",
+   "transitGatewaysAttached": 1
+  },
+  {
+   "gatewayConnection": "gateway-connection-2",
+   "tier0": "tier0-1",
+   "transitGatewaysAttached": 4
+  }
+ ],
+ "projects": [
+  {
+   "project": "project-1",
+   "default": false,
+   "yours": false,
+   "namesTier0Itself": 0,
+   "externalBlocks": 1,
+   "transitGateways": [
+    {
+     "transitGateway": "transit-gateway-1",
+     "default": true,
+     "attachedTo": [
+      "gateway-connection-2"
+     ]
+    }
+   ],
+   "connectivityProfiles": [
+    {
+     "profile": "profile-1",
+     "transitGateway": "transit-gateway-1",
+     "externalBlocks": 1,
+     "serviceGateway": true
+    }
+   ],
+   "vpcs": 1
+  },
+  {
+   "project": "project-2",
+   "default": true,
+   "yours": false,
+   "namesTier0Itself": 0,
+   "externalBlocks": 0,
+   "transitGateways": [
+    {
+     "transitGateway": "transit-gateway-2",
+     "default": true,
+     "attachedTo": [
+      "gateway-connection-1"
+     ]
+    }
+   ],
+   "connectivityProfiles": [
+    {
+     "profile": "profile-2",
+     "transitGateway": "transit-gateway-2",
+     "externalBlocks": 1,
+     "serviceGateway": true
+    }
+   ],
+   "vpcs": 2
+  },
+  {
+   "project": "project-3",
+   "default": false,
+   "yours": true,
+   "namesTier0Itself": 0,
+   "externalBlocks": 1,
+   "transitGateways": [
+    {
+     "transitGateway": "transit-gateway-3",
+     "default": true,
+     "attachedTo": [
+      "gateway-connection-2"
+     ]
+    }
+   ],
+   "connectivityProfiles": [
+    {
+     "profile": "profile-3",
+     "transitGateway": "transit-gateway-3",
+     "externalBlocks": 1,
+     "serviceGateway": true
+    }
+   ],
+   "vpcs": 1
+  },
+  {
+   "project": "project-4",
+   "default": false,
+   "yours": false,
+   "namesTier0Itself": 0,
+   "externalBlocks": 0,
+   "transitGateways": [
+    {
+     "transitGateway": "transit-gateway-4",
+     "default": true,
+     "attachedTo": []
+    }
+   ],
+   "connectivityProfiles": [
+    {
+     "profile": "profile-4",
+     "transitGateway": "transit-gateway-4",
+     "externalBlocks": 0,
+     "serviceGateway": false
+    }
+   ],
+   "vpcs": 1
+  },
+  {
+   "project": "project-5",
+   "default": false,
+   "yours": false,
+   "namesTier0Itself": 0,
+   "externalBlocks": 1,
+   "transitGateways": [
+    {
+     "transitGateway": "transit-gateway-5",
+     "default": true,
+     "attachedTo": [
+      "gateway-connection-2"
+     ]
+    }
+   ],
+   "connectivityProfiles": [
+    {
+     "profile": "profile-5",
+     "transitGateway": "transit-gateway-5",
+     "externalBlocks": 1,
+     "serviceGateway": true
+    }
+   ],
+   "vpcs": 1
+  },
+  {
+   "project": "project-6",
+   "default": false,
+   "yours": false,
+   "namesTier0Itself": 0,
+   "externalBlocks": 1,
+   "transitGateways": [
+    {
+     "transitGateway": "transit-gateway-6",
+     "default": true,
+     "attachedTo": [
+      "gateway-connection-2"
+     ]
+    }
+   ],
+   "connectivityProfiles": [
+    {
+     "profile": "profile-6",
+     "transitGateway": "transit-gateway-6",
+     "externalBlocks": 1,
+     "serviceGateway": true
+    }
+   ],
+   "vpcs": 1
+  }
+ ],
+ "ipBlocks": {
+  "total": 11,
+  "byVisibility": {
+   "EXTERNAL": 7,
+   "PRIVATE": 3,
+   "unset": 1
+  }
+ },
+ "compute": {
+  "vcenterVersion": "9.1.1.0",
+  "zones": [
+   {
+    "zone": "zone-1",
+    "clusters": [
+     "cluster-1"
+    ]
+   },
+   {
+    "zone": "zone-2",
+    "clusters": [
+     "cluster-2"
+    ]
+   },
+   {
+    "zone": "zone-3",
+    "clusters": [
+     "cluster-3"
+    ]
+   }
+  ],
+  "clusters": 3,
+  "clustersInAZone": 3,
+  "clusterInTwoZones": false
+ }
+}
