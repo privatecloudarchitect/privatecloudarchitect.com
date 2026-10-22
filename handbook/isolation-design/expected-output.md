@@ -40,7 +40,7 @@ What to see: every principal the policy does not name reads zero actions, the pr
 role included; visibility is unchanged because a Day-2 policy grants actions, never visibility.
 `flip-off` returns the project to the first table after the same propagation window.
 
-## VCF Automation 9.1.1, 2026-10-21: the assembled design (two HARD policies), read-only
+## VCF Automation 9.1.1, 2026-10-21: the assembled design (three HARD policies, two granting every action), read-only
 
 `python3 isolation.py` under an organization administrator's session login (its summary lines), then
 `python3 verify.py matrix --record matrix.json` as the four test principals over two deployments that already existed,
