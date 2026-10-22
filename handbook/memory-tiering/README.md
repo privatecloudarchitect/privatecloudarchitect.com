@@ -5,10 +5,10 @@ The runnable companion to
 The three super metrics that produce the lens's verdicts, in the exact formulas proven live, and a package of
 every super metric the lens's views and dashboard use.
 
-**Provenance:** formulas derived and validated against a live VCF Operations instance (11 hosts,
-5 clusters, ESXi 9.1), 2026-07-02 through 2026-07-08, including the denominator correction the
-sheet teaches. Thresholds (the 50 gate, the 80 trigger) are from the vSphere 9.1 memory-tiering
-best-practices documentation.
+**Provenance:** the formulas, including the denominator the chapter teaches, were validated against a live VCF
+Operations 9.1 instance, and the lens audit `candidacy.py` was last run against VCF Operations 9.1.1 with every host on
+ESX 9.1.1 on 2026-10-22 ([expected-output.md](expected-output.md)). The 50 gate and the 80 trigger are from the
+vSphere 9.1 memory-tiering documentation.
 
 ## Get started in the VCF Operations UI
 
@@ -96,7 +96,10 @@ fleet, follows from it. The `* 0` term only anchors the constant to each host so
   to half at a 1:1 ratio, quietly qualifying hosts that should have failed the gate. Proven live.
 - **Candidacy and activation readiness are two columns, not one.** Candidacy reads active against
   the 50 gate; readiness reads consumed against the 80 trigger. Reporting both is what turns
-  "we activated it and nothing happened" into expected behavior.
+  "we activated it and nothing happened" into a question you can answer.
+- **On a host whose tier holds pages, consumed counts them.** Host consumed memory is the DRAM tier's usage plus
+  the NVMe tier's, so **Consumed pct of DRAM** passes 100 there. Read readiness on such a host from the DRAM tier's
+  own usage, `mem:DRAM|tier.usage` (MB), against the same denominator; `candidacy.py` prints both.
 - **The consumed-percent metric does not compute at cluster scope.** The DRAM-tier denominator
   does not roll up; proven live. Read it per host, or aggregate host values deliberately.
 
@@ -117,36 +120,39 @@ fleet, follows from it. The `* 0` term only anchors the constant to each host so
 ## Running the lens against your own hosts
 
 `candidacy.py` runs the gate and the trigger against every host your Operations instance collects
-and prints the four readings the verdict alone does not give you. Read-only: resource lists, stat
-keys, and stat values. It writes nothing to the instance and no host name reaches its record.
+and prints what the verdict alone does not give you. Read-only: resource lists, relationships, properties, stat
+keys and stat values. It writes nothing to the instance and no host name reaches its record.
 
 ```
+umask 077                            # files you create from here on are mode 0600
 export OPS_HOST=... OPS_BROKER_HOST=...
 export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>
 export OPS_TLS_VERIFY=false          # only on a self-signed lab CA
-python3 candidacy.py                 # writes candidacy.json beside the script
+python3 candidacy.py --days 60       # writes candidacy.json beside the script
 ```
 
 It reports:
 
 1. **Where each host lands.** Active as a percent of the DRAM tier against the gate, consumed
-   against the trigger, and cold DRAM in GiB. Hosts are numbered by consumption rank, never named.
-2. **What the wrong denominator would have cost**, per host, with the signed error. This is the
-   reading that changed the sheet: the error does not have one sign. On a host with a tier the
-   total counts the tier and understates percent-of-DRAM; on a host without one the total is
-   memory usable by workloads, net of hypervisor overhead, and overstates it. Measured on the
-   reference estate, -48.0 and -16.4 percent on the two tiered hosts against +5.3 to +29.0 on the
-   nine untiered ones. **The error passes through zero at activation**, so no correction factor
-   fixes it and no drift-watching notices it.
-3. **Whether a configured tier is a used tier.** `mem:NVMe|memory_tier_size` says a tier exists;
-   `mem:NVMe|tier.usage` and the four latency and bandwidth counters on the NVMe side say whether
-   anything has moved into it. The script reads fourteen days of daily maxima so that a zero is a
-   sustained zero, and it checks the DRAM-side counters as a control: if those carry traffic, the
-   instrumentation is collecting and the silence is a fact rather than a gap.
-4. **Whether the 1:1 default holds.** The uplift a 1:1 ratio would give against the tier size the
-   host actually reports. On the reference estate one tiered host is exactly 1:1 and the other is
-   1:0.25, which makes any figure derived from the assumed uplift four times too large on the
-   second one.
+   against the trigger, and cold DRAM in GiB. Hosts are numbered by consumption rank, never named, and only hosts
+   that exist are measured: a host whose resource an adapter reports as NOT_EXISTING, or with no consumption sample
+   in the last hour, is skipped and counted, because a removed host keeps its last values.
+2. **What the wrong denominator would have cost**, per host, with the signed error. The error does not have one
+   sign: on a host with a tier the total counts the tier and understates percent-of-DRAM; on a host without one the
+   total is memory usable by workloads, net of hypervisor overhead, and overstates it. **The error passes through
+   zero at activation**, so no correction factor fixes it and no drift-watching notices it.
+3. **What each configured tier has held, day by day.** `mem:NVMe|memory_tier_size` says a tier exists;
+   `mem:NVMe|tier.usage` says whether pages are in it. For each host with a tier the script reads `--days` of daily
+   maxima (60 by default) and prints the first day the tier held pages, the five-minute sample when the first ones
+   arrived with the host's consumption then, the peak and its day, and how many days the host spent at or past the
+   trigger before the first page. The DRAM-side counters are the control: if they carry traffic, the
+   instrumentation is collecting and a zero is a reading rather than a gap.
+4. **What consumed counts.** Host consumed memory beside the two tiers' usage, and the DRAM tier's usage alone as a
+   percent of DRAM, which is the readiness figure on a host whose tier holds pages.
+5. **Whether the 1:1 default holds.** The uplift a 1:1 ratio would give against the tier size the host reports. Where
+   the two differ, every figure derived from the assumed uplift carries the difference.
+
+[expected-output.md](expected-output.md) holds a run against the reference estate, with notes on reading it.
 
 The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
 The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
@@ -158,16 +164,18 @@ keep it for a throwaway credential.
   `{"stat-key": [...]}`. A reader who guesses a camel-case name gets HTTP 200 and an empty list,
   which reads as a host that collects nothing rather than as a wrong key.
 - **Detect a tier with `mem:NVMe|memory_tier_size`, never with
-  `mem:NVMe|memory_tier_total_capacity`.** The capacity key is present on every host and reads
-  zero where there is no tier, because it reports the NVMe capacity the hardware could use rather
-  than the tier that is configured. The cleanest detector of all is the key set: a configured tier
-  adds ten memory keys (a size, a usage, and read/write latency and bandwidth on each side of the
-  boundary), and their arrival is unambiguous.
+  `mem:NVMe|memory_tier_total_capacity`.** The capacity key can be present on every host and read zero where there
+  is no tier, so its presence proves nothing, and on the reference estate it read the same figure on two hosts
+  whose tiers differ fourfold, so its value is not the tier's size. The cleanest detector is the key set: the keys
+  on every host with a tier and on no host without one. `candidacy.py` reads every host's key list for it, because
+  a key on one untiered host can be missing from another; on the reference estate six keys qualified (the tier's
+  size and usage, and read and write latency and bandwidth on the NVMe side).
 
 ### Scope and units
 
 `mem|guest_demand` is a **VirtualMachine** key and is not present on a host; the host-scope
 analogue is `mem|host_demand`. `mem:DRAM|memory_tier_total_capacity` is a **HostSystem** key and is
 not present on a machine, which is the same fact that makes the percent-of-DRAM metrics compute per
-host and refuse to roll up to a cluster. And the units are mixed: the `mem|` keys report KB while
-`mem:DRAM|tier.usage` reports MB.
+host and refuse to roll up to a cluster. And the units are mixed: the `mem|` keys and the DRAM tier capacity report
+KB while both tiers' `tier.usage` report MB, which `candidacy.py` confirms on your hosts when the two tiers' usage
+adds up to consumed.

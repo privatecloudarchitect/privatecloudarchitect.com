@@ -1,172 +1,200 @@
 {
- "captured_utc": "2026-09-20T20:12:34Z",
+ "captured_utc": "2026-10-22T07:35:07Z",
  "gate": 50.0,
  "trigger": 80.0,
+ "hostsListed": 11,
+ "hostsSkipped": {},
  "hosts": [
   {
    "host": 1,
-   "activePctOfDram": 12.5,
-   "consumedPctOfDram": 58.2,
+   "activePctOfDram": 15.1,
+   "consumedPctOfDram": 65.8,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 321.9,
+   "coldDramGiB": 356.6,
    "dramGiB": 703.4,
    "tierConfigured": true,
    "tierGiB": 175.8,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 781409344.0,
-   "activePctOfTotal": 10.4,
+   "activePctOfTotal": 12.6,
    "denominatorErrorPct": -16.4,
    "upliftIfOneToOneGiB": 703.4,
-   "ratioDramToTier": 0.25
+   "ratioDramToTier": 0.25,
+   "tierUsageGiB": {
+    "dram": 462.7,
+    "nvme": 0.0
+   },
+   "consumedMinusBothTiersPct": 0.02,
+   "dramOnlyPctOfDram": 65.8
   },
   {
    "host": 2,
-   "activePctOfDram": 13.0,
-   "consumedPctOfDram": 52.6,
+   "activePctOfDram": 7.8,
+   "consumedPctOfDram": 59.4,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 304.2,
+   "coldDramGiB": 395.3,
    "dramGiB": 766.5,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 13.7,
-   "denominatorErrorPct": 5.3
+   "activePctOfTotal": 8.2,
+   "denominatorErrorPct": 5.4
   },
   {
    "host": 3,
-   "activePctOfDram": 15.6,
-   "consumedPctOfDram": 81.3,
+   "activePctOfDram": 17.4,
+   "consumedPctOfDram": 87.3,
    "candidate": true,
    "pastTrigger": true,
-   "coldDramGiB": 293.9,
+   "coldDramGiB": 312.6,
    "dramGiB": 447.4,
    "tierConfigured": true,
    "tierGiB": 447.4,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 781409344.0,
-   "activePctOfTotal": 8.1,
+   "activePctOfTotal": 9.0,
    "denominatorErrorPct": -48.0,
    "upliftIfOneToOneGiB": 447.4,
-   "ratioDramToTier": 1.0
+   "ratioDramToTier": 1.0,
+   "tierUsageGiB": {
+    "dram": 385.6,
+    "nvme": 4.8
+   },
+   "consumedMinusBothTiersPct": 0.0,
+   "dramOnlyPctOfDram": 86.2
   },
   {
    "host": 4,
-   "activePctOfDram": 11.3,
-   "consumedPctOfDram": 62.6,
+   "activePctOfDram": 14.1,
+   "consumedPctOfDram": 69.3,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 65.6,
+   "coldDramGiB": 70.7,
    "dramGiB": 128.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 13.6,
-   "denominatorErrorPct": 20.0
+   "activePctOfTotal": 16.9,
+   "denominatorErrorPct": 19.8
   },
   {
    "host": 5,
-   "activePctOfDram": 14.4,
-   "consumedPctOfDram": 55.6,
+   "activePctOfDram": 15.6,
+   "consumedPctOfDram": 52.7,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 52.7,
+   "coldDramGiB": 47.5,
    "dramGiB": 128.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 17.2,
-   "denominatorErrorPct": 20.0
+   "activePctOfTotal": 18.7,
+   "denominatorErrorPct": 19.8
   },
   {
    "host": 6,
-   "activePctOfDram": 7.4,
-   "consumedPctOfDram": 35.4,
+   "activePctOfDram": 6.0,
+   "consumedPctOfDram": 40.3,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 35.8,
+   "coldDramGiB": 43.8,
    "dramGiB": 128.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 9.0,
-   "denominatorErrorPct": 21.4
+   "activePctOfTotal": 7.0,
+   "denominatorErrorPct": 16.4
   },
   {
    "host": 7,
-   "activePctOfDram": 6.7,
-   "consumedPctOfDram": 30.8,
+   "activePctOfDram": 8.5,
+   "consumedPctOfDram": 43.7,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 30.9,
-   "dramGiB": 128.0,
+   "coldDramGiB": 33.8,
+   "dramGiB": 96.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 7.8,
-   "denominatorErrorPct": 16.6
+   "activePctOfTotal": 11.1,
+   "denominatorErrorPct": 29.4
   },
   {
    "host": 8,
-   "activePctOfDram": 3.2,
-   "consumedPctOfDram": 27.5,
+   "activePctOfDram": 6.0,
+   "consumedPctOfDram": 28.0,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 31.1,
+   "coldDramGiB": 28.2,
    "dramGiB": 128.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 3.7,
+   "activePctOfTotal": 7.0,
    "denominatorErrorPct": 16.6
   },
   {
    "host": 9,
-   "activePctOfDram": 3.1,
-   "consumedPctOfDram": 29.8,
+   "activePctOfDram": 4.5,
+   "consumedPctOfDram": 25.7,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 25.7,
-   "dramGiB": 96.0,
+   "coldDramGiB": 27.1,
+   "dramGiB": 128.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 3.9,
-   "denominatorErrorPct": 29.0
+   "activePctOfTotal": 5.5,
+   "denominatorErrorPct": 21.4
   },
   {
    "host": 10,
-   "activePctOfDram": 5.6,
-   "consumedPctOfDram": 21.9,
+   "activePctOfDram": 2.5,
+   "consumedPctOfDram": 11.6,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 20.9,
+   "coldDramGiB": 11.6,
    "dramGiB": 128.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 6.5,
-   "denominatorErrorPct": 16.7
+   "activePctOfTotal": 2.9,
+   "denominatorErrorPct": 16.4
   },
   {
    "host": 11,
-   "activePctOfDram": 3.6,
-   "consumedPctOfDram": 18.4,
+   "activePctOfDram": 1.2,
+   "consumedPctOfDram": 8.9,
    "candidate": true,
    "pastTrigger": false,
-   "coldDramGiB": 18.9,
+   "coldDramGiB": 9.8,
    "dramGiB": 128.0,
    "tierConfigured": false,
    "tierGiB": 0,
+   "esx": "9.1.1-25714478",
    "nvmeCapacityKeyReads": 0.0,
-   "activePctOfTotal": 4.2,
-   "denominatorErrorPct": 16.7
+   "activePctOfTotal": 1.4,
+   "denominatorErrorPct": 16.8
   }
  ],
  "candidates": 11,
  "pastTrigger": 1,
  "tierConfigured": 2,
  "totalHosts": 11,
- "fleetColdDramGiB": 1201.6,
+ "esxVersions": {
+  "9.1.1-25714478": 11
+ },
+ "fleetColdDramGiB": 1337.0,
  "fleetDramGiB": 2909.3,
  "denominator": {
   "tieredHosts": [
@@ -174,35 +202,77 @@
    -48.0
   ],
   "untieredHosts": [
-   5.3,
-   20.0,
-   20.0,
+   5.4,
+   19.8,
+   19.8,
+   16.4,
+   29.4,
+   16.6,
    21.4,
-   16.6,
-   16.6,
-   29.0,
-   16.7,
-   16.7
+   16.4,
+   16.8
   ],
   "changesSign": true
  },
  "use": {
   "tieredHosts": 2,
-  "everyNvmeCounterZeroNow": 2,
+  "everyNvmeCounterZeroNow": 1,
   "dramSideCarryingTraffic": 2,
   "nvmeCounters": 5,
-  "historyDays": 14,
-  "historySamples": 14,
-  "historyMax": 0.0
+  "days": 60,
+  "hosts": [
+   {
+    "host": 1,
+    "ratioDramToTier": 0.25,
+    "daysRead": 46,
+    "daysWithPages": 0,
+    "firstDayWithPages": null,
+    "peakTierGiB": 0.0,
+    "peakDay": null,
+    "lastDayTierGiB": 0.0,
+    "consumedPctOfDramPeakBeforePages": 84.4,
+    "daysPastTriggerBeforePages": 2,
+    "consumedPctOfDramPeak": 84.4,
+    "fiveMinuteSampleShareBeforePages": {
+     "samples": 12999,
+     "atOrPastTrigger": 4,
+     "pctAtOrPastTrigger": 0.0
+    },
+    "clusterHosts": 3,
+    "clusterHostsWithTier": 2,
+    "clusterEsxVersions": 1
+   },
+   {
+    "host": 3,
+    "ratioDramToTier": 1.0,
+    "daysRead": 46,
+    "daysWithPages": 22,
+    "firstDayWithPages": "2026-10-01",
+    "peakTierGiB": 147.9,
+    "peakDay": "2026-10-06",
+    "lastDayTierGiB": 28.9,
+    "consumedPctOfDramPeakBeforePages": 90.0,
+    "daysPastTriggerBeforePages": 22,
+    "consumedPctOfDramPeak": 128.5,
+    "firstSampleWithPages": {
+     "at": "2026-10-01T23:29Z",
+     "tierGiB": 19.5,
+     "consumedPctOfDram": 82.3,
+     "consumedPctOfDramSampleBefore": 69.5
+    },
+    "fiveMinuteSampleShareBeforePages": {
+     "samples": 7180,
+     "atOrPastTrigger": 6421,
+     "pctAtOrPastTrigger": 89.4
+    },
+    "clusterHosts": 3,
+    "clusterHostsWithTier": 2,
+    "clusterEsxVersions": 1
+   }
+  ]
  },
  "surface": {
-  "tieredHostKeys": 263,
-  "untieredHostKeys": 261,
   "memKeysOnlyOnTiered": [
-   "mem:DRAM|bandwidth.read_latest",
-   "mem:DRAM|bandwidth.write_latest",
-   "mem:DRAM|latency.read_latest",
-   "mem:DRAM|latency.write_latest",
    "mem:NVMe|bandwidth.read_latest",
    "mem:NVMe|bandwidth.write_latest",
    "mem:NVMe|latency.read_latest",
@@ -210,6 +280,27 @@
    "mem:NVMe|memory_tier_size",
    "mem:NVMe|tier.usage"
   ],
-  "nvmeCapacityKeyOnUntieredHost": true
+  "memKeysAlsoOnSomeUntiered": {
+   "mem:DRAM|bandwidth.read_latest": 1,
+   "mem:DRAM|bandwidth.write_latest": 1,
+   "mem:DRAM|latency.read_latest": 1,
+   "mem:DRAM|latency.write_latest": 1,
+   "mem:DRAM|tier.usage": 7
+  },
+  "untieredHosts": 9,
+  "hostKeyCounts": [
+   248,
+   265
+  ],
+  "nvmeCapacityKeyPresentOn": 11,
+  "nvmeCapacityKeyNonZeroOn": 2,
+  "nvmeCapacityKeyGiBOnTiered": [
+   745.2
+  ],
+  "guestDemandOnHost": false,
+  "dramCapacityOnHost": true,
+  "vmKeys": 331,
+  "guestDemandOnVm": true,
+  "dramCapacityOnVm": false
  }
 }
