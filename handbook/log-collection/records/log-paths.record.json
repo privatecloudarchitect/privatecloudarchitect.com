@@ -1,5 +1,5 @@
 {
- "adapter_instances": 59,
+ "adapter_instances": 60,
  "collectors": [
   {
    "data_persistence": true,
@@ -28,7 +28,7 @@
    "scope": "FLEET",
    "size": "medium",
    "type": "OPS",
-   "version": "9.1.1.0.25679751"
+   "version": "9.1.1.0100.25795063"
   },
   {
    "deployment": "VSP",
@@ -63,7 +63,7 @@
    "path": "DIRECT"
   }
  ],
- "read_at": "2026-10-05T01:24:40Z",
+ "read_at": "2026-10-22T18:17:30Z",
  "source_proof": {
   "applications": [
    "Hostd",
@@ -78,77 +78,198 @@
      "{{collector-host-1}}"
     ],
     "host": "{{esx-1}}",
-    "own_events": 15972
+    "own_events": 27564
    },
    {
     "forwarders": [
      "{{collector-host-1}}"
     ],
     "host": "{{esx-2}}",
-    "own_events": 22152
+    "own_events": 22923
    },
    {
-    "forwarders": [],
+    "forwarders": [
+     "{{collector-host-1}}"
+    ],
     "host": "{{esx-3}}",
-    "own_events": 0
+    "own_events": 14767
    },
    {
     "forwarders": [
      "{{collector-host-1}}"
     ],
     "host": "{{esx-4}}",
-    "own_events": 14886
+    "own_events": 15364
    },
    {
     "forwarders": [
      "{{collector-host-1}}"
     ],
     "host": "{{esx-5}}",
-    "own_events": 14603
+    "own_events": 19618
    },
    {
     "forwarders": [
      "{{collector-host-1}}"
     ],
     "host": "{{esx-6}}",
-    "own_events": 11641
+    "own_events": 15480
    },
    {
     "forwarders": [
      "{{collector-host-2}}"
     ],
     "host": "{{esx-7}}",
-    "own_events": 6536
+    "own_events": 6914
    },
    {
     "forwarders": [
      "{{collector-host-2}}"
     ],
     "host": "{{esx-8}}",
-    "own_events": 8186
+    "own_events": 8173
    },
    {
     "forwarders": [
      "{{collector-host-1}}"
     ],
     "host": "{{esx-9}}",
-    "own_events": 13226
+    "own_events": 18045
    },
    {
     "forwarders": [
      "{{collector-host-1}}"
     ],
     "host": "{{esx-10}}",
-    "own_events": 21217
+    "own_events": 15190
    },
    {
     "forwarders": [
      "{{collector-host-1}}"
     ],
     "host": "{{esx-11}}",
-    "own_events": 13778
+    "own_events": 19993
    }
   ],
   "window_minutes": 60
+ },
+ "stored_config": {
+  "read": "read",
+  "recommended": {
+   "protocol": "syslog_tcp",
+   "ssl_enabled": true
+  },
+  "vcenters": [
+   {
+    "enabled": false,
+    "esx_logs": true,
+    "protocol": "syslog_tcp",
+    "ssl_enabled": false,
+    "vcenter": "{{vcenter-1}}"
+   },
+   {
+    "enabled": true,
+    "esx_logs": true,
+    "protocol": "syslog_tcp",
+    "ssl_enabled": true,
+    "vcenter": "{{source-6}}"
+   },
+   {
+    "enabled": true,
+    "esx_logs": true,
+    "protocol": "syslog_tcp",
+    "ssl_enabled": true,
+    "vcenter": "{{vcenter-2}}"
+   },
+   {
+    "enabled": true,
+    "esx_logs": true,
+    "protocol": "syslog_tcp",
+    "ssl_enabled": true,
+    "vcenter": "{{source-9}}"
+   }
+  ]
+ },
+ "trust_proof": {
+  "hosts": [
+   {
+    "host": "{{esx-7}}",
+    "target": "ssl://{{collector-host-2}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-8}}",
+    "target": "ssl://{{collector-host-2}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-9}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-10}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-11}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-1}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-2}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-3}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-4}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-5}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   },
+   {
+    "host": "{{esx-6}}",
+    "target": "ssl://{{collector-host-1}}:1514",
+    "trusted_cas": 11,
+    "trusts_target": true,
+    "why": "verified"
+   }
+  ],
+  "read": "read"
  }
 }
