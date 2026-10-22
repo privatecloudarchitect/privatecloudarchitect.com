@@ -72,7 +72,7 @@ def broker_mint():
 def tenant_mint():
     """The consumption surface's refresh-token grant; the refresh token file is rewritten only if a different value comes back."""
     path = os.environ["VCFA_REFRESH_TOKEN_FILE"]
-    sent = open(path, encoding="utf-8").read().strip()
+    sent = secret("VCFA_REFRESH_TOKEN")   # the same file, read with the mode refusal; path is kept for the rotation
     body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": sent}).encode()
     req = urllib.request.Request(f"https://{os.environ['VCFA_HOST']}/oauth/tenant/{os.environ['VCFA_ORG']}/token", data=body, method="POST",
                                  headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"})
