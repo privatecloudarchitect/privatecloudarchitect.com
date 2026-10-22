@@ -127,9 +127,9 @@ Exit: 0 every check this run owns ran and is ok, on at least one organization ·
       schedule reads, a run whose tenant no organization names, a run that judged no organization, the watch's own
       token's end date unread, a record that could not be written, or a request a --replay set holds no answer for
       · 5 a usage error: an unknown or missing argument, a missing or inconsistent environment variable, a credential
-      or key file that cannot be read, a tenant or date that names nothing, a --replay directory that cannot be read
-      or holds no replay set, a Python older than 3.9. An error the watch did not
-      expect exits 3, never 1. --why: 0 a row matched; 1 none did, and it prints the first reads for a message no run
+      or key file that cannot be read, a secret's file open to group or other (refused unread, with the fix:
+      chmod 600), a tenant or date that names nothing, a --replay directory that cannot be read or holds no replay
+      set, a Python older than 3.9. An error the watch did not expect exits 3, never 1. --why: 0 a row matched; 1 none did, and it prints the first reads for a message no run
       showed.
 """
 
@@ -841,11 +841,23 @@ def whole_list(fetch, what: str) -> list[dict]:
     raise ReadError(f"{what}: more than {MAX_PAGES} pages")
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret_file(name: str) -> str:
+    """The secret in the file NAME names, read through read_secret."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    with open(os.environ[name], encoding="utf-8") as f:
-        return f.read().strip()
+    return read_secret(name)
 
 
 class Vcfa:
@@ -944,8 +956,7 @@ class Graph:
 
         with open(os.environ["ENTRA_CERT_FILE"], "rb") as f:
             der = x509.load_pem_x509_certificate(f.read()).public_bytes(serialization.Encoding.DER)
-        with open(os.environ["ENTRA_KEY_FILE"], "rb") as f:
-            key = serialization.load_pem_private_key(f.read(), password=None)
+        key = serialization.load_pem_private_key(_secret_file("ENTRA_KEY_FILE").encode(), password=None)
         now = int(time.time())
         head = {"alg": "PS256", "typ": "JWT", "x5t#S256": b64(hashlib.sha256(der).digest())}
         claims = {"aud": f"{ENTRA}/{self.tenant}/oauth2/v2.0/token", "iss": self.client, "sub": self.client,
@@ -1492,6 +1503,28 @@ def usage_problem(env: dict, provider_only: bool = False) -> str:
               "ENTRA_CERT_FILE", "ENTRA_KEY_FILE"):
         if REPLAY is None and env.get(k) and not (Path(env[k]).is_file() and os.access(env[k], os.R_OK)):
             return f"{k} names a file that cannot be read"
+    return refused_secret_file()
+
+
+SECRET_FILES = ("VCFA_PROVIDER_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_BEARER_FILE", "ENTRA_CLIENT_SECRET_FILE",
+                "ENTRA_KEY_FILE")
+
+
+def refused_secret_file() -> str:
+    """The refusal of the first secret's file open to group or other, or "": each is read once, through the reader the
+    run uses, before any call, so the refusal is a usage error (exit 5), never a read that failed. The certificate is
+    public and read as given; a replayed run reads none."""
+    if REPLAY is not None:
+        return ""
+    for k in SECRET_FILES:
+        if os.environ.get(k):
+            try:
+                _secret_file(k)
+            except PermissionError as e:
+                if e.errno is None:   # the refusal names the variable, the mode and the fix
+                    return str(e)
+            except (OSError, UnicodeDecodeError):
+                pass   # a file that cannot be read is named by the check above it
     return ""
 
 

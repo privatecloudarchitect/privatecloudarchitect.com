@@ -91,9 +91,11 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         record refused because an estate value survived the scrub (nothing is written, so a tool that reads the
         record has nothing to read), a request a --replay set holds no answer for, or an error the script did not
         expect
-      5 a usage error (a missing credential or host, a credential file that cannot be read or holds nothing, VC_HOSTS
-        without VC_USER and a password, --orgs-only without BROKER_HOSTS, an unreadable FINGERPRINT_KEY_FILE, a --replay
-        directory that cannot be read or holds no replay set, a Python older than 3.10), found before anything is sent
+      5 a usage error (a missing credential or host, a credential file that cannot be read or holds nothing, a
+        credential file open to group or other, refused unread with the fix (chmod 600), VC_HOSTS without VC_USER and a
+        password, --orgs-only without BROKER_HOSTS, a FINGERPRINT_KEY_FILE unreadable or open to group or other, a
+        --replay directory that cannot be read or holds no replay set, a Python older than 3.10), found before anything
+        is sent
 A tool that reads this record (service-accounts' catalog_check.py --census) takes it as a read only when its exit is
 0, no fleet call failed, each paged list's last call states it was read whole (`listed`: the stated total and the
 distinct entries read, equal), and the lines it needs are there.
@@ -466,22 +468,39 @@ def _ctx() -> ssl.SSLContext:
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret(name: str) -> str:
+    """NAME_FILE's secret, read through read_secret, or NAME itself."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    path = os.environ.get(f"{name}_FILE")
-    if path:
-        with open(path, encoding="utf-8") as f:
-            return f.read().strip()
+    if os.environ.get(f"{name}_FILE"):
+        return read_secret(f"{name}_FILE")
     return os.environ.get(name, "")
 
 
 def fingerprint_key() -> bytes | None:
-    """The secret in FINGERPRINT_KEY_FILE, or None when it is unset."""
+    """The secret in FINGERPRINT_KEY_FILE, or None when it is unset. Read as bytes, as every tool that joins on it
+    reads it; a file open to group or other is refused before it is read, as read_secret refuses one."""
     path = os.environ.get("FINGERPRINT_KEY_FILE")
     if not path:
         return None
     with open(path, "rb") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"FINGERPRINT_KEY_FILE names a file of mode {mode:04o}, open to group or other: "
+                                  'run chmod 600 "$FINGERPRINT_KEY_FILE" and try again (the file was not read)')
         key = f.read().strip()
     if not key:
         raise ValueError("FINGERPRINT_KEY_FILE is empty")
@@ -1367,15 +1386,17 @@ CREDENTIAL_SECRETS = ("OPS_API_TOKEN", "API_TOKEN", "OPS_BEARER", "VCFA_PROVIDER
 
 
 def credential_problem() -> str | None:
-    """A credential the run was given but cannot use, found before anything is sent: a NAME_FILE that cannot be read
-    or holds nothing, or VC_HOSTS without VC_USER and a password. A usage error (exit 5), never a failed read."""
+    """A credential the run was given but cannot use, found before anything is sent: a NAME_FILE that cannot be read,
+    holds nothing or is open to group or other (refused unread, with the fix), or VC_HOSTS without VC_USER and a
+    password. A usage error (exit 5), never a failed read."""
     for name in CREDENTIAL_SECRETS:
         if os.environ.get(f"{name}_FILE"):
             try:
                 if not _secret(name):
                     return f"{name}_FILE is empty"
-            except (OSError, UnicodeDecodeError) as e:
-                return f"{name}_FILE could not be read: {type(e).__name__}"
+            except (OSError, UnicodeDecodeError) as e:   # the refusal (no errno) names the variable and the fix
+                refused = isinstance(e, PermissionError) and e.errno is None
+                return str(e) if refused else f"{name}_FILE could not be read: {type(e).__name__}"
     if os.environ.get("VC_HOSTS", "").strip() and not (os.environ.get("VC_USER") and _secret("VC_PASSWORD")):
         return "VC_HOSTS needs VC_USER and VC_PASSWORD_FILE (or VC_PASSWORD)"
     return None
@@ -1485,7 +1506,8 @@ def _run(argv: list[str] | None = None) -> int:
     try:
         key = None if a.orgs_only else fingerprint_key()
     except (OSError, ValueError) as e:
-        print(f"FINGERPRINT_KEY_FILE could not be read: {type(e).__name__}", file=sys.stderr)
+        print(f"{e}; nothing was sent" if isinstance(e, PermissionError) and e.errno is None
+              else f"FINGERPRINT_KEY_FILE could not be read: {type(e).__name__}", file=sys.stderr)
         return EXIT_USAGE
     try:
         ops_token = None if a.orgs_only else ops_bearer()

@@ -401,5 +401,5 @@ a group no assigned group is named, metadata not naming the app's active certifi
 known (a credential refused before anything was read, a read refused or a list not read to its end, Entra out of
 reach, a teardown residue it could not read, a record the scrub refused on a run that would have exited 0, a request a
 `--replay` set holds no answer for, an error it did not expect), 5 not run as asked (`ENTRA_CLIENT_ID` without its
-credential, a tenant domain Entra names no tenant for, and a `--replay` directory that cannot be read or holds no
-replay set among them). A record the scrub refuses never hides a 1, a 2 or a 3.
+credential, a secret's file open to group or other, refused unread with the fix (`chmod 600`), a tenant domain Entra
+names no tenant for, and a `--replay` directory that cannot be read or holds no replay set among them). A record the scrub refuses never hides a 1, a 2 or a 3.

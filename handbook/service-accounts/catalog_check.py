@@ -48,7 +48,7 @@ Exit, the worst state in this order, so a warning never hides a client the run c
         token expiring before its rotation date, or a catalog entry two API clients join), and nothing above
       0 every entry complete and not due inside the window, and with --census every API client complete
       5 a usage error: an argument this script does not take, a --today that is not a date, a catalog or census file
-        that cannot be read, a catalog that is not one (no JSON object with a credentials list of objects), FINGERPRINT_KEY_FILE unset or unreadable, a census record without fingerprints or made
+        that cannot be read, a catalog that is not one (no JSON object with a credentials list of objects), FINGERPRINT_KEY_FILE unset, unreadable or open to group or other (refused unread, with the fix: chmod 600), a census record without fingerprints or made
         under another key, or a Python older than 3.10
 Standard library only; reads its files and FINGERPRINT_KEY_FILE, writes nothing, calls nothing.
 """
@@ -285,6 +285,19 @@ def census_unread(record: dict) -> str | None:
     return None
 
 
+def fingerprint_key() -> bytes:
+    """The secret in FINGERPRINT_KEY_FILE, read as bytes as census.py reads it. A file open to group or other is refused
+    before it is read; the refusal names the variable and the fix, never the file's content."""
+    path = os.environ["FINGERPRINT_KEY_FILE"]
+    with open(path, "rb") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"FINGERPRINT_KEY_FILE names a file of mode {mode:04o}, open to group or other: "
+                                  'run chmod 600 "$FINGERPRINT_KEY_FILE" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _census(path: str) -> tuple[dict | None, bytes | None, str | None, int]:
     """The census record and the key, or the reason the join cannot run and its exit: 5 for what the operator gave
     (a file, the key), 3 for a record that is not a read."""
@@ -293,14 +306,13 @@ def _census(path: str) -> tuple[dict | None, bytes | None, str | None, int]:
             record = json.load(f)
     except (OSError, ValueError) as e:
         return None, None, f"could not read {path}: {type(e).__name__}", EXIT_USAGE
-    key_path = os.environ.get("FINGERPRINT_KEY_FILE")
-    if not key_path:
+    if not os.environ.get("FINGERPRINT_KEY_FILE"):
         return None, None, "--census needs FINGERPRINT_KEY_FILE, the same file the census ran with", EXIT_USAGE
     try:
-        with open(key_path, "rb") as f:
-            key = f.read().strip()
-    except OSError as e:
-        return None, None, f"could not read FINGERPRINT_KEY_FILE: {type(e).__name__}", EXIT_USAGE
+        key = fingerprint_key()
+    except OSError as e:   # the refusal of a file open to group or other (no errno) names the variable and the fix
+        refused = isinstance(e, PermissionError) and e.errno is None
+        return None, None, str(e) if refused else f"could not read FINGERPRINT_KEY_FILE: {type(e).__name__}", EXIT_USAGE
     unread = census_unread(record)
     if unread:
         return None, None, f"NOT READ: {path} is not a read of the API clients: {unread}. Nothing is joined (exit 3)", EXIT_UNREAD

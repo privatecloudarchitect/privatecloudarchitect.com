@@ -16,8 +16,10 @@ user@org with VCFA_PASSWORD), else from VCFA_BEARER, a bearer you already hold. 
 
 Env:  VCFA_HOST, VCFA_ORG; VCFA_REFRESH_TOKEN_FILE and/or VCFA_USER + VCFA_PASSWORD and/or VCFA_BEARER;
       WARN_DAYS, ALERT_DAYS; TLS_VERIFY=false on a self-signed lab CA
+VCFA_REFRESH_TOKEN_FILE is mode 0600: a file open to group or other is refused unread, before anything is sent.
 Exit: 0 every token has more than WARN_DAYS · 1 one is within WARN_DAYS · 2 one is within ALERT_DAYS or past
-      its date, or the grant was refused · 3 nothing could be read
+      its date, or the grant was refused · 3 nothing could be read · 5 VCFA_REFRESH_TOKEN_FILE missing or open to
+      group or other (nothing sent)
 """
 
 import base64
@@ -115,6 +117,18 @@ def verdict(days, warn, alert):
     return 0, "ok"
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def main():
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
     warn, alert = int(os.environ.get("WARN_DAYS", "14")), int(os.environ.get("ALERT_DAYS", "7"))
@@ -123,7 +137,11 @@ def main():
     print(f"runway.py: refresh-token runway on one organization, warn at {warn} days, alert at {alert}\n")
 
     if os.environ.get("VCFA_REFRESH_TOKEN_FILE"):
-        refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
+        try:
+            refresh = read_secret("VCFA_REFRESH_TOKEN_FILE")
+        except (PermissionError, FileNotFoundError) as e:   # missing or open to group or other
+            print(f"runway.py: {e}; nothing was sent", file=sys.stderr)
+            sys.exit(5)
         bearer, line, refused = grant(host, org, refresh)
         print(f"  grant   the stored refresh token: {line}")
         worst = max(worst, 2 if refused else 0)

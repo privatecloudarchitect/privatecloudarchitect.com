@@ -61,8 +61,9 @@ Exit: 0 every door of every surface configured was read and returned an HTTP sta
         token, session or bearer could not be minted so the doors behind it were not read, a request a --replay set
         holds no answer for, or an error the script did not expect
       5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, a credential file (any NAME_FILE,
-        VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read, a --replay directory that
-        cannot be read or holds no replay set, or a Python older than 3.10
+        VCFA_REFRESH_TOKEN_FILE, VCFA_PROVIDER_REFRESH_TOKEN_FILE) that cannot be read or is open to group or other
+        (refused unread, with the fix: chmod 600), a --replay directory that cannot be read or holds no replay set, or
+        a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
 run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190).
 """
@@ -149,11 +150,23 @@ def row(surface, token, status, expect=None, note=""):
     print(f"  {surface:<34} {token:<26} {str(status) if status is not None else '---':>4}  {v:<9} {mark:<26} {note}")
 
 
-def read_file_token(path):
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
+def read_file_token(var):
+    """The token in the file VAR names, read through read_secret."""
     if opslib.REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return opslib.REPLAY_CREDENTIAL
-    with open(path, encoding="utf-8") as f:
-        return f.read().strip()
+    return read_secret(var)
 
 
 def token_file_named(var):
@@ -174,9 +187,10 @@ def write_file_token(path, value):
     os.replace(tmp, path)
 
 
-def vcfa_refresh_grant(host, path, token_file):
-    """The RFC 6749 refresh-token grant; the platform answers with a bearer AND a new refresh token."""
-    body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": read_file_token(token_file)}).encode()
+def vcfa_refresh_grant(host, path, var):
+    """The RFC 6749 refresh-token grant on the token in the file VAR names; the platform answers with a bearer AND a new
+    refresh token."""
+    body = urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": read_file_token(var)}).encode()
     st, data, _ = req("POST", f"https://{host}{path}", {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}, body)
     if st != 200 or not isinstance(data, dict) or not data.get("access_token"):
         print(f"  {path}: HTTP {st}: {str(data)[:160]}")
@@ -188,9 +202,9 @@ def vcfa_refresh_grant(host, path, token_file):
               + ("a refresh token came back with it, and under --replay no token file is read or rewritten, so whether "
                  "it rotated is not judged" if returned else "no refresh token in the answer"))
         return data["access_token"]
-    sent = read_file_token(token_file)
+    sent = read_file_token(var)
     if returned and returned != sent:
-        write_file_token(token_file, returned)
+        write_file_token(os.environ[var], returned)
         print(f"  {path}: bearer minted; the refresh token ROTATED and the file was rewritten (the old value is dead)")
     elif returned:
         print(f"  {path}: bearer minted; a refresh token came back with it and is the same value you sent (no rotation on this build)")
@@ -218,19 +232,28 @@ class _Parser(argparse.ArgumentParser):
         raise SystemExit(EXIT_USAGE)
 
 
+def refusal(e, var):
+    """What a credential file that failed to read says: the reader's refusal when the file is open to group or other
+    (it names the variable, the mode and the fix), else that VAR could not be read and the error's kind."""
+    if isinstance(e, PermissionError) and e.errno is None:
+        return str(e)
+    return f"{var} could not be read: {type(e).__name__}"
+
+
 def credentials_readable():
-    """The first credential file named but unreadable, as (variable, error name), or None. Read before any call."""
+    """The first credential file named but unreadable or open to group or other, as the line to print, or None. Read
+    before any call."""
     for name in SECRET_NAMES:
         try:
             secret(name)
         except OSError as e:
-            return f"{name}_FILE", type(e).__name__
+            return refusal(e, f"{name}_FILE")
     for var in TOKEN_FILES:
         if os.environ.get(var):
             try:
-                read_file_token(os.environ[var])
+                read_file_token(var)
             except OSError as e:
-                return var, type(e).__name__
+                return refusal(e, var)
     return None
 
 
@@ -267,7 +290,7 @@ def _run():
     try:
         held = secret("OPS_API_TOKEN")
     except OSError as e:
-        print(f"FATAL: OPS_API_TOKEN_FILE could not be read: {type(e).__name__}", file=sys.stderr)
+        print(f"FATAL: {refusal(e, 'OPS_API_TOKEN_FILE')}", file=sys.stderr)
         return EXIT_USAGE
     if not os.environ.get("OPS_HOST") or not held:
         print("FATAL: OPS_HOST and OPS_API_TOKEN_FILE (or OPS_API_TOKEN) are required: the broker's bearer is the first "
@@ -275,7 +298,7 @@ def _run():
         return EXIT_USAGE
     bad = credentials_readable()
     if bad:
-        print(f"FATAL: {bad[0]} could not be read: {bad[1]}; nothing was sent", file=sys.stderr)
+        print(f"FATAL: {bad}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE
     print("doors.py: one harmless read per pair; tokens minted per run and never printed\n")
     # ---- the broker and the surfaces its bearer reaches, or does not
@@ -349,7 +372,7 @@ def _run():
     counts = {}
     if host and org and token_file_named("VCFA_REFRESH_TOKEN_FILE"):
         print("\nVCF Automation, the tenant OAuth grant")
-        t = vcfa_refresh_grant(host, f"/oauth/tenant/{org}/token", token_file_named("VCFA_REFRESH_TOKEN_FILE"))
+        t = vcfa_refresh_grant(host, f"/oauth/tenant/{org}/token", "VCFA_REFRESH_TOKEN_FILE")
         if t:
             st, n = rights_count(host, t); counts["OAuth grant"] = n
             row("VCF Automation, rights", "tenant OAuth bearer", st, "accepted", f"{n} effective rights" if n is not None else "")
@@ -374,7 +397,7 @@ def _run():
         print("\n  VCF Automation, Basic session login   skipped: VCFA_HOST, VCFA_USER, VCFA_PASSWORD_FILE not all set")
     if host and token_file_named("VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
         print("\nVCF Automation, the provider api-token")
-        t = vcfa_refresh_grant(host, "/oauth/provider/token", token_file_named("VCFA_PROVIDER_REFRESH_TOKEN_FILE"))
+        t = vcfa_refresh_grant(host, "/oauth/provider/token", "VCFA_PROVIDER_REFRESH_TOKEN_FILE")
         if t:
             st, n = rights_count(host, t); counts["provider api-token"] = n
             row("VCF Automation, provider rights", "provider bearer", st, "accepted", f"{n} effective rights" if n is not None else "")

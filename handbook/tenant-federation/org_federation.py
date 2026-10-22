@@ -131,7 +131,8 @@ Exit: 0 done · 1 a check failed, or a write refused while building, configuring
       user has signed in), a teardown whose residue could not be read, a record the scrub refused to write on a run that
       would have exited 0, a request a --replay set holds no answer for, or an error it did not expect (never 1) · 5
       not run as asked: an unknown, missing or malformed argument (--enable without --configure, --groups-only without --group or with --enable or --user-key
-      among them), a missing environment variable or a file that cannot be read, ENTRA_CLIENT_ID without its
+      among them), a missing environment variable or a file that cannot be read, a secret's file open to group or
+      other (refused unread, with the fix: chmod 600), ENTRA_CLIENT_ID without its
       credential, an ENTRA_TENANT_ID that is neither a tenant id nor a domain Entra names a tenant for, metadata that
       is not the tenant's or names no certificate that reads, SECRET_DAYS of a year or more, a --replay directory that
       cannot be read or holds no replay set, or a Python older than 3.9. Nothing is sent on a 5. A record the scrub refuses is not written and never hides the run's code: 1, 2 and 3
@@ -989,6 +990,9 @@ def _resolve_tenant_env(discover=None):
 # its variable is set. METADATA_FILE is the tenant's public metadata, not a credential, and is read as given.
 CREDENTIAL_FILES = ("VCFA_PROVIDER_BEARER_FILE", "VCFA_PROVIDER_REFRESH_TOKEN_FILE", "ENTRA_CLIENT_SECRET_FILE",
                     "NEW_SECRET_FILE")
+# Every file that holds a secret, read through read_secret: a file open to group or other is refused unread. The
+# certificate form's ENTRA_KEY_FILE is one; its ENTRA_CERT_FILE and METADATA_FILE are public, and read as given.
+SECRET_FILES = CREDENTIAL_FILES + ("APP_SECRET_FILE", "ENTRA_KEY_FILE")
 
 
 def _given(var):
@@ -996,17 +1000,47 @@ def _given(var):
     return bool(os.environ.get(var)) or (REPLAY is not None and var in CREDENTIAL_FILES)
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
+def _read_text(path):
+    """A file that holds no secret (the tenant's public metadata), stripped."""
+    with open(path, encoding="utf-8") as f:
+        return f.read().strip()
+
+
 def _read_file(var):
+    """The file VAR names, stripped, or None when VAR is unset; a secret's through read_secret. A file that cannot be
+    read, and a secret's file open to group or other (refused unread, with the fix), are usage errors."""
     if REPLAY is not None and (var in CREDENTIAL_FILES or (var == "APP_SECRET_FILE" and os.environ.get(var))):
         return REPLAY_CREDENTIAL   # a replayed run reads no credential: nothing is sent
-    path = os.environ.get(var)
-    if not path:
+    if not os.environ.get(var):
         return None
     try:
-        with open(path, encoding="utf-8") as f:
-            return f.read().strip()
+        return read_secret(var) if var in SECRET_FILES else _read_text(os.environ[var])
     except OSError as e:   # a variable that names no readable file is a usage error, not a failed read
+        if isinstance(e, PermissionError) and e.errno is None:   # the refusal names the variable and the fix
+            raise UsageError(str(e)) from None
         raise UsageError(f"{var} names a file that cannot be read ({type(e).__name__})") from None
+
+
+def check_secret_files():
+    """Every secret's file the environment names, read once before anything is sent, so one that cannot be read or is
+    open to group or other is a usage error (exit 5) with nothing sent, never an error met after a call. A replayed
+    run reads none."""
+    if REPLAY is not None:
+        return
+    for var in SECRET_FILES:
+        _read_file(var)
 
 
 class Vcfa:
@@ -1137,8 +1171,7 @@ class Graph:
 
         with open(os.environ["ENTRA_CERT_FILE"], "rb") as f:
             pem = f.read()
-        with open(os.environ["ENTRA_KEY_FILE"], "rb") as f:
-            key = serialization.load_pem_private_key(f.read(), password=None)
+        key = serialization.load_pem_private_key(_read_file("ENTRA_KEY_FILE").encode(), password=None)
         der = base64.b64decode(b"".join(line for line in pem.splitlines() if not line.startswith(b"-----")))
         b64u = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=").decode()  # noqa: E731
         now = int(time.time())
@@ -3020,12 +3053,14 @@ def _run(argv=None):
     if a.org:
         if credential_problem(entra=False):
             raise UsageError(f"--org needs {credential_problem(entra=False)}")
+        check_secret_files()
         _resolve_tenant_env()   # a domain name given as ENTRA_TENANT_ID, resolved to the id before anything is sent
         return prove_existing(a) if a.prove else configure_existing(a)
     a.user_key = a.user_key or "oid"
     if a.update:
         if credential_problem(entra=False):
             raise UsageError(f"--update needs {credential_problem(entra=False)}")
+        check_secret_files()
         _resolve_tenant_env()
         return update(a)
     if a.teardown and not a.execute:   # the plan reads the state file, as --execute would, and nothing remote
@@ -3054,6 +3089,7 @@ def _run(argv=None):
     days = os.environ.get("SECRET_DAYS", "180")
     if not (days.isdigit() and 0 < int(days) < 365):   # checked before anything is sent, not at the secret step
         raise UsageError(f"SECRET_DAYS must be a whole number of days under a year, not {days!r}")
+    check_secret_files()
     _resolve_tenant_env()
     run = Run(a)
     vcfa, g = Vcfa(run.host), Graph(run.tenant, run.client)

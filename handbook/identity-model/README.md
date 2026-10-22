@@ -39,7 +39,7 @@ export OPS_HOST=<operations-fqdn>
 export OPS_API_TOKEN_FILE=/path/to/api-token          # mode 0600; an API token from VCF Operations: an API client holding VCF Administrator
 export OPS_BROKER_HOST=<identity-broker-fqdn>           # where the token is traded for a bearer; default OPS_HOST
 export BROKER_TENANT=CUSTOMER                          # the broker tenant, the realm's path segment at the broker (it was OPS_REALM)
-# or, instead of the API token: export OPS_BEARER_FILE=/path/to/bearer   (a bearer you already hold)
+# or, instead of the API token: export OPS_BEARER_FILE=/path/to/bearer   (a bearer you already hold, mode 0600)
 # BROKER_HOST and API_TOKEN_FILE, the names integrations-identity's vcenter_exchange.py takes, are read when
 # OPS_BROKER_HOST and OPS_API_TOKEN_FILE are unset, so one shell serves both companions
 export VCFA_HOST=<automation-fqdn>                       # optional: each organization's ways in
@@ -48,6 +48,8 @@ export VC_HOSTS=<vcenter-fqdn>,<vcenter-fqdn>            # optional: the broker 
 export VC_USER=<user@domain> VC_PASSWORD_FILE=/path/to/password   # mode 0600
 export TLS_VERIFY=false                                  # only on a self-signed lab CA
 export OUT=census.json
+# every credential file, and FINGERPRINT_KEY_FILE below, is read only at mode 0600: one open to group or other is
+# refused unread, with the fix (chmod 600 "$OPS_API_TOKEN_FILE"), exit 5 and nothing sent
 
 python3 census.py            # read, print, record
 python3 census.py --redact   # the same, printed with placeholders, for a transcript you will share
@@ -90,7 +92,7 @@ without it. Give `catalog_check.py` the same file.
 |---|---|---|
 | 0 | the record is written and every call answered | nothing |
 | 3 | a read failed or is not known: a call failed, or answered without what the read needs, such as a vCenter session sign-in that returned no session id, a list whose answer has no list under its key (a 200 without its list key is not an empty list), a paged list not read whole (below), an organization listed without `isClassicTenant` (its type prints `type not read`) or without `isProviderConsumptionOrg` (it prints `provider consumption not read`), a broker listed without `healthy` (it prints `health not read`), or a list of no broker or, as the provider, of no organization, where the census's own bearer came from a broker and the provider's System organization is one (the record is still written and names the call, and the run prints the server's reason; a fleet identity read refused or read in part opens the print with `NOT READ`, because the lines that count brokers and clients then count nothing, or only part); the credential could not be obtained; with `--orgs-only` an organization signing in through VCF single sign-on whose issuer `BROKER_HOSTS` does not name; the record refused because an estate value survived the scrub (nothing is written, so a tool that reads it has nothing to read); under `--replay`, a request the set holds no answer for; or an error the script did not expect | fix the read; take no count from this run |
-| 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; an unreadable `FINGERPRINT_KEY_FILE`; a `--replay` directory that cannot be read or holds no replay set; a Python older than 3.10); nothing is written | fix the invocation |
+| 5 | a usage error, found before anything is sent (a missing host or credential; a credential file that cannot be read or holds nothing; a credential file open to group or other, refused unread with the fix, `chmod 600`; `VC_HOSTS` without `VC_USER` and a password; with `--orgs-only`, no `VCFA_HOST`, no provider credential or no `BROKER_HOSTS`; a `FINGERPRINT_KEY_FILE` unreadable or open to group or other; a `--replay` directory that cannot be read or holds no replay set; a Python older than 3.10); nothing is written | fix the invocation |
 
 These are the codes every identity companion uses: 0 nothing to act on, 3 a read that failed, 5 a usage error. The
 census judges nothing, so it has no finding code of its own. A tool that reads `census.json`, as

@@ -112,8 +112,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         from none other
       5 a usage error (a missing or bad argument or environment variable, --sessions without DIRECTORY_DOMAINS, a
         domain in both DIRECTORY_DOMAINS and OTHER_DOMAINS, an --ack file that cannot be read or breaks its format, a
-        credential file named that cannot be read or is empty, a --replay directory that cannot be read or holds no
-        replay set, among them), or a Python older than 3.10; nothing is written
+        credential file named that cannot be read or is empty, one open to group or other (refused unread, with the
+        fix: chmod 600), a --replay directory that cannot be read or holds no replay set, among them), or a Python
+        older than 3.10; nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
       the run's code stands when it is 1, 2, 3 or 4, and a run that found nothing exits 3 (the record a later --compare
       reads was not written).
@@ -428,13 +429,24 @@ def _ctx() -> ssl.SSLContext | None:
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret(name: str) -> str:
+    """NAME_FILE's secret, read through read_secret, or NAME itself."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    path = os.environ.get(f"{name}_FILE")
-    if path:
-        with open(path, encoding="utf-8") as f:
-            return f.read().strip()
+    if os.environ.get(f"{name}_FILE"):
+        return read_secret(f"{name}_FILE")
     return os.environ.get(name, "")
 
 
@@ -452,14 +464,25 @@ def bearer_file() -> str:
     return os.environ.get("BEARER_FILE") or os.environ.get("OPS_BEARER_FILE", "")
 
 
+def bearer_var() -> str:
+    """The variable that names the bearer file: BEARER_FILE, or OPS_BEARER_FILE when it is unset."""
+    return "BEARER_FILE" if os.environ.get("BEARER_FILE") else "OPS_BEARER_FILE"
+
+
 def fingerprint_key() -> bytes | None:
-    """The secret in FINGERPRINT_KEY_FILE, or None when it is unset."""
+    """The secret in FINGERPRINT_KEY_FILE, or None when it is unset. Read as bytes, as every tool that joins on it
+    reads it; a file open to group or other is refused before it is read, as read_secret refuses one."""
     path = os.environ.get("FINGERPRINT_KEY_FILE")
     if not path:
         return None
     if REPLAY is not None:  # a replayed run reads no credential: records made under it carry the placeholder's key
         return REPLAY_CREDENTIAL.encode()
     with open(path, "rb") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"FINGERPRINT_KEY_FILE names a file of mode {mode:04o}, open to group or other: "
+                                  'run chmod 600 "$FINGERPRINT_KEY_FILE" and try again (the file was not read)')
         key = f.read().strip()
     if not key:
         raise ValueError("FINGERPRINT_KEY_FILE is empty")
@@ -517,8 +540,7 @@ def broker_bearer() -> str:
     if bearer_file():
         if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
             return REPLAY_CREDENTIAL
-        with open(bearer_file(), encoding="utf-8") as f:
-            return f.read().strip().removeprefix("Bearer ").strip()
+        return read_secret(bearer_var()).removeprefix("Bearer ").strip()
     status, answer = _form(f"https://{broker_host()}/acs/t/{broker_tenant()}/token",
                            {"grant_type": API_TOKEN_GRANT, "api_token": api_token()})
     if status != 200 or "access_token" not in answer:
@@ -1435,8 +1457,9 @@ def compare_main(paths: list[str], cover_hours: int = COVER_HOURS, span_days: fl
     if ack_path:
         try:
             acks, key = load_acks(ack_path), fingerprint_key()
-        except (OSError, ValueError) as e:
-            print(f"--ack {ack_path}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
+        except (OSError, ValueError) as e:   # the key's refusal (no errno) names FINGERPRINT_KEY_FILE and the fix
+            print(f"{e}; nothing was compared" if isinstance(e, PermissionError) and e.errno is None
+                  else f"--ack {ack_path}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
             return EXIT_USAGE
     try:
         result = compare(records, cover_hours, span_days, max_gap, acks, key)
@@ -1479,19 +1502,22 @@ SECRET_FILES = ("VC_PASSWORD_FILE", "API_TOKEN_FILE", "OPS_API_TOKEN_FILE", "BEA
 
 def unusable_secret_files() -> list[str]:
     """The *_FILE variables set to a file that cannot be read or holds nothing: a usage error, found before any call.
-    A replayed run opens none of them: it reads no credential."""
+    Each is read as the run reads it, so a file open to group or other raises the reader's refusal (PermissionError,
+    a usage error too), unread. A replayed run opens none of them: it reads no credential."""
     if REPLAY is not None:
         return []
     bad = []
     for name in SECRET_FILES:
-        path = os.environ.get(name)
-        if not path:
+        if not os.environ.get(name):
             continue
         try:
-            with open(path, "rb") as f:
-                if not f.read().strip():
-                    bad.append(name)
-        except OSError:
+            if not (fingerprint_key() if name == "FINGERPRINT_KEY_FILE" else read_secret(name)):
+                bad.append(name)
+        except PermissionError as e:
+            if e.errno is None:   # open to group or other: the reader's refusal names the variable and the fix
+                raise
+            bad.append(name)
+        except (OSError, UnicodeDecodeError, ValueError):   # ValueError: an empty FINGERPRINT_KEY_FILE
             bad.append(name)
     return bad
 
@@ -1574,7 +1600,11 @@ def _run(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as e:
         print(f"--ack {a.ack}: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
         return EXIT_USAGE
-    bad = unusable_secret_files()
+    try:
+        bad = unusable_secret_files()
+    except PermissionError as e:
+        print(f"{e}; nothing was sent", file=sys.stderr)
+        return EXIT_USAGE
     if bad:
         print(f"{', '.join(bad)}: the file named cannot be read, or is empty", file=sys.stderr)
         return EXIT_USAGE

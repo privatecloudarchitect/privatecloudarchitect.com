@@ -28,7 +28,8 @@ Exit, the first that applies:
      refused for an estate value that survived its scrub on a run that would have passed, a request a --replay set
      holds no answer for, or an error it did not expect. Never a pass, never a finding.
   0  every check passed, its evidence at or before the deadline
-  5  a usage error: a missing or bad argument or environment variable, a token file that cannot be read, a --user that
+  5  a usage error: a missing or bad argument or environment variable, a token file that cannot be read, a credential
+     file open to group or other (refused unread, with the fix: chmod 600), a --user that
      selects no account or more than one, a --replay directory that cannot be read or holds no replay set, or a Python
      older than 3.10; nothing is sent
 The contract every identity companion keeps: 0 nothing for a person to act on, 3 a read failed or a result is
@@ -365,10 +366,23 @@ def _lab_verify() -> bool:
     return os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret_file(name: str) -> str:
+    """The secret in the file NAME names, read through read_secret."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    return Path(os.environ[name]).read_text(encoding="utf-8").strip()
+    return read_secret(name)
 
 
 def _secret_given(name: str) -> bool:
@@ -615,9 +629,7 @@ def _assertion(tenant: str, client: str) -> str:
     der = x509.load_pem_x509_certificate(
         Path(os.environ["ENTRA_CERT_FILE"]).read_bytes()
     ).public_bytes(serialization.Encoding.DER)
-    key = serialization.load_pem_private_key(
-        Path(os.environ["ENTRA_KEY_FILE"]).read_bytes(), password=None
-    )
+    key = serialization.load_pem_private_key(_secret_file("ENTRA_KEY_FILE").encode(), password=None)
     now = int(time.time())
     head = {"alg": "PS256", "typ": "JWT", "x5t#S256": b64(hashlib.sha256(der).digest())}
     claims = {
@@ -1199,6 +1211,15 @@ def _run(argv: list[str] | None = None) -> int:
         if REPLAY is None and os.environ.get(name) and not os.access(os.environ[name], os.R_OK):
             print(f"{name}: the file cannot be read", file=sys.stderr)
             return EXIT_USAGE
+        if REPLAY is None and os.environ.get(name) and name != "ENTRA_CERT_FILE":   # the certificate is public
+            try:   # read once through the run's reader: one open to group or other is refused unread
+                _secret_file(name)
+            except PermissionError as e:
+                if e.errno is None:   # the refusal names the variable, the mode and the fix
+                    print(f"{e}; nothing was sent", file=sys.stderr)
+                    return EXIT_USAGE
+            except (OSError, UnicodeDecodeError):
+                pass   # left to the read that needs it, as before
     try:
         record, calls = run(a)
     except UsageError as e:

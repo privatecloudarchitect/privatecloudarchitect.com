@@ -9,9 +9,9 @@ look on your estate, not a sample someone typed from memory.
 
 | File | What it is |
 |---|---|
-| `capture.py` | Performs the chapter's calls against your own VCF Automation and writes the record: flow A (the stored refresh token traded for a bearer, then one read on each API surface), flow B (the Basic session login whose bearer arrives in a response header), the count of effective rights under each bearer, and the rights present under one and absent under the other, by name. Read-only; stdlib Python; no token value is printed or written, and the script refuses to write a record in which any secret, host, or organization survived. |
+| `capture.py` | Performs the chapter's calls against your own VCF Automation and writes the record: flow A (the stored refresh token traded for a bearer, then one read on each API surface), flow B (the Basic session login whose bearer arrives in a response header), the count of effective rights under each bearer, and the rights present under one and absent under the other, by name. Read-only; stdlib Python; no token value is printed or written, and the script refuses to write a record in which any secret, host, or organization survived. Exit 0 recorded, 1 a call failed, 5 a token file missing or open to group or other (nothing sent). |
 | `calls.json` | The record from the reference estate, 2026-09-21: eight exchanges with their request lines, headers, bodies, status codes, elapsed times, and each bearer's own expiry claim. |
-| `runway.py` | How long your refresh tokens have left, and whether the one you store still works: one refresh grant with the stored token (a 400 is read for its error body and never retried), then the token list read to its declared total, each token's expiry against `WARN_DAYS` (14) and `ALERT_DAYS` (7). Read-only; stdlib Python; no token value is printed. Exit 0 ok, 1 within the warning window, 2 within the alert window or the grant refused, 3 nothing could be read. |
+| `runway.py` | How long your refresh tokens have left, and whether the one you store still works: one refresh grant with the stored token (a 400 is read for its error body and never retried), then the token list read to its declared total, each token's expiry against `WARN_DAYS` (14) and `ALERT_DAYS` (7). Read-only; stdlib Python; no token value is printed. Exit 0 ok, 1 within the warning window, 2 within the alert window or the grant refused, 3 nothing could be read, 5 the token file missing or open to group or other (nothing sent). |
 | `expected-output.md` | The transcripts: `capture.py` on 2026-09-21 and `runway.py` on 2026-10-07. |
 
 ## Run it
@@ -21,13 +21,16 @@ export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>
 export VCFA_REFRESH_TOKEN_FILE=/path/to/refresh-token      # mode 0600; the api-token minted in the console for that org
 export VCFA_USER=<user>@<org> VCFA_PASSWORD=<password>    # flow B; a dedicated account, never an administrator's daily one
 export VCFA_DOMAIN=<your-dns-domain>                       # optional; replaced by a placeholder in the record
-export VCFA_PROVIDER_REFRESH_TOKEN_FILE=/path/to/provider-refresh-token   # optional; the provider path
+export VCFA_PROVIDER_REFRESH_TOKEN_FILE=/path/to/provider-refresh-token   # optional; the provider path; mode 0600
 export TLS_VERIFY=false                                    # only on a self-signed lab CA
 export OUT=calls.json
 
 python3 capture.py
 python3 runway.py                                          # the same environment; VCFA_BEARER works too
 ```
+
+Each token file is read only at mode 0600: one open to group or other is refused unread, with the fix (`chmod 600` on
+the file), and the script exits 5 with nothing sent.
 
 Run `runway.py` on a schedule and let its exit code raise the alarm, for example weekly:
 

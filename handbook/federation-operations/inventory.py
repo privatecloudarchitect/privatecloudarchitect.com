@@ -89,7 +89,8 @@ Exit, the first that applies: 3 the run judged no organization (a wrong host, a 
       record missing, unreadable or from a run that did not read, a tenant's domain not resolved, a record the scrub
       refused (no record is written), or a request a --replay set holds no answer for · 0 nothing for a person to act
       on · 5 a usage error: an unknown or abbreviated flag, a missing environment variable or a file that cannot be
-      read, a --replay directory that cannot be read or holds no replay set, an inventory that is not valid JSON or not
+      read, a credential file open to group or other (refused unread, with the fix: chmod 600), a --replay directory
+      that cannot be read or holds no replay set, an inventory that is not valid JSON or not
       the shape above, a tenant that is neither an id nor a domain name or a domain Entra names no tenant for, a tenant
       or an organization declared twice, OUT naming the inventory or a schedule's record, a Python older than 3.9.
       An error the run did not expect exits 3, never 1. A record the scrub refuses never hides a 1, and turns a 0 into
@@ -458,11 +459,23 @@ def whole_list(fetch, what: str) -> list[dict]:
     raise ReadError(f"{what}: more than {MAX_PAGES} pages")
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret_file(name: str) -> str:
+    """The secret in the file NAME names, read through read_secret."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    with open(os.environ[name], encoding="utf-8") as f:
-        return f.read().strip()
+    return read_secret(name)
 
 
 class Vcfa:
@@ -1253,6 +1266,24 @@ def usage_problem(env: dict) -> str:
             ("INVENTORY_FILE",):   # a replayed run opens no credential file; the inventory is read as given
         if env.get(k) and not (Path(env[k]).is_file() and os.access(env[k], os.R_OK)):
             return f"{k} names a file that cannot be read"
+    return refused_secret_file()
+
+
+def refused_secret_file() -> str:
+    """The refusal of the first provider credential file open to group or other, or "": each is read once, through the
+    reader the run uses, before any call, so the refusal is a usage error (exit 5), never a read that failed. A
+    replayed run reads none."""
+    if REPLAY is not None:
+        return ""
+    for k in ("VCFA_PROVIDER_REFRESH_TOKEN_FILE", "VCFA_PROVIDER_BEARER_FILE"):
+        if os.environ.get(k):
+            try:
+                _secret_file(k)
+            except PermissionError as e:
+                if e.errno is None:   # the refusal names the variable, the mode and the fix
+                    return str(e)
+            except (OSError, UnicodeDecodeError):
+                pass   # a file that cannot be read is named by the check above it
     return ""
 
 

@@ -111,7 +111,7 @@ person's password.
 unset VC_USER VC_PASSWORD_FILE                      # the census then reads as the client
 export BROKER_HOST=<identity-broker-fqdn>           # trades the API client's token for a bearer
 export API_TOKEN_FILE=/path/to/api-token            # mode 0600; the API client's API token
-# or, instead of the API token: export BEARER_FILE=/path/to/bearer   (a broker bearer you already hold)
+# or, instead of the API token: export BEARER_FILE=/path/to/bearer   (a broker bearer you already hold, mode 0600)
 
 python3 vcenter_exchange.py                         # the exchange and both sessions, on every vCenter
 python3 vcenter_exchange.py --sessions --redact     # and the census, read as the client
@@ -126,7 +126,9 @@ census's client holds `vcf_administrator`, give it nothing else to do and keep i
 
 `BROKER_TENANT` (the broker tenant, default `CUSTOMER`), `INTERACTIVE_AGENTS` (default `vSphereUI`), `LOCAL_DOMAIN`
 (the vCenter's own SSO domain, default `VSPHERE.LOCAL`) and `OUT` (default `exchange.json`) are optional. `VC_PASSWORD`
-and `API_TOKEN` are read when their `_FILE` forms are unset.
+and `API_TOKEN` are read when their `_FILE` forms are unset. Every credential file, and `FINGERPRINT_KEY_FILE`, is read
+only at mode 0600: one open to group or other is refused unread, with the fix (`chmod 600` on the file), as a usage
+error (exit 5) with nothing sent.
 
 **One shell for every companion.** `vcenter_exchange.py` also reads the names `api_client.py` and identity-model's
 `census.py` take: `OPS_BROKER_HOST`, then `OPS_HOST`, when `BROKER_HOST` is unset; `OPS_API_TOKEN_FILE` (or
@@ -153,7 +155,7 @@ The exit is the first of these that applies, so a scheduler reads one state from
 | 3 | a read failed or is undetermined: a vCenter that did not answer the exchange or any other request, a session list not read (an empty one included, since it always holds the census's own session, and one that does not hold it), a census identity that could read only its own sessions (by key, or every session under its own name), a session NOT PLACED (in a domain neither `DIRECTORY_DOMAINS` nor `OTHER_DOMAINS` names, so it was not judged), no vCenter read, a credential the broker did not trade, a request a `--replay` set holds no answer for, or an error the script did not expect | fix the read and run again; for NOT PLACED, name each domain printed on the terminal in one of the two lists; nothing is known of what was not read |
 | 4 | `--sessions` found the local administrator signing in from a client other than the vSphere Client: an account in automated use is not a break-glass account | find the client (`--where`) and move it |
 | 0 | every vCenter took the client through both sessions (when a client is given), and with `--sessions` every directory-account session is from the vSphere Client or acknowledged, and the local administrator signs in from no other client | nothing |
-| 5 | a usage error (`--sessions` without `DIRECTORY_DOMAINS`, a domain in both `DIRECTORY_DOMAINS` and `OTHER_DOMAINS`, an `--ack` file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, `--ack` without `--sessions`, a `--replay` directory that cannot be read or holds no replay set, among them), or a Python older than 3.10; nothing is written | fix the invocation |
+| 5 | a usage error (`--sessions` without `DIRECTORY_DOMAINS`, a domain in both `DIRECTORY_DOMAINS` and `OTHER_DOMAINS`, an `--ack` file that cannot be read or breaks its format, a credential file named that cannot be read or is empty, or open to group or other (refused unread, with the fix), `--ack` without `--sessions`, a `--replay` directory that cannot be read or holds no replay set, among them), or a Python older than 3.10; nothing is written | fix the invocation |
 
 The exit reads each session list at one moment, and an integration that is not signed in at that moment is not seen: a
 job that runs at 02:00 for ten minutes is absent from a read at 10:00 on any number of days. So schedule the census at
@@ -256,7 +258,7 @@ because recorded answers are no read of your estate.
 | 3 | a vCenter not read in every record, a record holding no session census read on any vCenter, the records short of the coverage asked, or a record a `--replay` run wrote (`"replay": true`, refused before anything is compared) | read again, more often or for longer; nothing is known of what was not read |
 | 4 | the local administrator from a client other than the vSphere Client in any record | find the client (`--where`) and move it |
 | 0 | every vCenter read in every record, the coverage met, and none of the above | nothing: this is the census's gate before the broker federates |
-| 5 | fewer than two records, an option that is not `--compare`'s, a record that cannot be read or parsed, records without fingerprints, records made under two keys, or `--ack` without `FINGERPRINT_KEY_FILE` or under another key | fix the invocation |
+| 5 | fewer than two records, an option that is not `--compare`'s, a record that cannot be read or parsed, records without fingerprints, records made under two keys, or `--ack` without `FINGERPRINT_KEY_FILE`, with one open to group or other (refused unread, with the fix), or under another key | fix the invocation |
 
 ### What the census does not read: vCenter's sign-in events
 
@@ -320,7 +322,7 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `OPS_API_TOKEN_FILE` | your VCF Operations API token, mode 0600 (`OPS_API_TOKEN` is read if it is unset, then `API_TOKEN_FILE` and `API_TOKEN`), traded at the broker for a bearer |
 | `OPS_BROKER_HOST` | the broker that trades it (`BROKER_HOST` is read when it is unset; default `OPS_HOST`) |
 | `BROKER_TENANT` | the broker tenant, the realm's path segment in the broker's token URL (default `CUSTOMER`; `OPS_REALM`, its earlier name, is still read) |
-| `OPS_BEARER_FILE` | instead of the API token, a bearer you already hold |
+| `OPS_BEARER_FILE` | instead of the API token, a bearer you already hold, mode 0600 |
 | `STATE` | the state file the create writes and every later write reads (default `api_client.<client id>.state.json`) |
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |
 | `OUT` | the record (default `api_client.json`; `api_client.replay.json` under `--replay`) |
@@ -381,7 +383,7 @@ or a retirement that then finds no client in the realm it reads exits 3 (`NOT RE
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
 | 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; for a rotation or a retirement, no client by that id in the fleet's only realm or the realm the state file records; a run signed in as the client it would change, on a bearer it cannot read, or on an API client's bearer that carries no client id (`azp`), for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; a state file that records the client in another realm than the run reads; or a fleet with no realm, so no client to make, rotate, retire or remove in one |
 | 3 | a read failed or is undetermined: a list or the realm list not read whole (a page refused, an answer without its list or its total, a total that changed between pages, a page that added nothing new, or pages that end before the total they state), the read-back not read, a token issued whose id the list read after it could not name, a create answered without the client's uuid (no role bound, nothing more sent), a teardown, a rotation or a retirement on a fleet of more than one realm that found no client where no state file records its realm, your token not traded for a bearer, a request that got no answer (a write among them, since whether it was made is not known, and a token's trade at the broker, which is neither traded nor refused), a request a `--replay` set holds no answer for, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
-| 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists, a fleet of more than one realm with no `--realm`, a `--realm` that names none of its realms or more than one, a `--replay` directory that cannot be read or holds no replay set), or a Python older than 3.10; nothing is written |
+| 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists, with `--execute` an operator credential file that cannot be read, is empty or is open to group or other (refused unread, with the fix: `chmod 600`), a fleet of more than one realm with no `--realm`, a `--realm` that names none of its realms or more than one, a `--replay` directory that cannot be read or holds no replay set), or a Python older than 3.10; nothing is written |
 
 ### What it sends, and in what order
 
@@ -473,7 +475,7 @@ id; no secret), and the teardown revokes and deletes only an account that file r
 | 1 | the run did not hold: a write was refused (a teardown's revoke among them), or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
 | 2 | refused by this script before any write: an account that already exists (refused, never adopted), for a teardown an account the state file does not record, or no organization, or more than one, carrying the name given exactly (case included) |
 | 3 | a read failed or is undetermined: the organization or the account list not read whole (a page refused, an answer without its list or its `resultTotal`, a total that changed between pages, a page that added nothing new, or pages that end before the total), the read-back not read, the residue not read back, the provider's credential not traded for a bearer, a request that got no answer (a write among them, since whether it was made is not known, and a refresh, which is neither held nor refused), a request a `--replay` set holds no answer for, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
-| 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists for a create, or does not for a teardown, a `--replay` directory that cannot be read or holds no replay set), or a Python older than 3.10; nothing is written |
+| 5 | a usage error (a missing or bad argument or variable, a role given as an id, a token file that exists for a create, or does not for a teardown, with `--execute` a provider credential file that cannot be read, is empty or is open to group or other (refused unread, with the fix: `chmod 600`), a `--replay` directory that cannot be read or holds no replay set), or a Python older than 3.10; nothing is written |
 
 **Every list read whole.** The organization list and the account list are read page by page, 32 asked to a page, the largest the service account list takes (it refuses more with HTTP 400),
 until their items, counted once each by id, reach the total the answer states (`resultTotal`); a page is short only

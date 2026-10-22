@@ -54,7 +54,7 @@ export VCFA_HOST=<automation-fqdn>
 export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer             # mode 0600, a provider System Administrator's bearer
 export TLS_VERIFY=false                                                # only on a self-signed lab CA
 export ENTRA_TENANT_ID=<tenant-id> ENTRA_CLIENT_ID=<automation-app-client-id>
-export ENTRA_CERT_FILE=/path/to/cert.pem ENTRA_KEY_FILE=/path/to/key.pem   # or ENTRA_CLIENT_SECRET_FILE
+export ENTRA_CERT_FILE=/path/to/cert.pem ENTRA_KEY_FILE=/path/to/key.pem   # the key mode 0600; or ENTRA_CLIENT_SECRET_FILE
 export ORG=fed-trial-1                                                 # a name no organization, app or group uses
 export ENTITLED_UPN=<test-user-1> UNENTITLED_UPN=<test-user-2>
 
@@ -64,7 +64,7 @@ python3 org_federation.py --protocol oidc --org-type all-apps --prove
 python3 org_federation.py --protocol oidc --org-type all-apps --teardown --execute
 ```
 
-A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused the write that disables a local account (403), the write a provider bearer carried, so give every write here a provider bearer. With both files set, the script uses the bearer.
+A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused the write that disables a local account (403), the write a provider bearer carried, so give every write here a provider bearer. With both files set, the script uses the bearer. Every secret's file (the bearer, the api-token, a client secret, the key) is read only at mode 0600: one open to group or other is refused unread, with the fix (`chmod 600` on the file), and the run exits 5 with nothing sent.
 
 ## Exit codes
 
@@ -74,7 +74,7 @@ A provider bearer lasts an hour, so mint it just before each run, as the platfor
 | 1 | a check failed, or a write was refused while building, configuring, updating or tearing down; the record names which |
 | 2 | refused by what it read, with nothing sent: a name this script did not create, no state file to tear down, no such organization, an organization with no federation to `ENTRA_TENANT_ID` switched on (for `--update`, which says what the organization holds), a change its protocol does not take, a switch of protocol, OIDC user key or SAML user-name claim (judged on what the organization stores and the users it holds, enabled or not, and on a re-run of `--execute` over its own organization), a change of the app or the issuer under OIDC users keyed on a claim other than `oid` or `preferred_username`, a settings write to a switched-off federation without `--enable`, a group import into a federation that stays switched off, a group-only import to an organization that stores no settings for the tenant over that protocol, a client secret Entra refused, a role its type lacks, a named group held another way, SAML with no metadata yet (it prints what the tenant needs), SAML metadata naming none of the certificates the organization holds while it holds SAML users and the organization's app was not read, and, with the tenant's read-only app, a group to import that no group assigned to the app is named (or two are), metadata that does not name the certificate Entra signs the app with or names one the app does not hold, or no app (or two) carrying the organization's client id or identifier |
 | 3 | a result not known: a credential refused before anything was read (the tenant's read-only app's among them), a read refused or a list not read to its end in any mode (`--prove` and `--prove --org` only read), Entra out of reach when asked about a new secret or a tenant's domain, a check with nothing to read yet (`--prove --org` over SAML before any SAML user has signed in: run it again after the first browser sign-in), a teardown that could not read whether an object it made is gone (an answer other than 200 or 404), a record the scrub refused to write on a run that would have exited 0, a request a `--replay` set holds no answer for, or an error the script did not expect (never 1). A record the scrub refuses never hides a 1, a 2 or a 3: the run's own code stands |
-| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`, `--groups-only` without `--group` or with `--enable` or `--user-key`), a missing environment variable or credential (`ENTRA_CLIENT_ID` without its credential among them), an `ENTRA_TENANT_ID` that is neither a tenant id nor a domain Entra names a tenant for, a file that cannot be read, metadata that is not the tenant's or names no signing certificate that reads, `SECRET_DAYS` of a year or more, a `--replay` directory that cannot be read or holds no replay set, a Python older than 3.9 |
+| 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`, `--groups-only` without `--group` or with `--enable` or `--user-key`), a missing environment variable or credential (`ENTRA_CLIENT_ID` without its credential among them), an `ENTRA_TENANT_ID` that is neither a tenant id nor a domain Entra names a tenant for, a file that cannot be read, a secret's file open to group or other (refused unread, with the fix: `chmod 600`), metadata that is not the tenant's or names no signing certificate that reads, `SECRET_DAYS` of a year or more, a `--replay` directory that cannot be read or holds no replay set, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
 assignments and permission grants, and groups, and sets a service principal's claims policy. On the reference
@@ -98,7 +98,7 @@ take it.
 
 ```bash
 export VCFA_HOST=<automation-fqdn> ENTRA_TENANT_ID=<tenant-id or one of its domain names>
-export VCFA_PROVIDER_BEARER_FILE=<file>    # a provider bearer: platform-identity's plate 04, "Your provider bearer"
+export VCFA_PROVIDER_BEARER_FILE=<file, mode 0600>    # a provider bearer: platform-identity's plate 04, "Your provider bearer"
 export APP_CLIENT_ID=<the app's client id> APP_SECRET_FILE=<the secret the tenant handed over, mode 0600>   # OIDC
 # export METADATA_FILE=<the app's federation metadata>                                                     # SAML
 export ENTRA_CLIENT_ID=<the tenant's read-only app> ENTRA_CLIENT_SECRET_FILE=<its secret, mode 0600>   # the watch's app
@@ -208,13 +208,13 @@ certificate confirms it.
 
 ```bash
 export VCFA_HOST=<automation-fqdn> ENTRA_TENANT_ID=<tenant-id>
-export VCFA_PROVIDER_BEARER_FILE=<file>    # a provider bearer, as for --configure: platform-identity's plate 04, "Your provider bearer"
+export VCFA_PROVIDER_BEARER_FILE=<file, mode 0600>    # a provider bearer, as for --configure: platform-identity's plate 04, "Your provider bearer"
 export ORG=<the organization>
 
 python3 org_federation.py --update --key-refresh               # plan: automatic refresh on, strategy ADD, every hour
 python3 org_federation.py --update --key-refresh --execute     # write it and read it back
 python3 org_federation.py --update --keys --execute            # the keys the provider publishes now (after an emergency roll)
-NEW_SECRET_FILE=<file> python3 org_federation.py --update --secret --execute      # the secret the tenant's administrator rotated
+NEW_SECRET_FILE=<file, mode 0600> python3 org_federation.py --update --secret --execute      # the secret the tenant's administrator rotated
 METADATA_FILE=<file> python3 org_federation.py --update --metadata --execute      # SAML: metadata naming both certificates
 # --metadata with the tenant's read-only app: ENTRA_CLIENT_ID and ENTRA_CLIENT_SECRET_FILE, as for --configure
 ```

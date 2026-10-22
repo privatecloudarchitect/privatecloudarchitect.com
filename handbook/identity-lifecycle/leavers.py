@@ -227,7 +227,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         inside WARN_DAYS of its end (rotate it; that flag is not acknowledged, the rotation clears it)
       0 nothing open, nothing unread, nothing flagged (with --close-now: the close held, or the plan printed, which
         says it sent nothing and closed nothing)
-      5 a usage error, a Python older than 3.10, an unreadable --ack file, a --user that names no account or more than
+      5 a usage error, a Python older than 3.10, an unreadable --ack file, a credential file open to group or other
+        (refused unread, with the fix: chmod 600), a --user that names no account or more than
         one, an --expect-tenants list that leaves out this run's tenant or names no tenant, a bad WARN_DAYS or
         --left-on, and with --close-now an account that is not federated, under oid a --user given to --execute that
         is not an object id or the account's id, a principal name without --left-on, one the name guard refuses, or
@@ -804,11 +805,46 @@ def _lab_verify() -> bool:
     return os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret_file(name: str) -> str:
+    """The secret in the file NAME names, read through read_secret."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    with open(os.environ[name], encoding="utf-8") as f:
-        return f.read().strip()
+    return read_secret(name)
+
+
+SECRET_FILES = ("VCFA_PROVIDER_BEARER_FILE", "VCFA_PROVIDER_REFRESH_TOKEN_FILE", "ENTRA_CLIENT_SECRET_FILE",
+                "ENTRA_KEY_FILE")
+
+
+def refused_secret_file() -> str:
+    """The refusal of the first secret's file open to group or other, or "": each the environment names is read once,
+    through the reader the run uses, before anything is sent, so the refusal is a usage error (exit 5) with nothing
+    sent. A file that cannot be read is left to the read that needs it (a credential not obtained, exit 3). The
+    certificate is public and read as given; a replayed run reads none."""
+    if REPLAY is not None:
+        return ""
+    for k in SECRET_FILES:
+        if os.environ.get(k):
+            try:
+                _secret_file(k)
+            except PermissionError as e:
+                if e.errno is None:   # the refusal names the variable, the mode and the fix
+                    return str(e)
+            except (OSError, UnicodeDecodeError):
+                pass
+    return ""
 
 
 def _message(e: urllib.error.HTTPError) -> str:
@@ -1026,8 +1062,7 @@ def _assertion(tenant: str, client: str) -> str:
 
     with open(os.environ["ENTRA_CERT_FILE"], "rb") as f:
         der = x509.load_pem_x509_certificate(f.read()).public_bytes(serialization.Encoding.DER)
-    with open(os.environ["ENTRA_KEY_FILE"], "rb") as f:
-        key = serialization.load_pem_private_key(f.read(), password=None)
+    key = serialization.load_pem_private_key(_secret_file("ENTRA_KEY_FILE").encode(), password=None)
     now = int(time.time())
     head = {"alg": "PS256", "typ": "JWT", "x5t#S256": b64(hashlib.sha256(der).digest())}
     claims = {"aud": f"{ENTRA}/{tenant}/oauth2/v2.0/token", "iss": client, "sub": client, "jti": str(uuid.uuid4()),
@@ -2328,6 +2363,10 @@ def _close_now_main(a: argparse.Namespace) -> int:
     if not os.environ.get("VCFA_HOST"):
         print("set VCFA_HOST (see the header); --close-now needs no Graph credential", file=sys.stderr)
         return EXIT_USAGE
+    refused = refused_secret_file()
+    if refused:
+        print(f"{refused}; nothing was sent", file=sys.stderr)
+        return EXIT_USAGE
     _plan_alone(a)
     calls: list = []
     try:
@@ -2479,6 +2518,10 @@ def _run(argv: list[str] | None = None) -> int:
     warn = os.environ.get("WARN_DAYS", str(WARN_DAYS)).strip()
     if not warn.isdigit():
         print(f"WARN_DAYS {warn!r}: a whole number of days, 0 or more", file=sys.stderr)
+        return EXIT_USAGE
+    refused = refused_secret_file()
+    if refused:
+        print(f"{refused}; nothing was sent", file=sys.stderr)
         return EXIT_USAGE
     planned = _plan_alone(a)
     calls: list = []

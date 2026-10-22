@@ -67,9 +67,9 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         it the token is not tried, and the record notes it). An account of that name in another organization is not
         read: the organization is the one you name
       5 a usage error (a missing or bad argument or environment variable, a role given as an id, a token file that
-        exists for a create or does not for a teardown, with --execute a provider credential file that cannot be read
-        or is empty, a --replay directory that cannot be read or holds no replay set), or a Python older than 3.10;
-        nothing is written
+        exists for a create or does not for a teardown, with --execute a provider credential file that cannot be read,
+        is empty or is open to group or other (refused unread, with the fix: chmod 600), a --replay directory that
+        cannot be read or holds no replay set), or a Python older than 3.10; nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
       the run's code stands when it is 1, 2 or 3, and a run that held exits 3 (its writes were made; the record was not
       written).
@@ -346,11 +346,23 @@ def _ctx() -> ssl.SSLContext | None:
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret_file(name: str) -> str:
+    """The secret in the file NAME names, read through read_secret."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    with open(os.environ[name], encoding="utf-8") as f:
-        return f.read().strip()
+    return read_secret(name)
 
 
 def _send(method: str, url: str, body: object | None = None, headers: dict | None = None,
@@ -930,14 +942,16 @@ def report(record: dict) -> list[str]:
 
 
 def credential_problem() -> str | None:
-    """With --execute: the provider credential file, named but unreadable or empty, found before anything is sent."""
+    """With --execute: the provider credential file, named but unreadable, empty or open to group or other (refused
+    unread, with the fix), found before anything is sent."""
     for name in ("VCFA_PROVIDER_BEARER_FILE", "VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
         if os.environ.get(name):
             try:
                 if not _secret_file(name):
                     return f"{name} is empty"
-            except (OSError, UnicodeDecodeError) as e:
-                return f"{name} could not be read: {type(e).__name__}"
+            except (OSError, UnicodeDecodeError) as e:   # the refusal (no errno) names the variable and the fix
+                refused = isinstance(e, PermissionError) and e.errno is None
+                return str(e) if refused else f"{name} could not be read: {type(e).__name__}"
     return None
 
 

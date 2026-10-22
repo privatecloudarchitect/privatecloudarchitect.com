@@ -18,8 +18,9 @@ as a placeholder with its length.
   P1  POST /oauth/provider/token                the provider path, only when VCFA_PROVIDER_REFRESH_TOKEN_FILE is set
 
 Env:  VCFA_HOST, VCFA_ORG, VCFA_REFRESH_TOKEN_FILE (flow A); VCFA_USER (user@org), VCFA_PASSWORD (flow B);
-      VCFA_PROVIDER_REFRESH_TOKEN_FILE (optional); TLS_VERIFY=false on a self-signed lab CA; OUT (default calls.json)
-Exit: 0 recorded · 1 a call failed
+      VCFA_PROVIDER_REFRESH_TOKEN_FILE (optional); TLS_VERIFY=false on a self-signed lab CA; OUT (default calls.json).
+      Each token file is mode 0600: one open to group or other is refused unread, before anything is sent.
+Exit: 0 recorded · 1 a call failed · 5 a token file missing or open to group or other (nothing sent)
 """
 
 import base64
@@ -121,6 +122,18 @@ def jwt_claims(token):
         return None
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def rights_all(san, host, bearer):
     names, page = [], 1
     while True:
@@ -137,9 +150,14 @@ def main():
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
     user_at_org = os.environ.get("VCFA_USER", ""); user = user_at_org.split("@")[0] if user_at_org else "{{user}}"
     domain = os.environ.get("VCFA_DOMAIN", "")
-    refresh = open(os.environ["VCFA_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip()
+    try:   # both token files are read before anything is sent
+        refresh = read_secret("VCFA_REFRESH_TOKEN_FILE")
+        prov = read_secret("VCFA_PROVIDER_REFRESH_TOKEN_FILE") if os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE") else None
+    except (PermissionError, FileNotFoundError) as e:   # a token file missing or open to group or other
+        print(f"capture.py: {e}; nothing was sent", file=sys.stderr)
+        sys.exit(5)
     password = os.environ.get("VCFA_PASSWORD", "")
-    san = Sanitizer(host, org, user, domain, [refresh, password])
+    san = Sanitizer(host, org, user, domain, [refresh, password, prov])
     failed = 0
     print("capture.py: the two flows, recorded read-only; values parameterized on the way into the record\n")
     # ---- flow A
@@ -190,8 +208,7 @@ def main():
                        "note": "the rights the session login carries and the OAuth grant is stripped of; no role edit adds them to the OAuth path"})
         print(f"\n  R   rights: OAuth {total_a}, session {total_b}; under the session only: {delta}; under OAuth only: {back}")
     # ---- provider path (optional)
-    if os.environ.get("VCFA_PROVIDER_REFRESH_TOKEN_FILE"):
-        prov = open(os.environ["VCFA_PROVIDER_REFRESH_TOKEN_FILE"], encoding="utf-8").read().strip(); san.secrets.append(prov)
+    if prov:
         st, pb, _ = call(san, "P1", "The provider path: the same grant at the provider endpoint", "POST", "/oauth/provider/token",
                          {"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}, form={"grant_type": "refresh_token", "refresh_token": prov})
         if st == 200:

@@ -30,8 +30,9 @@ Exit:  0 claims printed, the principal a PERSON or a CLIENT
          a VCF Automation service account's user name, or a prn_type other than USER or SERVICE), a request a --replay
          set holds no answer for, or an error the script did not expect
        5 a usage error: an argument it does not take, OPS_HOST or the api-token unset, OPS_API_TOKEN_FILE that cannot
-         be read, JWT_ENV naming an empty variable or a value that is not a JWT, a --replay directory that cannot be
-         read or holds no replay set, --replay with JWT_ENV set, or a Python older than 3.10
+         be read or is open to group or other (refused unread, with the fix: chmod 600), JWT_ENV naming an empty
+         variable or a value that is not a JWT, a --replay directory that cannot be read or holds no replay set,
+         --replay with JWT_ENV set, or a Python older than 3.10
 A refused mint names no cause. A deleted or rotated api-token was refused at the broker with HTTP 500 on the 9.1.0
 run of 2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (X-153, X-190); one past its expiry date is
 not tested.
@@ -170,8 +171,10 @@ def _run():
         from opslib import bearer, secret
         try:
             held = secret("OPS_API_TOKEN")
-        except OSError as e:
-            print(f"FATAL: OPS_API_TOKEN_FILE could not be read: {type(e).__name__}", file=sys.stderr)
+        except OSError as e:   # the refusal of a file open to group or other (no errno) names the variable and the fix
+            refused = isinstance(e, PermissionError) and e.errno is None
+            print(f"FATAL: {e}" if refused else f"FATAL: OPS_API_TOKEN_FILE could not be read: {type(e).__name__}",
+                  file=sys.stderr)
             return EXIT_USAGE
         if not os.environ.get("OPS_HOST") or not held:
             print("FATAL: OPS_HOST and OPS_API_TOKEN_FILE (or OPS_API_TOKEN) are required, or JWT_ENV to decode a JWT you hold",

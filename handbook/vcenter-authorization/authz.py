@@ -240,7 +240,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         and nothing else moved; with --save-permissions: the file written; with --compare-permissions: no grant added,
         removed or changed, and every vCenter in both files)
       5 a usage error, before anything is sent: an argument or environment variable missing or wrong (an abbreviated flag
-        among them: flags are taken whole, so --exec is not --execute), a REALM_DOMAIN
+        among them: flags are taken whole, so --exec is not --execute), a password file that cannot be read or is
+        open to group or other (refused unread, with the fix: chmod 600), a REALM_DOMAIN
         that names BROKER_TENANT or a DIRECTORY_DOMAINS, OTHER_DOMAINS or LOCAL_DOMAIN entry, a BROKER_TENANT that
         names a DIRECTORY_DOMAINS or LOCAL_DOMAIN entry, --remove without OTHER_DOMAINS stated, an id --remove cannot
         name as a realm-spelled grant on that vCenter (an API client's among them), pyVmomi missing for a step that needs it
@@ -598,18 +599,30 @@ def ctx():
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def secret(name):
-    """NAME_FILE's content, or NAME itself. A file named but unreadable is a usage error (exit 5), never a read that
-    failed: nothing has been sent when it is read. A replayed run reads none: nothing is sent."""
+    """NAME_FILE's content, read through read_secret, or NAME itself. A file named but unreadable, or open to group or
+    other (refused unread, with the fix), is a usage error (exit 5), never a read that failed: nothing has been sent
+    when it is read. A replayed run reads none: nothing is sent."""
     if REPLAY is not None:
         return REPLAY_CREDENTIAL
-    path = os.environ.get(name + "_FILE")
-    if path:
+    if os.environ.get(name + "_FILE"):
         try:
-            with open(path, encoding="utf-8") as f:
-                return f.read().strip()
-        except (OSError, UnicodeDecodeError) as e:
-            raise UsageError(f"{name}_FILE could not be read: {type(e).__name__}") from None
+            return read_secret(name + "_FILE")
+        except (OSError, UnicodeDecodeError) as e:   # the refusal (no errno) names the variable and the fix
+            refused = isinstance(e, PermissionError) and e.errno is None
+            raise UsageError(str(e) if refused else f"{name}_FILE could not be read: {type(e).__name__}") from None
     return os.environ.get(name, "")
 
 

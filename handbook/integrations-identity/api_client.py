@@ -93,9 +93,10 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a
         teardown, no client and no token left, in the fleet's only realm or the realm the state file records)
       5 a usage error (a missing or bad argument or environment variable, a lifetime outside the bounds, a token file
-        that exists, with --execute an operator credential file that cannot be read or is empty, a fleet holding more
-        than one realm with no --realm, a --realm that names none of the fleet's realms or more than one, a --replay
-        directory that cannot be read or holds no replay set), or a Python older than 3.10; nothing is written
+        that exists, with --execute an operator credential file that cannot be read, is empty or is open to group or
+        other (refused unread, with the fix: chmod 600), a fleet holding more than one realm with no --realm, a
+        --realm that names none of the fleet's realms or more than one, a --replay directory that cannot be read or
+        holds no replay set), or a Python older than 3.10; nothing is written
       A record refused because an estate value survived the scrub is not written, and never hides the run's result:
       the run's code stands when it is 1, 2 or 3, and a run that held exits 3 (its write was made; the record was not
       written).
@@ -369,26 +370,38 @@ def _ctx() -> ssl.SSLContext | None:
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
 
 
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
 def _secret(name: str) -> str:
+    """NAME_FILE's secret, read through read_secret, or NAME itself."""
     if REPLAY is not None:  # a replayed run reads no credential: nothing is sent
         return REPLAY_CREDENTIAL
-    path = os.environ.get(f"{name}_FILE")
-    if path:
-        with open(path, encoding="utf-8") as f:
-            return f.read().strip()
+    if os.environ.get(f"{name}_FILE"):
+        return read_secret(f"{name}_FILE")
     return os.environ.get(name, "")
 
 
 def credential_problem() -> str | None:
-    """With --execute: an operator credential file named but unreadable or empty, found before anything is sent. A
-    usage error (exit 5), never a read that failed."""
+    """With --execute: an operator credential file named but unreadable, empty or open to group or other (refused
+    unread, with the fix), found before anything is sent. A usage error (exit 5), never a read that failed."""
     for name in ("OPS_API_TOKEN", "API_TOKEN", "OPS_BEARER"):
         if os.environ.get(f"{name}_FILE"):
             try:
                 if not _secret(name):
                     return f"{name}_FILE is empty"
-            except (OSError, UnicodeDecodeError) as e:
-                return f"{name}_FILE could not be read: {type(e).__name__}"
+            except (OSError, UnicodeDecodeError) as e:   # the refusal (no errno) names the variable and the fix
+                refused = isinstance(e, PermissionError) and e.errno is None
+                return str(e) if refused else f"{name}_FILE could not be read: {type(e).__name__}"
     return None
 
 
