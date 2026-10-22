@@ -23,9 +23,11 @@ block is one cause to find (a routing boundary, or front doors retired together)
 tell those apart.
 
 Finally it crosses the guest layer against the floor beneath it: every virtual machine's guest availability
-KPI, which rides VMware Tools, against the hypervisor's own uptime reading, which does not. A KPI of zero
-with a climbing uptime is a blind reading, not a down machine, and the two are different findings with
-different owners.
+KPI, which rides VMware Tools, against what the hypervisor says without Tools, its power state and the age of
+its uptime reading. A KPI of zero on a powered-off machine is down, or off on purpose; on a powered-on machine
+with a current uptime it is a blind reading, not a down machine; and a resource whose adapter reports
+NOT_EXISTING is a deleted machine's record, which keeps its last values and is not a machine at all. A
+powered-off machine keeps its last uptime, so the uptime's age, not its value, says whether it is running.
 
 Read-only throughout. Nothing here imports, edits or deletes content.
 
@@ -53,6 +55,8 @@ IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 
 # The reachability arm, by the role each metric plays rather than by its full published name, so the script
 # finds them on an estate that names the bundle (the name's second field) differently.
+FRESH_MINUTES = 30   # an uptime reading older than this is not evidence the machine is running now
+
 ROLES = [("checks", "Checks (count)"), ("reachable", "Checks Reachable"), ("unreachable", "Checks Unreachable"),
          ("sli", "Reachability SLI"), ("delivery", "Packet Delivery")]
 
@@ -180,34 +184,85 @@ def main():
                   f"is one cause to find rather than several failures")
 
     # ---- 4: the guest layer against the floor
-    st, body = ops("GET", "/api/resources", tok,
-                   params={"resourceKind": "VirtualMachine", "pageSize": 2000, "_no_links": "true"})
-    vms = (body.get("resourceList") or []) if isinstance(body, dict) else []
+    # Every VirtualMachine resource, read to the list's declared total. A resource an adapter reports as
+    # NOT_EXISTING is a deleted machine's record, not a machine: it keeps its last values, a guest KPI of zero
+    # among them. The floor is the hypervisor's power state, a property, beside the AGE of the uptime reading:
+    # a powered-off machine keeps its last uptime, so a latest uptime above zero says nothing about now unless
+    # the reading is current.
+    vms, page = [], 0
+    while True:
+        st, body = ops("GET", "/api/resources", tok,
+                       params={"resourceKind": "VirtualMachine", "pageSize": 1000, "page": page, "_no_links": "true"})
+        got = (body.get("resourceList") or []) if isinstance(body, dict) else []
+        vms += got
+        total = ((body.get("pageInfo") or {}).get("totalCount") if isinstance(body, dict) else None)
+        page += 1
+        if not got or total is None or len(vms) >= total or page > 50:
+            break
+    gone = {v["identifier"] for v in vms if v.get("identifier") and "NOT_EXISTING" in
+            {s.get("resourceState") for s in v.get("resourceStatusStates") or []}}
     ids = [v["identifier"] for v in vms if v.get("identifier")]
     guest = {}
     if ids:
         st, body = ops("POST", "/api/resources/stats/latest/query", tok,
-                       body={"resourceId": ids, "statKey": ["summary|availability_kpi", "sys|uptime_latest"],
-                             "_no_links": True})
+                       body={"resourceId": ids, "statKey": ["summary|availability_kpi", "sys|uptime_latest"]})
         per = collections.defaultdict(dict)
+        nowms = now.timestamp() * 1000
         for v in ((body.get("values") or []) if isinstance(body, dict) else []):
             for s in (v.get("stat-list") or {}).get("stat", []):
-                if s.get("data"):
-                    per[v.get("resourceId")][s["statKey"]["key"]] = s["data"][-1]
-        zero = {r: d for r, d in per.items() if d.get("summary|availability_kpi") == 0}
-        guest = {"machines": len(ids), "reporting": len(per),
-                 "kpiHundred": sum(1 for d in per.values() if d.get("summary|availability_kpi") == 100),
-                 "kpiZero": len(zero),
-                 "kpiZeroButUptimeClimbing": sum(1 for d in zero.values()
-                                                 if (d.get("sys|uptime_latest") or 0) > 0),
-                 "kpiZeroAndUptimeZero": sum(1 for d in zero.values() if d.get("sys|uptime_latest") == 0),
-                 "kpiZeroAndNoUptimeAtAll": sum(1 for d in zero.values() if "sys|uptime_latest" not in d)}
-        print(f"\n  GUEST AGAINST THE FLOOR: {guest['kpiZero']} of {guest['reporting']} machines read a guest "
-              f"KPI of zero")
-        print(f"     {guest['kpiZeroButUptimeClimbing']} of them have a climbing uptime: blind, not down")
-        print(f"     {guest['kpiZeroAndUptimeZero']} have an uptime of zero: actually stopped")
-        print(f"     {guest['kpiZeroAndNoUptimeAtAll']} have no uptime reading at all: unmeasured at both "
-              f"layers, which is a third answer and not a down one")
+                if s.get("data") and s.get("timestamps"):
+                    per[v.get("resourceId")][s["statKey"]["key"]] = (s["data"][-1], (nowms - s["timestamps"][-1]) / 60000)
+        st, body = ops("POST", "/api/resources/properties/latest/query", tok,
+                       body={"resourceIds": ids, "propertyKeys": ["summary|runtime|powerState"]})
+        power = {}
+        for v in ((body.get("values") or []) if isinstance(body, dict) else []):
+            for p in (v.get("property-contents") or {}).get("property-content") or []:
+                if p.get("statKey") == "summary|runtime|powerState" and p.get("values"):
+                    power[v["resourceId"]] = p["values"][-1]
+
+        def kpi(r):
+            return (per[r].get("summary|availability_kpi") or (None, None))[0]
+
+        def uptime_current(r):
+            u = per[r].get("sys|uptime_latest")
+            return bool(u and u[0] and u[0] > 0 and u[1] <= FRESH_MINUTES)
+
+        live = [r for r in ids if r not in gone]
+        zero = [r for r in live if kpi(r) == 0]
+        on = [r for r in zero if power.get(r) == "Powered On"]
+        guest = {"resources": len(ids), "declaredTotal": total, "deletedMachineRecords": len(gone),
+                 "deletedReadingKpiZero": sum(1 for r in gone if kpi(r) == 0),
+                 "machines": len(live), "reporting": sum(1 for r in live if kpi(r) is not None),
+                 "kpiHundred": sum(1 for r in live if kpi(r) == 100), "kpiZero": len(zero),
+                 "kpiZeroPoweredOff": sum(1 for r in zero if power.get(r) == "Powered Off"),
+                 "kpiZeroPoweredOnUptimeCurrent": sum(1 for r in on if uptime_current(r)),
+                 "kpiZeroPoweredOnUptimeNotCurrent": sum(1 for r in on if not uptime_current(r)),
+                 "kpiZeroOtherPowerState": sum(1 for r in zero if power.get(r) not in ("Powered On", "Powered Off")),
+                 "kpiZeroPoweredOffKeepingAnUptime": sum(1 for r in zero if power.get(r) == "Powered Off"
+                                                         and (per[r].get("sys|uptime_latest") or (0,))[0] > 0),
+                 "kpiHundredButPoweredOff": sum(1 for r in live if kpi(r) == 100 and power.get(r) == "Powered Off"),
+                 "freshMinutes": FRESH_MINUTES,
+                 # What reading the latest uptime alone, deleted records included, would have said: the rule
+                 # this script used before it read power state and existence.
+                 "uptimeAloneWouldSay": {
+                     "running": sum(1 for r in ids if kpi(r) == 0 and (per[r].get("sys|uptime_latest") or (0,))[0] > 0),
+                     "stopped": sum(1 for r in ids if kpi(r) == 0 and (per[r].get("sys|uptime_latest") or (None,))[0] == 0),
+                     "unmeasured": sum(1 for r in ids if kpi(r) == 0 and "sys|uptime_latest" not in per[r])}}
+        print(f"\n  GUEST AGAINST THE FLOOR: {guest['resources']} machine records, {guest['deletedMachineRecords']} of them "
+              f"for machines that no longer exist ({guest['deletedReadingKpiZero']} of those still read a KPI of zero)")
+        print(f"     {guest['kpiZero']} of the {guest['machines']} machines that exist read a guest KPI of zero:")
+        print(f"     {guest['kpiZeroPoweredOff']} are powered off: down, or off on purpose")
+        print(f"     {guest['kpiZeroPoweredOnUptimeCurrent']} are powered on with a current uptime: running, the guest "
+              f"layer blind (VMware Tools silent)")
+        print(f"     {guest['kpiZeroPoweredOnUptimeNotCurrent']} are powered on without a current uptime reading: unknown")
+        if guest["kpiZeroOtherPowerState"]:
+            print(f"     {guest['kpiZeroOtherPowerState']} report another power state or none: unknown")
+        if guest["kpiZeroPoweredOffKeepingAnUptime"]:
+            print(f"     {guest['kpiZeroPoweredOffKeepingAnUptime']} of the powered-off machines still carry their last "
+                  f"uptime above zero, which is why a latest uptime is not a running machine")
+        w = guest["uptimeAloneWouldSay"]
+        print(f"     the latest uptime alone, deleted records included, would have said {w['running']} running, "
+              f"{w['stopped']} stopped and {w['unmeasured']} unmeasured")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "owner": owner,
                "content": arm, "computed": computed, "tree": tree, "guest": guest,

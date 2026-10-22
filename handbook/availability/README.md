@@ -42,6 +42,8 @@ python3 promise.py
 3. **The denominator is what you think.** It walks the relationship tree: the adapter's direct children
    against the raw check objects, showing how many addresses fold under a name check. Counting objects
    instead of depth-1 children inflates the denominator and understates the SLI silently.
+4. **Every machine record is read**, to the list's declared total, with its existence, power state and the age
+   of each reading, before any of them is called down.
 
 It then reports the **shape** of the failure rather than only its size, grouping checks by anonymised address
 block, because five unreachable endpoints spread across three blocks is five problems and five in one block
@@ -49,10 +51,13 @@ is one cause to find: a routing boundary, or front doors retired together. A per
 apart.
 
 Finally it crosses the guest layer against the floor beneath it: every machine's guest availability KPI, which
-rides VMware Tools, against the hypervisor's own uptime, which does not. A KPI of zero with a climbing uptime
-is **blind, not down**; a KPI of zero with no uptime reading at all is **unknown**, which is a third answer and
-a different ticket. In the record (`promise.json`, 2026-09-21) 27 machines read a guest KPI of zero, and none
-of them was confirmed stopped by the floor.
+rides VMware Tools, against what the hypervisor says without Tools, its **power state** and the **age** of its uptime
+reading. A KPI of zero on a powered-off machine is down, or off on purpose. On a powered-on machine with a current
+uptime it is **blind, not down**: the guest is running and Tools is silent. A machine record whose adapter reports
+NOT_EXISTING belongs to a machine that was deleted; it keeps its last values, a KPI of zero among them, so it is
+counted apart and never as a machine. A powered-off machine also keeps its last uptime, so a latest uptime above
+zero says nothing about now: the script reads its age, and prints what the uptime alone would have said beside the
+answer. [expected-output.md](expected-output.md) holds a run against the reference estate.
 
 It writes `promise.json`, names no address, check or machine, and changes nothing.
 
@@ -210,8 +215,8 @@ proven live. The short form, in sensor-chain order:
   ping at 0% and serves an HTTP 200.
 - **Peak, not average.** Delivery reads the cycle's worst packet loss; a link that fails every
   fifth batch averages respectably and is still failing someone every fifth batch.
-- **Blind is not down.** Tools heartbeat under 100 means the platform lost its sensor, and the
-  honest guest reading is unknown, not unavailable. The L3 view pairs the KPI with its sensor
+- **Blind is not down.** On a machine the hypervisor shows powered on, a Tools heartbeat under 100 means the
+  platform lost its sensor, and the honest guest reading is unknown, not unavailable. The L3 view pairs the KPI with its sensor
   columns so the distinction is visible.
 - **Band bounds are exclusive at the top.** An ascending band colors green only above the yellow
   bound; a bound equal to the perfect value renders a perfect reading yellow.

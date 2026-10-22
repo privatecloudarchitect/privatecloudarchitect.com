@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-09-21T07:25:28Z",
+ "captured_utc": "2026-10-22T09:03:25Z",
  "owner": "PCA",
  "content": {
   "checks": {
@@ -30,36 +30,35 @@
  },
  "computed": {
   "sli": {
-   "value": 58.33333206176758,
-   "ageMinutes": 13.9
+   "value": 100.0,
+   "ageMinutes": 9.8
   },
   "reachable": {
    "value": 7.0,
-   "ageMinutes": 13.9
+   "ageMinutes": 9.8
   },
   "checks": {
-   "value": 12.0,
-   "ageMinutes": 13.9
+   "value": 7.0,
+   "ageMinutes": 9.8
   },
   "unreachable": {
-   "value": 5.0,
-   "ageMinutes": 13.9
+   "value": 0.0,
+   "ageMinutes": 9.8
   }
  },
  "tree": {
-  "directChildren": 12,
+  "directChildren": 7,
   "byKind": {
-   "ip_type": 11,
+   "ip_type": 6,
    "fqdn_type": 1
   },
   "rawObjects": {
-   "ip_type": 12,
+   "ip_type": 7,
    "fqdn_type": 1
   },
   "foldedUnderAName": 1,
   "lossDistribution": {
-   "0.0": 7,
-   "100.0": 5
+   "0.0": 7
   },
   "byBlock": {
    "block A": {
@@ -70,10 +69,6 @@
     "reachable": 5,
     "unreachable": 0
    },
-   "block C": {
-    "reachable": 0,
-    "unreachable": 5
-   },
    "a name check": {
     "reachable": 1,
     "unreachable": 0
@@ -81,13 +76,26 @@
   }
  },
  "guest": {
-  "machines": 103,
-  "reporting": 103,
-  "kpiHundred": 76,
-  "kpiZero": 27,
-  "kpiZeroButUptimeClimbing": 10,
-  "kpiZeroAndUptimeZero": 0,
-  "kpiZeroAndNoUptimeAtAll": 17
+  "resources": 139,
+  "declaredTotal": 139,
+  "deletedMachineRecords": 41,
+  "deletedReadingKpiZero": 9,
+  "machines": 98,
+  "reporting": 98,
+  "kpiHundred": 69,
+  "kpiZero": 29,
+  "kpiZeroPoweredOff": 29,
+  "kpiZeroPoweredOnUptimeCurrent": 0,
+  "kpiZeroPoweredOnUptimeNotCurrent": 0,
+  "kpiZeroOtherPowerState": 0,
+  "kpiZeroPoweredOffKeepingAnUptime": 8,
+  "kpiHundredButPoweredOff": 0,
+  "freshMinutes": 30,
+  "uptimeAloneWouldSay": {
+   "running": 16,
+   "stopped": 0,
+   "unmeasured": 22
+  }
  },
  "pingInstances": 1
 }
