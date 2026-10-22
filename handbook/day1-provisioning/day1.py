@@ -13,9 +13,10 @@ thing. This script puts them side by side and reports where they disagree:
   3. the CONTENT TREE: blueprints, their versions, and the catalog items a release produces, including the rule
      the interface enforces on a version object's name;
   4. the INGREDIENTS: the resource types a blueprint may declare, and the image catalog it draws on;
-  5. with --probe-release, the DELETE SEMANTICS: what each face actually does when you ask it to remove a
-     version. This creates a throwaway blueprint, releases a version, asks both faces to delete it, reads back
-     what changed, and removes the blueprint again. It never touches content it did not create.
+  5. with --probe-release --project <project>, the DELETE SEMANTICS: what each face actually does when you ask it
+     to remove a version. This creates a throwaway blueprint in the project you name, releases a version, asks both
+     faces to delete it (the classic face after releasing it again, and the record says what state each call met),
+     reads back what changed, and removes the blueprint again. It never touches content it did not create.
 
   --lookup <name> [--project <project>]   read-only, and on its own: every blueprint of that exact name in every
      project you can see, with its id, project and creator. Key automation on the id it prints; it refuses when
@@ -36,11 +37,12 @@ Run:
   export VCFA_USER=<account> VCFA_PASSWORD_FILE=~/.vcf/vcfa-password    # or VCFA_REFRESH_TOKEN_FILE
   export TLS_VERIFY=false                                               # only on a self-signed lab CA
   python3 day1.py
-  python3 day1.py --probe-release   # also creates and deletes a throwaway blueprint, see step 5
+  python3 day1.py --probe-release --project <project>   # also creates and deletes a throwaway blueprint there, step 5
 
 Exit: 0 read (for --lookup: one match, in your project, or the only one when no project is named); 1 --lookup
       found no blueprint of that name; 2 a call failed or the sign-in was refused; 3 --lookup found the name
-      outside your project or more than once: key on the id, never update by name; 5 an unknown argument.
+      outside your project or more than once: key on the id, never update by name; 5 an unknown argument, or
+      --probe-release without a project it may write in.
 """
 import base64
 import http.client
@@ -279,17 +281,41 @@ def probe_release(c, L, project, model_content):
     mine = [b for b in ((rb.get("content") or []) if isinstance(rb, dict) else []) if b.get("name") == name]
     if mine:
         bid = mine[0]["id"]
-        c.api("POST", f"/blueprint/api/blueprints/{bid}/versions/1.0.0/actions/release", {})
-        time.sleep(6)
-        st_c, rc = c.api("DELETE", f"/blueprint/api/blueprints/{bid}/versions/1.0.0")
+        vpath = f"/blueprint/api/blueprints/{bid}/versions/1.0.0"
+
+        def vstatus():
+            s_v, v = c.api("GET", vpath)
+            return v.get("status") if s_v == 200 and isinstance(v, dict) else None
+
+        def settle(want, seconds=60):
+            """The version's status once it reads WANT, or what it reads when the wait runs out."""
+            t0, state = time.time(), vstatus()
+            while state != want and time.time() - t0 < seconds:
+                time.sleep(3)
+                state = vstatus()
+            return state
+
+        # The CCI delete above unreleased the version, so it is released again before the classic calls: both faces
+        # are then asked about a released version, and the record says so rather than assuming it.
+        before = vstatus()  # what the classic face makes of the version the CCI delete just unpublished
+        st_r, rr = c.api("POST", f"{vpath}/actions/release", {})
+        state = settle("RELEASED")
+        results.append({"case": "release the same version again, through the classic face", "face": "classic",
+                        "status": st_r, "outcome": "accepted" if st_r in (200, 201, 204) else "refused",
+                        "versionStatusBefore": before, "versionStatusAfter": state, "message": L.scrub(msg(rr)) if st_r not in (200, 201, 204) else ""})
+        print(f"     classic release the same version again  HTTP {st_r}  version status {before} -> {state}")
+        st_c, rc = c.api("DELETE", vpath)
         results.append({"case": "DELETE the same version", "face": "classic", "status": st_c,
-                        "outcome": "refused", "message": L.scrub(msg(rc))})
+                        "outcome": "refused" if st_c not in (200, 202, 204) else "accepted",
+                        "versionStatusBefore": state, "versionStatusAfter": vstatus(), "message": L.scrub(msg(rc))})
         print(f"     classic DELETE the same version         HTTP {st_c}  {msg(rc)[:110]}")
-        st_u, ru = c.api("POST", f"/blueprint/api/blueprints/{bid}/versions/1.0.0/actions/unrelease", {})
+        st_u, ru = c.api("POST", f"{vpath}/actions/unrelease", {})
+        after_u = settle("VERSIONED") if st_u in (200, 204) else vstatus()
         results.append({"case": "unrelease the same version, by its own name", "face": "classic", "status": st_u,
-                        "outcome": "accepted" if st_u in (200, 204) else "refused", "message": L.scrub(msg(ru))})
+                        "outcome": "accepted" if st_u in (200, 204) else "refused", "versionStatusAfter": after_u,
+                        "message": L.scrub(msg(ru))})
         print(f"     classic unrelease, the named action     HTTP {st_u}  "
-              f"{'accepted, which is what the CCI delete did' if st_u in (200, 204) else msg(ru)[:80]}")
+              f"{'accepted, which is what the CCI delete did' if st_u in (200, 204) else msg(ru)[:80]}; version status now {after_u}")
 
     st, bs = c.items(BP, "blueprints", project)
     for b in bs:
@@ -352,6 +378,11 @@ def main():
         if flag in sys.argv and sys.argv.index(flag) + 1 >= len(sys.argv):
             print(f"{flag} takes a value (see --help)", file=sys.stderr)
             sys.exit(5)
+    if "--probe-release" in sys.argv and "--project" not in sys.argv:
+        # A write goes where its operator says, never into whichever project happens to list first (G-658's rule).
+        print("--probe-release writes a throwaway blueprint: name the project it may write in with --project <project>",
+              file=sys.stderr)
+        sys.exit(5)
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
     try:
         refresh, password = secret("VCFA_REFRESH_TOKEN"), secret("VCFA_PASSWORD")
@@ -492,7 +523,11 @@ def main():
         content = ("name: probe-day1-release\nversion: 1\n"
                    "description: Throwaway blueprint for a handbook probe. Provisions nothing.\n"
                    "resources:\n  Secret:\n    type: Util.PasswordEntry\n    properties:\n      length: 12\n")
-        release = probe_release(c, L, home, content)
+        target = sys.argv[sys.argv.index("--project") + 1]
+        if target not in projects:
+            print(f"--project names a project this identity cannot see; it sees {len(projects)}", file=sys.stderr)
+            sys.exit(5)
+        release = probe_release(c, L, target, content)
         if release is not None:
             release["probedUtc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     else:

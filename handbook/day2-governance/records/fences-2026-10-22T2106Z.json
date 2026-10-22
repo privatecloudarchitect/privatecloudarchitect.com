@@ -1,0 +1,150 @@
+{
+ "capturedUtc": "2026-10-22T21:06:43Z",
+ "steps": [
+  {
+   "at": "21:06:46Z",
+   "step": "blueprint create",
+   "status": 201,
+   "refused": null
+  },
+  {
+   "at": "21:06:47Z",
+   "step": "lease policy create",
+   "status": 201,
+   "refused": null
+  },
+  {
+   "at": "21:06:47Z",
+   "step": "approval policy create",
+   "status": 201,
+   "refused": null
+  },
+  {
+   "at": "21:06:47Z",
+   "step": "waiting for the policies to reach new requests",
+   "seconds": 60
+  },
+  {
+   "at": "21:07:48Z",
+   "step": "deploy request",
+   "status": 202,
+   "refused": null
+  },
+  {
+   "at": "21:08:09Z",
+   "step": "deployment created",
+   "seconds": 21,
+   "status": "CREATE_SUCCESSFUL",
+   "leaseSet": true,
+   "leaseDays": 1.0
+  },
+  {
+   "at": "21:08:26Z",
+   "step": "first destroy request",
+   "status": "APPROVAL_PENDING",
+   "secondsToSettle": 16
+  },
+  {
+   "at": "21:08:27Z",
+   "step": "approval raised",
+   "fields": [
+    "action",
+    "adminActioned",
+    "autoApproval",
+    "createdAt",
+    "currentLevel",
+    "decision",
+    "deploymentId",
+    "deploymentName",
+    "expired",
+    "expiryAt",
+    "id",
+    "lastUpdatedAt",
+    "levels",
+    "orgId",
+    "projectId",
+    "projectName",
+    "requestId",
+    "requestedBy",
+    "status",
+    "totalLevels"
+   ],
+   "status": "PENDING",
+   "currentLevel": 1,
+   "totalLevels": 1,
+   "expiresAfterHours": 23.9
+  },
+  {
+   "at": "21:08:33Z",
+   "step": "rejected as the approver",
+   "actionStatus": 200,
+   "refused": null,
+   "requestStatus": "APPROVAL_REJECTED",
+   "secondsToSettle": 6,
+   "deploymentStillThere": true,
+   "item": {
+    "status": "REJECTED",
+    "decision": "REJECT",
+    "currentLevel": 1,
+    "totalLevels": 1,
+    "autoApproval": true,
+    "expired": false
+   }
+  },
+  {
+   "at": "21:08:45Z",
+   "step": "second destroy request",
+   "status": "APPROVAL_PENDING",
+   "secondsToSettle": 11
+  },
+  {
+   "at": "21:08:57Z",
+   "step": "approved as the approver",
+   "actionStatus": 200,
+   "refused": null,
+   "deploymentGone": true,
+   "secondsToGone": 11,
+   "item": {
+    "status": "APPROVED",
+    "decision": "REJECT",
+    "currentLevel": 1,
+    "totalLevels": 1,
+    "autoApproval": true,
+    "expired": false
+   }
+  },
+  {
+   "at": "21:08:57Z",
+   "step": "teardown approval policy",
+   "status": 204
+  },
+  {
+   "at": "21:08:58Z",
+   "step": "teardown lease policy",
+   "status": 204
+  },
+  {
+   "at": "21:08:58Z",
+   "step": "teardown blueprint",
+   "status": 204
+  },
+  {
+   "at": "21:08:59Z",
+   "step": "residue",
+   "probePolicies": 0,
+   "probeDeployments": 0,
+   "probeBlueprints": 0
+  }
+ ],
+ "verdict": {
+  "leaseSetFromThePolicy": true,
+  "destroyWaitedForApproval": true,
+  "rejectionKeptTheDeployment": true,
+  "approvalRemovedTheDeployment": true
+ },
+ "residue": {
+  "probePolicies": 0,
+  "probeDeployments": 0,
+  "probeBlueprints": 0
+ }
+}

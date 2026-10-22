@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-19T15:03:27Z",
+ "captured_utc": "2026-10-22T20:39:35Z",
  "signIn": "session login",
  "vocabulary": [
   {
@@ -385,10 +385,21 @@
     "verdict": "the object survives and publishToCatalog flips to false: this is an unrelease"
    },
    {
+    "case": "release the same version again, through the classic face",
+    "face": "classic",
+    "status": 200,
+    "outcome": "accepted",
+    "versionStatusBefore": "VERSIONED",
+    "versionStatusAfter": "RELEASED",
+    "message": ""
+   },
+   {
     "case": "DELETE the same version",
     "face": "classic",
     "status": 405,
     "outcome": "refused",
+    "versionStatusBefore": "RELEASED",
+    "versionStatusAfter": "RELEASED",
     "message": "Method 'DELETE' is not supported."
    },
    {
@@ -396,6 +407,7 @@
     "face": "classic",
     "status": 200,
     "outcome": "accepted",
+    "versionStatusAfter": "VERSIONED",
     "message": ""
    },
    {
@@ -406,6 +418,6 @@
    }
   ],
   "residue": [],
-  "probedUtc": "2026-10-19T15:03:27Z"
+  "probedUtc": "2026-10-22T20:39:35Z"
  }
 }

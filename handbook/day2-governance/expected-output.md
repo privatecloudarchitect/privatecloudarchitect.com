@@ -161,3 +161,28 @@ regime, so read until the count is stable:
 ```
 python3 governance.py --actions <deployment-id>
 ```
+
+## `fences.py --project <project>`, on throwaway objects, 2026-10-22T21:09Z
+
+```
+[21:09:22Z] blueprint create {"status": 201, "refused": null}
+[21:09:23Z] lease policy create {"status": 201, "refused": null}
+[21:09:24Z] approval policy create {"status": 201, "refused": null}
+[21:09:24Z] waiting for the policies to reach new requests {"seconds": 60}
+[21:10:25Z] deploy request {"status": 202, "refused": null}
+[21:10:46Z] deployment created {"seconds": 21, "status": "CREATE_SUCCESSFUL", "leaseSet": true, "leaseDays": 1.0}
+[21:11:03Z] first destroy request {"status": "APPROVAL_PENDING", "secondsToSettle": 17}
+[21:11:03Z] approval raised {"fields": ["action", "adminActioned", "autoApproval", "createdAt", "currentLevel", "decision", "deploymentId", "deploymentName", "expired", "expiryAt", "id", "lastUpdatedAt", "levels", "orgId", "projectId", "projectName", "requestId", "requestedBy", "status", "totalLevels"], "status": "PENDING", "currentLevel": 1, "totalLevels": 1, "expiresAfterHours": 23.9}
+[21:11:10Z] rejected as the approver {"actionStatus": 200, "refused": null, "requestStatus": "APPROVAL_REJECTED", "secondsToSettle": 6, "deploymentStillThere": true, "item": {"status": "REJECTED", "decision": "REJECT", "currentLevel": 1, "totalLevels": 1, "autoApproval": true, "expired": false}}
+[21:11:22Z] second destroy request {"status": "APPROVAL_PENDING", "secondsToSettle": 11}
+[21:11:34Z] approved as the approver {"actionStatus": 200, "refused": null, "deploymentGone": true, "secondsToGone": 11, "item": {"status": "APPROVED", "decision": "REJECT", "currentLevel": 1, "totalLevels": 1, "autoApproval": true, "expired": false}}
+[21:11:34Z] teardown approval policy {"status": 204}
+[21:11:35Z] teardown lease policy {"status": 204}
+[21:11:35Z] teardown blueprint {"status": 204}
+[21:11:36Z] residue {"probePolicies": 0, "probeDeployments": 0, "probeBlueprints": 0}
+wrote fences.json; no project, user, organization or host name is recorded; exit 0
+```
+
+It exited 0: the lease was set from the policy, the first destroy request waited for approval and the rejection kept the
+deployment, and the second request, approved, removed it. The run before it, at 21:06Z, gave the same answer; its
+record is `records/fences-2026-10-22T2106Z.json`.

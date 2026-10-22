@@ -146,7 +146,7 @@ export TLS_VERIFY=false                                    # only on a self-sign
 
 python3 day1.py                                     # read-only: both faces, side by side
 python3 day1.py --lookup <blueprint> --project <yours>   # read-only: key on the id, refuse a name not yours
-python3 day1.py --probe-release                     # writes: a throwaway blueprint, created and deleted
+python3 day1.py --probe-release --project <yours>  # writes: a throwaway blueprint there, created and deleted
 ```
 
 The sign-in is a session login as `<account>@<org>`, or a refresh token minted for the organization in a file of
