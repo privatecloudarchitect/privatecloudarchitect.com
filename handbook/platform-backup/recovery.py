@@ -17,21 +17,37 @@ configuration AND the run history on each plane, and puts them side by side:
   4. the TARGET each plane writes to, compared, because a recovery plan has as many single points as the
      targets have in common;
   5. the RESTORE EVIDENCE: whether a restore has ever run here. Each plane answers differently, and one of
-     them answers with an HTTP 500 whose message reads like a broken endpoint.
+     them answers with an HTTP 500 whose message reads like a broken endpoint;
+  6. the AGE of the newest successful copy on each plane, against the longest wait the schedule allows plus a
+     margin. This is the alert the chapter asks for: a skipped run leaves no failed record, so a rule watching
+     for failures stays green, while the age of the newest copy keeps growing. The script exits 1 when any
+     plane's newest copy is older than its schedule allows;
+  7. the RECOVERY WINDOW: the span the retained copies cover, where the plane publishes a retention count and a
+     history to count it against. A retention of 30 copies is 30 days only when 30 runs happened on 30 days.
 
 SAFETY. Backup configurations carry credentials for the target. Every response passes through ``strip_secrets``
 inside the function that performs the request, which deletes the secret-bearing keys on arrival and keeps only
 a boolean saying whether something was there. Nothing downstream can leak a value because no value survives the
 read. If you extend this script, extend ``SECRET_KEYS`` first.
 
-Read-only throughout. Nothing here takes, deletes or restores a backup.
+Every credential file is refused if it is open to group or other, before it is read.
 
-Run:
-  export SDDC_HOST=<sddc-manager-fqdn>  SDDC_TOKEN_FILE=/path/to/bearer          # mode 0600
-  export VC_HOST=<vcenter-fqdn>         VC_SESSION_FILE=/path/to/session-id      # optional
-  export NSX_HOST=<nsx-manager-fqdn>    NSX_BASIC_FILE=/path/to/user:password    # optional, mode 0600
-  export TLS_VERIFY=false                                                        # only on a self-signed lab CA
+Read-only throughout. Nothing here takes, deletes or restores a backup. Signing in to vCenter opens a session, which
+the script closes when it is done.
+
+Run (each plane is optional; give the ones you want read):
+  export SDDC_HOST=<sddc-manager-fqdn>  SDDC_TOKEN_FILE=/path/to/bearer                      # mode 0600
+  export VC_HOST=<vcenter-fqdn>  VC_USER=<sso-user>  VC_PASSWORD_FILE=/path/to/password      # mode 0600
+         # or, instead of the user and password: VC_SESSION_FILE=/path/to/session-id         (mode 0600)
+  export NSX_HOST=<nsx-manager-fqdn>  NSX_USER=<user>  NSX_PASSWORD_FILE=/path/to/password   # mode 0600
+         # or, instead: NSX_BASIC_FILE=/path/to/user:password                                (mode 0600)
+  export BACKUP_AGE_MARGIN_HOURS=6     # optional: slack past the longest scheduled wait before a copy is overdue
+  export TLS_VERIFY=false              # only on a self-signed lab CA
   python3 recovery.py
+Exit: 0 every plane read holds a copy younger than its schedule allows · 1 a plane's newest copy is overdue, or a plane
+      read holds no successful copy: the alert · 2 a setting is missing, or a secret file is open to group or other
+      · 3 a sign-in or a read failed · 4 the record refused to write (an estate value survived the scrub, or the run
+      read fewer planes than the record on disk)
 """
 import base64
 import collections
@@ -72,6 +88,67 @@ def strip_secrets(obj):
 def ctx():
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
+
+
+class ReadFailed(Exception):
+    """A plane whose settings were given did not answer a read the record depends on."""
+
+
+def read_secret(var):
+    """The secret in the file VAR names. A file open to group or other is refused before it is read; the refusal
+    names the variable and the fix, never the file's content."""
+    with open(os.environ[var], encoding="utf-8") as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        # Windows makes the mode from the read-only flag alone, so it has no group or other bits to judge.
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{var} names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${var}" and try again (the file was not read)')
+        return f.read().strip()
+
+
+DAY = {d: i for i, d in enumerate(("MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"))}
+
+
+def longest_interval_hours(days, every_day_when_empty=False):
+    """The longest wait between two scheduled runs, in hours, from a day list of names (MONDAY) or integers.
+    Integers are taken modulo 7, so a Sunday written as 0 or as 7 gives the same answer. None when the list
+    holds nothing readable, unless the plane documents an empty list as every day."""
+    if not days:
+        return 24 if every_day_when_empty else None
+    idx = sorted({DAY[d] if isinstance(d, str) else int(d) % 7
+                  for d in days if isinstance(d, int) or d in DAY})
+    if not idx:
+        return None
+    return max((idx[(i + 1) % len(idx)] - idx[i]) % 7 or 7 for i in range(len(idx))) * 24
+
+
+def parse_utc(text):
+    return dt.datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+
+
+def iso(t):
+    return t.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if t else None
+
+
+def age_check(newest, interval_h, margin_h, now):
+    """How old the newest copy is, against how old the schedule lets it get. A plane with no successful copy in
+    the history read is overdue by definition."""
+    allowed = interval_h + margin_h if interval_h else None
+    age = round((now - newest).total_seconds() / 3600, 1) if newest else None
+    return {"newestCopyUtc": iso(newest), "ageHours": age, "scheduledIntervalHours": interval_h,
+            "marginHours": margin_h, "allowedHours": allowed,
+            "overdue": newest is None or (allowed is not None and age > allowed)}
+
+
+def recovery_window(copies, keep):
+    """The span the retained copies cover when the target keeps the KEEP most recent and every run left one: the
+    newest copy back to the oldest of those. A count of copies is a number of days only on a gapless history."""
+    if not keep or not copies:
+        return None
+    kept = sorted(copies, reverse=True)[:keep]
+    return {"keepsMostRecent": keep, "successfulCopiesCounted": len(copies),
+            "spanDays": round((kept[0] - kept[-1]).total_seconds() / 86400, 1),
+            "oldestRetainedUtc": iso(kept[-1])}
 
 
 PLACEHOLDER = re.compile(r"(\{\{[^}]*\}\})")
@@ -171,7 +248,11 @@ def reader(host, headers):
         rq = urllib.request.Request(f"https://{host}{path}", headers=dict(headers, Accept="application/json"))
         try:
             with urllib.request.urlopen(rq, context=ctx(), timeout=180) as r:
-                return r.status, strip_secrets(json.loads(r.read() or b"null"))
+                raw = r.read()
+                try:
+                    return r.status, strip_secrets(json.loads(raw or b"null"))
+                except ValueError:
+                    return r.status, None  # an answer that is not JSON is no answer; the caller's check says so
         except urllib.error.HTTPError as e:
             raw = e.read()
             try:
@@ -184,35 +265,43 @@ def reader(host, headers):
     return get
 
 
-def read_sddc(L):
-    host, tf = os.environ.get("SDDC_HOST"), os.environ.get("SDDC_TOKEN_FILE")
-    if not (host and tf and os.path.exists(tf)):
+def read_sddc(L, now, margin):
+    host = os.environ.get("SDDC_HOST")
+    if not (host and os.environ.get("SDDC_TOKEN_FILE")):
         return {"plane": "the lifecycle manager", "reached": False,
                 "why": "set SDDC_HOST and SDDC_TOKEN_FILE to include this plane"}
-    get = reader(host, {"Authorization": "Bearer " + open(tf, encoding="utf-8").read().strip()})
+    get = reader(host, {"Authorization": "Bearer " + read_secret("SDDC_TOKEN_FILE")})
     st, cfg = get("/v1/system/backup-configuration")
-    locs = (cfg.get("backupLocations") or []) if isinstance(cfg, dict) else []
-    scheds = (cfg.get("backupSchedules") or []) if isinstance(cfg, dict) else []
+    if st != 200 or not isinstance(cfg, dict):
+        raise ReadFailed(f"the lifecycle manager's backup configuration answered {st}")
+    locs = cfg.get("backupLocations") or []
+    scheds = cfg.get("backupSchedules") or []
     s0 = scheds[0] if scheds else {}
     st, t = get("/v1/tasks?limit=2000")
-    tasks = (t.get("elements") or []) if isinstance(t, dict) else []
+    if st != 200 or not isinstance(t, dict):
+        raise ReadFailed(f"the lifecycle manager's task list answered {st}")
+    tasks = t.get("elements") or []
     runs = sorted([e for e in tasks if e.get("type") == "SDDCMANAGER_BACKUP"],
                   key=lambda e: e.get("creationTimestamp") or "")
-    stamps = [dt.datetime.fromisoformat(e["creationTimestamp"].replace("Z", "+00:00")) for e in runs
-              if e.get("creationTimestamp")]
+    stamps = [parse_utc(e["creationTimestamp"]) for e in runs if e.get("creationTimestamp")]
+    good = [parse_utc(e["creationTimestamp"]) for e in runs if e.get("creationTimestamp")
+            and str(e.get("status")).upper() in ("SUCCESSFUL", "SUCCEEDED")]
     statuses = collections.Counter(e.get("status") for e in runs)
     sub, seconds = [], None
     if runs:
         st, one = get(f"/v1/tasks/{runs[-1]['id']}")
         steps = (one.get("subTasks") or []) if isinstance(one, dict) else []
-        sub = [s.get("name") for s in steps]
+        sub = [x.get("name") for x in steps]
         # How long a run takes is a number the chapter states, so it comes from here rather than from prose.
         if steps and steps[0].get("creationTimestamp") and steps[-1].get("completionTimestamp"):
-            a = dt.datetime.fromisoformat(steps[0]["creationTimestamp"].replace("Z", "+00:00"))
-            b = dt.datetime.fromisoformat(steps[-1]["completionTimestamp"].replace("Z", "+00:00"))
-            seconds = round((b - a).total_seconds())
+            seconds = round((parse_utc(steps[-1]["completionTimestamp"])
+                             - parse_utc(steps[0]["creationTimestamp"])).total_seconds())
+    # From 9.1.1 the task list has a horizon: tasks older than the retention setting are cleaned up, so a count of
+    # runs, or the absence of a restore task, reaches back that far at most. An older build answers 404 here.
+    st_s, ts = get("/v1/tasks/config/settings")
+    interval = 1 if str(s0.get("frequency")).upper() == "HOURLY" else longest_interval_hours(s0.get("daysOfWeek") or [])
     return {"plane": "the lifecycle manager", "reached": True,
-            "configured": bool(cfg.get("isConfigured")) if isinstance(cfg, dict) else None,
+            "configured": bool(cfg.get("isConfigured")),
             "schedule": {"field": "frequency", "says": s0.get("frequency"),
                          "daysListed": len(s0.get("daysOfWeek") or []),
                          "days": list(s0.get("daysOfWeek") or []),
@@ -230,18 +319,53 @@ def read_sddc(L):
                      "carryingAnError": sum(1 for e in runs if e.get("errors")),
                      "hourOfDay": dict(collections.Counter(x.hour for x in stamps))},
             "coverage": coverage({x.date() for x in stamps}),
+            "age": age_check(max(good) if good else None, interval, margin, now),
+            "recoveryWindow": recovery_window(good, (s0.get("retentionPolicy") or {}).get("numberOfMostRecentBackups")),
+            "taskRetentionDays": ts.get("retentionDays") if st_s == 200 and isinstance(ts, dict) else None,
             "whatARunDoes": sub, "aRunTakesSeconds": seconds,
             "tasksRead": len(tasks)}
 
 
-def read_vcenter(L):
-    host, sf = os.environ.get("VC_HOST"), os.environ.get("VC_SESSION_FILE")
-    if not (host and sf and os.path.exists(sf)):
+def vcenter_session(host):
+    """A session id: opened with VC_USER and VC_PASSWORD_FILE (and closed by the caller), or read from
+    VC_SESSION_FILE. Returns (session, opened_here)."""
+    user = os.environ.get("VC_USER")
+    if user and os.environ.get("VC_PASSWORD_FILE"):
+        basic = base64.b64encode(f"{user}:{read_secret('VC_PASSWORD_FILE')}".encode()).decode()
+        rq = urllib.request.Request(f"https://{host}/api/session", method="POST",
+                                    headers={"Authorization": f"Basic {basic}"})
+        try:
+            with urllib.request.urlopen(rq, context=ctx(), timeout=60) as r:
+                return json.loads(r.read()), True
+        except urllib.error.HTTPError as e:
+            raise ReadFailed(f"the vCenter sign-in answered {e.code}") from None
+    return read_secret("VC_SESSION_FILE"), False
+
+
+def read_vcenter(L, now, margin):
+    host = os.environ.get("VC_HOST")
+    if not host or not (os.environ.get("VC_SESSION_FILE")
+                        or (os.environ.get("VC_USER") and os.environ.get("VC_PASSWORD_FILE"))):
         return {"plane": "the management vCenter", "reached": False,
-                "why": "set VC_HOST and VC_SESSION_FILE to include this plane"}
-    get = reader(host, {"vmware-api-session-id": open(sf, encoding="utf-8").read().strip()})
+                "why": "set VC_HOST, and VC_USER with VC_PASSWORD_FILE or VC_SESSION_FILE, to include this plane"}
+    session, opened = vcenter_session(host)
+    try:
+        return _read_vcenter(reader(host, {"vmware-api-session-id": session}), L, now, margin)
+    finally:
+        if opened:
+            rq = urllib.request.Request(f"https://{host}/api/session", method="DELETE",
+                                        headers={"vmware-api-session-id": session})
+            try:
+                urllib.request.urlopen(rq, context=ctx(), timeout=30).close()
+            except (urllib.error.URLError, OSError):
+                pass
+
+
+def _read_vcenter(get, L, now, margin):
     st, scheds = get("/api/appliance/recovery/backup/schedules")
-    name, s0 = (list(scheds.items())[0] if isinstance(scheds, dict) and scheds else (None, {}))
+    if st != 200 or not isinstance(scheds, dict):
+        raise ReadFailed(f"the vCenter's backup schedules answered {st}")
+    name, s0 = (list(scheds.items())[0] if scheds else (None, {}))
     rec = (s0 or {}).get("recurrence_info") or {}
     st, parts = get("/api/appliance/recovery/backup/parts")
     catalog = [{"id": p.get("id"), "optional": p.get("optional"),
@@ -250,17 +374,31 @@ def read_vcenter(L):
                for p in (parts if isinstance(parts, list) else [])]
     selected = list((s0 or {}).get("parts") or [])
     st, jobs = get("/api/appliance/recovery/backup/job")
-    jobs = jobs if isinstance(jobs, list) else []
+    if st != 200:
+        raise ReadFailed(f"the vCenter's backup job list answered {st}")
+    # Job ids begin YYYYMMDD-HHMMSS, so sorting them newest first needs no further read.
+    ids = sorted((str(j) for j in (jobs if isinstance(jobs, list) else [])), reverse=True)
     days = set()
-    for j in jobs:
-        m = re.match(r"(\d{4})(\d{2})(\d{2})-", str(j))
+    for j in ids:
+        m = re.match(r"(\d{4})(\d{2})(\d{2})-", j)
         if m:
             days.add(dt.date(int(m.group(1)), int(m.group(2)), int(m.group(3))))
-    last = {}
-    if jobs:
-        st, one = get(f"/api/appliance/recovery/backup/job/{jobs[0]}")
-        last = {"state": one.get("state"), "progress": one.get("progress"),
-                "messages": len(one.get("messages") or [])} if isinstance(one, dict) else {}
+    # The newest copy and the retained window need each job's state and end time: read jobs newest first until
+    # the retention count of successful copies is found, or twice that many jobs have been read.
+    keep = ((s0 or {}).get("retention_info") or {}).get("max_count")
+    want = max(keep or 0, 1)
+    last, good = {}, []
+    for jid in ids[:want * 2]:
+        st, one = get(f"/api/appliance/recovery/backup/job/{jid}")
+        if not isinstance(one, dict):
+            continue
+        if not last:
+            last = {"state": one.get("state"), "progress": one.get("progress"),
+                    "messages": len(one.get("messages") or [])}
+        if one.get("state") == "SUCCEEDED" and one.get("end_time"):
+            good.append(parse_utc(one["end_time"]))
+            if len(good) >= want:
+                break
     st_r, restore = get("/api/appliance/recovery/restore/job")
     return {"plane": "the management vCenter", "reached": True,
             "schedule": {"field": "recurrence_info.days", "daysListed": len(rec.get("days") or []),
@@ -277,26 +415,39 @@ def read_vcenter(L):
             "parts": {"catalog": catalog, "selected": selected,
                       "deselectedDefaults": [p["id"] for p in catalog
                                              if p["selectedByDefault"] and p["id"] not in selected]},
-            "runs": {"total": len(jobs), "mostRecent": last},
+            "runs": {"total": len(ids), "mostRecent": last},
             "coverage": coverage(days),
+            "age": age_check(max(good) if good else None,
+                             longest_interval_hours(rec.get("days") or [], every_day_when_empty=True), margin, now),
+            "recoveryWindow": recovery_window(good, keep),
             "restoreEvidence": {"status": st_r,
                                 "message": L.scrub(json.dumps(restore))[:200] if restore else ""}}
 
 
-def read_nsx(L):
-    host, bf = os.environ.get("NSX_HOST"), os.environ.get("NSX_BASIC_FILE")
-    if not (host and bf and os.path.exists(bf)):
+def read_nsx(L, now, margin):
+    host, user = os.environ.get("NSX_HOST"), os.environ.get("NSX_USER")
+    if not host or not (os.environ.get("NSX_BASIC_FILE") or (user and os.environ.get("NSX_PASSWORD_FILE"))):
         return {"plane": "the network manager", "reached": False,
-                "why": "set NSX_HOST and NSX_BASIC_FILE to include this plane"}
-    cred = open(bf, encoding="utf-8").read().strip()
+                "why": "set NSX_HOST, and NSX_USER with NSX_PASSWORD_FILE or NSX_BASIC_FILE, to include this plane"}
+    cred = (f"{user}:{read_secret('NSX_PASSWORD_FILE')}" if user and os.environ.get("NSX_PASSWORD_FILE")
+            else read_secret("NSX_BASIC_FILE"))
     get = reader(host, {"Authorization": "Basic " + base64.b64encode(cred.encode()).decode()})
     st, cfg = get("/api/v1/cluster/backups/config")
-    sch = (cfg.get("backup_schedule") or {}) if isinstance(cfg, dict) else {}
-    srv = (cfg.get("remote_file_server") or {}) if isinstance(cfg, dict) else {}
+    if st != 200 or not isinstance(cfg, dict):
+        raise ReadFailed(f"the network manager's backup configuration answered {st}")
+    sch = cfg.get("backup_schedule") or {}
+    srv = cfg.get("remote_file_server") or {}
     proto = srv.get("protocol") or {}
     st, hist = get("/api/v1/cluster/backups/history")
-    cl = (hist.get("cluster_backup_statuses") or []) if isinstance(hist, dict) else []
-    inv = (hist.get("inventory_backup_statuses") or []) if isinstance(hist, dict) else []
+    if st != 200 or not isinstance(hist, dict):
+        raise ReadFailed(f"the network manager's backup history answered {st}")
+    cl = hist.get("cluster_backup_statuses") or []
+    inv = hist.get("inventory_backup_statuses") or []
+    good = [dt.datetime.fromtimestamp(c["end_time"] / 1000, dt.timezone.utc)
+            for c in cl if c.get("success") and c.get("end_time")]
+    interval = (round(sch["seconds_between_backups"] / 3600, 2)
+                if sch.get("resource_type") == "IntervalBackupSchedule" and sch.get("seconds_between_backups")
+                else longest_interval_hours(sch.get("days_of_week") or []))
     st_r, restore = get("/api/v1/cluster/restore/status")
     return {"plane": "the network manager", "reached": True,
             "schedule": {"field": "resource_type", "says": sch.get("resource_type"),
@@ -306,16 +457,15 @@ def read_nsx(L):
                                          "which fixes 6 and 0-or-7 as the two absent days under either "
                                          "convention this platform could be using",
                          "atHour": sch.get("hour_of_day"), "atMinute": sch.get("minute_of_day"),
-                         "enabled": cfg.get("backup_enabled") if isinstance(cfg, dict) else None,
-                         "inventorySummaryIntervalMinutes": cfg.get("inventory_summary_interval")
-                         if isinstance(cfg, dict) else None},
+                         "enabled": cfg.get("backup_enabled"),
+                         "inventorySummaryIntervalMinutes": cfg.get("inventory_summary_interval")},
             "target": {"protocol": proto.get("protocol_name"), "port": srv.get("port"),
                        "server": L.get("target", srv.get("server")),
                        "directory": L.get("path", srv.get("directory_path")),
                        "username": L.get("account", (proto.get("authentication_scheme") or {}).get("username")),
                        "authScheme": (proto.get("authentication_scheme") or {}).get("scheme_name"),
                        "fingerprintPinned": bool(proto.get("ssh_fingerprint"))},
-            "runs": {"overall": hist.get("overall_backup_status") if isinstance(hist, dict) else None,
+            "runs": {"overall": hist.get("overall_backup_status"),
                      "clusterBackupsReported": len(cl),
                      "inventoryBackupsReported": len(inv),
                      "mostRecentClusterBackupUtc":
@@ -323,16 +473,29 @@ def read_nsx(L):
                          .strftime("%Y-%m-%dT%H:%M:%SZ") if cl and cl[0].get("start_time") else None,
                      "historyDepth": "only the most recent is reported"},
             "coverage": None,
+            "age": age_check(max(good) if good else None, interval, margin, now),
+            "recoveryWindow": None,
+            "recoveryWindowWhy": "the plane reports only its most recent backup",
             "restoreEvidence": {"status": st_r,
-                                "state": ((restore or {}).get("status") or {}).get("value"),
-                                "description": ((restore or {}).get("status") or {}).get("description")}}
+                                "state": ((restore or {}).get("status") or {}).get("value")
+                                if isinstance(restore, dict) else None,
+                                "description": ((restore or {}).get("status") or {}).get("description")
+                                if isinstance(restore, dict) else None}}
 
 
 def main():
     out_dir = os.environ.get("OUT_DIR", ".")
+    try:
+        margin = float(os.environ.get("BACKUP_AGE_MARGIN_HOURS", "6"))
+    except ValueError:
+        raise KeyError("BACKUP_AGE_MARGIN_HOURS must be a number of hours") from None
+    now = dt.datetime.now(dt.timezone.utc)
     L = Labels()
     print("recovery.py: what protects the management plane, and whether it actually ran\n")
-    planes = [read_sddc(L), read_vcenter(L), read_nsx(L)]
+    planes = [read_sddc(L, now, margin), read_vcenter(L, now, margin), read_nsx(L, now, margin)]
+    reached = [p for p in planes if p.get("reached")]
+    if not reached:
+        raise KeyError("no plane is configured: give SDDC_HOST, VC_HOST or NSX_HOST with its sign-in")
 
     for p in planes:
         if not p.get("reached"):
@@ -352,13 +515,31 @@ def main():
             print(f"  {'':<26} copy contains {p['parts']['selected']}; "
                   f"deselected defaults: {p['parts']['deselectedDefaults'] or 'none'}")
 
-    reached = [p for p in planes if p.get("reached")]
     targets = {json.dumps([(p.get("target") or {}).get(k) for k in ("server", "directory", "username")])
                for p in reached}
     print(f"\n  TARGETS: {len(reached)} plane(s) read, {len(targets)} distinct target description(s)")
     if len(targets) == 1 and len(reached) > 1:
         print("     every plane read writes to the same place, so the recovery plan has one target and "
               "as many dependants as there are planes")
+
+    print(f"\n  AGE OF THE NEWEST COPY, against the longest scheduled wait plus {margin:g} h")
+    for p in reached:
+        a = p["age"]
+        if not a["newestCopyUtc"]:
+            print(f"     {p['plane']:<26} no successful copy in the history read: OVERDUE")
+            continue
+        verdict = "OVERDUE" if a["overdue"] else "within"
+        allowed = f"allowed {a['allowedHours']:g} h" if a["allowedHours"] else "no schedule to judge against"
+        print(f"     {p['plane']:<26} newest {a['newestCopyUtc']}, {a['ageHours']:g} h old, {allowed}: {verdict}")
+
+    print("\n  RECOVERY WINDOW, if every retained copy is still on the target")
+    for p in reached:
+        w = p.get("recoveryWindow")
+        if w:
+            print(f"     {p['plane']:<26} keeps the {w['keepsMostRecent']} most recent: they span "
+                  f"{w['spanDays']:g} days, back to {w['oldestRetainedUtc'][:10]}")
+        else:
+            print(f"     {p['plane']:<26} not computed: {p.get('recoveryWindowWhy') or 'no retention count read'}")
 
     print("\n  HAS A RESTORE EVER RUN HERE?")
     for p in reached:
@@ -367,7 +548,9 @@ def main():
             print(f"     {p['plane']:<26} HTTP {ev.get('status')}  "
                   f"{ev.get('state') or ''} {str(ev.get('description') or ev.get('message') or '')[:90]}")
         else:
-            print(f"     {p['plane']:<26} no task of that type among {p.get('tasksRead')} read")
+            horizon = (f", and it keeps tasks for {p['taskRetentionDays']} days" if p.get("taskRetentionDays")
+                       else "")
+            print(f"     {p['plane']:<26} no task of that type among {p.get('tasksRead')} read{horizon}")
 
     # A run that reached fewer planes than a previous one must not overwrite the richer record. This is
     # the sibling of G-166: there the loss came from an optional probe, here from partial credentials,
@@ -381,10 +564,13 @@ def main():
         except ValueError:
             _prior = {}
 
+    overdue = [p["plane"] for p in reached if p["age"]["overdue"]]
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "planes": planes,
                "distinctTargets": len(targets),
-               "planesRead": len(reached)}
+               "planesRead": len(reached),
+               "ageMarginHours": margin,
+               "planesOverdue": len(overdue)}
 
     if _prior and _prior.get("planesRead", 0) > payload["planesRead"]:
         raise SystemExit(
@@ -394,11 +580,14 @@ def main():
 
     text = L.scrub(json.dumps(payload, indent=1, ensure_ascii=False))
     for key in SECRET_KEYS:
-        assert f'"{key}"' not in text, f"a {key} field reached the record"
-    for var in ("SDDC_HOST", "VC_HOST", "NSX_HOST"):
+        if f'"{key}"' in text:
+            raise SystemExit(f"FATAL: a {key} field reached the record")
+    for var in ("SDDC_HOST", "VC_HOST", "NSX_HOST", "VC_USER", "NSX_USER"):
         v = os.environ.get(var)
-        assert not v or v not in text, f"{var} reached the record"
-    assert not IPV4.search(text), "an address reached the record"
+        if v and v in text:
+            raise SystemExit(f"FATAL: {var} reached the record")
+    if IPV4.search(text):
+        raise SystemExit("FATAL: an address reached the record")
     bare = re.sub(r"\{\{[^}]*\}\}", "", text)
     for fam, m in L.maps.items():
         for nm in m:
@@ -409,7 +598,28 @@ def main():
     open(os.path.join(out_dir, "recovery.json"), "w", encoding="utf-8").write(text + "\n")
     print(f"\nwrote recovery.json ({len(reached)} of {len(planes)} plane(s) read); "
           f"every address, path and account name replaced by a placeholder")
+    if overdue:
+        print(f"\nALERT: the newest copy is overdue on {', '.join(overdue)}")
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    try:
+        sys.exit(main())
+    except (KeyError, PermissionError) as e:
+        print(f"recovery.py: {e}", file=sys.stderr)
+        sys.exit(2)
+    except (ReadFailed, urllib.error.URLError, OSError) as e:
+        print(f"READ FAILED: {e}", file=sys.stderr)
+        sys.exit(3)
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            sys.exit(4 if e.code.startswith(("FATAL", "REFUSING")) else 3)
+        raise
+    except Exception as e:  # anything else is a failed read, never the alert's exit 1
+        print(f"READ FAILED: unexpected {type(e).__name__}: {e}", file=sys.stderr)
+        sys.exit(3)
