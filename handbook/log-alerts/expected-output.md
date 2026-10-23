@@ -1,6 +1,6 @@
 # Expected output
 
-The runs on the reference estate that the chapter shows, 2026-10-09: VCF Operations and Log Management 9.1.1, three
+The runs on the reference estate that the chapter shows, 2026-10-09 (the episodes reads 2026-10-23): VCF Operations and Log Management 9.1.1, three
 vCenters and their hosts on 9.1.1. Host names, the scope name and the test label are replaced; every other line is as
 printed, and lines longer than 220 characters are cut.
 
@@ -173,6 +173,62 @@ SP-C1: on in PCA - Storage Path - <scope>, monitors enabled 7 of 7 (attempt 1)
 SP-C2: on in PCA - Storage Path - <scope>, monitors enabled 3 of 3 (attempt 1)
 SP-C3: on in PCA - Storage Path - <scope>, monitors enabled 6 of 6 (attempt 1)
 apply: 0 created, 37 unchanged
+```
+
+## signatures.py episodes --start esx.problem.vmsyslogd.remote.failure --loss esx.problem.vmsyslogd.remote.logmessages.dropped --source vcenter --days 22
+
+Read 2026-10-23.
+
+```
+from each vCenter: esx.problem.vmsyslogd.remote.failure over 22 days: 139 records on 11 hosts, 27 episodes (records within 10 minutes of the last); 39 esx.problem.vmsyslogd.remote.logmessages.dropped records
+  2026-10-02T03:38Z    11 records   11 hosts    0 after a boot  lost messages on 9 hosts after [8, 8, 10, 16, 17, 17, 26, 26, 33] min
+  2026-10-04T20:24Z     2 records    2 hosts    0 after a boot  nothing lost
+  2026-10-04T22:08Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-04T22:22Z     8 records    8 hosts    0 after a boot  nothing lost
+  2026-10-05T11:19Z    11 records   10 hosts    8 after a boot  lost messages on 1 host after [0] min
+  2026-10-05T13:23Z     1 records    1 hosts    1 after a boot  nothing lost
+  2026-10-06T12:50Z    10 records    3 hosts    2 after a boot  nothing lost
+  2026-10-06T13:50Z     7 records    1 hosts    0 after a boot  nothing lost
+  2026-10-06T14:37Z     7 records    1 hosts    0 after a boot  nothing lost
+  2026-10-06T14:55Z     6 records    1 hosts    0 after a boot  lost messages on 1 host after [2] min
+  2026-10-06T20:26Z     2 records    2 hosts    0 after a boot  lost messages on 1 host after [9] min
+  2026-10-06T22:21Z     2 records    2 hosts    0 after a boot  nothing lost
+  2026-10-07T01:40Z     2 records    1 hosts    0 after a boot  nothing lost
+  2026-10-07T16:49Z    12 records    6 hosts    0 after a boot  nothing lost
+  2026-10-07T18:44Z    12 records    6 hosts    0 after a boot  nothing lost
+  2026-10-13T03:08Z     6 records    4 hosts    0 after a boot  nothing lost
+  2026-10-16T20:29Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-16T21:50Z     6 records    3 hosts    0 after a boot  nothing lost
+  2026-10-20T14:26Z     3 records    3 hosts    0 after a boot  nothing lost
+  2026-10-21T21:40Z    22 records   11 hosts    0 after a boot  nothing lost
+  2026-10-22T00:07Z     1 records    1 hosts    0 after a boot  lost messages on 1 host after [21] min
+  2026-10-23T00:42Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T00:56Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T02:39Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T02:53Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T06:34Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T16:49Z     1 records    1 hosts    0 after a boot  nothing lost
+  episodes with a loss: 5; without: 22 (4 of them on most hosts); loss records with no start record in the 120 minutes before, the failure still on: 26
+wrote signatures-episodes-syslog-vcenter.record.json
+```
+
+## signatures.py episodes --start esx.problem.vmsyslogd.remote.failure --loss esx.problem.vmsyslogd.remote.logmessages.dropped --days 22
+
+Read 2026-10-23.
+
+```
+from Log Management: esx.problem.vmsyslogd.remote.failure over 22 days: 12 records on 5 hosts, 9 episodes (records within 10 minutes of the last); 2 esx.problem.vmsyslogd.remote.logmessages.dropped records
+  2026-10-20T14:26Z     3 records    3 hosts    0 after a boot  nothing lost
+  2026-10-21T21:44Z     2 records    2 hosts    0 after a boot  nothing lost
+  2026-10-22T00:07Z     1 records    1 hosts    0 after a boot  lost messages on 1 host after [21] min
+  2026-10-23T00:42Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T00:56Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T02:39Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T02:53Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T06:34Z     1 records    1 hosts    0 after a boot  nothing lost
+  2026-10-23T16:49Z     1 records    1 hosts    0 after a boot  nothing lost
+  episodes with a loss: 1; without: 8 (1 of them on most hosts); loss records with no start record in the 120 minutes before, the failure still on: 1
+wrote signatures-episodes-syslog-logs.record.json
 ```
 
 ## signatures.py bindings --hours 24 --days 7

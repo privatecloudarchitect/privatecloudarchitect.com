@@ -24,6 +24,18 @@ Read-only. Three subcommands, each answering one question a log alert depends on
             ten minutes after the same host booted (an alert on them fires on every restart), and the exact search
             body it sent, so the same query can become a log symptom. `--body FILE` sends a search body as it stands.
 
+  episodes  Does the record a failure starts with tell a lasting failure from one that recovers by itself?
+            vCenter's stream of one identifier (`--start <id>`) over --days, grouped into episodes: records that
+            follow the last within --gap minutes (default 10), across hosts. For each episode, how many hosts, how
+            many of its records came within ten minutes after the same host booted, and on how many hosts a record
+            of a second identifier (`--loss <id>`) followed within --within minutes (default 120), with the minutes
+            it took. And how many loss records came long after any start record of the same host: the loss repeats
+            while a failure lasts, and the start does not. An alert on the start fires on every episode; an alert on
+            the loss fires only where something was lost. `--source logs` (the default) reads Log Management, which is
+            what an alert counts; `--source vcenter` reads each vCenter's own event history (VC_HOST, VC_USER,
+            VC_PASSWORD and pyVmomi, as `catalog`), which is what happened. The two differ where vCenter's stream did not
+            reach the store, and Log Management keeps records only as long as its retention.
+
   monitor   What did Log Management build from my condition, and when does it run?
             Log Management runs each log symptom as an OpenSearch monitor, and OpenSearch logs the definition it
             stores (`TransportIndexMonitorAction`) into the same store where the platform's own logs are collected,
@@ -55,6 +67,8 @@ lmlib.py's (OPS_HOST, OPS_API_TOKEN_FILE, ...).
   python3 signatures.py bindings [--hours N] [--out DIR]
   python3 signatures.py monitor --name "<symptom name>" [--out DIR [--label NAME]]
   python3 signatures.py try     (--vc-event ID | [--app APP] --text TOKEN | --body FILE) [--within FIELD=VALUE] [--days N]
+                                [--out DIR [--label NAME]]
+  python3 signatures.py episodes --start ID --loss ID [--source logs|vcenter] [--days N] [--gap MINUTES] [--within MINUTES]
                                 [--out DIR [--label NAME]]
 """
 
@@ -271,6 +285,115 @@ def after_boot(s, body: dict, start: int, end: int) -> dict:
             "matched": total[0], "after_boot": near}
 
 
+def stream(s, vc_event: str, start: int, end: int, step_h: int = 24) -> tuple[list[tuple[str, int]], int]:
+    """Every record of one vCenter event type over the window as (host, ms), read in day slices because a search
+    returns at most 2,000 events; the count of slices that held more than that is returned with them."""
+    out, truncated, t = [], 0, start
+    while t < end:
+        body = {"query": {"bool": {"must": [{"term": {"vc_event_type": vc_event}}],
+                                   "must_not": [{"match_phrase": {"text": LABEL}}],
+                                   "filter": [{"range": {"timestamp": {"gte": t, "lt": min(t + step_h * 3600000, end)}}}]}},
+                "size": 2000}
+        ev = s.search(body).get("events") or {}
+        hits = ev.get("hits") or []
+        truncated += (ev.get("total") or 0) > len(hits)
+        for h in hits:
+            ts = (h.get("msgContent") or {}).get("logTimestamp")
+            host = (hit_fields(h).get("hostname") or "").lower()
+            if ts and host:
+                out.append((host, int(ts)))
+        t += step_h * 3600000
+    return sorted(out, key=lambda x: x[1]), truncated
+
+
+def vc_stream(types: tuple[str, ...], start: int, end: int) -> dict[str, list[tuple[str, int]]]:
+    """The same records as `stream`, read from each vCenter's own event history (`EventManager`) rather than from
+    Log Management: what vCenter wrote, whether or not it reached the store an alert counts. VC_HOST, VC_USER,
+    VC_PASSWORD and pyVmomi, as `catalog` takes them."""
+    try:
+        from pyVim.connect import Disconnect, SmartConnect
+        from pyVmomi import vim
+    except ImportError as exc:
+        raise SystemExit("episodes --source vcenter needs pyVmomi (pip install pyvmomi)") from exc
+    verify = os.environ.get("VC_TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
+    ctx = ssl.create_default_context() if verify else ssl._create_unverified_context()
+    begin, until = (datetime.fromtimestamp(ms / 1000, UTC) for ms in (start, end))
+    out: dict[str, list[tuple[str, int]]] = {t: [] for t in types}
+    for host in [h.strip() for h in os.environ["VC_HOST"].split(",") if h.strip()]:
+        si = SmartConnect(host=host, user=os.environ["VC_USER"], pwd=os.environ["VC_PASSWORD"], sslContext=ctx)
+        try:
+            spec = vim.event.EventFilterSpec(eventTypeId=list(types),
+                                             time=vim.event.EventFilterSpec.ByTime(beginTime=begin, endTime=until))
+            col = si.content.eventManager.CreateCollectorForEvents(spec)
+            try:
+                col.RewindCollector()
+                while page := col.ReadNextEvents(1000):
+                    for e in page:
+                        kind = getattr(e, "eventTypeId", None)
+                        if kind in out and e.host:
+                            out[kind].append((e.host.name.lower(), int(e.createdTime.timestamp() * 1000)))
+            finally:
+                col.DestroyCollector()
+        finally:
+            Disconnect(si)
+    return {k: sorted(v, key=lambda x: x[1]) for k, v in out.items()}
+
+
+def episodes(s, start_type: str, loss_type: str, days: float, gap_min: int, within_min: int,
+             source: str = "logs") -> dict:
+    """The start records grouped into episodes, and for each whether its hosts went on to lose messages.
+
+    An episode is a run of start records, on any hosts, each within the gap of the one before. A host lost messages
+    in an episode when a loss record of the same host came within the window after that host's start record. A loss
+    record more than the window after every earlier start record of its host is a repeat: the failure was still on.
+    Boots are vCenter's `esx.audit.host.boot` events, matched by host name, as `try` reads them.
+    """
+    start, end = window(days)
+    if source == "vcenter":
+        got = vc_stream((start_type, loss_type, BOOT), start, end)
+        starts, losses, booted, t1, t2 = got[start_type], got[loss_type], got[BOOT], 0, 0
+    else:
+        starts, t1 = stream(s, start_type, start, end)
+        losses, t2 = stream(s, loss_type, start, end)
+        booted = stream(s, BOOT, start, end)[0]
+    boots: dict[str, list[int]] = collections.defaultdict(list)
+    for host, ts in booted:
+        boots[host].append(ts)
+    by_host: dict[str, list[int]] = collections.defaultdict(list)
+    for host, ts in losses:
+        by_host[host].append(ts)
+    eps: list[dict] = []
+    for host, ts in starts:
+        if not eps or ts - eps[-1]["last"] > gap_min * 60_000:
+            eps.append({"first": ts, "last": ts, "records": 0, "hosts": set(), "after_boot": 0, "lost": {}})
+        e = eps[-1]
+        e["last"], e["records"] = ts, e["records"] + 1
+        e["hosts"].add(host)
+        e["after_boot"] += any(0 <= ts - b <= AFTER_BOOT_MIN * 60_000 for b in boots.get(host, []))
+        lag = [lt - ts for lt in by_host.get(host, []) if 0 <= lt - ts <= within_min * 60_000]
+        if lag and host not in e["lost"]:
+            e["lost"][host] = min(lag)
+    iso = lambda ms: datetime.fromtimestamp(ms / 1000, UTC).strftime("%Y-%m-%dT%H:%MZ")  # noqa: E731
+    rows = [{"from": iso(e["first"]), "to": iso(e["last"]), "records": e["records"], "hosts": len(e["hosts"]),
+             "after_boot": e["after_boot"], "hosts_lost": len(e["lost"]),
+             "loss_after_minutes": sorted(round(v / 60_000) for v in e["lost"].values())} for e in eps]
+    host_starts: dict[str, list[int]] = collections.defaultdict(list)
+    for host, ts in starts:
+        host_starts[host].append(ts)
+    repeats = sum(1 for host, lt in losses
+                  if not any(0 <= lt - ts <= within_min * 60_000 for ts in host_starts.get(host, [])))
+    return {"source": source, "start_type": start_type, "loss_type": loss_type, "window_days": days, "gap_minutes": gap_min,
+            "within_minutes": within_min, "boot_minutes": AFTER_BOOT_MIN,
+            "start_records": len(starts), "loss_records": len(losses), "truncated_slices": t1 + t2,
+            "hosts": len({h for h, _ in starts} | {h for h, _ in losses}),
+            "episodes": rows,
+            "summary": {"episodes": len(rows), "with_loss": sum(1 for r in rows if r["hosts_lost"]),
+                        "without_loss": sum(1 for r in rows if not r["hosts_lost"]),
+                        "episodes_on_most_hosts_without_loss": sum(
+                            1 for r in rows if not r["hosts_lost"] and r["hosts"] * 2 > len({h for h, _ in starts})),
+                        "loss_repeats_with_no_start_before": repeats}}
+
+
 def object_kind(s, ops_id: str | None) -> str:
     """The VCF Operations object kind a record's `vmw_vr_ops_id` names: the kind an alert on these records takes."""
     if not ops_id:
@@ -401,10 +524,11 @@ def write(out_dir: Path | None, name: str, record: dict, scrub) -> None:
 
 
 def parse_args(argv: list[str]) -> dict:
-    if not argv or argv[0] not in ("catalog", "seen", "try", "fields", "monitor", "bindings"):
+    if not argv or argv[0] not in ("catalog", "seen", "try", "fields", "monitor", "bindings", "episodes"):
         raise SystemExit(__doc__)
     a = {"cmd": argv[0], "family": [], "grep": None, "days": 7.0, "out": None, "vc_event": None, "app": None,
-         "text": None, "within": [], "body": None, "label": None, "check": [], "name": None, "hours": 24.0}
+         "text": None, "within": [], "body": None, "label": None, "check": [], "name": None, "hours": 24.0,
+         "start": None, "loss": None, "gap": 10, "within_min": 120, "source": "logs"}
     rest = argv[1:]
     while rest:
         x = rest.pop(0)
@@ -412,6 +536,14 @@ def parse_args(argv: list[str]) -> dict:
             a["family"].append(rest.pop(0))
         elif x in ("--days", "--hours") and rest and re.fullmatch(r"\d+(\.\d+)?", rest[0]):
             a[x[2:]] = float(rest.pop(0))
+        elif x == "--gap" and rest and rest[0].isdigit():
+            a["gap"] = int(rest.pop(0))
+        elif x == "--within" and rest and a["cmd"] == "episodes" and rest[0].isdigit():
+            a["within_min"] = int(rest.pop(0))
+        elif x == "--source" and rest and rest[0] in ("logs", "vcenter"):
+            a["source"] = rest.pop(0)
+        elif x in ("--start", "--loss") and rest:
+            a[x[2:]] = rest.pop(0)
         elif x == "--within" and rest and "=" in rest[0]:
             a["within"].append(tuple(rest.pop(0).split("=", 1)))
         elif x == "--check" and rest:
@@ -424,6 +556,8 @@ def parse_args(argv: list[str]) -> dict:
             raise SystemExit(f"unknown argument {x!r}")
     if a["cmd"] == "try" and not (a["vc_event"] or a["text"] or a["body"]):
         raise SystemExit("try needs --vc-event ID, or --text TOKEN (with --app APP for a condition), or --body FILE")
+    if a["cmd"] == "episodes" and not (a["start"] and a["loss"]):
+        raise SystemExit("episodes needs --start ID and --loss ID, two vCenter event types")
     return a
 
 
@@ -450,7 +584,7 @@ def main(argv: list[str]) -> int:
         return 0
     from lmlib import Session
 
-    s = Session()
+    s = None if (a["cmd"] == "episodes" and a["source"] == "vcenter") else Session()
     if a["cmd"] == "bindings":
         record = {"read_at": taken, **bindings(s, a["hours"], a["days"])}
         print(f"records with an inventory object over {a['hours']:g} hours, by the object kind they bind to:")
@@ -460,6 +594,24 @@ def main(argv: list[str]) -> int:
         for e in record["vm_events"]:
             print(f"  {e['events']:>7}  {e['vc_event_type']:<58} {e['binds_to']}")
         write(a["out"], "bindings", record, scrub)
+        return 0
+    if a["cmd"] == "episodes":
+        record = {"read_at": taken, **episodes(s, a["start"], a["loss"], a["days"], a["gap"], a["within_min"], a["source"])}
+        sm = record["summary"]
+        print(f"from {'each vCenter' if a['source'] == 'vcenter' else 'Log Management'}: "
+              f"{record['start_type']} over {a['days']:g} days: {record['start_records']} records on {record['hosts']} hosts, "
+              f"{sm['episodes']} episodes (records within {a['gap']} minutes of the last); "
+              f"{record['loss_records']} {record['loss_type']} records")
+        for r in record["episodes"]:
+            lost = (f"lost messages on {r['hosts_lost']} host{'s' if r['hosts_lost'] != 1 else ''} after "
+                    f"{r['loss_after_minutes']} min") if r["hosts_lost"] else "nothing lost"
+            print(f"  {r['from']}  {r['records']:>4} records  {r['hosts']:>3} hosts  {r['after_boot']:>3} after a boot  {lost}")
+        print(f"  episodes with a loss: {sm['with_loss']}; without: {sm['without_loss']} "
+              f"({sm['episodes_on_most_hosts_without_loss']} of them on most hosts); loss records with no start record "
+              f"in the {a['within_min']} minutes before, the failure still on: {sm['loss_repeats_with_no_start_before']}")
+        if record["truncated_slices"]:
+            print(f"  WARNING: {record['truncated_slices']} day slices held more than 2,000 records; counts are floors")
+        write(a["out"], f"episodes-{a['label']}" if a["label"] else "episodes", record, scrub)
         return 0
     if a["cmd"] == "monitor":
         if not a["name"]:

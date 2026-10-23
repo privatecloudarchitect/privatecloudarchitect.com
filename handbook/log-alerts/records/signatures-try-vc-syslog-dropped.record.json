@@ -1,0 +1,66 @@
+{
+ "after_boot": {
+  "after_boot": 0,
+  "boots": 0,
+  "matched": 2,
+  "minutes": 10,
+  "records": 2
+ },
+ "body": {
+  "query": {
+   "bool": {
+    "filter": [
+     {
+      "range": {
+       "timestamp": {
+        "gte": 1792177703678,
+        "lte": 1792782503678
+       }
+      }
+     }
+    ],
+    "must": [
+     {
+      "term": {
+       "vc_event_type": "esx.problem.vmsyslogd.remote.logmessages.dropped"
+      }
+     }
+    ],
+    "must_not": [
+     {
+      "match_phrase": {
+       "text": "labelled test line"
+      }
+     }
+    ]
+   }
+  },
+  "size": 3
+ },
+ "by_application": [
+  {
+   "appname": "vcenter-server",
+   "events": 2
+  }
+ ],
+ "by_host": [
+  {
+   "appname": "vcenter-server",
+   "events": 2,
+   "host": "{{host-1}}"
+  }
+ ],
+ "events": 2,
+ "object_kinds": {
+  "HostSystem": 1
+ },
+ "read_at": "2026-10-23T19:08:23Z",
+ "samples": [
+  {
+   "appname": "vcenter-server",
+   "text": "2026-10-22 16:34:35.948 {{host-1}} vcenter-server: <the catalog text of esx.problem.vmsyslogd.remote.logmessages.dropped>",
+   "vc_event_type": "esx.problem.vmsyslogd.remote.logmessages.dropped"
+  }
+ ],
+ "window_days": 7.0
+}

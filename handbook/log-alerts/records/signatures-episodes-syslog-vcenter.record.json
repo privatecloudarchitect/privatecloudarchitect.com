@@ -1,0 +1,284 @@
+{
+ "boot_minutes": 10,
+ "episodes": [
+  {
+   "after_boot": 0,
+   "from": "2026-10-02T03:38Z",
+   "hosts": 11,
+   "hosts_lost": 9,
+   "loss_after_minutes": [
+    8,
+    8,
+    10,
+    16,
+    17,
+    17,
+    26,
+    26,
+    33
+   ],
+   "records": 11,
+   "to": "2026-10-02T03:39Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-04T20:24Z",
+   "hosts": 2,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 2,
+   "to": "2026-10-04T20:24Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-04T22:08Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-04T22:08Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-04T22:22Z",
+   "hosts": 8,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 8,
+   "to": "2026-10-04T22:22Z"
+  },
+  {
+   "after_boot": 8,
+   "from": "2026-10-05T11:19Z",
+   "hosts": 10,
+   "hosts_lost": 1,
+   "loss_after_minutes": [
+    0
+   ],
+   "records": 11,
+   "to": "2026-10-05T11:23Z"
+  },
+  {
+   "after_boot": 1,
+   "from": "2026-10-05T13:23Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-05T13:23Z"
+  },
+  {
+   "after_boot": 2,
+   "from": "2026-10-06T12:50Z",
+   "hosts": 3,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 10,
+   "to": "2026-10-06T12:58Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-06T13:50Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 7,
+   "to": "2026-10-06T13:52Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-06T14:37Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 7,
+   "to": "2026-10-06T14:40Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-06T14:55Z",
+   "hosts": 1,
+   "hosts_lost": 1,
+   "loss_after_minutes": [
+    2
+   ],
+   "records": 6,
+   "to": "2026-10-06T14:57Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-06T20:26Z",
+   "hosts": 2,
+   "hosts_lost": 1,
+   "loss_after_minutes": [
+    9
+   ],
+   "records": 2,
+   "to": "2026-10-06T20:26Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-06T22:21Z",
+   "hosts": 2,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 2,
+   "to": "2026-10-06T22:21Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-07T01:40Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 2,
+   "to": "2026-10-07T01:40Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-07T16:49Z",
+   "hosts": 6,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 12,
+   "to": "2026-10-07T17:07Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-07T18:44Z",
+   "hosts": 6,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 12,
+   "to": "2026-10-07T19:00Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-13T03:08Z",
+   "hosts": 4,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 6,
+   "to": "2026-10-13T03:08Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-16T20:29Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-16T20:29Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-16T21:50Z",
+   "hosts": 3,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 6,
+   "to": "2026-10-16T21:51Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-20T14:26Z",
+   "hosts": 3,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 3,
+   "to": "2026-10-20T14:27Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-21T21:40Z",
+   "hosts": 11,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 22,
+   "to": "2026-10-21T21:45Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-22T00:07Z",
+   "hosts": 1,
+   "hosts_lost": 1,
+   "loss_after_minutes": [
+    21
+   ],
+   "records": 1,
+   "to": "2026-10-22T00:07Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T00:42Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T00:42Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T00:56Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T00:56Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T02:39Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T02:39Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T02:53Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T02:53Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T06:34Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T06:34Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T16:49Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T16:49Z"
+  }
+ ],
+ "gap_minutes": 10,
+ "hosts": 11,
+ "loss_records": 39,
+ "loss_type": "esx.problem.vmsyslogd.remote.logmessages.dropped",
+ "read_at": "2026-10-23T19:05:55Z",
+ "source": "vcenter",
+ "start_records": 139,
+ "start_type": "esx.problem.vmsyslogd.remote.failure",
+ "summary": {
+  "episodes": 27,
+  "episodes_on_most_hosts_without_loss": 4,
+  "loss_repeats_with_no_start_before": 26,
+  "with_loss": 5,
+  "without_loss": 22
+ },
+ "truncated_slices": 0,
+ "window_days": 22.0,
+ "within_minutes": 120
+}

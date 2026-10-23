@@ -1,0 +1,106 @@
+{
+ "boot_minutes": 10,
+ "episodes": [
+  {
+   "after_boot": 0,
+   "from": "2026-10-20T14:26Z",
+   "hosts": 3,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 3,
+   "to": "2026-10-20T14:27Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-21T21:44Z",
+   "hosts": 2,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 2,
+   "to": "2026-10-21T21:44Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-22T00:07Z",
+   "hosts": 1,
+   "hosts_lost": 1,
+   "loss_after_minutes": [
+    21
+   ],
+   "records": 1,
+   "to": "2026-10-22T00:07Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T00:42Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T00:42Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T00:56Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T00:56Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T02:39Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T02:39Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T02:53Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T02:53Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T06:34Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T06:34Z"
+  },
+  {
+   "after_boot": 0,
+   "from": "2026-10-23T16:49Z",
+   "hosts": 1,
+   "hosts_lost": 0,
+   "loss_after_minutes": [],
+   "records": 1,
+   "to": "2026-10-23T16:49Z"
+  }
+ ],
+ "gap_minutes": 10,
+ "hosts": 5,
+ "loss_records": 2,
+ "loss_type": "esx.problem.vmsyslogd.remote.logmessages.dropped",
+ "read_at": "2026-10-23T19:06:04Z",
+ "source": "logs",
+ "start_records": 12,
+ "start_type": "esx.problem.vmsyslogd.remote.failure",
+ "summary": {
+  "episodes": 9,
+  "episodes_on_most_hosts_without_loss": 1,
+  "loss_repeats_with_no_start_before": 1,
+  "with_loss": 1,
+  "without_loss": 8
+ },
+ "truncated_slices": 0,
+ "window_days": 22.0,
+ "within_minutes": 120
+}
