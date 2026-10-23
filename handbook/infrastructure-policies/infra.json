@@ -1,0 +1,33 @@
+{
+ "capturedUtc": "2026-10-23T09:22:35Z",
+ "steps": [],
+ "read": {
+  "policies": [
+   {
+    "policy": "policy-1",
+    "mandatory": true,
+    "hasCriteria": false,
+    "creationStatus": "SUCCESS",
+    "syncedToVCenters": true,
+    "compatibleZones": "1 of 3",
+    "onQuotasOf": [],
+    "computePolicyFound": true,
+    "computePolicyKind": "vm_host_affinity",
+    "hostsCarryingTheHostTag": [
+     "cluster 1: 0 of 2",
+     "cluster 2: 2 of 2",
+     "cluster 3: 0 of 2"
+    ],
+    "vmsCarryingTheVmTag": 0,
+    "namespacesListingIt": 0,
+    "appliesToNothing": true
+   }
+  ],
+  "zones": 3,
+  "quotas": 4,
+  "vcenterNamespacePolicies": 1,
+  "enforcementModes": [
+   "MANDATORY"
+  ]
+ }
+}
