@@ -1,0 +1,698 @@
+{
+ "capturedUtc": "2026-10-23T19:12:54Z",
+ "sizes": {
+  "nsx": "medium-singleton",
+  "edge": "medium",
+  "vcfa": "medium",
+  "fleet": "simple"
+ },
+ "warnPercent": 70.0,
+ "exports": {
+  "HCX": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:09:03 GMT-0500 (Central Daylight Time)",
+   "rows": 37
+  },
+  "NSX": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:05:20 GMT-0500 (Central Daylight Time)",
+   "rows": 537
+  },
+  "Ops-for-Net": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:09:59 GMT-0500 (Central Daylight Time)",
+   "rows": 89
+  },
+  "SDDC": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:08:24 GMT-0500 (Central Daylight Time)",
+   "rows": 39
+  },
+  "SRM": {
+   "release": "9.1.1",
+   "downloaded": "Fri Oct 23 2026 12:11:28 GMT-0500 (Central Daylight Time)",
+   "rows": 17
+  },
+  "VCF-Ops": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:08:43 GMT-0500 (Central Daylight Time)",
+   "rows": 220
+  },
+  "vCenter": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:04:51 GMT-0500 (Central Daylight Time)",
+   "rows": 131
+  },
+  "vIDB": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:10:29 GMT-0500 (Central Daylight Time)",
+   "rows": 21
+  },
+  "ESX": {
+   "release": "9.1.0",
+   "downloaded": "Fri Oct 23 2026 12:01:31 GMT-0500 (Central Daylight Time)",
+   "rows": 103
+  },
+  "VCFA": {
+   "release": "9.1.1",
+   "downloaded": "Fri Oct 23 2026 12:10:46 GMT-0500 (Central Daylight Time)",
+   "rows": 60
+  },
+  "vSAN": {
+   "release": "9.1.1",
+   "downloaded": "Fri Oct 23 2026 12:05:47 GMT-0500 (Central Daylight Time)",
+   "rows": 67
+  }
+ },
+ "estate": {
+  "sddc": [
+   {
+    "instance": "instance-1",
+    "hosts": 2,
+    "domains": 1,
+    "viDomains": 0,
+    "mostHostsInADomain": 2
+   },
+   {
+    "instance": "instance-2",
+    "hosts": 9,
+    "domains": 2,
+    "viDomains": 1,
+    "mostHostsInADomain": 6
+   }
+  ],
+  "vcenters": [
+   {
+    "vcenter": "vcenter-1",
+    "hosts": 2,
+    "vms": 10,
+    "vmsOn": 9,
+    "supervisors": 0,
+    "namespaces": 0,
+    "mostZonesOnASupervisor": 0
+   },
+   {
+    "vcenter": "vcenter-2",
+    "hosts": 3,
+    "vms": 51,
+    "vmsOn": 45,
+    "supervisors": 0,
+    "namespaces": 0,
+    "mostZonesOnASupervisor": 0
+   },
+   {
+    "vcenter": "vcenter-3",
+    "hosts": 6,
+    "vms": 33,
+    "vmsOn": 32,
+    "supervisors": 1,
+    "namespaces": 14,
+    "mostZonesOnASupervisor": 3
+   }
+  ],
+  "nsx": [
+   {
+    "nsx": "nsx-1",
+    "projects": 1,
+    "vpcs": 0,
+    "subnets": 0,
+    "mostSubnetsInAVpc": 0,
+    "transitGateways": 1
+   },
+   {
+    "nsx": "nsx-2",
+    "projects": 1,
+    "vpcs": 3,
+    "subnets": 9,
+    "mostSubnetsInAVpc": 3,
+    "transitGateways": 1
+   },
+   {
+    "nsx": "nsx-3",
+    "projects": 6,
+    "vpcs": 7,
+    "subnets": 24,
+    "mostSubnetsInAVpc": 11,
+    "transitGateways": 6
+   }
+  ],
+  "vcfa": {
+   "orgs": 7,
+   "namespaces": 5,
+   "vpcs": 5,
+   "regionQuotas": 4,
+   "mostRegionsInAnOrg": 1
+  }
+ },
+ "caps": [
+  {
+   "id": "fleet-hosts",
+   "layer": "fleet",
+   "product": "SDDC",
+   "name": "Number of Hosts in a VCF Fleet",
+   "for": null,
+   "limit": "50,000",
+   "value": 50000,
+   "release": "9.1.0",
+   "count": "fleet_hosts",
+   "missing": null,
+   "read": {
+    "count": 11,
+    "where": "2 instance(s) read",
+    "of": 2
+   },
+   "usedPercent": 0.02
+  },
+  {
+   "id": "fleet-model-hosts",
+   "layer": "fleet",
+   "product": "SDDC",
+   "name": "Number of Hosts",
+   "for": null,
+   "limit": "100",
+   "value": 100,
+   "release": "9.1.0",
+   "count": "fleet_hosts",
+   "missing": null,
+   "read": {
+    "count": 11,
+    "where": "2 instance(s) read",
+    "of": 2
+   },
+   "usedPercent": 11.0
+  },
+  {
+   "id": "fleet-model-vms",
+   "layer": "fleet",
+   "product": "SDDC",
+   "name": "Number of VMs",
+   "for": null,
+   "limit": "1,000",
+   "value": 1000,
+   "release": "9.1.0",
+   "count": "fleet_vms",
+   "missing": null,
+   "read": {
+    "count": 94,
+    "where": "3 vCenter(s) read",
+    "of": 3
+   },
+   "usedPercent": 9.4
+  },
+  {
+   "id": "instance-hosts",
+   "layer": "instance",
+   "product": "SDDC",
+   "name": "ESXi Hosts",
+   "for": null,
+   "limit": "5000",
+   "value": 5000,
+   "release": "9.1.0",
+   "count": "instance_hosts",
+   "missing": null,
+   "read": {
+    "count": 9,
+    "where": "instance-2",
+    "of": 2
+   },
+   "usedPercent": 0.18
+  },
+  {
+   "id": "instance-vcenters",
+   "layer": "instance",
+   "product": "SDDC",
+   "name": "vCenter Servers",
+   "for": null,
+   "limit": "40",
+   "value": 40,
+   "release": "9.1.0",
+   "count": "instance_vcenters",
+   "missing": null,
+   "read": {
+    "count": 2,
+    "where": "instance-2",
+    "of": 2
+   },
+   "usedPercent": 5.0
+  },
+  {
+   "id": "instance-vi-domains",
+   "layer": "instance",
+   "product": "SDDC",
+   "name": "VI Workload Domains",
+   "for": null,
+   "limit": "39",
+   "value": 39,
+   "release": "9.1.0",
+   "count": "instance_vi_domains",
+   "missing": null,
+   "read": {
+    "count": 1,
+    "where": "instance-2",
+    "of": 2
+   },
+   "usedPercent": 2.56
+  },
+  {
+   "id": "domain-hosts",
+   "layer": "workload domain",
+   "product": "SDDC",
+   "name": "ESXi Hosts",
+   "for": null,
+   "limit": "2500",
+   "value": 2500,
+   "release": "9.1.0",
+   "count": "domain_hosts",
+   "missing": null,
+   "read": {
+    "count": 6,
+    "where": "instance-2",
+    "of": 2
+   },
+   "usedPercent": 0.24
+  },
+  {
+   "id": "vcenter-hosts",
+   "layer": "vCenter",
+   "product": "vCenter",
+   "name": "Hosts per vCenter Server",
+   "for": null,
+   "limit": "2500",
+   "value": 2500,
+   "release": "9.1.0",
+   "count": "vcenter_hosts",
+   "missing": null,
+   "read": {
+    "count": 6,
+    "where": "vcenter-3",
+    "of": 3
+   },
+   "usedPercent": 0.24
+  },
+  {
+   "id": "vcenter-hosts-vlcm",
+   "layer": "vCenter",
+   "product": "vCenter",
+   "name": "Hosts per vCenter Server managed by vSphere Lifecycle Manager",
+   "for": null,
+   "limit": "1000",
+   "value": 1000,
+   "release": "9.1.0",
+   "count": "vcenter_hosts",
+   "missing": null,
+   "read": {
+    "count": 6,
+    "where": "vcenter-3",
+    "of": 3
+   },
+   "usedPercent": 0.6
+  },
+  {
+   "id": "vcenter-vms-on",
+   "layer": "vCenter",
+   "product": "vCenter",
+   "name": "Powered-on virtual machines per vCenter Server",
+   "for": null,
+   "limit": "40000",
+   "value": 40000,
+   "release": "9.1.0",
+   "count": "vcenter_vms_on",
+   "missing": null,
+   "read": {
+    "count": 45,
+    "where": "vcenter-2",
+    "of": 3
+   },
+   "usedPercent": 0.11
+  },
+  {
+   "id": "vcenter-vms",
+   "layer": "vCenter",
+   "product": "vCenter",
+   "name": "Registered virtual machines per vCenter Server",
+   "for": null,
+   "limit": "45000",
+   "value": 45000,
+   "release": "9.1.0",
+   "count": "vcenter_vms",
+   "missing": null,
+   "read": {
+    "count": 51,
+    "where": "vcenter-2",
+    "of": 3
+   },
+   "usedPercent": 0.11
+  },
+  {
+   "id": "vcenter-supervisor-clusters",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of ESXi clusters enabled with vSphere with Kubernetes per vCenter",
+   "for": null,
+   "limit": "50",
+   "value": 50,
+   "release": "9.1.0",
+   "count": "vcenter_supervisors",
+   "missing": null,
+   "read": {
+    "count": 1,
+    "where": "vcenter-3",
+    "of": 3
+   },
+   "usedPercent": 2.0
+  },
+  {
+   "id": "vcenter-namespaces",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of Namespace per vCenter",
+   "for": null,
+   "limit": "500",
+   "value": 500,
+   "release": "9.1.0",
+   "count": "vcenter_namespaces",
+   "missing": null,
+   "read": {
+    "count": 14,
+    "where": "vcenter-3",
+    "of": 3
+   },
+   "usedPercent": 2.8
+  },
+  {
+   "id": "supervisor-zones",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of vSphere Zones per Supervisor",
+   "for": null,
+   "limit": "30",
+   "value": 30,
+   "release": "9.1.0",
+   "count": "supervisor_zones",
+   "missing": null,
+   "read": {
+    "count": 3,
+    "where": "vcenter-3",
+    "of": 3
+   },
+   "usedPercent": 10.0
+  },
+  {
+   "id": "namespace-zones",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of vSphere Zones per Supervisor namespace",
+   "for": null,
+   "limit": "3",
+   "value": 3,
+   "release": "9.1.0",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  },
+  {
+   "id": "supervisor-hosts",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of hosts per WCP enabled cluster",
+   "for": null,
+   "limit": "64",
+   "value": 64,
+   "release": "9.1.0",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  },
+  {
+   "id": "kubernetes-workers",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of worker nodes in a single vSphere Kubernetes cluster",
+   "for": null,
+   "limit": "150",
+   "value": 150,
+   "release": "9.1.0",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  },
+  {
+   "id": "vks-per-namespace",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of vSphere Kubernetes clusters per Supervisor namespace",
+   "for": null,
+   "limit": "93",
+   "value": 93,
+   "release": "9.1.0",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  },
+  {
+   "id": "vks-per-supervisor",
+   "layer": "Supervisor",
+   "product": "vCenter",
+   "name": "Maximum number of vSphere Kubernetes clusters that can be created per Supervisor",
+   "for": null,
+   "limit": "190",
+   "value": 190,
+   "release": "9.1.0",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  },
+  {
+   "id": "nsx-projects",
+   "layer": "NSX",
+   "product": "NSX",
+   "name": "Projects",
+   "for": "Medium NSX Manager - Singleton",
+   "limit": "500",
+   "value": 500,
+   "release": "9.1.0",
+   "count": "nsx_projects",
+   "missing": null,
+   "read": {
+    "count": 6,
+    "where": "nsx-3",
+    "of": 3
+   },
+   "usedPercent": 1.2
+  },
+  {
+   "id": "nsx-vpcs",
+   "layer": "NSX",
+   "product": "NSX",
+   "name": "System Wide VPCs",
+   "for": "Medium NSX Manager - Singleton",
+   "limit": "120",
+   "value": 120,
+   "release": "9.1.0",
+   "count": "nsx_vpcs",
+   "missing": null,
+   "read": {
+    "count": 7,
+    "where": "nsx-3",
+    "of": 3
+   },
+   "usedPercent": 5.83
+  },
+  {
+   "id": "nsx-subnets",
+   "layer": "NSX",
+   "product": "NSX",
+   "name": "Subnets",
+   "for": "Medium NSX Manager - Singleton",
+   "limit": "1,024",
+   "value": 1024,
+   "release": "9.1.0",
+   "count": "nsx_subnets",
+   "missing": null,
+   "read": {
+    "count": 24,
+    "where": "nsx-3",
+    "of": 3
+   },
+   "usedPercent": 2.34
+  },
+  {
+   "id": "nsx-subnets-per-vpc",
+   "layer": "NSX",
+   "product": "NSX",
+   "name": "Subnets per VPC",
+   "for": "Medium NSX Manager - Singleton",
+   "limit": null,
+   "value": null,
+   "release": "9.1.0",
+   "count": "nsx_subnets_per_vpc",
+   "missing": "not listed for this size",
+   "read": {
+    "count": 11,
+    "where": "nsx-3",
+    "of": 3
+   },
+   "usedPercent": null
+  },
+  {
+   "id": "nsx-transit-gateways",
+   "layer": "NSX",
+   "product": "NSX",
+   "name": "Transit Gateways",
+   "for": "Medium NSX Manager - Singleton",
+   "limit": null,
+   "value": null,
+   "release": "9.1.0",
+   "count": "nsx_tgws",
+   "missing": "not listed for this size",
+   "read": {
+    "count": 6,
+    "where": "nsx-3",
+    "of": 3
+   },
+   "usedPercent": null
+  },
+  {
+   "id": "edge-vpcs-per-tgw",
+   "layer": "NSX",
+   "product": "NSX",
+   "name": "VPC per Transit Gateway",
+   "for": "Medium Edge Node",
+   "limit": "120",
+   "value": 120,
+   "release": "9.1.0",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  },
+  {
+   "id": "vcfa-orgs",
+   "layer": "VCF Automation",
+   "product": "VCFA",
+   "name": "Organizations",
+   "for": "Medium Profile",
+   "limit": "4000",
+   "value": 4000,
+   "release": "9.1.1",
+   "count": "vcfa_orgs",
+   "missing": null,
+   "read": {
+    "count": 7,
+    "where": "the provider",
+    "of": 1
+   },
+   "usedPercent": 0.17
+  },
+  {
+   "id": "vcfa-projects",
+   "layer": "VCF Automation",
+   "product": "VCFA",
+   "name": "Projects across Organizations",
+   "for": "Medium Profile",
+   "limit": "10000 projects",
+   "value": 10000,
+   "release": "9.1.1",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  },
+  {
+   "id": "vcfa-namespaces",
+   "layer": "VCF Automation",
+   "product": "VCFA",
+   "name": "Namespaces Across Organizations",
+   "for": "Medium Profile",
+   "limit": "10000 namespaces",
+   "value": 10000,
+   "release": "9.1.1",
+   "count": "vcfa_namespaces",
+   "missing": null,
+   "read": {
+    "count": 5,
+    "where": "the provider",
+    "of": 1
+   },
+   "usedPercent": 0.05
+  },
+  {
+   "id": "vcfa-vpcs",
+   "layer": "VCF Automation",
+   "product": "VCFA",
+   "name": "Virtual Private Clouds",
+   "for": "Medium Profile",
+   "limit": "10000",
+   "value": 10000,
+   "release": "9.1.1",
+   "count": "vcfa_vpcs",
+   "missing": null,
+   "read": {
+    "count": 5,
+    "where": "the provider",
+    "of": 1
+   },
+   "usedPercent": 0.05
+  },
+  {
+   "id": "vcfa-region-quotas",
+   "layer": "VCF Automation",
+   "product": "VCFA",
+   "name": "Region quota",
+   "for": "Medium Profile",
+   "limit": "4000",
+   "value": 4000,
+   "release": "9.1.1",
+   "count": "vcfa_quotas",
+   "missing": null,
+   "read": {
+    "count": 4,
+    "where": "the provider",
+    "of": 1
+   },
+   "usedPercent": 0.1
+  },
+  {
+   "id": "vcfa-regions-per-org",
+   "layer": "VCF Automation",
+   "product": "VCFA",
+   "name": "Regions per Organization",
+   "for": "Medium Profile",
+   "limit": "10 regions per Organization",
+   "value": 10,
+   "release": "9.1.1",
+   "count": "vcfa_regions_per_org",
+   "missing": null,
+   "read": {
+    "count": 1,
+    "where": "the provider",
+    "of": 1
+   },
+   "usedPercent": 10.0
+  },
+  {
+   "id": "vcfa-users-per-org",
+   "layer": "VCF Automation",
+   "product": "VCFA",
+   "name": "Users (max Users per Organization)",
+   "for": "Medium Profile",
+   "limit": "8000",
+   "value": 8000,
+   "release": "9.1.1",
+   "count": null,
+   "missing": null,
+   "read": null,
+   "usedPercent": null
+  }
+ ],
+ "over": [],
+ "missing": [
+  "nsx-subnets-per-vpc",
+  "nsx-transit-gateways"
+ ]
+}
