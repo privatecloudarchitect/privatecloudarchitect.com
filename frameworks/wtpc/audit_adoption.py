@@ -33,6 +33,10 @@ than a finding.
 
 Read-only throughout. It reads the vCenter tagging plane and the Operations group plane and writes nothing.
 
+Exit status: 0 when every posture's chain is complete; 1 when the chain stops for any posture (the first incomplete
+link is printed per posture); 2 when the read did not complete. What it prints is built from the record it writes
+(`report`), so a run can be re-read from its adoption.json.
+
 Run:
   export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN_FILE=...   # as the rest of the estate
   export VCENTER_HOST=...
@@ -48,6 +52,7 @@ import collections
 import json
 import os
 import re
+import sys
 import time
 import urllib.request
 
@@ -176,11 +181,61 @@ def framework_groups(ops, prefix):
     return rows
 
 
+def report(record: dict) -> list[str]:
+    """What a run prints, built from its record."""
+    tax, cats, assign = record["taxonomy"], record["categories"], record["assignments"]
+    lines = ["audit_adoption.py: how far did adoption get, and which link stops it?", ""]
+    lines.append(f"  0. TAXONOMY: the posture rules match on {', '.join(tax['ruleCategories']) or 'no category'}; the "
+                 f"taxonomy file declares {', '.join(tax['declaredCategories'])}")
+    if tax["undeclaredInRules"]:
+        lines.append(f"     the rules name {', '.join(tax['undeclaredInRules'])}, which the file does not declare. Point "
+                     f"WTPC_TAXONOMY at the file your estate converged with; links 1 and 2 below are read against the "
+                     f"rules' categories")
+    wanted = tax["ruleCategories"] or tax["declaredCategories"]
+    if not record["categoriesRead"]:
+        lines.append(f"  1. CATEGORIES: not read ({record.get('categoriesError') or 'unreachable'}); set VCENTER_HOST plus "
+                     f"either VCENTER_SESSION_ID or VCENTER_USERNAME and VCENTER_PASSWORD to include this link")
+    else:
+        present = sum(1 for v in cats.values() if v["present"])
+        lines += ["", f"  1. CATEGORIES: {present} of {len(cats)} categories the rules match on exist on the vCenter"]
+        for name, v in cats.items():
+            state = "present" if v["present"] else "MISSING"
+            extra = "" if not v["present"] else ("" if v["cardinalityMatches"] else ", cardinality differs")
+            lines.append(f"     {name:<20} {state}{extra}")
+    lines += ["", f"  2. ASSIGNMENTS: {assign['withATaxonomyTag']} of {assign['machines']} machine(s) carry a tag from "
+                  f"those categories ({assign['withAnyTag']} carry any tag at all)"]
+    for name in wanted:
+        lines.append(f"     {name:<20} carried by {assign['byCategory'].get(name, 0)} machine(s)")
+    rules = {r["group"].rsplit(" (", 1)[0]: r["conditions"] for r in record["groups"] if r["group"].endswith("(VMs)")}
+    for posture, n in sorted(assign["carryingTheCombination"].items()):
+        rule = " AND ".join(f"{c['category']}={c['value']}" for c in rules.get(posture, []))
+        lines.append(f"     {posture:<28} {n} machine(s) carry every condition of its rule ({rule})")
+    lines.append("     this is the link the converge does NOT own: apply.py states that workload tagging is "
+                 "deliberately not a phase, because it rides your estate's change process")
+    empty = [r for r in record["groups"] if r["mechanism"] == "tag rule" and not r["members"]]
+    lines += ["", f"  3. GROUPS: {len(record['groups'])} present; {record['tagRuleGroups']} resolve by tag rule and "
+                  f"{record['tagRuleGroupsEmpty']} of those have no members"]
+    lines += [f"     empty: {r['group']}" for r in empty]
+    derive = record["derive"]
+    lines += ["", f"  4. DERIVE: {derive['posturesRefusing']} of {derive['posturesTotal']} posture(s) would refuse to reconcile"]
+    for posture, v in sorted(derive["postures"].items()):
+        verdict = "WOULD REFUSE" if v["wouldRefuse"] else "has members to derive from"
+        lines.append(f"     {posture:<28} VMs group {v['vmsGroupMembers']} member(s): {verdict}")
+    lines.append("     the guard is `not vm_ids` in reconcile_infra_groups.py, read per posture, so an empty "
+                 "VMs group cannot blank the derived host and cluster groups")
+    lines += ["", "  THE CHAIN, PER POSTURE:"]
+    for posture, v in record["postures"].items():
+        lines.append(f"     {posture:<28} {v['stopsAt'] or 'complete: it has members to govern'}")
+    lines += ["", f"  THE CHAIN STOPS AT: {record['stopsAt'] or 'nowhere; every posture has members'}"]
+    if record["stopsAt"]:
+        lines.append("     everything downstream of that link is a consequence rather than a finding")
+    return lines
+
+
 def main():
     prefix = os.environ.get("WTPC_PREFIX", "PCA - WTPC")
     out_dir = os.environ.get("OUT_DIR", ".")
     ops = OpsSession()
-    print("audit_adoption.py: how far did adoption get, and which link stops it?\n")
 
     # ---- link 0: the taxonomy the rules use, against the taxonomy this run was given
     rows = framework_groups(ops, prefix)
@@ -190,22 +245,15 @@ def main():
     undeclared = [c for c in ruled if c not in declared]
     taxonomy = {"ruleCategories": ruled, "declaredCategories": sorted(declared), "undeclaredInRules": undeclared,
                 "matches": not undeclared}
-    print(f"  0. TAXONOMY: the posture rules match on {', '.join(ruled) or 'no category'}; the taxonomy file "
-          f"declares {', '.join(sorted(declared))}")
-    if undeclared:
-        print(f"     the rules name {', '.join(undeclared)}, which the file does not declare. Point WTPC_TAXONOMY at "
-              f"the file your estate converged with; links 1 and 2 below are read against the rules' categories")
     wanted = ruled or sorted(declared)
 
     # ---- link 1: the categories the rules match on
     live = {}
-    vc_reachable = True
+    vc_reachable, vc_error = True, None
     try:
         live = vcenter_categories()
     except Exception as exc:
-        vc_reachable = False
-        print(f"  1. CATEGORIES: not read ({type(exc).__name__}); set VCENTER_HOST plus either "
-              f"VCENTER_SESSION_ID or VCENTER_USERNAME and VCENTER_PASSWORD to include this link")
+        vc_reachable, vc_error = False, type(exc).__name__
     cats = {}
     if vc_reachable:
         for name in wanted:
@@ -213,33 +261,14 @@ def main():
             cats[name] = {"present": bool(got),
                           "cardinalityMatches": bool(got) and (not spec or got.get("cardinality") == spec.get("cardinality")),
                           "declaredValues": len(spec.get("values") or [])}
-        present = sum(1 for v in cats.values() if v["present"])
-        print(f"\n  1. CATEGORIES: {present} of {len(cats)} categories the rules match on exist on the vCenter")
-        for name, v in cats.items():
-            state = "present" if v["present"] else "MISSING"
-            extra = "" if not v["present"] else ("" if v["cardinalityMatches"] else ", cardinality differs")
-            print(f"     {name:<20} {state}{extra}")
 
     # ---- link 2: the assignments, and each posture's whole combination
     combos = {p: r["conditions"] for p, r in posture_vms.items()}
     assign = taxonomy_assignments(ops, set(wanted), combos)
-    print(f"\n  2. ASSIGNMENTS: {assign['withATaxonomyTag']} of {assign['machines']} machine(s) carry a tag from "
-          f"those categories ({assign['withAnyTag']} carry any tag at all)")
-    for name in wanted:
-        print(f"     {name:<20} carried by {assign['byCategory'].get(name, 0)} machine(s)")
-    for posture, n in sorted(assign["carryingTheCombination"].items()):
-        rule = " AND ".join(f"{c['category']}={c['value']}" for c in combos[posture])
-        print(f"     {posture:<28} {n} machine(s) carry every condition of its rule ({rule})")
-    print(f"     this is the link the converge does NOT own: apply.py states that workload tagging is "
-          f"deliberately not a phase, because it rides your estate's change process")
 
     # ---- link 3: the groups
     tagrule = [r for r in rows if r["mechanism"] == "tag rule"]
     empty = [r for r in tagrule if not r["members"]]
-    print(f"\n  3. GROUPS: {len(rows)} present; {len(tagrule)} resolve by tag rule and {len(empty)} of those "
-          f"have no members")
-    for r in empty:
-        print(f"     empty: {r['group']}")
 
     # ---- link 4: the derive, and 5: what it all governs
     # The guard's condition is the guard's, not a plausible restatement of it. reconcile_infra_groups.py
@@ -251,12 +280,6 @@ def main():
         n = row["members"]
         derive[posture] = {"vmsGroupMembers": n, "wouldRefuse": not n}
     refusing = sorted(k for k, v in derive.items() if v["wouldRefuse"])
-    print(f"\n  4. DERIVE: {len(refusing)} of {len(derive)} posture(s) would refuse to reconcile")
-    for posture, v in sorted(derive.items()):
-        verdict = "WOULD REFUSE" if v["wouldRefuse"] else "has members to derive from"
-        print(f"     {posture:<28} VMs group {v['vmsGroupMembers']} member(s): {verdict}")
-    print(f"     the guard is `not vm_ids` in reconcile_infra_groups.py, read per posture, so an empty "
-          f"VMs group cannot blank the derived host and cluster groups")
 
     # ---- the verdict: the first incomplete link, per posture
     postures = {}
@@ -275,15 +298,9 @@ def main():
         postures[posture] = {"vmsGroupMembers": row["members"], "carryingTheCombination": carrying, "stopsAt": stop}
     first = sorted((v["stopsAt"] for v in postures.values() if v["stopsAt"]), key=lambda x: x[0])
     stops_at = first[0] if first else None
-    print("\n  THE CHAIN, PER POSTURE:")
-    for posture, v in postures.items():
-        print(f"     {posture:<28} {v['stopsAt'] or 'complete: it has members to govern'}")
-    print(f"\n  THE CHAIN STOPS AT: {stops_at or 'nowhere; every posture has members'}")
-    if stops_at:
-        print("     everything downstream of that link is a consequence rather than a finding")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "prefix": prefix,
-               "taxonomy": taxonomy, "categories": cats, "categoriesRead": vc_reachable,
+               "taxonomy": taxonomy, "categories": cats, "categoriesRead": vc_reachable, "categoriesError": vc_error,
                "assignments": assign, "groups": rows,
                "tagRuleGroups": len(tagrule), "tagRuleGroupsEmpty": len(empty),
                "derive": {"guard": DERIVE_GUARD, "postures": derive,
@@ -297,8 +314,25 @@ def main():
     # and no tag from outside those categories is recorded: an estate's other tags are its own business.
     os.makedirs(out_dir, exist_ok=True)
     open(os.path.join(out_dir, "adoption.json"), "w", encoding="utf-8").write(text + "\n")
-    print(f"\nwrote adoption.json; no machine is named and no tag outside the categories the rules name is recorded")
+    for line in report(payload):
+        print(line)
+    print("\nwrote adoption.json; no machine is named and no tag outside the categories the rules name is recorded")
+    return 1 if stops_at else 0
+
+
+def run() -> int:
+    """main() with the exit contract: 2 when the read did not complete."""
+    try:
+        return main()
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            print(e.code, file=sys.stderr)
+            return 2
+        raise
+    except Exception as e:  # noqa: BLE001 - any failed read is "did not complete", named on stderr
+        print(f"FATAL: {type(e).__name__}: {e}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(run())

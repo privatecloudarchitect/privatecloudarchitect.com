@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-08T03:32:04Z",
+ "captured_utc": "2026-10-22T22:08:56Z",
  "prefix": "PCA - WTPC",
  "taxonomy": {
   "ruleCategories": [
@@ -34,16 +34,14 @@
  },
  "categoriesRead": true,
  "assignments": {
-  "machines": 139,
-  "withAnyTag": 17,
-  "withATaxonomyTag": 10,
+  "machines": 169,
+  "withAnyTag": 14,
+  "withATaxonomyTag": 7,
   "byCategory": {
-   "identity.function": 9,
-   "lifecycle.env": 3,
-   "policy.sla": 1
+   "identity.function": 7
   },
   "carryingTheCombination": {
-   "test-dev-traditional": 1,
+   "test-dev-traditional": 0,
    "prod-latency-critical-db": 0
   }
  },
@@ -74,7 +72,7 @@
   {
    "group": "test-dev-traditional (VMs)",
    "mechanism": "tag rule",
-   "members": 1,
+   "members": 0,
    "conditions": [
     {
      "category": "lifecycle.env",
@@ -174,7 +172,7 @@
   {
    "group": "test-dev-traditional (Clusters)",
    "mechanism": "static list",
-   "members": 2,
+   "members": 1,
    "conditions": []
   },
   {
@@ -191,25 +189,25 @@
   {
    "group": "test-dev-traditional (Hosts)",
    "mechanism": "static list",
-   "members": 4,
+   "members": 1,
    "conditions": []
   }
  ],
  "tagRuleGroups": 8,
- "tagRuleGroupsEmpty": 5,
+ "tagRuleGroupsEmpty": 6,
  "derive": {
   "guard": "REFUSING to reconcile: the VMs group is empty (likely a transient re-resolution).",
   "postures": {
    "test-dev-traditional": {
-    "vmsGroupMembers": 1,
-    "wouldRefuse": false
+    "vmsGroupMembers": 0,
+    "wouldRefuse": true
    },
    "prod-latency-critical-db": {
     "vmsGroupMembers": 0,
     "wouldRefuse": true
    }
   },
-  "posturesRefusing": 1,
+  "posturesRefusing": 2,
   "posturesTotal": 2
  },
  "postures": {
@@ -219,9 +217,9 @@
    "stopsAt": "2 · the assignments: no machine carries every condition its rule names"
   },
   "test-dev-traditional": {
-   "vmsGroupMembers": 1,
-   "carryingTheCombination": 1,
-   "stopsAt": null
+   "vmsGroupMembers": 0,
+   "carryingTheCombination": 0,
+   "stopsAt": "2 · the assignments: no machine carries every condition its rule names"
   }
  },
  "stopsAt": "2 · the assignments: no machine carries every condition its rule names"

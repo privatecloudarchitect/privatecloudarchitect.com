@@ -4,13 +4,18 @@
 A converge is level-triggered, so its dry run is a report of the distance between these files and your estate,
 and that distance is supposed to move. This runs `apply.py` in its default dry-run mode (it never passes
 --execute), and writes `dryrun.json`: each step and each parity gate with its command, its exit code and the
-lines that summarize it. Object listings are dropped, ids are masked, and host names and file paths are replaced
-by placeholders, so the record carries counts and outcomes, not your estate's names; it refuses to write a record
+lines that summarize it. Object listings are dropped, ids are masked, host names and file paths are replaced
+by placeholders, and a dash is written as a colon (the handbook's typography, which renders these lines), so the record carries counts and outcomes, not your estate's names; it refuses to write a record
 in which a host name survived. Diff this week's record against last week's: the day the pending list grows an
 entry is the day something changed that nobody declared.
 
-Run:  python3 record_dryrun.py [posture ...]      (environment as for apply.py; read-only on the estate)
+Run:  python3 record_dryrun.py [posture ...] [--against LAST_WEEK.json]   (environment as for apply.py; read-only)
 Env:  OUT_DIR for the record (default: this folder)
+
+With --against, it also compares the new record with an earlier one: steps that appeared or went, exit codes that
+moved, and summary lines that changed. It exits 1 when the pending list (the steps with a non-zero exit) differs,
+because that is the change nobody declared, and 0 when it is the same; summary lines that moved are printed either
+way. Keep each week's dryrun.json under its date and pass last week's.
 """
 from __future__ import annotations
 
@@ -35,17 +40,54 @@ PATH = re.compile(r"/(?:private|Users|home|tmp|var|opt|mnt|Volumes|root)(?:/[\w.
 
 
 def scrub(line: str) -> str:
+    line = line.replace(" \u2014 ", ": ").replace("\u2014", ": ").replace("\u2013", "-")
     line = PATH.sub("<path>", line)                 # first: an id inside a path is part of the path
     line = UUID.sub("{{id}}", line)
     line = FQDN.sub("<host>", line)
     return SHORT_ID.sub("{{id}}", line).rstrip()
 
 
+def compare(old: dict, new: dict) -> tuple[bool, list[str]]:
+    """What moved between two dry-run records; True when the pending list (steps with a non-zero exit) differs."""
+    before = {s["label"]: s for s in old.get("steps", [])}
+    after = {s["label"]: s for s in new.get("steps", [])}
+    pending = lambda r: sorted(s["label"] for s in r.get("steps", []) if s["exit"])  # noqa: E731
+    lines = [f"compared with the record of {old.get('captured_utc', '?')}"]
+    for label in sorted(set(after) - set(before)):
+        lines.append(f"  new step: {label} (exit {after[label]['exit']})")
+    for label in sorted(set(before) - set(after)):
+        lines.append(f"  step gone: {label}")
+    for label in [x for x in after if x in before]:
+        a, b = before[label], after[label]
+        if a["exit"] != b["exit"]:
+            lines.append(f"  {label}: exit {a['exit']} -> {b['exit']}")
+        gone = [x for x in a["summary"] if x not in b["summary"]]
+        came = [x for x in b["summary"] if x not in a["summary"]]
+        if gone or came:
+            lines.append(f"  {label}: summary changed")
+            lines += [f"    - {x}" for x in gone] + [f"    + {x}" for x in came]
+    changed = pending(old) != pending(new)
+    lines.append("  the pending list " + (f"changed: {pending(old)} -> {pending(new)}" if changed else "is the same"))
+    return changed, lines
+
+
 def main() -> int:
-    postures = [a for a in sys.argv[1:] if not a.startswith("-")]
-    flags = [a for a in sys.argv[1:] if a.startswith("-")]
+    args = sys.argv[1:]
+    against = None
+    if "--against" in args:
+        i = args.index("--against")
+        if i + 1 >= len(args):
+            sys.exit("--against needs the earlier dryrun.json to compare with")
+        against = args[i + 1]
+        del args[i:i + 2]
+    postures = [a for a in args if not a.startswith("-")]
+    flags = [a for a in args if a.startswith("-")]
     if flags:
-        sys.exit(f"record_dryrun.py takes posture names only (it always runs the dry run); refused: {flags}")
+        sys.exit(f"record_dryrun.py takes posture names and --against only (it always runs the dry run); refused: {flags}")
+    previous = None
+    if against:
+        with open(against, encoding="utf-8") as f:
+            previous = json.load(f)
     env = dict(os.environ, PYTHONUNBUFFERED="1")      # keep apply.py's headers in order with its steps' output
     r = subprocess.run([sys.executable, "apply.py", *postures], cwd=HERE, env=env, stdout=subprocess.PIPE,
                        stderr=subprocess.STDOUT, text=True, timeout=3600)     # one stream, so a step's errors stay in it
@@ -84,7 +126,12 @@ def main() -> int:
     pending = [s["label"] for s in record["steps"] if s["exit"]]
     print(f"recorded {len(record['steps'])} steps and gates; {len(pending)} non-zero: {pending}; verdict: {record['verdict']}")
     print(f"wrote {out}")
-    return 0
+    if previous is None:
+        return 0
+    changed, lines = compare(previous, record)
+    for line in lines:
+        print(line)
+    return 1 if changed else 0
 
 
 if __name__ == "__main__":

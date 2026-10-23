@@ -173,18 +173,25 @@ display string that does not parse back. And the category read takes a **session
 basic auth, because `/api/cis/tagging/*` answered 401 to basic auth on the build this was written against.
 
 It writes `adoption.json`, names no machine, records no tag from outside the categories the rules name, and changes
-nothing.
+nothing. What it prints is built from that record, and it exits 0 when every posture's chain is complete, 1 while
+the chain stops for any posture, and 2 when the read did not complete, so it can run weekly on a schedule.
 
 ### What would the converge do now? `record_dryrun.py`
 
 A converge is level-triggered, so its dry run reports the distance between these files and your estate, and that
 distance moves. This runs `apply.py` in its default dry-run mode (it never passes `--execute`) and writes
 `dryrun.json`: each step and parity gate with its command, its exit code and the lines that summarize it, with
-object listings dropped and ids, host names and paths masked. Archive it and diff it against last week's.
+object listings dropped, ids, host names and paths masked, and dashes written as colons. Keep each week's record
+under its date and compare the new run with last week's:
 
 ```bash
-python3 record_dryrun.py                  # same environment as apply.py; read-only on the estate
+python3 record_dryrun.py                                   # same environment as apply.py; read-only on the estate
+python3 record_dryrun.py --against dryrun-<last week>.json # and print what moved since that record
 ```
+
+With `--against` it prints the steps that appeared or went, the exit codes that moved and the summary lines that
+changed, and exits 1 when the pending list (the steps with a non-zero exit) differs: the change nobody declared.
+`dryrun-2026-10-08.json` beside `dryrun.json` is an earlier run of the reference estate, for trying the comparison.
 
 ### Is any of it governing anything? `audit_deployment.py`
 
