@@ -58,6 +58,14 @@ K8SAUTHZ = "authorization.k8s.io/v1"
 PROJ = "project.cci.vmware.com/v1alpha2"
 
 
+def binding_name(kind, subject):
+    """The name a ProjectRoleBinding for this subject carries on VCF Automation 9.1: cci, the subject's kind in lower
+    case, and the subject with a group's trailing @ removed, joined by colons. The probe's refusals are the evidence:
+    keeping the @, lowercasing the subject, or adding a segment are each refused. A page or a pipeline that names a
+    binding uses this, so the rule lives in one place."""
+    return f"cci:{kind.lower()}:{subject[:-1] if subject.endswith('@') else subject}"
+
+
 def ctx():
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
@@ -298,9 +306,7 @@ def main():
             sub = (b.get("subjects") or [{}])[0]
             sname, skind = str(sub.get("name") or ""), str(sub.get("kind") or "")
             seg = name.split(":", 2)
-            third = seg[2] if len(seg) > 2 else ""
-            expect = sname[:-1] if sname.endswith("@") else sname
-            rule_holds.append(len(seg) == 3 and seg[0] == "cci" and seg[1] == skind.lower() and third == expect)
+            rule_holds.append(name == binding_name(skind, sname))
             for fam, v in (("group" if skind == "Group" else "user", sname),):
                 L.get(fam, v)
             bindings.append({"project": L.scrub(p), "role": (b.get("roleRef") or {}).get("name"),
