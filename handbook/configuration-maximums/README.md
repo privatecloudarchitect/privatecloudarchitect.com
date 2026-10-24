@@ -6,6 +6,10 @@ one read-only script that takes the CSV exports you download from Broadcom's Con
 that bound a private cloud's construct ladder for the sizes you deployed, reads the estate's own counts, and prints how
 much of each cap is used. Stdlib Python only; no token or password is printed or written.
 
+**The tool is the authority.** Broadcom's VMware Configuration Maximums tool at configmax.broadcom.com publishes the
+caps; this script only reads the exports you take from it, and the record here is a snapshot of the exports of
+2026-10-23. Export again before you rely on a figure, for the release and the sizes you run.
+
 | File | What it is |
 |---|---|
 | `maximums.py` | Reads the exports (one CSV per product), selects about thirty caps by the export's own row names and your sizes, and, for each plane whose settings you give it, reads SDDC Manager, vCenter, NSX and the VCF Automation provider plane with GETs only. Prints the caps with their release, the count read and the share used, and writes `maximums.json`. |
