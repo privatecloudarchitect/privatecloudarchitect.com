@@ -110,6 +110,7 @@ Framework estates carry five further clauses:
 | [`handbook/platform-lifecycle/`](handbook/platform-lifecycle/) | [Platform lifecycle](https://privatecloudarchitect.com/handbook/platform-lifecycle) | Answers the question before a change window: is the upgrade the registry offers actually available, with its bundles downloaded. Read-only |
 | [`handbook/certs-credentials/`](handbook/certs-credentials/) | [Certificates and credentials](https://privatecloudarchitect.com/handbook/certs-credentials) | Reports rotation coverage and the certificate horizon from metadata alone, built so that no secret can reach its output. Read-only |
 | [`handbook/platform-backup/`](handbook/platform-backup/) | [Backup and restore](https://privatecloudarchitect.com/handbook/platform-backup) | Answers what a backup configuration cannot: did it run? Each plane's schedule in its own encoding, and the days between runs that carry no copy. Read-only |
+| [`handbook/host-lifecycle/`](handbook/host-lifecycle/) | [Host lifecycle](https://privatecloudarchitect.com/handbook/host-lifecycle) | `hostlife.py`: both declarations of every cluster, its image and its Configuration Profiles document, with their stored compliance and the non-identifying fields of every drifted item; and `plan`, the order of the move off baselines, host profiles and Auto Deploy. Read-only |
 
 ### Part IV · Observability and response
 
