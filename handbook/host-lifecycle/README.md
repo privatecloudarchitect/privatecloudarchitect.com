@@ -22,12 +22,25 @@ export TLS_VERIFY=false                       # only on a self-signed lab CA
 
 python3 hostlife.py; echo "exit $?"
 python3 hostlife.py --json                    # the scrubbed record on stdout instead of the report
+FINGERPRINT_KEY_FILE=~/.secrets/fp python3 hostlife.py --host-builds   # also what each host runs (key: mode 0600)
 python3 hostlife.py --from-record records/hostlife.record.json   # the report again from a record; no call is made
 ```
 
 `VC_SESSION_FILE` (a session id, mode 0600) works in place of the user and password file for a single vCenter. Every
 credential file is refused, unread, if it is open to group or other. The record goes to `out/` (or `OUT_DIR`), so a
 first run never meets the shipped one.
+
+`--host-builds` (or `HOST_BUILDS=1`) adds what each host **runs**: its version and build, read live from the host's
+own summary through the vSphere API's JSON form (SOAP where a build has none), never from a stored compliance result,
+with its connection state and whether it is in maintenance mode. A host that is not connected reports the last build
+vCenter knew, and the report marks it as last known. Each host is named by a keyed fingerprint of its hardware UUID,
+made with a secret of your own in `FINGERPRINT_KEY_FILE` (mode 0600), so a dated series of records joins one host
+across runs while no record names it. A UUID that is missing or all zeros, or that two hosts report, never joins; the
+record counts them as `unidentified` and `collisions`, and a key two vCenters share never joins either. Without a key
+file the builds are read and nothing joins. The flag changes no exit code: a read that fails is recorded with
+`"read": false` and its reason, never as a pass. The build is the one the host reports in its summary; what a host
+reports there after a Live Patch, applied without a reboot, has not been read on an estate yet, so the read makes no
+claim for a host live-patched since its last reboot.
 
 **Exit codes.** 0 every cluster read is managed with an image and the stored compliance with each declaration it has
 is compliant; 1 a cluster is still on baselines, or a stored image or configuration compliance is not compliant (the
@@ -75,7 +88,8 @@ carries the time vCenter last checked. Two things it reports are easy to misread
 - The configuration document is reduced to its section names and counts in memory. A drifted item keeps only the
   fields whose names cannot identify anything; every other field is listed by name under `withheld`, never by value.
 - Every vCenter, cluster, host and depot server name in the record is a placeholder, and the script refuses to write a
-  record in which one survived.
+  record in which one survived. With `--host-builds`, a host appears only as its keyed fingerprint; its UUID never
+  reaches the record.
 
 ## Reading the record
 
@@ -87,4 +101,6 @@ and whether each is on, `base_images` and `newest_base_image`) and `clusters`. I
 `image_compliance` (`status`, `checked`), and `configuration`: `enabled`, then where it is on, `audit`,
 `enabled_on`, `last_change`, `document` (the section names and counts) and `compliance` (`status`, `checked`, and per
 host its `status` and its `drift`, each item's `change`, `path`, `fields` and `withheld`). `findings` lists what the
-report prints at its foot; `exit` is the exit code; `calls` lists every request by method, path template and status.
+report prints at its foot; with `--host-builds`, each vCenter also carries `host_builds` (`read`, `via`, `read_at`,
+`keyed`, `collisions`, `unidentified`, `unread`, and `hosts`, each with its `key`, `joinable`, `cluster`, `version`,
+`build`, `connection_state` and `in_maintenance`); `exit` is the exit code; `calls` lists every request by method, path template and status.

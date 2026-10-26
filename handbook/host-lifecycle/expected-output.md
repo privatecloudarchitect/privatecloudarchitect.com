@@ -67,6 +67,31 @@ Read each cluster's two lines first, the image and then the configuration. Every
 vCenter stored, with its time; the script starts no check. The drifted items keep their protocol and port and withhold
 the address, which is the field that would name a host.
 
+## What --host-builds adds
+
+The run of 2026-10-26T07:21:54Z against the same three vCenters, with `--host-builds` and a key file of the run's own:
+84 requests, 78 of them GETs and the rest the session sign-ins and sign-outs. The 17 more GETs than the run above are
+one service-versions read and one host list per vCenter, and one summary per host. Each vCenter gains two lines after
+its own; printed, as above, from the scrubbed record:
+
+```
+{{vcenter-1}}  vCenter 9.1.1.0 build 25712839
+  host builds  2 read live (vi-json), 2026-10-26T07:22:06Z: 2 on 9.1.1 build 25714478
+             in maintenance 0; keyed yes; collisions 0; unidentified 0; unread 0
+{{vcenter-2}}  vCenter 9.1.1.0 build 25712839
+  host builds  3 read live (vi-json), 2026-10-26T07:22:16Z: 3 on 9.1.1 build 25714478
+             in maintenance 0; keyed yes; collisions 0; unidentified 0; unread 0
+{{vcenter-3}}  vCenter 9.1.1.0 build 25712839
+  host builds  6 read live (vi-json), 2026-10-26T07:22:33Z: 6 on 9.1.1 build 25714478
+             in maintenance 0; keyed yes; collisions 0; unidentified 0; unread 0
+```
+
+This is what each host runs, read from the host's own summary at the time on the line, not the image compliance the
+cluster lines above print, which is the result vCenter stored. Every host here is connected, so each build is what it
+runs; a host that is not connected would be counted under its last known build and named as such. Zero collisions is
+a reading of this estate, not an assumption: a nested or cloned host can report another's hardware UUID, and such a
+pair would be counted and never joined. The exit code is still 1, from the same ALERT line; the flag changes no exit.
+
 ## The ordered moves for the chapter's example answers
 
 An estate with a baseline cluster running a Supervisor, host profiles and an ESX upgrade ahead, managed by VCF:

@@ -11,7 +11,11 @@ cluster of every vCenter you name, with the stored results that say whether the 
      document's sections, and the stored compliance with, for every drifted item, its path and its non-identifying
      fields only (a protocol and a port, never a host name or an address);
   3. what feeds and surrounds them: the depots, the newest base image the depot holds, any hardware support manager,
-     any host profile, and the Auto Deploy and Image Builder services.
+     any host profile, and the Auto Deploy and Image Builder services;
+  4. with --host-builds, what each host RUNS: its version and build read live from the host's own summary, never from
+     a stored compliance result, with its connection state and maintenance mode. Each host is named by a keyed
+     fingerprint of its hardware UUID (FINGERPRINT_KEY_FILE), so a dated series can join one host across runs while
+     the record names none; a UUID that is missing, all zeros, or reported by two hosts never joins.
 
 It also carries plan(), a pure function: given what you answer about your estate, the moves off baselines, host
 profiles, Auto Deploy and UMDS, in the order the documentation sets, each marked enforced, documented order or
@@ -31,6 +35,8 @@ Run:
   export TLS_VERIFY=false                                           # only on a self-signed lab CA
   python3 hostlife.py                     # the report; writes out/hostlife.record.json, scrubbed
   python3 hostlife.py --json              # the scrubbed record on stdout instead of the report
+  python3 hostlife.py --host-builds       # also each host's running build (or HOST_BUILDS=1); with
+         FINGERPRINT_KEY_FILE=/path/to/key   # optional, mode 0600: a secret of your own that keys each host's fingerprint
   python3 hostlife.py --from-record PATH  # the report again, from a record, with no call
   python3 hostlife.py plan --baselines --upgrade --host-profiles   # the ordered moves for your answers
 
@@ -44,6 +50,8 @@ from __future__ import annotations
 import argparse
 import base64
 import datetime as dt
+import hashlib
+import hmac
 import http.cookiejar
 import json
 import os
@@ -271,6 +279,178 @@ def _soap(vc: Vcenter, base: str) -> dict:
         call(f'<Logout xmlns="{VIM}"><_this type="SessionManager">{sm}</_this></Logout>', "sign out of the vSphere API")
 
 
+# ── what each host runs: its live build, read per host, keyed so a series can join it without naming it ──────────
+ZERO_UUID = re.compile(r"^[0\-]*$")
+BUILD_PATHS = ("summary.config.product.version", "summary.config.product.build", "summary.hardware.uuid",
+               "summary.runtime.connectionState", "summary.runtime.inMaintenanceMode")
+
+
+def fingerprint_key() -> bytes | None:
+    """The secret in FINGERPRINT_KEY_FILE, or None when it is unset; the identity census's rule, so a key serves both."""
+    if not os.environ.get("FINGERPRINT_KEY_FILE"):
+        return None
+    key = read_secret("FINGERPRINT_KEY_FILE")
+    if not key:
+        raise KeyError("FINGERPRINT_KEY_FILE names an empty file: write a secret of your own to it")
+    return key.encode()
+
+
+def fingerprint(key: bytes, value: str) -> str:
+    return hmac.new(key, value.strip().lower().encode(), hashlib.sha256).hexdigest()[:16]
+
+
+def _vim_release(vc: Vcenter) -> str | None:
+    st, _, raw = _open(urllib.request.Request(f"https://{vc.host}/sdk/vimServiceVersions.xml", headers={"User-Agent": AGENT}))
+    vc.calls.append({"method": "GET", "path": "/sdk/vimServiceVersions.xml", "status": st})
+    m = re.search(rb"<name>urn:vim25</name>\s*<version>([^<]+)</version>", raw or b"")
+    return m.group(1).decode() if m else None
+
+
+def _summaries_json(vc: Vcenter, release: str, host_ids: list[str]) -> dict | None:
+    """Each host's summary through the vSphere API's JSON form, on the REST session. None when the build serves no
+    JSON form or refuses it the REST session, so the caller falls back to SOAP; a host whose summary did not answer maps
+    to None."""
+    root, tpl = f"https://{vc.host}/sdk/vim25/{release}", "/sdk/vim25/{release}/HostSystem/{host}/summary"
+    out: dict = {}
+    for hid in host_ids:
+        st, _, raw = _open(urllib.request.Request(f"{root}/HostSystem/{hid}/summary", headers={
+            "Accept": "application/json", "User-Agent": AGENT, "vmware-api-session-id": vc.session}))
+        vc.calls.append({"method": "GET", "path": tpl, "status": st})
+        if st in (401, 403, 404) and not out:
+            return None
+        s = _json(raw) if st == 200 else None
+        if not isinstance(s, dict):
+            out[hid] = None
+            continue
+        cfg, hw, rt = s.get("config") or {}, s.get("hardware") or {}, s.get("runtime") or {}
+        product = cfg.get("product") or {}
+        out[hid] = {"version": product.get("version"), "build": product.get("build"), "uuid": hw.get("uuid"),
+                    "connection_state": rt.get("connectionState"), "in_maintenance": rt.get("inMaintenanceMode")}
+    return out
+
+
+def _summaries_soap(vc: Vcenter, host_ids: list[str]) -> dict | None:
+    """The same five properties over SOAP, one RetrievePropertiesEx for every host, on a session of its own opened and
+    closed here. None when no user is set (a session id alone cannot open SOAP)."""
+    if vc.user is None:
+        return None
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx()),
+                                         urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    base = f"https://{vc.host}/sdk"
+
+    def call(body: str, why: str):
+        env = (f'<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="{SOAPENV}">'
+               f"<soapenv:Body>{body}</soapenv:Body></soapenv:Envelope>")
+        st, _, raw = _open(urllib.request.Request(base, data=env.encode(), method="POST", headers={
+            "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "urn:vim25/8.0.0.0", "User-Agent": AGENT}), opener)
+        vc.calls.append({"method": "POST", "path": "/sdk", "status": st, "why": why})
+        try:
+            node = ET.fromstring(raw).find(f"{{{SOAPENV}}}Body")
+        except ET.ParseError:
+            return None
+        return node[0] if node is not None and len(node) and not node[0].tag.endswith("Fault") else None
+
+    esc = lambda s: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")  # noqa: E731
+    sc = call(f'<RetrieveServiceContent xmlns="{VIM}"><_this type="ServiceInstance">ServiceInstance</_this>'
+              "</RetrieveServiceContent>", "read the service content")
+    rv = sc.find(f"{{{VIM}}}returnval") if sc is not None else None
+    if rv is None:
+        return None
+    sm, pc = (rv.findtext(f"{{{VIM}}}{k}") for k in ("sessionManager", "propertyCollector"))
+    if call(f'<Login xmlns="{VIM}"><_this type="SessionManager">{sm}</_this><userName>{esc(vc.user)}</userName>'
+            f"<password>{esc(vc.password)}</password></Login>", "sign in to the vSphere API") is None:
+        return None
+    try:
+        paths = "".join(f"<pathSet>{p}</pathSet>" for p in BUILD_PATHS)
+        objs = "".join(f'<objectSet><obj type="HostSystem">{esc(h)}</obj></objectSet>' for h in host_ids)
+        r = call(f'<RetrievePropertiesEx xmlns="{VIM}"><_this type="PropertyCollector">{pc}</_this><specSet><propSet>'
+                 f"<type>HostSystem</type>{paths}</propSet>{objs}</specSet><options/></RetrievePropertiesEx>",
+                 "read each host's build")
+        if r is None:
+            return None
+        out: dict = dict.fromkeys(host_ids)
+        for o in r.iter(f"{{{VIM}}}objects"):
+            hid = o.findtext(f"{{{VIM}}}obj")
+            props = {p.findtext(f"{{{VIM}}}name"): p.findtext(f"{{{VIM}}}val") for p in o.findall(f"{{{VIM}}}propSet")}
+            out[hid] = {"version": props.get(BUILD_PATHS[0]), "build": props.get(BUILD_PATHS[1]),
+                        "uuid": props.get(BUILD_PATHS[2]), "connection_state": props.get(BUILD_PATHS[3]),
+                        "in_maintenance": {"true": True, "false": False}.get(str(props.get(BUILD_PATHS[4])).lower())}
+        return out
+    finally:
+        call(f'<Logout xmlns="{VIM}"><_this type="SessionManager">{sm}</_this></Logout>', "sign out of the vSphere API")
+
+
+def host_builds(vc: Vcenter, key: bytes | None, clusters: list[tuple[str, list[str]]] | None = None) -> dict:
+    """Each host's running version and build, read live per host from its summary (summary.config.product,
+    summary.hardware.uuid, summary.runtime), never from a stored compliance result (G-781). Each host is named by a
+    keyed fingerprint of its hardware UUID (the census's FINGERPRINT_KEY_FILE rule), so a dated series can join one
+    host across runs while the record names none. A row is joinable only when it is keyed and its UUID is its own: a
+    UUID that is missing or all zeros, or that another host in the same read also reports, never joins. A host that is
+    not connected reports the last build vCenter knew, which a reader takes as last known, never as running. What a
+    host reports here after a Live Patch, applied without a reboot, has not been read on an estate yet, so the read
+    makes no claim for a host live-patched since its last reboot.
+
+    `clusters` is [(cluster name, [host id, ...])]; without it the clusters and their hosts are listed here. A host in
+    no cluster is read too, under the cluster None."""
+    if clusters is None:
+        st, cls = vc.get("/vcenter/cluster")
+        if st != 200 or not isinstance(cls, list):
+            return {"read": False, "why": f"the cluster list answered {st}"}
+        clusters = []
+        for cl in sorted(cls, key=lambda c: c.get("name") or ""):
+            st, hs = vc.get(f"/vcenter/host?clusters={cl['cluster']}", "/vcenter/host?clusters={cluster}")
+            clusters.append((cl.get("name"), [h["host"] for h in hs] if st == 200 and isinstance(hs, list) else []))
+    st, every = vc.get("/vcenter/host")
+    if st != 200 or not isinstance(every, list):
+        return {"read": False, "why": f"the host list answered {st}"}
+    in_clusters = {h for _, hosts in clusters for h in hosts}
+    standalone = sorted(h["host"] for h in every if h.get("host") not in in_clusters)
+    if standalone:
+        clusters = [*clusters, (None, standalone)]
+    ids = [h for _, hosts in clusters for h in hosts]
+    read_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    release = _vim_release(vc)
+    found, via = (_summaries_json(vc, release, ids), "vi-json") if release else (None, None)
+    if found is None:
+        found, via = _summaries_soap(vc, ids), "soap"
+    if found is None:
+        return {"read": False, "read_at": read_at, "why": "neither the vSphere API's JSON form nor SOAP answered"}
+    uuids = [str((found.get(h) or {}).get("uuid") or "").strip().lower() for h in ids]
+    seen = {u: uuids.count(u) for u in set(uuids)}
+    rows, unread = [], 0
+    for (cname, hosts) in clusters:
+        for h in hosts:
+            s = found.get(h)
+            if s is None:
+                unread += 1
+                continue
+            u = str(s.get("uuid") or "").strip().lower()
+            identified = bool(u) and not ZERO_UUID.match(u)
+            rows.append({"key": fingerprint(key, u) if key and identified else None,
+                         "joinable": bool(key) and identified and seen[u] == 1,
+                         "cluster": cname, "version": s.get("version"), "build": s.get("build"),
+                         "connection_state": s.get("connection_state"), "in_maintenance": s.get("in_maintenance")})
+    return {"read": True, "via": via, "read_at": read_at, "keyed": key is not None, "hosts": rows,
+            "unread": unread,
+            "collisions": sum(n for u, n in seen.items() if n > 1 and u and not ZERO_UUID.match(u)),
+            "unidentified": sum(1 for u in uuids if not u or ZERO_UUID.match(u))}
+
+
+def guard_joins(reads: list[dict]) -> None:
+    """Across several vCenters' host_builds: a key two rows share anywhere in the census never joins, and each
+    vCenter's `collisions` counts its rows that share a key with a row elsewhere too."""
+    keys = [r["key"] for b in reads if b.get("read") for r in b["hosts"] if r["key"]]
+    shared = {k for k in keys if keys.count(k) > 1}
+    for b in reads:
+        if not b.get("read"):
+            continue
+        across = 0
+        for r in b["hosts"]:
+            if r["key"] in shared and r["joinable"]:
+                r["joinable"], across = False, across + 1
+        b["collisions"] += across
+
+
 # ── the reads ───────────────────────────────────────────────────────────────────────────────────────────────────
 def item_fields(value) -> dict:
     """The non-identifying fields of one drifted configuration item: a URL keeps its scheme and port, an object keeps
@@ -408,7 +588,7 @@ def newer(a: str, b: str) -> bool:
     return pa > pb
 
 
-def read_vcenter(vc: Vcenter) -> dict:
+def read_vcenter(vc: Vcenter, builds: bool = False, key: bytes | None = None) -> dict:
     out: dict = {"name": vc.host}
     st, v = vc.get("/appliance/system/version")
     if st != 200 or not isinstance(v, dict):
@@ -441,10 +621,13 @@ def read_vcenter(vc: Vcenter) -> dict:
     st, clusters = vc.get("/vcenter/cluster")
     if st != 200 or not isinstance(clusters, list):
         raise ReadFailed(f"the cluster list answered {st}")
-    out["clusters"] = []
+    out["clusters"], members = [], []
     for cl in sorted(clusters, key=lambda c: c.get("name") or ""):
         st, hs = vc.get(f"/vcenter/host?clusters={cl['cluster']}", "/vcenter/host?clusters={cluster}")
         out["clusters"].append(read_cluster(vc, cl["cluster"], cl.get("name"), len(hs) if isinstance(hs, list) else None))
+        members.append((cl.get("name"), [h["host"] for h in hs] if st == 200 and isinstance(hs, list) else []))
+    if builds:
+        out["host_builds"] = host_builds(vc, key, members)
     return out
 
 
@@ -634,6 +817,21 @@ def report(rec: dict) -> list[str]:
         lines.append(f"  depot      UMDS {dep['umds']}; online depots: {on or 'none'}")
         lines.append(f"             {dep['base_images']} base image(s), newest {dep['newest_base_image']}; "
                      f"{dep['offline_bundles']} offline bundle(s)")
+        hb = v.get("host_builds")
+        if hb is not None:
+            if not hb.get("read"):
+                lines.append(f"  host builds  not read: {hb.get('why')}")
+            else:
+                runs: dict[str, int] = {}
+                for r in hb["hosts"]:
+                    tag = f"{r['version']} build {r['build']}" + ("" if r["connection_state"] == "connected"
+                                                                  else f" (last known, {r['connection_state']})")
+                    runs[tag] = runs.get(tag, 0) + 1
+                lines.append(f"  host builds  {len(hb['hosts'])} read live ({hb['via']}), {hb['read_at']}: "
+                             + "; ".join(f"{n} on {t}" for t, n in sorted(runs.items())))
+                lines.append(f"             in maintenance {sum(1 for r in hb['hosts'] if r['in_maintenance'])}; "
+                             f"keyed {'yes' if hb['keyed'] else 'no (set FINGERPRINT_KEY_FILE to join a series)'}; "
+                             f"collisions {hb['collisions']}; unidentified {hb['unidentified']}; unread {hb['unread']}")
         for c in v["clusters"]:
             lines.append(f"  {c['name']}  {c['hosts']} host(s)")
             if not c["image_managed"]:
@@ -905,7 +1103,8 @@ def plan_lines(given: dict, sources: bool = False) -> list[str]:
 
 
 # ── main ────────────────────────────────────────────────────────────────────────────────────────────────────────
-def census(hosts: list[str], user: str | None = None, password: str | None = None, session: str | None = None) -> tuple[dict, dict]:
+def census(hosts: list[str], user: str | None = None, password: str | None = None, session: str | None = None,
+           builds: bool = False, key: bytes | None = None) -> tuple[dict, dict]:
     """Read every vCenter named; returns (the record before the scrub, the Labels that scrub it). Credentials come in
     as arguments, so a caller that holds them in memory never writes them anywhere."""
     started = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -913,10 +1112,12 @@ def census(hosts: list[str], user: str | None = None, password: str | None = Non
     for host in hosts:
         vc = Vcenter(host, user, password, session)
         try:
-            vcs.append(read_vcenter(vc))
+            vcs.append(read_vcenter(vc, builds, key))
         finally:
             vc.close()
             calls.append({"vcenter": host, "calls": vc.calls})
+    if builds:
+        guard_joins([v["host_builds"] for v in vcs])
     found = findings(vcs)
     rec = {"tool": "hostlife.py", "captured_utc": started,
            "finished_utc": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -961,6 +1162,8 @@ def main(argv: list[str]) -> int:
     p.add_argument("--json", action="store_true", help="print the scrubbed record instead of the report")
     p.add_argument("--from-record", metavar="PATH", help="print the report from a saved record; no call is made")
     p.add_argument("--out-dir", default=os.environ.get("OUT_DIR", "out"), help="where the scrubbed record is written")
+    p.add_argument("--host-builds", action="store_true", default=os.environ.get("HOST_BUILDS", "").strip() == "1",
+                   help="also read each host's running version and build, keyed by FINGERPRINT_KEY_FILE where it is set")
     ns = p.parse_args(argv)
     if ns.from_record:
         with open(ns.from_record, encoding="utf-8") as f:
@@ -971,10 +1174,11 @@ def main(argv: list[str]) -> int:
     if not hosts:
         raise KeyError("set VC_HOST, one vCenter or several separated by commas")
     user = os.environ.get("VC_USER")
+    key = fingerprint_key() if ns.host_builds else None
     if user and os.environ.get("VC_PASSWORD_FILE"):
-        rec, L = census(hosts, user=user, password=read_secret("VC_PASSWORD_FILE"))
+        rec, L = census(hosts, user=user, password=read_secret("VC_PASSWORD_FILE"), builds=ns.host_builds, key=key)
     elif os.environ.get("VC_SESSION_FILE") and len(hosts) == 1:
-        rec, L = census(hosts, session=read_secret("VC_SESSION_FILE"))
+        rec, L = census(hosts, session=read_secret("VC_SESSION_FILE"), builds=ns.host_builds, key=key)
     else:
         raise KeyError("set VC_USER with VC_PASSWORD_FILE, or VC_SESSION_FILE for a single vCenter")
     clean, path = write_record(rec, L, ns.out_dir, also=tuple(hosts) + ((user,) if user else ()))
