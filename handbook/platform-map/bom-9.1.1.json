@@ -1,28 +1,590 @@
 {
  "release": "9.1.1",
- "source": "Broadcom TechDocs, VMware Cloud Foundation 9.1.1.0 Release Notes, Bill of Materials (techdocs.broadcom.com, vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-1-0-release-notes/vmware-cloud-foundation-9-1-1-0-bill-of-material.html)",
- "read": "2026-10-12",
- "note": "Keys are the names inventory.py prints; bom_name is the row as the bill of materials writes it. A later patch of the same release (9.1.1.0100 against 9.1.1.0) is reported as such, not as a difference. For another release, copy this file and fill it from that release's bill of materials.",
- "components": {
-  "SDDC Manager": {"bom_name": "VCF Installer/ SDDC Manager", "version": "9.1.1.0", "build": "25713928"},
-  "ESX": {"bom_name": "ESX", "version": "9.1.1.0", "build": "25714478"},
-  "vCenter": {"bom_name": "vCenter", "version": "9.1.1.0", "build": "25712839"},
-  "NSX": {"bom_name": "NSX", "version": "9.1.1.0", "build": "25691509"},
-  "VCF Operations": {"bom_name": "VCF Operations", "version": "9.1.1.0", "build": "25679751"},
-  "VCF Operations for networks": {"bom_name": "VCF Operations for networks", "version": "9.1.1.0", "build": "25682214"},
-  "VCF Operations orchestrator": {"bom_name": "VCF Operations orchestrator", "version": "9.1.1.0", "build": "25679883"},
-  "VCF Automation": {"bom_name": "VCF Automation", "version": "9.1.1.0", "build": "25714559"},
-  "Supervisor": {"bom_name": "Supervisor", "version": "9.1.1.0", "build": "25714555"},
-  "Fleet lifecycle": {"bom_name": "Fleet lifecycle", "version": "9.1.1.0", "build": "25713934"},
-  "Identity broker": {"bom_name": "Identity broker", "version": "9.1.1.0", "build": "25679886"},
-  "Log management": {"bom_name": "Log management", "version": "9.1.1.0", "build": "25679624"},
-  "Real-time metrics": {"bom_name": "Real-time metrics", "version": "9.1.1.0", "build": "25679622"},
-  "Real-time metrics store": {"bom_name": "Real-time metrics store", "version": "9.1.1.0", "build": "25714471"},
-  "Salt RaaS": {"bom_name": "Salt RaaS", "version": "9.1.1.0", "build": "25679895"},
-  "Salt master": {"bom_name": "Salt master", "version": "9.1.1.0", "build": "25679895"},
-  "SDDC lifecycle": {"bom_name": "SDDC lifecycle", "version": "9.1.1.0", "build": "25713940"},
-  "Software depot": {"bom_name": "Software depot", "version": "9.1.1.0", "build": "25713941"},
-  "Telemetry": {"bom_name": "Telemetry", "version": "9.1.1.0", "build": "25671600"},
-  "VCF services runtime": {"bom_name": "VCF services runtime", "version": "9.1.1.0", "build": "25714471"}
- }
+ "source": "Broadcom TechDocs, VMware Cloud Foundation 9.1.1.0 Release Notes, Bill of Materials (https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-1-0-release-notes/vmware-cloud-foundation-9-1-1-0-bill-of-material.html)",
+ "read": "2026-10-28",
+ "note": "Every row of the bill's four tables, in the page's order. read_as names what inventory.py prints for a component whose version it reads; appliance names the OVF products, and service the Supervisor service IDs, that show a row deployed when its version is not compared. Written by the site's platform_catalog.py --write-companion-bom from the catalog; for another release, re-read the bill and re-place every row.",
+ "rows": [
+  {
+   "table": "core",
+   "bom_name": "VCF Installer/ SDDC Manager",
+   "version": "9.1.1.0",
+   "build": "25713928",
+   "read_as": [
+    "SDDC Manager"
+   ],
+   "appliance": [
+    "VMware VCF SDDC Manager Appliance"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "ESX",
+   "version": "9.1.1.0",
+   "build": "25714478",
+   "read_as": [
+    "ESX"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "vCenter",
+   "version": "9.1.1.0",
+   "build": "25712839",
+   "read_as": [
+    "vCenter"
+   ],
+   "appliance": [
+    "VMware vCenter Server Appliance"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "vSAN ESA Witness",
+   "version": "9.1.1.0",
+   "build": "25714474",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "vSAN File Services *",
+   "version": "9.1.1.0",
+   "build": "25846901",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "vSAN OSA Witness",
+   "version": "9.1.1.0",
+   "build": "25714473",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "NSX",
+   "version": "9.1.1.0",
+   "build": "25691509",
+   "read_as": [
+    "NSX"
+   ],
+   "appliance": [
+    "nsx-unified-appliance"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF Operations",
+   "version": "9.1.1.0",
+   "build": "25679751",
+   "read_as": [
+    "VCF Operations"
+   ],
+   "appliance": [
+    "VMware Cloud Foundation Operations Appliance"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Cloud proxy",
+   "version": "9.1.1.0",
+   "build": "25679891",
+   "read_as": [],
+   "appliance": [
+    "VMware Cloud Foundation Operations Cloud Proxy"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "License server",
+   "version": "9.1.1.0",
+   "build": "25679819",
+   "read_as": [],
+   "appliance": [
+    "VCF License Server Appliance"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF Operations for networks",
+   "version": "9.1.1.0",
+   "build": "25682214",
+   "read_as": [
+    "VCF Operations for networks"
+   ],
+   "appliance": [
+    "VCF Operations for Networks Platform",
+    "VCF Operations for Networks Collector"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF Operations HCX",
+   "version": "9.1.1.0",
+   "build": "25690219",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF Operations orchestrator",
+   "version": "9.1.1.0",
+   "build": "25679883",
+   "read_as": [
+    "VCF Operations orchestrator"
+   ],
+   "appliance": [
+    "VCF Operations orchestrator Appliance"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF Automation",
+   "version": "9.1.1.0",
+   "build": "25714559",
+   "read_as": [
+    "VCF Automation"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Supervisor",
+   "version": "9.1.1.0",
+   "build": "25714555",
+   "read_as": [
+    "Supervisor"
+   ],
+   "appliance": [
+    "vSphere Supervisor"
+   ],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VKS Add-ons (former VKS Standard Packages)",
+   "version": "3.7.0+20260618",
+   "build": "25497365",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "vSphere Kubernetes releases",
+   "version": "1.34.2+vmware.2-vkr.2",
+   "build": "N/A",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Fleet lifecycle",
+   "version": "9.1.1.0",
+   "build": "25713934",
+   "read_as": [
+    "Fleet lifecycle"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Identity broker",
+   "version": "9.1.1.0",
+   "build": "25679886",
+   "read_as": [
+    "Identity broker"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Log management",
+   "version": "9.1.1.0",
+   "build": "25679624",
+   "read_as": [
+    "Log management"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Real-time metrics",
+   "version": "9.1.1.0",
+   "build": "25679622",
+   "read_as": [
+    "Real-time metrics"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Real-time metrics store",
+   "version": "9.1.1.0",
+   "build": "25714471",
+   "read_as": [
+    "Real-time metrics store"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Salt RaaS",
+   "version": "9.1.1.0",
+   "build": "25679895",
+   "read_as": [
+    "Salt RaaS"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Salt master",
+   "version": "9.1.1.0",
+   "build": "25679895",
+   "read_as": [
+    "Salt master"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "SDDC lifecycle",
+   "version": "9.1.1.0",
+   "build": "25713940",
+   "read_as": [
+    "SDDC lifecycle"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Software depot",
+   "version": "9.1.1.0",
+   "build": "25713941",
+   "read_as": [
+    "Software depot"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Telemetry",
+   "version": "9.1.1.0",
+   "build": "25671600",
+   "read_as": [
+    "Telemetry"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF services runtime",
+   "version": "9.1.1.0",
+   "build": "25714471",
+   "read_as": [
+    "VCF services runtime"
+   ],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF download tool",
+   "version": "9.1.1.0",
+   "build": "25713929",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VMware Remote Console",
+   "version": "13.1.1",
+   "build": "25665422",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VMware Tools",
+   "version": "13.1.5.0",
+   "build": "25677323",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF Consumption CLI",
+   "version": "9.1.1.0",
+   "build": "25662425",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "VCF Consumption CLI Plugins & Database",
+   "version": "9.1.1.0",
+   "build": "25665404",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Deep Learning VM",
+   "version": "9.1.1.0",
+   "build": "25664150",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "core",
+   "bom_name": "Private AI Services",
+   "version": "3.0.0",
+   "build": "25675446",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "VMware vSphere Kubernetes Service",
+   "version": "3.7.0+v1.36",
+   "build": "N/A",
+   "read_as": [],
+   "appliance": [],
+   "service": [
+    "tkg.vsphere.vmware.com"
+   ]
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "Harbor (Supervisor service)",
+   "version": "2.15.2+vmware.1-vks.1",
+   "build": "25639075",
+   "read_as": [],
+   "appliance": [],
+   "service": [
+    "harbor.tanzu.vmware.com"
+   ]
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "CA Cluster issuer (Supervisor service)",
+   "version": "9.1.1.0",
+   "build": "25662423",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "Contour (Supervisor service)",
+   "version": "1.33.5",
+   "build": "25639301",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "External DNS (Supervisor service)",
+   "version": "0.21.0+vmware.2-vks.1",
+   "build": "25639209",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "ArgoCD (Supervisor service)",
+   "version": "1.2.0",
+   "build": "25642124",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "VKSM Auto-attach",
+   "version": "9.1.1.0",
+   "build": "25714559",
+   "read_as": [],
+   "appliance": [],
+   "service": [
+    "auto-attach.vksm.broadcom.com"
+   ]
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "Supervisor Management Proxy",
+   "version": "9.1.1.0",
+   "build": "25665478",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "supervisor-services",
+   "bom_name": "VMware vSphere Supervisor LCI",
+   "version": "9.1.2",
+   "build": "25714560",
+   "read_as": [],
+   "appliance": [],
+   "service": [
+    "cci-ns.vmware.com"
+   ]
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Migration service engine (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25714559",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Migration Service (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25714559",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "ArgoCD (VCF service)",
+   "version": "1.2.0",
+   "build": "25642124",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Configuration Service (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25670523",
+   "read_as": [],
+   "appliance": [],
+   "service": [
+    "configuration.vsphere.vmware.com"
+   ]
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Data Services (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25651575",
+   "read_as": [],
+   "appliance": [],
+   "service": [
+    "consumption-operator.dsm.vsphere.vmware.com",
+    "dsm-provider-operator.dsm.vsphere.vmware.com"
+   ]
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Encryption Management (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25714559",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Metrics Aggregator (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25665407",
+   "read_as": [],
+   "appliance": [],
+   "service": [
+    "metrics-aggregator.vmware.com"
+   ]
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Protection and Recovery (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25691510",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Harbor (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25714559",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "vcf-services",
+   "bom_name": "Secret Store (VCF service)",
+   "version": "9.1.1.0",
+   "build": "25710217",
+   "read_as": [],
+   "appliance": [],
+   "service": []
+  },
+  {
+   "table": "add-ons",
+   "bom_name": "VMware Data Services Manager",
+   "version": "9.1.1.0",
+   "build": "25651575",
+   "read_as": [],
+   "appliance": [
+    "VMware Data Services Manager Appliance"
+   ],
+   "service": []
+  },
+  {
+   "table": "add-ons",
+   "bom_name": "Protection and Recovery",
+   "version": "9.1.1.0",
+   "build": "25691510",
+   "read_as": [],
+   "appliance": [
+    "Protection and recovery appliance"
+   ],
+   "service": []
+  }
+ ]
 }

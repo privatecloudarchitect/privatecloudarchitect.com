@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-12T20:01:54Z",
+ "captured": "2026-10-28T06:52:20Z",
  "instances": [
   {
    "sddc_manager": "9.1.1.0.25713928",
@@ -29,6 +29,26 @@
       "namespaces": {
        "total": 0,
        "system": 0
+      },
+      "appliances": {
+       "read": "ok",
+       "vms": 51,
+       "products": {
+        "Avi Cloud Controller": 1,
+        "Protection and recovery appliance": 1,
+        "VCF License Server Appliance": 1,
+        "VCF Operations for Networks Collector": 1,
+        "VCF Operations for Networks Platform": 1,
+        "VCF Operations orchestrator Appliance": 1,
+        "VMware Cloud Foundation Operations Appliance": 1,
+        "VMware Cloud Foundation Operations Cloud Proxy": 1,
+        "VMware VCF SDDC Manager Appliance": 1,
+        "VMware vCenter Server Appliance": 3,
+        "license-hub": 1,
+        "nsx-edge": 2,
+        "nsx-unified-appliance": 2
+       },
+       "other": 34
       }
      }
     },
@@ -65,7 +85,7 @@
       "services": {
        "auto-attach.vksm.broadcom.com": {
         "name": "VKS cluster management",
-        "version": "0.2.1-0100-25757808"
+        "version": "0.2.1-0200-25801570"
        },
        "cci-ns.vmware.com": {
         "name": "Local Consumption Interface",
@@ -76,8 +96,12 @@
         "version": "9.1.1-25670523"
        },
        "consumption-operator.dsm.vsphere.vmware.com": {
-        "name": "Data Services Manager Consumption Operator",
-        "version": "9.1.0+vmware.0.25261877"
+        "name": "Data Services Consumption Operator",
+        "version": "9.1.1+vmware.0.25623779"
+       },
+       "dsm-provider-operator.dsm.vsphere.vmware.com": {
+        "name": "Data Services Provider Operator",
+        "version": "9.1.1+vmware.0.25641961"
        },
        "harbor.tanzu.vmware.com": {
         "name": "Harbor",
@@ -98,7 +122,18 @@
       },
       "namespaces": {
        "total": 14,
-       "system": 8
+       "system": 9
+      },
+      "appliances": {
+       "read": "ok",
+       "vms": 33,
+       "products": {
+        "Avi Service Engine": 5,
+        "VMware Data Services Manager Appliance": 1,
+        "nsx-edge": 2,
+        "vSphere Supervisor": 3
+       },
+       "other": 22
       }
      }
     }
@@ -129,6 +164,17 @@
       "namespaces": {
        "total": 0,
        "system": 0
+      },
+      "appliances": {
+       "read": "ok",
+       "vms": 10,
+       "products": {
+        "VMware Cloud Foundation Operations Cloud Proxy": 1,
+        "VMware VCF SDDC Manager Appliance": 1,
+        "nsx-edge": 2,
+        "nsx-unified-appliance": 1
+       },
+       "other": 5
       }
      }
     }
@@ -139,7 +185,7 @@
   {
    "type": "OPS",
    "what": "VCF Operations",
-   "version": "9.1.1.0.25679751",
+   "version": "9.1.1.0100.25795063",
    "deployment": "OVA",
    "scope": "FLEET",
    "size": "medium",
@@ -158,7 +204,7 @@
   {
    "type": "OPS_NETWORKS",
    "what": "VCF Operations for networks",
-   "version": "9.1.1.0.25682214",
+   "version": "9.1.1.0100.25774578",
    "deployment": "OVA",
    "scope": "FLEET",
    "size": "extra_large",
@@ -175,7 +221,7 @@
   {
    "type": "VCFA",
    "what": "VCF Automation",
-   "version": "9.1.1.0100.25757808",
+   "version": "9.1.1.0200.25801570",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "small",
@@ -183,12 +229,42 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 3,
-   "shares_name": false
+   "shares_name": false,
+   "runtime": {
+    "group": 3,
+    "is_runtime": false,
+    "type": "CONSUMPTION",
+    "listed": false
+   }
   },
   {
    "type": "VSP",
    "what": "VCF services runtime",
-   "version": "9.1.1.0.25714471",
+   "version": "9.1.1.0100.25801571",
+   "deployment": "VSP",
+   "scope": "INSTANCE",
+   "size": "small",
+   "nodes": {
+    "worker": 2,
+    "control-plane": 1
+   },
+   "node_sizes": {
+    "null": 3
+   },
+   "instance": 2,
+   "name_group": 4,
+   "shares_name": false,
+   "runtime": {
+    "group": 1,
+    "is_runtime": true,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
+  },
+  {
+   "type": "VSP",
+   "what": "VCF services runtime",
+   "version": "9.1.1.0100.25801571",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
@@ -200,31 +276,19 @@
     "null": 7
    },
    "instance": 1,
-   "name_group": 4,
-   "shares_name": false
-  },
-  {
-   "type": "VSP",
-   "what": "VCF services runtime",
-   "version": "9.1.1.0.25714471",
-   "deployment": "VSP",
-   "scope": "INSTANCE",
-   "size": "small",
-   "nodes": {
-    "control-plane": 1,
-    "worker": 2
-   },
-   "node_sizes": {
-    "null": 3
-   },
-   "instance": 2,
    "name_group": 5,
-   "shares_name": false
+   "shares_name": false,
+   "runtime": {
+    "group": 2,
+    "is_runtime": true,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "VCF_FLEET_LCM",
    "what": "Fleet lifecycle",
-   "version": "9.1.1.0100.25761871",
+   "version": "9.1.1.0200.25801070",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "small",
@@ -232,12 +296,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 6,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "VIDB",
    "what": "Identity broker",
-   "version": "9.1.1.0.25679886",
+   "version": "9.1.1.0100.25796677",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
@@ -245,12 +315,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 7,
-   "shares_name": false
+   "shares_name": false,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "OPS_LOGS",
    "what": "Log management",
-   "version": "9.1.1.0.25679624",
+   "version": "9.1.1.0100.25795095",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "small",
@@ -258,12 +334,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 8,
-   "shares_name": false
+   "shares_name": false,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "SALT_RAAS",
    "what": "Salt RaaS",
-   "version": "9.1.1.0.25679895",
+   "version": "9.1.1.0100.25795075",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "medium",
@@ -271,12 +353,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 6,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "VCF_FLEET_DEPOT",
    "what": "Software depot",
-   "version": "9.1.1.0.25713941",
+   "version": "9.1.1.0200.25801072",
    "deployment": "VSP",
    "scope": "FLEET",
    "size": "medium",
@@ -284,12 +372,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 6,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "OPS_DATA_PLATFORM",
    "what": "Real-time metrics",
-   "version": "9.1.1.0.25679622",
+   "version": "9.1.1.0100.25794546",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
@@ -297,12 +391,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 9,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "VCFMS_METRICS_STORE",
    "what": "Real-time metrics store",
-   "version": "9.1.1.0.25714471",
+   "version": "9.1.1.0100.25801571",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
@@ -310,12 +410,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 9,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "SALT",
    "what": "Salt master",
-   "version": "9.1.1.0.25679895",
+   "version": "9.1.1.0100.25795075",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
@@ -323,12 +429,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 9,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "VCF_SDDC_LCM",
    "what": "SDDC lifecycle",
-   "version": "9.1.1.0100.25761870",
+   "version": "9.1.1.0200.25801981",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "small",
@@ -336,12 +448,18 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 9,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "VCF_SDDC_LCM",
    "what": "SDDC lifecycle",
-   "version": "9.1.1.0100.25761870",
+   "version": "9.1.1.0200.25801981",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "small",
@@ -349,12 +467,18 @@
    "node_sizes": {},
    "instance": 2,
    "name_group": 10,
-   "shares_name": false
+   "shares_name": false,
+   "runtime": {
+    "group": 1,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   },
   {
    "type": "TELEMETRY_ACCEPTOR",
    "what": "Telemetry",
-   "version": "9.1.1.0.25671600",
+   "version": "9.1.1.0100.25741214",
    "deployment": "VSP",
    "scope": "INSTANCE",
    "size": "medium",
@@ -362,7 +486,13 @@
    "node_sizes": {},
    "instance": 1,
    "name_group": 9,
-   "shares_name": true
+   "shares_name": true,
+   "runtime": {
+    "group": 2,
+    "is_runtime": false,
+    "type": "MANAGEMENT",
+    "listed": true
+   }
   }
  ],
  "collection": {
@@ -400,7 +530,7 @@
  },
  "bom": {
   "release": "9.1.1",
-  "read": "2026-10-12",
+  "read": "2026-10-28",
   "rows": [
    {
     "what": "SDDC Manager",
@@ -489,114 +619,114 @@
    {
     "what": "VCF Operations",
     "where": "instance 1",
-    "version": "9.1.1.0.25679751",
+    "version": "9.1.1.0100.25795063",
     "bom": "9.1.1.0.25679751",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "VCF Operations for networks",
     "where": "instance 1",
-    "version": "9.1.1.0.25682214",
+    "version": "9.1.1.0100.25774578",
     "bom": "9.1.1.0.25682214",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "VCF Automation",
     "where": "instance 1",
-    "version": "9.1.1.0100.25757808",
+    "version": "9.1.1.0200.25801570",
     "bom": "9.1.1.0.25714559",
     "status": "later patch"
    },
    {
     "what": "VCF services runtime",
-    "where": "instance 1",
-    "version": "9.1.1.0.25714471",
+    "where": "instance 2",
+    "version": "9.1.1.0100.25801571",
     "bom": "9.1.1.0.25714471",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "VCF services runtime",
-    "where": "instance 2",
-    "version": "9.1.1.0.25714471",
+    "where": "instance 1",
+    "version": "9.1.1.0100.25801571",
     "bom": "9.1.1.0.25714471",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "Fleet lifecycle",
     "where": "instance 1",
-    "version": "9.1.1.0100.25761871",
+    "version": "9.1.1.0200.25801070",
     "bom": "9.1.1.0.25713934",
     "status": "later patch"
    },
    {
     "what": "Identity broker",
     "where": "instance 1",
-    "version": "9.1.1.0.25679886",
+    "version": "9.1.1.0100.25796677",
     "bom": "9.1.1.0.25679886",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "Log management",
     "where": "instance 1",
-    "version": "9.1.1.0.25679624",
+    "version": "9.1.1.0100.25795095",
     "bom": "9.1.1.0.25679624",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "Salt RaaS",
     "where": "instance 1",
-    "version": "9.1.1.0.25679895",
+    "version": "9.1.1.0100.25795075",
     "bom": "9.1.1.0.25679895",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "Software depot",
     "where": "instance 1",
-    "version": "9.1.1.0.25713941",
+    "version": "9.1.1.0200.25801072",
     "bom": "9.1.1.0.25713941",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "Real-time metrics",
     "where": "instance 1",
-    "version": "9.1.1.0.25679622",
+    "version": "9.1.1.0100.25794546",
     "bom": "9.1.1.0.25679622",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "Real-time metrics store",
     "where": "instance 1",
-    "version": "9.1.1.0.25714471",
+    "version": "9.1.1.0100.25801571",
     "bom": "9.1.1.0.25714471",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "Salt master",
     "where": "instance 1",
-    "version": "9.1.1.0.25679895",
+    "version": "9.1.1.0100.25795075",
     "bom": "9.1.1.0.25679895",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "SDDC lifecycle",
     "where": "instance 1",
-    "version": "9.1.1.0100.25761870",
+    "version": "9.1.1.0200.25801981",
     "bom": "9.1.1.0.25713940",
     "status": "later patch"
    },
    {
     "what": "SDDC lifecycle",
     "where": "instance 2",
-    "version": "9.1.1.0100.25761870",
+    "version": "9.1.1.0200.25801981",
     "bom": "9.1.1.0.25713940",
     "status": "later patch"
    },
    {
     "what": "Telemetry",
     "where": "instance 1",
-    "version": "9.1.1.0.25671600",
+    "version": "9.1.1.0100.25741214",
     "bom": "9.1.1.0.25671600",
-    "status": "build"
+    "status": "later patch"
    },
    {
     "what": "VCF Operations orchestrator",
@@ -604,6 +734,288 @@
     "version": "9.1.0.0400.25545107",
     "bom": "9.1.1.0.25679883",
     "status": "behind"
+   }
+  ],
+  "coverage": [
+   {
+    "table": "core",
+    "bom_name": "VCF Installer/ SDDC Manager",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "ESX",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "vCenter",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "vSAN ESA Witness",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "vSAN File Services *",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "vSAN OSA Witness",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "NSX",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF Operations",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Cloud proxy",
+    "state": "seen"
+   },
+   {
+    "table": "core",
+    "bom_name": "License server",
+    "state": "seen"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF Operations for networks",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF Operations HCX",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF Operations orchestrator",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF Automation",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Supervisor",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "VKS Add-ons (former VKS Standard Packages)",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "vSphere Kubernetes releases",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "Fleet lifecycle",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Identity broker",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Log management",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Real-time metrics",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Real-time metrics store",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Salt RaaS",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Salt master",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "SDDC lifecycle",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Software depot",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "Telemetry",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF services runtime",
+    "state": "read"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF download tool",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "VMware Remote Console",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "VMware Tools",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF Consumption CLI",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "VCF Consumption CLI Plugins & Database",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "Deep Learning VM",
+    "state": "unread"
+   },
+   {
+    "table": "core",
+    "bom_name": "Private AI Services",
+    "state": "unread"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "VMware vSphere Kubernetes Service",
+    "state": "seen"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "Harbor (Supervisor service)",
+    "state": "seen"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "CA Cluster issuer (Supervisor service)",
+    "state": "unread"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "Contour (Supervisor service)",
+    "state": "unread"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "External DNS (Supervisor service)",
+    "state": "unread"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "ArgoCD (Supervisor service)",
+    "state": "unread"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "VKSM Auto-attach",
+    "state": "seen"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "Supervisor Management Proxy",
+    "state": "unread"
+   },
+   {
+    "table": "supervisor-services",
+    "bom_name": "VMware vSphere Supervisor LCI",
+    "state": "seen"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Migration service engine (VCF service)",
+    "state": "unread"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Migration Service (VCF service)",
+    "state": "unread"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "ArgoCD (VCF service)",
+    "state": "unread"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Configuration Service (VCF service)",
+    "state": "seen"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Data Services (VCF service)",
+    "state": "seen"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Encryption Management (VCF service)",
+    "state": "unread"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Metrics Aggregator (VCF service)",
+    "state": "seen"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Protection and Recovery (VCF service)",
+    "state": "unread"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Harbor (VCF service)",
+    "state": "unread"
+   },
+   {
+    "table": "vcf-services",
+    "bom_name": "Secret Store (VCF service)",
+    "state": "unread"
+   },
+   {
+    "table": "add-ons",
+    "bom_name": "VMware Data Services Manager",
+    "state": "seen"
+   },
+   {
+    "table": "add-ons",
+    "bom_name": "Protection and Recovery",
+    "state": "seen"
    }
   ]
  },

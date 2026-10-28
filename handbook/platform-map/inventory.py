@@ -11,19 +11,25 @@ you hold is your own:
      its vSphere zones and the clusters each holds, the Supervisor services installed, and how many of its
      namespaces are the platform's own (GET /api/vcenter/namespace-management/supervisors/summaries,
      .../namespace-management/software/clusters, /api/vcenter/consumption-domains/zones,
-     .../zones/cluster/{zone}/associations, .../supervisors/{id}/supervisor-services, /api/vcenter/namespaces/instances)
+     .../zones/cluster/{zone}/associations, .../supervisors/{id}/supervisor-services, /api/vcenter/namespaces/instances);
+     and what runs there as an appliance: every VM's product as its OVF names it (GET /api/vcenter/vm, then
+     /sdk/vim25/{release}/VirtualMachine/{vm}/summary through the vSphere API's JSON form on the same session), counted
+     per product name for the platform's vendors only, without the OVF's version, which is the deployed one
   3  the fleet: VCF Operations exchanges its session for the Fleet lifecycle service's key (GET
      /suite-api/api/integrations/services, the entry of type VCF_FLEET_LCM; POST /suite-api/api/auth/token/exchange),
      then GET /fleet-lcm/v1/components at the address that entry names: each component's type, version, how it is
-     hosted (an appliance from an OVA, or a service on the VCF services runtime), its scope, size and nodes, and the
-     instance it belongs to, matched through its vCenter; and where VCF Operations collects (GET
+     hosted (an appliance from an OVA, or a service on the VCF services runtime), its scope, size and nodes, the
+     instance it belongs to, matched through its vCenter, and the runtime it runs on by group and type (a CONSUMPTION
+     runtime the list carries no component for is VCF Automation's); and where VCF Operations collects (GET
      /suite-api/api/collectors, /suite-api/api/adapters): adapter instances on its cloud proxies, and on the
      analytics node's own collector
   4  optionally, the standalone VCF Operations orchestrator appliances you name (GET /vco/api/about, which needs no
      sign-in): neither SDDC Manager nor the fleet list carries one, so nothing else here would see its version
   5  the checks the chapter teaches: one management domain per instance, a vCenter and an NSX manager for every
      domain, a Supervisor only in a workload domain, one services runtime per instance, one release across every
-     component read, and with --bom FILE every component against that release's bill of materials
+     component read, and with --bom FILE every component against that release's bill of materials, every row of
+     the bill reported read (its version compared), seen deployed (an appliance or a Supervisor service it names) or not
+     read here
 
 Read-only throughout. No token or password value is printed. With --record FILE it also writes what it read, with
 every host name, identifier and object name left out, which is the shape of the record the chapter renders.
@@ -34,7 +40,8 @@ Env:   SDDC_HOSTS (comma-separated, one SDDC Manager per instance), SDDC_USER, S
        VCFO_HOSTS (comma-separated, optional): standalone VCF Operations orchestrator appliances
        TLS_VERIFY=false on a self-signed lab CA
 Flags: --record FILE    write the record
-       --bom FILE       compare every component with a bill of materials (bom-9.1.1.json ships beside this script)
+       --bom FILE       compare every component with a bill of materials and account for every row of it
+                        (bom-9.1.1.json ships beside this script: all 56 rows of the 9.1.1 bill)
        --no-vcenter     skip step 2
 Exit:  0 every read answered and every check held · 1 a check differs · 2 a read failed
 """
@@ -53,6 +60,9 @@ from datetime import datetime, timezone
 
 GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
 DOMAIN_ADAPTERS = ("VMWARE", "NSXTAdapter", "VirtualAndPhysicalSANAdapter")   # vCenter, NSX and vSAN collection
+# An appliance names its product and vendor in its OVF (summary.config.product). Only these vendors' products reach the
+# output: the platform's own appliances are its vocabulary, another vendor's product is the estate's choice and stays out.
+VENDORS = re.compile(r"\b(vmware|broadcom|avi networks)\b", re.I)
 
 
 def ctx():
@@ -216,9 +226,48 @@ def read_vcenter(fqdn, user, password):
     st, ns = call("GET", f"https://{fqdn}/api/vcenter/namespaces/instances", h)
     nsl = listed(ns, "items")
     names |= {str(n.get("namespace")) for n in nsl if n.get("namespace")}
+    appliances = read_appliances(fqdn, h)
     call("DELETE", f"https://{fqdn}/api/session", h)   # ends this read's own session, nothing else
     return {"read": "ok", "supervisors": supervisors, "zones": sorted(zones), "services": dict(sorted(services.items())),
-            "namespaces": {"total": len(nsl), "system": sum(1 for n in nsl if str(n.get("namespace", "")).startswith("svc-"))}}, names
+            "namespaces": {"total": len(nsl), "system": sum(1 for n in nsl if str(n.get("namespace", "")).startswith("svc-"))},
+            "appliances": appliances}, names
+
+
+def vim_release(fqdn):
+    """The vSphere API release this vCenter serves (/sdk/vimServiceVersions.xml, no sign-in), which its JSON form is keyed by."""
+    req = urllib.request.Request(f"https://{fqdn}/sdk/vimServiceVersions.xml")
+    try:
+        with urllib.request.urlopen(req, context=ctx(), timeout=60) as r:
+            raw = r.read()
+    except (urllib.error.URLError, TimeoutError, ConnectionError):
+        return None
+    m = re.search(rb"<name>urn:vim25</name>\s*<version>([^<]+)</version>", raw)
+    return m.group(1).decode() if m else None
+
+
+def read_appliances(fqdn, h):
+    """What runs in this vCenter as an appliance: each VM's product as its OVF names it (summary.config.product, read
+    through the vSphere API's JSON form on this read's REST session), counted per product name, the platform's vendors
+    only. The OVF's version is the one the appliance was deployed at, not the one it runs, so it is not kept; a VM with
+    no product, or another vendor's, is counted and not named."""
+    st, vms = call("GET", f"https://{fqdn}/api/vcenter/vm", h)
+    rel = vim_release(fqdn)
+    if st != 200 or not isinstance(vms, list) or not rel:
+        return {"read": f"refused (VM list {st}, vSphere API release {rel or 'unread'})"}
+    products, other, failed = Counter(), 0, 0
+    for vm in vms:
+        s, summ = call("GET", f"https://{fqdn}/sdk/vim25/{rel}/VirtualMachine/{urllib.parse.quote(str(vm.get('vm')))}/summary", h)
+        if s != 200 or not isinstance(summ, dict):
+            failed += 1
+            continue
+        p = (summ.get("config") or {}).get("product") or {}
+        name = str(p.get("name") or "").strip()
+        if name and VENDORS.search(str(p.get("vendor") or "")):
+            products[name] += 1
+        else:
+            other += 1
+    return {"read": "ok" if not failed else f"partial ({failed} of {len(vms)} unread)", "vms": len(vms),
+            "products": dict(sorted(products.items())), "other": other}
 
 
 # ---------------------------------------------------------------- step 3: the fleet and collection
@@ -261,6 +310,7 @@ def read_fleet(instances):
     for row, c in zip(rows, comps):
         row["name_group"] = order.index(c.get("fqdn")) + 1
         row["shares_name"] = sum(1 for x in comps if x.get("fqdn") == c.get("fqdn")) > 1
+    place_runtimes(rows, comps)
     names = {str(x) for c in comps for x in (c.get("id"), c.get("fqdn"), c.get("sddcLcmId"), (c.get("vcenter") or {}).get("fqdn"),
                                             (c.get("vcenter") or {}).get("id"), (c.get("vspCluster") or {}).get("id")
                                             if isinstance(c.get("vspCluster"), dict) else c.get("vspCluster")) if x}
@@ -290,6 +340,26 @@ def read_fleet(instances):
     return rows, collection, names
 
 
+def place_runtimes(rows, comps):
+    """Which services runtime each service runs on: a group number and the cluster's type (MANAGEMENT, CONSUMPTION), never
+    its identifier. A runtime component (type VSP) is its own group, so a group no VSP row owns is a runtime the list
+    does not carry as a component: on 9.1.1, VCF Automation's."""
+    def runtime_id(c):
+        v = c.get("vspCluster")
+        return str(v.get("id")) if isinstance(v, dict) else None
+    rts = list(dict.fromkeys([str(c.get("id")) for c in comps if c.get("componentType") == "VSP"] + [x for x in map(runtime_id, comps) if x]))
+    for row, c in zip(rows, comps):
+        if c.get("componentType") == "VSP":
+            row["runtime"] = {"group": rts.index(str(c.get("id"))) + 1, "is_runtime": True,
+                              "type": (c.get("vspCluster") or {}).get("type") if isinstance(c.get("vspCluster"), dict) else None}
+        elif runtime_id(c):
+            row["runtime"] = {"group": rts.index(runtime_id(c)) + 1, "is_runtime": False, "type": c["vspCluster"].get("type")}
+    listed_rt = {r["runtime"]["group"] for r in rows if (r.get("runtime") or {}).get("is_runtime")}
+    for r in rows:
+        if r.get("runtime"):
+            r["runtime"]["listed"] = r["runtime"]["group"] in listed_rt
+
+
 def read_standalone(hosts):
     rows, names = [], set()
     for host in hosts:
@@ -317,11 +387,16 @@ def version_rows(instances, fleet, standalone):
     return [r for r in rows if r[1]]
 
 
+def bom_row_for(bom, what):
+    """The bill's row a version reading compares with: the row whose read_as names what this script prints."""
+    return next((r for r in bom["rows"] if what in (r.get("read_as") or [])), None)
+
+
 def compare_bom(rows, bom):
     """Each version row against the bill of materials: at its build, a later patch of the release, or behind it."""
     out = []
     for what, ver, where in rows:
-        b = bom["components"].get(what)
+        b = bom_row_for(bom, what)
         if not b:
             continue
         if what == "Supervisor":   # its version string carries the vCenter build, so only the release compares
@@ -335,6 +410,30 @@ def compare_bom(rows, bom):
         else:
             status = "differs"
         out.append({"what": what, "where": where, "version": ver, "bom": f"{b['version']}.{b['build']}", "status": status})
+    return out
+
+
+def bom_coverage(bom, bom_rows, instances):
+    """Every row of the bill, in three states: read (a version above compared with it), seen (deployed, its running
+    version not compared here) or unread (nothing here read it, so nothing here says whether it is
+    deployed). Seen is an appliance it names in a vCenter, or a Supervisor service it names installed. The bill is the
+    release's own list, so a row this script cannot read is reported, never dropped."""
+    read_names = {r["what"] for r in bom_rows}
+    seen, services = Counter(), set()
+    for inst in instances:
+        for d in inst["domains"]:
+            for name, n in (((d.get("vc") or {}).get("appliances") or {}).get("products") or {}).items():
+                seen[name] += n
+            services |= set(((d.get("vc") or {}).get("services") or {}))
+    out = []
+    for r in bom["rows"]:
+        if read_names & set(r.get("read_as") or []):
+            state = "read"
+        elif any(seen.get(a) for a in r.get("appliance") or []) or services & set(r.get("service") or []):
+            state = "seen"
+        else:
+            state = "unread"
+        out.append({"table": r["table"], "bom_name": r["bom_name"], "state": state})
     return out
 
 
@@ -373,6 +472,13 @@ def main():
             if vc["read"] != "ok":
                 print(f"          vCenter read: {vc['read']}")
                 continue
+            ap = vc.get("appliances") or {}
+            if ap.get("products") is not None:
+                print(f"          appliances  {ap['vms']} VMs; by their OVF product (version not kept: it is the deployed one): "
+                      + ("; ".join(f"{n} {k}" for k, n in ap["products"].items()) or "none named")
+                      + f"; {ap['other']} with no product or another vendor's" + ("" if ap["read"] == "ok" else f" ({ap['read']})"))
+            else:
+                print(f"          appliances  {ap.get('read', 'not read')}")
             if not vc["supervisors"]:
                 print("          Supervisor: none")
                 continue
@@ -385,14 +491,20 @@ def main():
     if ops_token:
         fleet, collection, names = read_fleet(instances); seen |= names
         print("\nfleet  (the Fleet lifecycle service's component list)")
-        print(f"  {'component':<20} {'version':<21} {'hosted as':<9} {'scope':<9} {'size':<12} {'nodes':<36} instance")
+        print(f"  {'component':<20} {'version':<21} {'hosted as':<9} {'scope':<9} {'size':<12} {'nodes':<36} {'instance':<9} runtime")
         for c in sorted(fleet, key=lambda c: (c["instance"] or 0, c["scope"] or "", c["type"] or "")):
             nodes = ", ".join(f"{n} {k}" for k, n in sorted(c["nodes"].items())) or "-"
-            print(f"  {str(c['type']):<20} {str(c['version']):<21} {str(c['deployment']):<9} {str(c['scope']):<9} {str(c['size']):<12} {nodes:<36} {c['instance'] or '?'}")
+            rt = c.get("runtime") or {}
+            rtl = (f"{'is ' if rt.get('is_runtime') else ''}#{rt['group']} {rt.get('type') or '?'}" + ("" if rt.get("listed", True) else ", not listed")) if rt else "-"
+            print(f"  {str(c['type']):<20} {str(c['version']):<21} {str(c['deployment']):<9} {str(c['scope']):<9} {str(c['size']):<12} {nodes:<36} {str(c['instance'] or '?'):<9} {rtl}")
         per = Counter(c["instance"] for c in fleet); scope = Counter(c["scope"] for c in fleet); dep = Counter(c["deployment"] for c in fleet)
         print(f"  {len(fleet)} components: " + ", ".join(f"{per[i]} on instance {i}" for i in sorted(k for k in per if k)) +
               f"; {scope.get('FLEET', 0)} at fleet scope, {scope.get('INSTANCE', 0)} at instance scope; "
               f"{dep.get('OVA', 0)} appliances from an OVA, {dep.get('VSP', 0)} on the services runtime")
+        unlisted = sorted({(c["runtime"]["group"], c["runtime"].get("type")) for c in fleet if c.get("runtime") and not c["runtime"]["listed"]})
+        for g, t in unlisted:
+            on = sorted({c["what"] for c in fleet if (c.get("runtime") or {}).get("group") == g})
+            print(f"  services runtime #{g} ({t}) carries {', '.join(on)}; the list carries no component for that runtime itself")
         if collection:
             rc = ", ".join(f"{n} {t}" for t, n in sorted(collection["remote_collectors"].items())) or "none"
             print(f"  where VCF Operations collects: {collection['on_remote']} adapter instances on its remote collectors ({rc}), "
@@ -414,12 +526,15 @@ def main():
     for r, n in sorted(rel.items(), key=lambda x: str(x[0])):
         odd = sorted({f"{w} {v}" for w, v, _ in rows if release(v) == r}) if len(rel) > 1 and n <= 3 else []
         print(f"  {r}: {n} component reading(s)" + (f": {'; '.join(odd)}" if odd else ""))
-    bom_rows = []
+    bom_rows, coverage = [], []
     if bom_file:
         with open(bom_file, encoding="utf-8") as f:
             bom = json.load(f)
         bom_rows = compare_bom(rows, bom)
-        print(f"\nbill of materials {bom['release']}  ({os.path.basename(bom_file)}, read {bom['read']})")
+        coverage = bom_coverage(bom, bom_rows, instances)
+        state = Counter(c["state"] for c in coverage)
+        print(f"\nbill of materials {bom['release']}  ({os.path.basename(bom_file)}, read {bom['read']}): {len(coverage)} rows, "
+              f"{state.get('read', 0)} read here, {state.get('seen', 0)} seen deployed (an appliance or a Supervisor service), {state.get('unread', 0)} not read here")
         for status in ("build", "release", "later patch", "behind", "differs"):
             hit = [r for r in bom_rows if r["status"] == status]
             if hit:
@@ -429,6 +544,10 @@ def main():
                                 for r in hit})
                 count = f"{len(shown)}" + (f" ({len(hit)} readings)" if len(hit) != len(shown) else "")
                 print(f"  {label:<14} {count}: " + "; ".join(shown))
+        for st_, label in (("seen", "seen, version unread"), ("unread", "not read here")):
+            names = [f"{c['bom_name']}" for c in coverage if c["state"] == st_]
+            if names:
+                print(f"  {label:<14} {len(names)}: " + "; ".join(names))
     # ---- the checks a map makes possible
     checks = []
     for i, inst in enumerate(instances, start=1):
@@ -461,7 +580,7 @@ def main():
                              for inst in instances],
                "fleet": fleet, "collection": collection, "standalone": standalone,
                "releases": {str(k): v for k, v in rel.items()},
-               "bom": {"release": bom["release"], "read": bom["read"], "rows": bom_rows} if bom_file else None,
+               "bom": {"release": bom["release"], "read": bom["read"], "rows": bom_rows, "coverage": coverage} if bom_file else None,
                "checks": [{"ok": ok, "check": what} for ok, what in checks]}
         text = json.dumps(out, indent=1)
         # the product's own vocabulary is what the record is for; an object an operator happened to name after it is not a leak
@@ -470,6 +589,8 @@ def main():
         reserved |= {str(x) for inst in instances for d in inst["domains"] for x in (d["type"], d["status"], *((d.get("vc") or {}).get("services") or {}),
                                                                                 *(s["name"] for s in ((d.get("vc") or {}).get("services") or {}).values()))}
         reserved |= {s["what"] for s in standalone} | {"INTERNAL"}
+        reserved |= {str(p) for inst in instances for d in inst["domains"] for p in (((d.get("vc") or {}).get("appliances") or {}).get("products") or {})}
+        reserved |= {c["bom_name"] for c in coverage}
         leaked = sorted(n for n in seen - reserved if n and len(n) > 3 and re.search(r"(?<![\w.-])" + re.escape(n) + r"(?![\w-])", text))
         assert not leaked, f"an estate name reached the record ({len(leaked)}); nothing was written"
         with open(record, "w", encoding="utf-8") as f:
