@@ -69,28 +69,45 @@ the address, which is the field that would name a host.
 
 ## What --host-builds adds
 
-The run of 2026-10-26T07:21:54Z against the same three vCenters, with `--host-builds` and a key file of the run's own:
-84 requests, 78 of them GETs and the rest the session sign-ins and sign-outs. The 17 more GETs than the run above are
-one service-versions read and one host list per vCenter, and one summary per host. Each vCenter gains two lines after
-its own; printed, as above, from the scrubbed record:
+The run of 2026-10-28T05:08:47Z against the same three vCenters, with `--host-builds` and a key file of the run's own:
+89 requests, 83 of them GETs and the rest the session sign-ins and sign-outs. The 22 more GETs than the run above are
+one service-versions read and one host list per vCenter, one summary per host, and one read of the last remediation
+per image-managed cluster; the depot list adds none, because it keeps what the script already reads. An excerpt,
+printed as above from the scrubbed record: each vCenter's lines, and each cluster's heading with its new line.
 
 ```
 {{vcenter-1}}  vCenter 9.1.1.0 build 25712839
-  host builds  2 read live (vi-json), 2026-10-26T07:22:06Z: 2 on 9.1.1 build 25714478
+  host builds  2 read live (vi-json), 2026-10-28T05:09:00Z: 2 on 9.1.1 build 25714478
              in maintenance 0; keyed yes; collisions 0; unidentified 0; unread 0
+  depot list   46 image(s) with their release dates, read 2026-10-28T05:08:56Z
+  {{cluster-1}}  2 host(s)
+             last remediation OK, ended 2026-10-06T21:51:24.097Z; failed 0, skipped 0, successful 2
 {{vcenter-2}}  vCenter 9.1.1.0 build 25712839
-  host builds  3 read live (vi-json), 2026-10-26T07:22:16Z: 3 on 9.1.1 build 25714478
+  host builds  3 read live (vi-json), 2026-10-28T05:09:10Z: 3 on 9.1.1 build 25714478
              in maintenance 0; keyed yes; collisions 0; unidentified 0; unread 0
+  depot list   47 image(s) with their release dates, read 2026-10-28T05:09:07Z
+  {{cluster-2}}  3 host(s)
+             last remediation OK, ended 2026-10-06T14:58:20.396Z; failed 0, skipped 0, successful 3
 {{vcenter-3}}  vCenter 9.1.1.0 build 25712839
-  host builds  6 read live (vi-json), 2026-10-26T07:22:33Z: 6 on 9.1.1 build 25714478
+  host builds  6 read live (vi-json), 2026-10-28T05:09:29Z: 6 on 9.1.1 build 25714478
              in maintenance 0; keyed yes; collisions 0; unidentified 0; unread 0
+  depot list   47 image(s) with their release dates, read 2026-10-28T05:09:18Z
+  {{cluster-3}}  2 host(s)
+             last remediation OK, ended 2026-10-06T13:00:07.713Z; failed 0, skipped 0, successful 2
+  {{cluster-4}}  2 host(s)
+             last remediation unavailable: The last remediation results for entity {{cluster-4}} are unavailable.
+  {{cluster-5}}  2 host(s)
+             last remediation unavailable: The last remediation results for entity {{cluster-5}} are unavailable.
 ```
 
-This is what each host runs, read from the host's own summary at the time on the line, not the image compliance the
-cluster lines above print, which is the result vCenter stored. Every host here is connected, so each build is what it
-runs; a host that is not connected would be counted under its last known build and named as such. Zero collisions is
-a reading of this estate, not an assumption: a nested or cloned host can report another's hardware UUID, and such a
-pair would be counted and never joined. The exit code is still 1, from the same ALERT line; the flag changes no exit.
+The host builds are what each host runs, read from the host's own summary at the time on the line, not the image
+compliance the cluster lines print, which is the result vCenter stored. Every host here is connected, so each build is
+what it runs; a host that is not connected would be counted under its last known build and named as such. Zero
+collisions is a reading of this estate, not an assumption: a nested or cloned host can report another's hardware UUID,
+and such a pair would be counted and never joined. The depot lists differ by one image between the first vCenter and
+the other two; every image appears once, with one release date. The last remediation is the one the platform keeps;
+two clusters answer that theirs are unavailable, which is recorded as it is said, not read as none ever run. The exit
+code is still 1, from the same ALERT line; the flag changes no exit.
 
 ## The ordered moves for the chapter's example answers
 

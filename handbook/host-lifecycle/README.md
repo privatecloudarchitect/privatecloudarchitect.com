@@ -37,7 +37,16 @@ vCenter knew, and the report marks it as last known. Each host is named by a key
 made with a secret of your own in `FINGERPRINT_KEY_FILE` (mode 0600), so a dated series of records joins one host
 across runs while no record names it. A UUID that is missing or all zeros, or that two hosts report, never joins; the
 record counts them as `unidentified` and `collisions`, and a key two vCenters share never joins either. Without a key
-file the builds are read and nothing joins. The flag changes no exit code: a read that fails is recorded with
+file the builds are read and nothing joins. The flag also keeps the depot's base images, each with its release date
+exactly as the read returned it, and the time of that read, from the read the script already makes; a read that fails
+leaves `versions` null with its reason, never an empty list, so a failed read is never taken for an empty depot. An
+image's release date is when the vendor released it, not when the depot took it in: no field records that, so a series
+of records bounds it between two reads. And each image-managed cluster gains its last remediation as vSphere Lifecycle
+Manager stores it: its status, start and end times (the end time the remediation's own, which runs past its last
+host's), its failed, skipped and successful hosts as counts, the commit it applied, and its notifications counted by
+type, never their text. The platform keeps only the last remediation, so a series of records sees a sample, and no
+field says who started a remediation or whether a person intervened. An "are unavailable" answer is recorded as
+`unavailable`, any other failure as `failed` with its reason. The flag changes no exit code: a read that fails is recorded with
 `"read": false` and its reason, never as a pass. The build is the one the host reports in its summary; what a host
 reports there after a Live Patch, applied without a reboot, has not been read on an estate yet, so the read makes no
 claim for a host live-patched since its last reboot.
@@ -103,4 +112,7 @@ and whether each is on, `base_images` and `newest_base_image`) and `clusters`. I
 host its `status` and its `drift`, each item's `change`, `path`, `fields` and `withheld`). `findings` lists what the
 report prints at its foot; with `--host-builds`, each vCenter also carries `host_builds` (`read`, `via`, `read_at`,
 `keyed`, `collisions`, `unidentified`, `unread`, and `hosts`, each with its `key`, `joinable`, `cluster`, `version`,
-`build`, `connection_state` and `in_maintenance`); `exit` is the exit code; `calls` lists every request by method, path template and status.
+`build`, `connection_state` and `in_maintenance`), and its `depot` gains `versions` (each `version` with its
+`release_date`), `read_at`, and `versions_why` when the read failed; each image-managed cluster gains
+`last_remediation` (`state`, `read_at`, and when stored `status`, `start_time`, `end_time`, `end_time_from`, `failed`,
+`skipped`, `successful`, `commit` and `notifications`); `exit` is the exit code; `calls` lists every request by method, path template and status.

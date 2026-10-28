@@ -15,7 +15,9 @@ cluster of every vCenter you name, with the stored results that say whether the 
   4. with --host-builds, what each host RUNS: its version and build read live from the host's own summary, never from
      a stored compliance result, with its connection state and maintenance mode. Each host is named by a keyed
      fingerprint of its hardware UUID (FINGERPRINT_KEY_FILE), so a dated series can join one host across runs while
-     the record names none; a UUID that is missing, all zeros, or reported by two hosts never joins.
+     the record names none; a UUID that is missing, all zeros, or reported by two hosts never joins. The depot's base
+     images are kept too, each with its release date as the read returned it, and the time of that read, and each
+     image-managed cluster's last remediation as vSphere Lifecycle Manager stores it (only the last one is kept).
 
 It also carries plan(), a pure function: given what you answer about your estate, the moves off baselines, host
 profiles, Auto Deploy and UMDS, in the order the documentation sets, each marked enforced, documented order or
@@ -491,7 +493,32 @@ def _day(t) -> str | None:
     return str(t)[:10] if t else None
 
 
-def read_cluster(vc: Vcenter, cid: str, name: str, hosts: int | None) -> dict:
+def last_remediation(vc: Vcenter, b: str, tb: str) -> dict:
+    """With --host-builds, the cluster's last remediation as vSphere Lifecycle Manager stores it: only the last one is
+    kept, so a series of records sees a sample of a cluster's remediations, never all of them. Three states: `stored`
+    (its status, start and end times, the end time the remediation's own, which runs past its last host's; failed,
+    skipped and successful hosts as counts; the commit it applied, as returned; notifications counted by type, never
+    their text), `unavailable` (the platform's own "are unavailable" answer, with its error type and scrubbed message),
+    or `failed` (any other answer, with its reason). Nothing here says who started a remediation or whether a person
+    intervened."""
+    read_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")  # stamped before the read
+    st, body = vc.get(f"{b}/software/reports/last-apply-result", f"{tb}/software/reports/last-apply-result")
+    if st == 200 and isinstance(body, dict):
+        status = body.get("status") or {}
+        notes = body.get("notifications") or {}
+        return {"state": "stored", "read_at": read_at, "status": status.get("status"),
+                "start_time": status.get("start_time"), "end_time": status.get("end_time"), "end_time_from": "status",
+                "failed": len(body.get("failed_hosts") or []), "skipped": len(body.get("skipped_hosts") or []),
+                "successful": len(body.get("successful_hosts") or []), "commit": body.get("commit"),
+                "notifications": {k: len(v) for k, v in sorted(notes.items()) if isinstance(v, list)}
+                if isinstance(notes, dict) else {}}
+    msg = message(body)
+    if st == 404 and isinstance(body, dict) and body.get("error_type") == "NOT_FOUND" and "are unavailable" in str(msg):
+        return {"state": "unavailable", "read_at": read_at, "error_type": "NOT_FOUND", "message": msg}
+    return {"state": "failed", "read_at": read_at, "why": msg or f"answered {st}"}
+
+
+def read_cluster(vc: Vcenter, cid: str, name: str, hosts: int | None, builds: bool = False) -> dict:
     b = f"/esx/settings/clusters/{cid}"
     tb = "/esx/settings/clusters/{cluster}"
     out: dict = {"name": name, "hosts": hosts}
@@ -515,6 +542,8 @@ def read_cluster(vc: Vcenter, cid: str, name: str, hosts: int | None) -> dict:
             "solutions": sorted((sw.get("solutions") or {}).keys()),
             "alternative_images": len(sw.get("alternative_images") or {}),
         }
+        if builds:
+            out["last_remediation"] = last_remediation(vc, b, tb)
         st, comp = vc.get(f"{b}/software/compliance", f"{tb}/software/compliance")
         if st == 200 and isinstance(comp, dict):
             hosts_c = comp.get("hosts") or {}
@@ -588,6 +617,26 @@ def newer(a: str, b: str) -> bool:
     return pa > pb
 
 
+def depot_listing(status: int, bases, read_at: str) -> dict:
+    """With --host-builds, the depot's base images as the read returned them: each distinct (version, release date) once,
+    the release date kept exactly as returned (a string, or null when absent), sorted by version; and the time stamped
+    immediately before the read. A read that did not answer 200 with a list records versions null and its reason, never
+    an empty list, so a failed read is never taken for an empty depot."""
+    if status != 200 or not isinstance(bases, list):
+        return {"versions": None, "versions_why": message(bases) or f"answered {status}", "read_at": read_at}
+    seen, listing = set(), []
+    for b in bases:
+        if not isinstance(b, dict) or not b.get("version"):
+            continue
+        pair = (b.get("version"), b.get("release_date"))
+        if pair in seen:
+            continue
+        seen.add(pair)
+        listing.append({"version": pair[0], "release_date": pair[1]})
+    listing.sort(key=lambda x: ([int(n) for n in re.findall(r"\d+", str(x["version"]))], str(x["release_date"] or "")))
+    return {"versions": listing, "read_at": read_at}
+
+
 def read_vcenter(vc: Vcenter, builds: bool = False, key: bytes | None = None) -> dict:
     out: dict = {"name": vc.host}
     st, v = vc.get("/appliance/system/version")
@@ -603,6 +652,7 @@ def read_vcenter(vc: Vcenter, builds: bool = False, key: bytes | None = None) ->
     st_u, _ = vc.get("/esx/settings/depots/umds")
     st_on, online = vc.get("/esx/settings/depots/online")
     st_off, offline = vc.get("/esx/settings/depots/offline")
+    depot_read_at = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")  # stamped before the read
     st_b, bases = vc.get("/esx/settings/depot-content/base-images")
     depots = []
     for d in (online or {}).values() if st_on == 200 and isinstance(online, dict) else []:
@@ -618,13 +668,16 @@ def read_vcenter(vc: Vcenter, builds: bool = False, key: bytes | None = None) ->
                     "online": sorted(depots, key=lambda d: (d["kind"], d["description"] or "")),
                     "offline_bundles": len(offline) if st_off == 200 and isinstance(offline, (dict, list)) else None,
                     "base_images": len(versions), "newest_base_image": versions[-1] if versions else None}
+    if builds:
+        out["depot"].update(depot_listing(st_b, bases, depot_read_at))
     st, clusters = vc.get("/vcenter/cluster")
     if st != 200 or not isinstance(clusters, list):
         raise ReadFailed(f"the cluster list answered {st}")
     out["clusters"], members = [], []
     for cl in sorted(clusters, key=lambda c: c.get("name") or ""):
         st, hs = vc.get(f"/vcenter/host?clusters={cl['cluster']}", "/vcenter/host?clusters={cluster}")
-        out["clusters"].append(read_cluster(vc, cl["cluster"], cl.get("name"), len(hs) if isinstance(hs, list) else None))
+        out["clusters"].append(read_cluster(vc, cl["cluster"], cl.get("name"), len(hs) if isinstance(hs, list) else None,
+                                            builds))
         members.append((cl.get("name"), [h["host"] for h in hs] if st == 200 and isinstance(hs, list) else []))
     if builds:
         out["host_builds"] = host_builds(vc, key, members)
@@ -832,6 +885,10 @@ def report(rec: dict) -> list[str]:
                 lines.append(f"             in maintenance {sum(1 for r in hb['hosts'] if r['in_maintenance'])}; "
                              f"keyed {'yes' if hb['keyed'] else 'no (set FINGERPRINT_KEY_FILE to join a series)'}; "
                              f"collisions {hb['collisions']}; unidentified {hb['unidentified']}; unread {hb['unread']}")
+            dep_b = v["depot"]
+            if "versions" in dep_b:
+                lines.append(f"  depot list   {len(dep_b['versions'])} image(s) with their release dates, read {dep_b['read_at']}"
+                             if dep_b["versions"] is not None else f"  depot list   not read: {dep_b.get('versions_why')}")
         for c in v["clusters"]:
             lines.append(f"  {c['name']}  {c['hosts']} host(s)")
             if not c["image_managed"]:
@@ -847,6 +904,12 @@ def report(rec: dict) -> list[str]:
                     parts.append("solutions " + ", ".join(im["solutions"]))
                 lines.append("    image    " + "; ".join(parts))
                 lines.append(f"             compliance {ic.get('status')}, stored {ic.get('checked') or ic.get('why')}")
+                lr = c.get("last_remediation")
+                if lr is not None:
+                    lines.append(
+                        f"             last remediation {lr['status']}, ended {lr['end_time']}; failed {lr['failed']}, "
+                        f"skipped {lr['skipped']}, successful {lr['successful']}" if lr["state"] == "stored"
+                        else f"             last remediation {lr['state']}: {lr.get('message') or lr.get('why')}")
             cfg = c["configuration"]
             if not cfg.get("enabled"):
                 lines.append("    configuration profiles  not enabled")
