@@ -545,8 +545,9 @@ Steps 1 to 4 run only when an API client's credential is given.
   bearer kept reading, writing on its own client and trading at vCenter until its own expiry, 30 minutes after it was
   minted, and was refused 30 seconds after. The fleet API's in-place regenerate
   (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`), called outside the script in the same run, answered a
-  token under a new id with a new end date, and the value from before was refused three seconds later: it leaves no
-  overlap, so the script does not use it. How long an overlap may last is bounded only by the old token's own end date,
+  token under a new id with a new end date, and the value from before was then refused at the broker (HTTP 400) while
+  the new one traded (HTTP 200); the interval between the two was not recorded. It leaves no overlap, so the script
+  does not use it. How long an overlap may last is bounded only by the old token's own end date,
   which was not waited out.
 - `service_account.py` writes only with `--execute`: one service account and its token, or their revocation and
   removal. Rotation: the account read back with rotation required on every refresh, and each refresh returned a new

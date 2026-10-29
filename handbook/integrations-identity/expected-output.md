@@ -164,9 +164,10 @@ api_client_retire.json written with every estate value replaced
   companion's tests, not run on the reference estate, which holds one realm.
 - **Regenerating a token in place gives no overlap.** The fleet API also regenerates a token's value
   (`POST /ssorealms/{realm}/api-tokens/{token id}/regenerate`). In a run of 2026-10-13, called outside the script, the answer
-  was a token under a new id with a new end date and a new value; the value from before answered HTTP 400 at the broker
-  three seconds later, and the new one HTTP 200. An integration reading the old value fails from that moment, so rotate with
-  `--rotate` and its overlap, not by regenerating.
+  was a token under a new id with a new end date and a new value; the value from before then answered HTTP 400 at the
+  broker, and the new one HTTP 200 (the interval between the regenerate and the refusal was not recorded). An integration
+  still holding the old value is refused once it is regenerated, so rotate with `--rotate` and its overlap, not by
+  regenerating.
 
 ## 1b. `api_client.py --scope instance`: the role at one VCF instance
 
