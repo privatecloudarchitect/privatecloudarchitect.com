@@ -59,8 +59,8 @@ inputs:
 
   vm_image:
     type: string
-    title: VM image (immutable ID)
-    description: 'kubectl get virtualmachineimages -n <ns>'
+    title: VM image (display name)
+    description: 'kubectl get clustervirtualmachineimages,virtualmachineimages -o custom-columns=ID:.metadata.name,NAME:.status.name'
 
   storage_class:
     type: string

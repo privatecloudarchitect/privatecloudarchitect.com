@@ -1,5 +1,5 @@
 {
- "capturedUtc": "2026-10-28T23:28:04Z",
+ "capturedUtc": "2026-10-29T14:42:27Z",
  "orgLibraries": [
   {
    "name": "{{library-1}}",
@@ -68,117 +68,74 @@
      "kubernetes": 0
     }
    ],
-   "pins": [
+   "locks": [
     {
      "file": "{{file-1}}",
-     "line": 72,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-2}}",
-     "line": 46,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 105,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 107,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-3}}",
-     "line": 55,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
+    }
+   ],
+   "pins": [
     {
      "file": "{{file-4}}",
-     "line": 35,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 96,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 99,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 109,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-5}}",
-     "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 100,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-6}}",
-     "line": 59,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 56,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 119,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 23,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-7}}",
      "line": 123,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-8}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-9}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-10}}",
      "line": 18,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     }
    ]
@@ -239,117 +196,74 @@
      "kubernetes": 0
     }
    ],
-   "pins": [
+   "locks": [
     {
      "file": "{{file-1}}",
-     "line": 72,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-2}}",
-     "line": 46,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 105,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 107,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-3}}",
-     "line": 55,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
+    }
+   ],
+   "pins": [
     {
      "file": "{{file-4}}",
-     "line": 35,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 96,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 99,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 109,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-5}}",
-     "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 100,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-6}}",
-     "line": 59,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 56,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 119,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 23,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-7}}",
      "line": 123,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-8}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-9}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-10}}",
      "line": 18,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     }
    ]
@@ -410,117 +324,74 @@
      "kubernetes": 0
     }
    ],
-   "pins": [
+   "locks": [
     {
      "file": "{{file-1}}",
-     "line": 72,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-2}}",
-     "line": 46,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 105,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 107,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-3}}",
-     "line": 55,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
+    }
+   ],
+   "pins": [
     {
      "file": "{{file-4}}",
-     "line": 35,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 96,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 99,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 109,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-5}}",
-     "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 100,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-6}}",
-     "line": 59,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 56,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 119,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 23,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-7}}",
      "line": 123,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-8}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-9}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-10}}",
      "line": 18,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     }
    ]
@@ -581,117 +452,74 @@
      "kubernetes": 0
     }
    ],
-   "pins": [
+   "locks": [
     {
      "file": "{{file-1}}",
-     "line": 72,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-2}}",
-     "line": 46,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 105,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-2}}",
-     "line": 107,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
     },
     {
      "file": "{{file-3}}",
-     "line": 55,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
+     "pin": "{{image-1}}",
+     "verdict": "HELD",
+     "qualified": "2026-10-29"
+    }
+   ],
+   "pins": [
     {
      "file": "{{file-4}}",
-     "line": 35,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 96,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-4}}",
-     "line": 99,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 109,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-5}}",
-     "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 100,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-6}}",
-     "line": 59,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 56,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
-     "scope": "cluster"
-    },
-    {
-     "file": "{{file-7}}",
-     "line": 119,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "line": 23,
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-7}}",
      "line": 123,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-8}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-9}}",
      "line": 23,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     },
     {
      "file": "{{file-10}}",
      "line": 18,
-     "pin": "{{image-id-1}}",
-     "resolves": "id",
+     "pin": "{{image-1}}",
+     "resolves": "name",
      "scope": "cluster"
     }
    ]

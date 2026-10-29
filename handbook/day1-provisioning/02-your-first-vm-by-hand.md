@@ -41,15 +41,18 @@ Work from a per-namespace context, not the top-level one:
 ```bash
 vcf context use <context-name>:<namespace>:<project>
 
-kubectl get virtualmachineimages                  # the image  -> vmi-...
-kubectl get virtualmachineclasses                 # the size   -> best-effort-small, ...
+kubectl get clustervirtualmachineimages,virtualmachineimages \
+  -o custom-columns=ID:.metadata.name,NAME:.status.name     # the image -> its display name
+kubectl get virtualmachineclasses                           # the size  -> best-effort-small, ...
 ```
 
-**Read the namespace-scoped image list, not the cluster-scoped one.**
-[00-reaching-the-supervisor](./00-reaching-the-supervisor.md) explains why at length; the short
-version is that `clustervirtualmachineimages` is where a VKS estate keeps its Kubernetes **node**
-images, so searching it for Ubuntu returns a long list of things that are not what you want. If a
-`vmi-` id's display name carries a Kubernetes version, it is a node image.
+**Read both image lists, and pin the display name.** An image is cluster-scoped when its library is
+attached to the whole Supervisor and namespace-scoped when it is attached to your namespace, so
+either list can hold yours; the command reads both. [00-reaching-the-supervisor](./00-reaching-the-supervisor.md)
+explains the two scopes. A display name that carries a Kubernetes version is a VKS **node** image, not
+one to build a VM from. `NAME` is the value to pin. The `ID` names a library item, and a rebuilt
+library gives every image a new one, so a file that pins it stops working; a name can carry new bits,
+so record what it served when you tested it ([Content libraries](https://privatecloudarchitect.com/handbook/content-libraries)).
 
 Storage classes are the one value with no obvious list command from inside a namespace, because
 `kubectl get storageclass` is a cluster-scoped read and your tenant identity is refused it. Two ways
@@ -71,8 +74,11 @@ NAME:.metadata.name,CLASS:.spec.className,IMAGE:.spec.imageName,STORAGE:.spec.st
 
 ```
 NAME                      CLASS               IMAGE                  STORAGE
-app-db-01                 best-effort-small   vmi-0000000000000      my-storage-class
+app-db-01                 best-effort-small   my-vm-image            my-storage-class
 ```
+
+If `IMAGE` shows a `vmi-` id, that machine was pinned by id: pin the display name the image lists
+give for that id instead.
 
 Those three values are known to work together on this estate, because a machine is running on them
 right now. Starting from a proven triple removes the most common first-attempt failure, which is a
@@ -123,11 +129,9 @@ metadata:
     app.kubernetes.io/part-of: hello-vm       # which application it belongs to
     environment: lab                          # prod | stage | dev | test | dr | lab
 spec:
-  # WHAT to build from. A vmi- id rather than a friendly name: the id is immutable, so
-  # this file produces the same machine next month. A display name is not a contract.
-  image:
-    kind: VirtualMachineImage
-    name: <REPLACE_ME-vm-image>
+  # WHAT to build from: the image's display name. Admission resolves it to the image's id
+  # and records that id in spec.image. Not the id itself: an id names a library item, and a
+  # rebuilt library gives every image a new one, which would leave this file naming nothing.
   imageName: <REPLACE_ME-vm-image>
 
   # HOW BIG. A named class, not a CPU and memory pair. The platform team owns what the

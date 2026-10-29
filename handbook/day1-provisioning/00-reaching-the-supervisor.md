@@ -126,8 +126,8 @@ per-namespace context to read and use them:
 
 ```bash
 vcf context use <context-name>:<namespace>:<project>
-kubectl get virtualmachineimages -n <your-namespace>   # VM images bound to YOUR namespace; look here first
-kubectl get clustervirtualmachineimages               # images shared cluster-wide; see the warning below
+kubectl get clustervirtualmachineimages,virtualmachineimages \
+  -o custom-columns=ID:.metadata.name,NAME:.status.name   # VM images, both scopes; see below
 kubectl get virtualmachineclasses         # VM sizes (vm_class)
 kubectl get kubernetesreleases            # Kubernetes releases for VKS, templates 4 and 5 (kr for short)
 ```
@@ -154,14 +154,13 @@ Re-vending costs nothing but the round trip; it re-reads the namespace list and 
 after creating a namespace, and treat `context ... not found` as "my snapshot is old", not as "my
 namespace is missing".
 
-**The image list has two scopes, and the bigger one is mostly the wrong images.** A VM image is either
-bound to your namespace (`virtualmachineimages`) or shared across the cluster
-(`clustervirtualmachineimages`), and the two lists can have nothing in common. On the estate these
-templates were verified against they overlap in zero entries: three general-purpose images are bound to
-the namespace, and 138 are cluster-scoped. The trap is that the cluster-scoped list is where a VKS estate
-keeps its **Kubernetes node images**, so a search for Ubuntu returns 103 results and not one of them is a
-general-purpose Ubuntu you want under a VM. Read your namespace's list first, and treat a `vmi-` id whose
-display name carries a Kubernetes version as a node image rather than a candidate.
+**The image list has two scopes, and where yours sits depends on where its library is attached.** A
+library attached to your namespace puts its images in `virtualmachineimages`; one attached to the whole
+Supervisor puts them in `clustervirtualmachineimages`, beside the **Kubernetes node images** a VKS estate
+keeps there. So read both lists, which the command above does, and treat a display name (`NAME`) that
+carries a Kubernetes version as a node image rather than a candidate. On the reference estate on
+2026-10-29 the general-purpose library was attached to the whole Supervisor: the namespace list was
+empty, and of the 102 cluster images, 99 were node images and 3 were general-purpose.
 
 Two consequences worth knowing before you pick a namespace to build in. An image bound to one namespace is
 not usable from another, so the same manifest can work in one and be refused in the next with *no VM image

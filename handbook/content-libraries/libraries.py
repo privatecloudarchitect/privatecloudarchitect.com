@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""libraries.py: can each namespace see the VM images it needs, through which attachment, and do your pins resolve?
+"""libraries.py: can each namespace see the VM images it needs, through which attachment, and do your pins hold?
 
-A VM names its image by an id (vmi-...), and the id resolves only if the namespace can list an image carrying it. An
-image reaches a namespace by one of three attachments, and each lives on a different layer:
+A VM names its image by display name or by id (vmi-...), and either resolves only if the namespace can list an image
+carrying it; a display name resolves only when exactly one image carries it, and admission refuses it otherwise. The
+practice: pin by display name, and hold the pin with an image-lock.json beside the blueprint that records the image's
+fingerprint when it was qualified, because neither the name nor the id freezes the bits (an id names a library slot,
+so a rebuild changes it and new content in the same slot keeps it). An image reaches a namespace by one of three
+attachments, and each lives on a different layer:
 
   * SUPERVISOR-WIDE: the library's vCenter copy sits in the Supervisor's own library list, every namespace holds a
     ClusterContentLibrary for it, and its images are ClusterVirtualMachineImages in every namespace. A provider
@@ -20,6 +24,10 @@ can name and where they come from, the Kubernetes release images apart, and any 
   --pins PATH        also check every image pin in the YAML/JSON files under PATH (vmi-... ids and imageName values)
                      against each namespace's images: an id resolves directly, a display name only when one image
                      carries it. A library rebuild gives every image a new id, which is what this catches.
+  --lock PATH        also check every image-lock.json at PATH (a file, or every one under a directory): the pin
+                     must resolve to one image, and that image's fingerprint (SHA-256 over its library item's
+                     sorted name:bytes file pairs) must equal the lock's. HELD, RE-QUALIFY (the bits under the
+                     pin changed since qualification, or a rebuild changed a size), or NOT CHECKED (unread).
   --namespace NAME   read one namespace instead of every namespace the account can list
   --vcenter          also read the provider side from vCenter: the Supervisor's library list and each namespace's
                      own library setting (VC_HOST, VC_USER, VC_PASSWORD_FILE)
@@ -39,11 +47,11 @@ Run:
   python3 libraries.py                                  # every namespace
   python3 libraries.py --pins ./blueprints              # and every pin under ./blueprints
 
-Exit: 0 every namespace read can name a general-purpose image, no attachment is unready and every pin resolves;
-      1 a finding (a namespace with no general-purpose image, an unready attachment, a pin that resolves nowhere);
-      2 a setting is missing, a secret file is open, or the sign-in was refused; 3 a namespace could not be read
-      (its endpoint did not answer), which is not a finding; 4 the record refused to write because an estate value
-      survived; 5 an unknown argument.
+Exit: 0 every namespace read can name a general-purpose image, no attachment is unready, every pin resolves and
+      every lock holds; 1 a finding (a namespace with no general-purpose image, an unready attachment, a pin that
+      resolves nowhere or ambiguously, a lock to re-qualify); 2 a setting is missing, a secret file is open, the
+      sign-in was refused, or a lock file is malformed; 3 a namespace or a fingerprint could not be read, which is
+      not a finding; 4 the record refused to write because an estate value survived; 5 an unknown argument.
 """
 
 import base64
@@ -64,12 +72,20 @@ IREG = "imageregistry.vmware.com/v1alpha2"
 K8S_RELEASE_LABEL = "services.supervisor.vmware.com/kubernetes.vmware.com"
 VMI = re.compile(r"\bvmi-[0-9a-f]{12,20}\b")
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
-# A display-name pin is only read from an imageName key at the start of a line (a VM manifest's own field); an id
-# pin (vmi-...) is read wherever it appears, including a blueprint input's default.
+# A display-name pin is read from an imageName key (a VM manifest's own field) and from the default of a blueprint
+# input whose key names an image (vm_image, db_vm_image); an id pin (vmi-...) is read wherever it appears outside a
+# comment. A comment naming an id, such as a version-history note, is not a pin.
 IMAGE_NAME = re.compile(
     r"""^\s*(?:-\s*)?["']?imageName["']?\s*:\s*["']?([A-Za-z0-9][A-Za-z0-9._-]{2,80})"""
 )
+IMAGE_INPUT = re.compile(r"^(\s+)([A-Za-z0-9_]*image[A-Za-z0-9_]*)\s*:\s*$", re.I)
+DEFAULT = re.compile(r"""^\s+default\s*:\s*["']?([A-Za-z0-9][A-Za-z0-9._-]{2,80})""")
+COMMENT = re.compile(r"(^|\s)#.*$")
 PLACEHOLDER = re.compile(r"(\{\{[^}]*\}\})")
+# fileInfo sizeInBytes is a Kubernetes quantity: most items carry plain digits, a node image carried "3952256k".
+QUANTITY = re.compile(r"^([0-9]+)(Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$")
+FACTOR = {None: 1, "k": 10**3, "M": 10**6, "G": 10**9, "T": 10**12, "P": 10**15, "E": 10**18,
+          "Ki": 2**10, "Mi": 2**20, "Gi": 2**30, "Ti": 2**40, "Pi": 2**50, "Ei": 2**60}
 
 
 def ctx():
@@ -292,6 +308,8 @@ def read_namespace(t, ep, ns):
             for i in nitem
         }
     )
+    item_print = {i["metadata"]["name"]: fingerprint((i.get("status") or {}).get("fileInfo")) for i in citem + nitem}
+    prints = {}
     images = []
     for scope, objs in (("cluster", cimg), ("namespace", nimg)):
         for i in objs:
@@ -301,6 +319,9 @@ def read_namespace(t, ep, ns):
                 item_lib.get(
                     ((i.get("spec") or {}).get("providerRef") or {}).get("name"), (None, None)
                 )
+            )
+            prints[i["metadata"]["name"]] = item_print.get(
+                ((i.get("spec") or {}).get("providerRef") or {}).get("name")
             )
             if lib:
                 lib["kubernetes" if k8s else "images"] += 1
@@ -323,7 +344,70 @@ def read_namespace(t, ep, ns):
     k8s_count = sum(
         1 for i in cimg + nimg if K8S_RELEASE_LABEL in (i["metadata"].get("labels") or {})
     )
-    return {"images": images, "kubernetesImages": k8s_count, "attachments": list(libs.values())}
+    return {
+        "images": images,
+        "kubernetesImages": k8s_count,
+        "attachments": list(libs.values()),
+        "_prints": prints,  # kept out of the record: used for --lock, then dropped
+    }
+
+
+def quantity_bytes(size):
+    """A Kubernetes quantity string as whole bytes, or None when it is not one this reads."""
+    if isinstance(size, int) and not isinstance(size, bool):
+        return size
+    m = QUANTITY.match(str(size).strip()) if size is not None else None
+    return int(m.group(1)) * FACTOR[m.group(2)] if m else None
+
+
+def fingerprint(files):
+    """SHA-256 over a library item's sorted name:bytes file pairs; None when any name or size cannot be read."""
+    import hashlib
+
+    pairs = []
+    for f in files or []:
+        name, size = f.get("name"), quantity_bytes(f.get("sizeInBytes", f.get("size")))
+        if not name or size is None:
+            return None
+        pairs.append(f"{name}:{size}")
+    return "sha256:" + hashlib.sha256("\n".join(sorted(pairs)).encode()).hexdigest() if pairs else None
+
+
+def find_locks(path):
+    """(file, entry) for every image entry of every image-lock.json at path. A malformed lock stops the run."""
+    files = (
+        [path]
+        if os.path.isfile(path)
+        else sorted(
+            os.path.join(d, f) for d, _, fs in os.walk(path) for f in fs if f == "image-lock.json"
+        )
+    )
+    out = []
+    for f in files:
+        try:
+            lock = json.load(open(f, encoding="utf-8"))
+            assert lock.get("lockVersion") == 1
+            for e in lock["images"]:
+                assert e["pin"] and e["fingerprint"]["value"].startswith("sha256:")
+                out.append((f, e))
+        except (OSError, ValueError, KeyError, TypeError, AssertionError):
+            stop(2, f"{f} is not an image lock this reads (lockVersion 1, images[].pin, images[].fingerprint.value)")
+    return out
+
+
+def lock_verdict(entry, images, prints):
+    """HELD, RE-QUALIFY, NOT CHECKED, AMBIGUOUS or UNRESOLVED for one lock entry in one namespace."""
+    how, _scope = resolve(entry["pin"], images)
+    if how is None:
+        return "UNRESOLVED"
+    if how == "ambiguous":
+        return "AMBIGUOUS"
+    key = "id" if how == "id" else "name"
+    image = next(i for i in images if i[key] == entry["pin"])
+    seen = prints.get(image["id"])
+    if seen is None:
+        return "NOT CHECKED"
+    return "HELD" if seen == entry["fingerprint"]["value"] else "RE-QUALIFY"
 
 
 def find_pins(path):
@@ -335,7 +419,8 @@ def find_pins(path):
             os.path.join(d, f)
             for d, _, fs in os.walk(path)
             for f in fs
-            if f.endswith((".yaml", ".yml", ".json"))
+            # an image-lock.json records the id it observed, which is not a pin: --lock reads those files
+            if f.endswith((".yaml", ".yml", ".json")) and f != "image-lock.json"
         ]
     )
     out = []
@@ -344,11 +429,20 @@ def find_pins(path):
             text = open(f, encoding="utf-8").read()
         except (OSError, UnicodeDecodeError):
             continue
-        for n, line in enumerate(text.splitlines(), 1):
-            if line.lstrip().startswith("#"):
+        image_input = None  # the indent of an input whose key names an image, while inside it
+        for n, raw in enumerate(text.splitlines(), 1):
+            line = COMMENT.sub("", raw)
+            if not line.strip():
+                continue
+            indent = len(line) - len(line.lstrip())
+            if image_input is not None and indent <= image_input:
+                image_input = None
+            k = IMAGE_INPUT.match(line)
+            if k:
+                image_input = len(k.group(1))
                 continue
             vals = set(VMI.findall(line))
-            m = IMAGE_NAME.match(line)
+            m = IMAGE_NAME.match(line) or (DEFAULT.match(line) if image_input is not None else None)
             if m and not VMI.match(m.group(1)) and not m.group(1).startswith("$"):
                 vals.add(m.group(1))
             for v in sorted(vals):
@@ -486,6 +580,18 @@ def report(rec):
             else "RESOLVES NOWHERE"
         )
         lines.append(f"pin {pin:<26} {f}:{line}  {how}, in {len(ok)} of {read} namespace(s)")
+    locks = {}
+    for n in rec["namespaces"]:
+        for lk in n.get("locks", []):
+            locks.setdefault((lk["pin"], lk["file"], lk["qualified"]), []).append(lk["verdict"])
+    for (pin, f, on), verdicts in sorted(locks.items(), key=lambda kv: (kv[0][1], kv[0][0])):
+        held = verdicts.count("HELD")
+        worst = next(
+            (v for v in ("RE-QUALIFY", "AMBIGUOUS", "UNRESOLVED", "NOT CHECKED") if v in verdicts), "HELD"
+        )
+        lines.append(
+            f"lock {pin:<25} {f}  {worst}: held in {held} of {len(verdicts)} namespace(s) (qualified {on})"
+        )
     if rec.get("vcenter"):
         v = rec["vcenter"]
         for s in v["supervisors"]:
@@ -510,12 +616,19 @@ def report(rec):
 
 
 def run(argv):
-    known = {"--pins": True, "--namespace": True, "--vcenter": False, "--help": False, "-h": False}
+    known = {
+        "--pins": True,
+        "--lock": True,
+        "--namespace": True,
+        "--vcenter": False,
+        "--help": False,
+        "-h": False,
+    }
     opt, a = {}, list(argv)
     while a:
         k = a.pop(0)
         if k not in known:
-            print(f"unknown argument {k!r}: use --pins PATH, --namespace NAME, --vcenter")
+            print(f"unknown argument {k!r}: use --pins PATH, --lock PATH, --namespace NAME, --vcenter")
             return 5
         if k in ("--help", "-h"):
             print(__doc__)
@@ -544,6 +657,7 @@ def run(argv):
     if opt.get("--namespace"):
         nss = [n for n in nss if n["metadata"]["name"] == opt["--namespace"]]
     pins = find_pins(opt["--pins"]) if opt.get("--pins") else []
+    locks = find_locks(opt["--lock"]) if opt.get("--lock") else []
     unread = 0
     for n in sorted(nss, key=lambda n: n["metadata"]["name"]):
         name, ep = (
@@ -557,7 +671,24 @@ def run(argv):
             unread += 1
             rec["namespaces"].append(row)
             continue
+        prints = got.pop("_prints")
         row.update(got)
+        row["locks"] = []
+        for f, entry in locks:
+            verdict = lock_verdict(entry, got["images"], prints)
+            rel = (
+                os.path.relpath(f, opt["--lock"])
+                if os.path.isdir(opt["--lock"])
+                else os.path.basename(f)
+            )
+            row["locks"].append(
+                {"file": rel, "pin": entry["pin"], "verdict": verdict,
+                 "qualified": (entry.get("qualified") or {}).get("on")}
+            )
+            if verdict == "NOT CHECKED":
+                unread += 1
+            elif verdict != "HELD":
+                rec["findings"].append(f"{name}: lock {entry['pin']} ({rel}) reads {verdict}")
         if not got["images"]:
             rec["findings"].append(f"{name} can name no general-purpose image")
         for a2 in got["attachments"]:
@@ -626,6 +757,13 @@ def scrub_record(rec):
         for i in n.get("images") or []:
             L.get("image", i["name"])
             L.get("image-id", i["id"])
+        for lk in n.get("locks") or []:
+            L.get("file", lk["file"])
+            (
+                L.get("image-id", lk["pin"])
+                if lk["pin"].startswith("vmi-")
+                else L.get("image", lk["pin"])
+            )
         for p in n.get("pins") or []:
             L.get("file", p["file"])
             (
@@ -646,8 +784,9 @@ def scrub_record(rec):
 
 
 def leaked(clean, raw):
-    """True when any estate value the run saw survives in the scrubbed record."""
-    text = json.dumps(clean)
+    """True when any estate value the run saw survives in the scrubbed record, outside the placeholders: a real name
+    can equal a label (an estate's project named project-1), and inside a placeholder that is not a leak."""
+    text = "".join(part for i, part in enumerate(PLACEHOLDER.split(json.dumps(clean))) if not i % 2)
     values = {v for m in _LABELS.maps.values() for v in m}
     return any(
         re.search(rf"(?<![A-Za-z0-9-]){re.escape(v)}(?![A-Za-z0-9-])", text) for v in values if v

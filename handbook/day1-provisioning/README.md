@@ -98,7 +98,7 @@ behind them, live in the handbook at
 
 - **This series, narrated end to end** ([Building blueprints](https://privatecloudarchitect.com/handbook/building-blueprints)): the crawl-walk-run of this library as one chapter, a single idea per step from one VM to microservices, with the design reasoning and the watch points drawn out. The narrated companion to read alongside these files.
 - **What a template is, and how it deploys** ([Day-1 provisioning](https://privatecloudarchitect.com/handbook/day1-provisioning)): a released version becomes a catalog item whose input schema is the tenant's whole interface, and the requester owns what they deploy. The model every template here plugs into.
-- **The VM primitive**, stages 1 to 4 ([The VM Service](https://privatecloudarchitect.com/handbook/vm-service)): the class, the immutable image, the storage class, and the cloud-init Secret, which are the exact fields these blueprints set.
+- **The VM primitive**, stages 1 to 4 ([The VM Service](https://privatecloudarchitect.com/handbook/vm-service)): the class, the image pinned by its display name, the storage class, and the cloud-init Secret, which are the exact fields these blueprints set.
 - **The Kubernetes primitive**, stages 4 to 5 ([Supervisor and VKS operations](https://privatecloudarchitect.com/handbook/vks-operations)): the cluster as a spec whose nodes are outputs, the VKS resource stages 4 and 5 declare.
 
 ## What is in this folder
@@ -190,5 +190,7 @@ file:
   jobs.
 - **Right-size on purpose.** Boot disks and sizes are chosen, not inherited, so a
   deploy does not quietly spend quota you did not mean to.
-- **Immutable images.** Pin the image to its ID, not a moving alias, so a deploy
-  is reproducible.
+- **Images pinned by name, held to what you tested.** Pin the image's display name,
+  not its `vmi-` id: the id names a library item, and a rebuilt library gives every
+  image a new one. A name can carry new bits, so record what it served when you
+  tested it ([Content libraries](https://privatecloudarchitect.com/handbook/content-libraries)).

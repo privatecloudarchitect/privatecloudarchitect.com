@@ -92,13 +92,14 @@ inputs:
 
   vm_image:
     type: string
-    title: VM image (immutable ID)
+    title: VM image (display name)
     description: >-
-      The image the VM boots from, given as its IMMUTABLE cluster-image ID
-      (looks like vmi-0a1b2c3d...), never a friendly alias like "ubuntu-latest".
-      Pinning the ID makes a deploy reproducible: it cannot drift when someone
-      re-tags the alias next month. Find a current Ubuntu 24.04 image with:
-        kubectl get virtualmachineimages -n <ns>
+      The display name of the image the VM boots from. Admission resolves it to
+      the image's id. Not the id itself (vmi-...): an id names a library item,
+      and a rebuilt library gives every image a new one. A name can carry new
+      bits, so record what it served when you tested it. List the display names
+      (NAME) of the images your namespace can use, at either scope, with:
+        kubectl get clustervirtualmachineimages,virtualmachineimages -o custom-columns=ID:.metadata.name,NAME:.status.name
 
   storage_class:
     type: string

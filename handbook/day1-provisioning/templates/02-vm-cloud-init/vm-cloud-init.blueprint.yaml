@@ -62,10 +62,10 @@ inputs:
 
   vm_image:
     type: string
-    title: VM image (immutable ID)
+    title: VM image (display name)
     description: >-
-      The immutable cluster-image ID (vmi-...) to boot from, not a friendly alias,
-      so a deploy is reproducible.  kubectl get virtualmachineimages -n <ns>
+      The image's display name, not its vmi- id, which a rebuilt library changes.
+        kubectl get clustervirtualmachineimages,virtualmachineimages -o custom-columns=ID:.metadata.name,NAME:.status.name
 
   storage_class:
     type: string

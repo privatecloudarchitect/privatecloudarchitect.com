@@ -56,7 +56,8 @@ project path while the classic face reports none of the items as global and ever
 a listing is not an entitlement answer.
 
 **The ingredients.** The deployable resource types and the images, whose object name is an opaque id and whose
-readable name is a separate field. Pin by the id.
+readable name is a separate field. Pin by the readable name and hold it with a lock: the id names a library item,
+which a rebuild replaces.
 
 ## `--lookup`: key on the id, refuse a name that is not yours
 

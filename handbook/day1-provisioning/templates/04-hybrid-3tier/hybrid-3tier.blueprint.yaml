@@ -62,8 +62,8 @@ inputs:
   # --- Database VM sizing/image (the stateful tier) --------------------------
   db_vm_image:
     type: string
-    title: Database VM image (immutable ID)
-    description: 'kubectl get virtualmachineimages -n <ns>'
+    title: Database VM image (display name)
+    description: 'kubectl get clustervirtualmachineimages,virtualmachineimages -o custom-columns=ID:.metadata.name,NAME:.status.name'
 
   db_vm_class:
     type: string
