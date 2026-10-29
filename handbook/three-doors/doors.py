@@ -46,7 +46,8 @@ Run:
   DOORS_NAMESPACE=<ns> python3 doors.py --probe-doors --dry-run   # what the probe would create
   DOORS_NAMESPACE=<ns> python3 doors.py --probe-doors             # build, compare, delete, read back
 
-The probe needs a namespace that has a VM image bound to it and storage quota left. Both are checked before
+The probe needs a namespace that can name a general-purpose VM image (bound to it, or cluster-scoped from a library
+attached to the whole Supervisor) and storage quota left. Both are checked before
 anything is created, and it says which one is missing rather than letting an admission webhook say it later.
 
 Exit: 0 written; 2 a call failed, a sign-in was refused, or a probe's precondition was not met; 3 a probe left
@@ -80,6 +81,7 @@ SUFFIX = {"Ki": 1024, "Mi": 1024 ** 2, "Gi": 1024 ** 3, "Ti": 1024 ** 4,
 LINK = re.compile(r"^cci:([^:]+):([^:]+):[^:]+:VirtualMachine:(.+)$")
 MARKER = re.compile(r"(?i)deploy|catalog|blueprint|vra|automation")
 # A Kubernetes release's node image names its release and build: ob-<n>-ubuntu-<n>-amd64-v1.30.1---vmware.1-vkr.1.
+K8S_RELEASE_LABEL = "services.supervisor.vmware.com/kubernetes.vmware.com"
 NODE_IMAGE = re.compile(r"v\d+\.\d+\.\d+(\+[\w.]+)?---vmware\.")
 
 
@@ -272,6 +274,10 @@ def survey(e, L, project):
                             "present": len(spaces), "usable": len(with_endpoint),
                             "note": "usable means it publishes its own namespaceEndpointURL; that URL is the door"})
     per_ns, seen = [], []
+    # A library attached to the whole Supervisor lands its images in every namespace as cluster-scoped images, so a
+    # namespace with nothing bound can still name one. The cluster list is mostly Kubernetes node images on an estate
+    # that runs clusters, so only the general-purpose ones count.
+    general = general_cluster_images(e, with_endpoint[0]["status"]["namespaceEndpointURL"]) if with_endpoint else []
     for n in with_endpoint:
         name, url = n["metadata"]["name"], (n.get("status") or {}).get("namespaceEndpointURL")
         L.get("namespace", name)
@@ -284,14 +290,15 @@ def survey(e, L, project):
         # a single opaque string, and a scrubber only replaces what it was told about.
         for v in e.items(url, f"/apis/{VMOP}/v1alpha5/namespaces/{name}/virtualmachines"):
             L.get("machine", v["metadata"]["name"])
-        per_ns.append({"namespace": L.get("namespace", name), "imagesBound": images, "classes": classes,
+        per_ns.append({"namespace": L.get("namespace", name), "imagesBound": images, "imagesCluster": len(general),
+                       "classes": classes,
                        "quotaStated": stated, "quotaGiB": round(lim / SUFFIX["Gi"], 1) if stated else None,
                        "usedGiB": round(used / SUFFIX["Gi"], 1), "freeGiB": round((lim - used) / SUFFIX["Gi"], 1) if stated else None,
-                       "couldBuildAVm": (images > 0 and (lim - used) > 20 * SUFFIX["Gi"]) if stated else None})
-    needs["direct"].append({"need": "a VM image bound to THAT namespace", "kind": "VirtualMachineImage",
-                            "present": sum(1 for x in per_ns if x["imagesBound"]), "usable": len(per_ns),
-                            "note": "images are namespace scoped here, so a namespace with none cannot build a "
-                                    "VM, whatever the cluster-scoped list holds"})
+                       "couldBuildAVm": (images + len(general) > 0 and (lim - used) > 20 * SUFFIX["Gi"]) if stated else None})
+    needs["direct"].append({"need": "a VM image THAT namespace can name", "kind": "VirtualMachineImage",
+                            "present": sum(1 for x in per_ns if x["imagesBound"] + x["imagesCluster"]), "usable": len(per_ns),
+                            "note": "bound to the namespace, or cluster-scoped from a library attached to the Supervisor; "
+                                    "the Kubernetes node images in the cluster list do not count"})
     needs["direct"].append({"need": "storage quota with room for the boot disk", "kind": "StoragePolicyQuota",
                             "present": sum(1 for x in per_ns if x["freeGiB"] is not None and x["freeGiB"] > 20),
                             "usable": len(per_ns),
@@ -314,6 +321,17 @@ def survey(e, L, project):
     return needs, per_ns, image_scope(e, with_endpoint, seen)
 
 
+def general_cluster_images(e, url):
+    """(id, display name) of every cluster-scoped image that is not a Kubernetes node image."""
+    path = f"/apis/{VMOP}/v1alpha5/clustervirtualmachineimages"
+    st, _ = e.ns(url, path)
+    if st != 200:
+        return []
+    return [(i["metadata"]["name"], str((i.get("status") or {}).get("name") or "")) for i in e.items(url, path)
+            if not NODE_IMAGE.search(str((i.get("status") or {}).get("name") or ""))
+            and K8S_RELEASE_LABEL not in ((i.get("metadata") or {}).get("labels") or {})]
+
+
 def image_scope(e, spaces, seen):
     """The two places a VM image lives, compared, in counts: the images bound to the namespaces against the
     cluster-scoped list, by id and by display name, and how many of the cluster images are Kubernetes node images
@@ -329,7 +347,9 @@ def image_scope(e, spaces, seen):
     cluster = [(i["metadata"]["name"], str((i.get("status") or {}).get("name") or ""),
                 str(((i.get("status") or {}).get("osInfo") or {}).get("type") or "")) for i in e.items(url, path)]
     ubuntu = [c for c in cluster if "ubuntu" in (c[1] + " " + c[2]).lower()]
+    general = general_cluster_images(e, url)
     return {"clusterListStatus": st, "clusterImages": len(cluster), "namespaceImages": len({s[0] for s in seen}),
+            "clusterGeneral": len(general),
             "sharedById": len({s[0] for s in seen} & {c[0] for c in cluster}),
             "sharedByDisplayName": len({s[1] for s in seen if s[1]} & {c[1] for c in cluster if c[1]}),
             "clusterNodeImages": sum(1 for c in cluster if NODE_IMAGE.search(c[1])),
@@ -768,14 +788,15 @@ def main():
         print(f"     {n['need']:46s} {n['present']}")
     ready = [x for x in per_ns if x["couldBuildAVm"]]
     unknown = [x for x in per_ns if x["couldBuildAVm"] is None]
-    print(f"\n  {len(ready)} of {len(per_ns)} namespace(s) could build a VM today (an image bound to them and room for a "
+    print(f"\n  {len(ready)} of {len(per_ns)} namespace(s) could build a VM today (an image they can name and room for a "
           f"20Gi boot disk)" + (f"; {len(unknown)} state no storage limit, so this script cannot judge them" if unknown else ""))
     for x in per_ns:
         room = f"free {x['freeGiB']:>7.1f} GiB of {x['quotaGiB']:.1f}" if x["quotaStated"] else "no storage limit stated"
         verdict = {True: "can build", False: "cannot build here", None: "cannot judge"}[x["couldBuildAVm"]]
-        print(f"     {x['namespace']:22s} images {x['imagesBound']:>2}  classes {x['classes']:>2}  {room}  {verdict}")
+        print(f"     {x['namespace']:22s} images {x['imagesBound']:>2} bound {x['imagesCluster']:>2} cluster  classes {x['classes']:>2}  {room}  {verdict}")
     if scope and scope.get("clusterListStatus") == 200:
-        print(f"  images: {scope['namespaceImages']} bound to these namespaces, {scope['clusterImages']} cluster-scoped, sharing "
+        print(f"  images: {scope['namespaceImages']} bound to these namespaces, {scope['clusterImages']} cluster-scoped "
+              f"({scope['clusterGeneral']} general-purpose), sharing "
               f"{scope['sharedById']} by id and {scope['sharedByDisplayName']} by name; {scope['clusterNodeImages']} of the "
               f"cluster-scoped are Kubernetes node images, {scope['clusterUbuntuNodeImages']} of the {scope['clusterUbuntu']} "
               f"that are Ubuntu")
@@ -818,12 +839,13 @@ def main():
         if not match:
             fail("DOORS_NAMESPACE is not a namespace with an endpoint in the chosen project")
         url = match[0][2]
-        images = [i["metadata"]["name"] for i in e.items(url, f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachineimages")]
+        images = [i["metadata"]["name"] for i in e.items(url, f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachineimages")] \
+            + [g[0] for g in general_cluster_images(e, url)]
         classes = sorted(c["metadata"]["name"] for c in e.items(url, f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachineclasses"))
         row = next((x for x in per_ns if x["namespace"] == L.get("namespace", ns)), None)
         if not images:
-            fail("no VM image is bound to that namespace; the direct door cannot open there. Images are namespace "
-                 "scoped, so a large cluster catalogue does not help.")
+            fail("that namespace can name no general-purpose VM image, bound or cluster-scoped; the direct door cannot "
+                 "open there. The Kubernetes node images in the cluster list do not help.")
         if not row or not row["quotaStated"] or row["freeGiB"] <= 20:
             fail("that namespace has no stated storage limit or under 20 GiB left; the probe needs 20 GiB for a boot disk")
         storage = os.environ.get("DOORS_STORAGE_CLASS") or next(
@@ -835,7 +857,7 @@ def main():
         if dry_run:
             taken = taken_names(e, project, url, f"/apis/{VMOP}/v1alpha5/namespaces/{ns}/virtualmachines", f"{PREFIX}-probe")
             print(f"\n  DRY RUN, the probe would create in {L.get('namespace', ns)}: a VirtualMachine named {PREFIX}-direct "
-                  f"(class {vmclass}, the first bound image, storage class {L.get('storageclass', storage)}); a blueprint "
+                  f"(class {vmclass}, the first image it can name, storage class {L.get('storageclass', storage)}); a blueprint "
                   f"{PREFIX}-probe and its version {PREFIX}-probe:1.0.0 released to the catalog in {L.get('project', project)}; "
                   f"and a catalog request for a deployment and machine named {PREFIX}-catalog. It would then delete all of "
                   f"them and read back the machines, the deployment, the blueprint, the version and both catalogs. "

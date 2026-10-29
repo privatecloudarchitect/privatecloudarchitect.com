@@ -67,8 +67,8 @@ version and both catalogs to report whether anything of its own remains.
 Every object it touches is one it made. Both machines, the blueprint and its version carry a `handbook-doors-`
 prefix. Its teardown deletes by name, so before it creates anything it checks that none of those names is taken
 and stops if one is. It also checks two prerequisites first and refuses with the reason rather than letting an
-admission webhook say it later: a VM image bound to the namespace, and storage quota with room for a 20 GiB boot
-disk.
+admission webhook say it later: a general-purpose VM image the namespace can name (bound to it, or cluster-scoped from
+a library attached to the whole Supervisor), and storage quota with room for a 20 GiB boot disk.
 
 The teardown waits up to ten minutes for each path, and records each machine's disk promotion state
 (`VirtualMachineDiskPromotionSynced`) when its delete is issued. On 9.1.1 the machine whose promotion had not synced
@@ -88,12 +88,15 @@ record has none of them, because a Day-2 action is a property of the record rath
 
 ## Two prerequisites that bite, and are worth reading before you pick a namespace
 
-**Images are scoped, and the longer list is usually the wrong one.** A VM image is either bound to your namespace
-(`virtualmachineimages`) or shared cluster-wide (`clustervirtualmachineimages`), and the two lists can have nothing
-in common. `doors.py` compares them by id and by display name and counts how many cluster-scoped images are
-Kubernetes node images by the release their name carries (`imageScope` in the record). On the reference estate the
-lists shared nothing, and every cluster-scoped Ubuntu image was a node image. The same manifest therefore
-builds in a namespace with an image bound and is refused in one without.
+**An image counts at either scope, and the long list is mostly the wrong images.** A VM image is either bound to
+your namespace (`virtualmachineimages`) or cluster-scoped (`clustervirtualmachineimages`), where a library attached
+to the whole Supervisor lands its images in every namespace. `doors.py` compares the two lists by id and by display
+name, counts how many cluster-scoped images are Kubernetes node images by the release their name carries, and counts
+the rest as general-purpose (`imageScope` in the record); a namespace can build when it can name a general-purpose
+image at either scope. On the reference estate on 2026-10-19 the general-purpose images were bound to three of five
+namespaces and none was cluster-scoped, so the same manifest built in three and was refused in two; on 2026-10-28,
+after the provider library was attached to the Supervisor, none was bound, every namespace named them at cluster
+scope, and every namespace could build.
 
 **Storage quota is per namespace,** and a namespace short of room for the boot disk refuses the create.
 
@@ -142,7 +145,8 @@ which while it is stopped.
 ## Reading the record
 
 `needs` is the prerequisite ledger, split into `direct` and `automation`, with what each door requires and how many
-of each the estate has. `namespaces` is one row per namespace with the images bound to it, the classes it publishes,
+of each the estate has. `namespaces` is one row per namespace with the images bound to it (`imagesBound`), the
+general-purpose cluster images it can name (`imagesCluster`), the classes it publishes,
 its quota and whether it could build a VM today. `imageScope` compares the two image lists. `claimBuys` holds the
 shape of the claim (`linkShape`), the `deploymentActions` and `resourceActions` the claim makes possible, and the
 `recordFields` the deployment carries. `credentials` is the bearer offered to each door. `probe` is present when

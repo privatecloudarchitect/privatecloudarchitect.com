@@ -13,7 +13,15 @@ on your estate with no repository dependency and touches nothing (it only reads)
   export PREFLIGHT_VC_HOST=your-supervisor-vcenter.example.com
   export PREFLIGHT_NAMESPACE=your-target-namespace
   export PREFLIGHT_SESSION_ID=<a vCenter API session id>   # POST /api/session
-  python3 preflight.py --requires-vm-image --vm-count 2
+  # R1 reads the images the namespace can see through the namespace's own endpoint:
+  export PREFLIGHT_NS_ENDPOINT=<the namespace's endpoint URL>   # status.namespaceEndpointURL of the namespace
+  export PREFLIGHT_BEARER_FILE=~/.vcf/vcfa-bearer               # a VCF Automation bearer, file of mode 0600
+  python3 preflight.py --image <the vmi-... id or display name the bundle pins> --vm-count 2
+
+R1 asks whether the pinned image is among the images the namespace can name: its own VirtualMachineImages, or the
+Supervisor's ClusterVirtualMachineImages, where a library attached to the whole Supervisor lands. It does not
+judge from the namespace's vCenter library setting, which stays empty for a Supervisor-wide library and keeps
+the id of a library that was deleted. Without the endpoint and bearer, R1 reports that it did not look.
 
 The check functions are pure so you can unit test them; the live wrapper is the
 only part that reads your estate.
@@ -28,7 +36,7 @@ import ssl
 import sys
 import urllib.request
 
-PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
+PASS, WARN, FAIL, SKIP, UNKNOWN = "PASS", "WARN", "FAIL", "SKIP", "UNKNOWN"
 DEFAULT_BOOT_DISK_GIB = 80  # conservative un-right-sized OS image default
 
 
@@ -59,29 +67,33 @@ def check_auth_probe(probe_ok):
     )
 
 
-def check_image_resolves(requires_vm_image, namespace_content_libraries):
-    if not requires_vm_image:
-        return ("R1", "L1", "image resolves in namespace", SKIP, "Bundle declares no VM image.", "")
-    if namespace_content_libraries:
-        n = len(namespace_content_libraries)
-        return (
-            "R1",
-            "L1",
-            "image resolves in namespace",
-            PASS,
-            f"Namespace VM Service has {n} content library(ies) attached.",
-            "",
-        )
-    return (
-        "R1",
-        "L1",
-        "image resolves in namespace",
-        FAIL,
-        "The bundle needs a VM image but the namespace VM Service has no content library "
-        "attached, so the image will not resolve at admission.",
-        "Attach a content library holding the image to the namespace VM Service (and share it to "
-        "the org); prefer a Supervisor- or region-wide association so new namespaces inherit it.",
-    )
+def check_image_resolves(image_ref, visible):
+    """R1: is the pinned image (an id, or a display name one image carries) among the images the namespace can
+    name? `visible` is a list of (image id, display name, scope), or None when it was not read."""
+    t = "image resolves in namespace"
+    if not image_ref:
+        return ("R1", "L1", t, SKIP, "Bundle declares no VM image.", "")
+    if visible is None:
+        return ("R1", "L1", t, UNKNOWN, "The namespace's images were not read, so whether the image resolves "
+                "was not observed.", "Set PREFLIGHT_NS_ENDPOINT and PREFLIGHT_BEARER_FILE so the gate can list them.")
+    hit = [v for v in visible if v[0] == image_ref]
+    if hit:
+        return ("R1", "L1", t, PASS, f"{image_ref} ({hit[0][1] or 'no display name'}) is visible at {hit[0][2]} "
+                "scope.", "")
+    named = [v for v in visible if v[1] == image_ref]
+    if len(named) == 1:
+        return ("R1", "L1", t, PASS, f"Display name {image_ref} resolves to {named[0][0]} at {named[0][2]} scope "
+                "(a name pin follows whatever image carries it).", "")
+    if len(named) > 1:
+        return ("R1", "L1", t, WARN, f"Display name {image_ref} is carried by {len(named)} images; which one "
+                "admission picks was not tested.", "Pin the image by id, or remove the duplicate display name.")
+    n_cluster = sum(1 for v in visible if v[2] == "cluster")
+    return ("R1", "L1", t, FAIL,
+            f"The pinned image {image_ref} is not among the {len(visible)} images this namespace can see "
+            f"({n_cluster} cluster-wide, {len(visible) - n_cluster} in the namespace); the VM will be refused at admission.",
+            "If the image's library was rebuilt, every image id changed: find the image by its display name and "
+            "re-pin. If the image is missing entirely, check that its library is ready and attached, to the "
+            "Supervisor for every namespace or to this namespace.")
 
 
 def check_quota_footprint(storage_limit_mib, vm_count, per_vm_boot_disk_gib=DEFAULT_BOOT_DISK_GIB):
@@ -166,10 +178,40 @@ def _read_namespace_instance(host, namespace, session_id):
         return json.loads(r.read().decode("utf-8"))
 
 
+def _secret_file(name):
+    """The value in the file NAME_FILE names, refused unread when the file is open to group or other."""
+    path = os.environ.get(f"{name}_FILE")
+    if not path:
+        return None
+    with open(os.path.expanduser(path)) as f:
+        mode = os.fstat(f.fileno()).st_mode & 0o777
+        if mode & 0o077 and os.name != "nt":
+            raise PermissionError(f"{name}_FILE names a file of mode {mode:04o}, open to group or other: "
+                                  f'run chmod 600 "${name}_FILE" and try again (the file was not read)')
+        return f.read().strip()
+
+
+def _read_visible_images(endpoint, namespace, bearer):
+    """Every image the namespace can name: (id, display name, scope) for cluster and namespace scope."""
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    out = []
+    for scope, path in (("cluster", "/apis/vmoperator.vmware.com/v1alpha5/clustervirtualmachineimages"),
+                        ("namespace", f"/apis/vmoperator.vmware.com/v1alpha5/namespaces/{namespace}/virtualmachineimages")):
+        req = urllib.request.Request(endpoint.rstrip("/") + path,
+                                     headers={"Authorization": f"Bearer {bearer}", "Accept": "application/json"})
+        with urllib.request.urlopen(req, context=ctx, timeout=30) as r:
+            for item in json.loads(r.read().decode("utf-8")).get("items", []):
+                out.append((item["metadata"]["name"], (item.get("status") or {}).get("name"), scope))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="Standup Dependency Ladder preflight gate.")
     ap.add_argument(
-        "--requires-vm-image", action="store_true", help="the bundle deploys a VM Service VM"
+        "--image", default=None,
+        help="the image the bundle pins (a vmi-... id or a display name); omit when it deploys no VM",
     )
     ap.add_argument(
         "--requires-vks", action="store_true", help="the bundle deploys a VKS guest cluster"
@@ -180,16 +222,28 @@ def main():
     host = os.environ.get("PREFLIGHT_VC_HOST")
     namespace = os.environ.get("PREFLIGHT_NAMESPACE")
     session_id = os.environ.get("PREFLIGHT_SESSION_ID")
-    probe_ok, content_libs, storage_mib = None, None, None
+    probe_ok, visible, storage_mib = None, None, None
     if host and namespace and session_id:
         try:
             data = _read_namespace_instance(host, namespace, session_id)
-            content_libs = (data.get("vm_service_spec") or {}).get("content_libraries")
             specs = data.get("storage_specs") or []
             storage_mib = sum(int(s.get("limit") or 0) for s in specs) or None
+            probe_ok = True
         except Exception as exc:
             print(f"live read failed: {exc}", file=sys.stderr)
             probe_ok = False
+    endpoint = os.environ.get("PREFLIGHT_NS_ENDPOINT")
+    if args.image and endpoint and namespace:
+        try:
+            bearer = _secret_file("PREFLIGHT_BEARER")
+            if bearer:
+                visible = _read_visible_images(endpoint, namespace, bearer)
+            del bearer
+        except PermissionError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        except Exception as exc:
+            print(f"image read failed: {exc}", file=sys.stderr)
     else:
         print(
             "PREFLIGHT_VC_HOST / PREFLIGHT_NAMESPACE / PREFLIGHT_SESSION_ID unset; "
@@ -199,7 +253,7 @@ def main():
 
     rungs = [
         check_auth_probe(probe_ok),
-        check_image_resolves(args.requires_vm_image, content_libs),
+        check_image_resolves(args.image, visible),
         check_quota_footprint(storage_mib, args.vm_count),
         check_loadbalancer(args.requires_vks, True if args.requires_vks else None),
     ]
@@ -209,7 +263,7 @@ def main():
     print(f"Standup preflight -> namespace {namespace or '(unset)'}")
     for rung, lesson, title, status, detail, fix in rungs:
         print(f"  [{status:4}] {rung} {title} ({lesson}) - {detail}")
-        if fix and status in (FAIL, WARN):
+        if fix and status in (FAIL, WARN, UNKNOWN):
             print(f"         fix: {fix}")
         blocked = blocked or status == FAIL
     if blocked:

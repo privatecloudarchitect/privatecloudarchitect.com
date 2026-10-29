@@ -1,0 +1,741 @@
+{
+ "capturedUtc": "2026-10-28T23:28:04Z",
+ "orgLibraries": [
+  {
+   "name": "{{library-1}}",
+   "kind": "PROVIDER",
+   "autoAttach": true,
+   "projectScoped": false,
+   "status": "READY",
+   "subscribed": true,
+   "regions": 1
+  }
+ ],
+ "namespaces": [
+  {
+   "name": "{{namespace-1}}",
+   "project": "{{project-1}}",
+   "images": [
+    {
+     "id": "{{image-id-1}}",
+     "name": "{{image-1}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-2}}",
+     "name": "{{image-2}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-3}}",
+     "name": "{{image-3}}",
+     "scope": "cluster",
+     "os": "windows2019srvNext_64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    }
+   ],
+   "kubernetesImages": 99,
+   "attachments": [
+    {
+     "name": "{{library-2}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "FromItemID",
+     "ready": true,
+     "images": 0,
+     "kubernetes": 99
+    },
+    {
+     "name": "{{library-1}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "PreferItemSourceID",
+     "ready": true,
+     "images": 3,
+     "kubernetes": 0
+    }
+   ],
+   "pins": [
+    {
+     "file": "{{file-1}}",
+     "line": 72,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 46,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 105,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 107,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-3}}",
+     "line": 55,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 35,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 96,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 99,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-5}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-6}}",
+     "line": 59,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 56,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 119,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 123,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-8}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-9}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-10}}",
+     "line": 18,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    }
+   ]
+  },
+  {
+   "name": "{{namespace-2}}",
+   "project": "{{project-2}}",
+   "images": [
+    {
+     "id": "{{image-id-1}}",
+     "name": "{{image-1}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-2}}",
+     "name": "{{image-2}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-3}}",
+     "name": "{{image-3}}",
+     "scope": "cluster",
+     "os": "windows2019srvNext_64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    }
+   ],
+   "kubernetesImages": 99,
+   "attachments": [
+    {
+     "name": "{{library-2}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "FromItemID",
+     "ready": true,
+     "images": 0,
+     "kubernetes": 99
+    },
+    {
+     "name": "{{library-1}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "PreferItemSourceID",
+     "ready": true,
+     "images": 3,
+     "kubernetes": 0
+    }
+   ],
+   "pins": [
+    {
+     "file": "{{file-1}}",
+     "line": 72,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 46,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 105,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 107,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-3}}",
+     "line": 55,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 35,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 96,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 99,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-5}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-6}}",
+     "line": 59,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 56,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 119,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 123,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-8}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-9}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-10}}",
+     "line": 18,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    }
+   ]
+  },
+  {
+   "name": "{{namespace-3}}",
+   "project": "{{project-1}}",
+   "images": [
+    {
+     "id": "{{image-id-1}}",
+     "name": "{{image-1}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-2}}",
+     "name": "{{image-2}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-3}}",
+     "name": "{{image-3}}",
+     "scope": "cluster",
+     "os": "windows2019srvNext_64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    }
+   ],
+   "kubernetesImages": 99,
+   "attachments": [
+    {
+     "name": "{{library-2}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "FromItemID",
+     "ready": true,
+     "images": 0,
+     "kubernetes": 99
+    },
+    {
+     "name": "{{library-1}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "PreferItemSourceID",
+     "ready": true,
+     "images": 3,
+     "kubernetes": 0
+    }
+   ],
+   "pins": [
+    {
+     "file": "{{file-1}}",
+     "line": 72,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 46,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 105,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 107,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-3}}",
+     "line": 55,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 35,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 96,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 99,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-5}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-6}}",
+     "line": 59,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 56,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 119,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 123,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-8}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-9}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-10}}",
+     "line": 18,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    }
+   ]
+  },
+  {
+   "name": "{{namespace-4}}",
+   "project": "{{project-1}}",
+   "images": [
+    {
+     "id": "{{image-id-1}}",
+     "name": "{{image-1}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-2}}",
+     "name": "{{image-2}}",
+     "scope": "cluster",
+     "os": "ubuntu64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    },
+    {
+     "id": "{{image-id-3}}",
+     "name": "{{image-3}}",
+     "scope": "cluster",
+     "os": "windows2019srvNext_64Guest",
+     "contentVersion": "2",
+     "ready": true,
+     "library": "{{library-1}}",
+     "via": "supervisor"
+    }
+   ],
+   "kubernetesImages": 99,
+   "attachments": [
+    {
+     "name": "{{library-2}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "FromItemID",
+     "ready": true,
+     "images": 0,
+     "kubernetes": 99
+    },
+    {
+     "name": "{{library-1}}",
+     "via": "supervisor",
+     "type": "ContentLibrary",
+     "naming": "PreferItemSourceID",
+     "ready": true,
+     "images": 3,
+     "kubernetes": 0
+    }
+   ],
+   "pins": [
+    {
+     "file": "{{file-1}}",
+     "line": 72,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 46,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 105,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-2}}",
+     "line": 107,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-3}}",
+     "line": 55,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 35,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 96,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-4}}",
+     "line": 99,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-5}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-6}}",
+     "line": 59,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 56,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 119,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-7}}",
+     "line": 123,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-8}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-9}}",
+     "line": 23,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    },
+    {
+     "file": "{{file-10}}",
+     "line": 18,
+     "pin": "{{image-id-1}}",
+     "resolves": "id",
+     "scope": "cluster"
+    }
+   ]
+  }
+ ],
+ "findings": [],
+ "vcenter": {
+  "supervisors": [
+   [
+    {
+     "library": "{{library-2}}",
+     "type": "SUBSCRIBED",
+     "services": [
+      "kubernetes.vmware.com"
+     ],
+     "naming": null,
+     "exists": true
+    },
+    {
+     "library": "{{library-1}}",
+     "type": "LOCAL",
+     "services": [],
+     "naming": "PREFER_ITEM_SOURCE_ID",
+     "exists": true
+    }
+   ]
+  ],
+  "perNamespace": {
+   "{{namespace-1}}": {
+    "entries": 0,
+    "namingNothing": 0
+   },
+   "{{namespace-2}}": {
+    "entries": 0,
+    "namingNothing": 0
+   },
+   "{{namespace-3}}": {
+    "entries": 0,
+    "namingNothing": 0
+   },
+   "{{namespace-4}}": {
+    "entries": 0,
+    "namingNothing": 0
+   }
+  }
+ }
+}

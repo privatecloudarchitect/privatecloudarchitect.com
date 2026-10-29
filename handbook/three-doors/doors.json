@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-19T21:44:42Z",
+ "captured_utc": "2026-10-28T23:34:02Z",
  "signIn": "session login",
  "project": "{{project-1}}",
  "needs": {
@@ -7,22 +7,22 @@
    {
     "need": "a Supervisor namespace, vended to you",
     "kind": "SupervisorNamespace",
-    "present": 5,
-    "usable": 5,
+    "present": 3,
+    "usable": 3,
     "note": "usable means it publishes its own namespaceEndpointURL; that URL is the door"
    },
    {
-    "need": "a VM image bound to THAT namespace",
+    "need": "a VM image THAT namespace can name",
     "kind": "VirtualMachineImage",
     "present": 3,
-    "usable": 5,
-    "note": "images are namespace scoped here, so a namespace with none cannot build a VM, whatever the cluster-scoped list holds"
+    "usable": 3,
+    "note": "bound to the namespace, or cluster-scoped from a library attached to the Supervisor; the Kubernetes node images in the cluster list do not count"
    },
    {
     "need": "storage quota with room for the boot disk",
     "kind": "StoragePolicyQuota",
-    "present": 5,
-    "usable": 5,
+    "present": 3,
+    "usable": 3,
     "note": "the refusal arrives from an admission webhook at the create call and names the reason"
    }
   ],
@@ -51,7 +51,7 @@
    {
     "need": "a released version",
     "kind": "BlueprintVersion",
-    "present": 29,
+    "present": 39,
     "usable": null,
     "note": "the version object's name is derived, not chosen: it must equal '<blueprint>:<version>'"
    },
@@ -68,63 +68,47 @@
   {
    "namespace": "{{namespace-1}}",
    "imagesBound": 0,
-   "classes": 4,
-   "quotaStated": true,
-   "quotaGiB": 195.3,
-   "usedGiB": 45.6,
-   "freeGiB": 149.7,
-   "couldBuildAVm": false
-  },
-  {
-   "namespace": "{{namespace-2}}",
-   "imagesBound": 3,
+   "imagesCluster": 3,
    "classes": 4,
    "quotaStated": true,
    "quotaGiB": 390.6,
-   "usedGiB": 88.0,
-   "freeGiB": 302.6,
+   "usedGiB": 128.0,
+   "freeGiB": 262.6,
+   "couldBuildAVm": true
+  },
+  {
+   "namespace": "{{namespace-2}}",
+   "imagesBound": 0,
+   "imagesCluster": 3,
+   "classes": 4,
+   "quotaStated": true,
+   "quotaGiB": 293.0,
+   "usedGiB": 3.0,
+   "freeGiB": 290.0,
    "couldBuildAVm": true
   },
   {
    "namespace": "{{namespace-3}}",
-   "imagesBound": 3,
-   "classes": 4,
-   "quotaStated": true,
-   "quotaGiB": 293.0,
-   "usedGiB": 9.0,
-   "freeGiB": 284.0,
-   "couldBuildAVm": true
-  },
-  {
-   "namespace": "{{namespace-4}}",
    "imagesBound": 0,
+   "imagesCluster": 3,
    "classes": 4,
    "quotaStated": true,
    "quotaGiB": 293.0,
-   "usedGiB": 63.0,
-   "freeGiB": 230.0,
-   "couldBuildAVm": false
-  },
-  {
-   "namespace": "{{namespace-5}}",
-   "imagesBound": 3,
-   "classes": 4,
-   "quotaStated": true,
-   "quotaGiB": 293.0,
-   "usedGiB": 238.0,
-   "freeGiB": 55.0,
+   "usedGiB": 250.0,
+   "freeGiB": 43.0,
    "couldBuildAVm": true
   }
  ],
  "imageScope": {
   "clusterListStatus": 200,
-  "clusterImages": 138,
-  "namespaceImages": 3,
+  "clusterImages": 102,
+  "namespaceImages": 0,
+  "clusterGeneral": 3,
   "sharedById": 0,
   "sharedByDisplayName": 0,
-  "clusterNodeImages": 138,
-  "clusterUbuntu": 64,
-  "clusterUbuntuNodeImages": 64
+  "clusterNodeImages": 99,
+  "clusterUbuntu": 60,
+  "clusterUbuntuNodeImages": 58
  },
  "claimBuys": {
   "deploymentActions": [
@@ -148,7 +132,7 @@
    "VirtualMachine.Suspend",
    "VirtualMachine.WebConsole"
   ],
-  "linkShape": "cci:{{project-1}}:{{namespace-5}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:{{machine-11}}",
+  "linkShape": "cci:{{project-1}}:{{namespace-3}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:{{machine-7}}",
   "recordFields": [
    "blueprintId",
    "blueprintVersion",
@@ -199,139 +183,6 @@
   "doorsThatTakeIt": 3,
   "note": "a door answering 200 here is answering this identity; what it then PERMITS is the project role tier and the four dials, which the access-control chapter covers"
  },
- "probe": {
-  "probedUtc": "2026-10-19T21:37:21Z",
-  "direct": {
-   "createStatus": 201,
-   "secondsToPoweredOn": 20,
-   "machine": {
-    "labelKeys": [
-     "app.kubernetes.io/name",
-     "handbook-probe",
-     "topology.kubernetes.io/zone"
-    ],
-    "annotationKeys": [
-     "mgmt.proxy.vmware.com/allowlist",
-     "mgmt.proxy.vmware.com/watermark",
-     "virtualmachine.vmoperator.vmware.com/first-boot-done",
-     "vmoperator.vmware.com/backup-version",
-     "vmoperator.vmware.com/bootstrap-hash-customspec",
-     "vmoperator.vmware.com/created-at-build-version",
-     "vmoperator.vmware.com/created-at-schema-version",
-     "vmoperator.vmware.com/last-resized-vm-class",
-     "vmoperator.vmware.com/manager-id",
-     "vmoperator.vmware.com/upgraded-to-build-version",
-     "vmoperator.vmware.com/upgraded-to-feature-version",
-     "vmoperator.vmware.com/upgraded-to-schema-version"
-    ],
-    "ownerReferences": [],
-    "powerState": "PoweredOn",
-    "specKeys": [
-     "biosUUID",
-     "className",
-     "hardware",
-     "image",
-     "imageName",
-     "instanceUUID",
-     "network",
-     "powerOffMode",
-     "powerState",
-     "promoteDisksMode",
-     "restartMode",
-     "storageClass",
-     "suspendMode",
-     "volumes"
-    ],
-    "promoteDisksMode": "Online",
-    "diskPromotion": "DiskPromotionPending",
-    "deleting": false
-   }
-  },
-  "catalog": {
-   "blueprintStatus": 200,
-   "releaseStatus": 200,
-   "requestStatus": 200,
-   "secondsToCreateSuccessful": 40,
-   "secondsToPoweredOn": 20,
-   "machine": {
-    "labelKeys": [
-     "app.kubernetes.io/name",
-     "handbook-probe",
-     "topology.kubernetes.io/zone"
-    ],
-    "annotationKeys": [
-     "mgmt.proxy.vmware.com/allowlist",
-     "mgmt.proxy.vmware.com/watermark",
-     "virtualmachine.vmoperator.vmware.com/first-boot-done",
-     "vmoperator.vmware.com/backup-version",
-     "vmoperator.vmware.com/bootstrap-hash-customspec",
-     "vmoperator.vmware.com/created-at-build-version",
-     "vmoperator.vmware.com/created-at-schema-version",
-     "vmoperator.vmware.com/last-resized-vm-class",
-     "vmoperator.vmware.com/manager-id",
-     "vmoperator.vmware.com/upgraded-to-build-version",
-     "vmoperator.vmware.com/upgraded-to-feature-version",
-     "vmoperator.vmware.com/upgraded-to-schema-version"
-    ],
-    "ownerReferences": [],
-    "powerState": "PoweredOn",
-    "specKeys": [
-     "biosUUID",
-     "className",
-     "hardware",
-     "image",
-     "imageName",
-     "instanceUUID",
-     "network",
-     "powerOffMode",
-     "powerState",
-     "promoteDisksMode",
-     "restartMode",
-     "storageClass",
-     "suspendMode",
-     "volumes"
-    ],
-    "promoteDisksMode": "Online",
-    "diskPromotion": "DiskPromotionPending",
-    "deleting": false
-   },
-   "claimedBy": "cci:{{project-1}}:{{namespace-2}}:vmoperator.vmware.com/v1alpha5:VirtualMachine:handbook-doors-catalog"
-  },
-  "identical": {
-   "ownerReferencesBoth": [],
-   "markerOnEither": [],
-   "annotationKeysEqual": true,
-   "annotationCount": 12,
-   "specKeysEqual": true,
-   "indistinguishable": true
-  },
-  "teardown": {
-   "catalogDiskPromotionAtDelete": "DiskPromotionPending",
-   "catalogSecondsToVmGone": 324,
-   "catalogSecondsToDeploymentGone": 335,
-   "directDiskPromotionAtDelete": "True",
-   "directSecondsToVmGone": 30
-  },
-  "residue": {
-   "machines": [],
-   "catalogItems": [],
-   "classicCatalogItems": [],
-   "blueprint": false,
-   "version": false,
-   "deployment": false
-  },
-  "clean": true
- },
- "fourthDoor": {
-  "probedUtc": "2026-10-19T21:37:20Z",
-  "created": 201,
-  "declaredByANamespace": false,
-  "claimedByADeployment": false,
-  "tenantQuotaDeltaBytes": 0,
-  "deleted": [
-   204,
-   true
-  ],
-  "namespacesAsked": 5
- }
+ "probe": null,
+ "fourthDoor": null
 }
