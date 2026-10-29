@@ -72,5 +72,3 @@ write a record in which one survived.
   setting holds and how many name no library.
 - `findings`: a namespace with no general-purpose image, an attachment that is not ready, a pin that resolves nowhere
   or is ambiguous, a Supervisor entry naming a library vCenter does not hold.
-</content>
-</invoke>
