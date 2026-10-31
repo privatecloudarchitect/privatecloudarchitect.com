@@ -33,11 +33,14 @@ python3 inventory.py --probe-bindings      # also ask whether a namespace's bind
 
 ### About `--probe-bindings`
 
-The chapter claims a namespace binds four planes at create and refuses to rebind them. That claim should be the
-platform's answer, not ours, so the flag asks it and records the reply. It sends five requests the server is
-built to refuse, and every one carries a value that cannot be applied anyway: a class, a region and a VPC named
-`zz-probe-value-that-exists-nowhere`, and a parent project sent in the body while the URL still addresses the
-real parent, which is the shape a Kubernetes API server rejects as a mismatch rather than a move. The script
+The chapter claims a namespace binds four planes at create and none can be moved after. That claim should be the
+platform's answer, not ours, so the flag asks it and records the reply. It sends five requests, and every one
+carries a value that cannot be applied anyway: a class, a region and a VPC named
+`zz-probe-value-that-exists-nowhere`, a parent project that does not exist patched into `metadata.namespace`, and
+the whole object with a sibling project in the body while the URL still addresses the real parent, which is the
+shape a Kubernetes API server rejects as a mismatch rather than a move. Four are refused; the patch of
+`metadata.namespace` answers 200 and changes nothing, because the parent is not part of what a patch can carry, so a
+200 here is not a move: the namespace read back is the answer. The script
 reads the namespace before and after and **refuses to write the record if one byte of its spec moved**.
 
 Two things to know before you run it on an estate you care about:

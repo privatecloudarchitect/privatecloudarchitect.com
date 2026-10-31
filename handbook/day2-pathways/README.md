@@ -47,7 +47,7 @@ one serves and the one it prefers, and says whether the preferred one is the lin
 written against (`MEASURED_LINE`, `v1alpha5`). The delete behaviour in the next sections belongs to that line;
 the upstream project describes it differently for a newer one, so a Supervisor that prefers a newer line needs
 the delete column re-read before anyone relies on it. `versions.json` is the reference estate's answer, read
-2026-10-07: five namespaces, each serving `v1alpha1` to `v1alpha5` and preferring `v1alpha5`.
+2026-10-22: three namespaces, each serving `v1alpha1` to `v1alpha5` and preferring `v1alpha5`.
 
 ## The drift audit, which is why this script exists
 

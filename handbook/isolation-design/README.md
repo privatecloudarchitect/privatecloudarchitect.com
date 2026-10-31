@@ -133,8 +133,9 @@ python3 verify.py matrix --record matrix.json
 ```
 
 Every cell is a live HTTP call as that principal. Expected shape: `expected-output.md`. With `--record` it also
-writes the matrix by role (edit-1, edit-2, edit_adv, admin, operator), with no user name and no deployment id;
-`matrix.json` here is that record from the reference estate, read on VCF Automation 9.1.1.
+writes the matrix by role (edit-1, edit-2, edit_adv, admin, and operator when `VCFA_OPERATOR_USER` and its password
+are set), with no user name and no deployment id; `matrix.json` here is that record from the reference estate, read
+on VCF Automation 9.1.1 without the operator set, so it has no operator row.
 A cross-user `not-visible(404)` is the design holding, not a failure.
 
 ### 5. The flip: prove what governance changes
