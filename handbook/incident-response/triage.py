@@ -36,6 +36,7 @@ Exit: 0 the read completed - 4 a read was refused or came back short
 import argparse
 import collections
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -54,8 +55,10 @@ OPEN_STATUSES = ("NEW", "ACTIVE", "UPDATED")   # every status but CANCELED is a 
 TRACES = [
     ("symptom", r"\*\*Symptom", "the observation, stated before any cause"),
     ("root cause", r"\*\*Root cause", "the cause, named"),
+    # a word's own ending, not the alternation's: "platform config" and "architectur" are stems, so a boundary right
+    # after them refused "platform configuration" and "architectural", the template's own word among them
     ("layer", r"\*\*Root cause\s*\((?:[^)]*\b(?:information contract|structural|processing logic|"
-               r"architectur|platform[- ]config|infrastructure)\b[^)]*)\)", "the cause classified to a layer"),
+               r"architectur\w*|platform[- ]config\w*|infrastructure)\b[^)]*)\)", "the cause classified to a layer"),
     ("fix", r"\*\*(?:Fix|Discipline|Workaround|Prevention)", "what to do instead"),
     ("evidence", r"\*\*(?:Reference|Evidence)", "where the finding came from"),
     ("cross-link", r"\b[A-Z]-\d+\b", "another entry this one depends on"),
@@ -167,16 +170,33 @@ def rank_definitions(alerts, owner, top=10):
     return rows
 
 
+DAY = re.compile(r"\b(20\d\d-\d\d-\d\d)\b")
+
+
+def layer_of(body):
+    """The layer an entry's root cause names, one of LAYERS' labels, "other wording", or None when it names none."""
+    m = re.search(r"\*\*Root cause\s*\(([^)]{3,80})\)", body, re.I)
+    if not m:
+        return None
+    t = m.group(1).lower()
+    return next((label for needle, label in LAYERS if needle in t), "other wording")
+
+
 def audit_corpus(path, entry_pattern):
     """How much of the method each recorded failure kept. Generic on purpose: the heading pattern is an argument, and
-    the traces are patterns over the entry body, so this audits whatever record you keep. A funnel, not a score."""
-    with open(path, encoding="utf-8") as fh:
-        text = fh.read()
+    the traces are patterns over the entry body, so this audits whatever record you keep. A funnel, not a score.
+
+    The block says what it read and when: the file's sha256, the time of the audit and the heading pattern, and, per
+    entry in file order, the first date its heading line carries and the layer it names. A template binds the entries
+    written after it, so a reader of the record can judge those alone."""
+    with open(path, "rb") as fh:
+        raw = fh.read()
+    text = raw.decode("utf-8")
     parts = re.split(entry_pattern, text, flags=re.M)
     entries = [(parts[i], parts[i + 1]) for i in range(1, len(parts) - 1, 2)]
     if not entries:
         return {"error": f"no entries matched {entry_pattern!r} in {os.path.basename(path)}"}
-    counts, layers = collections.Counter(), collections.Counter()
+    counts, layers, per_entry = collections.Counter(), collections.Counter(), []
     for _, body in entries:
         for name, pattern, _why in TRACES:
             if re.search(pattern, body, re.I):
@@ -187,17 +207,15 @@ def audit_corpus(path, entry_pattern):
             counts["quotes an HTTP status"] += 1
         if re.search(r"\blog(s|ging| file| search)?\b", body, re.I):
             counts["mentions a log"] += 1
-        m = re.search(r"\*\*Root cause\s*\(([^)]{3,80})\)", body, re.I)
-        if m:
-            t = m.group(1).lower()
-            for needle, label in LAYERS:
-                if needle in t:
-                    layers[label] += 1
-                    break
-            else:
-                layers["other wording"] += 1
-    return {"file": os.path.basename(path), "entries": len(entries), "carrying": dict(counts),
-            "layerTags": dict(layers.most_common()), "layerTagged": sum(layers.values())}
+        layer = layer_of(body)
+        if layer:
+            layers[layer] += 1
+        day = DAY.search(body.split("\n", 1)[0])
+        per_entry.append({"date": day.group(1) if day else None, "layer": layer})
+    return {"file": os.path.basename(path), "sha256": hashlib.sha256(raw).hexdigest(),
+            "capturedUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "entryPattern": entry_pattern,
+            "entries": len(entries), "carrying": dict(counts),
+            "layerTags": dict(layers.most_common()), "layerTagged": sum(layers.values()), "perEntry": per_entry}
 
 
 def main():

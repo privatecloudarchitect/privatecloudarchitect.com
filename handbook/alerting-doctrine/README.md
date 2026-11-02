@@ -51,8 +51,10 @@ reaches it. The first needs the effective-policy query, which lives on the unsup
 **exactly one** acknowledgment header (missing is 403, doubled is 400). The second exports each governing policy in
 turn, one at a time, because the export carries the policy's ancestors and a single export of every policy can
 outlast the read timeout. When either refuses, the script reports what it could not determine rather than guessing.
-It also reports how many of your definitions have an explicit entry there: one with none is unset, and the product
-decides.
+It also counts the explicit entries there that name your definitions, and that count is of entries, not definitions:
+an entry is one per kind and the export carries the default policy's ancestors' entries too, so it can hide a
+definition that has none. So it resolves each of your definitions through the default policy's chain, the way the
+product does, and reports it on, off or absent; an absent one is unset, and the product decides.
 
 **3. Where the threshold lives.** Every symptom condition's type, operator, value and metric key. A doctrine of plain
 conditions over computed metrics shows up as a tiny value vocabulary against keys that are mostly super metrics.
@@ -150,7 +152,12 @@ condition-type census, your value and operator vocabulary, how many conditions r
 compare no value. `debounce` carries the cycle distributions for definitions and symptoms, the states per
 definition, the impact badges and how many definitions have no description. `routing` carries the rule field list,
 the filter fields read, whether a policy field exists, and per rule the size of each filter. `correlation` carries
-check 6. `report` is the text the script printed.
+check 6. `listings` carries each listing as it came back: every page's HTTP status, the server's `totalCount`, how
+many items were read, and whether the listing is complete (every page 200 and the total read in full; a listing with
+no total is never recorded as complete). `defaultPolicyReview.ownedResolved` lists your definitions on, off and
+absent, resolved through the default policy's chain, and `exportRead` says whether that policy's export was read at
+all. `report` is the text the script printed. `listings`, `ownedResolved` and `exportRead` arrive with the next
+capture: the committed `alerts.json` (2026-10-10) predates them, so its `ownedEntries` is a count of entries.
 
 `storm.json`: `events`, each with its hosts and clusters (counts), the window by kind and definition, the VM alerts
 that could say down, and the alerts on the VMs under its hosts now and on its clusters; `vmVocabulary`;

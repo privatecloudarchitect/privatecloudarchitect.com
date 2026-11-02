@@ -30,9 +30,15 @@ It reports four things:
      custom-group tree that already scopes policies and alerts. Whether that works is a property of
      your instance: the run asks every group with members for its stat keys and counts the cost ones.
 
+  5. THE PRICE INPUTS. Which cost drivers differ from the product's reference, from the internal
+     cost-driver summary, and when the cost engine last ran. A driver is compared only when the summary
+     reports both its cost in force and its reference as numbers; a side the summary leaves out is not a
+     zero, so that driver is recorded as unknown, never as a match or a difference.
+
 Read-only throughout: resource lists, stat keys, stat values, group membership. It prices nothing,
 sets nothing, and writes nothing to the instance. A read that is refused or comes back short stops
-the run (exit 4) rather than reporting an absence it did not observe.
+the run (exit 4) rather than reporting an absence it did not observe; the price-input reads, which are
+optional, record their HTTP status instead, so a refused or empty read stays visible in the record.
 
 Run:
   export OPS_HOST=... OPS_BROKER_HOST=... OPS_API_TOKEN_FILE=...   # mode 0600 (or OPS_API_TOKEN, the value)
@@ -187,26 +193,62 @@ def internal(tok, path):
         return getattr(e, "code", None), None
 
 
+def _number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def driver_verdict(total, reference):
+    """Whether a driver's monthly cost in force matches the product's reference: True or False when the summary reports
+    both as numbers, None when either is missing. A missing value is not a zero: read as one, two missing values would
+    match and a missing cost would differ, and the summary observed neither."""
+    if not (_number(total) and _number(reference)):
+        return None
+    return abs(total - reference) < CENT
+
+
+def driver_entry(c: dict) -> dict:
+    """One driver as the record keeps it: its name, the verdict, and which sides the summary reported. No amount."""
+    total, ref = c.get("totalCost"), c.get("referenceTotalCost")
+    return {"driver": c.get("costDriver"), "matchesReference": driver_verdict(total, ref),
+            "costReported": _number(total), "referenceReported": _number(ref),
+            "referenceIsZero": (ref == 0) if _number(ref) else None}
+
+
 def price_inputs(tok):
     """5. Which price inputs differ from the product's reference, and when the cost engine last ran. The cost-driver
     summary carries, per driver, the monthly cost in force and the reference cost the product computes; a driver whose
-    two differ was entered or changed, one whose two match was left at the reference or entered at it. No amount is
-    kept: only whether each driver matches."""
+    two differ was entered or changed, one whose two match was left at the reference or entered at it, and one with a
+    side missing is unknown. No amount is kept. Each read's HTTP status is recorded, so a refused read is never an
+    empty answer; the engine's completion time is kept as the instance gives it, its own clock and format."""
     st, summ = internal(tok, "/internal/costdrivers/summary")
     if st != 200 or not isinstance(summ, dict):
         return {"read": False, "status": st}
-    drivers = [{"driver": c.get("costDriver"),
-                "matchesReference": abs((c.get("totalCost") or 0.0) - (c.get("referenceTotalCost") or 0.0)) < CENT,
-                "referenceIsZero": not c.get("referenceTotalCost")}
-               for c in summ.get("summaryCostConfigurations") or []]
-    _, modes = internal(tok, "/internal/costdrivers/configmodes")
-    _, run = internal(tok, "/internal/costcalculation/status")
-    run = run if isinstance(run, dict) else {}
-    return {"read": True, "drivers": drivers,
-            "modes": {m.get("costDriverType"): m.get("costDriverConfigModeType")
-                      for m in (modes or {}).get("costDriverConfigModes") or []},
-            "lastCalculation": {k: run.get(k) for k in ("status", "completionTime", "totalNoOfDatacenters",
-                                                        "failedNoOfDatacenters")}}
+    drivers = [driver_entry(c) for c in summ.get("summaryCostConfigurations") or []]
+    mst, modes = internal(tok, "/internal/costdrivers/configmodes")
+    rst, run = internal(tok, "/internal/costcalculation/status")
+    return {"read": True, "status": st, "drivers": drivers,
+            "modesStatus": mst,
+            "modes": ({m.get("costDriverType"): m.get("costDriverConfigModeType")
+                       for m in modes.get("costDriverConfigModes") or []}
+                      if mst == 200 and isinstance(modes, dict) else None),
+            "lastCalculationStatus": rst,
+            "lastCalculation": ({k: run.get(k) for k in ("status", "completionTime", "totalNoOfDatacenters",
+                                                         "failedNoOfDatacenters")}
+                                if rst == 200 and isinstance(run, dict) else None)}
+
+
+def groups_list(tok):
+    """Every custom group, in the one call the 9.1.1 specification gives the list: it takes no paging parameter and
+    declares no total (GET /api/resources/groups, "Get all custom groups"), so the read's status is recorded and a
+    declared total, should an instance send one, is held to the count."""
+    st, body = ops("GET", "/api/resources/groups", tok, params={"_no_links": "true"})
+    if st != 200:
+        stop(f"list custom groups answered HTTP {st}")
+    groups = (body or {}).get("groups") or []
+    total = ((body or {}).get("pageInfo") or {}).get("totalCount")
+    if total is not None and total != len(groups):
+        stop(f"list custom groups read {len(groups)} of the {total} it declared")
+    return groups, total, {"status": st, "calls": 1}
 
 
 def main():
@@ -293,13 +335,7 @@ def main():
     # The group list holds custom groups (the Container adapter's group types) and the product's own world objects
     # (vSphere World, VCF World and the like). A world object can carry estate-wide cost; that says nothing about
     # whether the groups you build carry it, so the two are counted apart.
-    st, body = ops("GET", "/api/resources/groups", tok, params={"pageSize": 5000, "_no_links": "true"})
-    if st != 200:
-        stop(f"list custom groups answered HTTP {st}")
-    groups = (body or {}).get("groups") or []
-    total = ((body or {}).get("pageInfo") or {}).get("totalCount")
-    if total is not None and total != len(groups):
-        stop(f"list custom groups read {len(groups)} of the {total} it declared")
+    groups, total, groups_read = groups_list(tok)
     custom = [g for g in groups if (g.get("resourceKey") or {}).get("adapterKindKey") == "Container"]
     worlds = [g for g in groups if g not in custom]
     populated = with_cost = members_priced = 0
@@ -314,13 +350,13 @@ def main():
             members_priced += 1
     world_cost = [(g.get("resourceKey") or {}).get("resourceKindKey") for g in worlds
                   if any(k.startswith("cost|") for k in statkeys(tok, g["id"]))]
-    showback = {"groups": len(groups), "groupsDeclaredTotal": total, "customGroups": len(custom),
+    showback = {"groups": len(groups), "groupsDeclaredTotal": total, "groupsRead": groups_read, "customGroups": len(custom),
                 "populatedCustomGroups": populated, "populatedCustomGroupsWithACostKey": with_cost,
                 "populatedCustomGroupsWithPricedMembers": members_priced,
                 "worldObjects": len(worlds), "worldObjectsWithCostKeys": sorted(world_cost),
                 "isAView": populated > 0 and with_cost == populated}
     print(f"\n  4. SHOWBACK over the custom-group tree: {len(custom)} custom group(s), {populated} with members"
-          + ("" if total is not None else " (the group list declares no total; it was read in one page of 5000)"))
+          + ("" if total is not None else " (the list declares no total and takes no paging, per the 9.1.1 specification; one call)"))
     if populated:
         print(f"     {with_cost} of the {populated} with members carry a cost key; {members_priced} of them hold "
               f"members of a priced type")
@@ -335,27 +371,36 @@ def main():
              if world_cost else ""))
 
     # ---- 5. the price inputs: which differ from the reference, and when the cost engine last ran
-    st, cur = ops("GET", "/api/costconfig/currency", tok, params={"_no_links": "true"})
-    currency = (cur or {}).get("code") if st == 200 else None
+    cst, cur = ops("GET", "/api/costconfig/currency", tok, params={"_no_links": "true"})
+    currency = (cur or {}).get("code") if cst == 200 else None
     prices = price_inputs(tok)
     print(f"\n  5. PRICE INPUTS (currency {currency or 'not served'}): the public API serves the currency only; the internal")
     print("     cost-driver summary carries each driver's cost in force beside the product's reference")
     if prices["read"]:
-        changed = [d["driver"] for d in prices["drivers"] if not d["matchesReference"]]
-        same = [d["driver"] for d in prices["drivers"] if d["matchesReference"]]
+        changed = [d["driver"] for d in prices["drivers"] if d["matchesReference"] is False]
+        same = [d["driver"] for d in prices["drivers"] if d["matchesReference"] is True]
+        unknown = [d["driver"] for d in prices["drivers"] if d["matchesReference"] is None]
         print(f"     {len(changed)} of {len(prices['drivers'])} driver(s) differ from the reference, so were entered or "
               f"changed: {', '.join(changed) or 'none'}")
         print(f"     {len(same)} match it, left at the reference or entered at it: {', '.join(same) or 'none'}")
+        if unknown:
+            print(f"     {len(unknown)} unknown, the summary leaving out a side, which is not a zero: {', '.join(unknown)}")
         lc = prices["lastCalculation"]
-        print(f"     the cost engine last ran {lc.get('status') or '?'} at {lc.get('completionTime') or '?'} (the "
-              f"instance's own clock and format), {lc.get('failedNoOfDatacenters')} of "
-              f"{lc.get('totalNoOfDatacenters')} datacenter(s) failed; print this beside every figure")
+        if lc is None:
+            print(f"     the cost engine's last run was not read (HTTP {prices['lastCalculationStatus']}): its date"
+                  " cannot travel with the figure until it is")
+        else:
+            print(f"     the cost engine last ran {lc.get('status') or '?'} at {lc.get('completionTime') or '?'} (the "
+                  f"instance's own clock and format, no zone given), {lc.get('failedNoOfDatacenters')} of "
+                  f"{lc.get('totalNoOfDatacenters')} datacenter(s) failed; print this beside every figure")
+        if prices["modes"] is None:
+            print(f"     the drivers' configuration modes were not read (HTTP {prices['modesStatus']})")
     else:
         print(f"     the internal summary was not read (HTTP {prices['status']}): confirming the inputs is a person's step")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "family": family, "coverage": coverage, "spread": spread, "composition": comp,
-               "showback": showback, "currency": currency, "priceInputs": prices,
+               "showback": showback, "currency": currency, "currencyStatus": cst, "priceInputs": prices,
                "vmKeys": [public(k) for k in collected["VirtualMachine"]],
                "hostKeys": [public(k) for k in collected["HostSystem"]]}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))

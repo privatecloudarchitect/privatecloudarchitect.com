@@ -25,12 +25,19 @@ What it does that a single-number read does not:
   WHOLE READS OR NONE. The cluster and machine lists are read page by page to their declared totals; a read that is
   refused or comes back short stops the run (exit 4) rather than projecting a partial estate.
 
+  THE RECORD SAYS WHAT THE GATE SAW. --record writes the parity gate's result for every declared policy under a stable
+  key, so a run under --parity-warn whose ruler had drifted is a record of the drift, never a clean-looking one; a run
+  with no --parity records that the gate did not run ("parity": null). A refused gate exits 3 before anything is
+  projected, and writes no record. Clusters and policies carry stable keys (a hash of the platform's identifier) beside
+  their numbers, so one run's cluster can be followed into the next; no name is written.
+
 Usage:  python3 runway.py [--parity expectations.json] [--parity-warn] [--model alloc|demand|both]
                           [--record runway.json]
 Env:    see opslib.py (OPS_HOST, OPS_API_TOKEN_FILE or OPS_API_TOKEN, ...)
 Exit:   0 healthy - 1 warning - 2 critical - 3 parity gate refused - 4 a read the run needs failed or came back short
 """
 
+import hashlib
 import json
 import os
 import sys
@@ -47,6 +54,12 @@ FALLBACK_CRIT, FALLBACK_WARN = 30, 90   # used only when a cluster's governing p
 KINDS = {"resourceKind": "ClusterComputeResource", "adapterKind": "VMWARE"}
 SETTINGS_BASE = dict(KINDS, includeInherited="true", _no_links="true")
 PAGE = 1000
+
+
+def stable_key(kind, ident):
+    """A key that follows one object from run to run and names nothing: the platform's identifier, hashed. A position in
+    a sorted list moves when an object is added or renamed; the identifier does not."""
+    return f"{kind}-" + hashlib.sha256(str(ident).encode("utf-8")).hexdigest()[:12]
 
 
 def key(axis, model, commit):
@@ -158,25 +171,35 @@ def parity_gate(tok, path, warn_only, names):
     with open(path, encoding="utf-8") as fh:
         declared = {k: v for k, v in json.load(fh).items() if not k.startswith("comment")}
     by_name = {n: i for i, n in names.items()}
-    failures, notes = [], []
+    failures, notes, results = [], [], []
     for pname, want in declared.items():
         pid = by_name.get(pname)
+        # the declared name is the reader's own, and a policy not found has no identifier: either way, hash, never name
+        entry = {"key": stable_key("policy", pid if pid is not None else f"name:{pname}"), "result": "match",
+                 "inherited": None, "axes": {}}
+        results.append(entry)
         if pid is None:
             failures.append(f"policy not found: {pname}")
+            entry["result"] = "not_found"
             continue
         got, inherited = blocks_of(tok, pid)["ratios"]
         if got is None:
             failures.append(f"{pname}: no allocation model in the policy's settings read")
+            entry["result"] = "unread"
             continue
+        entry["inherited"] = inherited
         if inherited:
             notes.append(f"{pname}: the allocation model is INHERITED, so this policy does not set it; you are "
                          f"verifying the default showing through")
         for axis, expect in want.items():
             actual = got.get(axis)
+            entry["axes"][axis] = {"declared": float(expect), "read": None if actual is None else float(actual)}
             if actual is None:
                 failures.append(f"{pname}: {axis} absent from the allocation model")
+                entry["result"] = "differs"
             elif float(actual) != float(expect):
                 failures.append(f"{pname}: {axis} declared {expect}, ruler reads {actual}")
+                entry["result"] = "differs"
     for n in notes:
         print(f"  note: {n}")
     if failures:
@@ -189,6 +212,8 @@ def parity_gate(tok, path, warn_only, names):
             sys.exit(3)
     else:
         print(f"parity gate: {len(declared)} policy(ies) match their declared ratios exactly\n")
+    return {"mode": "warn" if warn_only else "refuse", "declared": len(declared),
+            "differing": sum(1 for r in results if r["result"] != "match"), "results": results}
 
 
 def reservation_census(tok):
@@ -225,8 +250,7 @@ def main():
     models = MODELS if model_arg == "both" else (model_arg,)
     tok = bearer()
     names = policy_names(tok)
-    if parity_file:
-        parity_gate(tok, parity_file, "--parity-warn" in argv, names)
+    parity = parity_gate(tok, parity_file, "--parity-warn" in argv, names) if parity_file else None
 
     clusters = sorted(((r["identifier"], r["resourceKey"]["name"]) for r in read_whole(tok, KINDS, "clusters")
                        if r.get("identifier")), key=lambda c: c[1])
@@ -321,7 +345,8 @@ def main():
         mark = {2: "  CRITICAL", 1: "  warning"}.get(sev, "")
         print(f"  {name:22}{(str(pnum[pid]) if pid in pnum else '-'):>4}{''.join(f'{c:>11}' for c in cells)}"
               + "".join(f"{days(per_model[m]['runwayDays']):>13}" for m in models) + f"{days(platform):>10}{mark}")
-        rows.append({"cluster": n, "policy": pnum.get(pid), "criticalDays": crit, "warningDays": warn,
+        rows.append({"cluster": n, "key": stable_key("cluster", rid), "policy": pnum.get(pid),
+                     "policyKey": stable_key("policy", pid) if pid else None, "criticalDays": crit, "warningDays": warn,
                      "models": per_model, "platformRollupDays": platform,
                      "keysReturned": sum(1 for k in wanted if k in d), "severity": ["healthy", "warning", "critical"][sev]})
     print(rule)
@@ -367,7 +392,9 @@ def main():
                    "clusters": len(clusters), "models": list(models), "axes": list(AXES), "capDays": CAP_DAYS,
                    "keysInFamily": len(AXES) * len(MODELS) * 2 + 2, "keysAsked": len(wanted),
                    "effectivePolicyRead": eff is not None,
-                   "policies": [{"policy": pnum[pid], "governs": sum(1 for c in clusters if (eff or {}).get(c[0]) == pid),
+                   "parity": parity,
+                   "policies": [{"policy": pnum[pid], "key": stable_key("policy", pid),
+                                 "governs": sum(1 for c in clusters if (eff or {}).get(c[0]) == pid),
                                  "builtInDefault": names.get(pid) == "Default Policy",
                                  "ratios": b["ratios"][0], "ratiosInherited": b["ratios"][1],
                                  "buffers": b["buffers"][0], "buffersInherited": b["buffers"][1],

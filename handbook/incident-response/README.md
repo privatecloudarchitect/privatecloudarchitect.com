@@ -80,6 +80,18 @@ funnel, not a score; the step that falls away is the one your practice has stopp
 contract, processing logic, structural design, platform configuration, infrastructure), the same five every time, so
 the audit can count them and "other wording" falls toward zero.
 
+**The audit says what it read.** The `corpus` block carries the file's sha256, the time of the audit and the heading
+pattern, and, per entry in file order, the first date its heading line carries and the layer it names. A template binds
+the entries written after it, so a reader of the record can judge those alone and count the older ones as a value
+rather than a shortfall.
+
+**The layer trace counts the template's own words.** Its pattern once ended on a word boundary right after the stems
+"platform config" and "architectur", so an entry naming "platform configuration" or "architectural" was never counted
+as classified. The record in this folder, captured 2026-10-19, predates the fix: its `layer` count of 63 was taken with
+the old pattern, while its layer tags, read a different way, already show 2 entries of each of those words. It also
+predates the block's sha256, capture time, pattern and per-entry fields; the next capture, which reads the live queue
+first, writes them all.
+
 **Running it again without `--corpus` does not erase what the flag captured.** A run that audited no record has nothing
 to say about that section of `triage.json`, which is not the same as having found it empty, so the run carries the
 earlier audit forward and prints that it did.

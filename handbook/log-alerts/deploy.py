@@ -3,7 +3,7 @@
 
   python3 deploy.py plan     --scope scope.json [--bundle FILE] [--only SP-02,SP-08]
   python3 deploy.py apply    --scope scope.json [--bundle FILE] [--only IDS] --yes
-  python3 deploy.py status   --scope scope.json [--bundle FILE] [--out DIR]
+  python3 deploy.py status   --scope scope.json [--bundle FILE] [--only IDS] [--out DIR]
   python3 deploy.py teardown --scope scope.json [--bundle FILE] [--all] --yes
 
 `plan` writes nothing: it checks the bundle against the rules the 9.1.1 API enforces and prints every request.
@@ -12,7 +12,9 @@ and a policy that inherits from the scope's parent, so the members keep every ot
 the chosen alerts need; waits until Log Management lists a monitor for each; creates the alerts; switches each one on
 in the scope's policy, and off in any policy the scope lists under `disableIn`; and reads each alert's monitors back,
 switching the alert off and on until they read enabled. A second run changes nothing and says so. `status` reads the
-group, the policy, every alert and its monitors, and how many alerts each has raised. `teardown` removes the scope's
+group, the policy and which policy the group carries, every chosen alert's definition with its symptom set against the
+bundle's, its monitors, and how many alerts each has raised; its record names the bundle's digest, the alert ids the
+bundle holds and the ones this run read (`--only` narrows them), so a record of a subset says it is one. `teardown` removes the scope's
 policy and group; with `--all` it also deletes the bundle's alert and symptom definitions, which every scope shares.
 
 Why the read-back: on 9.1.1 the first switch-on of a new alert has left the monitors of its new symptoms disabled,
@@ -26,6 +28,7 @@ environment is lmlib.py's.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 import time
@@ -191,18 +194,60 @@ def needed(alerts: list[dict]) -> list[str]:
 
 
 # ---------------------------------------------------------------- the platform
+def listing(s, path: str, key: str, params: dict) -> tuple[list[dict], dict]:
+    """Every item of a list the 9.1.1 specification documents without paging (the policy summaries and the custom groups:
+    neither collection carries a pageInfo, and neither path lists a page parameter). One read; followed page by page only
+    when the answer itself carries a pageInfo whose total exceeds what came back, so no page parameter reaches a path that
+    never asked for one. Returns the items and what the read saw, for a record to say whether the list was read whole."""
+    body = s.must("GET", path, params=params) or {}
+    items = list(body.get(key) or [])
+    info = body.get("pageInfo")
+    total = int(info.get("totalCount", len(items))) if isinstance(info, dict) else len(items)
+    if total > len(items):
+        items = s.paged(path, key, params)
+    return items, {"read": len(items), "total": total, "paged": isinstance(info, dict), "whole": len(items) >= total}
+
+
+def find_read(s, kind: str, name: str) -> tuple[dict | None, dict]:
+    """`find`, with what the listing saw: an absent name means absent only when the list was read whole."""
+    if kind == "group":
+        groups, seen = listing(s, "/api/resources/groups", "groups", {"includePolicy": "false", "_no_links": "true"})
+        return next((g for g in groups if g["resourceKey"]["name"] == name), None), seen
+    if kind == "policy":
+        policies, seen = listing(s, "/api/policies", "policySummaries", {"_no_links": "true"})
+        return next((p for p in policies if p["name"] == name), None), seen
+    if kind == "symptom":  # the name parameter narrows on the server (a substring); the match here is exact
+        found = [x for x in s.paged("/api/symptomdefinitions", "symptomDefinitions", {"name": name})]
+        return next((x for x in found if x["name"] == name), None), {"read": len(found), "paged": True, "whole": True}
+    raise ValueError(kind)
+
+
 def find(s, kind: str, name: str) -> dict | None:
     """The group, policy or symptom definition with exactly this name, or None (alerts: `alert_index`)."""
-    if kind == "group":
-        groups = s.must("GET", "/api/resources/groups", params={"includePolicy": "false", "_no_links": "true"})
-        return next((g for g in groups.get("groups") or [] if g["resourceKey"]["name"] == name), None)
-    if kind == "policy":
-        policies = s.must("GET", "/api/policies", params={"_no_links": "true"}).get("policySummaries") or []
-        return next((p for p in policies if p["name"] == name), None)
-    if kind == "symptom":  # the name parameter narrows on the server (a substring); the match here is exact
-        return next((x for x in s.paged("/api/symptomdefinitions", "symptomDefinitions", {"name": name})
-                     if x["name"] == name), None)
-    raise ValueError(kind)
+    return find_read(s, kind, name)[0]
+
+
+def symptom_ids_of(definition: dict) -> list[str]:
+    """Every symptom definition id an alert definition's states name, through composite sets, sorted."""
+    out: list[str] = []
+
+    def walk(node) -> None:
+        if isinstance(node, dict):
+            out.extend(node.get("symptomDefinitionIds") or [])
+            for v in node.values():
+                if isinstance(v, (dict, list)):
+                    walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    for st in definition.get("states") or []:
+        walk(st.get("base-symptom-set"))
+    return sorted(set(out))
+
+
+def bundle_digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def alert_index(s, b: dict) -> dict[str, dict]:
@@ -292,25 +337,43 @@ def apply(s, b: dict, scope: dict, alerts: list[dict]) -> dict:
 def status(s, b: dict, scope: dict, alerts: list[dict]) -> dict:
     owner = scope["owner"]
     group_name, policy_name = scope_names(b, scope)
-    group, policy = find(s, "group", group_name), find(s, "policy", policy_name)
+    (group, group_seen), (policy, policy_seen) = find_read(s, "group", group_name), find_read(s, "policy", policy_name)
     members = len(s.paged(f"/api/resources/groups/{group['id']}/members", "resourceList")) if group else 0
     print(f"group {group_name}: {'present, ' + str(members) + ' members' if group else 'absent'}")
     print(f"policy {policy_name}: {'present' if policy else 'absent'}")
+    assignment = {"readBack": False, "assigned": None}
+    if group and policy:  # the group carries the id of the policy that governs it (includePolicy)
+        carried = (s.must("GET", f"/api/resources/groups/{group['id']}",
+                          params={"includePolicy": "true", "_no_links": "true"}) or {}).get("policy")
+        assignment = {"readBack": True, "assigned": carried == policy["id"]}
+        print(f"policy assignment: {'the group carries the policy' if assignment['assigned'] else 'the group carries another policy'}")
     mons = s.monitors()
     keyed = {x["key"]: x for x in b["symptoms"]}
+    symptom_id: dict[str, str | None] = {}
     rows, index = [], alert_index(s, b)
     for a in alerts:
         found = index.get(definition_name(b, owner, a["condition"]))
-        mine = [definition_name(b, owner, keyed[k]["condition"]) for k in a.get("anyOf") or [x for g in a.get("allOf") or [] for x in g]]
+        keys = a.get("anyOf") or [x for g in a.get("allOf") or [] for x in g]
+        mine = [definition_name(b, owner, keyed[k]["condition"]) for k in keys]
         on = sum(1 for n in mine if mons.get(n) is True)
-        raised = 0
+        raised, symptoms_match = 0, None
         if found:
             q = s.must("POST", "/api/alerts/query", {"alertDefinitionId": [found["id"]], "activeOnly": False},
                        params={"page": 0, "pageSize": 1})
             raised = int(((q or {}).get("pageInfo") or {}).get("totalCount", 0))
-        rows.append({"id": a["id"], "present": bool(found), "monitors": len(mine), "monitorsEnabled": on, "raised": raised})
-        print(f"{a['id']}: {'present' if found else 'absent'}, monitors enabled {on} of {len(mine)}, alerts raised {raised} (any status)")
-    return {"group": bool(group), "members": members, "policy": bool(policy), "alerts": rows}
+            for n in mine:  # the bundle's symptoms for this alert, by name, read once each across the run
+                if n not in symptom_id:
+                    sym = find(s, "symptom", n)
+                    symptom_id[n] = sym["id"] if sym else None
+            want = [symptom_id[n] for n in mine]
+            symptoms_match = None not in want and symptom_ids_of(found) == sorted(set(want))
+        rows.append({"id": a["id"], "present": bool(found), "symptomsMatch": symptoms_match, "monitors": len(mine),
+                     "monitorsEnabled": on, "raised": raised})
+        print(f"{a['id']}: {'present' if found else 'absent'}"
+              f"{'' if symptoms_match is None else ', symptom set ' + ('as the bundle' if symptoms_match else 'differs from the bundle')}"
+              f", monitors enabled {on} of {len(mine)}, alerts raised {raised} (any status)")
+    return {"group": bool(group), "members": members, "policy": bool(policy), "policyAssignment": assignment,
+            "listings": {"groups": group_seen, "policies": policy_seen}, "alerts": rows}
 
 
 def teardown(s, b: dict, scope: dict, everything: bool) -> dict:
@@ -401,6 +464,8 @@ def main(argv: list[str]) -> int:
         teardown(s, b, scope, a["all"])
     else:
         result = status(s, b, scope, alerts)
+        result = {"bundleSha256": bundle_digest(a["bundle"]), "only": sorted(a["only"]) if a["only"] else None,
+                  "bundleAlertIds": [x["id"] for x in b["alerts"]], "alertIdsRead": [x["id"] for x in alerts], **result}
         if a["out"]:
             scrub = Scrubber()
             scrub.add(scope["scope"], "scope")

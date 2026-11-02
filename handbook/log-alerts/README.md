@@ -66,8 +66,12 @@ The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is
 The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
 keep it for a throwaway credential.
 
-`--only SP-02,SP-08` limits `plan`, `apply` and `prove.py` to those alerts. `--out ./records` writes a scrubbed record
-from `signatures.py`, `deploy.py status` and `prove.py`.
+`--only SP-02,SP-08` limits `plan`, `apply`, `status` and `prove.py` to those alerts. `--out ./records` writes a scrubbed
+record from `signatures.py`, `deploy.py status` and `prove.py`. A `status` record names the bundle's sha256 and every
+alert id the bundle holds beside the ids it read, so a record of a subset says it is one; it also reads which policy the
+group carries (the assignment), each alert's symptom set against the bundle's, and whether the group and policy lists
+were read whole (the 9.1.1 specification documents both without paging, so `status` follows pages only when an answer
+says there are more). These fields appear from the next capture: `records/deploy-status.record.json` predates them.
 
 ## What each tool settles, and how to read it
 
@@ -143,4 +147,5 @@ the JSON (the chapter's workshop builds the entries), run `plan`, then `apply --
 ## Expected output
 
 [`expected-output.md`](expected-output.md) holds the runs on the reference estate the chapter shows: the identifiers
-seen, a catalog search by word, the tries, the deploy (first run and second run), status, and the proof.
+seen, the tries, the deploy (first run and second run), the episodes from each source, the bindings, two monitors, and
+the proof. The status run is kept as its record, `records/deploy-status.record.json`.

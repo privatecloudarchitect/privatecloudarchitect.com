@@ -65,6 +65,10 @@ RULE_FILTERS = ("alertDefinitionIdFilters", "alertImpactFilters", "alertTypeFilt
                 "alertControlStates", "actionStatuses", "criticalities", "resourceFilters", "resourceFilter",
                 "resourceKindFilters", "resourceKindFilter", "collectorGroupId", "collectorUUId")
 REPORT = []
+# Every listing the audit reads, as it came back: each page's HTTP status, the server's totalCount, how many items
+# arrived and whether the listing is complete. A refused or truncated read otherwise looks like a smaller estate.
+LISTINGS = {}
+PAGE_CAP = 21  # pages of a paged listing read before the audit stops and says so
 
 
 def say(line=""):
@@ -98,17 +102,41 @@ def owned_by(name, owner):
     return str(name or "").startswith(owner + " - ")
 
 
+def note_listing(path, statuses, total, read, pages=1):
+    """Record how a listing came back: complete only when every page answered 200 and the server's totalCount
+    was read in full. A listing with no totalCount is recorded as not known to be complete, never as complete."""
+    LISTINGS[path] = {"statuses": sorted(set(statuses)), "totalCount": total, "read": read, "pages": pages,
+                      "stoppedAtPageCap": pages >= PAGE_CAP and total is not None and read < total,
+                      "complete": all(s == 200 for s in statuses) and total is not None and read >= total}
+    return LISTINGS[path]
+
+
 def page(path, key, tok, size=1000):
-    out, n = [], 0
+    """Every item of a paged listing, and its note in LISTINGS (each page's status, the totalCount, the count read)."""
+    out, n, statuses, total = [], 0, [], None
     while True:
         st, body = ops("GET", path, tok, params={"pageSize": size, "page": n, "_no_links": "true"})
+        statuses.append(st)
         items = (body.get(key) or []) if isinstance(body, dict) else []
         out += items
-        total = ((body.get("pageInfo") or {}).get("totalCount") if isinstance(body, dict) else None)
+        t = ((body.get("pageInfo") or {}).get("totalCount") if isinstance(body, dict) else None)
+        total = t if t is not None else total
         n += 1
-        if not items or total is None or len(out) >= total or n > 20:
+        if not items or t is None or len(out) >= t or n >= PAGE_CAP:
             break
+    note_listing(path, statuses, total, len(out), n)
     return out
+
+
+def resolve_owned(mine, keys, entries):
+    """Each of your definitions under a policy, resolved through its chain as resolves_enabled does: on, off, or
+    absent (no policy in the chain sets it, so the product decides). Counting entries cannot say this: an entry is one
+    per kind and the export carries the ancestors', so a count of entries can hide a definition that has none."""
+    out = {"on": [], "off": [], "absent": []}
+    for a in mine:
+        state = resolves_enabled(a, keys, entries)
+        out["absent" if state is None else "on" if state else "off"].append(a.get("name"))
+    return {k: sorted(v) for k, v in out.items()}
 
 
 def export_policy(policy_id, tok):
@@ -204,6 +232,8 @@ def main():
     rules = page("/api/notifications/rules", "rules", tok)
     st, body = ops("GET", "/api/policies", tok, params={"_no_links": "true"})
     pols = (body.get("policySummaries") or []) if isinstance(body, dict) else []
+    note_listing("/api/policies", [st], ((body.get("pageInfo") or {}).get("totalCount") if isinstance(body, dict) else None),
+                 len(pols))
     by_id = {a["id"]: a for a in ads}
     mine = [a for a in ads if owned_by(a.get("name"), owner)]
 
@@ -220,14 +250,18 @@ def main():
     default = next((p for p in pols if p.get("defaultPolicy")), None)
     review = {"error": "no policy is flagged as the default"}
     if default:
-        entries = policy_alert_entries(default["id"], tok) or []
+        root = export_policy(default["id"], tok)
+        entries = (policy_alert_entries(default["id"], tok, root) or []) if root is not None else []
         ours = [e for e in entries if owned_by((by_id.get(e["alertId"]) or {}).get("name"), owner)]
         on = [e for e in ours if e["enabled"]]
         review = {"explicitEntries": len(entries),
                   "enabledEntries": sum(1 for e in entries if e["enabled"]),
                   "ownedEntries": len(ours), "ownedEnabled": len(on),
                   "ownedEnabledNames": sorted((by_id.get(e["alertId"]) or {}).get("name") for e in on),
-                  "ownedEnabledKinds": sorted({e["resourceKind"] for e in on})}
+                  "ownedEnabledKinds": sorted({e["resourceKind"] for e in on}),
+                  # the export read at all, and each of your definitions resolved through the default policy's chain
+                  "exportRead": root is not None,
+                  "ownedResolved": resolve_owned(mine, chain(default["id"], root), entries) if root is not None else None}
         say(f"\n  2. THE DEFAULT POLICY carries {len(entries)} explicit entries, {review['enabledEntries']} "
               f"of them enabled")
         say(f"     {len(ours)} are yours, and " + (f"{len(on)} of those are ENABLED there, which scopes them to "
@@ -235,11 +269,21 @@ def main():
               "none of those is enabled there"))
         for n in review["ownedEnabledNames"]:
             say(f"        {n}")
+        res = review["ownedResolved"]
+        if res is None:
+            say("     the default policy's export could not be read, so no definition of yours is resolved there")
+        else:
+            say(f"     resolved through its chain, of your {len(mine)} definitions: {len(res['on'])} on, {len(res['off'])} "
+                  f"off, {len(res['absent'])} absent (unset, so the product decides)")
+            for n in res["absent"]:
+                say(f"        absent: {n}")
 
     # the measured blast radius: what the default policy actually governs today
     st, body = ops("GET", "/api/resources", tok,
                    params={"resourceKind": kind, "pageSize": 2000, "_no_links": "true"})
     resources = (body.get("resourceList") or []) if isinstance(body, dict) else []
+    note_listing("/api/resources", [st], ((body.get("pageInfo") or {}).get("totalCount") if isinstance(body, dict) else None),
+                 len(resources))
     ids = [r["identifier"] for r in resources if r.get("identifier")]
     governed = {}
     if ids and default:
@@ -405,6 +449,13 @@ def main():
     say(f"     {len(one_by_one)} enabled rule(s) select every alert on a child kind, narrowed by no definition and no "
           f"object; a rule has no field that groups alerts, so each one it selects reaches its plug-in on its own")
 
+    # every listing as it came back, so a count that rests on a refused or truncated read can be told apart
+    say("\n  LISTINGS: " + "; ".join(
+        f"{p} {'/'.join(str(s) for s in n['statuses'])}, {n['read']} of "
+        + (str(n["totalCount"]) if n["totalCount"] is not None else "an unstated total")
+        + (", stopped at the page cap" if n["stoppedAtPageCap"] else "")
+        for p, n in LISTINGS.items()))
+
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                "owner": owner,
                "definitions": {"total": len(ads), "owned": len(mine),
@@ -421,12 +472,14 @@ def main():
                "debounce": debounce,
                "routing": routing,
                "correlation": correlation,
+               "listings": LISTINGS,
                "report": REPORT}
     text = UUID.sub("{{id}}", json.dumps(payload, indent=1, ensure_ascii=False))
     for var in ("OPS_HOST", "OPS_BROKER_HOST"):
         v = os.environ.get(var)
         assert not v or v not in text, f"{var} reached the record"
-    for name in (review.get("ownedEnabledNames") or []):
+    resolved = review.get("ownedResolved") or {}
+    for name in (review.get("ownedEnabledNames") or []) + [n for v in resolved.values() for n in v]:
         assert owned_by(name, owner), "a name that is not the owner's reached the published list"
     os.makedirs(out_dir, exist_ok=True)
     open(os.path.join(out_dir, "alerts.json"), "w", encoding="utf-8").write(text + "\n")

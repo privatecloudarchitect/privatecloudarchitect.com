@@ -69,3 +69,5 @@ What each section is there to stop:
   totals, which are not a showback by your groups.
 - **5, price inputs.** Which cost drivers differ from the product's reference (entered or changed) and which match it
   (left at the reference, or entered at it), and when the cost engine last ran. No amount is printed or recorded.
+
+This transcript is the reference estate's run of 2026-10-18, before the companion recorded a side the cost-driver summary leaves out as unknown: section 5 counted such a side as zero. From the next capture, section 5 prints a third line for drivers with a side missing, and the record carries the fields the README lists under The record.

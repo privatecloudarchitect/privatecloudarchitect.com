@@ -82,10 +82,17 @@ metric summing a chosen cost key), a modest build with an owner rather than a vi
 internal API's cost-driver summary (`GET /suite-api/internal/costdrivers/summary`, which answers only with the header
 `X-Ops-API-use-unsupported: true` and keeps no compatibility promise) carries each cost
 driver's monthly cost in force beside the reference cost the product computes. A driver whose two differ was entered or
-changed; one whose two match was left at the reference, or entered at it, which the summary cannot tell apart. The run
-prints which drivers are which and when the cost engine last ran (`GET /suite-api/internal/costcalculation/status`),
-the date to print beside any figure built on those inputs. It keeps no amount. If your instance refuses the internal
+changed; one whose two match was left at the reference, or entered at it, which the summary cannot tell apart. A
+driver is compared only when the summary reports both values as numbers: a side it leaves out is not a zero, so that
+driver is recorded as unknown, never as a match or a difference. The run prints which drivers are which and when the
+cost engine last ran (`GET /suite-api/internal/costcalculation/status`), the date to print beside any figure built on
+those inputs, as the instance gives it (its own clock and format, with no zone). It keeps no amount. Every price-input
+read records its HTTP status, so a refused read never passes for an empty one; if your instance refuses the internal
 API, the run prints the refusal, and confirming the inputs stays a person's step.
+
+The custom-group list (`GET /api/resources/groups`) takes no paging parameter and declares no total in the 9.1.1
+specification, so it is read in one call and its status recorded; a total an instance does declare is held to the
+count.
 
 ## The record
 
@@ -93,6 +100,12 @@ API, the run prints the refusal, and confirming the inputs stays a person's step
 amount. A cost key named after something on your estate (an additional cost's own name, after a colon) is recorded by
 its family only. `coverage.json` in this folder is the reference estate's run of 2026-10-18 on VCF Operations 9.1.1.0
 (build 25679751), the record the chapter renders.
+
+That run predates the rule above: it read a side the summary left out as zero, and its record keeps only each driver's
+match and whether the reference was zero or missing, so a match against a reference that was not zero is the only
+verdict it settles. These fields appear from the next capture: per driver `costReported`, `referenceReported` and a
+`matchesReference` that can be `null`; `priceInputs.status`, `modesStatus` and `lastCalculationStatus`, with `modes` or
+`lastCalculation` `null` when their read was refused; `showback.groupsRead`; and `currencyStatus`.
 
 ## Scope
 

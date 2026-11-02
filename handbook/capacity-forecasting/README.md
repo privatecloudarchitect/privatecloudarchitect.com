@@ -80,7 +80,8 @@ You declare, per policy, the allocation ratios it should carry:
 ```
 
 The gate reads each named policy's `CAPACITY_ALLOCATION_MODEL` block, parses it, and compares numbers. Any
-difference refuses the projection (`--parity-warn` downgrades the refusal to a warning). A test that searched the
+difference refuses the projection with exit 3, before anything is projected and before any record is written;
+`--parity-warn` downgrades the refusal to a warning, and the run goes on and records what the gate saw (below). A test that searched the
 serialized settings for the declared text would be prefix matching: `"cpu": 1` would match a ruler that had drifted
 to `15.0`, and `"cpu":1.5` written without the space the serializer emits would refuse a ruler reading exactly 1.5.
 
@@ -107,6 +108,23 @@ collection cycle.
 ## Writing a record
 
 `--record runway.json` writes the run as JSON for a report or a chart. Clusters are numbered by their place in the
-sorted list and policies by the order they were first met; no cluster or policy name is written, and the run refuses
-to write a record that would carry one. `runway.json` in this folder is the reference estate's run of 2026-10-18 on
-VCF Operations 9.1.1.0 (build 25679751), the record the chapter renders.
+sorted list and policies by the order they were first met, and each also carries a `key`: a hash of the platform's
+identifier, the same from run to run while the object lives, so one run's cluster can be followed into the next when
+the sorted list moves. No cluster or policy name is written, and the run refuses to write a record that would carry
+one.
+
+What the record says of the parity gate:
+
+| the run | `parity` in the record |
+|---|---|
+| no `--parity` | `null`: the gate did not run, and nothing about the ruler was checked |
+| `--parity`, every declared ratio matches | `mode` `refuse`, `differing` 0, and each declared policy's `result` `match` |
+| `--parity --parity-warn`, a ratio differs | `mode` `warn`, `differing` above 0, and for each declared policy its `key`, its `result` (`match`, `differs`, `not_found`, `unread`), whether its allocation block is `inherited`, and each declared axis with the value declared and the value read |
+| `--parity`, a ratio differs | no record: the gate refuses with exit 3 before anything is projected |
+
+A declared policy the run cannot find is keyed by a hash of the name you declared, so the record names nothing either
+way.
+
+`runway.json` in this folder is the reference estate's run of 2026-10-18 on VCF Operations 9.1.1.0 (build
+25679751), the record the chapter renders. It was written before the stable keys and the `parity` field existed, so it
+carries neither; the next capture carries both.
