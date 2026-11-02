@@ -84,7 +84,7 @@ Read an edge line as From, its cardinality, To, the tier, then how many objects 
 From held, and how many From each To had. Every declared cardinality held on this run; one that did not would end its
 line with `NOT AS DECLARED`.
 
-Six of fifty-one names conformed on that run, which is the ordinary result for an estate that grew before it had a
+Six of forty-nine names conformed on that run, which is the ordinary result for an estate that grew before it had a
 standard: the region and the projects conform, and the namespaces, zones, classes, VPC, subnets, and VM classes do
 not. The verdict column is the work list, and the rename order is outermost boundary first.
 

@@ -151,9 +151,9 @@ python3 day1.py --probe-release --project <yours>  # writes: a throwaway bluepri
 
 The sign-in is a session login as `<account>@<org>`, or a refresh token minted for the organization in a file of
 mode 0600; a secret file open to group or other is refused before it is read. Exit codes: 0 read (for `--lookup`
-one match, in your project); 1 `--lookup` found no blueprint of that name; 2 a call failed or the sign-in was
+one match, in your project, or the only one when no project is named); 1 `--lookup` found no blueprint of that name; 2 a call failed or the sign-in was
 refused; 3 `--lookup` found the name outside your project or more than once, so key on the id; 5 an unknown
-argument. Classic lists are read in full, page by page sorted by id.
+argument, or `--probe-release` without a project it may write in. Classic lists are read in full, page by page sorted by id.
 
 **Running it again without the flag does not erase what the flag captured.** A run that did not probe has
 nothing to say about that section of the record, which is not the same as having found it empty. So when the
