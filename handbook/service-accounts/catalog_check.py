@@ -11,6 +11,12 @@ Each entry: name, owner, scope, backend, cadence_days, last_rotated, next_due (d
 optional, and api_client names the VCF SSO API client an entry is for, by its client id or name, when the entry's
 name is not that. Start from credentials.example.json beside this script.
 
+Each run writes its record, catalog_check.json in the working directory (OUT names another path), with every name a
+placeholder: the day the states were judged at, each entry's state and reasons, which of the four facts it records and
+which it lacks, its dates, and, with --census, each API client the census read, its state and the entry that names it.
+The record carries no value an entry holds beyond its dates, counts and states, and a record an estate value survived
+the scrub in is not written. A later run compares records; a drift read reads the states.
+
 --census CENSUS.json joins the catalog to a record written by identity-model's census.py, which reads every API
 client with its roles and its tokens' two lifetimes. Each API client in the record is checked for what neither file
 holds alone: an owner, a role, both lifetimes and a rotation date. A client that no catalog entry names, or whose
@@ -35,6 +41,8 @@ clients would otherwise pass as an estate with none. An empty API client list fr
 a read: the run says that zero were joined, and why the empty list is the estate's.
 
 Use:  python3 catalog_check.py [CATALOG.json] [--today YYYY-MM-DD] [--census CENSUS.json]
+Env:  OUT (optional) the record's path, default catalog_check.json; FINGERPRINT_KEY_FILE, with --census, the file the
+      census ran with
 Exit, the worst state in this order, so a warning never hides a client the run could not judge:
       2 a failure (a field missing, a date overdue or unreadable, a secret in the file, an API client without an
         owner, a role, both lifetimes or a rotation date, or holding a token EXPIRED, REVOKED or past its end date)
@@ -43,14 +51,16 @@ Exit, the worst state in this order, so a warning never hides a client the run c
         or does not state it was read whole, its client lines are not the clients its reads listed, or a client line
         lacks its roles, tokens or fingerprint), checked before any entry is printed, with nothing joined, because
         nothing about the API clients is known; or a joined client holds a token whose state or end date the record does not carry, so that client
-        is not judged; or an error the script did not expect
+        is not judged; or an error the script did not expect; or a run whose code was 0 whose record was not written
+        because an estate value survived the scrub (nothing is known from a record that was not written)
       1 a warning (due inside the window, a next-due date later than the cadence allows, a client with no token, a
         token expiring before its rotation date, or a catalog entry two API clients join), and nothing above
       0 every entry complete and not due inside the window, and with --census every API client complete
       5 a usage error: an argument this script does not take, a --today that is not a date, a catalog or census file
         that cannot be read, a catalog that is not one (no JSON object with a credentials list of objects), FINGERPRINT_KEY_FILE unset, unreadable or open to group or other (refused unread, with the fix: chmod 600), a census record without fingerprints or made
         under another key, or a Python older than 3.10
-Standard library only; reads its files and FINGERPRINT_KEY_FILE, writes nothing, calls nothing.
+Standard library only; reads its files and FINGERPRINT_KEY_FILE, writes its record with every estate value replaced or
+nothing, calls nothing.
 """
 
 from __future__ import annotations
@@ -61,7 +71,8 @@ import json
 import os
 import re
 import sys
-from datetime import date, timedelta
+from collections import Counter
+from datetime import date, datetime, timedelta, timezone
 
 REQUIRED = ("name", "owner", "scope", "backend", "cadence_days", "last_rotated", "next_due")
 SECRET_SHAPED = ("password", "secret", "token", "value", "private_key", "key_material")
@@ -338,6 +349,177 @@ def catalog_shape(catalog: object) -> str | None:
     return None
 
 
+# ── the record contract: every estate value replaced, or nothing written ─────────────────────────────────────────
+# The record is what the run judged, for a later run to compare against and for a drift read to read: the day the
+# states were judged at, each entry's state, reasons, dates and which of the four facts it records, and each API client
+# the census joined, with the entry that names it. A name, an owner, a scope and a backend are estate values: each is
+# replaced by a placeholder numbered in listing order ({{credential-N}} an entry, {{client-N}} the API client it names,
+# {{owner-N}}, {{scope-N}}, {{backend-N}}; a census name is a placeholder already), anything shaped like an id, host,
+# address or user is replaced too, and a record one survives in is not written. The record carries no value an entry
+# holds beyond its dates, counts and states.
+FACTS = (("owner", "owner"), ("scope", "scope"), ("backend", "backend"), ("next_due", "rotation date"))
+PRODUCT = {"ok", "warn", "fail", "unread"}  # the states are never a name
+FIELDS = {"name": "credential", "catalog": "credential"}  # a field that holds a name: a placeholder, or a leak
+PATTERNS = [("id", re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")),
+            ("host", re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+\.[a-z]{2,}\b", re.I)),
+            ("ip", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
+            ("user", re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)*\b"))]
+NOT_SHAPED = {"captured", "today", "last_rotated", "next_due"}
+PLACEHOLDER = re.compile(r"\{\{[a-z-]+-\d+\}\}")
+OWN = re.compile(f"({PLACEHOLDER.pattern})")  # splits a text into what lies outside the placeholders and each one
+
+
+def _strings(obj: object, field: str | None = None):
+    """Every (field, string) in a record, the field being the key the string sits under."""
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from _strings(v, k)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _strings(v, field)
+    elif isinstance(obj, str):
+        yield field, obj
+
+
+def estate_values(record: dict, catalog: dict, census: dict | None) -> dict[str, str]:
+    """Each estate value the run read, mapped to its placeholder: every entry's name, the API client it names, its
+    owner, scope and backend; every API client and token name the census carries that is not a placeholder already;
+    then anything in the record shaped like an id, host, address or user."""
+    table: dict[str, str] = {}
+    seen: set[str] = set()
+    count: Counter = Counter()
+
+    def add(value: object, kind: str) -> None:
+        s = str(value).strip() if isinstance(value, (str, int, float)) and not isinstance(value, bool) else ""
+        if len(s) >= 3 and s.lower() not in PRODUCT and s.lower() not in seen and not PLACEHOLDER.fullmatch(s):
+            seen.add(s.lower())
+            count[kind] += 1
+            table[s] = f"{{{{{kind}-{count[kind]}}}}}"
+
+    for e in catalog.get("credentials") or []:
+        add(e.get("name"), "credential")
+        add(e.get("api_client"), "client")
+        for k, kind in (("owner", "owner"), ("scope", "scope"), ("backend", "backend")):
+            add(e.get(k), kind)
+    for c in ((census or {}).get("summary") or {}).get("api_clients") or []:
+        add(c.get("name"), "client")
+        for t in c.get("tokens") or []:
+            add(t.get("name"), "token")
+    for field, s in _strings(record):
+        if field not in NOT_SHAPED:
+            for kind, rx in PATTERNS:
+                for m in rx.findall(s):
+                    add(m, kind)
+    return table
+
+
+def _pattern(table: dict) -> re.Pattern | None:
+    """One alternation, longest first, matched only where it is not part of a longer word."""
+    if not table:
+        return None
+    alt = "|".join(re.escape(v) for v in sorted(table, key=len, reverse=True))
+    return re.compile(rf"(?<![A-Za-z0-9])(?:{alt})(?![A-Za-z0-9])", re.I)
+
+
+def one_pass(table: dict):
+    """A text with every registered value replaced by its placeholder in one pass: the longest value first, matched
+    without regard to case where it is not part of a longer word, and only outside the placeholders already in the
+    text, so a second scrub changes nothing and a value spelled like a placeholder rewrites no other's."""
+    rx, label = _pattern(table), {}
+    for value, placeholder in table.items():
+        label.setdefault(value.lower(), placeholder)
+    if rx is None:
+        return lambda text: text
+    return lambda text: "".join(part if i % 2 else rx.sub(lambda m: label[m.group(0).lower()], part)
+                                for i, part in enumerate(OWN.split(text)))
+
+
+def scrub(obj: object, table: dict) -> object:
+    """The record with every registered value replaced by its placeholder (one_pass); keys are never touched."""
+    replace = one_pass(table)
+
+    def walk(o: object) -> object:
+        if isinstance(o, dict):
+            return {k: walk(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [walk(v) for v in o]
+        return replace(o) if isinstance(o, str) else o
+
+    return walk(obj)
+
+
+def leaks(obj: object, table: dict) -> list[str]:
+    """The kind of every estate value still in a scrubbed record: a registered one, anything shaped like one, or a
+    name under a field that holds one (FIELDS) that is not a placeholder, so a value the registration missed (a name
+    under three characters) is caught before the record is written."""
+    rx, found = _pattern(table), []
+    kind_of = {k.lower(): v.strip("{}").rsplit("-", 1)[0] for k, v in table.items()}
+    for field, s in _strings(obj):
+        rest = PLACEHOLDER.sub(" ", s)  # a placeholder's own letters are not a surviving value
+        found += [kind_of[m.group(0).lower()] for m in rx.finditer(rest)] if rx else []
+        if field not in NOT_SHAPED:
+            found += [kind for kind, p in PATTERNS for _m in p.findall(rest)]
+        if field in FIELDS and re.search(r"[A-Za-z0-9]", rest):
+            found.append(FIELDS[field])
+    return found
+
+
+def record_of(judged: list[tuple[dict, str, list[str]]], joined: list | None, census: dict | None,
+              today: date, warn_days: int, code: int) -> dict:
+    """The record, every name still its own (scrub replaces them): the entries as judged, the census join when there
+    was one, the counts, and the run's exit. An entry's dates are carried only where they parse."""
+    rows = []
+    for e, state, reasons in judged:
+        cadence = e.get("cadence_days")
+        rows.append({
+            "name": e.get("name") if isinstance(e.get("name"), str) else None,
+            "kind": e.get("kind") if isinstance(e.get("kind"), str) else None,
+            "state": state,
+            "reasons": reasons,
+            "recorded": [what for k, what in FACTS if e.get(k) not in (None, "")],
+            "missing": [what for k, what in FACTS if e.get(k) in (None, "")],
+            "cadence_days": cadence if isinstance(cadence, int) and not isinstance(cadence, bool) else None,
+            "last_rotated": e.get("last_rotated") if _date(e.get("last_rotated")) else None,
+            "next_due": e.get("next_due") if _date(e.get("next_due")) else None,
+        })
+    states = Counter(state for _e, state, _r in judged)
+    summary: dict = {"credentials": len(rows), **{s: states.get(s, 0) for s in ("ok", "warn", "fail")}, "api_clients": None}
+    part = None
+    if census is not None:
+        clients = [{
+            "name": c.get("name"),
+            "catalog": (entry.get("name") or entry.get("api_client")) if entry else None,
+            "roles": len(c.get("roles") or []),
+            "tokens": [{
+                "name": t.get("name"),
+                "status": str(t.get("status")).upper() if t.get("status") else None,
+                "lifetimes_set": all(isinstance(t.get(k), int) and not isinstance(t.get(k), bool)
+                                     for k in ("api_token_ttl_min", "access_token_ttl_min")),
+                "expires": t.get("expires") if _date(t.get("expires")) else None,
+            } for t in c.get("tokens") or [] if isinstance(t, dict)],
+            "state": state,
+            "reasons": reasons,
+        } for c, entry, state, reasons in joined or []]
+        by = Counter(c["state"] for c in clients)
+        summary["api_clients"] = {"joined": len(clients), "recorded": sum(1 for c in clients if c["catalog"]),
+                                  **{s: by.get(s, 0) for s in ("ok", "warn", "fail", "unread")}}
+        part = {"captured": census.get("captured"), "clients": clients}
+    return {"captured": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "today": today.isoformat(),
+            "warn_days": warn_days, "sent": [], "entries": rows, "census": part, "summary": summary, "exit": code}
+
+
+def write_record(record: dict, table: dict) -> tuple[str, list[str]]:
+    """The record scrubbed and written to OUT (default catalog_check.json); or, when an estate value survived the
+    scrub, the kinds that did, and nothing written."""
+    out = os.environ.get("OUT") or "catalog_check.json"
+    clean = scrub(record, table)
+    left = leaks(clean, table)
+    if not left:
+        with open(out, "w", encoding="utf-8") as f:
+            f.write(json.dumps(clean, indent=1, ensure_ascii=False) + "\n")
+    return out, left
+
+
 def _args(argv: list[str]) -> tuple[dict, str | None]:
     """The catalog path and the values of --today and --census; any other argument is refused."""
     out: dict = {"path": None, "--today": None, "--census": None}
@@ -401,12 +583,15 @@ def _run(argv: list[str]) -> int:
     entries = catalog.get("credentials") or []
     worst = "ok"
     print(f"catalog_check.py: {len(entries)} credential(s) in {path}, read on {today.isoformat()}, warning window {warn_days} days\n")
+    judged: list[tuple[dict, str, list[str]]] = []
     for e in entries:
         state, reasons = check(e, today, warn_days)
+        judged.append((e, state, reasons))
         worst = max(worst, state, key=RANK.__getitem__)
         print(f"  {state:<5} {str(e.get('name', '<no name>')):<24} owner {e.get('owner') or '-':<16} due {e.get('next_due') or '-'}")
         for r in reasons:
             print(f"        {r}")
+    joined = None
     if census is not None:
         joined = census_join(catalog, census, key, today)
         realms = len(census["summary"]["realms"])
@@ -426,8 +611,18 @@ def _run(argv: list[str]) -> int:
                 print(f"        {r}")
     if worst == "unread":
         print("\nNOT READ: a token's state or end date was not in the census record, so that client is not judged (exit 3)")
-    print(f"\nexit {EXIT[worst]}")
-    return EXIT[worst]
+    code = EXIT[worst]
+    record = record_of(judged, joined, census, today, warn_days, code)
+    out, left = write_record(record, estate_values(record, catalog, census))
+    if left:  # not a usage error: the run read, and its record could not be written, so nothing is known from it
+        if code == 0:
+            code = EXIT_UNREAD
+        print(f"\nrefusing to write {out}: {len(left)} estate value(s) survived the scrub ({', '.join(sorted(set(left)))}); "
+              f"{out} not written, exit {code}: a tool that reads the record has nothing to read", file=sys.stderr)
+    else:
+        print(f"\n{out} written with every estate value replaced")
+    print(f"\nexit {code}")
+    return code
 
 
 if __name__ == "__main__":

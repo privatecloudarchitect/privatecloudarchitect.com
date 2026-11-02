@@ -1,0 +1,1238 @@
+{
+ "captured": "2026-11-02T14:58:32Z",
+ "today": "2026-11-02",
+ "warn_days": 14,
+ "sent": [],
+ "entries": [
+  {
+   "name": "{{credential-1}}",
+   "kind": "sso",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "overdue since 2026-08-02"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-05-04",
+   "next_due": "2026-08-02"
+  },
+  {
+   "name": "{{credential-2}}",
+   "kind": "sso",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-10-06",
+   "next_due": "2027-01-04"
+  },
+  {
+   "name": "{{credential-3}}",
+   "kind": "sso",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "overdue since 2026-10-27"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-07-29",
+   "next_due": "2026-10-27"
+  },
+  {
+   "name": "{{credential-4}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-09-24",
+   "next_due": "2027-09-24"
+  },
+  {
+   "name": "{{credential-5}}",
+   "kind": "ssh",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-05-04",
+   "next_due": "2027-05-04"
+  },
+  {
+   "name": "{{credential-6}}",
+   "kind": "ssh",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-10-04",
+   "next_due": "2027-10-04"
+  },
+  {
+   "name": "{{credential-7}}",
+   "kind": "ssh",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-10-04",
+   "next_due": "2027-10-04"
+  },
+  {
+   "name": "{{credential-8}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-10-04",
+   "next_due": "2027-10-04"
+  },
+  {
+   "name": "{{credential-9}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-10-05",
+   "next_due": "2027-10-05"
+  },
+  {
+   "name": "{{credential-10}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-10-04",
+   "next_due": "2027-10-04"
+  },
+  {
+   "name": "{{credential-11}}",
+   "kind": "vidb_api_token",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "next_due is later than last_rotated plus the 90-day cadence"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-08-07",
+   "next_due": "2027-02-03"
+  },
+  {
+   "name": "{{credential-12}}",
+   "kind": "vidb_api_token",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-02, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-03",
+   "next_due": "2026-11-02"
+  },
+  {
+   "name": "{{credential-13}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 180,
+   "last_rotated": "2026-07-28",
+   "next_due": "2027-01-24"
+  },
+  {
+   "name": "{{credential-14}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 180,
+   "last_rotated": "2026-10-28",
+   "next_due": "2027-04-26"
+  },
+  {
+   "name": "{{credential-15}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-10-30",
+   "next_due": "2027-01-28"
+  },
+  {
+   "name": "{{credential-16}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-10-30",
+   "next_due": "2027-01-28"
+  },
+  {
+   "name": "{{credential-17}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-10-31",
+   "next_due": "2027-01-29"
+  },
+  {
+   "name": "{{credential-18}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-10-30",
+   "next_due": "2027-01-28"
+  },
+  {
+   "name": "{{credential-19}}",
+   "kind": "ssh",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-10-30",
+   "next_due": "2027-10-30"
+  },
+  {
+   "name": "{{credential-20}}",
+   "kind": "api_key",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 90,
+   "last_rotated": "2026-08-11",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-21}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 180,
+   "last_rotated": "2026-08-12",
+   "next_due": "2027-02-08"
+  },
+  {
+   "name": "{{credential-22}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 180,
+   "last_rotated": "2026-09-09",
+   "next_due": "2027-03-08"
+  },
+  {
+   "name": "{{credential-23}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 180,
+   "last_rotated": "2026-09-09",
+   "next_due": "2027-03-08"
+  },
+  {
+   "name": "{{credential-24}}",
+   "kind": "entra_app_certificate",
+   "state": "fail",
+   "reasons": [
+    "missing scope"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 365,
+   "last_rotated": "2026-10-05",
+   "next_due": "2027-10-05"
+  },
+  {
+   "name": "{{credential-25}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-04, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-05",
+   "next_due": "2026-11-04"
+  },
+  {
+   "name": "{{credential-26}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-04, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-05",
+   "next_due": "2026-11-04"
+  },
+  {
+   "name": "{{credential-27}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-28}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-29}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-30}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-31}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-32}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-33}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-34}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-35}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-36}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-37}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-07, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-08",
+   "next_due": "2026-11-07"
+  },
+  {
+   "name": "{{credential-38}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-39}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-40}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-41}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-42}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-43}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-44}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-45}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-46}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-47}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-48}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-49}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-50}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-51}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-52}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-53}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-54}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-55}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-56}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-09, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-10",
+   "next_due": "2026-11-09"
+  },
+  {
+   "name": "{{credential-57}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-11, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-12",
+   "next_due": "2026-11-11"
+  },
+  {
+   "name": "{{credential-58}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-11, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-12",
+   "next_due": "2026-11-11"
+  },
+  {
+   "name": "{{credential-59}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-12, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-13",
+   "next_due": "2026-11-12"
+  },
+  {
+   "name": "{{credential-60}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-12, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-13",
+   "next_due": "2026-11-12"
+  },
+  {
+   "name": "{{credential-61}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-12, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-13",
+   "next_due": "2026-11-12"
+  },
+  {
+   "name": "{{credential-62}}",
+   "kind": "basic_auth",
+   "state": "fail",
+   "reasons": [
+    "missing scope",
+    "due 2026-11-12, inside the 14-day window"
+   ],
+   "recorded": [
+    "owner",
+    "backend",
+    "rotation date"
+   ],
+   "missing": [
+    "scope"
+   ],
+   "cadence_days": 30,
+   "last_rotated": "2026-10-13",
+   "next_due": "2026-11-12"
+  }
+ ],
+ "census": null,
+ "summary": {
+  "credentials": 62,
+  "ok": 0,
+  "warn": 0,
+  "fail": 62,
+  "api_clients": null
+ },
+ "exit": 2
+}

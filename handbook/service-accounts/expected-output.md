@@ -221,7 +221,9 @@ does not say a person holds it.
 ## catalog_check.py
 
 The example catalog, read with a fixed date so the run is reproducible. One entry falls due inside the 30-day window,
-which is a warning, so the exit is 1.
+which is a warning, so the exit is 1. The run writes its record, `catalog_check.json` in the working directory (`OUT`
+names another path): each entry's state, reasons, dates and which of the four facts it records, every name a
+placeholder.
 
 ```text
 $ python3 catalog_check.py credentials.example.json --today 2026-10-13
@@ -231,6 +233,8 @@ catalog_check.py: 3 credential(s) in credentials.example.json, read on 2026-10-1
   warn  ci-inventory-read        owner ci-team          due 2026-10-18
         due 2026-10-18, inside the 30-day window
   ok    directory-bind           owner identity-team    due 2027-03-23
+
+catalog_check.json written with every estate value replaced
 
 exit 1
 ```

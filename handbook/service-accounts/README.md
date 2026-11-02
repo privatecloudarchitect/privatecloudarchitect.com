@@ -9,7 +9,7 @@ these reads, so a row that differs on your estate is worth a report.
 | File | What it answers | Exit |
 |---|---|---|
 | `claims.py` | What does the bearer my api-token exchanges for say about its holder? Issuer, audience, the principal (the broker's `prn_type`: `USER` a person, `SERVICE` a machine identity; without it, a person's claim such as an email or a user name names a person, unless it holds `service-account-<name>`, the name VCF Automation gives a service account's user), scopes, and the lifetime read off the token itself. Any other JWT can be decoded through `JWT_ENV`. | 0 printed, the principal a PERSON or a CLIENT · 3 the mint failed, the broker answered a bearer that is not a JWT, or the principal is not determined (no `prn_type` and no person's claim, no `prn_type` and a person's claim holding `service-account-<name>`, or a `prn_type` other than `USER` or `SERVICE`), or a request a `--replay` set holds no answer for · 5 a usage error: an argument it does not take, the credential unset or its file unreadable or open to group or other, a `JWT_ENV` value that is not a JWT, a `--replay` directory that cannot be read or holds no replay set, `--replay` with `JWT_ENV` set |
-| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. With `--census`, it also reads the record the identity-model companion's `census.py` writes and checks every API client in it for an owner, a role, both lifetimes and a rotation date, which neither file holds alone. | The worst state, in this order: 2 a failure (with `--census`, a client holding a token `EXPIRED`, `REVOKED` or past its end date among them) · 3 the census record is not a read (a replayed run wrote it, `"replay": true`; its exit is not 0; a fleet identity call failed or answered without its list; it lists no realm, did not query every realm's API client and token lists, or does not state them read to their total; or a line the join reads is missing), or a joined client holds a token whose state or end date the record does not carry · 1 a warning · 0 every entry complete · 5 a usage error: an argument it does not take, a file it cannot read, a catalog that is not one (no object with a `credentials` list), the key unset, unreadable or open to group or other, or a record without fingerprints or made under another key |
+| `catalog_check.py` | Is every credential your automation holds recorded with an owner, a scope, a backend and a rotation date, and which is overdue or falls due inside the warning window? Reads a catalog of metadata (start from `credentials.example.json`), refuses one that holds a secret value, and calls nothing. With `--census`, it also reads the record the identity-model companion's `census.py` writes and checks every API client in it for an owner, a role, both lifetimes and a rotation date, which neither file holds alone. Each run writes its record, `catalog_check.json` (`OUT` names another path), every name a placeholder: the states, the reasons, which of the four facts each entry records, and the census join when there was one. | The worst state, in this order: 2 a failure (with `--census`, a client holding a token `EXPIRED`, `REVOKED` or past its end date among them) · 3 the census record is not a read (a replayed run wrote it, `"replay": true`; its exit is not 0; a fleet identity call failed or answered without its list; it lists no realm, did not query every realm's API client and token lists, or does not state them read to their total; or a line the join reads is missing), a joined client holds a token whose state or end date the record does not carry, or a run whose code was 0 whose record was not written because an estate value survived the scrub · 1 a warning · 0 every entry complete · 5 a usage error: an argument it does not take, a file it cannot read, a catalog that is not one (no object with a `credentials` list), the key unset, unreadable or open to group or other, or a record without fingerprints or made under another key |
 | `doors.py` | Which token does each surface accept? One harmless read per pair: the broker's bearer against VCF Operations, NSX, and the fleet plane's services; the per-service JWTs; VCF Automation's three login paths with the count of effective rights each carries (the arrival rule in numbers); vCenter's and SDDC Manager's own flows. Rows say MATCH or DIFFERS against the chapter's matrix. | 0 every door of every surface you configured answered · 3 a transport error, the broker mint failed, a surface you configured whose own token could not be minted (`NOT READ`), or a request a `--replay` set holds no answer for · 5 a usage error: an argument it does not take, `OPS_HOST` or the api-token unset, a credential file it cannot read or one open to group or other, a `--replay` directory that cannot be read or holds no replay set |
 | `replay/claims/`, `replay/doors/` | Recorded answer sets made from the X-126 record (VCF 9.1.1, 2026-10-15), every name a placeholder, for `--replay`: `claims.py` and `doors.py` run on them with no estate and send nothing. | none: a set is read by the scripts, never run |
 
@@ -59,7 +59,7 @@ into answers, with a placeholder for every name. `catalog_check.py` reads files 
 ```bash
 python3 claims.py --replay replay/claims      # what the broker's bearer says about its holder
 python3 doors.py --replay replay/doors        # the broker's and the fleet plane's doors, as X-126 read them
-python3 catalog_check.py credentials.example.json --today 2026-10-13   # the example catalog, on a fixed date
+python3 catalog_check.py credentials.example.json --today 2026-10-13   # the example catalog, on a fixed date; writes catalog_check.json
 ```
 
 Nothing is sent and no credential or token file is read: the set answers each request by its method, path and query,
@@ -115,6 +115,16 @@ join (a name two clients share, in two realms or across a re-creation: name each
 state (anything but `ACTIVE`, `EXPIRED` or `REVOKED`) or end date the record does not carry is not judged: its client
 prints `unread`, and the run exits 3 unless a failure (exit 2) comes first, so a warning never hides it.
 
+Each run writes its record, `catalog_check.json` in the working directory (`OUT` names another path): the day the
+states were judged at (`today`), each entry's state, reasons, dates and which of the four facts it records and which it
+lacks, the census join when there was one (each API client's state, its roles and tokens, and the entry that names it),
+the counts and the run's exit. Every name is a placeholder (`{{credential-N}}` an entry, `{{client-N}}` the API client
+it names, `{{owner-N}}`, `{{scope-N}}`, `{{backend-N}}`; a census name is one already), anything shaped like an id, a
+host, an address or a user is replaced too, and the record carries no value an entry holds beyond its dates, counts and
+states. A record an estate value survived the scrub in is not written, and a run whose code was 0 then exits 3, because
+the record a later run compares against, and a drift read reads, does not exist. A usage error, and a census refused
+before any entry is judged, write nothing.
+
 Every password and token is read from `NAME_FILE`, a file of mode 0600, when it is set; a file open to group or other
 is refused unread, with the fix (`chmod 600` on the file), and an empty one is refused too, each as a usage error (exit
 5) with nothing sent. The value itself in `NAME`
@@ -138,13 +148,18 @@ so keep it for a throwaway credential.
   date is not tested. Both scripts say so when it happens, and exit 3.
 - The replay sets were made from X-126's record, which keeps each door's status and each token's claim names and
   lifetime, never a value: every value in them is a placeholder, and a token in them is made unsigned at answer time.
-- `catalog_check.py` reads metadata you keep and was run on the example catalog; it never reads a backend, so it
-  cannot tell whether the value in the vault still works. That is what `claims.py` and `doors.py` are for. Its
-  `--census` join was run once on the reference estate's census record, with a scratch catalog naming one client: that
-  client joined, and the three no entry named failed (2026-10-15). That record predates the list totals the join now
-  requires, so the same record is refused today until `census.py` is run again. Its refusals of a census that did not
-  read, its token states and its zero-client line were run on synthetic records and on records `census.py`'s own code
-  wrote from a fake fleet, a page of one entry at a time past fifty included, and are held by its tests.
+- `catalog_check.py` reads metadata you keep; it never reads a backend, so it cannot tell whether the value in the
+  vault still works. That is what `claims.py` and `doors.py` are for. It was run on the example catalog and, on
+  2026-11-02, on the reference estate's own catalog, exported to this form from the reference tooling's typed catalog
+  (`pca secrets export-catalog`): 62 credentials, every one marked `fail` because that catalog records an owner, a
+  backend and the rotation dates for each but no scope, 40 of them also due inside the 14-day window and 2 past their
+  date. Its record, `catalog_check.json` beside this script, is that run, every name a placeholder, and the
+  enterprise strategy layer's drift read reads it. Its `--census` join was run once on the reference estate's census
+  record, with a scratch catalog naming one client: that client joined, and the three no entry named failed
+  (2026-10-15). That record predates the list totals the join now requires, so the same record is refused today until
+  `census.py` is run again. Its refusals of a census that did not read, its token states and its zero-client line were
+  run on synthetic records and on records `census.py`'s own code wrote from a fake fleet, a page of one entry at a
+  time past fifty included, and are held by its tests.
 
 ## Reading the output
 
