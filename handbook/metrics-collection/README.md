@@ -15,7 +15,7 @@ in the order a first visit should take it.
 | 1 | [`import/`](import/) | Import two files into your VCF Operations and bind three widgets. You now have the **PCA - Collect Once - Collection Strategy Guide** running on your own VMs. | about ten minutes |
 | 2 | the dashboard | Read it top to bottom. The order of its widgets is the lesson; the list below says what each one teaches. | an hour, once |
 | 3 | [`harness/`](harness/) | Run the read-only scripts that reproduce the three chapters' measurements against your instance: the planes and their retention, the roll-up check, the extraction coefficients, the identity key, the real-time path, the collection topology. | an afternoon |
-| 4 | [`collection-planes-atlas.html`](collection-planes-atlas.html) | The seventeen plates the three chapters draw, the sizing calculator included, as one page you can open in a browser or hand to someone. | as needed |
+| 4 | [`collection-planes-atlas.html`](collection-planes-atlas.html) | The eighteen plates the three chapters draw, the hold-windows planner and the sizing calculator included, as one page you can open in a browser or hand to someone. | as needed |
 
 ## 1. Import the guide
 
@@ -59,11 +59,12 @@ continuity, and the real-time path. Each prints beside an expected transcript.
 
 ## 4. The atlas
 
-`collection-planes-atlas.html` is the Collection Planes Atlas: twelve plates that draw the planes, the
-horizons, the catalog with vCenter statistics levels, the extraction contract, the regional shape, the
-domains beyond vSphere, the identity key, the real-time plane's rules, and the proof that the store's mean
-and peak keys are roll-ups of the 20-second samples. It is the same page as the artifact linked from the
-chapter.
+`collection-planes-atlas.html` is the Collection Planes Atlas: eighteen plates that draw the planes, the
+horizons, the catalog with vCenter statistics levels and the decision on vCenter's level, the extraction
+contract, the regional shape, the domains beyond vSphere, the identity key, the real-time plane's rules, the
+proof that the store's mean and peak keys are roll-ups of the 20-second samples, the topology shapes, how long
+each hop holds a signal on its way in (with a planner you run on your own outage and settings), the outage
+rule, the sizing calculator, the gold layer and the CMDB join. It is the page the three chapters are cut from.
 
 ## Where the guide comes from
 
