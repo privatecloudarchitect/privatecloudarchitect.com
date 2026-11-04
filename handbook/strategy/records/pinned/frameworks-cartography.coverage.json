@@ -1,0 +1,18 @@
+{
+ "captured_utc": "2026-10-21T14:11:08Z",
+ "verb": "coverage",
+ "walked": 11,
+ "heldNoSignal": 2,
+ "onThisVcenter": 9,
+ "categoriesDefined": 2,
+ "categoriesGoverned": 4,
+ "perCategory": {
+  "identity.app": 9,
+  "identity.app-layer": 0,
+  "identity.function": 9,
+  "lifecycle.env-observed": 0
+ },
+ "withAnyGovernedTag": 9,
+ "withEveryGovernedTag": 0,
+ "unclassifiedBacklog": 2
+}

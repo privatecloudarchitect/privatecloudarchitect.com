@@ -1,0 +1,512 @@
+# The synthetic adopter's portfolio (40-BREADTH.md step 9): measured and input values only, each input naming its
+# supplier; one estate-local initiative its own trigger event spawned (defined and judged; the board ranks the register's initiatives the estate plans); a role assigned to two departments in two scopes;
+# two exceptions, one expired and one renewed twice. Its records are the two synthetic ones beside it, never the
+# reference estate's. Every name a placeholder or the adopter's own word.
+schema: 5
+estate: adopter-one
+approval:
+  kind: input
+  status: 'the adopter''s own portfolio: no approval applies, since it is never served'
+  source: the adopter's platform lead, 2026-11-02
+policy:
+  version: 6
+  overrides: []
+approvals: []
+departments:
+- id: platform-group
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+- id: operations-group
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+assignments:
+- role: platform-team
+  scope: estate
+  department: platform-group
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+  basis: writes the clusters' declared images and the backup schedules
+- role: platform-team
+  scope: organization:org-two
+  department: operations-group
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+  basis: the second organization's clusters are the operations group's
+- role: observability-team
+  scope: estate
+  department: operations-group
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+  basis: the log forwarders are the operations group's
+role_history:
+- id: platform-team-estate-since-2025-03
+  role: platform-team
+  scope: estate
+  holder: the platform group's lead
+  from: '2025-03-01'
+  to: null
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+  note: from the adopter's directory export
+ownership:
+  owns:
+  - assignments
+  - targets
+  - exceptions
+  - initiatives
+  - conversion_rates
+  - capacity
+  - decision_log
+  imports:
+    capability state: the adopter's companion records, through the drift-read contract
+    investment and effort: the adopter's time-tracking export (export.json, where one is passed)
+    role_history: the adopter's directory export
+capacity:
+- role: platform-team
+  value: 8.0
+  unit: person-weeks per period
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+capabilities:
+- id: fleet-patch-window
+  grade: derived
+  target_grade:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    level: adopted
+    reason: exposure to published vulnerabilities is the reference estate's first risk
+  state:
+  - scope: estate
+    established: false
+    steps:
+      images-declared:
+        done: true
+        kind: measured
+        read_at: '2026-10-25T02:28:12Z'
+        source: records/handbook-host-lifecycle.record.json
+        note: five clusters image-managed on base image 9.1.1.0.25714478; their stored image compliance read COMPLIANT, evaluated
+          by the platform on 2026-10-06 and 2026-10-07 (G-781)
+      compliance-read-scheduled:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: the read has run by hand; no scheduled run record exists
+      window-agreed:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: a decision between the platform and security teams, which the reference estate does not have; it can be shown
+          only as illustrative, approved by the operator (DEC-14), and a grade resting on it is shown as illustrative
+      staging-and-remediation-procedure:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: read from the platform's task records when the estate's owner next remediates; this program never remediates
+      advisory-record:
+        done: true
+        kind: measured
+        read_at: '2026-10-28'
+        source: records/handbook-host-lifecycle.record.json
+        note: VMSA-2026-0006.2 kept verbatim as fetched and read by instrument/advisory.py (20-PILOT.md step 4)
+      per-host-series:
+        done: true
+        kind: measured
+        read_at: '2026-10-28T04:34:21Z'
+        source: records/handbook-host-lifecycle.record.json
+        note: the series' first keyed reading; the second, 2026-10-28T04:35:12Z, joins 11 of 11 hosts by key (20-PILOT.md
+          step 3)
+  readings:
+  - id: advisory-to-fixed-build-2026-10-28
+    value: advisory-to-fixed-build
+    advisory: VMSA-2026-0006
+    kind: measured
+    read_at: '2026-10-28T06:30:54Z'
+    source: records/handbook-host-lifecycle.record.json
+    reading: Closed by the 2026-10-07 reading, at most 70 days from the advisory's publication on 2026-07-29, with no lower
+      bound because no reading falls between them; graded inferred, because that reading (the day-2 capture's record) holds
+      no connection state and closes on its stored image compliance (11 hosts compliant, none unavailable). Every host ran
+      9.1.1 build 25714478, at or above the 9.1.x.x line's required build 25557999 (the line's mapping documented by the advisory's
+      own Version cell). Each stage lies within 0 to 70 days; the fixed image 9.1.0.0200.25557999 was released 2026-07-09,
+      20 days before the advisory. Closed means the fixed build runs on every host, the first of field note 09's three reads;
+      the configuration profile's compliance and a fresh posture assessment are not read here.
+    confidence: inferred
+  investment:
+    images-declared:
+      kind: not_recorded
+      source: null
+      note: done before this program; its effort was not recorded
+      value: null
+    compliance-read-scheduled:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 1
+    window-agreed:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 1
+    staging-and-remediation-procedure:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 3
+    advisory-record:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 4
+    per-host-series:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 3
+  effort:
+    patch-loop:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 6
+    drift-read:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 1
+    instrument-upkeep:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      value: 2
+  targets:
+    advisory-to-fixed-build:
+      kind: input
+      source: the adopter's platform lead, 2026-11-02
+      note: null
+      target_kind: committed
+      value: 14
+      window: P3M
+      allowance: one advisory per quarter over target
+      consequence: the next cycle's capacity goes to the patch loop first
+  exceptions:
+  - id: w-compliance-read-held
+    part: compliance-read-scheduled
+    reason: the scheduled read waits for the job runner the platform group procures
+    decided_by: the platform group's change board, 2026-01-10
+    granted: '2026-01-10'
+    renewals: 0
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+  - id: w-window-under-review
+    part: window-agreed
+    reason: the patch window is under review with the application owners
+    decided_by: the platform group's change board, 2026-10-20
+    granted: '2026-10-20'
+    renewals: 2
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+  parameters: {}
+- id: platform-restore
+  grade: derived
+  target_grade:
+    level: adopted
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    reason: a restorable management plane is the precondition for every other capability
+  state:
+  - scope: estate
+    established: false
+    steps:
+      schedules-declared:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T08:32:39Z'
+        source: records/handbook-platform-backup.recovery.json
+        note: three planes read, each schedule enabled
+      copy-age-read-scheduled:
+        done: false
+        kind: not_recorded
+      rehearsal-booked:
+        done: false
+        kind: not_recorded
+        note: no rehearsal record in the repository; the estate's owner would supply it
+  readings:
+  - id: newest-copy-overdue-hours-2026-10-22
+    value: newest-copy-overdue-hours
+    kind: measured
+    read_at: '2026-10-22T08:32:39Z'
+    source: records/handbook-platform-backup.recovery.json
+    reading: '0: the newest copies were 4.5, 8.5 and 1.5 hours old against 30, 30 and 78 hours allowed; no plane overdue'
+    confidence: live
+  - id: uncovered-plane-days-2026-10-22
+    value: uncovered-plane-days
+    kind: measured
+    read_at: '2026-10-22T08:32:39Z'
+    source: records/handbook-platform-backup.recovery.json
+    reading: 'About 5.7 plane-days per month over the record''s coverage windows (364 and 419 days): the lifecycle manager
+      had no copy on 44 of 364 days (4 gaps, the longest 19 days), the management vCenter on 28 of 419 days (4 gaps, the longest
+      20 days); (44/364 + 28/419) x 30.44 = 5.71. The network manager reports only its most recent copy, so its days are not
+      counted.'
+    confidence: live
+  investment:
+    schedules-declared:
+      kind: not_recorded
+      note: done before this program
+    copy-age-read-scheduled:
+      kind: input
+      value: 1
+      source: the adopter's platform lead, 2026-11-02
+    rehearsal-booked:
+      kind: input
+      value: 2
+      source: the adopter's platform lead, 2026-11-02
+  effort:
+    copy-age-read:
+      kind: input
+      value: 0.5
+      source: the adopter's platform lead, 2026-11-02
+    restore-rehearsal:
+      kind: input
+      value: 8
+      source: the adopter's platform lead, 2026-11-02
+    reader-upkeep:
+      kind: input
+      value: 1
+      source: the adopter's platform lead, 2026-11-02
+  targets:
+    newest-copy-overdue-hours:
+      kind: input
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: one overdue day per month
+      consequence: a missed copy is a finding on the next read
+      source: the adopter's platform lead, 2026-11-02
+    uncovered-plane-days:
+      kind: input
+      target_kind: aspirational
+      value: 1
+      window: P3M
+      allowance: null
+      consequence: null
+      source: the adopter's platform lead, 2026-11-02
+  exceptions: []
+conversion_rates:
+- kind: input
+  source: the adopter's platform lead, 2026-11-02
+  note: null
+  measure: exposure-days-past-window
+  rate: 2.0
+  low: 1.0
+  high: 4.0
+  unit: cu per advisory-day
+  method: 'expected loss per day an advisory stays open past its window: likelihood of exploitation in that day times the
+    impact'
+unconverted:
+- kind: input
+  source: the adopter's platform lead, 2026-11-02
+  note: approved by D4-14 as the plain id of schema 3; served in that form until the typed item is approved
+  measure: failed-host-remediation-share
+estimate_adjustment:
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+  note: null
+  factor: 1.2
+  applies_to:
+  - duration
+  - investment
+  method: an uplift for optimism bias, as the Green Book requires (research/r1 B3)
+initiatives:
+- id: fleet-patch-instrument
+  status:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay: null
+  duration:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: covers the five open establish steps (12 person-days) and their integration
+    value: 3.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: the patch loop runs today; the instrument adds its own read and its upkeep
+    loops:
+    - drift-read
+    - instrument-upkeep
+    change: null
+  planning:
+  - kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    id: assessed-2026-10-25
+    full_value_in: P3M
+    first_value_in: P3M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-10-25'
+    review_by: derived
+    confidence: inferred
+    evidence:
+    - ref: 'research/r5 D(d): every part can be built read-only'
+- id: risk-tiered-patch-windows
+  status:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    decision: a benchmark, not an obligation
+    reason: BOD 26-04 is 'a compulsory direction to federal, executive branch, departments, and agencies' (fetched 2026-10-25)
+  cost_of_delay:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    delta: 10.0
+    baseline:
+      kind: not_recorded
+      source: null
+      note: unmeasurable until fleet-patch-instrument exists
+      value: null
+    after: null
+    profile: standard
+    deadline: null
+  duration:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    value: 4.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: shorter windows run the patch loop more often
+    loops: []
+    change:
+      loop: patch-loop
+      value: 4.0
+  planning:
+  - kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    id: assessed-2026-10-25
+    full_value_in: P9M
+    first_value_in: P6M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-10-25'
+    review_by: derived
+    confidence: inferred
+    evidence:
+    - ref: requires fleet-patch-window, which fleet-patch-instrument establishes in <1y
+- id: agentic-patch-triage
+  status:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    delta: 8.0
+    baseline:
+      kind: not_recorded
+      source: null
+      note: null
+      value: null
+    after: null
+    profile: standard
+    deadline: null
+  duration:
+    kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    value: 12.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: not_recorded
+    source: null
+    note: unknown until the agent's own upkeep loop is designed
+    loops: []
+    change: null
+  planning:
+  - kind: input
+    source: the adopter's platform lead, 2026-11-02
+    note: null
+    id: assessed-2026-10-25
+    full_value_in: P18M
+    first_value_in: P15M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-10-25'
+    review_by: derived
+    confidence: forecast
+    evidence:
+    - ref: 'requires non-human-identity and safe-actuation, which no initiative establishes yet: it cannot be committed (GATE-8),
+        and its tier is the lead''s forecast, not a constrained one'
+local_capabilities: []
+local_initiatives:
+- id: adopter-one-copy-age-alert
+  summary: Alert on a management plane's newest backup copy older than its schedule allows, so the restore precondition is
+    read on a cadence and not at the restore
+  establishes: []
+  improves:
+  - capability:platform-restore
+  requires:
+  - capability:platform-restore
+  sponsor: platform-team
+  from: driver
+  from_event: te-2026-10-20-adopter-audit
+  cost_of_delay_through: null
+  guidance:
+  - half_life: implementation
+    evolution_stage: product
+    stance: null
+    assessed: '2026-10-21'
+    review_by: derived
+    confidence: documented
+    evidence:
+    - ref: 'the adopter''s internal audit of 2026-10-20 (its own record): one plane''s newest copy 41 hours old against 30
+        allowed'
+drivers: []
+trigger_events:
+- id: te-2026-10-20-adopter-audit
+  date: '2026-10-20'
+  read_at: '2026-10-21T09:00:00Z'
+  source: the adopter's internal audit of 2026-10-20 (its own record)
+  kind: driver
+  driver: physical-and-environmental-hazards
+  grade: in_force
+  reopened: []
+  spawned:
+  - adopter-one-copy-age-alert
+  no_change: false
+  ruled_at: '2026-10-21'
+scans: []
+decision_log:
+- id: decided-2026-10-21-copy-age-alert
+  date: '2026-10-21'
+  initiative: adopter-one-copy-age-alert
+  decision: 'explored: the alert is costed before the next period''s commitment'
+  by: platform-team
+  kind: input
+  source: the adopter's platform lead, 2026-11-02
+  reason: the audit found one plane's newest copy past the age its schedule allows

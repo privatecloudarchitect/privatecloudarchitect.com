@@ -1,0 +1,77 @@
+{
+ "captured_utc": "2026-10-21T23:44:53Z",
+ "instances": [
+  {
+   "label": "the instance asked about",
+   "sddcManagerVersions": [
+    "9.1.1.0.25713928"
+   ],
+   "domains": {
+    "total": 2,
+    "management": 1,
+    "workload": 1
+   },
+   "releases": 19,
+   "bundles": {
+    "total": 368,
+    "byStatus": {
+     "PENDING": 338,
+     "SUCCESSFUL": 29,
+     "FAILED": 1
+    }
+   },
+   "upgradables": 0,
+   "distinctBundlesOffered": 0,
+   "offeredAndStaged": 0,
+   "unstagedMB": 0,
+   "join": [],
+   "workloadDomainRefusal": {
+    "status": 400,
+    "message": "Management Domain with ID {{id}} not found."
+   },
+   "depot": {
+    "via": "v1/services-config",
+    "services": [
+     {
+      "type": "VCF_DEPOT",
+      "nodes": 1
+     }
+    ]
+   }
+  },
+  {
+   "label": "the rehearsal instance",
+   "sddcManagerVersions": [
+    "9.1.1.0.25713928"
+   ],
+   "domains": {
+    "total": 1,
+    "management": 1,
+    "workload": 0
+   },
+   "releases": 19,
+   "bundles": {
+    "total": 366,
+    "byStatus": {
+     "PENDING": 339,
+     "SUCCESSFUL": 27
+    }
+   },
+   "upgradables": 0,
+   "distinctBundlesOffered": 0,
+   "offeredAndStaged": 0,
+   "unstagedMB": 0,
+   "join": [],
+   "workloadDomainRefusal": null,
+   "depot": {
+    "via": "v1/services-config",
+    "services": [
+     {
+      "type": "VCF_DEPOT",
+      "nodes": 1
+     }
+    ]
+   }
+  }
+ ]
+}

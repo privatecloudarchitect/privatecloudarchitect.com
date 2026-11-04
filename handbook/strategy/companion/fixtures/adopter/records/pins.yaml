@@ -1,0 +1,10 @@
+schema: 1
+pins:
+- file: records/handbook-host-lifecycle.record.json
+  source: the adopter's own run of hostlife.py, 2026-10-30
+  sha256: 7c03dac73d736e808233a45c93e27abce24d761c0c1968f6b973f9b515f7c4b7
+  pinned: '2026-10-30'
+- file: records/handbook-platform-backup.recovery.json
+  source: the adopter's own run of recovery.py, 2026-10-30
+  sha256: d0089574138ffc07b4a5b2117d1744f61ef9dcfd6d7ba5b81d0bcfc884248721
+  pinned: '2026-10-30'

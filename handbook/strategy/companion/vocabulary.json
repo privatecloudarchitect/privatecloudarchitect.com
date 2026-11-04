@@ -1,0 +1,1646 @@
+{
+ "schema": 1,
+ "written_from": {
+  "competency_map": {
+   "path": "deploy/privatecloudarchitect/site/competency-map.yaml",
+   "sha256": "d14fcc9f5883d92eb7a3efb0d59eda97ece2a5688a905f9cd4a4abd18d3b9ce9"
+  },
+  "mastery": {
+   "path": "deploy/privatecloudarchitect/site/mastery.yaml",
+   "sha256": "c4e59dd1a42448b36dc9be50611f8ea381c55db33ed1019d93ace0137bf047bf"
+  },
+  "pages": {
+   "path": "deploy/privatecloudarchitect/site/src/pages.json",
+   "sha256": "735435406ae06e322b0066bfb48e45d968365b6f360c7751684267153b993990"
+  },
+  "ladder": {
+   "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
+   "sha256": "43ba4400efb809765130b471f17ae9467bed0b1e4d2f68dc3ce4b23dcceea4a3"
+  }
+ },
+ "jobs": [
+  {
+   "id": "foundation",
+   "name": "Hold the picture every job builds on: the platform and its identity model"
+  },
+  {
+   "id": "platform-upkeep",
+   "phase": "platform",
+   "name": "Keep the platform current, its hosts as declared, its credentials and certificates accounted for, and its state restorable"
+  },
+  {
+   "id": "identity-migration",
+   "phase": "platform",
+   "name": "Move an estate's identity to VCF single sign-on"
+  },
+  {
+   "id": "tenancy",
+   "phase": "prepare",
+   "name": "Give teams an isolated, self-service tenancy"
+  },
+  {
+   "id": "workloads",
+   "phase": "prepare",
+   "name": "Deploy workloads into a tenant, through a door chosen on purpose"
+  },
+  {
+   "id": "tenant-federation",
+   "phase": "prepare",
+   "name": "Federate a tenant organization to its own identity provider"
+  },
+  {
+   "id": "discovery",
+   "phase": "discover",
+   "name": "Discover and name what actually runs"
+  },
+  {
+   "id": "tuning",
+   "phase": "tune",
+   "name": "Tune the estate for efficiency and cost"
+  },
+  {
+   "id": "alerting",
+   "phase": "operate",
+   "name": "Watch the estate and respond: alerts that are actionable and proven, availability, and incidents"
+  },
+  {
+   "id": "observability-content",
+   "phase": "operate",
+   "name": "Keep operations content, its alerts, super metrics and groups, as code on stable names"
+  },
+  {
+   "id": "collection",
+   "phase": "operate",
+   "name": "Collect metrics, logs and flows once, and keep each class of log by rule"
+  },
+  {
+   "id": "automation",
+   "phase": "operate",
+   "name": "Automate against the VCF APIs as machine identities"
+  },
+  {
+   "id": "workload-operations",
+   "phase": "operate",
+   "name": "Operate deployed workloads through the plane that claims them"
+  },
+  {
+   "id": "orchestrator-authoring",
+   "phase": "operate",
+   "name": "Author, package and deploy Orchestrator content from one source"
+  },
+  {
+   "id": "identity-operations",
+   "phase": "operate",
+   "name": "Run identity day to day: failed sign-ins, rollovers and leavers"
+  },
+  {
+   "id": "security",
+   "phase": "prove",
+   "name": "Secure the tenancy and read its audit trail"
+  },
+  {
+   "id": "labelling",
+   "phase": "prove",
+   "name": "Label workloads so every group can read them"
+  }
+ ],
+ "competencies": [
+  {
+   "id": "platform-map",
+   "name": "Read the VCF 9.1 platform in one picture: the two domain kinds, the component families, and the scopes and planes vocabulary",
+   "part": "0",
+   "job": "foundation",
+   "teaches": "/handbook/platform-map",
+   "tier": "live",
+   "requires": [
+    "vsphere-admin"
+   ]
+  },
+  {
+   "id": "identity-model",
+   "name": "Place any sign-in on the VCF 9.1 identity model and read the estate's broker, realm, provider and directories from one census",
+   "part": "0",
+   "job": "foundation",
+   "teaches": "/handbook/identity-model",
+   "tier": "live,doc",
+   "harness": "handbook/identity-model",
+   "requires": [
+    "platform-map"
+   ],
+   "related": [
+    "platform-identity",
+    "construct-model",
+    "vcenter-authorization"
+   ]
+  },
+  {
+   "id": "platform-identity",
+   "name": "Tell which token, which clock and which login path a failing call is on, and pick the token each surface and operation class needs",
+   "part": "0",
+   "job": "automation",
+   "teaches": "/handbook/platform-identity",
+   "tier": "live",
+   "harness": "handbook/platform-identity",
+   "requires": [
+    "platform-map"
+   ],
+   "related": [
+    "identity-model"
+   ]
+  },
+  {
+   "id": "service-accounts",
+   "name": "Separate the human interactive surface from the automation surface and scope an automation identity least-privilege",
+   "part": "0",
+   "job": "automation",
+   "teaches": "/handbook/service-accounts",
+   "tier": "live",
+   "harness": "handbook/service-accounts",
+   "requires": [
+    "platform-identity"
+   ]
+  },
+  {
+   "id": "resilient-api-call",
+   "name": "Write an API call that survives token expiry, response-shape drift, and double execution (retry, parse-at-boundary, idempotency)",
+   "part": "0",
+   "job": "automation",
+   "teaches": "/handbook/resilient-api-call",
+   "tier": "live",
+   "requires": [
+    "platform-identity",
+    "service-accounts"
+   ]
+  },
+  {
+   "id": "vcfa-api",
+   "name": "Authenticate to VCF Automation the right way for the operation class, and drive its API",
+   "part": "0",
+   "job": "automation",
+   "teaches": "/handbook/vcfa-api",
+   "tier": "live",
+   "harness": "handbook/vcfa-api",
+   "requires": [
+    "platform-identity",
+    "resilient-api-call"
+   ]
+  },
+  {
+   "id": "construct-model",
+   "name": "Place a tenant in the containment hierarchy: organization, project, supervisor namespace, workload",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/construct-model",
+   "tier": "live",
+   "requires": [
+    "platform-map"
+   ]
+  },
+  {
+   "id": "access-control",
+   "name": "Grant consumption with the four layers and dials, and onboard a group end to end",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/access-control",
+   "tier": "live",
+   "harness": "handbook/access-control",
+   "requires": [
+    "construct-model",
+    "platform-identity"
+   ],
+   "related": [
+    "tenant-federation",
+    "identity-model"
+   ]
+  },
+  {
+   "id": "day2-governance",
+   "name": "Control the Day-2 action count with policy regimes, additive composition, and layered deletion defense",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/day2-governance",
+   "tier": "live",
+   "harness": "handbook/day2-governance",
+   "requires": [
+    "access-control"
+   ]
+  },
+  {
+   "id": "network-plane",
+   "name": "Read the tenant overlay from subnet to provider gateway, and choose the shared-VPC or VPC-per-tenant fork",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/network-plane",
+   "tier": "live",
+   "requires": [
+    "construct-model"
+   ]
+  },
+  {
+   "id": "capacity-plane",
+   "name": "Size a tenant with zone budgets, and read what each namespace holds against its class config",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/capacity-plane",
+   "tier": "live",
+   "requires": [
+    "construct-model"
+   ]
+  },
+  {
+   "id": "day1-provisioning",
+   "name": "Publish a blueprint to a catalog item whose schema is the tenant interface, with ownership at request",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/day1-provisioning",
+   "tier": "live",
+   "harness": "handbook/day1-provisioning",
+   "requires": [
+    "construct-model",
+    "access-control",
+    "capacity-plane"
+   ]
+  },
+  {
+   "id": "isolation-design",
+   "name": "Assemble per-user isolation in a shared project: one group binding, one two-policy change, proven by matrix",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/isolation-design",
+   "tier": "live,repo",
+   "harness": "handbook/isolation-design",
+   "requires": [
+    "construct-model",
+    "access-control",
+    "day2-governance",
+    "network-plane"
+   ]
+  },
+  {
+   "id": "temporary-elevation",
+   "name": "Grant time-boxed elevation through a broker: destructive access expires by construction, wider access is reverted by a watched reconciler",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/temporary-elevation",
+   "tier": "live,repo",
+   "harness": "handbook/temporary-elevation",
+   "requires": [
+    "day2-governance",
+    "isolation-design"
+   ],
+   "related": [
+    "service-accounts"
+   ]
+  },
+  {
+   "id": "vks-operations",
+   "name": "Operate a guest Kubernetes cluster from the org side, declared against a cluster class whose nodes are sized outputs",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/vks-operations",
+   "tier": "live",
+   "requires": [
+    "construct-model",
+    "capacity-plane"
+   ]
+  },
+  {
+   "id": "vm-service",
+   "name": "Read a VM as a namespace object (class, image, storage class, bootstrap) and sort machines by the path that governs them",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/vm-service",
+   "tier": "live",
+   "requires": [
+    "construct-model",
+    "capacity-plane"
+   ]
+  },
+  {
+   "id": "content-libraries",
+   "name": "Get a VM image into every namespace that needs it, pin it knowing what the pin survives, and find the failing layer when a namespace cannot see it",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/content-libraries",
+   "tier": "live,doc",
+   "harness": "handbook/content-libraries",
+   "requires": [
+    "vm-service"
+   ],
+   "related": [
+    "day1-provisioning",
+    "deployment-paths",
+    "namespace-storage"
+   ]
+  },
+  {
+   "id": "namespace-storage",
+   "name": "Read a namespace's storage from the four ledgers that answer it, and take each decision from its own plane",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/namespace-storage",
+   "tier": "live",
+   "requires": [
+    "construct-model",
+    "vm-service"
+   ]
+  },
+  {
+   "id": "building-blueprints",
+   "name": "Author an application blueprint crawl-walk-run, from a declared VM to a microservices app",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/building-blueprints",
+   "tier": "repo,doc",
+   "requires": [
+    "day1-provisioning",
+    "vm-service",
+    "vks-operations"
+   ]
+  },
+  {
+   "id": "control-plane-lb",
+   "name": "Read and reason about the Avi object graph behind a guest cluster's control-plane VIP",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/control-plane-lb",
+   "tier": "live,doc",
+   "requires": [
+    "vks-operations",
+    "network-plane"
+   ]
+  },
+  {
+   "id": "deployment-paths",
+   "name": "Choose between the direct Supervisor door and the Automation record, on what each leaves behind",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/deployment-paths",
+   "tier": "live,repo",
+   "requires": [
+    "vm-service",
+    "day1-provisioning"
+   ]
+  },
+  {
+   "id": "day2-pathways",
+   "name": "Change a claimed machine through the right plane, and audit the drift when somebody does not",
+   "part": "II",
+   "job": "workload-operations",
+   "teaches": "/handbook/day2-pathways",
+   "tier": "live,repo",
+   "requires": [
+    "deployment-paths",
+    "day2-governance"
+   ]
+  },
+  {
+   "id": "choosing-a-pathway",
+   "name": "Decide a workload's pathway at create, for the whole lifecycle, and place a console correctly",
+   "part": "II",
+   "job": "workload-operations",
+   "teaches": "/handbook/choosing-a-pathway",
+   "tier": "live,doc",
+   "requires": [
+    "deployment-paths",
+    "day2-pathways"
+   ]
+  },
+  {
+   "id": "workload-origin",
+   "name": "Decide where a workload is born, knowing which of tenancy, ownership and provenance can still be added later",
+   "part": "II",
+   "job": "workloads",
+   "teaches": "/handbook/workload-origin",
+   "tier": "live,doc",
+   "requires": [
+    "choosing-a-pathway",
+    "vks-operations"
+   ]
+  },
+  {
+   "id": "event-model",
+   "name": "Hold a deployment lifecycle event, fire on the right resource, and prove the workflow actually ran",
+   "part": "II",
+   "job": "workload-operations",
+   "teaches": "/handbook/event-model",
+   "tier": "live",
+   "harness": "handbook/event-model",
+   "requires": [
+    "deployment-paths",
+    "day2-pathways",
+    "service-accounts"
+   ]
+  },
+  {
+   "id": "platform-lifecycle",
+   "name": "Run the platform's lifecycle across its four planes with a rehearsal-instance discipline",
+   "part": "III",
+   "job": "platform-upkeep",
+   "teaches": "/handbook/platform-lifecycle",
+   "tier": "live,doc",
+   "requires": [
+    "platform-map"
+   ]
+  },
+  {
+   "id": "certs-credentials",
+   "name": "Custody service credentials and certificate horizons with scheduled reads and deliberate rotation",
+   "part": "III",
+   "job": "platform-upkeep",
+   "teaches": "/handbook/certs-credentials",
+   "tier": "live,doc",
+   "harness": "handbook/certs-credentials",
+   "requires": [
+    "platform-identity",
+    "platform-lifecycle"
+   ],
+   "related": [
+    "federation-operations"
+   ]
+  },
+  {
+   "id": "platform-backup",
+   "name": "Protect platform state: read the cadence from the history, alert on the newest copy's age, and book the restore rehearsal",
+   "part": "III",
+   "job": "platform-upkeep",
+   "teaches": "/handbook/platform-backup",
+   "tier": "live,doc",
+   "harness": "handbook/platform-backup",
+   "requires": [
+    "platform-lifecycle"
+   ]
+  },
+  {
+   "id": "host-lifecycle",
+   "name": "Build every host from the cluster's declared image and hold it to the cluster's configuration profile, from bare metal to retirement, and move an estate off baselines, host profiles and Auto Deploy in the order the platform sets",
+   "part": "III",
+   "job": "platform-upkeep",
+   "teaches": "/handbook/host-lifecycle",
+   "tier": "live,doc",
+   "harness": "handbook/host-lifecycle",
+   "requires": [
+    "platform-map"
+   ],
+   "related": [
+    "platform-lifecycle",
+    "certs-credentials",
+    "log-collection"
+   ]
+  },
+  {
+   "id": "ops-estate",
+   "name": "Author observability content as level-triggered convergence on stable names, hydrated from live exemplars",
+   "part": "IV",
+   "job": "observability-content",
+   "teaches": "/handbook/ops-estate",
+   "tier": "repo,live",
+   "harness": "handbook/ops-estate",
+   "requires": [
+    "platform-map",
+    "resilient-api-call"
+   ]
+  },
+  {
+   "id": "alerting-doctrine",
+   "name": "Design alerting as scoped policy with thresholds in the metrics and one envelope for alerts, views, and scoreboards",
+   "part": "IV",
+   "job": "alerting",
+   "teaches": "/handbook/alerting-doctrine",
+   "tier": "live,repo",
+   "requires": [
+    "ops-estate"
+   ],
+   "related": [
+    "wtpc"
+   ]
+  },
+  {
+   "id": "incident-response",
+   "name": "Separate standing conditions from incidents, route by impact badge and symptom, and record the layer each cause sat in",
+   "part": "IV",
+   "job": "alerting",
+   "teaches": "/handbook/incident-response",
+   "tier": "live,doc",
+   "requires": [
+    "platform-map",
+    "ops-estate"
+   ]
+  },
+  {
+   "id": "availability",
+   "name": "Instrument availability as five layers of evidence priced by posture",
+   "part": "IV",
+   "job": "alerting",
+   "teaches": "/handbook/availability",
+   "tier": "live,repo",
+   "harness": "handbook/availability",
+   "requires": [
+    "ops-estate"
+   ],
+   "related": [
+    "wtpc"
+   ]
+  },
+  {
+   "id": "metrics-collection",
+   "name": "Collect each signal once and size granularity per decision across the three collection planes",
+   "part": "IV",
+   "job": "collection",
+   "teaches": "/handbook/metrics-collection",
+   "tier": "live,doc",
+   "harness": "handbook/metrics-collection",
+   "requires": [
+    "ops-estate"
+   ],
+   "related": [
+    "capacity-forecasting"
+   ]
+  },
+  {
+   "id": "metrics-extraction",
+   "name": "Extract each grain once, by tier, read each decision from the platform, key every row on the pair every system carries, and read the real-time plane by its rules",
+   "part": "IV",
+   "job": "collection",
+   "teaches": "/handbook/metrics-extraction",
+   "tier": "live,doc",
+   "harness": "handbook/metrics-collection",
+   "requires": [
+    "metrics-collection"
+   ],
+   "related": [
+    "identifier-planes",
+    "capacity-forecasting"
+   ]
+  },
+  {
+   "id": "metrics-topology",
+   "name": "Decide in each region, ship only the thin tiers across the WAN, land an outage as absence, and size every tier from your own coefficients",
+   "part": "IV",
+   "job": "collection",
+   "teaches": "/handbook/metrics-topology",
+   "tier": "live,doc",
+   "harness": "handbook/metrics-collection",
+   "requires": [
+    "metrics-extraction"
+   ],
+   "related": [
+    "availability",
+    "cost-showback"
+   ]
+  },
+  {
+   "id": "log-collection",
+   "name": "Trace every log source through the order of operations, prove it from the destination, and repair a silent source at the layer that owns it",
+   "part": "IV",
+   "job": "collection",
+   "teaches": "/handbook/log-collection",
+   "tier": "live,doc",
+   "harness": "handbook/log-collection",
+   "requires": [
+    "metrics-extraction"
+   ],
+   "related": [
+    "availability",
+    "certs-credentials",
+    "incident-response"
+   ]
+  },
+  {
+   "id": "flow-collection",
+   "name": "Switch flow coverage on level by level at its owner, prove it at the collector and in the store, and plan the collector's gap",
+   "part": "IV",
+   "job": "collection",
+   "teaches": "/handbook/flow-collection",
+   "tier": "live,doc",
+   "harness": "handbook/flow-collection",
+   "requires": [
+    "metrics-extraction"
+   ],
+   "related": [
+    "network-plane",
+    "cartography-flow",
+    "availability"
+   ]
+  },
+  {
+   "id": "log-lifecycle",
+   "name": "Decide for every class of log how long it is kept, where else it goes, what it must never show and what is not worth keeping, and prove each rule on a labelled line",
+   "part": "IV",
+   "job": "collection",
+   "teaches": "/handbook/log-lifecycle",
+   "tier": "live,doc,repo",
+   "harness": "handbook/log-lifecycle",
+   "requires": [
+    "log-collection"
+   ],
+   "related": [
+    "log-alerts",
+    "incident-response",
+    "hardening-audit"
+   ]
+  },
+  {
+   "id": "log-alerts",
+   "name": "Build log alerts that fire: anchor each condition on an identifier the platform writes, scope it to one group, and prove it with a labelled line",
+   "part": "IV",
+   "job": "alerting",
+   "teaches": "/handbook/log-alerts",
+   "tier": "live,doc,repo",
+   "harness": "handbook/log-alerts",
+   "requires": [
+    "log-collection",
+    "alerting-doctrine"
+   ],
+   "related": [
+    "incident-response",
+    "ops-estate"
+   ]
+  },
+  {
+   "id": "wtpc",
+   "name": "Derive a posture from business impact and environment, and score objects against their own acceptable-state envelope",
+   "part": "V",
+   "job": "tuning",
+   "teaches": "/handbook/wtpc",
+   "tier": "repo,live",
+   "harness": "frameworks/wtpc",
+   "requires": [
+    "cartography",
+    "construct-model"
+   ]
+  },
+  {
+   "id": "wtpc-adoption",
+   "name": "Adopt the tuning framework as a converged estate: sources in, converge, records out",
+   "part": "V",
+   "job": "tuning",
+   "teaches": "/handbook/wtpc-adoption",
+   "tier": "live,repo",
+   "harness": "frameworks/wtpc",
+   "requires": [
+    "wtpc",
+    "ops-estate"
+   ]
+  },
+  {
+   "id": "memory-tiering",
+   "name": "Judge memory-tiering candidacy vs activation readiness against the gate-and-trigger thresholds",
+   "part": "V",
+   "job": "tuning",
+   "teaches": "/handbook/memory-tiering",
+   "tier": "live,doc",
+   "harness": "handbook/memory-tiering",
+   "requires": [
+    "wtpc"
+   ]
+  },
+  {
+   "id": "capacity-forecasting",
+   "name": "Forecast time-remaining per axis per cluster with the posture policy as the projection's ruler",
+   "part": "V",
+   "job": "tuning",
+   "teaches": "/handbook/capacity-forecasting",
+   "tier": "repo,live",
+   "harness": "handbook/capacity-forecasting",
+   "requires": [
+    "wtpc",
+    "capacity-plane"
+   ]
+  },
+  {
+   "id": "cost-showback",
+   "name": "Publish a cost figure only after checking its object type, coverage, composition and price inputs, and test showback against populated groups",
+   "part": "V",
+   "job": "tuning",
+   "teaches": "/handbook/cost-showback",
+   "tier": "live,doc",
+   "requires": [
+    "wtpc",
+    "memory-tiering"
+   ]
+  },
+  {
+   "id": "availability-design",
+   "name": "Design availability with HA, DRS, and zones",
+   "part": "VI",
+   "status": "planned",
+   "requires": [
+    "vks-operations",
+    "network-plane"
+   ]
+  },
+  {
+   "id": "disaster-recovery",
+   "name": "Design disaster recovery and business continuity",
+   "part": "VI",
+   "status": "planned",
+   "requires": [
+    "platform-backup",
+    "availability-design"
+   ]
+  },
+  {
+   "id": "microsegmentation",
+   "name": "Read whether a region can enforce microsegmentation, audit each VPC's posture at the org gateway, land DFW rules disabled over named groups, and prove a rule drops traffic on a throwaway pair",
+   "part": "VII",
+   "job": "security",
+   "teaches": "/handbook/microsegmentation",
+   "tier": "live,doc",
+   "harness": "handbook/microsegmentation",
+   "requires": [
+    "network-plane"
+   ],
+   "related": [
+    "cartography"
+   ]
+  },
+  {
+   "id": "hardening-audit",
+   "name": "Run the hardening loop from live reads, and read the audit trail the consumption surface already keeps",
+   "part": "VII",
+   "job": "security",
+   "teaches": "/handbook/hardening-audit",
+   "tier": "live,doc",
+   "harness": "handbook/hardening-audit",
+   "requires": [
+    "incident-response",
+    "microsegmentation",
+    "certs-credentials"
+   ]
+  },
+  {
+   "id": "identifier-planes",
+   "name": "Place a workload's identifiers on the plane its consumer can actually read",
+   "part": "VII",
+   "job": "labelling",
+   "teaches": "/handbook/identifier-planes",
+   "tier": "live,doc",
+   "requires": [
+    "microsegmentation",
+    "ops-estate"
+   ]
+  },
+  {
+   "id": "metadata-projection",
+   "name": "Project declared workload metadata onto the plane that governs, and keep it converged",
+   "part": "VII",
+   "job": "labelling",
+   "teaches": "/handbook/metadata-projection",
+   "tier": "live,repo",
+   "harness": "handbook/metadata-projection",
+   "requires": [
+    "identifier-planes",
+    "day1-provisioning"
+   ]
+  },
+  {
+   "id": "cartography",
+   "name": "Discover and name what actually runs: triangulate lenses, extract shared services, classify",
+   "part": "VIII",
+   "job": "discovery",
+   "teaches": "/handbook/cartography",
+   "tier": "repo,live",
+   "harness": "frameworks/cartography",
+   "requires": [
+    "construct-model"
+   ]
+  },
+  {
+   "id": "cartography-supervisor",
+   "name": "Read workload identity from Supervisor labels as an authoritative declared lens",
+   "part": "VIII",
+   "job": "discovery",
+   "teaches": "/handbook/cartography-supervisor",
+   "tier": "live,repo",
+   "harness": "frameworks/cartography",
+   "requires": [
+    "cartography",
+    "vks-operations"
+   ]
+  },
+  {
+   "id": "cartography-governance",
+   "name": "Write discovered facts back safely: facts not intent, two-phase ratification, least-privilege write",
+   "part": "VIII",
+   "job": "discovery",
+   "teaches": "/handbook/cartography-governance",
+   "tier": "live,repo",
+   "harness": "frameworks/cartography",
+   "requires": [
+    "cartography",
+    "access-control"
+   ]
+  },
+  {
+   "id": "cartography-flow",
+   "name": "Infer the east-west dependency graph from behaviour and quarantine shared services by fan-in",
+   "part": "VIII",
+   "job": "discovery",
+   "teaches": "/handbook/cartography-flow",
+   "tier": "live,repo",
+   "harness": "frameworks/cartography/flow",
+   "requires": [
+    "cartography",
+    "network-plane"
+   ],
+   "related": [
+    "flow-collection"
+   ]
+  },
+  {
+   "id": "cartography-arbitration",
+   "name": "Fuse the lenses into a confidence-scored classification where a conflict is a finding, not noise",
+   "part": "VIII",
+   "job": "discovery",
+   "teaches": "/handbook/cartography-arbitration",
+   "tier": "live,repo",
+   "harness": "frameworks/cartography/flow",
+   "requires": [
+    "cartography-flow",
+    "cartography-supervisor",
+    "cartography-governance"
+   ]
+  },
+  {
+   "id": "orchestrator-objects",
+   "name": "Read the Orchestrator object tree and name the three bindings that connect it, including which two break when content moves",
+   "part": "IX",
+   "job": "orchestrator-authoring",
+   "teaches": "/handbook/orchestrator-objects",
+   "tier": "live",
+   "harness": "handbook/orchestrator-objects",
+   "requires": [
+    "event-model",
+    "resilient-api-call"
+   ]
+  },
+  {
+   "id": "orchestrator-dependencies",
+   "name": "Deploy content in the order the bindings force, and rewrite the two identifier bindings at deploy time instead of by hand",
+   "part": "IX",
+   "job": "orchestrator-authoring",
+   "teaches": "/handbook/orchestrator-dependencies",
+   "tier": "live",
+   "harness": "handbook/orchestrator-dependencies",
+   "requires": [
+    "orchestrator-objects"
+   ]
+  },
+  {
+   "id": "orchestrator-packaging",
+   "name": "Build a packaged action and workflow to the format rules, and be refused locally by them before uploading",
+   "part": "IX",
+   "job": "orchestrator-authoring",
+   "teaches": "/handbook/orchestrator-packaging",
+   "tier": "live",
+   "harness": "handbook/orchestrator-packaging",
+   "requires": [
+    "orchestrator-dependencies"
+   ]
+  },
+  {
+   "id": "orchestrator-drift",
+   "name": "Hold one source of truth for authored content against a platform that offers an easier path around it",
+   "part": "IX",
+   "job": "orchestrator-authoring",
+   "teaches": "/handbook/orchestrator-drift",
+   "tier": "live",
+   "harness": "handbook/orchestrator-drift",
+   "requires": [
+    "orchestrator-packaging",
+    "ops-estate"
+   ]
+  },
+  {
+   "id": "identity-decisions",
+   "name": "Decide the identity boundary, the provider, provisioning, directory transport and where MFA happens, by the outage the estate can survive, and record what would reopen each",
+   "part": "X",
+   "job": "identity-migration",
+   "teaches": "/handbook/identity-decisions",
+   "tier": "doc,live",
+   "requires": [
+    "identity-model"
+   ],
+   "related": [
+    "vcenter-authorization",
+    "tenant-federation",
+    "identity-migration"
+   ]
+  },
+  {
+   "id": "vcenter-authorization",
+   "name": "Read and set vCenter authorization under VCF single sign-on: the session's name, VCF roles as reserved groups, the tag rule and the Supervisor shadow",
+   "part": "X",
+   "job": "identity-migration",
+   "teaches": "/handbook/vcenter-authorization",
+   "tier": "live,doc",
+   "harness": "handbook/vcenter-authorization",
+   "requires": [
+    "identity-model"
+   ],
+   "related": [
+    "service-accounts",
+    "platform-identity",
+    "integrations-identity"
+   ]
+  },
+  {
+   "id": "identity-operations",
+   "name": "Keep a vaulted, alerted, drilled way in for the day the broker or provider cannot authenticate, and watch the broker as a tier-0 service",
+   "part": "X",
+   "status": "planned",
+   "requires": [
+    "identity-decisions",
+    "service-accounts"
+   ]
+  },
+  {
+   "id": "integrations-identity",
+   "name": "Find every integration that signs in, give each its own identity for its surface (an API client, a VCF Automation service account, or a declared local account for a password-only product), and prove the move in the session census",
+   "part": "X",
+   "job": "automation",
+   "teaches": "/handbook/integrations-identity",
+   "tier": "live,doc",
+   "harness": "handbook/integrations-identity",
+   "requires": [
+    "service-accounts",
+    "vcenter-authorization"
+   ],
+   "related": [
+    "vcfa-api",
+    "platform-identity",
+    "identity-lifecycle"
+   ]
+  },
+  {
+   "id": "broker-directories",
+   "name": "Bind every broker directory over LDAPS on its issuing root with a read-only bind account and a one-call rollback",
+   "part": "X",
+   "status": "planned",
+   "requires": [
+    "identity-decisions",
+    "identity-operations"
+   ]
+  },
+  {
+   "id": "identity-migration",
+   "name": "Sequence an estate's move from vCenter-centric identity to VCF single sign-on, decisions and recovery first",
+   "part": "X",
+   "job": "identity-migration",
+   "teaches": "/handbook/identity-migration",
+   "tier": "live,doc",
+   "requires": [
+    "identity-decisions",
+    "vcenter-authorization",
+    "integrations-identity"
+   ],
+   "related": [
+    "certs-credentials",
+    "platform-lifecycle"
+   ]
+  },
+  {
+   "id": "tenant-federation",
+   "name": "Federate a tenant organization to its own identity provider over SAML or OIDC, gated twice, roles from groups, proven by a browser sign-in",
+   "part": "X",
+   "job": "tenant-federation",
+   "teaches": "/handbook/tenant-federation",
+   "tier": "live,doc",
+   "harness": "handbook/tenant-federation",
+   "requires": [
+    "identity-model",
+    "access-control"
+   ],
+   "related": [
+    "identity-decisions",
+    "vcfa-api",
+    "isolation-design"
+   ]
+  },
+  {
+   "id": "federation-operations",
+   "name": "Keep a federated organization signing in through key, certificate and secret rollovers and renames, watch each on a schedule, and place a failed sign-in by the plane that refused it",
+   "part": "X",
+   "job": "identity-operations",
+   "teaches": "/handbook/federation-operations",
+   "tier": "live,doc",
+   "harness": "handbook/federation-operations",
+   "requires": [
+    "tenant-federation"
+   ],
+   "related": [
+    "certs-credentials",
+    "identity-lifecycle"
+   ]
+  },
+  {
+   "id": "identity-lifecycle",
+   "name": "For organizations federated to a provider, run joiners, movers and leavers so access ends with one action at the provider, a scheduled report that alerts on what the platform kept and a close run on its alert, and no name is ever reused",
+   "part": "X",
+   "job": "identity-operations",
+   "teaches": "/handbook/identity-lifecycle",
+   "tier": "live,doc",
+   "harness": "handbook/identity-lifecycle",
+   "requires": [
+    "tenant-federation",
+    "platform-identity"
+   ],
+   "related": [
+    "service-accounts",
+    "federation-operations",
+    "vcfa-api",
+    "temporary-elevation"
+   ]
+  },
+  {
+   "id": "broker-federation",
+   "name": "Federate VCF single sign-on itself to a cloud identity provider with password-only integrations moved first",
+   "part": "X",
+   "status": "planned",
+   "requires": [
+    "identity-migration",
+    "integrations-identity",
+    "identity-operations"
+   ]
+  },
+  {
+   "id": "identity-assurance",
+   "name": "Hold the estate at a stated identity level with every property checked by a command and drift alerted",
+   "part": "X",
+   "status": "planned",
+   "requires": [
+    "vcenter-authorization",
+    "integrations-identity",
+    "identity-operations",
+    "identity-lifecycle",
+    "federation-operations"
+   ]
+  }
+ ],
+ "phases": [
+  {
+   "id": "platform",
+   "name": "Converge and maintain the platform"
+  },
+  {
+   "id": "prepare",
+   "name": "Prepare the tenancy"
+  },
+  {
+   "id": "discover",
+   "name": "Discover and name"
+  },
+  {
+   "id": "tune",
+   "name": "Tune and economize"
+  },
+  {
+   "id": "operate",
+   "name": "Operate and automate"
+  },
+  {
+   "id": "prove",
+   "name": "Secure and prove"
+  }
+ ],
+ "pages": [
+  {
+   "path": "/",
+   "title": "Private Cloud Architect · private cloud engineering, published with evidence"
+  },
+  {
+   "path": "/about",
+   "title": "About · Private Cloud Architect"
+  },
+  {
+   "path": "/demo/",
+   "title": "Demo walkthroughs · Private Cloud Architect"
+  },
+  {
+   "path": "/demo/hybrid-app-lifecycle",
+   "title": "One request to a running application, and every command in between · Private Cloud Architect"
+  },
+  {
+   "path": "/find-your-path",
+   "title": "Find your path: where to start · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/",
+   "title": "The Handbook · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/access-control",
+   "title": "Access control: four layers, four dials, three surfaces · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/alerting-doctrine",
+   "title": "Alerting doctrine: scope by policy, threshold in the metric, one page per failure · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/availability",
+   "title": "Availability is a computed promise · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/building-blueprints",
+   "title": "Building blueprints: crawl, walk, run, one concept at a time · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/capacity-forecasting",
+   "title": "Capacity forecasting: the first axis of the first cluster · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/capacity-plane",
+   "title": "The capacity plane: the zone is the ledger, the class is a menu · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/cartography",
+   "title": "Application Cartography: discover before you tune · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/cartography-arbitration",
+   "title": "Arbitration: fusing the lenses into one scored classification · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/cartography-flow",
+   "title": "The flow lens: the dependency graph, live · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/cartography-governance",
+   "title": "Tag governance: facts, intent, and who may write · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/cartography-supervisor",
+   "title": "The supervisor lens: labels are declarations · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/certs-credentials",
+   "title": "Certificates and credentials: one custodian, two planes · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/choosing-a-pathway",
+   "title": "Choosing a pathway: one decision at create governs the whole lifecycle · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/construct-model",
+   "title": "The construct model: a containment spine with one crossroads · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/content-libraries",
+   "title": "Content libraries: how a VM image reaches every namespace, and what its id promises · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/control-plane-lb",
+   "title": "The control-plane load balancer: built before the node it serves · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/cost-showback",
+   "title": "Cost and showback: a capacity signal with a price attached · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/day1-provisioning",
+   "title": "Day-1 provisioning: two faces over one plane, and they do not agree · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/day2-governance",
+   "title": "Day-2 governance: who controls the action count · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/day2-pathways",
+   "title": "Day-2 on three planes: the same field, three different truths · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/deployment-paths",
+   "title": "Three doors to one machine: identical inside, 17 actions apart · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/event-model",
+   "title": "The event model: what a delete actually fires, and how to reach one machine · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/federation-operations",
+   "title": "Keeping a federated organization signing in · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/flow-collection",
+   "title": "A flow is measured where it leaves · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/hardening-audit",
+   "title": "Hardening and audit: posture is a set of reads, and the trail is already on · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/host-lifecycle",
+   "title": "Host lifecycle: from bare metal to a host that stays as declared · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/identifier-planes",
+   "title": "Identifier planes: five places to label a workload, and which one your group can see · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/identity-decisions",
+   "title": "The identity decisions that are costly to reverse · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/identity-lifecycle",
+   "title": "Leavers, movers and the accounts the platform keeps · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/identity-migration",
+   "title": "Moving to VCF single sign-on: decide, recover, then join · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/identity-model",
+   "title": "The identity model: one provider and one realm per broker, two planes · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/incident-response",
+   "title": "Incident response: sort the queue, route by badge and symptom, fix by layer · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/integrations-identity",
+   "title": "Integrations that sign in as themselves · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/isolation-design",
+   "title": "The isolation design, assembled: five settings, no per-user objects · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/log-alerts",
+   "title": "A log alert fires on identifiers, not on words · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/log-collection",
+   "title": "Logs flow one way, their configuration the other · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/log-lifecycle",
+   "title": "Every log is kept, sent, hidden or dropped on purpose · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/memory-tiering",
+   "title": "Memory tiering candidacy is an active-memory question · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/metadata-projection",
+   "title": "Metadata is a projection, not a stamp · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/metrics-collection",
+   "title": "Collect once, decide at source: the three collection planes · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/metrics-extraction",
+   "title": "Extract once, by tier, on one key: from the collection planes to the warehouse · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/metrics-topology",
+   "title": "Decide in region, ship the thin layer: the collection topology and the size of each tier · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/microsegmentation",
+   "title": "Microsegmentation as code: posture per VPC, rules over groups · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/namespace-storage",
+   "title": "Storage for namespaces: four ledgers answer one question, and none of them is wrong · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/network-plane",
+   "title": "The network plane: the VPC is the isolation unit, chosen once per namespace · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/ops-estate",
+   "title": "Operations content is code: an estate with stable names and one converge · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/orchestrator-dependencies",
+   "title": "The dependency order: what each of the six layers needs from the last · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/orchestrator-drift",
+   "title": "Keeping content from rotting: two deploy paths and one source of truth · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/orchestrator-objects",
+   "title": "The Orchestrator object model: six kinds, five namespaces, three bindings · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/orchestrator-packaging",
+   "title": "Packaging: what is actually inside an action and a workflow · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/parts",
+   "title": "Handbook contents · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/platform-backup",
+   "title": "Backup and restore: configured is not proven · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/platform-identity",
+   "title": "Platform identity: which token, two clocks, and the rights each login path carries · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/platform-lifecycle",
+   "title": "Platform lifecycle: the four planes, and the rehearsal discipline · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/platform-map",
+   "title": "The platform in one picture: domains, components, and planes · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/resilient-api-call",
+   "title": "The resilient API call: retry, boundary, and idempotency · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/service-accounts",
+   "title": "Service accounts: the identity your automation holds · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/temporary-elevation",
+   "title": "Temporary elevation: the grant, the broker, and the clock · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/tenant-federation",
+   "title": "A tenant organization on its own identity provider · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/translation-map",
+   "title": "The translation map: requirements to outcomes · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/vcenter-authorization",
+   "title": "vCenter authorization under VCF single sign-on: two planes, one spelling · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/vcfa-api",
+   "title": "The VCF Automation API: two token flows, and the rule that chooses · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/vks-operations",
+   "title": "Supervisor and VKS operations: the cluster is a spec, the nodes are outputs · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/vm-service",
+   "title": "The VM Service: one primitive, three arrival paths · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/workload-origin",
+   "title": "Where a workload is born decides what it can ever be given · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/wtpc",
+   "title": "The Well-Tuned Private Cloud: posture over dashboards · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/wtpc-adoption",
+   "title": "Adopting the framework: one converge, and the chain that says whether it held · Private Cloud Architect"
+  },
+  {
+   "path": "/method",
+   "title": "Method · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/",
+   "title": "Field notes · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/aria-automation-8-18-to-vcf-automation-9-1-1",
+   "title": "Aria Automation 8.18 reaches VCF Automation 9.1.1 in thirteen stages: the fleet first, the core stack after the upgrade, identity last · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/capacity-in-and-out",
+   "title": "Capacity joins a private cloud from the bottom and leaves from the top, and divesting it means moving what stays · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/cloud-proxy-certificates",
+   "title": "Cloud proxy certificates in VCF Operations 9.1.1 compose as three planes, and the root ends the chain first · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/configuration-maximums",
+   "title": "The maximum that binds a VCF 9.1 private cloud first is usually a layer below the one you are sizing · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/control-plane-lb-build-order",
+   "title": "The control-plane load balancer is built before the first node · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/day2-patching-and-hardening",
+   "title": "A security advisory becomes a new cluster image, and a hardening audit becomes a benchmark · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/entra-signing-key-rollover",
+   "title": "A signing key missing from the organization's copy failed every sign-in until the copy was refreshed · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/identity-can-and-cannot",
+   "title": "VCF 9.1 identity: can and cannot, every answer graded · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/infrastructure-policies",
+   "title": "An infrastructure policy is a vCenter compute policy carried down four layers, and an Optional one binds only the VM that asks · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/name-reuse-inherits-an-account",
+   "title": "A new hire given a departed user's name inherited their enabled VCF Automation account, unless users were keyed on oid · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/powercli-sign-in-without-a-password",
+   "title": "Scheduled PowerCLI jobs leave Windows pass-through by steps: a password nobody types on vCenter 8, an API client's token on VCF 9.1 · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/receive-drops-and-collection-lag",
+   "title": "Receive drops per VM and per vNIC exist in three collectors and ship switched off in VCF Operations; measured on the reference estate, logs reached search in seconds, flows and alerts in minutes · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/selfsubject-review-returns-the-bearer",
+   "title": "The tenant API's self-subject review hands back the bearer you sent · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/servicenow-itsm-plugin-for-vm-apps",
+   "title": "ServiceNow users order a VM Apps organization's catalog through Broadcom's ITSM plug-in, and VCF Automation builds each order as one integration identity, in a project made for the channel · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/standup-dependency-ladder",
+   "title": "The Standup Dependency Ladder"
+  },
+  {
+   "path": "/notes/unattended-jobs-on-a-vcf-sso-api-token",
+   "title": "Unattended jobs that read sign in to vCenter as their own API clients, each with one narrow role and its token held in BeyondTrust · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/vcenter-service-accounts-under-federation",
+   "title": "A vCenter that federates its people still needs a local account for every product that only takes a password · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/vcfa-access-control-three-factors",
+   "title": "Access control in VCF Automation 9.1 composes as three factors · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/vcfa-project-vending",
+   "title": "A tenant project and its first namespace stand up entirely by API · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/vsphere-8-to-vsphere-foundation-9-1-1",
+   "title": "A controlled vSphere 8 estate reaches 9.1.1 as vSphere Foundation first, then stays there or converges to VCF · Private Cloud Architect"
+  },
+  {
+   "path": "/playbooks/",
+   "title": "Playbooks · Private Cloud Architect"
+  },
+  {
+   "path": "/playbooks/a-sign-in-fails",
+   "title": "A sign-in or a call fails: find the plane that refused it · Private Cloud Architect"
+  },
+  {
+   "path": "/playbooks/entra-id-for-a-tenant-organization",
+   "title": "Bring a tenant's Entra ID to its VCF Automation organization, from build to day 2 · Private Cloud Architect"
+  },
+  {
+   "path": "/playbooks/operate-the-identity-broker",
+   "title": "Operate the identity broker: the weekly read, and what each finding means · Private Cloud Architect"
+  },
+  {
+   "path": "/playbooks/tenant-self-service-isolation",
+   "title": "Own-only isolation and services self-service, at the same time · Private Cloud Architect"
+  },
+  {
+   "path": "/playbooks/vsphere-8-and-aria-automation-8-18-to-vcf-9-1",
+   "title": "From vSphere 8 and Aria Automation 8.18 to VCF 9.1.1: converge first, upgrade Automation inside the fleet, move identity last · Private Cloud Architect"
+  },
+  {
+   "path": "/solutions/",
+   "title": "Solutions · Private Cloud Architect"
+  },
+  {
+   "path": "/solutions/tenant-self-service-with-isolation",
+   "title": "Tenant self-service with own-only isolation · Private Cloud Architect"
+  },
+  {
+   "path": "/start",
+   "title": "The working chain · Private Cloud Architect"
+  },
+  {
+   "path": "/strategy",
+   "title": "Capabilities, what they return and cost, and who holds them"
+  },
+  {
+   "path": "/strategy/actionable-alerting",
+   "title": "Every alert reaches the right person once, about the object they can act on, scoped by the policy that enables it and with its threshold in the metric"
+  },
+  {
+   "path": "/strategy/agents",
+   "title": "Where agents enter, layer by layer"
+  },
+  {
+   "path": "/strategy/benefits-management",
+   "title": "Every value a capability promises is measured by its instrument against a recorded target, and each target has a held owner in every scope the capability is planned in"
+  },
+  {
+   "path": "/strategy/board",
+   "title": "Where the reference estate invests next"
+  },
+  {
+   "path": "/strategy/capacity-headroom",
+   "title": "For each capacity model, the first axis of the first cluster to run out is known, graded by the governing policy's thresholds, refused when the ruler has drifted, and hardware is scheduled from it by a named owner"
+  },
+  {
+   "path": "/strategy/costs-and-value",
+   "title": "What each capability returns, and what it costs once and to keep"
+  },
+  {
+   "path": "/strategy/drivers",
+   "title": "What each driver re-opens"
+  },
+  {
+   "path": "/strategy/fleet-patch-window",
+   "title": "A published advisory is closed across the fleet within its target window"
+  },
+  {
+   "path": "/strategy/incident-handling",
+   "title": "Every alert that pages is handled as an incident or recognised as a standing condition, routed by its impact badge and symptom, and its cause recorded with the layer it sat in"
+  },
+  {
+   "path": "/strategy/innovation-management",
+   "title": "Each cycle's scan is recorded over every area, and each technology signal ends in an initiative with a radar stance or a recorded no change"
+  },
+  {
+   "path": "/strategy/inventory-of-record",
+   "title": "Your estate holds one governed inventory of its workloads: each walked workload carries its application, tier and environment as facts the classifier proposed and a person ratified, and the count of workloads carrying none is read on a schedule"
+  },
+  {
+   "path": "/strategy/non-human-identity",
+   "title": "No integration or automation signs in on a person's account or a break-glass account, and every credential an automation holds has a named owner and a rotation date that has not passed"
+  },
+  {
+   "path": "/strategy/platform-restore",
+   "title": "The management plane can be restored from a copy no older than its schedule allows"
+  },
+  {
+   "path": "/strategy/portfolio-management",
+   "title": "Every initiative is ranked by cost of delay in one common unit and funded in rank order within each constrained role's capacity, what cannot be converted shown beside the rank"
+  },
+  {
+   "path": "/strategy/program-and-project-management",
+   "title": "Interdependent initiatives are delivered in prerequisite order: no plan runs ahead of what it stands on, each chain is funded item by item, and every planning assessment is within its review interval"
+  },
+  {
+   "path": "/strategy/roles/application-team",
+   "title": "Application team"
+  },
+  {
+   "path": "/strategy/roles/architecture-office",
+   "title": "Architecture office"
+  },
+  {
+   "path": "/strategy/roles/identity-team",
+   "title": "Identity team"
+  },
+  {
+   "path": "/strategy/roles/observability-team",
+   "title": "Observability team"
+  },
+  {
+   "path": "/strategy/roles/platform-team",
+   "title": "Platform team"
+  },
+  {
+   "path": "/strategy/roles/risk-team",
+   "title": "Risk and compliance"
+  },
+  {
+   "path": "/strategy/roles/security-team",
+   "title": "Security team"
+  },
+  {
+   "path": "/strategy/self-service-provisioning",
+   "title": "Teams request their own workloads from a catalog whose items are the tenant interface: each face asked what it allows, ownership read where it lives, content removed cleanly, blueprints keyed on identifiers"
+  },
+  {
+   "path": "/strategy/strategy-management",
+   "title": "The platform's direction is held current: every guidance assessment within its review interval, every driver's stress on record, and each trigger event ruled on in the cycle it arrives"
+  },
+  {
+   "path": "/strategy/tenancy-model",
+   "title": "A tenancy layout decided once, every construct named to the published grammar, each namespace's region, class and VPC fixed at create, and the inventory re-read after every upgrade against both"
+  },
+  {
+   "path": "/strategy/threat-alerting",
+   "title": "A shell or SSH switched on, a host firewall off, a sign-in failure burst, each raises an alert on the object it is about within minutes, switched on where the host lives and proven: an ESX host's signal by a labelled line sent, a vCenter event by its identifier in the catalog and the first real event"
+  },
+  {
+   "path": "/strategy/workload-day2",
+   "title": "Create, change and delete run through the plane that claims the machine, drift between record and machine is audited on a schedule, and no deleted deployment holds a resource"
+  }
+ ],
+ "rungs": [
+  "R0",
+  "R1",
+  "R2",
+  "R3",
+  "R4",
+  "R5",
+  "R6"
+ ]
+}

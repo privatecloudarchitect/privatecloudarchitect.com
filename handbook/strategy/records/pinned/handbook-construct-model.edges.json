@@ -1,0 +1,646 @@
+{
+ "captured_utc": "2026-10-20T16:11:48Z",
+ "cardinality": {
+  "1 : 1": {
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "toPerFrom": [
+    1,
+    1
+   ]
+  },
+  "1 : N": {
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "toPerFrom": [
+    1,
+    null
+   ]
+  },
+  "1 : 0+": {
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "toPerFrom": [
+    0,
+    null
+   ]
+  },
+  "N : 1": {
+   "fromPerTo": [
+    1,
+    null
+   ],
+   "toPerFrom": [
+    1,
+    1
+   ]
+  },
+  "N : N": {
+   "fromPerTo": [
+    1,
+    null
+   ],
+   "toPerFrom": [
+    1,
+    null
+   ]
+  }
+ },
+ "edges": [
+  {
+   "from": "Organization",
+   "cardinality": "1 : 0+",
+   "to": "Project",
+   "field": "the project lives in the organization the sign-in is scoped to",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 2,
+   "toPerFrom": [
+    2,
+    2
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Project",
+   "cardinality": "1 : 0+",
+   "to": "Supervisor Namespace",
+   "field": "the namespace is listed under its project (metadata.namespace)",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 2,
+   "toCount": 5,
+   "toPerFrom": [
+    0,
+    5
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "N : 1",
+   "to": "Region",
+   "field": "spec.regionName",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    5,
+    5
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "N : 1",
+   "to": "Namespace Class",
+   "field": "spec.className",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 2,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    4
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "N : 1",
+   "to": "VPC",
+   "field": "spec.vpcName",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    5,
+    5
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "N : N",
+   "to": "Zone",
+   "field": "status.zones[].name",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 3,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    3
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "N : N",
+   "to": "Storage Class",
+   "field": "status.storageClasses[].name",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    5,
+    5
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "N : N",
+   "to": "VM Class",
+   "field": "status.vmClasses[].name",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 4,
+   "toPerFrom": [
+    4,
+    4
+   ],
+   "fromPerTo": [
+    5,
+    5
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "1 : 0+",
+   "to": "VirtualMachine",
+   "field": "metadata.namespace, behind the namespace's endpoint",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 12,
+   "toPerFrom": [
+    0,
+    4
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Namespace",
+   "cardinality": "1 : 0+",
+   "to": "VKS Cluster",
+   "field": "metadata.namespace, behind the namespace's endpoint",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 3,
+   "toPerFrom": [
+    0,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Region",
+   "cardinality": "1 : N",
+   "to": "Zone",
+   "field": "Zone spec.regionName",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 3,
+   "toPerFrom": [
+    3,
+    3
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Region",
+   "cardinality": "1 : 0+",
+   "to": "VPC",
+   "field": "VPC spec.regionName",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Region",
+   "cardinality": "1 : 0+",
+   "to": "VM Class",
+   "field": "RegionVirtualMachineClassSummary spec.regionName",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 16,
+   "toPerFrom": [
+    16,
+    16
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "VirtualMachine",
+   "cardinality": "N : 1",
+   "to": "VM Class",
+   "field": "spec.className",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 12,
+   "toCount": 3,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    2,
+    8
+   ],
+   "holds": true
+  },
+  {
+   "from": "VirtualMachine",
+   "cardinality": "N : 1",
+   "to": "VM Image",
+   "field": "spec.imageName",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 12,
+   "toCount": 4,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    2,
+    6
+   ],
+   "holds": true
+  },
+  {
+   "from": "VirtualMachine",
+   "cardinality": "N : 1",
+   "to": "Storage Class",
+   "field": "spec.storageClass",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 12,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    12,
+    12
+   ],
+   "holds": true
+  },
+  {
+   "from": "VirtualMachine",
+   "cardinality": "N : N",
+   "to": "Network",
+   "field": "spec.network.interfaces[].network.name",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 8,
+   "toCount": 3,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    2,
+    3
+   ],
+   "holds": true
+  },
+  {
+   "from": "VirtualMachine",
+   "cardinality": "N : 1",
+   "to": "Zone",
+   "field": "label topology.kubernetes.io/zone",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 12,
+   "toCount": 2,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    3,
+    9
+   ],
+   "holds": true
+  },
+  {
+   "from": "VKS Cluster",
+   "cardinality": "1 : N",
+   "to": "Node VirtualMachine",
+   "field": "label cluster.x-k8s.io/cluster-name on each node",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 3,
+   "toCount": 8,
+   "toPerFrom": [
+    2,
+    3
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "VirtualMachineService",
+   "cardinality": "N : N",
+   "to": "VirtualMachine",
+   "field": "spec.selector matched against each machine's labels",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 6,
+   "toCount": 8,
+   "toPerFrom": [
+    1,
+    2
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "VirtualMachineService",
+   "cardinality": "1 : 0+",
+   "to": "Load balancer address",
+   "field": "status.loadBalancer.ingress[].ip",
+   "surface": "tenant, Cloud Consumption Interface",
+   "tier": "live",
+   "fromCount": 6,
+   "toCount": 5,
+   "toPerFrom": [
+    0,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Region",
+   "cardinality": "1 : N",
+   "to": "Supervisor",
+   "field": "Region.supervisors[]",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor",
+   "cardinality": "N : 1",
+   "to": "Region",
+   "field": "Supervisor.region",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Region",
+   "cardinality": "1 : 1",
+   "to": "NSX Manager",
+   "field": "Region.nsxManager",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Region",
+   "cardinality": "1 : N",
+   "to": "Storage Policy",
+   "field": "RegionStoragePolicy.region",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 3,
+   "toPerFrom": [
+    3,
+    3
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor",
+   "cardinality": "N : 1",
+   "to": "vCenter",
+   "field": "Supervisor.virtualCenter",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor",
+   "cardinality": "1 : N",
+   "to": "Supervisor Zone",
+   "field": "SupervisorZone.supervisor",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 3,
+   "toPerFrom": [
+    3,
+    3
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Supervisor Zone",
+   "cardinality": "1 : 1",
+   "to": "vSphere Zone",
+   "field": "SupervisorZone.zone",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 3,
+   "toCount": 3,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Organization",
+   "cardinality": "1 : 0+",
+   "to": "Content Library",
+   "field": "ContentLibrary.org",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 1,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    1,
+    1
+   ],
+   "holds": true
+  },
+  {
+   "from": "Organization",
+   "cardinality": "N : N",
+   "to": "Region",
+   "field": "RegionalNetworkingSetting.orgRef and regionRef",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 5,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    5,
+    5
+   ],
+   "holds": true
+  },
+  {
+   "from": "Regional networking",
+   "cardinality": "N : 1",
+   "to": "Provider Gateway",
+   "field": "RegionalNetworkingSetting.providerGatewayRef",
+   "surface": "provider, Tenant Manager",
+   "tier": "live",
+   "fromCount": 4,
+   "toCount": 1,
+   "toPerFrom": [
+    1,
+    1
+   ],
+   "fromPerTo": [
+    4,
+    4
+   ],
+   "holds": true
+  }
+ ]
+}

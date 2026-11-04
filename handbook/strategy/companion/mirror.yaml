@@ -1,0 +1,30 @@
+# The companion's mirror rows (40-BREADTH.md step 9), joined to the companion publisher's SOURCE_MAP
+# (deploy/privatecloudarchitect/companion/publish.py reads this file at import and prefixes each staging path with
+# handbook/, so the companion lives at handbook/strategy/ in the companion repository; step 12, on the operator's
+# ruling of 2026-11-04). Each row's source is a path from this repository's root; each staging path is under the
+# companion repository's handbook/ folder. Sources are this package with its pinned copies (the register, the policy,
+# the served projection of the reference portfolio and the pins the companion recognizes it by, under companion/pinned/,
+# where companion.adopt reads them), the generator (byte copies; its rendered views and its fixtures excluded) and the
+# reference estate's pinned companion records; never a live file, a rendered view or a fixture of the repository's
+# tests. The companion repository publishes every file in staging, so nothing the policy keeps private (an adopter's
+# portfolio, the reference estate's raw reads, the department briefs) has a row here.
+schema: 1
+trees:
+  - staging: strategy/companion
+    source: docs/design/enterprise-strategy-layer/companion
+    mode: mirror
+  - staging: strategy/generator
+    source: docs/design/enterprise-strategy-layer/generator
+    mode: mirror
+    exclude: [rendered, fixtures]   # directories: the publisher's join lists each file under them
+files: []
+records:
+  # the reference estate's pinned companion records (docs/design/enterprise-strategy-layer/records/pinned/, with
+  # pins.yaml), each a copy of a record already public under its companion in staging, but one: the day-1 catalog pin
+  # read is a copy of a lab state file that holds the organization's name, so it stays out of the mirror and the
+  # companion's run there reads that capability's record as not read (drift.read_capability: an absent copy reads as
+  # not read); a run on the mirror passes this folder as --records
+  staging: strategy/records/pinned
+  source: docs/design/enterprise-strategy-layer/records/pinned
+  mode: mirror
+  exclude: [handbook-day1-provisioning.catalog-pin-read.json]

@@ -1,0 +1,44 @@
+{
+ "tool": "recovery.py",
+ "captured_utc": "2026-10-30T08:05:00Z",
+ "planes": [
+  {
+   "plane": "the lifecycle manager",
+   "reached": true,
+   "schedule": {
+    "says": "daily",
+    "enabled": true,
+    "daysListed": 7,
+    "atHour": 2,
+    "atMinute": 0
+   },
+   "age": {
+    "overdue": false,
+    "allowedHours": 30,
+    "ageHours": 6.5
+   }
+  },
+  {
+   "plane": "the management vCenter",
+   "reached": true,
+   "schedule": {
+    "says": "daily",
+    "enabled": true,
+    "daysListed": 7,
+    "atHour": 3,
+    "atMinute": 0
+   },
+   "age": {
+    "overdue": true,
+    "allowedHours": 30,
+    "ageHours": 41.0
+   }
+  },
+  {
+   "plane": "the network manager",
+   "reached": false,
+   "schedule": {},
+   "age": {}
+  }
+ ]
+}

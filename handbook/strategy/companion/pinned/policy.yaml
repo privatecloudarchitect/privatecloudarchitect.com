@@ -1,0 +1,503 @@
+# The enterprise strategy layer's policy (charter 00-CHARTER.md section 5.12; D-055).
+#
+# Every choice the operator ratified, or an estate could revisit, held as versioned data. The generator, the gates and
+# the companions read these values by id through one typed loader and hold none of them as constants (GATE-14). Three
+# files, three reasons to change, one writer each: the register holds the domain's definitions, a portfolio holds one
+# estate's plan, and this file holds the method's parameters. Two ratified lists stay in the register because they are
+# the domain's own (the drivers and the watch entries); each of their entries carries the same `decided_by` and date.
+#
+# Each entry carries:
+#   value           the live value
+#   decided_by      the charter's decision and refinement ids that set it
+#   since           the policy version in which its current value arrived
+#   effective_from  the date its current value took effect (git records when it was written; this, when it applied)
+#   overridable     whether an estate may override it in its portfolio (the `override` shape below)
+#   change          its change class (charter section 5.12): data, method, schema or doctrine
+#   read_by         what reads it, from the `readers` vocabulary; [] marks a record kept
+#                   here under the same discipline, which no code reads and no parameter-change test covers
+#   depends_on      entries whose change changes this one's effect (optional)
+#   one_way         the part of a change that cannot be undone (optional); only the operator's ruling makes it
+#   history         the values it replaced, in the `history_item` shape (append-only)
+#
+# To change a value: append the current value to `history`, write the new value with its `since` and
+# `effective_from`, raise `policy_version`, and record the ruling in the charter's ledger. The charter states each value
+# as ratified on its date and names its entry; this file holds the live value. Durations are ISO 8601.
+#
+# Field paths below: `file.a.b`, `[]` for every item of a list, `*` for every key of a map, `**` for any depth.
+
+schema: 2
+policy_version: 7                        # 2026-11-04: every strategy page published and the companion's code public (strategy-pages, publication; the operator's ruling of 2026-11-04, 40-BREADTH.md step 12)
+effective_from: "2026-11-04"             # the date the current policy_version took effect; 6: 2026-10-30; 5: 2026-10-29; 4: 2026-10-28; 3: 2026-10-28; 2: 2026-10-26; 1: 2026-10-25
+
+shapes:                                  # the forms other files use to point at this one
+  history_item: {value: "the replaced value", since: "the policy version it arrived in", until_version: "the last policy version it held in", ended: "the date it stopped applying"}
+  override: {entry: "an entry marked overridable and not one_way", value: "the estate's value", effective_from: "a date", decided_by: "the estate's decision-log entry, by its date and decision", kind: input}
+  superseded_by: {id: "the successor's id", "on": "a date", decided_by: "the ruling's ids"}   # "on" quoted: YAML 1.1 reads a bare on as true
+
+vocabularies:                            # closed lists; each names the fields it covers. Adding a member is a data change;
+                                         # renaming or removing one the code reads by meaning (a forecast, a committed
+                                         # initiative, a scope, a drift result), or adding a kind, is a method change
+  kinds:
+    members: [measured, input, illustrative, not_recorded]
+    fields: ["portfolio.**.kind"]
+  confidence:
+    members: [documented, live, inferred, forecast, open, refuted]
+    fields: ["register.initiatives[].guidance[].confidence", "portfolio.initiatives[].planning[].confidence", "portfolio.capabilities[].readings[].confidence", "portfolio.local_initiatives[].guidance[].confidence"]
+  half_life_tiers:
+    members: [artifacts, implementation, frameworks, doctrine]
+    fields: ["register.initiatives[].guidance[].half_life", "portfolio.local_initiatives[].guidance[].half_life"]
+  evolution_stages:
+    members: [genesis, custom, product, commodity]
+    fields: ["register.initiatives[].guidance[].evolution_stage", "portfolio.local_initiatives[].guidance[].evolution_stage"]
+  radar_stances:
+    members: [adopt, trial, assess, caution]
+    fields: ["register.initiatives[].guidance[].stance", "portfolio.local_initiatives[].guidance[].stance"]
+  initiative_status:
+    members: [exploring, committed, delivering, deferred, declined, retired]
+    fields: ["portfolio.initiatives[].status.value"]
+  initiative_origins:
+    members: [technology, threat, driver, plan]
+    fields: ["register.initiatives[].from", "portfolio.local_initiatives[].from"]
+  trigger_kinds:
+    members: [technology, threat, driver]
+    fields: ["register.watch_list[].kind", "register.trigger_events[].kind", "portfolio.trigger_events[].kind"]
+  claim_grades:
+    members: [in_force, adopted, proposed, forecast]
+    fields: ["register.trigger_events[].grade", "register.signals[].grade", "portfolio.trigger_events[].grade"]
+  scan_areas:                            # schema 3: a proactive scan's coverage, area by area (charter section 5.8)
+    members: [political, economic, social, technological, legal, environmental]
+    fields: ["register.scans[].areas[].area", "portfolio.scans[].areas[].area"]
+  value_categories:
+    members: [exposure, speed, cost, resilience, evidence]
+    fields: ["register.capabilities[].value[].category", "portfolio.local_capabilities[].value[].category"]
+  target_kinds:
+    members: [committed, aspirational]
+    fields: ["portfolio.capabilities[].targets.*.target_kind"]
+  urgency_profiles:
+    members: [standard, urgent, fixed_date, intangible]
+    fields: ["portfolio.initiatives[].cost_of_delay.profile"]
+  loop_classes:
+    members: [toil, engineering]
+    fields: ["register.capabilities[].sustain[].toil", "portfolio.local_capabilities[].sustain[].toil"]
+  loop_triggers:
+    members: [schedule, release, advisory]
+    fields: ["register.capabilities[].sustain[].trigger[]", "portfolio.local_capabilities[].sustain[].trigger[]"]
+  capability_scopes:
+    members: [workload, platform]
+    fields: ["register.capabilities[].scope", "portfolio.local_capabilities[].scope"]
+  assignment_scopes:
+    members: [estate, organization, project, cluster]
+    fields: ["portfolio.assignments[].scope (before the colon)", "portfolio.capabilities[].state[].scope (before the colon)"]
+  prerequisite_prefixes:
+    members: [step, capability, competency, phase, ladder]
+    fields: ["register.capabilities[].establish[].requires[] (the part before the colon)", "register.initiatives[].requires[] (the part before the colon)", "register.initiatives[].establishes[] (the part before the colon)", "register.initiatives[].improves[] (the part before the colon)", "portfolio.local_capabilities[].establish[].requires[] (the part before the colon)", "portfolio.local_initiatives[].requires[] (the part before the colon)", "portfolio.local_initiatives[].establishes[] (the part before the colon)", "portfolio.local_initiatives[].improves[] (the part before the colon)"]
+  drift_modes:
+    members: [reconciled, detected, unread]
+    fields: ["drift-read lines: mode"]
+  drift_results:
+    members: [in_sync, drifted, check_failed, not_covered]
+    fields: ["drift-read lines: result"]
+  drift_resolutions:
+    members: [revert, redeclare, exception, open]
+    fields: ["drift-read lines: items[].resolution"]
+  driver_status:
+    members: [approved, candidate, retired]
+    fields: ["register.drivers[].status", "portfolio.drivers[].status"]
+  watch_status:
+    members: [active, pending_source]
+    fields: ["register.watch_list[].status (absent means active)"]
+  method_status:
+    members: [current, shadow, retired]
+    fields: ["policy.methods[].status"]
+  readers:
+    members: [generator, gates, strategy-check, adopter-companion, adapters, instrument]
+    fields: ["policy.entries[].read_by[]"]
+  change_classes:
+    members: [data, method, schema, doctrine]
+    fields: ["policy.entries[].change", "register.drivers[].change", "portfolio.drivers[].change"]
+  # Jobs are not listed here: they are the handbook's vocabulary (competency-map.yaml), read where they live.
+  # Planning tier ids are the `planning-tiers` entry's.
+
+entries:
+  # DEC-05: the cycle, the review intervals and the exception rule (the watch intervals are on each watch entry)
+  - id: cycle
+    value: {length: P3M, first_start: "the date PH4 exits"}
+    decided_by: [DEC-05]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: true                    # an estate runs its own cadence
+    change: data
+    read_by: [strategy-check, adopter-companion]
+    history: []
+
+  - id: review-intervals
+    value: {artifacts: P3M, implementation: P6M, frameworks: P1Y, doctrine: P2Y}
+    basis: >-
+      each tier reviewed at least twice within its shortest useful life (implementation 18 months, frameworks 3 years,
+      doctrine 5 years) and artifacts at their shortest life, 3 months (10-RESEARCH.md M11); an agency directive's
+      numbers sit at the artifacts tier
+    decided_by: [DEC-05, R-01]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false                   # the half-life clock is the site's knowledge, the same for every estate
+    change: data
+    read_by: [generator, strategy-check]
+    history: []
+
+  - id: exception-expiry
+    value:
+      expires_after_cycles: 1
+      max_consecutive_renewals: 2
+      after_cap: "the gap counts as drift and its next step is recorded in the decision log"
+    decided_by: [DEC-05]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false                   # the adoption bar's meaning depends on it
+    change: data
+    read_by: [strategy-check, adopter-companion]   # never the generator: no page computes an expiry from its build day
+    depends_on: [cycle]                  # an estate that overrides `cycle` changes its exceptions' life with it; the
+                                         # adoption view shows each estate's cycle length beside its grades
+    history: []
+
+  - id: interim-reviews
+    value: >-
+      until the strategy check runs on its schedule (PH3), assessments and watch entries that fall due are reviewed and
+      read at the next working session, each recorded with its date; a missed interval is recorded as missed, never
+      back-dated
+    ends_when: "PH3's scheduled mechanism records its first run"   # the run that ends it moves this entry to its history
+    decided_by: [DEC-05]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: data
+    read_by: []
+    history: []
+
+  # DEC-11: how often the strategy check runs. The agent fires daily and the check decides from this entry whether a
+  # run is due, so the agent's schedule holds no value of its own and a change here needs no reinstall (30-GATES.md).
+  - id: strategy-check
+    value: {every: P1W, at_cycle_start: true}
+    decided_by: [DEC-11]
+    since: 4
+    effective_from: "2026-10-28"
+    overridable: true                    # an estate runs its own check on its own cadence
+    change: data
+    read_by: [strategy-check]
+    history: []
+
+  # DEC-12: the planning tiers on the operator's scale (section 1); what a tier measures is the method planning-horizon
+  - id: planning-tiers
+    value:                               # half-open intervals, nearest first; the ids name no bounds, so a changed bound
+                                         # changes a field, never an id
+      - {id: sub-one, label: "<1y", from: P0D, to: P1Y}
+      - {id: sub-two, label: "1-2y", from: P1Y, to: P2Y}
+      - {id: sub-three, label: "2-3y", from: P2Y, to: P3Y}
+      - {id: sub-five, label: "3-5y", from: P3Y, to: P5Y}
+      - {id: five-year, label: "5y+", from: P5Y, to: null}
+    decided_by: [DEC-12, R-01]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: data                         # a changed bound re-derives every planning tier as a new assessment
+    read_by: [generator, gates]
+    history: []
+
+  - id: planning-horizon
+    value: {method: planning-horizon, version: 1}
+    decided_by: [DEC-12]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: method
+    read_by: [generator, gates]
+    history: []
+
+  # DEC-17 (a) to (d): how initiatives are chosen
+  - id: prioritization
+    value: {method: cd3-chain, version: 1}
+    decided_by: [DEC-17]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: true                    # an estate may select another registered method
+    change: method
+    read_by: [generator, adopter-companion]
+    history: []
+
+  - id: estimate-adjustment
+    value: {required: true, applies_to: [duration, investment], factor: "the estate's own, or the realized figure beside the estimate"}
+    decided_by: [DEC-17]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: true                    # the factor is the estate's
+    change: data
+    read_by: [generator]                 # the rule (what it applies to); the factor is the portfolio's
+    history: []
+
+  - id: capacity
+    value: {per: "constrained role", period: P3M, chain_funding: item_by_item, beyond_the_line: "the next period"}
+    decided_by: [DEC-17]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: true                    # an estate plans in its own period
+    change: data
+    read_by: [generator, adopter-companion]
+    history: []
+
+  # R-08 and DEC-02: how each value measure is computed; this entry alone names the method and its version for a value
+  - id: measure-methods
+    value:
+      advisory-to-fixed-build: {method: fixed-build-lead-time, version: 1}
+    decided_by: [R-08, DEC-02]
+    since: 2
+    effective_from: "2026-10-26"
+    overridable: false
+    change: method
+    read_by: [instrument, generator]
+    history: []
+
+  # DEC-17 (e) and (f): the adoption bar
+  - id: adoption-method
+    value: {method: adoption-levels, version: 1}
+    decided_by: [DEC-17]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false                   # one bar, so grades mean the same across estates
+    change: method
+    read_by: [generator, adopter-companion]
+    history: []
+
+  - id: world-class-bar
+    value:
+      world_class_level: adopted         # a level id of adoption-levels, never its ordinal
+      above_world_class: {level: managed-to-target, when: "a target grade recorded in the decision log justifies the cost"}
+      role_grade: minimum
+      show_distribution: true
+      rank_departments: false
+      illustrative_evidence: "a level resting on an illustrative figure or decision is shown as illustrative"
+    decided_by: [DEC-17]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: data
+    read_by: [generator, adopter-companion]
+    history: []
+
+  # DEC-17 (g): the catalog's completeness
+  - id: completeness
+    value:
+      outside_model: aws-caf
+      adaptation: "its named capabilities, read across its six perspectives in PH4 (research/r1 C2: adapt)"
+      cross_checks: [nist-csf-2.0, dora-capability-catalog, vmware-private-cloud-maturity-model]
+    decided_by: [DEC-17]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: data
+    read_by: [gates]                     # PH4's completeness check
+    history: []
+
+  # DEC-17 (h): the drift-read contract, an interface between the companions' adapters and the generator
+  - id: drift-contract
+    value: {contract: drift-read, version: 1, definition: {text: "charter section 5.6, the drift-read contract, with contract_version", at_commit: "f364e6b5"}}
+    decided_by: [DEC-17]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: schema                       # every line carries its contract_version; a new version is added beside the
+                                         # old, adapters emit both, then the old is retired
+    read_by: [adapters, generator]
+    history: []
+
+  # DEC-04: what is public
+  # Version 7 (the operator's ruling of 2026-11-04, 40-BREADTH.md step 12): the companion's code is public, mirrored
+  # to the companion repository under handbook/strategy/ (companion/mirror.yaml joined to the publisher's map).
+  - id: publication
+    value:
+      public: [register, policy, "the reference portfolio, its illustrative values labelled",
+               "the companion's code: the layer's generator and companion packages with their pinned copies, and the pinned records"]
+      private: ["an adopter's portfolio", "the reference estate's raw reads"]
+    decided_by: [DEC-04]
+    since: 7
+    effective_from: "2026-11-04"
+    overridable: false
+    change: data
+    one_way: "moving anything from private to public: a published page may be cached or indexed"
+    read_by: [gates]                     # GATE-7
+    history:
+      - value:
+          public: [register, policy, "the reference portfolio, its illustrative values labelled"]
+          private: ["an adopter's portfolio", "the reference estate's raw reads"]
+        since: 1
+        until_version: 6
+        ended: "2026-11-04"
+
+  # DEC-07 (made on D4-15): the strategy pages the site serves, each at its path under /strategy/; every other view is
+  # rendered for review only. Adding a path publishes that view; the generator writes its site copy and its entry.
+  # Version 7 (the operator's ruling of 2026-11-04, 40-BREADTH.md step 12): the index, the board, the costs and value,
+  # every capability whose values are all instrumented (a capability carrying a value with no instrument stays a
+  # review view, DEC-21), every role brief, the agentic page and the drivers' view.
+  - id: strategy-pages
+    value: [
+      "/strategy", "/strategy/board", "/strategy/costs-and-value",
+      "/strategy/fleet-patch-window", "/strategy/platform-restore", "/strategy/strategy-management",
+      "/strategy/portfolio-management", "/strategy/innovation-management", "/strategy/program-and-project-management",
+      "/strategy/benefits-management", "/strategy/inventory-of-record", "/strategy/non-human-identity",
+      "/strategy/actionable-alerting", "/strategy/threat-alerting", "/strategy/incident-handling",
+      "/strategy/capacity-headroom", "/strategy/tenancy-model", "/strategy/self-service-provisioning",
+      "/strategy/workload-day2",
+      "/strategy/roles/architecture-office", "/strategy/roles/platform-team", "/strategy/roles/security-team",
+      "/strategy/roles/risk-team", "/strategy/roles/observability-team", "/strategy/roles/identity-team",
+      "/strategy/roles/application-team",
+      "/strategy/agents", "/strategy/drivers",
+    ]
+    decided_by: [DEC-07]
+    since: 7
+    effective_from: "2026-11-04"
+    overridable: false
+    change: data
+    one_way: "publishing a page: a published page may be cached or indexed"
+    read_by: [generator, gates]          # GATE-3 (3.5, 3.6) reads which capabilities are published (40-BREADTH.md step 2)
+    history:
+      - value: ["/strategy/fleet-patch-window", "/strategy/costs-and-value"]
+        since: 5
+        until_version: 6
+        ended: "2026-11-04"
+
+  # DEC-21 (made 2026-10-29 as option (b)): a capability whose value no lane can yet measure is written with that
+  # value's instrument `not_covered`, kept off every served view and carried by name; `wait` would hold it unwritten
+  # (option (a)). GATE-3 lists it on a capability no page publishes while this reads `carry`, and refuses it otherwise.
+  - id: instrument-gaps
+    value: carry
+    decided_by: [DEC-21]
+    since: 6
+    effective_from: "2026-10-30"
+    overridable: false                   # an adopter's companion follows the ruling
+    change: data
+    read_by: [gates]
+    history: []
+
+  # DEC-14: who supplies the reference portfolio's illustrative figures
+  - id: illustrative-figures
+    value:
+      drafted_by: "the program's lead"
+      approved_by: operator
+      approval: "per figure or as a set, dated; the reference portfolio's drafts are approved at PH2's exit, when the board renders them"
+    decided_by: [DEC-14]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false                   # an adopter's portfolio refuses illustrative values (GATE-7)
+    change: data
+    read_by: []
+    history: []
+
+  # DEC-08: the product stack's scope
+  - id: product-stack-scope
+    value:
+      teach: [tenancy, isolation, capacity, data paths]
+      untaught: ["workload data residency and egress (N1)", "accelerator capacity and placement (N2)"]
+      read_first_in_ph4: ["Private AI Services, from its version-current documentation", "docs/reference/private-ai-foundation/README.md (concept only)"]
+      rule: "teach nothing not documented or proven"
+    decided_by: [DEC-08]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: data
+    read_by: []
+    history: []
+
+  # DEC-10 (R-10): agent-specific controls. The text lives in charter section 5.10 only; the rungs are capabilities the
+  # register writes (PH4 step 4, batch 2), each untaught with lane 64 until a chapter teaches it.
+  - id: agent-controls
+    value: {refinement: R-10, rungs: [verified-models-and-tools, bounded-model-egress, tested-stop, measured-accuracy], clauses: [3a, 4a, 5a]}
+    decided_by: [DEC-10, R-10]
+    since: 1
+    effective_from: "2026-10-25"
+    overridable: false
+    change: doctrine                     # it extends an approved verdict (V-05)
+    read_by: []
+    history: []
+
+methods:                                 # one implementation behind one interface per version; a version's definition is
+                                         # pinned to the commit that ratified it, so writing version 2 never rewrites 1
+  - id: cd3-chain
+    version: 1
+    status: current
+    decided_by: [DEC-17]
+    since: 1
+    definition: {text: "charter section 5.9: the prioritization rule, the chain rule, capacity and total cost", at_commit: "1daae6fa"}
+    parameters:
+      rate_requires: [rate, low, high, unit, method, source, kind]
+      rate_method: "an expected loss per unit of the measure: likelihood times impact"
+      weights: refused
+      report: "the rank across each rate's range, with the inputs at which it changes, one rate at a time and at the joint extremes"
+      unconverted: "shown beside the rank, never weighted into it"
+    reads_entries: [estimate-adjustment, capacity]
+    golden:
+      holds: >-
+        built in PH2: the reference portfolio as frozen on 2026-10-31 (generator/fixtures/migrate/portfolio.schema4.yaml,
+        with its register) ranks restore-recency first (6.38), then the chain of fleet-patch-instrument and
+        risk-tiered-patch-windows (2.38), and leaves agentic-patch-triage unranked (10-RESEARCH.md section 6); the live
+        portfolio's ranks are pinned by the live-board test
+      test: "platform/tests/test_enterprise_strategy_generator.py::test_the_board_reproduces_the_research_record_section_6"
+
+  - id: adoption-levels
+    version: 1
+    status: current
+    decided_by: [DEC-17]
+    since: 1
+    definition: {text: "charter section 5.9: the adoption bar", at_commit: "1daae6fa"}
+    levels:                              # ids keep their meaning; the order is a field
+      - {id: not-established, ordinal: 0}
+      - {id: established, ordinal: 1}
+      - {id: owned-and-read, ordinal: 2}
+      - {id: adopted, ordinal: 3}
+      - {id: managed-to-target, ordinal: 4}
+    reads_entries: [world-class-bar, exception-expiry]
+    golden:
+      holds: "built in PH2: the reference estate's fleet-patch-window at not-established, measured"
+      test: "platform/tests/test_enterprise_strategy_generator.py::test_the_reference_estates_pilot_is_not_established_measured"
+
+  - id: planning-horizon
+    version: 1
+    status: current
+    decided_by: [DEC-12]
+    since: 1
+    definition: {text: "charter section 5.7, the planning clock", at_commit: "1daae6fa"}
+    parameters:
+      measures: "from the assessment date to the initiative's full value"
+      recorded_beside: "from the assessment date to its first measured value"
+    reads_entries: [planning-tiers, review-intervals]
+    golden:
+      holds: "built in PH2: the reference portfolio's planning assessments derive their tiers and review-by dates, held by the golden fixture"
+      test: "platform/tests/test_enterprise_strategy_generator.py::test_the_report_equals_its_golden_fixture"
+
+  - id: fixed-build-lead-time
+    version: 1
+    status: current                      # adopted by the operator's ruling at PH2's exit, 2026-10-28 (D4-14); shadow before
+    decided_by: [R-08, DEC-02]
+    since: 2
+    definition: {text: "20-PILOT.md step 4 and section 3, with charter R-08 and research/r3-threat-agent-supply.md 4(c) steps 1 to 5", at_commit: "5eee6822"}
+    parameters:
+      line_rule: "a host is compared only with the required build of its own release line, never across lines"
+      unknown: "any shortfall keeps the measure open: a vCenter not read, an unread host, a host not connected (its build last known)"
+      imported: "a reading without connection state closes the measure only when every vCenter was read, its host counts equal its stored image compliance totals, no host count has an unknown version, and no host is unavailable; the value is then graded inferred"
+      stages: [vendor-lag, declaration-lag, remediation-lag]
+      stage_rule: "each stage runs from t0, clamped there, so the three sum to the total; each stage end is a bound with two ends (after the last reading at which its condition did not hold, t0 when none, and at or before the first at which it did); the vendor's ends when every named vCenter's depot lists an image at or above the required build; a release date before t0 is reported beside, never as a negative stage"
+    reads_entries: []
+    golden:
+      holds: >-
+        built in PH2 step 4: VMSA-2026-0006 closed by the 2026-10-07 reading, graded inferred, an upper bound of 70 days
+        with no lower bound; every stage end between t0 and 2026-10-07, so each stage within 0 to 70 days and the three
+        summing to the total; the fixed image released 20 days before t0, reported beside; a fixture with one unread host
+        stays open
+      test: "platform/tests/test_enterprise_strategy_lead_time.py::test_the_golden_values_on_the_committed_series"
+
+provenance:                              # stamped on every generated output (GATE-14)
+  fields:
+    methods: "a map of each method id the output used to its version and its status (a shadow method's output says so)"
+    policy_version: "this file's policy_version"
+    schemas: "the schema version of the register, the portfolio and this file"
+    contracts: "the drift-read contract version of every line read"
+    overrides_digest: "a digest of the portfolio's overrides"
+    input_digest: "a digest of the inputs the output renders: for a review view the register, the portfolio and this file as read; for a served view the parts of its slice of the projection it reads, the site's vocabulary and the pinned records and measure outputs it reads, the projection's withheld and not-yet-published sets it shows, this file as the estate runs it, and the renderer's format version (40-BREADTH.md step 2, S1)"
+    generated_at: "the UTC time of generation"

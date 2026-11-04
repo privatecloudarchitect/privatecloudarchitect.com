@@ -65,6 +65,12 @@ Framework estates carry five further clauses:
 
 ## The map
 
+### Above the handbook · The Architect's NOC
+
+| Folder | Chapter | What it does |
+|---|---|---|
+| [`handbook/strategy/`](handbook/strategy/) | [The Architect's NOC](https://privatecloudarchitect.com/strategy) | The adopter's companion over the strategy layer: reads your estate through the records its companions wrote and your portfolio, holds no credential and opens no connection, runs the layer's gates without publishing, and emits the role-by-role adoption view against the bar, the drift and exceptions, the ranked board and a brief per department that stays private. Shipped with the layer's generator, the register, the policy, the served reference portfolio and the pinned records it recognizes the reference estate by; `companion/README.md` under it says how to run it on your own portfolio. |
+
 ### Part 0 · The platform
 
 | Folder | Chapter | What it does |

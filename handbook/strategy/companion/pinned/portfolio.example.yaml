@@ -1,0 +1,2684 @@
+schema: 5
+estate: reference
+policy:
+  version: 7
+  overrides: []
+approval:
+  kind: illustrative
+  status: drafted by the lead 2026-10-25; approved by the operator 2026-10-28 at PH2's exit, as the board renders them (DEC-14,
+    D4-14)
+  source: null
+approvals: []
+departments:
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  id: infrastructure
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  id: operations
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  id: security
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  id: architecture
+assignments:
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: 'the observed writer (40-BREADTH step 8): docs/design/enterprise-strategy-layer/records/runs/2026-11-02-host-lifecycle/hostlife.record.json,
+    read 2026-11-02T16:15:35Z as the administrator SSO identity with reads only, shows the one profile cluster''s declaration
+    of its hosts'' remote syslog target as the platform team''s, stored NOT_COMPLIANT at 11:24:55Z against the log host the
+    forwarder wrote (G-780''s second writer) before the fix of 16:59Z folded that host into the profile; the department is
+    the lead''s figure'
+  role: platform-team
+  scope: estate
+  department: infrastructure
+  basis: writes each cluster's declared image and configuration profile (hostlife.record.json)
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: 'the observed writer (40-BREADTH step 8): docs/design/enterprise-strategy-layer/records/runs/2026-11-02-log-collection/log-paths.record.json,
+    read 2026-11-02T16:14:45Z as the least-privilege viewer API client with reads only, shows 12 of 12 hosts'' own events
+    relayed through the two forwarders the observability team writes; the stored configuration and each host''s trust were
+    not run; the department is the lead''s figure'
+  role: observability-team
+  scope: estate
+  department: operations
+  basis: Log Management's forwarder writes the hosts' syslog targets, a second writer of one setting (G-780)
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  role: security-team
+  scope: estate
+  department: security
+  basis: sponsors risk-tiered-patch-windows and reads the threat watch entries
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  role: risk-team
+  scope: estate
+  department: security
+  basis: reads the legal and certification watch entries
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  role: architecture-office
+  scope: estate
+  department: architecture
+  basis: 'owns the strategy practice: this file, the register''s use, the cadence'
+role_history:
+- id: platform-team-estate-from-unrecorded
+  role: platform-team
+  scope: estate
+  holder: the reference estate's owner
+  from: null
+  to: null
+  kind: not_recorded
+  source: null
+  note: no record of when the role was taken up; held on 2026-11-02, when the host-lifecycle run (docs/design/enterprise-strategy-layer/records/runs/2026-11-02-host-lifecycle/hostlife.record.json)
+    observed its written declaration, the profile enabled 2026-08-05
+- id: observability-team-estate-from-unrecorded
+  role: observability-team
+  scope: estate
+  holder: the reference estate's owner
+  from: null
+  to: null
+  kind: not_recorded
+  source: null
+  note: no record of when the role was taken up; held on 2026-11-02, when the log-collection run (docs/design/enterprise-strategy-layer/records/runs/2026-11-02-log-collection/log-paths.record.json)
+    observed the forwarders it writes relaying every host's own events
+ownership:
+  owns:
+  - assignments
+  - targets
+  - exceptions
+  - initiatives
+  - conversion_rates
+  - capacity
+  - decision_log
+  imports:
+    capability state: companion records, through the drift-read contract (section 5.6)
+    investment and effort: the enterprise's finance or time-tracking system of record, where one exists
+    role_history: the enterprise's directory or HR system of record, where one exists
+capacity:
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  role: platform-team
+  value: 10.0
+  unit: person-weeks per period
+capabilities:
+- id: fleet-patch-window
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    level: adopted
+    reason: exposure to published vulnerabilities is the reference estate's first risk
+  state:
+  - scope: estate
+    established: false
+    steps:
+      images-declared:
+        done: true
+        kind: measured
+        read_at: '2026-10-25T02:28:12Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/host-lifecycle/records/hostlife.record.json
+        note: five clusters image-managed on base image 9.1.1.0.25714478; their stored image compliance read COMPLIANT, evaluated
+          by the platform on 2026-10-06 and 2026-10-07 (G-781)
+      compliance-read-scheduled:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: the read has run by hand; no scheduled run record exists
+      window-agreed:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: a decision between the platform and security teams, which the reference estate does not have; it can be shown
+          only as illustrative, approved by the operator (DEC-14), and a grade resting on it is shown as illustrative
+      staging-and-remediation-procedure:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: read from the platform's task records when the reference estate's owner next remediates; this program never
+          remediates
+      advisory-record:
+        done: true
+        kind: measured
+        read_at: '2026-10-28'
+        source: docs/design/enterprise-strategy-layer/instrument/advisories/VMSA-2026-0006.yaml
+        note: VMSA-2026-0006.2 kept verbatim as fetched and read by instrument/advisory.py (20-PILOT.md step 4)
+      per-host-series:
+        done: true
+        kind: measured
+        read_at: '2026-10-28T04:34:21Z'
+        source: docs/design/enterprise-strategy-layer/instrument/series/20261028T043421Z.keyed.json
+        note: the series' first keyed reading; the second, 2026-10-28T04:35:12Z, joins 11 of 11 hosts by key (20-PILOT.md
+          step 3)
+  readings:
+  - id: advisory-to-fixed-build-2026-10-28
+    value: advisory-to-fixed-build
+    advisory: VMSA-2026-0006
+    kind: measured
+    read_at: '2026-10-28T06:30:54Z'
+    source: docs/design/enterprise-strategy-layer/instrument/measures/VMSA-2026-0006.20261028T063054Z.json
+    reading: Closed by the 2026-10-07 reading, at most 70 days from the advisory's publication on 2026-07-29, with no lower
+      bound because no reading falls between them; graded inferred, because that reading (the day-2 capture's record) holds
+      no connection state and closes on its stored image compliance (11 hosts compliant, none unavailable). Every host ran
+      9.1.1 build 25714478, at or above the 9.1.x.x line's required build 25557999 (the line's mapping documented by the advisory's
+      own Version cell). Each stage lies within 0 to 70 days; the fixed image 9.1.0.0200.25557999 was released 2026-07-09,
+      20 days before the advisory. Closed means the fixed build runs on every host, the first of field note 09's three reads;
+      the configuration profile's compliance and a fresh posture assessment are not read here.
+    confidence: inferred
+  investment:
+    images-declared:
+      kind: not_recorded
+      source: null
+      note: done before this program; its effort was not recorded
+      value: null
+    compliance-read-scheduled:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 1
+    window-agreed:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 1
+    staging-and-remediation-procedure:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 3
+    advisory-record:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 4
+    per-host-series:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 3
+  effort:
+    patch-loop:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 6
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 1
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 2
+  targets:
+    advisory-to-fixed-build:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      target_kind: committed
+      value: 14
+      window: P3M
+      allowance: one advisory per quarter over target
+      consequence: the next cycle's capacity goes to the patch loop first
+  exceptions: []
+  parameters: {}
+- id: platform-restore
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    level: adopted
+    reason: a restorable management plane is the precondition for every other capability
+  state:
+  - scope: estate
+    established: false
+    steps:
+      schedules-declared:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T08:32:39Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/platform-backup/recovery.json
+        note: three planes read, each schedule enabled
+      copy-age-read-scheduled:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: null
+      rehearsal-booked:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: no rehearsal record in the repository; the reference estate's owner would supply it
+  readings:
+  - id: newest-copy-overdue-hours-2026-10-22
+    value: newest-copy-overdue-hours
+    advisory: null
+    kind: measured
+    read_at: '2026-10-22T08:32:39Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/platform-backup/recovery.json
+    reading: '0: the newest copies were 4.5, 8.5 and 1.5 hours old against 30, 30 and 78 hours allowed; no plane overdue'
+    confidence: live
+  - id: uncovered-plane-days-2026-10-22
+    value: uncovered-plane-days
+    advisory: null
+    kind: measured
+    read_at: '2026-10-22T08:32:39Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/platform-backup/recovery.json
+    reading: 'About 5.7 plane-days per month over the record''s coverage windows (364 and 419 days): SDDC Manager (the record''s
+      lifecycle manager) had no copy on 44 of 364 days (4 gaps, the longest 19 days), the management vCenter on 28 of 419
+      days (4 gaps, the longest 20 days); (44/364 + 28/419) x 30.44 = 5.71. The network manager reports only its most recent
+      copy, so its days are not counted.'
+    confidence: live
+  investment:
+    schedules-declared:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    copy-age-read-scheduled:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 1
+    rehearsal-booked:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 2
+  effort:
+    copy-age-read:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 0.5
+    restore-rehearsal:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 8
+    reader-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      value: 1
+  targets:
+    newest-copy-overdue-hours:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: one overdue day per month
+      consequence: a missed copy is a finding on the next read
+    uncovered-plane-days:
+      kind: illustrative
+      source: the lead, 2026-10-25
+      note: null
+      target_kind: aspirational
+      value: 1
+      window: P3M
+      allowance: null
+      consequence: null
+  exceptions: []
+  parameters: {}
+- id: strategy-management
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: 'the practice''s own direction: a layer that cannot hold its own assessments current cannot ask an estate to'
+  state:
+  - scope: estate
+    established: false
+    steps:
+      register-and-policy-adopted:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/portfolio.example.yaml
+        note: the portfolio names policy version 6 and schema 4
+      stresses-read:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/register.yaml
+        note: eight drivers, each stress naming a written capability with its basis
+      intake-ruling:
+        done: true
+        kind: measured
+        read_at: '2026-10-31T21:16:34Z'
+        source: docs/design/enterprise-strategy-layer/register.yaml
+        note: two trigger events, each with its ruled_at (2026-10-25, the initiative it spawned, risk-tiered-patch-windows;
+          2026-10-30, ruled no change)
+      check-scheduled:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: three runs recorded, each from a checkout (source checkout); no run from the scheduled agent's export is on
+          record
+  readings:
+  - id: guidance-assessments-in-date-2026-11-04
+    value: guidance-assessments-in-date
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '100.0 percent of initiatives: 10 of 10 initiatives'' newest guidance within its review-by on 2026-11-04'
+    confidence: documented
+  - id: rulings-reopened-in-cycle-2026-11-04
+    value: rulings-reopened-in-cycle
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '0.0 percent of rulings: 0 of 4 rulings re-opened by a later event within one cycle length'
+    confidence: documented
+  - id: trigger-to-ruling-days-2026-11-04
+    value: trigger-to-ruling-days
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '0.0 days per event: the mean over 4 ruled events'
+    confidence: documented
+  investment:
+    register-and-policy-adopted:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    stresses-read:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    intake-ruling:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    check-scheduled:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: installing the agent and reading its first export run
+      value: 0.5
+  effort:
+    cycle-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 4
+    trigger-intake:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    guidance-assessments-in-date:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 100
+      window: P3M
+      allowance: one initiative past its date for at most a month
+      consequence: the overdue assessment is the next cycle review's first item
+    trigger-to-ruling-days:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 14
+      window: P3M
+      allowance: null
+      consequence: null
+    rulings-reopened-in-cycle:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 10
+      window: P1Y
+      allowance: null
+      consequence: null
+  exceptions: []
+  parameters: {}
+- id: portfolio-management
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: the board is the layer's central view; its inputs' kinds are what the reader is asked to trust
+  state:
+  - scope: estate
+    established: true
+    steps:
+      figures-kinded:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/portfolio.example.yaml
+        note: every figure the board computes with carries its kind and source (GATE-7 passes)
+      rates-recorded:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/portfolio.example.yaml
+        note: two conversion rates with method and range; one measure listed unconverted
+      capacity-set:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/portfolio.example.yaml
+        note: the platform team's capacity per period recorded
+      board-rendered:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/generator/rendered/board-reference.html
+        note: the board equal to what the generator emits (GATE-9)
+  readings:
+  - id: board-inputs-not-measured-2026-11-04
+    value: board-inputs-not-measured
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '100.0 percent of inputs: 43 of 43 board inputs illustrative or not recorded'
+    confidence: documented
+  investment:
+    figures-kinded:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    rates-recorded:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    capacity-set:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    board-rendered:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+  effort:
+    board-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 4
+    rate-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    committed-within-capacity:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 100
+      window: P3M
+      allowance: null
+      consequence: an item beyond the line waits for the next period, never squeezed in
+    board-inputs-not-measured:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 50
+      window: P1Y
+      allowance: null
+      consequence: null
+  exceptions: []
+  parameters: {}
+- id: innovation-management
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: the intake decides what the catalog learns of; the first cycle's scan is its first proof
+  state:
+  - scope: estate
+    established: true
+    steps:
+      technology-watch-framed:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/register.yaml
+        note: the watch list's technology entries, each with its interval and reader
+      first-scan-recorded:
+        done: true
+        kind: measured
+        read_at: '2026-11-03T03:53:57Z'
+        source: docs/design/enterprise-strategy-layer/register.yaml
+        note: the first proactive scan, scan-2026-11-02, recorded over the six areas with its three signals (step 5); read
+          at the practice record of 2026-11-03
+      stance-rule-applied:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/register.yaml
+        note: every technology-born initiative's newest guidance carries its evolution stage and a stance
+  readings:
+  - id: scan-area-coverage-2026-11-04
+    value: scan-area-coverage
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '100.0 percent of areas: the scan scan-2026-11-02 (2026-11-02) records 6 of 6 areas with a signal found or a
+      search made'
+    confidence: documented
+  - id: signal-to-stance-days-2026-11-04
+    value: signal-to-stance-days
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '0.0 days per signal: the mean over 1 initiatives from a scan, from the scan''s date to the first stance'
+    confidence: documented
+  investment:
+    technology-watch-framed:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    first-scan-recorded:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: the first scan over six areas, recorded
+      value: 2
+    stance-rule-applied:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+  effort:
+    proactive-scan:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 4
+    signal-grading:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    scan-area-coverage:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 100
+      window: P3M
+      allowance: null
+      consequence: an area not recorded re-opens the scan before the cycle closes
+    signal-to-stance-days:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 90
+      window: P1Y
+      allowance: null
+      consequence: null
+    stances-changed-early:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 20
+      window: P1Y
+      allowance: null
+      consequence: null
+  exceptions: []
+  parameters: {}
+- id: program-and-project-management
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: the chain rule and the planning clock are what keep the board honest about order
+  state:
+  - scope: estate
+    established: true
+    steps:
+      prerequisites-declared:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/register.yaml
+        note: every prerequisite resolves, no cycle (GATE-5 passes)
+      planning-assessed:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/portfolio.example.yaml
+        note: a planning assessment per planned initiative (GATE-4 passes)
+      chain-rule-applied:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/generator/rendered/board-reference.html
+        note: the board's chain items and unranked list rendered from the portfolio
+  readings:
+  - id: planning-assessments-in-date-2026-11-04
+    value: planning-assessments-in-date
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '100.0 percent of planned initiatives: 10 of 10 planned initiatives'' newest planning assessment within its review-by
+      on 2026-11-04'
+    confidence: documented
+  - id: uncommittable-initiatives-2026-11-04
+    value: uncommittable-initiatives
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '3 initiatives: 3 of 10 planned initiatives rest on a prerequisite no initiative establishes'
+    confidence: documented
+  investment:
+    prerequisites-declared:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    planning-assessed:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    chain-rule-applied:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+  effort:
+    readiness-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    plan-reassessment:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    uncommittable-initiatives:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: one, while its establishing initiative is being written
+      consequence: the requiring initiative stays uncommittable
+    planning-assessments-in-date:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 100
+      window: P3M
+      allowance: null
+      consequence: the overdue plan is re-assessed before the board is re-ranked
+  exceptions: []
+  parameters: {}
+- id: benefits-management
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: a value without a reading against a target is a claim; the ledger exists to be read
+  state:
+  - scope: estate
+    established: false
+    steps:
+      values-declared:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: docs/design/enterprise-strategy-layer/register.yaml
+        note: every written capability's values declared under GATE-3, one instrument gap listed
+      targets-recorded:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: no target recorded for exposure-days-past-window, failed-host-remediation-share
+      owners-held:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: the application team owns a target and holds no department in the reference estate's scope
+  readings:
+  - id: targets-without-a-held-owner-2026-11-04
+    value: targets-without-a-held-owner
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '10 values: 10 of 81 values (of capabilities with a recorded state) whose target owner holds no department in
+      a recorded scope'
+    confidence: documented
+  - id: values-measured-against-target-2026-11-04
+    value: values-measured-against-target
+    advisory: null
+    kind: measured
+    read_at: '2026-11-04T20:10:44Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261104T201044Z.json
+    reading: '63.0 percent of values: 51 of 81 values with a recorded target and a reading within its window before 2026-11-04'
+    confidence: documented
+  investment:
+    values-declared:
+      kind: not_recorded
+      source: null
+      note: done in the program's phases PH0 to PH3 by the lead; the effort was not tracked per step
+      value: null
+    targets-recorded:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    owners-held:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+  effort:
+    reading-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 3
+    owner-continuity:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    values-measured-against-target:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 100
+      window: P3M
+      allowance: null
+      consequence: a value unread for a window is named on the costs view
+    targets-without-a-held-owner:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: an unheld target is assigned before the next reading review
+  exceptions: []
+  parameters: {}
+- id: inventory-of-record
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: established
+    reason: the companion's reads exist and the first map is a throwaway's round trip, not the estate's
+  state:
+  - scope: estate
+    established: false
+    steps:
+      taxonomy-fixed:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T07:17:20Z'
+        source: deploy/privatecloudarchitect/companion/staging/frameworks/cartography/taxonomy.yaml
+        note: the four discovery-owned categories with their live names
+      lenses-adopted:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: deploy/privatecloudarchitect/companion/staging/frameworks/cartography/records/governance/classify.json
+        note: a read-only classification record of the reference estate's walked workloads
+      watch-window-set:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: the flow lens's record was not read for this batch; its window is not on record here
+      writer-split-proven:
+        done: true
+        kind: measured
+        read_at: '2026-10-30T06:57:54Z'
+        source: deploy/privatecloudarchitect/companion/staging/frameworks/cartography/records/governance/define-probe.json
+        note: the tag authority refused to define a category
+      map-written:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: the write-back record is a round trip on a throwaway VM, not the reference estate's first map
+  readings: []
+  investment:
+    taxonomy-fixed:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    lenses-adopted:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    watch-window-set:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    writer-split-proven:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    map-written:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 5
+  effort:
+    discovery-run:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    arbitration:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 4
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    split-retest:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    workloads-unresolved-share:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 10
+      window: P3M
+      allowance: null
+      consequence: null
+    governed-axes-undefined:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: an undefined category is defined by the administrator before the next walk
+  exceptions: []
+  parameters: {}
+- id: non-human-identity
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: every automation and every agent stands on it; the census already reads the estate
+  state:
+  - scope: estate
+    established: false
+    steps:
+      census-read:
+        done: true
+        kind: measured
+        read_at: '2026-10-13T07:46:05Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/integrations-identity/exchange.json
+        note: the census read three vCenters as the client (sessions_read 3) and found one directory principal and 23 local-administrator
+          sessions from non-interactive agents (exit 3 under the record's own code)
+      identity-per-integration:
+        done: false
+        kind: measured
+        read_at: '2026-10-13T07:46:05Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/integrations-identity/exchange.json
+        note: the census still finds a directory principal signing in from a non-interactive agent on every vCenter read
+      catalog-kept:
+        done: false
+        kind: measured
+        read_at: '2026-11-02T14:58:32Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/service-accounts/catalog_check.json
+        note: the catalog check over the reference estate's catalog in its JSON form (pca secrets export-catalog) marks all
+          62 entries fail, each for a scope the catalog does not record; owner, backend and the rotation dates are recorded
+          for every entry (summary.fail 62 of 62)
+      access-surfaces-split:
+        done: false
+        kind: measured
+        read_at: '2026-10-13T07:46:05Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/integrations-identity/exchange.json
+        note: the census finds the local administrator signing in from non-interactive agents (23 sessions) and one directory
+          principal in automated use
+  readings:
+  - id: held-credentials-overdue-2026-11-02
+    value: held-credentials-overdue
+    advisory: null
+    kind: measured
+    read_at: '2026-11-02T14:58:32Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/service-accounts/catalog_check.json
+    reading: '62 credentials: every entry of the reference estate''s catalog marked fail, each for a scope the catalog does
+      not record, 2 of them also past their rotation date (summary.fail; judged at 2026-11-02, warning window 14 days)'
+    confidence: documented
+  - id: held-credentials-due-in-window-2026-11-02
+    value: held-credentials-due-in-window
+    advisory: null
+    kind: measured
+    read_at: '2026-11-02T14:58:32Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/service-accounts/catalog_check.json
+    reading: '40 credentials: 40 of 62 entries fall due inside the 14-day window (next_due against warn_days) and none is
+      marked warn, each marked fail for its scope first; the warning reached none of them'
+    confidence: documented
+  - id: integrations-signing-in-as-people-2026-10-13
+    value: integrations-signing-in-as-people
+    advisory: null
+    kind: measured
+    read_at: '2026-10-13T07:46:05Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/integrations-identity/exchange.json
+    reading: '1 principals: one directory principal signing in from a client agent other than the vSphere Client, on each
+      of the three vCenters read (directory_not_interactive)'
+    confidence: documented
+  - id: local-administrator-in-automated-use-2026-10-13
+    value: local-administrator-in-automated-use
+    advisory: null
+    kind: measured
+    read_at: '2026-10-13T07:46:05Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/integrations-identity/exchange.json
+    reading: '23 sessions: the local administrator signing in from non-interactive agents across the three vCenters read (local_administrator_not_interactive)'
+    confidence: documented
+  investment:
+    census-read:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    identity-per-integration:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 3
+    catalog-kept:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    access-surfaces-split:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+  effort:
+    rotation-loop:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    census:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    held-credentials-overdue:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: a credential the check marks fail is rotated the day it is marked
+    held-credentials-due-in-window:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 2
+      window: P1M
+      allowance: null
+      consequence: null
+    integrations-signing-in-as-people:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: an integration found on a person's account is moved before the next census
+    local-administrator-in-automated-use:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: an integration found on the local administrator is moved before the next census
+  exceptions: []
+  parameters: {}
+- id: actionable-alerting
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: the audit already runs and the owned content is scoped; the thresholds, the hold times and the parent-aware alert
+      are the work left
+  state:
+  - scope: estate
+    established: false
+    steps:
+      scope-by-policy:
+        done: true
+        kind: measured
+        read_at: '2026-10-10T20:27:53Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+        note: 0 of the 24 owned entries enabled in the default policy; a VM-kind alert enabled there reaches up to 129 virtual
+          machines (109 under the policy, 20 through four policies inheriting from it), the blast radius counted the larger
+          way
+      threshold-in-metric:
+        done: false
+        kind: measured
+        read_at: '2026-10-10T20:27:53Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+        note: of 48 owned conditions, 24 compare a value from the vocabulary 0, 1 and 100 (18 of them read a super metric)
+          and 24 compare no value at all, log conditions built as log-alerts teaches
+      wait-and-cancel-set:
+        done: false
+        kind: measured
+        read_at: '2026-10-10T20:27:53Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+        note: all 24 owned definitions at wait 1 and cancel 1; 15 of the owned symptoms hold a wait instead (14 at 3 cycles,
+          1 at 12), so for those the hold lives in the symptoms and is not said where the alert is defined
+      one-failure-one-alert:
+        done: false
+        kind: measured
+        read_at: '2026-10-10T20:27:53Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+        note: 0 owned parent-aware definitions, 0 definitions keeping a child quiet; parent_aware.py's proof of 2026-10-10
+          ran on a throwaway group and was removed
+      routes-filtered:
+        done: false
+        kind: measured
+        read_at: '2026-10-10T20:27:53Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+        note: 6 rules, 2 enabled, 0 enabled without a filter (3 disabled rules carry none); one enabled rule filters by alert
+          definition, the other by an object, and neither by kind (resourceKindFilters 0), so the routing by kind is open
+  readings:
+  - id: owned-alerts-enabled-by-default-2026-10-10
+    value: owned-alerts-enabled-by-default
+    advisory: null
+    kind: measured
+    read_at: '2026-10-10T20:27:53Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+    reading: '0 of 24 owned definitions enabled in the default policy; the blast radius read beside: a VM-kind alert enabled
+      there reaches up to 129 virtual machines (109 under the policy, 20 through the four policies inheriting from it)'
+    confidence: documented
+  - id: rules-enabled-with-no-filter-2026-10-10
+    value: rules-enabled-with-no-filter
+    advisory: null
+    kind: measured
+    read_at: '2026-10-10T20:27:53Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+    reading: 0 enabled rules without a filter, of 6 rules (3 unfiltered rules are disabled)
+    confidence: documented
+  - id: alerts-per-host-failure-2026-10-10
+    value: alerts-per-host-failure
+    advisory: null
+    kind: measured
+    read_at: '2026-10-10T02:13:36Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/storm.json
+    reading: five host-failure events since 2026-09-07 raised 10 to 85 alerts each in their windows (6 to 43 per host); the
+      one single-host event raised 10 (3 on the host, 4 on transport nodes, 1 on the cluster, 2 on virtual machines)
+    confidence: documented
+  investment:
+    scope-by-policy:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    threshold-in-metric:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    wait-and-cancel-set:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    one-failure-one-alert:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 3
+    routes-filtered:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  effort:
+    alert-audit:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    storm-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    owned-alerts-enabled-by-default:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: an owned alert enabled in the default policy without a scope decision moves to a policy of its own before
+        the next audit
+    rules-enabled-with-no-filter:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: an unfiltered enabled rule is filtered or disabled the day the audit finds it
+    alerts-per-host-failure:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 1
+      window: P3M
+      allowance: null
+      consequence: null
+  exceptions: []
+  parameters: {}
+- id: threat-alerting
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: established
+    reason: the method is proven on the storage-path bundle; none of the four signals has a bundle or a proof on the reference
+      estate
+  state:
+  - scope: estate
+    established: false
+    steps:
+      identifiers-found:
+        done: true
+        kind: measured
+        read_at: '2026-10-09T18:16:22Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/log-alerts/records/signatures-try-vc-bad-username.record.json
+        note: 'identifiers found by stored-event queries in the signatures try records: host shell enabled (12 events in the
+          week), host SSH enabled (18), host firewall disabled (9) and the vCenter sign-in failures (BadUsernameSessionEvent,
+          4,249)'
+      conditions-accepted:
+        done: false
+        kind: measured
+        read_at: '2026-10-09T18:16:22Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/log-alerts/records/signatures-try-vc-bad-username.record.json
+        note: the try records hold the stored-event queries and their counts, not a symptom condition the API accepted; no
+          symptom exists for the four signals, only the storage-path bundle's; the sign-in condition waits for the integration
+          failing thousands of times a week (4,249) to be fixed by its owner
+      budget-known:
+        done: false
+        kind: measured
+        read_at: '2026-10-09T08:07:42Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/log-alerts/records/proof.record.json
+        note: the minutes are read for the storage-path bundle; no bundle of the four signals exists to read them for
+      switched-on-for-the-group:
+        done: false
+        kind: measured
+        read_at: '2026-10-09T08:08:19Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/log-alerts/records/deploy-status.record.json
+        note: the bundle read is Storage Path only (SP-01 onward, every monitor enabled); none of the four signals is in a
+          bundle
+      proven-by-line-or-event:
+        done: false
+        kind: measured
+        read_at: '2026-10-09T08:07:42Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/log-alerts/records/proof.record.json
+        note: the storage-path alerts are proven by a line; none of the four signals has an alert to prove
+      sources-collected:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T18:17:30Z'
+        source: docs/design/log-and-flow-collection/harness/records/log-paths.record.json
+        note: '11 of 11 hosts proven forwarding to Log Management with their own events, so the three host signals'' sources
+          reach the store; the sign-in signal is a vCenter event, which arrives through the vCenter channel whatever the log-collection
+          entry''s state (4,249 counted in a week in the try record); 1 of the 4 vCenter log-collection entries is disabled:
+          the records point to the retired workload domain''s entry (log-collection''s live read of 2026-10-04, the log and
+          flow collection record''s observation of that day, 3 vCenter adapters against 4 entries), to be confirmed by name
+          by the operations lane'
+  readings: []
+  investment:
+    identifiers-found:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    conditions-accepted:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    budget-known:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    switched-on-for-the-group:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    proven-by-line-or-event:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    sources-collected:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+  effort:
+    proof-loop:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    signal-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    signal-alerts-that-cannot-fire:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: an alert that cannot fire is repaired or removed from the catalog within the month, never left red-less
+        in the list
+    signal-alerts-unproven:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: an unproven alert is proven with a line or by its first real event, or removed, within the month; a proof
+        stands until the next release re-reads it
+    minutes-from-line-to-alert:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 10
+      window: P1M
+      allowance: null
+      consequence: null
+  exceptions: []
+  parameters: {}
+- id: incident-handling
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: the queue and the record are read; the practice of sorting, routing and tagging is what the estate adopts
+  state:
+  - scope: estate
+    established: false
+    steps:
+      queue-sorted:
+        done: false
+        kind: measured
+        read_at: '2026-10-19T16:00:36Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/incident-response/triage.json
+        note: 659 open of 3,927 instances; 45 standing over a month and 4 over a year, every open alert in control state OPEN
+          (nobody has assigned, suspended or suppressed one)
+      badge-routing:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: no routing table file exists on the reference estate
+      routing-table-started:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: no routing table file exists on the reference estate; triage.json's rank names the definitions its first rows
+          would hold
+      failure-record-audited:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: 'the reference estate keeps no failure record of its own to audit; the chapter''s worked example audits this
+          handbook''s own record (560 entries: 170 carry a symptom, 134 a root cause, 216 a fix, 102 evidence; 63 classify
+          a layer from the vocabulary, 88 carry a layer tag of any word), which is not the reference estate''s state'
+      layer-vocabulary-required:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: the reference estate keeps no failure record of its own; the worked example's corpus is the handbook's
+  readings:
+  - id: standing-conditions-over-a-month-2026-10-19
+    value: standing-conditions-over-a-month
+    advisory: null
+    kind: measured
+    read_at: '2026-10-19T16:00:36Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/incident-response/triage.json
+    reading: 45 open alerts standing over a month, 4 of them over a year, of 659 open, every one in control state OPEN (0
+      suspended)
+    confidence: documented
+  investment:
+    queue-sorted:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    badge-routing:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    routing-table-started:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    failure-record-audited:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    layer-vocabulary-required:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+  effort:
+    queue-triage:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 4
+    record-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    standing-conditions-over-a-month:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: an alert standing over a month is given an owner and a date, or closed, at the weekly triage
+    records-without-a-layer:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: a record without a layer goes back to its author at the monthly review
+  exceptions: []
+  parameters: {}
+- id: capacity-headroom
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-30
+    note: null
+    level: adopted
+    reason: the report runs with its ruler and census; the owner and the hardware decision on the record are what the estate
+      adopts
+  state:
+  - scope: estate
+    established: false
+    steps:
+      model-named:
+        done: true
+        kind: measured
+        read_at: '2026-10-18T19:26:27Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+        note: every row per model, alloc and demand
+      cap-screened:
+        done: true
+        kind: measured
+        read_at: '2026-10-18T19:26:27Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+        note: the count at the cap printed (3 clusters capped on both models); each row's atCap per model
+      reservation-census:
+        done: true
+        kind: measured
+        read_at: '2026-10-18T19:26:27Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+        note: 110 machines, 0 with a CPU or memory reservation, and the 30 plain against commitment-adjusted flavour pairs
+          all equal, so the commitment-adjusted flavour has nothing to add; a Supervisor namespace's budgets are not in the
+          record
+      ruler-read:
+        done: true
+        kind: measured
+        read_at: '2026-10-18T19:26:27Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+        note: the governing policy per cluster read, five clusters under three policies, each with its three capacity blocks
+          and inherited flags
+      parity-gate:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: 'no parity run is kept: runway.py --parity writes nothing to the record, and no declaration of the reference
+          estate''s rulers exists; the record''s pairsCompared and pairsDivergent (30 and 0) count the plain against commitment-adjusted
+          flavour pairs, not the gate'
+      rollup-owned:
+        done: false
+        kind: measured
+        read_at: '2026-10-18T19:26:27Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+        note: the record's estate roll-up is in the record (demand bound by cluster 4 on cpu, alloc by cluster 1 on cpu);
+          no report file names an owner
+  readings:
+  - id: runway-days-first-axis-2026-10-18
+    value: runway-days-first-axis
+    advisory: null
+    kind: measured
+    read_at: '2026-10-18T19:26:27Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+    reading: 0 days on the demand model, bound by cluster 4's cpu (the allocation model 0 days too, bound by cluster 1's cpu);
+      the companion's exit 2 marks it critical
+    confidence: documented
+  - id: clusters-below-the-cap-2026-10-18
+    value: clusters-below-the-cap
+    advisory: null
+    kind: measured
+    read_at: '2026-10-18T19:26:27Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+    reading: 2 of 5 clusters read a real figure below the one-year cap (cluster 4 at 0 days on the demand model's cpu, cluster
+      1 at 0 days on the allocation model's cpu); 3 read the cap on both models, the record's atCap
+    confidence: documented
+  investment:
+    model-named:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    cap-screened:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    reservation-census:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    ruler-read:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    parity-gate:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    rollup-owned:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  effort:
+    runway-report:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+    reservation-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    hardware-schedule-review:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 2
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      value: 1
+  targets:
+    runway-days-first-axis:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 120
+      window: P3M
+      allowance: null
+      consequence: a runway under the warning threshold's days on the demand model opens a hardware decision on the record
+        within the quarter
+    clusters-below-the-cap:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: aspirational
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: null
+    ruler-pairs-divergent:
+      kind: illustrative
+      source: the lead, 2026-10-30
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: the projection is refused until the ruler is re-declared or the policy corrected
+  exceptions: []
+  parameters: {}
+- id: tenancy-model
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-31
+    note: null
+    level: adopted
+    reason: the spine, the edge map and the taxonomy are read and the names audited; the layout decision and the renames are
+      the work
+  state:
+  - scope: estate
+    established: false
+    steps:
+      boundaries-decided:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: one organization, two projects and five namespaces read on 2026-10-20 (estate.json); no layout decision is on
+          record
+      projects-per-team:
+        done: false
+        kind: measured
+        read_at: '2026-10-20T16:11:48Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/estate.json
+        note: no project-level binding of a region, class or VPC on either project (publish-to-all in effect); project 1 holds
+          the five namespaces, each bound to a region, class and VPC at create; whether each team has its own project is not
+          on record
+      planes-fixed-at-create:
+        done: true
+        kind: measured
+        read_at: '2026-09-17T16:47:24Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/bindings.json
+        note: 'four of five rebinds refused (422: the class, the region, the VPC and the re-parent PUT); the fifth, a PATCH
+          of the parent to a project that does not exist, answered 200 and changed nothing; the spec read back unchanged;
+          three Tenant Manager attempts refused (400); on 9.1.0, not asked again on 9.1.1, on the first namespace the script
+          found'
+      names-to-the-grammar:
+        done: false
+        kind: measured
+        read_at: '2026-10-20T16:11:48Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/naming.json
+        note: '6 of 49 audited objects conform: the 2 projects and the region keep, 1 of 12 machines and 2 of 3 clusters refine,
+          the 5 namespaces, 3 zones, 3 classes, the VPC, its 3 subnets and 16 machine classes rename'
+      publish-or-bind-chosen:
+        done: false
+        kind: measured
+        read_at: '2026-10-20T16:11:48Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/estate.json
+        note: publish-to-all in effect (no project-level binding on either project); no record that it was chosen
+      inventory-after-upgrade:
+        done: true
+        kind: measured
+        read_at: '2026-10-20T16:11:48Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/edges.json
+        note: 'the 9.1.1 read against the 9.1.0 baseline of 2026-09-21 (kept in git history at e6478c70, not in the folder):
+          31 edges all holding (the provider edges read under a provider bearer), 100 kinds in 101 entries, one kind more
+          than on 9.1.0 (the README names it)'
+  readings:
+  - id: constructs-off-the-grammar-2026-10-20
+    value: constructs-off-the-grammar
+    advisory: null
+    kind: measured
+    read_at: '2026-10-20T16:11:48Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/naming.json
+    reading: 43 of 49 audited objects fail their construct's grammar (the projects and the region conform; namespaces, zones,
+      classes, the VPC, its subnets and the machine classes are to rename)
+    confidence: documented
+  - id: edges-not-holding-2026-10-20
+    value: edges-not-holding
+    advisory: null
+    kind: measured
+    read_at: '2026-10-20T16:11:48Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/edges.json
+    reading: 0 of 31 edges contradicted by the reference estate, the provider edges read under a provider bearer
+    confidence: documented
+  - id: projects-carrying-all-three-2026-10-20
+    value: projects-carrying-all-three
+    advisory: null
+    kind: measured
+    read_at: '2026-10-20T16:11:48Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/estate.json
+    reading: 0 of 2 projects bind capacity and network themselves; both hold role bindings and no project-level binding
+    confidence: documented
+  investment:
+    boundaries-decided:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    projects-per-team:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    planes-fixed-at-create:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    names-to-the-grammar:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 3
+    publish-or-bind-chosen:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 0.5
+    inventory-after-upgrade:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+  effort:
+    inventory-rerun:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    naming-audit:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    layout-review:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 2
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 0.5
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+  targets:
+    constructs-off-the-grammar:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: a name off its grammar is renamed outermost first, or the standard refined on the record, before the next
+        audit
+    edges-not-holding:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: an edge the estate contradicts is read again and the map or the design corrected before anything is designed
+        on it
+    projects-carrying-all-three:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: a project carrying people, capacity and network is split before its next namespace
+  exceptions: []
+  parameters: {}
+- id: self-service-provisioning
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-31
+    note: null
+    level: adopted
+    reason: both faces, the ownership and the release table are read; the entitlement note and the lookup run are the work
+  state:
+  - scope: estate
+    established: false
+    steps:
+      faces-asked:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T20:39:35Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day1-provisioning/day1.json
+        note: 13 kinds declared by the modern face, 5 of them writable
+      ownership-from-the-classic-face:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T20:39:35Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day1-provisioning/day1.json
+        note: 4 classic deployments, each naming an owner; the 4 CCI instances carry no identity field
+      versions-by-derived-name:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T20:39:35Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day1-provisioning/day1.json
+        note: 'the release probe''s first case: a version under a chosen name refused (422), the derived name expected'
+      entitlement-from-policy:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: no note beside the catalog; the 10 items read identical across the 2 projects, each carrying a project list,
+          none marked global
+      content-removed-cleanly:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T20:39:35Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day1-provisioning/day1.json
+        note: '7 cases on a throwaway blueprint created and deleted in the run: the chosen-name version and the classic DELETE
+          refused, release, unrelease and the two deletes accepted and read back, no residue'
+      blueprints-keyed-on-identifiers:
+        done: false
+        kind: not_recorded
+        read_at: null
+        source: null
+        note: no kept run of the lookup over the reference estate's blueprint names; 3 images read, their object names neither
+          the display name nor a UUID
+  readings:
+  - id: deployments-without-an-owner-2026-10-22
+    value: deployments-without-an-owner
+    advisory: null
+    kind: measured
+    read_at: '2026-10-22T20:39:35Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/day1-provisioning/day1.json
+    reading: 0 of 4 classic deployments name no owner
+    confidence: documented
+  - id: released-versions-pinning-a-removed-image-2026-10-31
+    value: released-versions-pinning-a-removed-image
+    advisory: null
+    kind: measured
+    read_at: '2026-10-31T10:54:22Z'
+    source: lab/state/images/2026-10-31T105422Z-catalog-pin-read.json
+    reading: 0 of 9 released versions pin an image id that resolves nowhere (102 cluster images read); 23 did after the provider
+      library rebuild of 2026-10-29, unreleased or re-pinned by 2026-10-30
+    confidence: documented
+  investment:
+    faces-asked:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    ownership-from-the-classic-face:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    versions-by-derived-name:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    entitlement-from-policy:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    content-removed-cleanly:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    blueprints-keyed-on-identifiers:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+  effort:
+    faces-reread:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    ownership-read:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 0.5
+    release-probe:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 2
+    drift-read:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 0.5
+    image-pins-read:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+  targets:
+    deployments-without-an-owner:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: a deployment naming no owner is traced to its request and given one within the month
+    name-matches-outside-the-project:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: a name that resolves outside the project is replaced by its identifier in the blueprint before the next
+        release
+    released-versions-pinning-a-removed-image:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: a released version pinning a removed image is unreleased or re-pinned before its next request
+  exceptions: []
+  parameters: {}
+- id: workload-day2
+  grade: derived
+  target_grade:
+    kind: illustrative
+    source: the lead, 2026-10-31
+    note: null
+    level: established
+    reason: two audits and one probe are on record; the schedule and the two deleted deployments holding a resource are the
+      work
+  state:
+  - scope: estate
+    established: false
+    steps:
+      change-through-the-claiming-plane:
+        done: true
+        kind: measured
+        read_at: '2026-09-21T17:21:14Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/records/pathways-2026-09-21.json
+        note: the probe changed one machine through the Automation action (the spec written in 22 seconds, the convergence
+          323 seconds, the record in step) and through the Supervisor (11 seconds, the machine on, the Automation record left
+          declaring PoweredOff with syncStatus SUCCESS); the vCenter plane's reversion is the chapter's and the README's statement,
+          not in the record; one run on 9.1, not repeated on 9.1.1
+      convergence-timed-apart:
+        done: true
+        kind: measured
+        read_at: '2026-09-21T17:21:14Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/records/pathways-2026-09-21.json
+        note: the same probe record, the spec write and the convergence timed apart; one run
+      syncstatus-read-as-applied-once:
+        done: true
+        kind: measured
+        read_at: '2026-10-22T01:16:11Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/pathways.json
+        note: '3 claimed machines compared: 1 live and agreeing with syncStatus none, 2 whose object is gone with syncStatus
+          MISSING'
+      drift-audit-scheduled:
+        done: false
+        kind: measured
+        read_at: '2026-10-22T01:16:11Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/pathways.json
+        note: 'two audits on record (2026-09-21 inside the probe record: 8 claimed, 3 agreeing, 5 gone; 2026-10-22 alone:
+          3 claimed), neither scheduled'
+      delete-through-the-deployment:
+        done: false
+        kind: measured
+        read_at: '2026-10-22T01:16:11Z'
+        source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/pathways.json
+        note: 2 deleted deployments each list 1 resource with syncStatus MISSING (6 on 2026-09-21)
+  readings:
+  - id: machines-drifted-silently-2026-10-22
+    value: machines-drifted-silently
+    advisory: null
+    kind: measured
+    read_at: '2026-10-22T01:16:11Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/pathways.json
+    reading: 0 of 3 claimed machines (1 live and agreeing with syncStatus none; 2 whose object is gone)
+    confidence: documented
+  - id: deleted-deployments-holding-a-resource-2026-10-22
+    value: deleted-deployments-holding-a-resource
+    advisory: null
+    kind: measured
+    read_at: '2026-10-22T01:16:11Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/pathways.json
+    reading: 2 deleted deployments each list 1 resource (6 on 2026-09-21)
+    confidence: documented
+  - id: machines-unresolved-through-their-claim-2026-10-22
+    value: machines-unresolved-through-their-claim
+    advisory: null
+    kind: measured
+    read_at: '2026-10-22T01:16:11Z'
+    source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/pathways.json
+    reading: 0 of 3 claimed machines unreachable through their claim (2 of 8 on 2026-09-21)
+    confidence: documented
+  investment:
+    change-through-the-claiming-plane:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    convergence-timed-apart:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    syncstatus-read-as-applied-once:
+      kind: not_recorded
+      source: null
+      note: done before this program
+      value: null
+    drift-audit-scheduled:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 0.5
+    delete-through-the-deployment:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+  effort:
+    drift-audit:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 0.5
+    tombstone-review:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+    pathway-probe:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 2
+    instrument-upkeep:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      value: 1
+  targets:
+    machines-drifted-silently:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: a silent drift is corrected through the claiming plane within the week
+    deleted-deployments-holding-a-resource:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P3M
+      allowance: null
+      consequence: a deleted deployment listing a resource is retired by its owner within the quarter
+    machines-unresolved-through-their-claim:
+      kind: illustrative
+      source: the lead, 2026-10-31
+      note: null
+      target_kind: committed
+      value: 0
+      window: P1M
+      allowance: null
+      consequence: a claim the audit cannot reach gets the credential it needs within the month
+  exceptions: []
+  parameters: {}
+conversion_rates:
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  measure: exposure-days-past-window
+  rate: 2.0
+  low: 1.0
+  high: 4.0
+  unit: cu per advisory-day
+  method: 'expected loss per day an advisory stays open past its window: likelihood of exploitation in that day times the
+    impact'
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  measure: uncovered-plane-days
+  rate: 3.0
+  low: 1.5
+  high: 6.0
+  unit: cu per plane-day
+  method: 'expected loss per day a plane has no copy: likelihood a restore is needed that day times the loss of the uncovered
+    state'
+- kind: illustrative
+  source: the lead, 2026-11-02
+  note: null
+  measure: local-administrator-in-automated-use
+  rate: 1.0
+  low: 0.5
+  high: 2.0
+  unit: cu per session-month
+  method: 'expected loss per month a local-administrator session stands in automated use: the delta is a level removed, converted
+    per session and month by the likelihood of misuse in that month times the impact'
+unconverted:
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: approved by D4-14 as the plain id of schema 3; served in that form until the typed item is approved
+  measure: failed-host-remediation-share
+estimate_adjustment:
+  kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  factor: 1.2
+  applies_to:
+  - duration
+  - investment
+  method: an uplift for optimism bias, as the Green Book requires (research/r1 B3)
+initiatives:
+- id: fleet-patch-instrument
+  status:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay: null
+  duration:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: covers the five open establish steps (12 person-days) and their integration
+    value: 3.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: the patch loop runs today; the instrument adds its own read and its upkeep
+    loops:
+    - drift-read
+    - instrument-upkeep
+    change: null
+  planning:
+  - kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    id: assessed-2026-10-25
+    full_value_in: P3M
+    first_value_in: P3M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-10-25'
+    review_by: derived
+    confidence: inferred
+    evidence:
+    - ref: 'research/r5 D(d): every part can be built read-only'
+- id: risk-tiered-patch-windows
+  status:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    decision: a benchmark, not an obligation
+    reason: BOD 26-04 is 'a compulsory direction to federal, executive branch, departments, and agencies' (fetched 2026-10-25)
+  cost_of_delay:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    delta: 10.0
+    baseline:
+      kind: not_recorded
+      source: null
+      note: unmeasurable until fleet-patch-instrument exists
+      value: null
+    after: null
+    profile: standard
+    deadline: null
+  duration:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    value: 4.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: shorter windows run the patch loop more often
+    loops: []
+    change:
+      loop: patch-loop
+      value: 4.0
+  planning:
+  - kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    id: assessed-2026-10-25
+    full_value_in: P9M
+    first_value_in: P6M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-10-25'
+    review_by: derived
+    confidence: inferred
+    evidence:
+    - ref: requires fleet-patch-window, which fleet-patch-instrument establishes in <1y
+  - kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    id: assessed-2026-11-02
+    full_value_in: P9M
+    first_value_in: P6M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-11-02'
+    review_by: derived
+    confidence: forecast
+    evidence:
+    - ref: requires fleet-patch-window, which fleet-patch-instrument establishes under a plan nobody has committed; the horizon
+        rests on that decision, so it is a forecast until the plan is committed (charter section 5.7, the committed line)
+- id: restore-recency
+  status:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    delta: 5.1
+    baseline:
+      kind: measured
+      source: the uncovered-plane-days reading above
+      note: null
+      value: 5.7
+    after:
+      kind: illustrative
+      source: null
+      note: 'each of the 8 recorded gaps closed within a day by next-day alerting, normalized as the baseline is: (4/364 +
+        4/419) x 30.44 = 0.63'
+      value: 0.63
+    profile: standard
+    deadline: null
+  duration:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: covers the two open establish steps (3 person-days) and the missed-copy alert
+    value: 2.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    loops:
+    - copy-age-read
+    - restore-rehearsal
+    - reader-upkeep
+    change: null
+  planning:
+  - kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    id: assessed-2026-10-25
+    full_value_in: P6M
+    first_value_in: P1M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-10-25'
+    review_by: derived
+    confidence: inferred
+    evidence:
+    - ref: platform-restore's schedules are declared and read today
+- id: agentic-patch-triage
+  status:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    delta: 8.0
+    baseline:
+      kind: not_recorded
+      source: null
+      note: null
+      value: null
+    after: null
+    profile: standard
+    deadline: null
+  duration:
+    kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    value: 12.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: not_recorded
+    source: null
+    note: unknown until the agent's own upkeep loop is designed
+    loops: []
+    change: null
+  planning:
+  - kind: illustrative
+    source: the lead, 2026-10-25
+    note: null
+    id: assessed-2026-10-25
+    full_value_in: P18M
+    first_value_in: P15M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-10-25'
+    review_by: derived
+    confidence: forecast
+    evidence:
+    - ref: 'requires non-human-identity and safe-actuation, which no initiative establishes yet: it cannot be committed (GATE-8),
+        and its tier is the lead''s forecast, not a constrained one'
+  - kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    id: assessed-2026-11-02
+    full_value_in: P18M
+    first_value_in: P15M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-11-02'
+    review_by: derived
+    confidence: forecast
+    evidence:
+    - ref: requires fleet-patch-window (fleet-patch-instrument establishes it), non-human-identity (identity-closure) and
+        safe-actuation, verified-models-and-tools and bounded-model-egress (agent-foundations); no committed plan establishes
+        any of them, so the horizon rests on decisions not yet made (charter section 5.7)
+    - ref: 'the scan signal sig-2026-10-28-mitre-atlas-v2026-10: ATLAS v2026.10 adds AI Agent Authority Expansion Controls
+        and AI Agent Scope Drift Detection as mitigations, controls the agent that proposes a remediation order stands under'
+- id: estate-telemetry-for-agents
+  status:
+    kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay: null
+  duration:
+    kind: illustrative
+    source: the lead, 2026-11-02
+    note: what the initiative draws on the constrained role; the observability team's own time is 6 person-weeks
+    value: 4.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: not_recorded
+    source: null
+    note: the aggregation's loop is undesigned; the shared drift-read and instrument-upkeep loops are not counted
+    loops: []
+    change: null
+  planning:
+  - kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    id: assessed-2026-11-02
+    full_value_in: P12M
+    first_value_in: P6M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-11-02'
+    review_by: derived
+    confidence: forecast
+    evidence:
+    - ref: requires physical-network-telemetry, which no initiative establishes, and non-human-identity, which identity-closure
+        establishes under a plan nobody has committed; the horizon rests on decisions not yet made (charter section 5.7)
+- id: estate-supply-chain-validation
+  status:
+    kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay: null
+  duration:
+    kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    value: 8.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: not_recorded
+    source: null
+    note: the verification loop is undesigned; the shared drift-read and instrument-upkeep loops are not counted
+    loops: []
+    change: null
+  planning:
+  - kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    id: assessed-2026-11-02
+    full_value_in: P12M
+    first_value_in: P6M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-11-02'
+    review_by: derived
+    confidence: forecast
+    evidence:
+    - ref: requires controlled-platform-change, which no initiative establishes, and fleet-patch-window, which fleet-patch-instrument
+        establishes under a plan nobody has committed
+- id: tested-exit-and-portability
+  status:
+    kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    value: exploring
+  commitment: null
+  rank: derived
+  applicability: null
+  cost_of_delay: null
+  duration:
+    kind: illustrative
+    source: the lead, 2026-11-02
+    note: what the initiative draws on the constrained role; the architecture office's own time is 3 person-weeks
+    value: 2.0
+    unit: person-weeks of the platform team
+  added_effort:
+    kind: not_recorded
+    source: null
+    note: the rehearsal loop is undesigned; the shared drift-read and instrument-upkeep loops are not counted
+    loops: []
+    change: null
+  planning:
+  - kind: illustrative
+    source: the lead, 2026-11-02
+    note: null
+    id: assessed-2026-11-02
+    full_value_in: P6M
+    first_value_in: P3M
+    tier: derived
+    first_value_tier: derived
+    assessed: '2026-11-02'
+    review_by: derived
+    confidence: forecast
+    evidence:
+    - ref: requires platform-restore, which restore-recency establishes under a plan nobody has committed; the schedules are
+        declared and read today
+local_capabilities: []
+local_initiatives: []
+drivers: []
+trigger_events: []
+scans: []
+decision_log:
+- kind: illustrative
+  source: the lead, 2026-10-25
+  note: null
+  id: decided-2026-10-25
+  date: '2026-10-25'
+  initiative: risk-tiered-patch-windows
+  decision: 'applicability recorded: a benchmark, not an obligation'
+  by: security-team
+  reason: the directive is a compulsory direction to United States federal executive branch departments and agencies only
+- kind: illustrative
+  source: the lead, 2026-11-02
+  note: null
+  id: decided-2026-11-02-cra
+  date: '2026-11-02'
+  initiative: estate-supply-chain-validation
+  decision: 'applicability recorded: a benchmark, not an obligation'
+  by: platform-team
+  reason: the Cyber Resilience Act binds manufacturers of products with digital elements (Annex I Part II), not the estate
+    as their operator; its software bill of materials duty applies from 11 December 2027 (Article 71(2), fetched 2026-11-02)
+- kind: illustrative
+  source: the lead, 2026-11-02
+  note: null
+  id: decided-2026-11-02-data-act
+  date: '2026-11-02'
+  initiative: tested-exit-and-portability
+  decision: 'applicability recorded: applicable where the estate consumes a data processing service'
+  by: architecture-office
+  reason: the Data Act's switching provisions bind providers of data processing services (Articles 23 and 29); the estate
+    reads them as its customer, and its own exit is rehearsed whether or not a provider's charges apply
+- kind: input
+  source: 'the operator, 2026-11-02 (lab/SYSTEM_STATE.md: the [OBS 2026-11-02 16:15Z] line on G-780 and f8''s [OBS] line of
+    the fix, desired commit config-commit-5)'
+  note: null
+  id: decided-2026-11-02-g780-profile-fold
+  date: '2026-11-02'
+  initiative: null
+  decision: 'the one profile cluster''s configuration profile amended to declare the log forwarder''s SSL 1514 log host (G-780''s
+    rule: the owner''s value folded into the profile), on the operator''s go at 16:59Z'
+  by: platform-team
+  reason: the profile declared the TCP 514 log host while the forwarder wrote the SSL 1514 one for the log collection's TLS
+    fix (G-287); remediating the profile as it stood would have undone the fix (docs/design/enterprise-strategy-layer/records/runs/2026-11-02-host-lifecycle/hostlife.record.json,
+    the result stored 11:24:55Z)

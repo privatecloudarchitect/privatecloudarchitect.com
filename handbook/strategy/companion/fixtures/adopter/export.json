@@ -1,0 +1,21 @@
+{
+ "about": "a stand-in export of a time-tracking system of record: what it supplies, in the portfolio's address grammar, and its values",
+ "supplies": {
+  "investment and effort": [
+   "capabilities/*/investment",
+   "capabilities/*/effort"
+  ]
+ },
+ "values": {
+  "capabilities": {
+   "fleet-patch-window": {
+    "investment": {
+     "compliance-read-scheduled": 1.5
+    },
+    "effort": {
+     "drift-read": 0.5
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,39 @@
+{
+ "tool": "hostlife.py",
+ "captured_utc": "2026-10-30T08:00:00Z",
+ "exit": 0,
+ "read_only": "every REST call a GET",
+ "vcenters": [
+  {
+   "vcenter": "{{host-1}}",
+   "clusters": [
+    {
+     "name": "{{cluster-1}}",
+     "image_managed": true,
+     "image": {
+      "base_image": "9.1.1.0.25714478"
+     },
+     "image_compliance": {
+      "status": "COMPLIANT",
+      "checked": "2026-10-29T22:10:00Z"
+     }
+    },
+    {
+     "name": "{{cluster-2}}",
+     "image_managed": true,
+     "image": {
+      "base_image": "9.1.1.0.25714478"
+     },
+     "image_compliance": {
+      "status": "NON_COMPLIANT",
+      "checked": "2026-10-29T22:12:00Z"
+     }
+    },
+    {
+     "name": "{{cluster-3}}",
+     "image_managed": false
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,195 @@
+{
+ "captured": "2026-10-13T07:46:05Z",
+ "census_as": "client",
+ "sent": [
+  "POST /acs/t/<broker tenant>/token at the broker (unless BEARER_FILE)",
+  "per vCenter: POST /api/vcenter/authentication/token, REST and SOAP sessions opened and closed",
+  "per vCenter: a third exchange, and a SOAP session as the client, opened and closed"
+ ],
+ "vcenters": [
+  {
+   "vcenter": "{{host-1}}",
+   "bearer_as_presented": 401,
+   "exchange": {
+    "status": 200,
+    "issued_token_type": "urn:ietf:params:oauth:token-type:saml2",
+    "token_type": "Bearer",
+    "expires_in_s": 299
+   },
+   "rest": {
+    "status": 201,
+    "user": "CUSTOMER\\{{client-1}}",
+    "vm_list_status": 200
+   },
+   "soap": {
+    "status": 200,
+    "user": "CUSTOMER\\{{client-1}}"
+   },
+   "sessions": {
+    "sessions": 319,
+    "by_class": {
+     "directory": 1,
+     "local administrator": 15,
+     "local, VCF integration account": 256,
+     "local, other": 47
+    },
+    "local_administrator_by_agent": {
+     "VMware vim-java": 5,
+     "XML-WS Runtime git-revision#50dbfd3": 2,
+     "vapi-endpoint": 8
+    },
+    "local_administrator_not_interactive": 15,
+    "directory": [
+     {
+      "principal": "{{domain-1}}\\{{name-1}}",
+      "agents": {
+       "vapi-endpoint": 1
+      },
+      "not_interactive": true
+     }
+    ],
+    "api_clients": 0,
+    "own_session_left_out": true,
+    "census_identity": {
+     "user": "CUSTOMER\\{{client-1}}"
+    }
+   }
+  },
+  {
+   "vcenter": "{{host-2}}",
+   "bearer_as_presented": 401,
+   "exchange": {
+    "status": 200,
+    "issued_token_type": "urn:ietf:params:oauth:token-type:saml2",
+    "token_type": "Bearer",
+    "expires_in_s": 299
+   },
+   "rest": {
+    "status": 201,
+    "user": "CUSTOMER\\{{client-1}}",
+    "vm_list_status": 200
+   },
+   "soap": {
+    "status": 200,
+    "user": "CUSTOMER\\{{client-1}}"
+   },
+   "sessions": {
+    "sessions": 358,
+    "by_class": {
+     "directory": 2,
+     "local administrator": 8,
+     "local, VCF integration account": 274,
+     "local, other": 74
+    },
+    "local_administrator_by_agent": {
+     "VMware vim-java": 1,
+     "XML-WS Runtime git-revision#50dbfd3": 3,
+     "vAPI": 4
+    },
+    "local_administrator_not_interactive": 8,
+    "directory": [
+     {
+      "principal": "{{domain-1}}\\{{name-1}}",
+      "agents": {
+       "vapi-endpoint": 1
+      },
+      "not_interactive": true
+     },
+     {
+      "principal": "{{domain-1}}\\{{name-2}}",
+      "agents": {
+       "vSphereUI": 1
+      },
+      "not_interactive": false
+     }
+    ],
+    "api_clients": 0,
+    "own_session_left_out": true,
+    "census_identity": {
+     "user": "CUSTOMER\\{{client-1}}"
+    }
+   }
+  },
+  {
+   "vcenter": "{{host-3}}",
+   "bearer_as_presented": 401,
+   "exchange": {
+    "status": 200,
+    "issued_token_type": "urn:ietf:params:oauth:token-type:saml2",
+    "token_type": "Bearer",
+    "expires_in_s": 299
+   },
+   "rest": {
+    "status": 201,
+    "user": "CUSTOMER\\{{client-1}}",
+    "vm_list_status": 200
+   },
+   "soap": {
+    "status": 200,
+    "user": "CUSTOMER\\{{client-1}}"
+   },
+   "sessions": {
+    "sessions": 280,
+    "by_class": {
+     "directory": 3,
+     "local, VCF integration account": 154,
+     "local, other": 123
+    },
+    "local_administrator_by_agent": {},
+    "local_administrator_not_interactive": 0,
+    "directory": [
+     {
+      "principal": "{{domain-1}}\\{{name-1}}",
+      "agents": {
+       "vapi-endpoint": 3
+      },
+      "not_interactive": true
+     }
+    ],
+    "api_clients": 0,
+    "own_session_left_out": true,
+    "census_identity": {
+     "user": "CUSTOMER\\{{client-1}}"
+    }
+   }
+  }
+ ],
+ "summary": {
+  "vcenters": 3,
+  "census_as": "client",
+  "client_tried": 3,
+  "client_took_both_sessions": 3,
+  "census_only_own_session": 0,
+  "bearer_as_presented": [
+   401
+  ],
+  "saml_lifetime_s": [
+   299
+  ],
+  "session_users": [
+   "CUSTOMER\\{{client-1}}"
+  ],
+  "sessions_read": 3,
+  "sessions_by_class": {
+   "directory": 6,
+   "local administrator": 23,
+   "local, VCF integration account": 684,
+   "local, other": 244
+  },
+  "local_administrator_by_agent": {
+   "VMware vim-java": 6,
+   "XML-WS Runtime git-revision#50dbfd3": 5,
+   "vAPI": 4,
+   "vapi-endpoint": 8
+  },
+  "directory_principals": [
+   "{{domain-1}}\\{{name-1}}",
+   "{{domain-1}}\\{{name-2}}"
+  ],
+  "directory_not_interactive": [
+   "{{domain-1}}\\{{name-1}}"
+  ],
+  "local_administrator_not_interactive": 23
+ },
+ "exit": 3
+}

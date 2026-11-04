@@ -1,0 +1,158 @@
+{
+ "captured_utc": "2026-10-22T01:16:11Z",
+ "project": "{{project-1}}",
+ "watchedFields": [
+  "powerState",
+  "className",
+  "imageName",
+  "storageClass"
+ ],
+ "audit": [
+  {
+   "deployment": "{{deployment-1}}",
+   "machine": "{{machine-1}}",
+   "deploymentStatus": "DELETE_SUCCESSFUL",
+   "syncStatus": "MISSING",
+   "state": "OK",
+   "declaredFields": 4,
+   "claimNamespaceReachable": true,
+   "foundLive": false,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": false,
+   "objectGone": true
+  },
+  {
+   "deployment": "{{deployment-2}}",
+   "machine": "{{machine-2}}",
+   "deploymentStatus": "DELETE_SUCCESSFUL",
+   "syncStatus": "MISSING",
+   "state": "OK",
+   "declaredFields": 4,
+   "claimNamespaceReachable": true,
+   "foundLive": false,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": false,
+   "objectGone": true
+  },
+  {
+   "deployment": "{{deployment-3}}",
+   "machine": "{{machine-3}}",
+   "deploymentStatus": "CREATE_SUCCESSFUL",
+   "syncStatus": null,
+   "state": "OK",
+   "declaredFields": 4,
+   "claimNamespaceReachable": true,
+   "foundLive": true,
+   "declaredVsObserved": [],
+   "declaredVsLive": [],
+   "agrees": true,
+   "objectGone": false
+  }
+ ],
+ "tombstones": [
+  {
+   "name": "{{deployment-1}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
+  },
+  {
+   "name": "{{deployment-2}}",
+   "status": "DELETE_SUCCESSFUL",
+   "resourcesStillListed": 1,
+   "syncStatuses": [
+    "MISSING"
+   ]
+  }
+ ],
+ "deleteStory": null,
+ "contract": {
+  "Deployment.status": {
+   "documented": [
+    "CREATE_SUCCESSFUL",
+    "CREATE_INPROGRESS",
+    "CREATE_FAILED",
+    "UPDATE_SUCCESSFUL",
+    "UPDATE_INPROGRESS",
+    "UPDATE_FAILED",
+    "DELETE_SUCCESSFUL",
+    "DELETE_INPROGRESS",
+    "DELETE_FAILED"
+   ],
+   "seen": {
+    "DELETE_SUCCESSFUL": 2,
+    "CREATE_SUCCESSFUL": 2
+   },
+   "neverSeen": [
+    "CREATE_INPROGRESS",
+    "CREATE_FAILED",
+    "UPDATE_SUCCESSFUL",
+    "UPDATE_INPROGRESS",
+    "UPDATE_FAILED",
+    "DELETE_INPROGRESS",
+    "DELETE_FAILED"
+   ]
+  },
+  "resource.syncStatus": {
+   "documented": [
+    "SUCCESS",
+    "MISSING",
+    "STALE"
+   ],
+   "seen": {
+    "MISSING": 2,
+    "SUCCESS": 5,
+    "null": 1
+   },
+   "neverSeen": [
+    "STALE"
+   ]
+  },
+  "resource.state": {
+   "documented": [
+    "PARTIAL",
+    "TAINTED",
+    "OK"
+   ],
+   "seen": {
+    "OK": 8
+   },
+   "neverSeen": [
+    "PARTIAL",
+    "TAINTED"
+   ]
+  },
+  "resource.origin": {
+   "documented": [
+    "DISCOVERED",
+    "DEPLOYED",
+    "ONBOARDED",
+    "MIGRATED",
+    "SIMULATED",
+    "CCS"
+   ],
+   "seen": {
+    "DEPLOYED": 8
+   },
+   "neverSeen": [
+    "DISCOVERED",
+    "ONBOARDED",
+    "MIGRATED",
+    "SIMULATED",
+    "CCS"
+   ]
+  }
+ },
+ "auditTotals": {
+  "claimed": 3,
+  "agree": 1,
+  "objectGone": 2,
+  "driftedSilently": 0,
+  "driftProvableFromTheRecordAlone": 0
+ },
+ "probe": null
+}

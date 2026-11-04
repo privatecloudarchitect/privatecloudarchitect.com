@@ -1,0 +1,107 @@
+# The companion records the strategy views read, each pinned as a byte copy (40-BREADTH.md step 2): the views and the
+# tests read the copy, never the lane's live record, so a lane that refreshes its record fails no push (GATE-9
+# re-renders the views in every pre-push). A strategy release refreshes a copy and its line here in one change, and
+# nothing else writes either; a test holds each copy's bytes to its sha256. Typed by models.Pins (schema 1).
+
+schema: 1
+pins:
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-host-lifecycle.record.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/host-lifecycle/records/hostlife.record.json
+    sha256: 3f83d97994ca2bb0860b7b0332c110c7de04f2ec293b6dd265ada11c0a69f480
+    pinned: "2026-10-30"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-platform-backup.recovery.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/platform-backup/recovery.json
+    sha256: 9fbf1310c597d347f186d4db13b6f1a65bf1757b03d34a0ee082ffc9b51f3dad
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/frameworks-cartography.coverage.json
+    source: deploy/privatecloudarchitect/companion/staging/frameworks/cartography/records/governance/coverage.json
+    sha256: 5b82de5b10f20f8e380a6cca817187f1f8e02dd198da39467e1488f81ca290ad
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-construct-model.edges.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/edges.json
+    sha256: 48cde718c7528c733373ca75a950f517832a5be4b987e598164a04f08ec5c255
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-construct-model.naming.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/naming.json
+    sha256: f148da6d4b593fcc2aa79ba4bbe1c8e7f3804337f9b812c4dd1b9986db570ded
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-construct-model.naming-standard.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/construct-model/naming-standard.json
+    sha256: 34bf82104b9fc4542551e708644a3167830666bd9d4de78f865fa7ce8cd12c0f
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-day1-provisioning.catalog-pin-read.json
+    source: lab/state/images/2026-11-02T022729Z-catalog-pin-read.json
+    sha256: adb2e33f824a79742760385925d6766d8e6d4babde0c6391f13be7006eb73ab0
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-day2-pathways.pathways.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/day2-pathways/pathways.json
+    sha256: e25ece0bbf23509daffb4ef09db1449545e675bbc8abebef149f0d9158bb09a2
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-hardening-audit.hardening.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/hardening-audit/hardening.json
+    sha256: 7c783d08c242fd897f6b60c034c114cc51f374f6c7c7219b53c40699dd8f0e6d
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-isolation-design.isolation.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/isolation-design/isolation.json
+    sha256: 3062968aafc7e25cdd58318886baa2b1216ff6270210b6389a3a41bd0f754aca
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-microsegmentation.posture.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/microsegmentation/posture.json
+    sha256: c4310f91c31be82d946fa7201801331ba9bb824f2e95995c18bbede08c9c9506
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-platform-lifecycle.lifecycle.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/platform-lifecycle/records/lifecycle-2026-10-21.json
+    sha256: c20835a5a719057f36de93b73cfa0cd2b073d02c994a28d2e51bd267591a8144
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-content-libraries.libraries.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/content-libraries/libraries.json
+    sha256: 0c982e4ac467c8e0cd4f44544dc4fd7495d2c087bf565282f21d5e2a8a4c4abc
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-identity-lifecycle.leavers.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/identity-lifecycle/leavers.json
+    sha256: a296620f5541ea18cc4bacd73892731d7727a2ea883b35654e96c532a3ede7f6
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-integrations-identity.exchange.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/integrations-identity/exchange.json
+    sha256: 46b5ea6934e1c8d2eec9ceef76073e10bfc053de447e5464c923ce709ccdbcd4
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-alerting-doctrine.alerts.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/alerting-doctrine/alerts.json
+    sha256: 80f20d40c28bde2dd15ce41b8113005b72a8e4af0d2cf5fe6543b03255034c92
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-capacity-forecasting.runway.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/capacity-forecasting/runway.json
+    sha256: 61997b40fa5a2d32740b4499a56dc8094998f27eb2b272ffc6ce7593f96e28c9
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-cost-showback.coverage.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/cost-showback/coverage.json
+    sha256: e24c8b63bad390a962c3c46fb75b4b3c41bb95bf4e3e43e6b716083fb4d0dbe0
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-incident-response.triage.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/incident-response/triage.json
+    sha256: 63440a47e30580a6d1ef79044f26e7c263aa368da0dd979a658de911b3eac97c
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-log-alerts.deploy-status.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/log-alerts/records/deploy-status.record.json
+    sha256: f8758210aaf2657ee266ad0b473813a8e32f11e045b0de26da8b1ab468a43e8f
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-log-collection.log-paths.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/log-collection/records/log-paths.record.json
+    sha256: 52435e954be583dfb13be25acedf4d1eb4bbfce23b3018241d6f9d4e56c39c2e
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-flow-collection.flow-paths.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/flow-collection/records/flow-paths.record.json
+    sha256: 592909af93c683a31d0d1b04dac3e201b769a638b40f454c5c0eb7f3b2628250
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-flow-collection.exporters.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/flow-collection/records/exporters.record.json
+    sha256: 7120c48559709d5e5562eca5fc56b861e22408ff0b17afd5a998158d02b9048b
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-ops-estate.content.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/ops-estate/content.json
+    sha256: 13bf4c84a32457f3f76b09c46e82f887564f2f7c39c53647e6a3721711dc404a
+    pinned: "2026-11-02"
+  - file: docs/design/enterprise-strategy-layer/records/pinned/handbook-service-accounts.catalog-check.json
+    source: deploy/privatecloudarchitect/companion/staging/handbook/service-accounts/catalog_check.json
+    sha256: dae478352eeb977ae0ea08bda7ac1436256317491297d22f23f5dae5037e5c28
+    pinned: "2026-11-02"

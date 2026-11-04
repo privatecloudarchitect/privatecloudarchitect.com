@@ -1,0 +1,886 @@
+{
+ "tool": "hostlife.py",
+ "captured_utc": "2026-10-25T02:28:12Z",
+ "finished_utc": "2026-10-25T02:28:44Z",
+ "read_only": "every REST call a GET; sessions opened and closed; no check, precheck, stage, remediation, export, extract or service start sent",
+ "summary": {
+  "vcenters": 3,
+  "clusters": 5,
+  "hosts": 11,
+  "on_images": 5,
+  "on_baselines": 0,
+  "image_compliant": 5,
+  "with_vendor_add_on": 1,
+  "with_firmware_add_on": 0,
+  "with_configuration_profiles": 1,
+  "configuration_compliant": 0,
+  "hardware_support_managers": 0,
+  "host_profiles": 0,
+  "host_profiles_read_on": 3,
+  "auto_deploy_running": 0,
+  "image_builder_running": 0,
+  "umds_configured": 0
+ },
+ "vcenters": [
+  {
+   "name": "{{vcenter-1}}",
+   "version": "9.1.1.0",
+   "build": "25712839",
+   "services": {
+    "Auto Deploy": {
+     "state": "STOPPED",
+     "startup": "MANUAL"
+    },
+    "Image Builder": {
+     "state": "STOPPED",
+     "startup": "MANUAL"
+    },
+    "vSphere Lifecycle Manager": {
+     "state": "STARTED",
+     "startup": "AUTOMATIC"
+    },
+    "Update Manager": {
+     "state": "STARTED",
+     "startup": "AUTOMATIC"
+    }
+   },
+   "hardware_support_managers": 0,
+   "host_profiles": {
+    "read": true,
+    "via": "vi-json",
+    "count": 0,
+    "profiles": []
+   },
+   "depot": {
+    "umds": "none (404)",
+    "online": [
+     {
+      "kind": "SDDC Manager's depot",
+      "enabled": false,
+      "description": "SDDC Manager Unified Depot",
+      "server": "{{depot-server-1}}"
+     },
+     {
+      "kind": "added by a user account",
+      "enabled": true,
+      "description": null,
+      "server": "{{depot-server-2}}"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "Offline depot via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "Partner provided Addons via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "VMware Async VM-tools via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "VMware Certified Async Drivers via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "vSphere ESXi patches via VCF Depot",
+      "server": "localhost"
+     }
+    ],
+    "offline_bundles": 16,
+    "base_images": 46,
+    "newest_base_image": "9.1.1.0100.25782009"
+   },
+   "clusters": [
+    {
+     "name": "{{cluster-1}}",
+     "hosts": 2,
+     "image_managed": true,
+     "image": {
+      "base_image": "9.1.1.0.25714478",
+      "vendor_add_on": null,
+      "firmware_add_on": null,
+      "components": [],
+      "solutions": [],
+      "alternative_images": 0
+     },
+     "image_compliance": {
+      "status": "COMPLIANT",
+      "checked": "2026-10-06T21:51:52.224Z",
+      "hosts": [
+       "COMPLIANT"
+      ]
+     },
+     "configuration": {
+      "enabled": false
+     }
+    }
+   ]
+  },
+  {
+   "name": "{{vcenter-2}}",
+   "version": "9.1.1.0",
+   "build": "25712839",
+   "services": {
+    "Auto Deploy": {
+     "state": "STOPPED",
+     "startup": "MANUAL"
+    },
+    "Image Builder": {
+     "state": "STOPPED",
+     "startup": "MANUAL"
+    },
+    "vSphere Lifecycle Manager": {
+     "state": "STARTED",
+     "startup": "AUTOMATIC"
+    },
+    "Update Manager": {
+     "state": "STARTED",
+     "startup": "AUTOMATIC"
+    }
+   },
+   "hardware_support_managers": 0,
+   "host_profiles": {
+    "read": true,
+    "via": "vi-json",
+    "count": 0,
+    "profiles": []
+   },
+   "depot": {
+    "umds": "none (404)",
+    "online": [
+     {
+      "kind": "SDDC Manager's depot",
+      "enabled": true,
+      "description": "SDDC Manager Unified Depot",
+      "server": "{{depot-server-3}}"
+     },
+     {
+      "kind": "added by a user account",
+      "enabled": true,
+      "description": null,
+      "server": "{{depot-server-2}}"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "Offline depot via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "Partner provided Addons via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "VMware Async VM-tools via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "VMware Certified Async Drivers via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "vSphere ESXi patches via VCF Depot",
+      "server": "localhost"
+     }
+    ],
+    "offline_bundles": 24,
+    "base_images": 47,
+    "newest_base_image": "9.1.1.0100.25782009"
+   },
+   "clusters": [
+    {
+     "name": "{{cluster-2}}",
+     "hosts": 3,
+     "image_managed": true,
+     "image": {
+      "base_image": "9.1.1.0.25714478",
+      "vendor_add_on": {
+       "name": "DEL-ESXi",
+       "version": "9100.25557999-A03",
+       "vendor": "Dell Inc."
+      },
+      "firmware_add_on": null,
+      "components": [],
+      "solutions": [],
+      "alternative_images": 0
+     },
+     "image_compliance": {
+      "status": "COMPLIANT",
+      "checked": "2026-10-06T16:15:16.843Z",
+      "hosts": [
+       "COMPLIANT"
+      ]
+     },
+     "configuration": {
+      "enabled": false
+     }
+    }
+   ]
+  },
+  {
+   "name": "{{vcenter-3}}",
+   "version": "9.1.1.0",
+   "build": "25712839",
+   "services": {
+    "Auto Deploy": {
+     "state": "STOPPED",
+     "startup": "MANUAL"
+    },
+    "Image Builder": {
+     "state": "STOPPED",
+     "startup": "MANUAL"
+    },
+    "vSphere Lifecycle Manager": {
+     "state": "STARTED",
+     "startup": "AUTOMATIC"
+    },
+    "Update Manager": {
+     "state": "STARTED",
+     "startup": "AUTOMATIC"
+    }
+   },
+   "hardware_support_managers": 0,
+   "host_profiles": {
+    "read": true,
+    "via": "vi-json",
+    "count": 0,
+    "profiles": []
+   },
+   "depot": {
+    "umds": "none (404)",
+    "online": [
+     {
+      "kind": "SDDC Manager's depot",
+      "enabled": true,
+      "description": "SDDC Manager Unified Depot",
+      "server": "{{depot-server-3}}"
+     },
+     {
+      "kind": "added by a user account",
+      "enabled": true,
+      "description": null,
+      "server": "{{depot-server-2}}"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "Offline depot via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "Partner provided Addons via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "VMware Async VM-tools via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "VMware Certified Async Drivers via VCF Depot",
+      "server": "localhost"
+     },
+     {
+      "kind": "the VCF depot, through vCenter",
+      "enabled": false,
+      "description": "vSphere ESXi patches via VCF Depot",
+      "server": "localhost"
+     }
+    ],
+    "offline_bundles": 21,
+    "base_images": 47,
+    "newest_base_image": "9.1.1.0100.25782009"
+   },
+   "clusters": [
+    {
+     "name": "{{cluster-3}}",
+     "hosts": 2,
+     "image_managed": true,
+     "image": {
+      "base_image": "9.1.1.0.25714478",
+      "vendor_add_on": null,
+      "firmware_add_on": null,
+      "components": [],
+      "solutions": [
+       "com.vmware.vsphere-wcp"
+      ],
+      "alternative_images": 0
+     },
+     "image_compliance": {
+      "status": "COMPLIANT",
+      "checked": "2026-10-07T18:49:29.566Z",
+      "hosts": [
+       "COMPLIANT"
+      ]
+     },
+     "configuration": {
+      "enabled": false
+     }
+    },
+    {
+     "name": "{{cluster-4}}",
+     "hosts": 2,
+     "image_managed": true,
+     "image": {
+      "base_image": "9.1.1.0.25714478",
+      "vendor_add_on": null,
+      "firmware_add_on": null,
+      "components": [],
+      "solutions": [
+       "com.vmware.vsphere-wcp"
+      ],
+      "alternative_images": 0
+     },
+     "image_compliance": {
+      "status": "COMPLIANT",
+      "checked": "2026-10-07T18:55:51.895Z",
+      "hosts": [
+       "COMPLIANT"
+      ]
+     },
+     "configuration": {
+      "enabled": true,
+      "audit": [
+       {
+        "operation": "Transition-Enable",
+        "status": "SUCCEEDED",
+        "started": "2026-08-05T07:06:10.911Z"
+       },
+       {
+        "operation": "Remediate",
+        "status": "SUCCEEDED",
+        "started": "2026-08-05T07:06:23.821Z"
+       }
+      ],
+      "enabled_on": "2026-08-05",
+      "last_change": "2026-08-05",
+      "document": {
+       "esx_sections": [
+        "advanced_options",
+        "authentication",
+        "authorization",
+        "network",
+        "network_vds",
+        "storage",
+        "syslog",
+        "system",
+        "vmkernel"
+       ],
+       "esx_subsections": 16,
+       "other_sections": [
+        "nsx"
+       ],
+       "host_override": 2,
+       "host_specific": 2,
+       "reference_host_version": "9.1.0"
+      },
+      "compliance": {
+       "status": "NOT_COMPLIANT",
+       "checked": "2026-10-24T23:43:16.609Z",
+       "hosts": [
+        {
+         "name": "{{host-1}}",
+         "status": "NON_COMPLIANT",
+         "drift": [
+          {
+           "change": "add",
+           "path": "/profile/esx/syslog/global_settings/remote_logging/log_host/0",
+           "shows": "profile / esx / syslog / global_settings / remote_logging / log_host / 0",
+           "fields": {
+            "formatter": "RFC_5424",
+            "framing": "OCTET_COUNTING",
+            "port": 514,
+            "protocol": "TCP"
+           },
+           "withheld": [
+            "address"
+           ]
+          },
+          {
+           "change": "delete",
+           "path": "/profile/esx/syslog/global_settings/remote_logging/log_host/1",
+           "shows": "profile / esx / syslog / global_settings / remote_logging / log_host / 1",
+           "fields": {
+            "formatter": "RFC_5424",
+            "framing": "OCTET_COUNTING",
+            "port": 1514,
+            "protocol": "SSL"
+           },
+           "withheld": [
+            "address"
+           ]
+          }
+         ]
+        },
+        {
+         "name": "{{host-2}}",
+         "status": "NON_COMPLIANT",
+         "drift": [
+          {
+           "change": "add",
+           "path": "/profile/esx/syslog/global_settings/remote_logging/log_host/0",
+           "shows": "profile / esx / syslog / global_settings / remote_logging / log_host / 0",
+           "fields": {
+            "formatter": "RFC_5424",
+            "framing": "OCTET_COUNTING",
+            "port": 514,
+            "protocol": "TCP"
+           },
+           "withheld": [
+            "address"
+           ]
+          },
+          {
+           "change": "delete",
+           "path": "/profile/esx/syslog/global_settings/remote_logging/log_host/1",
+           "shows": "profile / esx / syslog / global_settings / remote_logging / log_host / 1",
+           "fields": {
+            "formatter": "RFC_5424",
+            "framing": "OCTET_COUNTING",
+            "port": 1514,
+            "protocol": "SSL"
+           },
+           "withheld": [
+            "address"
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "name": "{{cluster-5}}",
+     "hosts": 2,
+     "image_managed": true,
+     "image": {
+      "base_image": "9.1.1.0.25714478",
+      "vendor_add_on": null,
+      "firmware_add_on": null,
+      "components": [],
+      "solutions": [
+       "com.vmware.vsphere-wcp"
+      ],
+      "alternative_images": 0
+     },
+     "image_compliance": {
+      "status": "COMPLIANT",
+      "checked": "2026-10-07T19:02:48.051Z",
+      "hosts": [
+       "COMPLIANT"
+      ]
+     },
+     "configuration": {
+      "enabled": false
+     }
+    }
+   ]
+  }
+ ],
+ "findings": [
+  {
+   "level": "NOTE",
+   "where": "{{vcenter-1}}",
+   "says": "the depot holds base image 9.1.1.0100.25782009, newer than every image this vCenter's clusters declare"
+  },
+  {
+   "level": "NOTE",
+   "where": "{{vcenter-2}}",
+   "says": "the depot holds base image 9.1.1.0100.25782009, newer than every image this vCenter's clusters declare"
+  },
+  {
+   "level": "ALERT",
+   "where": "{{cluster-4}}",
+   "says": "configuration compliance NOT_COMPLIANT, drift at /profile/esx/syslog/global_settings/remote_logging/log_host/0, /profile/esx/syslog/global_settings/remote_logging/log_host/1"
+  },
+  {
+   "level": "NOTE",
+   "where": "{{vcenter-3}}",
+   "says": "the depot holds base image 9.1.1.0100.25782009, newer than every image this vCenter's clusters declare"
+  }
+ ],
+ "exit": 1,
+ "calls": [
+  {
+   "vcenter": "{{vcenter-1}}",
+   "calls": [
+    {
+     "method": "POST",
+     "path": "/api/session",
+     "status": 201,
+     "why": "sign in"
+    },
+    {
+     "method": "GET",
+     "path": "/api/appliance/system/version",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/services",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/hardware-support/managers",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vimServiceVersions.xml",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vim25/{release}/ServiceInstance/ServiceInstance/content",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vim25/{release}/HostProfileManager/{manager}/profile",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/umds",
+     "status": 404
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/online",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/offline",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depot-content/base-images",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/cluster",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/host?clusters={cluster}",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software/compliance",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/configuration",
+     "status": 200
+    },
+    {
+     "method": "DELETE",
+     "path": "/api/session",
+     "status": 204,
+     "why": "sign out"
+    }
+   ]
+  },
+  {
+   "vcenter": "{{vcenter-2}}",
+   "calls": [
+    {
+     "method": "POST",
+     "path": "/api/session",
+     "status": 201,
+     "why": "sign in"
+    },
+    {
+     "method": "GET",
+     "path": "/api/appliance/system/version",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/services",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/hardware-support/managers",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vimServiceVersions.xml",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vim25/{release}/ServiceInstance/ServiceInstance/content",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vim25/{release}/HostProfileManager/{manager}/profile",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/umds",
+     "status": 404
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/online",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/offline",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depot-content/base-images",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/cluster",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/host?clusters={cluster}",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software/compliance",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/configuration",
+     "status": 200
+    },
+    {
+     "method": "DELETE",
+     "path": "/api/session",
+     "status": 204,
+     "why": "sign out"
+    }
+   ]
+  },
+  {
+   "vcenter": "{{vcenter-3}}",
+   "calls": [
+    {
+     "method": "POST",
+     "path": "/api/session",
+     "status": 201,
+     "why": "sign in"
+    },
+    {
+     "method": "GET",
+     "path": "/api/appliance/system/version",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/services",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/hardware-support/managers",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vimServiceVersions.xml",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vim25/{release}/ServiceInstance/ServiceInstance/content",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/sdk/vim25/{release}/HostProfileManager/{manager}/profile",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/umds",
+     "status": 404
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/online",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depots/offline",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/depot-content/base-images",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/cluster",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/host?clusters={cluster}",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software/compliance",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/configuration",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/host?clusters={cluster}",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software/compliance",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/configuration",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/configuration/audit-records",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/configuration",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/configuration/reports/last-compliance-result",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/vcenter/host?clusters={cluster}",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/software/compliance",
+     "status": 200
+    },
+    {
+     "method": "GET",
+     "path": "/api/esx/settings/clusters/{cluster}/enablement/configuration",
+     "status": 200
+    },
+    {
+     "method": "DELETE",
+     "path": "/api/session",
+     "status": 204,
+     "why": "sign out"
+    }
+   ]
+  }
+ ]
+}
