@@ -26,8 +26,8 @@
 # Field paths below: `file.a.b`, `[]` for every item of a list, `*` for every key of a map, `**` for any depth.
 
 schema: 2
-policy_version: 7                        # 2026-11-04: every strategy page published and the companion's code public (strategy-pages, publication; the operator's ruling of 2026-11-04, 40-BREADTH.md step 12)
-effective_from: "2026-11-04"             # the date the current policy_version took effect; 6: 2026-10-30; 5: 2026-10-29; 4: 2026-10-28; 3: 2026-10-28; 2: 2026-10-26; 1: 2026-10-25
+policy_version: 8                        # 2026-11-05: PH4 exited and the first cycle is anchored at that day (cycle; 40-BREADTH.md step 13)
+effective_from: "2026-11-05"             # the date the current policy_version took effect; 7: 2026-11-04; 6: 2026-10-30; 5: 2026-10-29; 4: 2026-10-28; 3: 2026-10-28; 2: 2026-10-26; 1: 2026-10-25
 
 shapes:                                  # the forms other files use to point at this one
   history_item: {value: "the replaced value", since: "the policy version it arrived in", until_version: "the last policy version it held in", ended: "the date it stopped applying"}
@@ -121,14 +121,18 @@ vocabularies:                            # closed lists; each names the fields i
 entries:
   # DEC-05: the cycle, the review intervals and the exception rule (the watch intervals are on each watch entry)
   - id: cycle
-    value: {length: P3M, first_start: "the date PH4 exits"}
+    value: {length: P3M, first_start: "2026-11-05"}   # the day PH4 exited (charter section 11; 40-BREADTH.md step 13)
     decided_by: [DEC-05]
-    since: 1
-    effective_from: "2026-10-25"
+    since: 8
+    effective_from: "2026-11-05"
     overridable: true                    # an estate runs its own cadence
     change: data
     read_by: [strategy-check, adopter-companion]
-    history: []
+    history:
+      - value: {length: P3M, first_start: "the date PH4 exits"}
+        since: 1
+        until_version: 7
+        ended: "2026-11-05"
 
   - id: review-intervals
     value: {artifacts: P3M, implementation: P6M, frameworks: P1Y, doctrine: P2Y}
@@ -165,6 +169,12 @@ entries:
       read at the next working session, each recorded with its date; a missed interval is recorded as missed, never
       back-dated
     ends_when: "PH3's scheduled mechanism records its first run"   # the run that ends it moves this entry to its history
+    basis: >-
+      in force past PH4's exit on 2026-11-05 (40-BREADTH.md step 13): the scheduled agent has fired daily since
+      2026-10-29 and recorded no run, each day finding the check not due, because every strategy release
+      runs the check in session inside the weekly interval (fifteen recorded runs to 2026-11-04, every one
+      from a checkout); the entry ends at the first scheduled run, the first day the check falls due with no
+      release's run before it, a week after the newest run or at a cycle's start
     decided_by: [DEC-05]
     since: 1
     effective_from: "2026-10-25"
