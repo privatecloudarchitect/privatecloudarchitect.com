@@ -7,7 +7,7 @@
 # 2026-10-25; the strand records under research/ hold its quotes. Fields marked `derived` are computed by the generator
 # from PH3, never typed. The method's parameters and the closed vocabularies are policy.yaml's (charter section 5.12).
 
-schema: 7
+schema: 8
 fixed: "2026-10-25"
 
 roles:                                   # generic; a portfolio assigns each to one department per scope
@@ -24,7 +24,8 @@ roles:                                   # generic; a portfolio assigns each to 
 # question is the charter's; the title and the promise are the door's typed lines, one each, corrected in the design
 # brief (docs/design/front-door/00-BRIEF.md); the paths are the views and pages the door opens, every
 # strategy path one the policy publishes and every handbook path one the site serves (GATE-15); a path whose heading
-# would mislead out of its page carries its own words, `{path, words}` (schema 7). A door written `roles`
+# would mislead out of its page carries its own words, `{path, words}` (schema 7), and each door states the order a
+# reader meets its two layers, the one its title names first leading (schema 8). A door written `roles`
 # in both layers is derived by the generator: one brief per role, and the chapters that teach the capabilities the
 # role's brief shows. The generator emits the feed the home renderer reads; nothing on the landing page restates it.
 readers:
@@ -33,6 +34,7 @@ readers:
     question: "Which capabilities, in what order, owned by whom, worth what, at what cost, invested in when, and why"
     door:
       title: "The map and the catalog"
+      order: [handbook, strategy]       # the map first, as the title names it
       promise: "Every chapter on its route, and every capability with its returns, costs and drivers."
       strategy: ["/strategy", "/strategy/drivers"]
       handbook: ["/handbook/"]
@@ -41,7 +43,8 @@ readers:
     question: "What is ours, what do we establish once, what do we keep doing, what does it cost, how do we show it works, how do we know we have drifted"
     door:
       title: "Your role's brief and chapters"
-      promise: "Your role's capabilities, the loops you keep, their drift reads, and the chapters that teach them."
+      order: [strategy, handbook]       # the brief first, as the title names it
+      promise: "What your team owns, writes, runs and watches, and the chapters that teach it."
       strategy: roles
       handbook: roles
   - id: decision-maker
@@ -49,6 +52,7 @@ readers:
     question: "What do we get, what does it cost, what does waiting cost, what changes the plan"
     door:
       title: "The board and the one-way decisions"
+      order: [strategy, handbook]       # the board first, as the title names it
       promise: "What to fund first, what it costs to keep, and which decisions cannot be undone cheaply."
       strategy: ["/strategy/board", "/strategy/costs-and-value"]
       handbook:

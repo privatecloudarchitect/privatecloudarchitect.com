@@ -322,6 +322,19 @@ def register_6_to_7(doc: dict) -> dict:
     return doc
 
 
+@migration("register", 7)
+def register_7_to_8(doc: dict) -> dict:
+    """Schema 8: each door states the order a reader meets its two layers. A schema-7 door has none, and the landing page
+    drew it handbook first, so the migration writes that order, the one the file already meant; a person changes it
+    where a door's title names the strategy side first."""
+    for r in doc.get("readers") or []:
+        door = r.get("door")
+        if isinstance(door, dict) and "order" not in door:
+            door["order"] = ["handbook", "strategy"]
+    doc["schema"] = 8
+    return doc
+
+
 @migration("portfolio", 2)
 def portfolio_2_to_3(doc: dict) -> dict:
     for d in doc.get("initiatives") or []:

@@ -297,7 +297,7 @@ def amount(value: float, unit: str) -> str:
 # The renderer's format version: raised by hand when a change to the renderer changes what a served page says, and
 # pinned with a fingerprint of the served pages rendered from frozen slices (rendered/format.lock.yaml), so a served
 # page's digest names the renderer that wrote it (40-BREADTH.md step 2, S1).
-FORMAT = 8  # 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
+FORMAT = 9  # 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
 NAME = "The Architect's NOC"  # the layer's public name (DEC-01, 00-CHARTER.md section 10), on every page's eyebrow and the index's description, and on the companion's frame; "the strategy layer" stays the descriptive phrase in prose, and the pages' paths are unchanged (D-053)
 
 
@@ -1539,7 +1539,7 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
         STYLE,
         '<div class="esl" data-source="register" data-view="role">',
         f'<span class="eyebrow">{E(NAME)}, {BRIEF}</span>',
-        f"<h1>{E(brief['name'])}</h1>",
+        f"<h1>{E(brief['name'])}: the {BRIEF}</h1>",
     ]
     held = ("accountable_for", "writes", "runs", "measures", "drift_reads", "sponsors", "reads")
     if brief["owns"]:
@@ -1785,7 +1785,7 @@ def drivers_page(register, pages: dict[str, str], prov: dict) -> str:
         STYLE,
         '<div class="esl" data-source="register" data-view="drivers">',
         f'<span class="eyebrow">{E(NAME)}, the drivers</span>',
-        "<h1>What each driver re-opens</h1>",
+        "<h1>Each driver, the capabilities it stresses, and the initiatives it re-opens</h1>",
         '<p class="dek">A driver is a kind of change the register watches for. Each one stresses capabilities, and a '
         "trigger on it re-opens the guidance of the initiatives that establish or improve them.</p>",
         f'<p>The register maps its drivers onto <span data-plane="design">{count(len(stressed))}</span> of '
@@ -1852,7 +1852,9 @@ def index_page(
     register's two views (the agentic page and the drivers' view). With
     `review` (the views the generator emits, as (title, path)), the review index also lists each view the policy does
     not publish and the index does not already link, so a view the policy publishes leaves that list with no code edit
-    (40-BREADTH.md step 6); the served index passes nothing and is unchanged."""
+    (40-BREADTH.md step 6); the served index passes nothing and is unchanged. The table names the role that holds each
+    capability, linked to its brief, so the heading's "who holds them" is kept by the page."""
+    roles = {r.id: r for r in register.roles}
     parts = [
         STYLE,
         '<div class="esl" data-source="register" data-view="index">',
@@ -1862,9 +1864,13 @@ def index_page(
         "to keep, and the chapters that teach it. An estate's portfolio ranks what it funds first.</p>",
         "<h2>Capabilities</h2>",
         table(
-            ["Capability", "Outcome"],
+            ["Capability", "Outcome", "Held by"],
             [
-                [f'<a href="/strategy/{E(c.id)}">{E(named(register, c.id))}</a>', E(c.outcome)]
+                [
+                    f'<a href="/strategy/{E(c.id)}">{E(named(register, c.id))}</a>',
+                    E(c.outcome),
+                    f'<a href="/strategy/roles/{E(c.accountable)}">{E(roles[c.accountable].name)}</a>',
+                ]
                 for c in register.capabilities
             ],
         ),
@@ -1880,7 +1886,7 @@ def index_page(
         # not serve is read as its text by the site's copy (render.site), so the index links them whatever the policy
         "<h2>Across the register</h2>",
         '<p><a href="/strategy/agents">Where agents enter, layer by layer</a>; '
-        '<a href="/strategy/drivers">what each driver re-opens</a>.</p>',
+        '<a href="/strategy/drivers">each driver, the capabilities it stresses, and the initiatives it re-opens</a>.</p>',
     ]
     if review:
         linked = "".join(parts)
@@ -2012,13 +2018,13 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
         )
     out[f"board-{pf.estate}"] = (
         f"What the {pf.estate} estate funds first",
-        f"The {pf.estate} portfolio's initiatives ranked by the cost of delay, within capacity: what to fund first",
+        f"The {pf.estate} estate's initiatives ranked by the cost of delay, within capacity: what to fund first",
         "/strategy/board",
         board_page(rep, reg, labels, pages, {r.measure: r.unit for r in pf.conversion_rates}),
     )
     out[f"costs-and-value-{pf.estate}"] = (
         "What each capability returns, and what it costs once and to keep",
-        "Each capability's targets and the cost of delay, set against its one-time investment and recurring effort",
+        "What each capability returns and the cost of delay, set against what it costs once and to keep",
         "/strategy/costs-and-value",
         costs_page(rep, reg, pages),
     )
@@ -2026,7 +2032,7 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
         reg
     ):  # the register alone, never the report, so no portfolio value reaches a brief
         out[f"role-{brief['role']}"] = (
-            brief["name"],
+            f"{brief['name']}: the {BRIEF}",
             _brief_description(brief),
             f"/strategy/roles/{brief['role']}",
             role_page(brief, reg, comp_map, pages, _used(rep, "register")),
@@ -2039,7 +2045,7 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
         agents_page(reg, pages, _used(rep, "register")),
     )
     out["drivers"] = (
-        "What each driver re-opens",
+        "Each driver, the capabilities it stresses, and the initiatives it re-opens",
         "Each driver of the register, the capabilities it stresses and the initiatives whose guidance a trigger on it "
         "re-opens",
         "/strategy/drivers",
@@ -2047,7 +2053,8 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
     )
     out["index"] = (
         "Capabilities, what they return and cost, and who holds them",
-        f"{NAME}: each capability, the board, the costs and value, and the role briefs",
+        f"{NAME}: every capability with what it returns, what it costs and the role that holds it; the board, the costs "
+        "and value, and the role briefs",
         "/strategy",
         index_page(_used(rep, "register"), reg, pages, review=[(v[0], v[2]) for v in out.values()]),
     )
@@ -2202,8 +2209,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         }
         return (
             "What each capability returns, and what it costs once and to keep",
-            "Each capability's targets and the cost of delay, set against its one-time investment and recurring "
-            "effort",
+            "What each capability returns and the cost of delay, set against what it costs once and to keep",
             "/strategy/costs-and-value",
             costs_page(rep, reg, pages, served=s),
         )
@@ -2220,7 +2226,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         labels = {t["id"]: t["label"] for t in pol.get("planning-tiers")}
         return (
             f"What the {pf.estate} estate funds first",
-            f"The {pf.estate} portfolio's initiatives ranked by the cost of delay, within capacity: what to fund first",
+            f"The {pf.estate} estate's initiatives ranked by the cost of delay, within capacity: what to fund first",
             "/strategy/board",
             board_page(
                 rep,
@@ -2234,7 +2240,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
     if kind == "role":
         brief = next(b for b in core.role_briefs(reg) if b["role"] == ident)
         return (
-            brief["name"],
+            f"{brief['name']}: the {BRIEF}",
             _brief_description(brief),
             f"/strategy/roles/{ident}",
             role_page(brief, reg, comp_map, pages, prov([])),
@@ -2249,7 +2255,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         )
     if kind == "drivers":
         return (
-            "What each driver re-opens",
+            "Each driver, the capabilities it stresses, and the initiatives it re-opens",
             "Each driver of the register, the capabilities it stresses and the initiatives whose guidance a trigger "
             "on it re-opens",
             "/strategy/drivers",
@@ -2257,7 +2263,8 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         )
     return (
         "Capabilities, what they return and cost, and who holds them",
-        f"{NAME}: each capability, the board, the costs and value, and the role briefs",
+        f"{NAME}: every capability with what it returns, what it costs and the role that holds it; the board, the costs "
+        "and value, and the role briefs",
         "/strategy",
         index_page(prov([]), reg, pages),
     )
@@ -2514,6 +2521,8 @@ def site_pages(pol) -> tuple[dict, dict[str, str]]:
 FRONT_DOOR = (
     SITE / "src" / "strategy-front-door.json"
 )  # beside pages.json; the home renderer reads it, and only it
+# the layer's name glossed where a reader first meets it on the landing page, in DEC-01's descriptive phrase
+LAYER_GLOSS = "the strategy layer: every capability the platform keeps, what it returns and costs, and the role that holds it"
 NOT_TAUGHT = "not taught yet"  # the empty state the role page prints, carried in the feed so the page types no literal
 BRIEF = "role brief"  # what a role's page calls itself (its eyebrow), carried in the feed as the door's word for it
 ROLE_WORK = (
@@ -2559,7 +2568,7 @@ def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
     chapters = role_chapters(reg, comp_map, pages)
     readers = []
     for r in reg.readers:
-        door: dict = {"title": r.door.title, "promise": r.door.promise}
+        door: dict = {"title": r.door.title, "promise": r.door.promise, "order": list(r.door.order)}
         if r.door.strategy == ROLES_DOOR:
             door["roles"] = [
                 {
@@ -2592,7 +2601,12 @@ def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
         raise ValueError("the register names no reader; the front door has no door to draw")
     content = {
         "readers": readers,
-        "labels": {"layer": NAME, "not_taught": NOT_TAUGHT, "brief": BRIEF},
+        "labels": {
+            "layer": NAME,
+            "layer_gloss": LAYER_GLOSS,
+            "not_taught": NOT_TAUGHT,
+            "brief": BRIEF,
+        },
     }
     digest = hashlib.sha256(
         json.dumps(content, sort_keys=True, ensure_ascii=False).encode()

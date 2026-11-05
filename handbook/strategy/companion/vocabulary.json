@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "3d2c5a2b52b2f2aba53c1c5575731e6d3963faa57716bdab841d2d7209cbee46"
+   "sha256": "384c5f285c8fd9766a22c383f624bd7913d64c920922b50a00aef73ebaffb09d"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1551,7 +1551,7 @@
   },
   {
    "path": "/strategy/drivers",
-   "title": "What each driver re-opens"
+   "title": "Each driver, the capabilities it stresses, and the initiatives it re-opens"
   },
   {
    "path": "/strategy/fleet-patch-window",
@@ -1587,31 +1587,31 @@
   },
   {
    "path": "/strategy/roles/application-team",
-   "title": "Application team"
+   "title": "Application team: the role brief"
   },
   {
    "path": "/strategy/roles/architecture-office",
-   "title": "Architecture office"
+   "title": "Architecture office: the role brief"
   },
   {
    "path": "/strategy/roles/identity-team",
-   "title": "Identity team"
+   "title": "Identity team: the role brief"
   },
   {
    "path": "/strategy/roles/observability-team",
-   "title": "Observability team"
+   "title": "Observability team: the role brief"
   },
   {
    "path": "/strategy/roles/platform-team",
-   "title": "Platform team"
+   "title": "Platform team: the role brief"
   },
   {
    "path": "/strategy/roles/risk-team",
-   "title": "Risk and compliance"
+   "title": "Risk and compliance: the role brief"
   },
   {
    "path": "/strategy/roles/security-team",
-   "title": "Security team"
+   "title": "Security team: the role brief"
   },
   {
    "path": "/strategy/self-service-provisioning",

@@ -30,7 +30,7 @@ from pydantic import (
 )
 
 SCHEMA_VERSIONS = {
-    "register": 7,  # 7: a typed door link's words; 6: the front door's readers (DEC-06; 50-FRONT-DOOR.md section 9)
+    "register": 8,  # 8: each door's order of its two layers; 7: a typed door link's words; 6: the front door's readers (DEC-06; 50-FRONT-DOOR.md section 9)
     "portfolio": 5,
     "policy": 2,
     "drift_read": 1,
@@ -45,7 +45,7 @@ SCHEMA_VERSIONS = {
     "practice": 1,  # instrument/practice.py's record (40-BREADTH.md step 4, batch 1)
     "watch_read": 1,  # instrument/watch.py's record of one read of a watch entry's source (charter section 5.8)
     "driver_stresses_draft": 1,  # drafts/driver-stresses.yaml, DEC-19's draft, read by no gate (40-BREADTH.md step 5)
-    "front_door": 2,  # 2: a link's words and the brief's label; 1: the feed the home renderer reads (DEC-06)
+    "front_door": 3,  # 3: each door's order and the layer's gloss; 2: a link's words and the brief's label; 1: the feed the home renderer reads (DEC-06)
 }
 
 
@@ -775,6 +775,9 @@ class Door(Strict):
     promise: str
     strategy: list[str | Link] | str  # paths the policy publishes, or `roles`
     handbook: list[str | Link] | str  # paths the site serves (an anchor allowed), or `roles`
+    # schema 8: the order a reader meets the door's two layers, the one its title names first leading (the decision-maker
+    # meets the board before the handbook's decisions); data beside the title, so no reader id reaches the renderer
+    order: list[str]
 
     @model_validator(mode="after")
     def _paths_or_roles(self) -> Door:
@@ -782,6 +785,10 @@ class Door(Strict):
             v = getattr(self, layer)
             if isinstance(v, str) and v != ROLES_DOOR:
                 raise ValueError(f"the door's {layer} is {v!r}; a list of paths, or {ROLES_DOOR!r}")
+        if sorted(self.order) != ["handbook", "strategy"]:
+            raise ValueError(
+                f"the door's order is {self.order!r}; each layer once, handbook and strategy"
+            )
         if (self.strategy == ROLES_DOOR) != (self.handbook == ROLES_DOOR):
             raise ValueError(f"a door derived from the roles is {ROLES_DOOR!r} in both layers")
         if isinstance(self.strategy, list):
@@ -834,6 +841,7 @@ class FrontDoorLink(Strict):
 class FrontDoorDoor(Strict):
     title: str
     promise: str
+    order: list[str]
     strategy: list[str | FrontDoorLink] | None = None
     handbook: list[str | FrontDoorLink] | None = None
     roles: list[FrontDoorRole] | None = (

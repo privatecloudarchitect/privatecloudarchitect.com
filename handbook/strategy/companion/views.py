@@ -218,8 +218,8 @@ def board(report: dict, portfolio, pol, prov: str, source: str) -> str:
     if cap:
         body += f"<h2>Capacity</h2><p>{E(str(cap))}</p>"
     return page(
-        "Where the estate invests next",
-        f"The {E(portfolio.estate)} portfolio's initiatives ranked by the cost of waiting, within capacity",
+        "What the estate funds first",
+        f"The {E(portfolio.estate)} estate's initiatives ranked by the cost of delay, within capacity: what to fund first",
         body,
         prov,
         source,
