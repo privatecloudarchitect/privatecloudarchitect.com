@@ -30,7 +30,7 @@ from pydantic import (
 )
 
 SCHEMA_VERSIONS = {
-    "register": 5,
+    "register": 6,  # 6: the front door's readers (DEC-06; 50-FRONT-DOOR.md section 9)
     "portfolio": 5,
     "policy": 2,
     "drift_read": 1,
@@ -45,6 +45,7 @@ SCHEMA_VERSIONS = {
     "practice": 1,  # instrument/practice.py's record (40-BREADTH.md step 4, batch 1)
     "watch_read": 1,  # instrument/watch.py's record of one read of a watch entry's source (charter section 5.8)
     "driver_stresses_draft": 1,  # drafts/driver-stresses.yaml, DEC-19's draft, read by no gate (40-BREADTH.md step 5)
+    "front_door": 1,  # the front door's feed the home renderer reads (DEC-06; 50-FRONT-DOOR.md section 9)
 }
 
 
@@ -707,6 +708,147 @@ def _id(x: Any) -> Any:
     return x.get("id") if isinstance(x, dict) else getattr(x, "id", None)
 
 
+# ── the front door (schema 6; DEC-06, 50-FRONT-DOOR.md section 9) ───────────────────────────────────────────────────
+ROLES_DOOR = "roles"  # a door derived from the roles: one brief per role, and the chapters that teach its loops
+_ANCHOR = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")  # the site's slug form for a heading anchor
+PROMISE_WORDS = 16  # the design brief's rule: one sentence of at most sixteen words
+# the brief's voice rules a model can hold: no number, typed or in words (a count on the door is computed beside the
+# links, so a typed one goes stale); no em or en dash; no "we" (the reader's estate, never ours)
+_NUMBER_WORDS = re.compile(  # a cardinal said in words; a hyphenated compound ("one-way") is a word, not a count
+    r"(?<![\w-])(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|"
+    r"sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|"
+    r"million|dozen)(?![\w-])",
+    re.I,
+)
+
+
+def _door_voice(field: str, text: str) -> None:
+    if re.search(r"\d", text) or _NUMBER_WORDS.search(text):
+        raise ValueError(
+            f"the door's {field} carries a number; a count is computed beside the door's links"
+        )
+    if re.search("[–—]", text):
+        raise ValueError(f"the door's {field} carries an em or en dash")
+    if re.search(r"\b[Ww]e\b|\b[Oo]ur\b", text):
+        raise ValueError(
+            f"the door's {field} says we or our; it is written for the reader's estate"
+        )
+
+
+def _site_path(path: str, where: str) -> str:
+    """A path the site serves, with an optional anchor in the site's slug form; the gate holds the path to the site's
+    manifest and the anchor to the page's body at the site's build (GATE-15)."""
+    base, _, anchor = path.partition("#")
+    if not base.startswith("/") or " " in base or "//" in base:
+        raise ValueError(f"{where}: {path!r} is not a site path")
+    if anchor and not _ANCHOR.fullmatch(anchor):
+        raise ValueError(f"{where}: the anchor of {path!r} is not in the site's slug form")
+    return path
+
+
+class Door(Strict):
+    """What a reader's door on the landing page carries, in both layers (50-FRONT-DOOR.md section 8): the typed
+    title and promise (one line each), the strategy views it opens and the handbook pages it pairs with. A door
+    written as `roles` in both layers is derived: one brief per role, and the chapters that teach the role's loops."""
+
+    title: str
+    promise: str
+    strategy: list[str] | str  # paths the policy publishes, or `roles`
+    handbook: list[str] | str  # paths the site serves (an anchor allowed), or `roles`
+
+    @model_validator(mode="after")
+    def _paths_or_roles(self) -> Door:
+        for layer in ("strategy", "handbook"):
+            v = getattr(self, layer)
+            if isinstance(v, str) and v != ROLES_DOOR:
+                raise ValueError(f"the door's {layer} is {v!r}; a list of paths, or {ROLES_DOOR!r}")
+        if (self.strategy == ROLES_DOOR) != (self.handbook == ROLES_DOOR):
+            raise ValueError(f"a door derived from the roles is {ROLES_DOOR!r} in both layers")
+        if isinstance(self.strategy, list):
+            if not self.strategy:
+                raise ValueError("the door opens no strategy view")
+            for p in self.strategy:
+                if not p.startswith("/strategy"):
+                    raise ValueError(f"the door's strategy path {p!r} is not a strategy view")
+        if isinstance(self.handbook, list):
+            if not self.handbook:
+                raise ValueError("the door pairs with no handbook page")
+            for p in self.handbook:
+                _site_path(p, "the door's handbook side")
+                if p.startswith("/strategy"):
+                    raise ValueError(f"the door's handbook path {p!r} is a strategy view")
+        for field in ("title", "promise"):
+            text = getattr(self, field)
+            if not text.strip() or "\n" in text:
+                raise ValueError(f"the door's {field} is one line of text")
+            _door_voice(field, text)
+        if len(self.promise.split()) > PROMISE_WORDS:
+            raise ValueError(f"the door's promise runs past {PROMISE_WORDS} words")
+        return self
+
+
+class Reader(Strict):
+    """One of the three readers the layer serves (charter section 6), with the door the landing page shows them."""
+
+    id: str
+    name: str
+    question: str
+    door: Door
+
+
+# the feed the generator emits for the home renderer (render.front_door): the doors as data, lists never counts
+class FrontDoorRole(Strict):
+    id: str
+    name: str
+    brief: str  # the role's public brief, a strategy page the policy publishes
+    chapters: list[
+        str
+    ]  # the published chapters that teach the capabilities the brief shows as the role's work
+
+
+class FrontDoorDoor(Strict):
+    title: str
+    promise: str
+    strategy: list[str] | None = None
+    handbook: list[str] | None = None
+    roles: list[FrontDoorRole] | None = (
+        None  # the door derived from the roles, in place of typed paths
+    )
+
+    @model_validator(mode="after")
+    def _typed_or_derived(self) -> FrontDoorDoor:
+        typed = self.strategy is not None and self.handbook is not None
+        if typed == (self.roles is not None):
+            raise ValueError(
+                "a feed's door carries its strategy and handbook paths, or its roles, never both"
+            )
+        return self
+
+
+class FrontDoorReader(Strict):
+    id: str
+    name: str
+    question: str
+    door: FrontDoorDoor
+
+
+class FrontDoorProvenance(Strict):
+    policy_version: int
+    schemas: dict[str, int]
+    input_digest: str
+
+
+class FrontDoor(Strict):
+    """The front door's feed (schema `front_door`): the readers in the register's order, the words the page prints
+    that the generator owns, and the provenance every served output carries. Read by the home renderer, which refuses
+    a feed it cannot type, a schema it does not know and a policy version the site's strategy pages do not carry."""
+
+    schema_: int = Field(alias="schema")
+    readers: list[FrontDoorReader]
+    labels: dict[str, str]
+    provenance: FrontDoorProvenance
+
+
 class Register(Strict):
     schema_: int = Field(alias="schema")
     fixed: Day
@@ -719,11 +861,15 @@ class Register(Strict):
     signals: list[Signal]
     scans: list[Scan]
     trigger_events: list[TriggerEvent]
+    readers: list[
+        Reader
+    ] = []  # schema 6: the front door's readers, in the order the landing page shows them
 
     @model_validator(mode="after")
     def _each_listed_once(self) -> Register:
         listed_once(
             [
+                ("the register's readers", self.readers, _id),
                 ("the register's roles", self.roles, _id),
                 ("the register's planned capabilities", self.planned_capabilities, lambda x: x),
                 ("the register's capabilities", self.capabilities, _id),
@@ -1678,6 +1824,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "pins": Pins,
     "catalog_map": CatalogMap,
     "practice": PracticeRecord,
+    "front_door": FrontDoor,
     "watch_read": WatchRead,
     "driver_stresses_draft": DriverStressesDraft,
 }

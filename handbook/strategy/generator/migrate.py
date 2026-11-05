@@ -304,6 +304,16 @@ def portfolio_4_to_5(doc: dict) -> dict:
     return doc
 
 
+@migration("register", 5)
+def register_5_to_6(doc: dict) -> dict:
+    """Schema 6 (DEC-06; 50-FRONT-DOOR.md section 9): the register gains `readers`, the three readers the landing
+    page's doors serve, with each door's typed title, promise and paths. A reader's lines are a person's words, which
+    no migration writes, and the field is optional, so a schema-5 file reads unchanged with no readers and the version
+    alone moves (the expand step; charter section 5.12). A portfolio embeds nothing of it and stays at schema 5."""
+    doc["schema"] = 6
+    return doc
+
+
 @migration("portfolio", 2)
 def portfolio_2_to_3(doc: dict) -> dict:
     for d in doc.get("initiatives") or []:

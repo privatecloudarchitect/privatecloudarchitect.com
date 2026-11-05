@@ -7,7 +7,7 @@
 # 2026-10-25; the strand records under research/ hold its quotes. Fields marked `derived` are computed by the generator
 # from PH3, never typed. The method's parameters and the closed vocabularies are policy.yaml's (charter section 5.12).
 
-schema: 5
+schema: 6
 fixed: "2026-10-25"
 
 roles:                                   # generic; a portfolio assigns each to one department per scope
@@ -18,6 +18,39 @@ roles:                                   # generic; a portfolio assigns each to 
   - {id: observability-team, name: "Observability team"}
   - {id: identity-team, name: "Identity team"}
   - {id: application-team, name: "Application team"}
+
+# The front door (schema 6; DEC-06, 50-FRONT-DOOR.md sections 8 and 9): the three readers the layer serves (charter
+# section 6), in the order the landing page shows them, each with the door the page draws for them in both layers. The
+# question is the charter's; the title and the promise are the door's typed lines, one each, corrected in the design
+# brief (docs/design/front-door/00-BRIEF.md); the paths are the views and pages the door opens, every
+# strategy path one the policy publishes and every handbook path one the site serves (GATE-15). A door written `roles`
+# in both layers is derived by the generator: one brief per role, and the chapters that teach the capabilities the
+# role's brief shows. The generator emits the feed the home renderer reads; nothing on the landing page restates it.
+readers:
+  - id: architect
+    name: "The architect"
+    question: "Which capabilities, in what order, owned by whom, worth what, at what cost, invested in when, and why"
+    door:
+      title: "The map and the catalog"
+      promise: "Every chapter on its route, and every capability with its returns, costs and drivers."
+      strategy: ["/strategy", "/strategy/drivers"]
+      handbook: ["/handbook/"]
+  - id: department-operator
+    name: "The department operator"
+    question: "What is ours, what do we establish once, what do we keep doing, what does it cost, how do we show it works, how do we know we have drifted"
+    door:
+      title: "Your role's brief and chapters"
+      promise: "Your role's capabilities, the loops you keep, their drift reads, and the chapters that teach them."
+      strategy: roles
+      handbook: roles
+  - id: decision-maker
+    name: "The decision-maker"
+    question: "What do we get, what does it cost, what does waiting cost, what changes the plan"
+    door:
+      title: "The board and the one-way decisions"
+      promise: "What to fund first, what it costs to keep, and which decisions cannot be undone cheaply."
+      strategy: ["/strategy/board", "/strategy/costs-and-value"]
+      handbook: ["/handbook/identity-decisions", "/notes/capacity-in-and-out#twelve-decisions-to-treat-as-one-way-and-how-firmly-each-is-known"]
 
 # Capabilities the catalog defines in PH4, named because an initiative already stands on them. A prerequisite that
 # names one resolves (GATE-5); no initiative establishes them yet, so an initiative that requires one cannot be

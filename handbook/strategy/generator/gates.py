@@ -224,9 +224,20 @@ CLAUSES: dict[str, tuple[str, str]] = {
         "a node of the portfolio under a path the run's import supplies, or an import that supplies a field the "
         "portfolio does not import",
     ),
+    "15.1": ("GATE-15", "a register that names no reader"),
+    "15.2": ("GATE-15", "a door's strategy path that `strategy-pages` does not publish"),
+    "15.3": (
+        "GATE-15",
+        "a door's handbook path that `deploy/privatecloudarchitect/site/src/pages.json` does not serve",
+    ),
+    "15.4": (
+        "GATE-15",
+        "the feed at `deploy/privatecloudarchitect/site/src/strategy-front-door.json` that is not what the "
+        "generator emits, or absent",
+    ),
 }
 
-STRUCTURAL = tuple(f"GATE-{n}" for n in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14))
+STRUCTURAL = tuple(f"GATE-{n}" for n in (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15))
 
 # The strategy layer's code, as GATE-14's first clause names it. A path joins this list in the change that creates it.
 CODE = (
@@ -508,6 +519,9 @@ class Sources:
     outside_model: Doc | None = (
         None  # research/outside-model.yaml, the sources' named capabilities (step 1)
     )
+    front_door: str | None = (
+        None  # the committed feed's text, deploy/.../src/strategy-front-door.json (GATE-15)
+    )
     root: Path = ROOT
     git: Path | None = None  # the checkout that resolves a pinned commit; the files' own when None
     # a run's import (step 9): each field `ownership.imports` names, with the address prefixes it supplies (served.address_of);
@@ -576,6 +590,8 @@ class Sources:
                 f"{rel}/research/outside-model.yaml",
                 lambda p: _shaped("outside_model", Doc.read(p, root)),
             ),
+            # the feed as committed; absent is a finding (15.4), never a source error
+            front_door=source(FRONT_DOOR_REL, lambda p: text(p) if (root / p).is_file() else None),
             root=root,
         )
 
@@ -3147,6 +3163,96 @@ def _path_of(where: str) -> tuple:
 
 
 # ── running them ────────────────────────────────────────────────────────────────────────────────────────────────────
+# ── GATE-15: the front door (schema 6; DEC-06, 50-FRONT-DOOR.md section 9) ───────────────────────────────────────────
+FRONT_DOOR_REL = "deploy/privatecloudarchitect/site/src/strategy-front-door.json"
+
+
+def gate_15(s: Sources) -> list[Finding]:
+    """The readers' doors and the feed the home renderer reads: a register that names no reader; a door that opens a
+    view the policy does not publish, or pairs with a page the site does not serve; and the committed feed that is not
+    what the generator emits from these files, or is absent, so the landing page never draws a door from a stale feed."""
+    out = []
+    readers = _listed(s.register.data.get("readers"))
+    if not readers and s.judges("15.1"):
+        out.append(
+            _f(
+                "15.1",
+                s.register,
+                ("readers",),
+                "the register names no reader; the front door has no door to draw",
+                "write the readers the charter's section 6 names, each with its door in both layers",
+                line=s.register.line("readers") or 1,
+            )
+        )
+    published = _published_pages(s)
+    for i, r in enumerate(readers):
+        door = r.get("door") if isinstance(r, dict) else None
+        if not isinstance(door, dict):
+            continue
+        if published is not None and s.judges("15.2") and isinstance(door.get("strategy"), list):
+            for j, p in enumerate(door["strategy"]):
+                if p not in published:
+                    out.append(
+                        _f(
+                            "15.2",
+                            s.register,
+                            ("readers", i, "door", "strategy", j),
+                            f"the {r.get('id')}'s door opens {p}, which `strategy-pages` does not publish",
+                            "publish the view in policy.yaml's `strategy-pages`, or open a published one",
+                        )
+                    )
+        if s.judges("15.3") and isinstance(door.get("handbook"), list):
+            for j, p in enumerate(door["handbook"]):
+                if str(p).partition("#")[0] not in s.pages:
+                    out.append(
+                        _f(
+                            "15.3",
+                            s.register,
+                            ("readers", i, "door", "handbook", j),
+                            f"the {r.get('id')}'s door pairs with {p}, which the site does not serve",
+                            "pair the door with a page deploy/privatecloudarchitect/site/src/pages.json holds",
+                        )
+                    )
+    if s.judges("15.4") and not out:  # judged on the typed files once the doors themselves pass
+        try:
+            typed = s.typed()
+        except Exception:  # the models' refusal is GATE-14's to name
+            typed = None
+        if typed is not None:
+            from generator import render
+
+            reg, pf, pol = typed
+            try:
+                emitted = render.emit_front_door(pol=pol, reg=reg, pf=pf)
+            except Exception as e:  # the renderer refuses what the doors cannot open; say so once
+                emitted = None
+                out.append(
+                    _f(
+                        "15.4",
+                        FRONT_DOOR_REL,
+                        (),
+                        f"the generator could not emit the feed: {e}",
+                        "fix what the message names, then render and commit the feed",
+                        line=1,
+                    )
+                )
+            if emitted is not None and s.front_door != emitted:
+                out.append(
+                    _f(
+                        "15.4",
+                        FRONT_DOOR_REL,
+                        (),
+                        "the committed feed is absent"
+                        if s.front_door is None
+                        else "the committed feed is not what the generator emits from these files",
+                        "run `python -m generator.render` from docs/design/enterprise-strategy-layer and commit the "
+                        "feed with the register that moved it",
+                        line=1,
+                    )
+                )
+    return out
+
+
 GATES = {
     "GATE-1": gate_1,
     "GATE-2": gate_2,
@@ -3161,6 +3267,7 @@ GATES = {
     "GATE-11": gate_11,
     "GATE-12": gate_12,
     "GATE-14": gate_14,
+    "GATE-15": gate_15,
 }
 NEEDS_TYPED = {
     "GATE-8"
@@ -3168,7 +3275,7 @@ NEEDS_TYPED = {
 NEEDS_VIEWS = {"GATE-9"}
 # Gates with a clause judged only on the typed models (6.2, the board's labels in 7.3, the report's provenance in
 # 14.5): when the models do not load and nothing else was refused, the gate has not judged, so it is not covered.
-PARTLY_TYPED = {"GATE-6", "GATE-7", "GATE-14"}
+PARTLY_TYPED = {"GATE-6", "GATE-7", "GATE-14", "GATE-15"}
 # Gates with a clause judged only on the loaded policy (3.3, on its value categories): when the policy does not load
 # and nothing else was refused, the gate has not judged, so it is not covered.
 PARTLY_LOADED = {"GATE-3"}

@@ -22,6 +22,7 @@ path), or docs/design/enterprise-strategy-layer/generator/render.py.
 
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import os
@@ -294,7 +295,7 @@ def amount(value: float, unit: str) -> str:
 # The renderer's format version: raised by hand when a change to the renderer changes what a served page says, and
 # pinned with a fingerprint of the served pages rendered from frozen slices (rendered/format.lock.yaml), so a served
 # page's digest names the renderer that wrote it (40-BREADTH.md step 2, S1).
-FORMAT = 6  # 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
+FORMAT = 7  # 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
 NAME = "The Architect's NOC"  # the layer's public name (DEC-01, 00-CHARTER.md section 10), on every page's eyebrow and the index's description, and on the companion's frame; "the strategy layer" stays the descriptive phrase in prose, and the pages' paths are unchanged (D-053)
 
 
@@ -1584,7 +1585,7 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
                     [
                         f'<a href="/strategy/{E(cid)}">{E(named(register, cid))}</a>',
                         E(caps[cid].outcome),
-                        links(cid, "taught by") or "not taught yet",
+                        links(cid, "taught by") or NOT_TAUGHT,
                         links(cid, "background") or "none",
                     ]
                     for cid in brief["accountable_for"]
@@ -1994,19 +1995,7 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
         lines += drift.read_capability(cap.id, pol, reg, parameters=_parameters(pf, cap.id))
     # one report per run: a caller that has computed it (the gates' Sources) passes it in
     rep = report if report is not None else core.report(reg, pf, pol, lines)
-    comp_map = yaml.safe_load((SITE / "competency-map.yaml").read_text())
-    if str(SITE) not in sys.path:
-        sys.path.insert(0, str(SITE))
-    import validate_routes
-
-    # the site's own pages from pages.json, and the strategy pages from the policy alone, so a page the policy publishes
-    # or withdraws is published or withdrawn in the render that writes it, never one render later
-    pages = {
-        p["path"]: p["title"]
-        for p in json.loads((SITE / "src" / "pages.json").read_text())["pages"]
-        if not validate_routes.strategy_entry(p)
-    }
-    pages.update(dict.fromkeys(pol.get("strategy-pages"), ""))
+    comp_map, pages = site_pages(pol)
     labels = {t["id"]: t["label"] for t in pol.get("planning-tiers")}
     out = {}
     for cap in reg.capabilities:
@@ -2495,6 +2484,132 @@ def with_entries(manifest: dict, entries: list[dict]) -> dict:
     return out
 
 
+def site_pages(pol) -> tuple[dict, dict[str, str]]:
+    """The competency map, and the pages a hand-off or a door may go to: the site's own pages from pages.json, and the
+    strategy pages from the policy alone, so a page the policy publishes or withdraws is published or withdrawn in the
+    render that writes it, never one render later."""
+    comp_map = yaml.safe_load((SITE / "competency-map.yaml").read_text())
+    if str(SITE) not in sys.path:
+        sys.path.insert(0, str(SITE))
+    import validate_routes
+
+    pages = {
+        p["path"]: p["title"]
+        for p in json.loads((SITE / "src" / "pages.json").read_text())["pages"]
+        if not validate_routes.strategy_entry(p)
+    }
+    pages.update(dict.fromkeys(pol.get("strategy-pages"), ""))
+    return comp_map, pages
+
+
+# ── the front door's feed (schema 6; DEC-06, 50-FRONT-DOOR.md section 9) ────────────────────────────────────────────
+FRONT_DOOR = (
+    SITE / "src" / "strategy-front-door.json"
+)  # beside pages.json; the home renderer reads it, and only it
+NOT_TAUGHT = "not taught yet"  # the empty state the role page prints, carried in the feed so the page types no literal
+ROLE_WORK = (
+    "writes",
+    "runs",
+    "measures",
+)  # with `accountable_for`, the relations a role's brief shows as the role's own work
+
+
+def role_chapters(reg, comp_map: dict, pages: dict[str, str]) -> dict[str, list[str]]:
+    """Per role, the published chapters that teach the capabilities its brief shows as the role's work (accountable
+    for, writes, runs, measures; sponsoring and reading are initiatives and watch entries, not capabilities), classed
+    through the same hand-offs as the role page, so a foundation chapter the brief shows as background never reaches
+    a door; in the competency map's order, each once."""
+    from generator import core
+
+    order = {c["teaches"]: i for i, c in enumerate(comp_map["competencies"]) if c.get("teaches")}
+    caps = {c.id: c for c in reg.capabilities}
+    out = {}
+    for brief in core.role_briefs(reg):
+        work = set(brief["accountable_for"]) | {
+            x["capability"] for k in ROLE_WORK for x in brief[k]
+        }
+        paths = {
+            p
+            for cid in work
+            for kind, p, _title in handoffs(caps[cid], comp_map, pages)
+            if kind == "taught by"
+        }
+        out[brief["role"]] = sorted(paths, key=lambda p: (order.get(p, len(order)), p))
+    return out
+
+
+def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
+    """The feed the home renderer reads: each reader's door with the title, promise and paths the register types, the
+    door written `roles` derived from the roles (one published brief per role, and the chapters that teach the role's
+    work), the two words the page prints that the generator owns, and the provenance every served output carries.
+    Lists, never counts: the renderer counts. The register's order is the feed's, and the feed refuses a door that
+    opens a view the policy does not publish or pairs with a page the site does not serve (GATE-15)."""
+    from generator.models import ROLES_DOOR, SCHEMA_VERSIONS, FrontDoor
+
+    published = set(pol.get("strategy-pages"))
+    chapters = role_chapters(reg, comp_map, pages)
+    readers = []
+    for r in reg.readers:
+        door: dict = {"title": r.door.title, "promise": r.door.promise}
+        if r.door.strategy == ROLES_DOOR:
+            door["roles"] = [
+                {
+                    "id": role.id,
+                    "name": role.name,
+                    "brief": f"/strategy/roles/{role.id}",
+                    "chapters": chapters[role.id],
+                }
+                for role in reg.roles
+            ]
+            unpublished = [x["brief"] for x in door["roles"] if x["brief"] not in published]
+            unserved: list[str] = []
+        else:
+            door["strategy"], door["handbook"] = list(r.door.strategy), list(r.door.handbook)
+            unpublished = [p for p in r.door.strategy if p not in published]
+            unserved = [p for p in r.door.handbook if p.partition("#")[0] not in pages]
+        if unpublished:
+            raise ValueError(
+                f"the {r.id}'s door opens {', '.join(unpublished)}, which the policy does not publish"
+            )
+        if unserved:
+            raise ValueError(
+                f"the {r.id}'s door pairs with {', '.join(unserved)}, which the site does not serve"
+            )
+        readers.append({"id": r.id, "name": r.name, "question": r.question, "door": door})
+    if not readers:
+        raise ValueError("the register names no reader; the front door has no door to draw")
+    content = {"readers": readers, "labels": {"layer": NAME, "not_taught": NOT_TAUGHT}}
+    digest = hashlib.sha256(
+        json.dumps(content, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()[:16]
+    feed = {
+        "schema": SCHEMA_VERSIONS["front_door"],
+        **content,
+        "provenance": {
+            "policy_version": pol.model.policy_version,
+            "schemas": {k: SCHEMA_VERSIONS[k] for k in ("register", "portfolio", "policy")},
+            "input_digest": digest,
+        },
+    }
+    FrontDoor.model_validate(feed)
+    return feed
+
+
+def front_door_text(feed: dict) -> str:
+    return json.dumps(feed, indent=1, sort_keys=True, ensure_ascii=False) + "\n"
+
+
+def emit_front_door(pol=None, reg=None, pf=None) -> str:
+    """The feed as text from the files, as the estate runs the policy; a policy passed in is taken as the estate
+    runs it (the gates' loaded view)."""
+    from generator.policy import load_policy, load_portfolio, load_register
+
+    reg, pf = reg or load_register(), pf or load_portfolio()
+    pol = pol if pol is not None else load_policy().for_estate(pf.policy.overrides)
+    comp_map, pages = site_pages(pol)
+    return front_door_text(front_door(reg, pol, comp_map, pages))
+
+
 def write_if_changed(path: Path, text: str) -> bool:
     """Write a page only when it differs from the one on disk beyond its generation stamp, so a render that changes
     nothing leaves every file, and every stamped page date, as it was."""
@@ -2551,6 +2666,10 @@ def main(argv: list[str]) -> int:
             manifest_path.write_text(
                 json.dumps(updated, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
             )
+        # the front door's feed, the one file the home renderer reads for the doors (DEC-06)
+        feed = emit_front_door()
+        if not FRONT_DOOR.exists() or FRONT_DOOR.read_text(encoding="utf-8") != feed:
+            FRONT_DOOR.write_text(feed, encoding="utf-8")
     if "--validate" in argv:
         out_dir = (
             Path(argv[argv.index("--validate") + 1]).resolve()

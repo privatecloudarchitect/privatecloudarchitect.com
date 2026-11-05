@@ -22,6 +22,7 @@ NOT_APPLICABLE: dict[str, str] = {
 }
 
 _REPOSITORY_GATES = {
+    "GATE-15": "the front door's readers and the feed the home renderer reads: the register's own doors against the policy and the site's manifest, this repository's files",
     "GATE-2": "the register against the site's vocabulary and the catalog's map",
     "GATE-5": "the register's prerequisites and the ladder charter",
     "GATE-6": "the register's citations, verified in this repository",

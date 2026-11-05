@@ -69,6 +69,7 @@ READS = (
     "deploy/privatecloudarchitect/site/competency-map.yaml",
     "deploy/privatecloudarchitect/site/mastery.yaml",
     "deploy/privatecloudarchitect/site/src/pages.json",
+    "deploy/privatecloudarchitect/site/src/strategy-front-door.json",  # the front door's feed, held to the render (15.4)
     "deploy/privatecloudarchitect/site/src/pages",  # a chapter's plates, which a strategy page's citation names
     "deploy/privatecloudarchitect/site/src/layout.html",
     "deploy/privatecloudarchitect/site/structure_refs.py",
