@@ -9,6 +9,11 @@ that the machine does not record which path it took. So this does the join the p
   2. the PRIMITIVE: the spec and status fields of a real machine, including the two different ways it can name
      its image and the several separate fields that govern power behaviour, and how many machines hold a
      declared power state different from the observed one;
+  2a. the BOOTSTRAP: which provider each machine names in spec.bootstrap (cloud-init, Sysprep, LinuxPrep, vApp
+     properties) and in what form (cloud-init's cloud-config held in a secret the machine names, or written into
+     the spec itself), set beside the path the machine arrived by, with its status conditions by type; key names
+     only, never a value, a secret's name or its content; and what the schema the namespace serves says of the
+     bootstrap: its providers, each provider's fields and the schema's own first sentence for each;
   3. the ARRIVAL JOIN: every virtual machine classified into one of three paths by reading objects rather than
      by trusting a naming convention. A controller owner means a cluster minted it. A deployment resource that
      links it, by namespace and name, means the catalog wrapped it. Neither means it was made by hand on the wire;
@@ -295,6 +300,43 @@ def main():
           f"{len(creatable)} declare create")
     print(f"     {', '.join(vocab)}")
 
+    # ---- 2b. what the served schema says of the bootstrap: the product's own words, at the preferred version
+    schema = None
+    try:
+        doc = e.one(first, f"/openapi/v3/apis/{VMOP}/{pref}")
+    except SystemExit:
+        doc = None
+        print("  the namespace serves no readable OpenAPI schema for the VM Service; the bootstrap's providers are not read")
+    if doc:
+        defs = (doc.get("components") or {}).get("schemas") or {}
+
+        def deref(s):
+            ref = s.get("$ref") or ((s.get("allOf") or [{}])[0].get("$ref"))
+            return defs[ref.rsplit("/", 1)[1]] if ref else s
+
+        def lead(text):   # the description's opening sentence, as the schema writes it
+            return re.split(r"(?<=\.)\s", " ".join((text or "").split()), maxsplit=1)[0]
+
+        vm_def = next((v for k, v in defs.items() if k.endswith(f".{pref}.VirtualMachine")), {})
+        spec_def = deref(((vm_def.get("properties") or {}).get("spec")) or {})
+        boot_def = deref(((spec_def.get("properties") or {}).get("bootstrap")) or {})
+        providers = {name: deref(s) for name, s in sorted((boot_def.get("properties") or {}).items())}
+        cloud = providers.get("cloudInit") or {}
+        cfg = deref(((cloud.get("properties") or {}).get("cloudConfig")) or {})
+        raw = deref(((cloud.get("properties") or {}).get("rawCloudConfig")) or {})
+        flat = lambda text: " ".join((text or "").split())   # noqa: E731
+        schema = {"bootstrap": flat(boot_def.get("description")),
+                  "providers": {n: {"lead": lead(s.get("description")), "description": flat(s.get("description")),
+                                    "fields": sorted(s.get("properties") or {})}
+                                for n, s in providers.items()},
+                  "cloudInitFields": {f: flat(deref(fs).get("description"))
+                                      for f, fs in sorted((cloud.get("properties") or {}).items())},
+                  "cloudConfigKeys": sorted(cfg.get("properties") or {}),
+                  "rawCloudConfigRequired": sorted(raw.get("required") or [])}
+        print(f"  the schema names {len(providers)} bootstrap provider(s): {', '.join(providers)}; "
+              f"cloud-init takes {len(schema['cloudConfigKeys'])} cloud-config key(s) inline, or a secret "
+              f"by {' and '.join(schema['rawCloudConfigRequired'])}")
+
     # ---- 2 and 3. the primitive, and the arrival join
     shape = None
     plane, services, classes_seen = {}, collections.Counter(), {}
@@ -305,10 +347,17 @@ def main():
             L.reserve(sp.get("className"))
             owned = [o.get("kind") for o in (md.get("ownerReferences") or []) if o.get("controller")]
             keys = sorted(md.get("labels") or {}) + sorted(md.get("annotations") or {})
+            boot = sp.get("bootstrap") or {}
             plane[(ns, md["name"])] = {"namespace": ns, "name": md["name"], "class": sp.get("className"),
                                        "controllerOwner": owned[0] if owned else None,
                                        "specPowerState": sp.get("powerState"),
-                                       "statusPowerState": stt.get("powerState"), "keys": keys}
+                                       "statusPowerState": stt.get("powerState"), "keys": keys,
+                                       # the provider and the form, by key name alone: a secret's name and every
+                                       # value stay on the plane
+                                       "bootstrap": {prov: sorted(v) if isinstance(v, dict) else []
+                                                     for prov, v in sorted(boot.items())},
+                                       "conditions": sorted(f"{c.get('type')}={c.get('status')}"
+                                                            for c in (stt.get("conditions") or []) if c.get("type"))}
             if shape is None:
                 shape = {"apiVersion": pref, "specFields": sorted(sp.keys()), "statusFields": sorted(stt.keys()),
                          "namesImageTwoWays": bool("image" in sp and "imageName" in sp),
@@ -353,6 +402,21 @@ def main():
     print(f"     {link_resources} deployment resource(s) link a machine, naming {len(links)} distinct machine(s); "
           f"{arrivals['claimedButAbsent']} of those are not on the plane")
 
+    # ---- 2a. the bootstrap, by the path each machine arrived by
+    def form(m):
+        return " + ".join(f"{prov}({', '.join(keys) or '-'})" for prov, keys in m["bootstrap"].items()) or "none"
+    by_path = {"controller": nodes, "catalog": catalog, "wire": raw}
+    bootstrap = {path: dict(collections.Counter(form(plane[k]) for k in keys)) for path, keys in by_path.items()}
+    named = sum(1 for m in plane.values() if m["bootstrap"])
+    cloud_init = sum(1 for m in plane.values() if "cloudInit" in m["bootstrap"])
+    conditions = dict(collections.Counter(c for m in plane.values() for c in m["conditions"]))
+    print(f"\n  bootstrap: {named} of {len(plane)} machine(s) name a provider, {cloud_init} of them cloud-init")
+    for path, forms in bootstrap.items():
+        if forms:
+            print(f"     {path}: " + "; ".join(f"{f} {n}" for f, n in sorted(forms.items())))
+    boot_cond = {c: n for c, n in sorted(conditions.items()) if re.search(r"(?i)bootstrap|customi[sz]", c)}
+    print(f"     bootstrap conditions in status: {boot_cond or 'none reported'}")
+
     # ---- 4. can the machine tell you which?
     marker = re.compile(r"(?i)deploy|catalog|blueprint|instance|vra|automation")
     tell = {"catalogHaveAMarker": sum(1 for k in catalog if any(marker.search(x) for x in plane[k]["keys"])),
@@ -383,11 +447,13 @@ def main():
     machines = [{"name": L.get("vm", v["name"]), "namespace": L.get("namespace", v["namespace"]), "class": v["class"],
                  "controllerOwner": v["controllerOwner"], "specPowerState": v["specPowerState"],
                  "statusPowerState": v["statusPowerState"], "keys": [L.key(x) for x in v["keys"]],
+                 "bootstrap": v["bootstrap"], "conditions": v["conditions"],
                  "arrival": "controller" if k in nodes else "catalog" if k in catalog else "wire"}
                 for k, v in sorted(plane.items())]
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "signIn": e.kind,
                "vocabulary": vocab, "verbs": kinds, "apiVersions": versions, "preferred": pref, "primitive": shape,
                "powerDisagree": disagree, "arrivals": arrivals, "canTheMachineTell": tell, "machines": machines,
+               "bootstrap": bootstrap, "conditionCounts": conditions, "bootstrapSchema": schema,
                "blueprintResourceTypes": types, "wrappedKinds": dict(wrapped_kinds),
                "classes": classes, "namespacesRead": len(endpoints), "publishedClasses": len(published),
                "requireReservation": len(need_res), "reservationUnstated": len(unstated),

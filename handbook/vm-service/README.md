@@ -69,6 +69,11 @@ separate fields that govern power, and `powerDisagree` counts the machines whose
 `arrivals` is the join (`controllerOwned`, `catalogWrapped`, `rawOnTheWire`, `claimedButAbsent`, with
 `linkResources` and `linksWithoutAKnownNamespace`) and `canTheMachineTell` is the follow-up question, with the
 keys the two classes share. `machines` is one row per machine with its namespace, class, controller owner,
-declared and observed power state, arrival path, and the label and annotation **keys** it carries. `classes`
+declared and observed power state, arrival path, the label and annotation **keys** it carries, its `bootstrap`
+(each provider it names with that provider's field names, never a value or a secret's name) and its status
+`conditions` by type and status. `bootstrap` at the top level counts the forms by arrival path,
+`conditionCounts` counts every condition across the plane, and `bootstrapSchema` is what the served schema says of
+the bootstrap: its description, each provider's opening sentence and fields, the cloud-config keys cloud-init takes
+inline, and the fields a secret reference requires. `classes`
 carries `hasPolicyBlock` beside `allPolicyValuesZero` and the namespaces each was seen in; `requireReservation`
 is the region's own answer and `reservationUnstated` counts summaries that do not state it.
