@@ -7,7 +7,7 @@
 # 2026-10-25; the strand records under research/ hold its quotes. Fields marked `derived` are computed by the generator
 # from PH3, never typed. The method's parameters and the closed vocabularies are policy.yaml's (charter section 5.12).
 
-schema: 6
+schema: 7
 fixed: "2026-10-25"
 
 roles:                                   # generic; a portfolio assigns each to one department per scope
@@ -23,7 +23,8 @@ roles:                                   # generic; a portfolio assigns each to 
 # section 6), in the order the landing page shows them, each with the door the page draws for them in both layers. The
 # question is the charter's; the title and the promise are the door's typed lines, one each, corrected in the design
 # brief (docs/design/front-door/00-BRIEF.md); the paths are the views and pages the door opens, every
-# strategy path one the policy publishes and every handbook path one the site serves (GATE-15). A door written `roles`
+# strategy path one the policy publishes and every handbook path one the site serves (GATE-15); a path whose heading
+# would mislead out of its page carries its own words, `{path, words}` (schema 7). A door written `roles`
 # in both layers is derived by the generator: one brief per role, and the chapters that teach the capabilities the
 # role's brief shows. The generator emits the feed the home renderer reads; nothing on the landing page restates it.
 readers:
@@ -50,7 +51,9 @@ readers:
       title: "The board and the one-way decisions"
       promise: "What to fund first, what it costs to keep, and which decisions cannot be undone cheaply."
       strategy: ["/strategy/board", "/strategy/costs-and-value"]
-      handbook: ["/handbook/identity-decisions", "/notes/capacity-in-and-out#twelve-decisions-to-treat-as-one-way-and-how-firmly-each-is-known"]
+      handbook:
+        - "/handbook/identity-decisions"
+        - {path: "/notes/capacity-in-and-out#twelve-decisions-to-treat-as-one-way-and-how-firmly-each-is-known", words: "Capacity decisions to treat as one-way"}
 
 # Capabilities the catalog defines in PH4, named because an initiative already stands on them. A prerequisite that
 # names one resolves (GATE-5); no initiative establishes them yet, so an initiative that requires one cannot be

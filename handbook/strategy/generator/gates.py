@@ -3167,6 +3167,11 @@ def _path_of(where: str) -> tuple:
 FRONT_DOOR_REL = "deploy/privatecloudarchitect/site/src/strategy-front-door.json"
 
 
+def _link_paths(entries: list) -> list:
+    """A door's entries as paths: a plain path, or the path of `{path, words}` (schema 7)."""
+    return [e.get("path") if isinstance(e, dict) else e for e in entries]
+
+
 def gate_15(s: Sources) -> list[Finding]:
     """The readers' doors and the feed the home renderer reads: a register that names no reader; a door that opens a
     view the policy does not publish, or pairs with a page the site does not serve; and the committed feed that is not
@@ -3190,7 +3195,7 @@ def gate_15(s: Sources) -> list[Finding]:
         if not isinstance(door, dict):
             continue
         if published is not None and s.judges("15.2") and isinstance(door.get("strategy"), list):
-            for j, p in enumerate(door["strategy"]):
+            for j, p in enumerate(_link_paths(door["strategy"])):
                 if p not in published:
                     out.append(
                         _f(
@@ -3202,7 +3207,7 @@ def gate_15(s: Sources) -> list[Finding]:
                         )
                     )
         if s.judges("15.3") and isinstance(door.get("handbook"), list):
-            for j, p in enumerate(door["handbook"]):
+            for j, p in enumerate(_link_paths(door["handbook"])):
                 if str(p).partition("#")[0] not in s.pages:
                     out.append(
                         _f(

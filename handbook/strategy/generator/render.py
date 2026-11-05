@@ -5,7 +5,7 @@
   board-reference.html              the reference portfolio's board: the rank, the capacity line, where the rank turns,
                                     the planning tiers, every illustrative input labelled
   costs-and-value-reference.html    V-03's view: each capability's one-time investment against its recurring effort, its
-                                    targets and the cost of waiting
+                                    targets and the cost of delay
   role-<role>.html                  a role's public brief, from the register alone (charter section 6)
   index.html                        every capability, the two portfolio views and every role brief
 
@@ -33,6 +33,8 @@ import tempfile
 from pathlib import Path
 
 import yaml
+
+from .files import parsed
 
 LAYER = Path(__file__).resolve().parent.parent
 ROOT = LAYER.parents[2]
@@ -295,7 +297,7 @@ def amount(value: float, unit: str) -> str:
 # The renderer's format version: raised by hand when a change to the renderer changes what a served page says, and
 # pinned with a fingerprint of the served pages rendered from frozen slices (rendered/format.lock.yaml), so a served
 # page's digest names the renderer that wrote it (40-BREADTH.md step 2, S1).
-FORMAT = 7  # 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
+FORMAT = 8  # 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
 NAME = "The Architect's NOC"  # the layer's public name (DEC-01, 00-CHARTER.md section 10), on every page's eyebrow and the index's description, and on the companion's frame; "the strategy layer" stays the descriptive phrase in prose, and the pages' paths are unchanged (D-053)
 
 
@@ -393,7 +395,9 @@ def table(head: list[str], rows: list[list[str]]) -> str:
 
 def wrap(title: str, description: str, path: str, content: str) -> str:
     """The site's layout, filled as the site's build fills it."""
-    page = (SITE / "src" / "layout.html").read_text()
+    page = parsed(
+        SITE / "src" / "layout.html", str
+    )  # read once per process until it moves (generator/files.py)
     page = (
         page.replace("{{title}}", E(title))
         .replace("{{description}}", E(description))
@@ -857,7 +861,7 @@ def strategy_page(
     else:  # a capability whose own territory is untaught: its untaught entries say where it was sent
         parts.append("<p>The capability as a whole is taught by no published chapter yet.</p>")
     parts.append(
-        f'<p>Across the portfolio: <a href="/strategy/board">where the {E(rep["estate"])} estate invests next</a>; '
+        f'<p>Across the portfolio: <a href="/strategy/board">what the {E(rep["estate"])} estate funds first</a>; '
         '<a href="/strategy/costs-and-value">what each capability returns, and what it costs once and to keep</a>; '
         '<a href="/strategy">every capability and role brief</a>.</p>'
     )
@@ -1170,7 +1174,7 @@ def board_page(
         STYLE,
         '<div class="esl" data-source="register portfolio" data-view="board">',
         f'<span class="eyebrow">{E(NAME)}, {E(rep["estate"])} portfolio</span>',
-        f"<h1>Where the {E(rep['estate'])} estate invests next</h1>",
+        f"<h1>What the {E(rep['estate'])} estate funds first</h1>",
         '<p class="dek">Each initiative ranked by what a month of waiting costs over the time it takes, an enabler by '
         "the chain it unblocks, funded within the constrained role's capacity. Every input marked illustrative was "
         "supplied for the worked example, not measured.</p>",
@@ -1534,7 +1538,7 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
     parts = [
         STYLE,
         '<div class="esl" data-source="register" data-view="role">',
-        f'<span class="eyebrow">{E(NAME)}, role brief</span>',
+        f'<span class="eyebrow">{E(NAME)}, {BRIEF}</span>',
         f"<h1>{E(brief['name'])}</h1>",
     ]
     held = ("accountable_for", "writes", "runs", "measures", "drift_reads", "sponsors", "reads")
@@ -1855,7 +1859,7 @@ def index_page(
         f'<span class="eyebrow">{E(NAME)}</span>',
         "<h1>Capabilities, what they return and cost, and who holds them</h1>",
         '<p class="dek">Each capability is an outcome the platform keeps; its page says what it returns, what it costs once and '
-        "to keep, and the chapters that teach it. An estate's portfolio ranks where it invests next.</p>",
+        "to keep, and the chapters that teach it. An estate's portfolio ranks what it funds first.</p>",
         "<h2>Capabilities</h2>",
         table(
             ["Capability", "Outcome"],
@@ -1865,7 +1869,7 @@ def index_page(
             ],
         ),
         "<h2>Across the portfolio</h2>",
-        '<p><a href="/strategy/board">The board: where to invest next</a>; '
+        '<p><a href="/strategy/board">The board: what to fund first</a>; '
         '<a href="/strategy/costs-and-value">what each capability returns, and what it costs once and to keep</a>.</p>',
         "<h2>Role briefs</h2><ul>",
         "".join(
@@ -2007,14 +2011,14 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
             strategy_page(cap.id, rep, reg, pf, _measures(cap, pol), lines, comp_map, pages),
         )
     out[f"board-{pf.estate}"] = (
-        f"Where the {pf.estate} estate invests next",
-        f"The {pf.estate} portfolio's initiatives ranked by the cost of waiting, within capacity",
+        f"What the {pf.estate} estate funds first",
+        f"The {pf.estate} portfolio's initiatives ranked by the cost of delay, within capacity: what to fund first",
         "/strategy/board",
         board_page(rep, reg, labels, pages, {r.measure: r.unit for r in pf.conversion_rates}),
     )
     out[f"costs-and-value-{pf.estate}"] = (
         "What each capability returns, and what it costs once and to keep",
-        "Each capability's targets and the cost of waiting, set against its one-time investment and recurring effort",
+        "Each capability's targets and the cost of delay, set against its one-time investment and recurring effort",
         "/strategy/costs-and-value",
         costs_page(rep, reg, pages),
     )
@@ -2057,14 +2061,16 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
 def _site_vocabulary(pol) -> tuple[dict, dict]:
     """The competency map, and the site's pages by path with each strategy page the policy publishes (its title
     blank), as every view reads them."""
-    comp_map = yaml.safe_load((SITE / "competency-map.yaml").read_text())
+    comp_map = parsed(
+        SITE / "competency-map.yaml", yaml.safe_load
+    )  # read-only; cached (generator/files.py)
     if str(SITE) not in sys.path:
         sys.path.insert(0, str(SITE))
     import validate_routes
 
     pages = {
         p["path"]: p["title"]
-        for p in json.loads((SITE / "src" / "pages.json").read_text())["pages"]
+        for p in parsed(SITE / "src" / "pages.json", json.loads)["pages"]
         if not validate_routes.strategy_entry(p)
     }
     pages.update(dict.fromkeys(pol.get("strategy-pages"), ""))
@@ -2196,7 +2202,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         }
         return (
             "What each capability returns, and what it costs once and to keep",
-            "Each capability's targets and the cost of waiting, set against its one-time investment and recurring "
+            "Each capability's targets and the cost of delay, set against its one-time investment and recurring "
             "effort",
             "/strategy/costs-and-value",
             costs_page(rep, reg, pages, served=s),
@@ -2213,8 +2219,8 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         rep["provenance"]["input_digest"] = served.slice_digest(s, pol, FORMAT)
         labels = {t["id"]: t["label"] for t in pol.get("planning-tiers")}
         return (
-            f"Where the {pf.estate} estate invests next",
-            f"The {pf.estate} portfolio's initiatives ranked by the cost of waiting, within capacity",
+            f"What the {pf.estate} estate funds first",
+            f"The {pf.estate} portfolio's initiatives ranked by the cost of delay, within capacity: what to fund first",
             "/strategy/board",
             board_page(
                 rep,
@@ -2488,14 +2494,16 @@ def site_pages(pol) -> tuple[dict, dict[str, str]]:
     """The competency map, and the pages a hand-off or a door may go to: the site's own pages from pages.json, and the
     strategy pages from the policy alone, so a page the policy publishes or withdraws is published or withdrawn in the
     render that writes it, never one render later."""
-    comp_map = yaml.safe_load((SITE / "competency-map.yaml").read_text())
+    comp_map = parsed(
+        SITE / "competency-map.yaml", yaml.safe_load
+    )  # read-only; cached (generator/files.py)
     if str(SITE) not in sys.path:
         sys.path.insert(0, str(SITE))
     import validate_routes
 
     pages = {
         p["path"]: p["title"]
-        for p in json.loads((SITE / "src" / "pages.json").read_text())["pages"]
+        for p in parsed(SITE / "src" / "pages.json", json.loads)["pages"]
         if not validate_routes.strategy_entry(p)
     }
     pages.update(dict.fromkeys(pol.get("strategy-pages"), ""))
@@ -2507,6 +2515,7 @@ FRONT_DOOR = (
     SITE / "src" / "strategy-front-door.json"
 )  # beside pages.json; the home renderer reads it, and only it
 NOT_TAUGHT = "not taught yet"  # the empty state the role page prints, carried in the feed so the page types no literal
+BRIEF = "role brief"  # what a role's page calls itself (its eyebrow), carried in the feed as the door's word for it
 ROLE_WORK = (
     "writes",
     "runs",
@@ -2544,7 +2553,7 @@ def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
     work), the two words the page prints that the generator owns, and the provenance every served output carries.
     Lists, never counts: the renderer counts. The register's order is the feed's, and the feed refuses a door that
     opens a view the policy does not publish or pairs with a page the site does not serve (GATE-15)."""
-    from generator.models import ROLES_DOOR, SCHEMA_VERSIONS, FrontDoor
+    from generator.models import ROLES_DOOR, SCHEMA_VERSIONS, FrontDoor, link_path
 
     published = set(pol.get("strategy-pages"))
     chapters = role_chapters(reg, comp_map, pages)
@@ -2564,9 +2573,12 @@ def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
             unpublished = [x["brief"] for x in door["roles"] if x["brief"] not in published]
             unserved: list[str] = []
         else:
-            door["strategy"], door["handbook"] = list(r.door.strategy), list(r.door.handbook)
-            unpublished = [p for p in r.door.strategy if p not in published]
-            unserved = [p for p in r.door.handbook if p.partition("#")[0] not in pages]
+            door["strategy"] = [_link(e) for e in r.door.strategy]
+            door["handbook"] = [_link(e) for e in r.door.handbook]
+            unpublished = [p for p in map(link_path, r.door.strategy) if p not in published]
+            unserved = [
+                p for p in map(link_path, r.door.handbook) if p.partition("#")[0] not in pages
+            ]
         if unpublished:
             raise ValueError(
                 f"the {r.id}'s door opens {', '.join(unpublished)}, which the policy does not publish"
@@ -2578,7 +2590,10 @@ def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
         readers.append({"id": r.id, "name": r.name, "question": r.question, "door": door})
     if not readers:
         raise ValueError("the register names no reader; the front door has no door to draw")
-    content = {"readers": readers, "labels": {"layer": NAME, "not_taught": NOT_TAUGHT}}
+    content = {
+        "readers": readers,
+        "labels": {"layer": NAME, "not_taught": NOT_TAUGHT, "brief": BRIEF},
+    }
     digest = hashlib.sha256(
         json.dumps(content, sort_keys=True, ensure_ascii=False).encode()
     ).hexdigest()[:16]
@@ -2593,6 +2608,11 @@ def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
     }
     FrontDoor.model_validate(feed)
     return feed
+
+
+def _link(entry) -> str | dict:
+    """A door's entry as the register writes it: a path, or a path with its own words."""
+    return entry if isinstance(entry, str) else {"path": entry.path, "words": entry.words}
 
 
 def front_door_text(feed: dict) -> str:

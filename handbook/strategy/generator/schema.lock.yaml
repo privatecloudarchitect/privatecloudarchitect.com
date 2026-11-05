@@ -2,7 +2,7 @@
 # GATE-14). A model whose fingerprint no longer matches its schema version fails its test: give the file a new
 # schema version with a migration, and add its fingerprint here. Never edit a pinned fingerprint to pass the test.
 
-register: {1: 04acea7b614fa3ee, 2: 77efe2f6b4c9b733, 3: 07054149042264a0, 4: 3001d5bd9a7c8879, 5: dd39d67cef675417, 6: eab569cf8415edf3}   # 2: typed citations (30-GATES.md step 2); 3: 40-BREADTH.md step 2; 4: the practice key and a trigger event's ruling day; the plain untaught text and the tombstone gone (step 4, batch 1); 6: the front door's readers (DEC-06)
+register: {1: 04acea7b614fa3ee, 2: 77efe2f6b4c9b733, 3: 07054149042264a0, 4: 3001d5bd9a7c8879, 5: dd39d67cef675417, 6: eab569cf8415edf3, 7: 62b1920c7a366cda}   # 2: typed citations (30-GATES.md step 2); 3: 40-BREADTH.md step 2; 4: the practice key and a trigger event's ruling day; the plain untaught text and the tombstone gone (step 4, batch 1); 6: the front door's readers (DEC-06); 7: a typed door link's words
 portfolio: {1: 2a1f88b46835846c, 2: 71db5cba6a611deb, 3: 8485b8f1400cf166, 4: 2dcb8d5d5e2d466b, 5: d5cc9489ae5aa3ab}   # 2: typed citations and exceptions; 3: keys, approvals, the estate's own; 4: the register's capability at schema 4 and the typed unconverted item only (step 4, batch 1)
 policy: {1: 5e326a1eef52829a, 2: 24738334933d73b0}   # 2: each golden names its test
 drift_read: {1: d65f66fe51531b73}
@@ -17,4 +17,4 @@ catalog_map: {1: ee770436e3fd043a, 2: f25a6c03c90f33f0}   # 1: the model, no fil
 practice: {1: 4f78629ade5e766d}   # instrument/practice.py's record of the layer's own practice (step 4, batch 1)
 watch_read: {1: 70520d0f32b85ef8}   # instrument/watch.py's record of one read of a watch entry's source (charter section 5.8, the operator's ruling of 2026-10-31)
 driver_stresses_draft: {1: fbfc7609e1c43611}   # drafts/driver-stresses.yaml, DEC-19's draft (40-BREADTH.md step 5)
-front_door: {1: 21ffb2f4babbfa4b}   # the feed the home renderer reads (DEC-06; 50-FRONT-DOOR.md section 9)
+front_door: {1: 21ffb2f4babbfa4b, 2: 791a5684a4baaf63}   # the feed the home renderer reads (DEC-06; 50-FRONT-DOOR.md section 9); 2: a link's words and the brief's label

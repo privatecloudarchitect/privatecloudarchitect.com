@@ -30,7 +30,7 @@ from pydantic import (
 )
 
 SCHEMA_VERSIONS = {
-    "register": 6,  # 6: the front door's readers (DEC-06; 50-FRONT-DOOR.md section 9)
+    "register": 7,  # 7: a typed door link's words; 6: the front door's readers (DEC-06; 50-FRONT-DOOR.md section 9)
     "portfolio": 5,
     "policy": 2,
     "drift_read": 1,
@@ -45,7 +45,7 @@ SCHEMA_VERSIONS = {
     "practice": 1,  # instrument/practice.py's record (40-BREADTH.md step 4, batch 1)
     "watch_read": 1,  # instrument/watch.py's record of one read of a watch entry's source (charter section 5.8)
     "driver_stresses_draft": 1,  # drafts/driver-stresses.yaml, DEC-19's draft, read by no gate (40-BREADTH.md step 5)
-    "front_door": 1,  # the front door's feed the home renderer reads (DEC-06; 50-FRONT-DOOR.md section 9)
+    "front_door": 2,  # 2: a link's words and the brief's label; 1: the feed the home renderer reads (DEC-06)
 }
 
 
@@ -746,15 +746,35 @@ def _site_path(path: str, where: str) -> str:
     return path
 
 
+class Link(Strict):
+    """A typed door's link with its own words (schema 7): a destination whose heading would mislead out of its page
+    (an anchor's heading reads without its page's subject), said in one line held by the promise's voice rules."""
+
+    path: str
+    words: str
+
+    @model_validator(mode="after")
+    def _one_line_in_voice(self) -> Link:
+        if not self.words.strip() or "\n" in self.words:
+            raise ValueError("a link's words are one line of text")
+        _door_voice("link's words", self.words)
+        return self
+
+
+def link_path(entry: str | Link) -> str:
+    return entry if isinstance(entry, str) else entry.path
+
+
 class Door(Strict):
     """What a reader's door on the landing page carries, in both layers (50-FRONT-DOOR.md section 8): the typed
-    title and promise (one line each), the strategy views it opens and the handbook pages it pairs with. A door
-    written as `roles` in both layers is derived: one brief per role, and the chapters that teach the role's loops."""
+    title and promise (one line each), the strategy views it opens and the handbook pages it pairs with, each a path
+    or a path with its own words. A door written as `roles` in both layers is derived: one brief per role, and the
+    chapters that teach the role's loops; a derived door carries no typed words."""
 
     title: str
     promise: str
-    strategy: list[str] | str  # paths the policy publishes, or `roles`
-    handbook: list[str] | str  # paths the site serves (an anchor allowed), or `roles`
+    strategy: list[str | Link] | str  # paths the policy publishes, or `roles`
+    handbook: list[str | Link] | str  # paths the site serves (an anchor allowed), or `roles`
 
     @model_validator(mode="after")
     def _paths_or_roles(self) -> Door:
@@ -767,13 +787,13 @@ class Door(Strict):
         if isinstance(self.strategy, list):
             if not self.strategy:
                 raise ValueError("the door opens no strategy view")
-            for p in self.strategy:
+            for p in map(link_path, self.strategy):
                 if not p.startswith("/strategy"):
                     raise ValueError(f"the door's strategy path {p!r} is not a strategy view")
         if isinstance(self.handbook, list):
             if not self.handbook:
                 raise ValueError("the door pairs with no handbook page")
-            for p in self.handbook:
+            for p in map(link_path, self.handbook):
                 _site_path(p, "the door's handbook side")
                 if p.startswith("/strategy"):
                     raise ValueError(f"the door's handbook path {p!r} is a strategy view")
@@ -806,11 +826,16 @@ class FrontDoorRole(Strict):
     ]  # the published chapters that teach the capabilities the brief shows as the role's work
 
 
+class FrontDoorLink(Strict):
+    path: str
+    words: str
+
+
 class FrontDoorDoor(Strict):
     title: str
     promise: str
-    strategy: list[str] | None = None
-    handbook: list[str] | None = None
+    strategy: list[str | FrontDoorLink] | None = None
+    handbook: list[str | FrontDoorLink] | None = None
     roles: list[FrontDoorRole] | None = (
         None  # the door derived from the roles, in place of typed paths
     )

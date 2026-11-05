@@ -383,24 +383,24 @@ capabilities:
     value: guidance-assessments-in-date
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '100.0 percent of initiatives: 10 of 10 initiatives'' newest guidance within its review-by on 2026-11-05'
     confidence: documented
   - id: rulings-reopened-in-cycle-2026-11-05
     value: rulings-reopened-in-cycle
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '0.0 percent of rulings: 0 of 4 rulings re-opened by a later event within one cycle length'
     confidence: documented
   - id: trigger-to-ruling-days-2026-11-05
     value: trigger-to-ruling-days
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '0.0 days per event: the mean over 4 ruled events'
     confidence: documented
   investment:
@@ -516,8 +516,8 @@ capabilities:
     value: board-inputs-not-measured
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '100.0 percent of inputs: 43 of 43 board inputs illustrative or not recorded'
     confidence: documented
   investment:
@@ -619,8 +619,8 @@ capabilities:
     value: scan-area-coverage
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '100.0 percent of areas: the scan scan-2026-11-02 (2026-11-02) records 6 of 6 areas with a signal found or a
       search made'
     confidence: documented
@@ -628,8 +628,8 @@ capabilities:
     value: signal-to-stance-days
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '0.0 days per signal: the mean over 1 initiatives from a scan, from the scan''s date to the first stance'
     confidence: documented
   investment:
@@ -734,8 +734,8 @@ capabilities:
     value: planning-assessments-in-date
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '100.0 percent of planned initiatives: 10 of 10 planned initiatives'' newest planning assessment within its review-by
       on 2026-11-05'
     confidence: documented
@@ -743,8 +743,8 @@ capabilities:
     value: uncommittable-initiatives
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '3 initiatives: 3 of 10 planned initiatives rest on a prerequisite no initiative establishes'
     confidence: documented
   investment:
@@ -840,8 +840,8 @@ capabilities:
     value: targets-without-a-held-owner
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '10 values: 10 of 81 values (of capabilities with a recorded state) whose target owner holds no department in
       a recorded scope'
     confidence: documented
@@ -849,8 +849,8 @@ capabilities:
     value: values-measured-against-target
     advisory: null
     kind: measured
-    read_at: '2026-11-05T13:45:59Z'
-    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T134559Z.json
+    read_at: '2026-11-05T19:18:20Z'
+    source: docs/design/enterprise-strategy-layer/instrument/practice/20261105T191820Z.json
     reading: '63.0 percent of values: 51 of 81 values with a recorded target and a reading within its window before 2026-11-05'
     confidence: documented
   investment:

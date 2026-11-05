@@ -26,6 +26,7 @@ from pathlib import Path
 
 import yaml
 
+from .files import parsed
 from .models import DriftLine, Parameter, Pins, Register
 from .policy import Loaded
 
@@ -252,7 +253,8 @@ def _pins(root: Path, pins_dir: Path | None = None) -> dict[str, object]:
     `pins_dir` (an adopter's flat folder, pins.yaml beside the copies; 40-BREADTH.md step 9), its file's basename. Two
     pins of one basename are refused there, since a flat folder cannot hold both (3c's judgment of step 9, F6)."""
     path = (pins_dir / "pins.yaml") if pins_dir is not None else root / PINS.relative_to(ROOT)
-    pins = Pins.model_validate(yaml.safe_load(path.read_text())).pins
+    # parsed once per process until the file moves: a render reads it once per capability (generator/files.py)
+    pins = parsed(path, lambda text: Pins.model_validate(yaml.safe_load(text))).pins
     if pins_dir is None:
         return {p.file: p for p in pins}
     by_name: dict[str, object] = {}

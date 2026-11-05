@@ -1,12 +1,12 @@
 {
  "schema": 1,
- "commit": "bbb83fef8b4c670011bcb78d5ebb98aea752f397",
+ "commit": "a6438c7a2e5bc32bc3f57a95759a705a9b4349c5",
  "written_by": "docs/design/enterprise-strategy-layer/generator/pin_companion.py",
  "register": {
   "source": "docs/design/enterprise-strategy-layer/register.yaml",
-  "source_sha256": "61cb97365fd305358877b8c5abae9a204300ed7993cb918e649e519668950014",
+  "source_sha256": "72a53e662857f7b7d2b193c14f06d2d4604907ddeec97051f1422f1792c36859",
   "copy": "docs/design/enterprise-strategy-layer/companion/pinned/register.yaml",
-  "copy_sha256": "61cb97365fd305358877b8c5abae9a204300ed7993cb918e649e519668950014"
+  "copy_sha256": "72a53e662857f7b7d2b193c14f06d2d4604907ddeec97051f1422f1792c36859"
  },
  "policy": {
   "source": "docs/design/enterprise-strategy-layer/policy.yaml",
@@ -16,9 +16,9 @@
  },
  "portfolio": {
   "source": "docs/design/enterprise-strategy-layer/portfolio.example.yaml",
-  "source_sha256": "67be4930ab840ca75af908f170fc01c4d480f3c08b0491ba19ba33eb16782118",
+  "source_sha256": "50109d647ab97702abeff5e380de824fe00ecfa8990cdfd7169551849d62b774",
   "copy": "docs/design/enterprise-strategy-layer/companion/pinned/portfolio.example.yaml",
-  "copy_sha256": "aa2654657f024a16cde7d25d8fb7b01e79254c1e0d6cad5708c6509946ecd794",
+  "copy_sha256": "c9a234418d5876c497ac06f711a36b5a9931a2a6b924fde35b9966d1e8d27148",
   "projection": "the served projection: the approved nodes, every withheld node removed, the approvals left out, and the initiatives the projection holds off the board left out with the decision-log entries that name them"
  }
 }

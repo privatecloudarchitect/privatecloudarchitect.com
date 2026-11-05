@@ -314,6 +314,14 @@ def register_5_to_6(doc: dict) -> dict:
     return doc
 
 
+@migration("register", 6)
+def register_6_to_7(doc: dict) -> dict:
+    """Schema 7: a typed door's link may carry its own words (`{path, words}` beside a plain path), a person's words
+    no migration writes, so a schema-6 file reads unchanged and the version alone moves (the expand step)."""
+    doc["schema"] = 7
+    return doc
+
+
 @migration("portfolio", 2)
 def portfolio_2_to_3(doc: dict) -> dict:
     for d in doc.get("initiatives") or []:
