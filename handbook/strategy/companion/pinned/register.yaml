@@ -44,7 +44,7 @@ readers:
     door:
       title: "Your role's brief and chapters"
       order: [strategy, handbook]       # the brief first, as the title names it
-      promise: "What your team owns, writes, runs and watches, and the chapters that teach it."
+      promise: "Your team's role brief and the chapters that teach its part in the strategy."
       strategy: roles
       handbook: roles
   - id: decision-maker

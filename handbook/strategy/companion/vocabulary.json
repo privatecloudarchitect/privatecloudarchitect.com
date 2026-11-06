@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "384c5f285c8fd9766a22c383f624bd7913d64c920922b50a00aef73ebaffb09d"
+   "sha256": "d71fb9d598f798622888b5b6d2905995596d0f42de2b2fe609a062e6a45cc4d7"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1539,7 +1539,7 @@
   },
   {
    "path": "/strategy/board",
-   "title": "What the reference estate funds first"
+   "title": "What to fund first, worked on the reference estate"
   },
   {
    "path": "/strategy/capacity-headroom",

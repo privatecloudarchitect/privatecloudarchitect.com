@@ -297,7 +297,7 @@ def amount(value: float, unit: str) -> str:
 # The renderer's format version: raised by hand when a change to the renderer changes what a served page says, and
 # pinned with a fingerprint of the served pages rendered from frozen slices (rendered/format.lock.yaml), so a served
 # page's digest names the renderer that wrote it (40-BREADTH.md step 2, S1).
-FORMAT = 9  # 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
+FORMAT = 10  # 10: the review's round 2 (the board as a worked example, the costs description in the reader's finance words, a driver defined); 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
 NAME = "The Architect's NOC"  # the layer's public name (DEC-01, 00-CHARTER.md section 10), on every page's eyebrow and the index's description, and on the companion's frame; "the strategy layer" stays the descriptive phrase in prose, and the pages' paths are unchanged (D-053)
 
 
@@ -861,7 +861,7 @@ def strategy_page(
     else:  # a capability whose own territory is untaught: its untaught entries say where it was sent
         parts.append("<p>The capability as a whole is taught by no published chapter yet.</p>")
     parts.append(
-        f'<p>Across the portfolio: <a href="/strategy/board">what the {E(rep["estate"])} estate funds first</a>; '
+        f'<p>Across the portfolio: <a href="/strategy/board">what to fund first, worked on the {E(rep["estate"])} estate</a>; '
         '<a href="/strategy/costs-and-value">what each capability returns, and what it costs once and to keep</a>; '
         '<a href="/strategy">every capability and role brief</a>.</p>'
     )
@@ -1174,7 +1174,7 @@ def board_page(
         STYLE,
         '<div class="esl" data-source="register portfolio" data-view="board">',
         f'<span class="eyebrow">{E(NAME)}, {E(rep["estate"])} portfolio</span>',
-        f"<h1>What the {E(rep['estate'])} estate funds first</h1>",
+        f"<h1>What to fund first, worked on the {E(rep['estate'])} estate</h1>",
         '<p class="dek">Each initiative ranked by what a month of waiting costs over the time it takes, an enabler by '
         "the chain it unblocks, funded within the constrained role's capacity. Every input marked illustrative was "
         "supplied for the worked example, not measured.</p>",
@@ -1768,6 +1768,20 @@ def agents_page(register, pages: dict[str, str], prov: dict) -> str:
     return "".join(parts)
 
 
+def _driver_kinds(register, html: bool = False) -> str:
+    """What a driver is, in the reader's words and from the register's own list: the kinds of outside change the layer
+    watches for, named from the first to the last the register holds, so the sentence moves when the list does. As
+    HTML the count carries its plane, as every count the page computes does."""
+    first, last = register.drivers[0].id, register.drivers[-1].id
+    n = count(len(register.drivers))
+    if html:
+        n = f'<span data-plane="design">{n}</span>'
+        first, last = E(words(first)), E(words(last))
+    else:
+        first, last = words(first), words(last)
+    return f"A driver is one of the {n} kinds of outside change the strategy layer watches for, from {first} to {last}"
+
+
 def drivers_page(register, pages: dict[str, str], prov: dict) -> str:
     """What each driver re-opens (40-BREADTH.md step 6): the register's drivers as they stand, each stress with its
     basis and grade, the initiatives that serve the capability with their newest guidance assessment
@@ -1786,9 +1800,9 @@ def drivers_page(register, pages: dict[str, str], prov: dict) -> str:
         '<div class="esl" data-source="register" data-view="drivers">',
         f'<span class="eyebrow">{E(NAME)}, the drivers</span>',
         "<h1>Each driver, the capabilities it stresses, and the initiatives it re-opens</h1>",
-        '<p class="dek">A driver is a kind of change the register watches for. Each one stresses capabilities, and a '
+        f'<p class="dek">{_driver_kinds(register, html=True)}. Each one stresses capabilities, and a '
         "trigger on it re-opens the guidance of the initiatives that establish or improve them.</p>",
-        f'<p>The register maps its drivers onto <span data-plane="design">{count(len(stressed))}</span> of '
+        f'<p>The strategy layer maps its drivers onto <span data-plane="design">{count(len(stressed))}</span> of '
         f'<span data-plane="design">{count(len(register.capabilities))}</span> written capabilities; a planned '
         "capability is stressed once a batch writes it.</p>",
     ]
@@ -2017,14 +2031,14 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
             strategy_page(cap.id, rep, reg, pf, _measures(cap, pol), lines, comp_map, pages),
         )
     out[f"board-{pf.estate}"] = (
-        f"What the {pf.estate} estate funds first",
+        f"What to fund first, worked on the {pf.estate} estate",
         f"The {pf.estate} estate's initiatives ranked by the cost of delay, within capacity: what to fund first",
         "/strategy/board",
         board_page(rep, reg, labels, pages, {r.measure: r.unit for r in pf.conversion_rates}),
     )
     out[f"costs-and-value-{pf.estate}"] = (
         "What each capability returns, and what it costs once and to keep",
-        "What each capability returns and the cost of delay, set against what it costs once and to keep",
+        "What each capability returns, its one-time investment and recurring cost, and the cost of delay",
         "/strategy/costs-and-value",
         costs_page(rep, reg, pages),
     )
@@ -2046,8 +2060,7 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
     )
     out["drivers"] = (
         "Each driver, the capabilities it stresses, and the initiatives it re-opens",
-        "Each driver of the register, the capabilities it stresses and the initiatives whose guidance a trigger on it "
-        "re-opens",
+        f"{_driver_kinds(reg)}: the capabilities each one stresses and the initiatives it re-opens",
         "/strategy/drivers",
         drivers_page(reg, pages, _used(rep, "register")),
     )
@@ -2209,7 +2222,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         }
         return (
             "What each capability returns, and what it costs once and to keep",
-            "What each capability returns and the cost of delay, set against what it costs once and to keep",
+            "What each capability returns, its one-time investment and recurring cost, and the cost of delay",
             "/strategy/costs-and-value",
             costs_page(rep, reg, pages, served=s),
         )
@@ -2225,7 +2238,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         rep["provenance"]["input_digest"] = served.slice_digest(s, pol, FORMAT)
         labels = {t["id"]: t["label"] for t in pol.get("planning-tiers")}
         return (
-            f"What the {pf.estate} estate funds first",
+            f"What to fund first, worked on the {pf.estate} estate",
             f"The {pf.estate} estate's initiatives ranked by the cost of delay, within capacity: what to fund first",
             "/strategy/board",
             board_page(
@@ -2256,8 +2269,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
     if kind == "drivers":
         return (
             "Each driver, the capabilities it stresses, and the initiatives it re-opens",
-            "Each driver of the register, the capabilities it stresses and the initiatives whose guidance a trigger "
-            "on it re-opens",
+            f"{_driver_kinds(reg)}: the capabilities each one stresses and the initiatives it re-opens",
             "/strategy/drivers",
             drivers_page(reg, pages, prov([])),
         )
