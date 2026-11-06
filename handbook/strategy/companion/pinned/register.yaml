@@ -36,7 +36,9 @@ readers:
       title: "The map and the catalog"
       order: [handbook, strategy]       # the map first, as the title names it
       promise: "Every chapter on its route, and every capability with its returns, costs and drivers."
-      strategy: ["/strategy", "/strategy/drivers"]
+      strategy:
+        - "/strategy"
+        - {path: "/strategy/drivers", words: "Drivers: the outside changes that re-open the plan"}
       handbook: ["/handbook/"]
   - id: department-operator
     name: "The department operator"
@@ -57,7 +59,7 @@ readers:
       strategy: ["/strategy/board", "/strategy/costs-and-value"]
       handbook:
         - "/handbook/identity-decisions"
-        - {path: "/notes/capacity-in-and-out#twelve-decisions-to-treat-as-one-way-and-how-firmly-each-is-known", words: "Capacity decisions to treat as one-way"}
+        - {path: "/notes/capacity-in-and-out#twelve-decisions-to-treat-as-one-way-and-how-firmly-each-is-known", words: "Capacity decisions to treat as one-way, in a field note"}
 
 # Capabilities the catalog defines in PH4, named because an initiative already stands on them. A prerequisite that
 # names one resolves (GATE-5); no initiative establishes them yet, so an initiative that requires one cannot be
