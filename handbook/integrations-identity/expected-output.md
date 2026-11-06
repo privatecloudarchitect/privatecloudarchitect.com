@@ -1,10 +1,10 @@
 # What a run looks like
 
-The reference estate, 2026-10-13 and 2026-10-15 (UTC): three vCenters on 9.1.1 joined to VCF single sign-on, whose
+The reference estate, 2026-10-13, 2026-10-15 and 2026-11-06 (UTC): three vCenters on 9.1.1 joined to VCF single sign-on, whose
 broker's identity provider is Active Directory over LDAP. Every run on the estate used `--redact`, so the names are
 placeholders, and each record path is shown as the record's file name in this folder. The API clients in them were
 throwaways, made by `api_client.py` for these runs and removed at the end: sections 1, 1a and 5 are one run of
-2026-10-15 at 06:36, section 3 a run of 2026-10-13 at 07:45, section 4 a read two minutes after it, section 2 an
+2026-11-06 at 18:17, section 3 a run of 2026-10-13 at 07:45, section 4 a read two minutes after it, section 2 an
 earlier client at 04:51, and section 3b a run of 2026-10-15 at 11:25. The plans and the refusal in sections 1 and 1a send nothing, and were run with a stand-in
 host.
 
@@ -22,6 +22,7 @@ With no `--execute` it prints every call and body and sends nothing. Exit 0.
 $ python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 43200 --access-token-ttl 60
 Create plan for API client backup-01 on operations.example.net:
   in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
+  GET    /acs/t/{broker tenant}/api-tokens/policy at the broker, before any write: a lifetime over a maximum it publishes is refused (exit 2)
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients
          {"clientDescription": "an integration's own identity", "clientId": "backup-01", "clientName": "backup-01"}
   PUT    /api/fleet-management/iam/ssorealms/{realm}/principals/{client uuid}/roles
@@ -33,28 +34,45 @@ Create plan for API client backup-01 on operations.example.net:
 plan only: nothing was sent (--execute sends it)
 ```
 
-A lifetime outside the broker's bounds is refused before anything is sent: a usage error, exit 5 (2 before
+A lifetime outside the ranges checked before anything is sent is refused there: a usage error, exit 5 (2 before
 2026-10-15).
 
 ```
 $ python3 api_client.py --client-id backup-01 --role vcf_viewer --api-token-ttl 100 --access-token-ttl 60
---api-token-ttl 100 is outside the broker's bounds of 1440 to 259200 minutes
+--api-token-ttl 100 is outside 1440 to 259200 minutes, from one day, the shortest the broker took on the reference estate, to the documented 180 days
 ```
 
-The create on the reference estate, with the shortest API token lifetime the broker takes. Exit 0.
+With `--execute`, a create or a rotation first reads the broker's token TTL policy. On the reference estate it
+published 60 minutes for an access token and 259,200 for an API token, so a create asked for 61 minutes was refused
+there, exit 2, and the fleet's list read after it held no client of that id. Your broker's maximums may differ: the
+first line under the mode gives them.
+
+```
+$ python3 api_client.py --client-id <id> --role vcf_viewer --api-token-ttl 1440 --access-token-ttl 61 \
+    --description <a throwaway> --token-file <path> --execute --redact
+create: API client {{client-1}}
+  the broker's token TTL policy: HTTP 200, maximums API token 259200 min, access token 60 min
+  refused: --access-token-ttl 61 is over the 60 minutes the broker's token TTL policy allows: nothing was written
+exit 2
+
+api_client_refused.json written with every estate value replaced
+```
+
+The create on the same estate, with the shortest API token lifetime the broker takes. Exit 0.
 
 ```
 $ python3 api_client.py --client-id <id> --role vcf_viewer --api-token-ttl 1440 --access-token-ttl 60 \
     --description <a throwaway> --token-file <path> --execute --redact
 create: API client {{client-1}}
+  the broker's token TTL policy: HTTP 200, maximums API token 259200 min, access token 60 min
   GET    /ssorealms: HTTP 200
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
   POST   /ssorealms/{realm}/api-clients: HTTP 201
   PUT    /ssorealms/{realm}/principals/{client uuid}/roles: HTTP 200
   POST   /ssorealms/{realm}/api-tokens: HTTP 201
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
   the token traded at the broker: HTTP 200, a SERVICE bearer living 60.0 min
   read back: client present True, roles vcf_viewer at SSO_REALM scope; tokens ACTIVE API 1440 min, access 60 min
 exit 0
@@ -81,6 +99,7 @@ client, with other lifetimes for the new token so the read-back shows which toke
 $ python3 api_client.py --client-id backup-01 --rotate --api-token-ttl 2880 --access-token-ttl 60
 Rotation plan for API client backup-01 on operations.example.net:
   in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
+  GET    /acs/t/{broker tenant}/api-tokens/policy at the broker, before any write: a lifetime over a maximum it publishes is refused (exit 2)
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query, ?page=N&pageSize=50 to the stated total: the client and the tokens it holds
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens
          {"accessTokenTtl": 60, "apiClientId": "backup-01", "apiTokenTtl": 2880, "tokenName": "backup-01-token-<UTC stamp>", "tokenType": "API_CLIENT"}
@@ -95,13 +114,14 @@ plan only: nothing was sent (--execute sends it)
 $ python3 api_client.py --client-id <id> --rotate --api-token-ttl 2880 --access-token-ttl 60 \
     --token-file <new path> --old-token-file <path> --execute --redact
 rotate: API client {{client-1}}
+  the broker's token TTL policy: HTTP 200, maximums API token 259200 min, access token 60 min
   GET    /ssorealms: HTTP 200
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
   POST   /ssorealms/{realm}/api-tokens: HTTP 201
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
   the new token traded at the broker: HTTP 200, a SERVICE bearer living 60.0 min
   signed in as: a person's token
   in the overlap: 1 token(s) held before, 2 active with the new one
@@ -131,11 +151,11 @@ plan only: nothing was sent (--execute sends it)
 $ python3 api_client.py --client-id <id> --retire-old --old-token-file <path> --execute --redact
 retire-old: API client {{client-1}}
   GET    /ssorealms: HTTP 200
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
   DELETE /ssorealms/{realm}/api-tokens/{token id}: HTTP 204
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
   signed in as: a person's token
   held before: 2 token(s); deleted 1, every one older than the newest
   the old token at the broker, before the delete: HTTP 200, traded
@@ -152,7 +172,7 @@ api_client_retire.json written with every estate value replaced
 - **The retirement removes what is older than the newest.** `--retire-old` deleted the one older token; the broker
   traded it before the delete and answered it with HTTP 400 after, and one token was left, with the new lifetimes. The
   old token's file can then be removed.
-- **What it refuses, before any delete.** On the same client, `--retire-old` with no state file recording the client
+- **What it refuses, before any delete.** On a throwaway of 2026-10-15, `--retire-old` with no state file recording the client
   exited 2 with `refused: this script did not make this client`, and a second `--retire-old`, with one token left, exited
   2 with `refused: the client holds one token`. Run on a client's own token, every write after the create refuses too
   (`--rotate` included, since 2026-10-15, held by the companion's tests): a second throwaway client, holding VCF
@@ -178,7 +198,7 @@ attempt, and the record keeps its reason:
   PUT    /ssorealms/{realm}/principals/{client uuid}/roles: HTTP 400 (Invalid role scope for the given role:vcf_viewer)
 ```
 
-`sddc_viewer` bundles only an instance's components (vCenter ReadOnly, NSX auditor), and the fleet took it:
+`sddc_viewer` bundles only an instance's components (vCenter ReadOnly, NSX auditor), and the fleet took it (a create of this version prints the broker's policy line first, as section 1 shows):
 
 ```text
 create: API client {{client-1}}
@@ -514,12 +534,12 @@ The throwaway removed, on the operator's own token. Exit 0.
 $ python3 api_client.py --client-id <id> --teardown --execute --redact
 teardown: API client {{client-1}}
   GET    /ssorealms: HTTP 200
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
   DELETE /ssorealms/{realm}/api-tokens/{token id}: HTTP 204
   DELETE /ssorealms/{realm}/api-clients/{client id}: HTTP 204
-  POST   /ssorealms/{realm}/api-clients/query: HTTP 200
-  POST   /ssorealms/{realm}/api-tokens/query: HTTP 200
+  POST   /ssorealms/{realm}/api-clients/query?page=0&pageSize=50: HTTP 200
+  POST   /ssorealms/{realm}/api-tokens/query?page=0&pageSize=50: HTTP 200
   signed in as: a person's token
   residue: client present False, tokens left 0
 exit 0
@@ -677,6 +697,7 @@ replay: 5 recorded answers from replay/api_client; nothing is sent and no creden
 replay: --execute runs its plan alone under --replay; nothing is sent
 Rotation plan for API client backup-01 on ops.example.test:
   in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)
+  GET    /acs/t/{broker tenant}/api-tokens/policy at the broker, before any write: a lifetime over a maximum it publishes is refused (exit 2)
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-clients/query and api-tokens/query, ?page=N&pageSize=50 to the stated total: the client and the tokens it holds
   POST   /api/fleet-management/iam/ssorealms/{realm}/api-tokens
          {"accessTokenTtl": 60, "apiClientId": "backup-01", "apiTokenTtl": 2880, "tokenName": "backup-01-token-<UTC stamp>", "tokenType": "API_CLIENT"}

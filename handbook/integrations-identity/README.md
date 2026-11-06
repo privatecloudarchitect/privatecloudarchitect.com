@@ -28,7 +28,7 @@ one, and nothing is written to the platform on it.
 | `vcenter_exchange.py` | The session census and the exchange. Read-only. Writes `exchange.json` with every estate name replaced, and refuses to write a record in which one survived. |
 | `api_client.py` | One API client for one integration: plan it (the default), create it, rotate its token, retire the old one, remove it. Writes `api_client.json` the same way, and a state file you keep and do not publish. |
 | `exchange.json` | The census and the exchange on the reference estate, 2026-10-13, read as an API client. The chapter's plates render it. |
-| `api_client.json`, `api_client_overlap.json`, `api_client_retire.json`, `api_client_teardown.json` | One throwaway client made, its token rotated with the old one still trading, the old one retired, and the client removed, on the reference estate, 2026-10-15. |
+| `api_client_refused.json`, `api_client.json`, `api_client_overlap.json`, `api_client_retire.json`, `api_client_teardown.json` | One throwaway client: a create over the broker's TTL policy refused before any write, then the client made, its token rotated with the old one still trading, the old one retired, and the client removed, on the reference estate, 2026-11-06. |
 | `api_client_rotate.json` | The earlier `--rotate` of 2026-10-13, which deleted the old token in the same run; kept as the register's evidence for the overlap it showed. |
 | `service_account.py` | One VCF Automation service account for one integration: plan it (the default), create it, revoke and remove it. Writes `service_account.json` the same way, and a state file you keep and do not publish. |
 | `service_account.json`, `service_account_teardown.json` | One throwaway service account made, revoked and removed in a throwaway All Apps organization on the reference estate, 2026-10-13. |
@@ -305,8 +305,8 @@ python3 api_client.py --client-id backup-01 --teardown --execute    # when the i
 | `--scope realm\|instance` | where the role applies: the whole realm (the default), or one VCF instance with `--instance` |
 | `--instance NAME` | with `--scope instance`: the VCF instance's name as the realm's coverage names it; a name the realm does not cover is refused before any write |
 | `--realm REALM` | the realm to act in, by its name or its id as `GET /ssorealms` lists them; required when the fleet holds more than one realm, and the realm the create recorded for every later run |
-| `--api-token-ttl MIN` | the API token's lifetime in minutes, 1,440 to 259,200 (required to create) |
-| `--access-token-ttl MIN` | the lifetime in minutes of each bearer the token yields, 30 to 60 (required to create) |
+| `--api-token-ttl MIN` | the API token's lifetime in minutes, 1,440 to 259,200, and no more than the broker's TTL policy allows (required to create) |
+| `--access-token-ttl MIN` | the lifetime in minutes of each bearer the token yields, 30 to 480, and no more than the broker's TTL policy allows (required to create) |
 | `--token-file PATH` | where the token is written, mode 0600; the file must not exist (required with `--execute`) |
 | `--description TEXT` | the client's description (default `an integration's own identity`) |
 | `--rotate` | issue the client a new token with both lifetimes and prove it, deleting nothing (needs both lifetimes and `--token-file`; no `--role`) |
@@ -382,13 +382,17 @@ or a retirement that then finds no client in the realm it reads exits 3 (`NOT RE
 |---|---|
 | 0 | the plan printed; or the run held on read-back: the client with its one role and an active token with both lifetimes; for a rotation, the new token proved and active beside the old ones and, when given, the old token still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a teardown, no client and no token left, in the fleet's only realm or the realm the state file records |
 | 1 | the run did not hold: a write was refused, or the read-back was not what was asked; a create that stopped part way prints where it stopped and the teardown to run before trying again |
-| 2 | refused by this script before any write: a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; for a rotation or a retirement, no client by that id in the fleet's only realm or the realm the state file records; a run signed in as the client it would change, on a bearer it cannot read, or on an API client's bearer that carries no client id (`azp`), for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; a state file that records the client in another realm than the run reads; or a fleet with no realm, so no client to make, rotate, retire or remove in one |
+| 2 | refused by this script before any write: a lifetime over a maximum the broker's TTL policy publishes, for a create or a rotation (the policy is read first); a client that already exists (refused, never adopted); for a rotation, a retirement or a teardown, a client the state file does not record; for a rotation or a retirement, no client by that id in the fleet's only realm or the realm the state file records; a run signed in as the client it would change, on a bearer it cannot read, or on an API client's bearer that carries no client id (`azp`), for every write after the create, a rotation included; a retirement while the client holds one token or whose newest token this script did not issue; a state file that records the client in another realm than the run reads; or a fleet with no realm, so no client to make, rotate, retire or remove in one |
 | 3 | a read failed or is undetermined: a list or the realm list not read whole (a page refused, an answer without its list or its total, a total that changed between pages, a page that added nothing new, or pages that end before the total they state), the read-back not read, a token issued whose id the list read after it could not name, a create answered without the client's uuid (no role bound, nothing more sent), a teardown, a rotation or a retirement on a fleet of more than one realm that found no client where no state file records its realm, your token not traded for a bearer, a request that got no answer (a write among them, since whether it was made is not known, and a token's trade at the broker, which is neither traded nor refused), a request a `--replay` set holds no answer for, or an error the script did not expect; and a run whose writes held but whose record the scrub refused |
-| 5 | a usage error (a missing or bad argument or variable, a lifetime outside the bounds, a token file that exists, with `--execute` an operator credential file or the `--old-token-file` that cannot be read, is empty or is open to group or other (refused unread, with the fix: `chmod 600`), a fleet of more than one realm with no `--realm`, a `--realm` that names none of its realms or more than one, a `--replay` directory that cannot be read or holds no replay set), or a Python older than 3.10; nothing is written |
+| 5 | a usage error (a missing or bad argument or variable, a lifetime outside the ranges checked before anything is sent, a token file that exists, with `--execute` an operator credential file or the `--old-token-file` that cannot be read, is empty or is open to group or other (refused unread, with the fix: `chmod 600`), a fleet of more than one realm with no `--realm`, a `--realm` that names none of its realms or more than one, a `--replay` directory that cannot be read or holds no replay set), or a Python older than 3.10; nothing is written |
 
 ### What it sends, and in what order
 
-Every path is under `/api/fleet-management/iam` on VCF Operations.
+Every path is under `/api/fleet-management/iam` on VCF Operations, apart from the broker's two. First, for a create
+or a rotation, the broker's token TTL policy: `GET /acs/t/{broker tenant}/api-tokens/policy` at the broker, with
+`Accept: application/vnd.vmware.vidm.api-tokens.ttl.policy+json` (it answers 404 to `application/json`) and the run's
+bearer. A lifetime over a maximum it publishes is refused, exit 2, before anything else is sent; the report's first line
+under the mode gives the maximums, or that the policy was not read.
 
 1. `GET /ssorealms`: the realm to act in, the one `--realm` names or the fleet's only realm (more than one, with no
    `--realm`, is refused, exit 5). Then a query of the realm's API clients, read whole; a client with the id you gave
@@ -533,7 +537,13 @@ Steps 1 to 4 run only when an API client's credential is given.
 - `api_client.py` writes only with `--execute`: one client, one role binding, one token, a new token, the old tokens'
   removal, or the client's. A create refuses a client id that exists; every later write acts only on a client its state
   file records, and never on the client the run is signed in as, a rotation included.
-- The lifetime bounds are the ones the broker held a create to on the reference estate, not documented ranges.
+- Lifetimes are checked twice. Before anything is sent, against the broker's fixed ranges as the reference estate's
+  broker held them: an API token of 1,440 to 259,200 minutes (one day, under the documented 30 days, to the documented
+  180) and an access token of 30 to 480. With `--execute`, against the maximums the broker's TTL policy publishes, read
+  before any write: the reference estate's read 60 minutes and 259,200, and refused bearers of 61 and 480 minutes as over
+  its 60. The access maximum follows the fleet's IAM `accessTokenTtl` setting: set to 120 for a run, the policy read 120. A broker that does not answer the read (the route is new in identity broker 9.1.1) leaves the lifetimes to its
+  own check when the token is issued, and the record shows the policy as not read. The API maximum is held on the route's documented
+  purpose; on the reference estate it equalled the fixed 180 days, so it was never seen to bind on its own.
 - A rotation was run on VCF 9.1.1 twice. On 2026-10-13 the earlier one-step `--rotate` showed the client holding two
   active tokens, the old token trading before the delete and refused after it (HTTP 400). On 2026-10-15 the two-step
   form ran: `--rotate` left two active tokens with the old one still trading and deleted nothing, `--retire-old` then

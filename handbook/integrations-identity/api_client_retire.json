@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-15T06:37:17Z",
+ "captured": "2026-11-06T18:18:30Z",
  "mode": "retire-old",
  "client": "{{client-1}}",
  "calls": [
@@ -10,12 +10,12 @@
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-clients/query",
+   "path": "/ssorealms/{realm}/api-clients/query?page=0&pageSize=50",
    "status": 200
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-tokens/query",
+   "path": "/ssorealms/{realm}/api-tokens/query?page=0&pageSize=50",
    "status": 200
   },
   {
@@ -25,18 +25,20 @@
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-clients/query",
+   "path": "/ssorealms/{realm}/api-clients/query?page=0&pageSize=50",
    "status": 200
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-tokens/query",
+   "path": "/ssorealms/{realm}/api-tokens/query?page=0&pageSize=50",
    "status": 200
   }
  ],
  "asked": {
   "old_token_given": true
  },
+ "realm": "{{host-2}}",
+ "realms_in_fleet": 1,
  "signed_in_as": "a person's token",
  "tokens_before": 2,
  "old_token_before_delete": {
@@ -47,6 +49,7 @@
   "status": 400
  },
  "readback": {
+  "newest_kept": true,
   "client_present": true,
   "roles": [
    "vcf_viewer"

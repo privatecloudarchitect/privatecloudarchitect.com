@@ -1,0 +1,20 @@
+{
+ "captured": "2026-11-06T18:17:57Z",
+ "mode": "create",
+ "client": "{{client-1}}",
+ "calls": [],
+ "asked": {
+  "role": "vcf_viewer",
+  "scope": "SSO_REALM",
+  "api_token_ttl_min": 1440,
+  "access_token_ttl_min": 61
+ },
+ "policy": {
+  "status": 200,
+  "enabled": true,
+  "max_api_token_ttl_min": 259200,
+  "max_access_token_ttl_min": 60
+ },
+ "refused": "--access-token-ttl 61 is over the 60 minutes the broker's token TTL policy allows: nothing was written",
+ "exit": 2
+}

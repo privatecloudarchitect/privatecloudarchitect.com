@@ -1,5 +1,5 @@
 {
- "captured": "2026-10-15T06:37:03Z",
+ "captured": "2026-11-06T18:18:18Z",
  "mode": "rotate",
  "client": "{{client-1}}",
  "calls": [
@@ -10,12 +10,12 @@
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-clients/query",
+   "path": "/ssorealms/{realm}/api-clients/query?page=0&pageSize=50",
    "status": 200
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-tokens/query",
+   "path": "/ssorealms/{realm}/api-tokens/query?page=0&pageSize=50",
    "status": 200
   },
   {
@@ -25,17 +25,17 @@
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-tokens/query",
+   "path": "/ssorealms/{realm}/api-tokens/query?page=0&pageSize=50",
    "status": 200
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-clients/query",
+   "path": "/ssorealms/{realm}/api-clients/query?page=0&pageSize=50",
    "status": 200
   },
   {
    "method": "POST",
-   "path": "/ssorealms/{realm}/api-tokens/query",
+   "path": "/ssorealms/{realm}/api-tokens/query?page=0&pageSize=50",
    "status": 200
   }
  ],
@@ -44,6 +44,14 @@
   "access_token_ttl_min": 60,
   "old_token_given": true
  },
+ "policy": {
+  "status": 200,
+  "enabled": true,
+  "max_api_token_ttl_min": 259200,
+  "max_access_token_ttl_min": 60
+ },
+ "realm": "{{host-2}}",
+ "realms_in_fleet": 1,
  "signed_in_as": "a person's token",
  "token_file_written": true,
  "tokens_before": 1,

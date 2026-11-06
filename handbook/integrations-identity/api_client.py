@@ -47,8 +47,13 @@ page, 50 asked to a page, until the items counted once each (by id) reach the to
 (pageInfo.totalCount). A page refused, an answer with no list or no total, a total that changes between pages, a page
 that adds nothing new, or pages that end (a page shorter than the page size the answer states it served) before the
 total is reached, is a read that failed (exit 3), never a shorter list, and a run that could not read a list whole sends
-no write that rests on it. Lifetimes outside the bounds the broker held on the reference
-estate (an API token of 1,440 to 259,200 minutes, an access token of 30 to 60) are refused before anything is sent.
+no write that rests on it. Lifetimes are checked twice. Before anything is sent, an API token outside 1,440 to 259,200
+minutes (one day, the shortest the broker took on the reference estate, under the documented 30 days, to the documented
+180 days) or an access token outside the documented 30 to 480 is refused (exit 5). With --execute, a create or a rotation
+then reads the broker's token TTL policy (GET /acs/t/<tenant>/api-tokens/policy, asked for its own media type, since the
+route answers 404 to application/json) and refuses a lifetime over either maximum it publishes (exit 2) before any write:
+the reference estate's read 60 minutes and 259,200. A broker that does not answer that read (the route is new in
+identity broker 9.1.1) leaves the lifetimes to its own check when the token is issued, and the record shows the policy as not read.
 
 Env:  OPS_HOST                 VCF Operations FQDN (required)
       OPS_API_TOKEN_FILE       an API token of a user whose fleet role may manage the fleet's API clients: the
@@ -73,7 +78,8 @@ Use:  python3 api_client.py --client-id ID --role ROLE --api-token-ttl MIN --acc
                             script holds the answers the reads get, and a request it holds no answer for is a read
                             that failed (exit 3)
 Exit, the first that applies, so a scheduler reads one state from one number:
-      2 refused by this script before any write: the client exists (for a create); no state file records the client
+      2 refused by this script before any write: a lifetime over a maximum the broker's token TTL policy publishes (for
+        a create or a rotation, read first); the client exists (for a create); no state file records the client
         with this uuid (for a rotation, a retirement or a teardown), the state file records it in another realm, or
         there is no client by that id (for a rotation or a retirement, in the fleet's only realm or the realm the
         state file records); the run is signed in as the client, or its bearer is not a JWT this script can read or
@@ -92,7 +98,8 @@ Exit, the first that applies, so a scheduler reads one state from one number:
         lifetimes; for a rotation, the new token proved and active beside the old ones, and, when given, the old token
         still trading; for a retirement, one token left, the newest, and, when given, the old token refused; for a
         teardown, no client and no token left, in the fleet's only realm or the realm the state file records)
-      5 a usage error (a missing or bad argument or environment variable, a lifetime outside the bounds, a token file
+      5 a usage error (a missing or bad argument or environment variable, a lifetime outside the range checked before
+        anything is sent, a token file
         that exists, with --execute an operator credential file or the --old-token-file that cannot be read, is empty
         or is open to group or other (refused unread, with the fix: chmod 600; the old token is read before anything is
         sent, so a rotation never issues a new token first), a fleet holding more than one realm with no --realm, a
@@ -120,9 +127,13 @@ from collections import Counter
 AGENT = "api_client.py"
 IAM = "/api/fleet-management/iam"
 API_TOKEN_GRANT = "urn:custom:vcf:params:oauth:grant-type:api-token"
-# The bounds the broker held a create to on the reference estate (minutes), not the documented ranges.
+# The lifetimes checked before anything is sent (minutes): an API token from the one day the broker took on the reference
+# estate (1439 refused, under the documented 30 days) to the documented 180 days; an access token inside the documented
+# 30 to 480, the range the broker's fixed check held there (29 and 481 refused as invalid). The broker's own maximums
+# are its token TTL policy's, read before any write (broker_policy).
 API_TOKEN_TTL = (1440, 259200)
-ACCESS_TOKEN_TTL = (30, 60)
+ACCESS_TOKEN_TTL = (30, 480)
+POLICY_MEDIA = "application/vnd.vmware.vidm.api-tokens.ttl.policy+json"   # the policy route answers 404 to application/json
 # One exit contract for every identity companion: 0 nothing to act on, 3 a read failed or is undetermined, 5 a usage
 # error; 1 and 2 are this script's own (the run did not hold; refused before any write).
 EXIT_OK, EXIT_NOT_HELD, EXIT_REFUSED, EXIT_UNREAD, EXIT_USAGE = 0, 1, 2, 3, 5
@@ -450,16 +461,52 @@ def broker_tenant() -> str:
     return os.environ.get("BROKER_TENANT") or os.environ.get("OPS_REALM") or "CUSTOMER"
 
 
+def broker_host() -> str:
+    """The broker that trades API tokens for bearers: OPS_BROKER_HOST, BROKER_HOST, or VCF Operations' own host."""
+    return os.environ.get("OPS_BROKER_HOST") or os.environ.get("BROKER_HOST") or os.environ["OPS_HOST"]
+
+
+def broker_policy(bearer: str) -> dict:
+    """The broker's token TTL policy: the maximums, in minutes, a token's two lifetimes may be asked with, read with the
+    bearer every other call carries and asked for the route's own media type. {"status": N} and no maximums when it was
+    not read: a broker without the route (it is new in identity broker 9.1.1), a refusal, or no answer."""
+    status, answer = _send("GET", f"https://{broker_host()}/acs/t/{broker_tenant()}/api-tokens/policy",
+                           headers={"Accept": POLICY_MEDIA, "Authorization": f"Bearer {bearer}"})
+    out: dict = {"status": status}
+    if status == 200:
+        api, access, on = ((answer.get(k) if isinstance(answer, dict) else None)
+                           for k in ("maxApiTokenTtl", "maxAccessTokenTtl", "enabled"))
+        if type(api) is int and type(access) is int and type(on) is bool:
+            out.update({"enabled": on, "max_api_token_ttl_min": api, "max_access_token_ttl_min": access})
+        else:
+            out["shape"] = "no maxApiTokenTtl, maxAccessTokenTtl and enabled in the answer"
+    return out
+
+
+def policy_error(policy: dict, api_ttl: int, access_ttl: int) -> str | None:
+    """A lifetime over a maximum the broker's policy publishes, named with that maximum. None when the policy allows both,
+    was not read, or reads enabled false: what the broker does with a disabled policy was not read, so it judges then.
+    The access maximum is the one seen to bind (on the reference estate the broker refused 61 and 480 minutes as over its
+    60), and it follows the fleet's IAM accessTokenTtl setting: set to 120 for a run, the policy read 120. The API maximum is held because the route is documented as the limits for creating a token, to check a lifetime
+    before asking for it; there it equalled the fixed 180 days, so it was never seen to bind on its own."""
+    if policy.get("enabled") is not True:
+        return None
+    over = [f"--{flag} {asked} is over the {most} minutes the broker's token TTL policy allows"
+            for flag, asked, most in (("api-token-ttl", api_ttl, policy["max_api_token_ttl_min"]),
+                                      ("access-token-ttl", access_ttl, policy["max_access_token_ttl_min"])) if asked > most]
+    return "; ".join(over) or None
+
+
 def ops_bearer() -> str:
     """The bearer in OPS_BEARER_FILE, or the operator's API token traded at the broker for one."""
     if os.environ.get("OPS_BEARER_FILE"):
         return _secret("OPS_BEARER").removeprefix("Bearer ").strip()
-    broker = os.environ.get("OPS_BROKER_HOST") or os.environ.get("BROKER_HOST") or os.environ["OPS_HOST"]
-    status, answer = _send("POST", f"https://{broker}/acs/t/{broker_tenant()}/token",
+    status, answer = _send("POST", f"https://{broker_host()}/acs/t/{broker_tenant()}/token",
                            form={"grant_type": API_TOKEN_GRANT, "api_token": (_secret("OPS_API_TOKEN") or _secret("API_TOKEN"))})
     if status != 200 or not isinstance(answer, dict) or "access_token" not in answer:
         # a deleted API token is refused here, not with 401: HTTP 500 on 9.1.0 (2026-09-16), HTTP 400 for a deleted API
-        # client token on 9.1.1 (X-153, X-190); check the token still exists, then its expiry, before the service
+        # client token on 9.1.1 (X-153, X-190), and HTTP 500 for an expired one on 9.1.1 (X-063); check the token still
+        # exists, then its expiry, before the service
         raise RuntimeError(f"the broker did not trade the operator's API token for a bearer (HTTP {status})")
     return answer["access_token"]
 
@@ -538,9 +585,10 @@ def bounds_error(api_ttl: int | None, access_ttl: int | None) -> str | None:
     if api_ttl is None or access_ttl is None:
         return "set both lifetimes: --api-token-ttl and --access-token-ttl, in minutes"
     if not API_TOKEN_TTL[0] <= api_ttl <= API_TOKEN_TTL[1]:
-        return f"--api-token-ttl {api_ttl} is outside the broker's bounds of {API_TOKEN_TTL[0]} to {API_TOKEN_TTL[1]} minutes"
+        return (f"--api-token-ttl {api_ttl} is outside {API_TOKEN_TTL[0]} to {API_TOKEN_TTL[1]} minutes, from one day, the "
+                "shortest the broker took on the reference estate, to the documented 180 days")
     if not ACCESS_TOKEN_TTL[0] <= access_ttl <= ACCESS_TOKEN_TTL[1]:
-        return f"--access-token-ttl {access_ttl} is outside the broker's bounds of {ACCESS_TOKEN_TTL[0]} to {ACCESS_TOKEN_TTL[1]} minutes"
+        return f"--access-token-ttl {access_ttl} is outside the documented {ACCESS_TOKEN_TTL[0]} to {ACCESS_TOKEN_TTL[1]} minutes"
     return None
 
 
@@ -711,8 +759,7 @@ def readback(fleet: Fleet, rid: str, client_id: str, keep: str | None = None) ->
 def prove(token: str) -> dict:
     """Trade the new API token at the broker once: the status, and the bearer's principal type and lifetime. The
     token and the bearer stay in memory."""
-    broker = os.environ.get("OPS_BROKER_HOST") or os.environ.get("BROKER_HOST") or os.environ["OPS_HOST"]
-    status, answer = _send("POST", f"https://{broker}/acs/t/{broker_tenant()}/token",
+    status, answer = _send("POST", f"https://{broker_host()}/acs/t/{broker_tenant()}/token",
                            form={"grant_type": API_TOKEN_GRANT, "api_token": token})
     out = {"status": status}
     bearer = answer.get("access_token") if isinstance(answer, dict) else None
@@ -1216,6 +1263,9 @@ def plan_lines(a: argparse.Namespace) -> list[str]:
            (f"  in realm {a.realm.strip()}, the one --realm names (refused, exit 5, if no realm or more than one answers "
             "to it)" if a.realm and a.realm.strip()
             else "  in the fleet's only realm (refused, exit 5, if it holds more than one: name it with --realm)")]
+    if not (a.teardown or a.retire_old):
+        out.append("  GET    /acs/t/{broker tenant}/api-tokens/policy at the broker, before any write: a lifetime over a "
+                   "maximum it publishes is refused (exit 2)")
     for c in calls:
         out.append(f"  {c['method']:6} {c['path'] if c['path'].startswith('/acs') else IAM + c['path']}")
         if c.get("body"):
@@ -1238,6 +1288,13 @@ def report(record: dict) -> list[str]:
     lines = [f"{record['mode']}: API client {record['client']}"
              + (f" in realm {record['realm']}, one of the fleet's {record['realms_in_fleet']}"
                 if record.get("realm") and (record.get("realms_in_fleet") or 0) > 1 else "")]
+    if "policy" in record:
+        p = record["policy"]
+        lines.append("  the broker's token TTL policy: " + (
+            f"HTTP 200, maximums API token {p['max_api_token_ttl_min']} min, access token {p['max_access_token_ttl_min']} min"
+            + ("" if p["enabled"] else ", enabled false: not applied here") if "enabled" in p
+            else f"not read (HTTP {p['status']}" + (f", {p['shape']}" if p.get("shape") else "")
+            + "): the broker judges the lifetimes when the token is issued"))
     for c in record.get("calls", []):
         lines.append(f"  {c['method']:6} {c['path']}: HTTP {c['status']}" + (f" ({c['message']})" if c.get("message") else "")
                      + (f" ({c['shape']})" if c.get("shape") else ""))
@@ -1320,8 +1377,11 @@ def _run(argv: list[str] | None = None) -> int:
     ap.add_argument("--instance", help="with --scope instance: the VCF instance's name, as the realm's coverage names it")
     ap.add_argument("--realm", help="the realm to act in, by its name or its id as GET /ssorealms lists them; required "
                                     "when the fleet holds more than one realm")
-    ap.add_argument("--api-token-ttl", type=int, help="the API token's lifetime in minutes (1440 to 259200)")
-    ap.add_argument("--access-token-ttl", type=int, help="the lifetime in minutes of each bearer it yields (30 to 60)")
+    ap.add_argument("--api-token-ttl", type=int,
+                    help="the API token's lifetime in minutes (1440 to 259200, and no more than the broker's policy allows)")
+    ap.add_argument("--access-token-ttl", type=int,
+                    help="the lifetime in minutes of each bearer it yields (30 to 480, and no more than the broker's policy "
+                         "allows)")
     ap.add_argument("--token-file", help="where the token is written, mode 0600; it must not exist")
     ap.add_argument("--description", default="an integration's own identity", help="the client's description")
     ap.add_argument("--teardown", action="store_true", help="remove the client and its tokens instead")
@@ -1406,9 +1466,15 @@ def _run(argv: list[str] | None = None) -> int:
     except (RuntimeError, urllib.error.URLError, OSError) as e:
         print(f"could not start: {e}", file=sys.stderr)
         return EXIT_UNREAD
-    realms = realm_list(fleet)
+    over = None
+    if mode in ("create", "rotate"):   # the broker's maximums, read before any write
+        record["policy"] = broker_policy(fleet.bearer)
+        over = policy_error(record["policy"], a.api_token_ttl, a.access_token_ttl)
+    realms = None if over else realm_list(fleet)
     realm, made_in = None, {}
-    if realms is None:
+    if over:
+        record["refused"], record["exit"] = f"{over}: nothing was written", EXIT_REFUSED
+    elif realms is None:
         record["exit"] = EXIT_UNREAD
     elif not realms:
         record["refused"] = ("the fleet holds no realm: an API client lives in a realm, so "
