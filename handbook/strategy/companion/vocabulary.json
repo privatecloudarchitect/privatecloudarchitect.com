@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "d71fb9d598f798622888b5b6d2905995596d0f42de2b2fe609a062e6a45cc4d7"
+   "sha256": "e03102e3cbbc4a483ce9982a0f2e4323644c0b400a72abf323e921f97d716799"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1127,7 +1127,7 @@
   },
   {
    "path": "/handbook/",
-   "title": "The Handbook · Private Cloud Architect"
+   "title": "The handbook map · Private Cloud Architect"
   },
   {
    "path": "/handbook/access-control",
