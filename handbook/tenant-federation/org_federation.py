@@ -91,7 +91,7 @@ written: the OIDC client secret is minted, handed to VCF Automation and dropped,
 secret VCF Automation returns before anything else sees the response.
 
 Safety: --execute refuses an organization, app or group name that already exists unless this script created it (its
-state file says so), and --teardown deletes only objects that state file records. The state file holds object ids,
+state file records it), and --teardown deletes only objects that state file records. The state file holds object ids,
 not secrets; keep it beside the record and do not publish it. A real tenant's organization is proven with --prove
 --org and configured with --configure --org, which write nothing to Entra and delete nothing anywhere.
 

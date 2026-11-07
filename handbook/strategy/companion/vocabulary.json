@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "9580f5bf52689c3ee8429fce32952310ccf552de9a14c2896b046fedb4bfe83a"
+   "sha256": "2e9eed66fdcc9496ad6773e925ddb3fd52c08bf33ad5f3bad3efb83aa5ca63db"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",

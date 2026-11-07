@@ -88,8 +88,8 @@ switched off, a credential that lists none it can judge) exits 3 and says what i
 them. Without the tenant's read-only app, and not declared provider-only, the run reads the organization's side (key
 refresh, keys held and PKCE over OIDC, the local administrator over either protocol) and runs none of the rollover
 checks (the client secret's end date,
-the SAML certificate's end date and whether the organization holds it, the app's gate, the group names), says so for
-each organization ("rollover checks not run: the tenant's read-only app is owed"), and exits 3. A provider other than
+the SAML certificate's end date and whether the organization holds it, the app's gate, the group names), prints for
+each organization that they were not run ("rollover checks not run: the tenant's read-only app is owed"), and exits 3. A provider other than
 Entra ID, whose side this watch does not read, is the same.
 
 One schedule per tenant. A provider with several tenants runs the watch once per Entra tenant, each run with that
