@@ -251,7 +251,7 @@ def main():
     if not entitled:
         print("     Every object above is present, listable and well formed. The firewall capabilities are not "
               "entitled, so a firewall write is refused at the gateway, and no read of the objects themselves "
-              "says so. What an unentitled firewall does with rules already in place depends on the license "
+              "shows that refusal. What an unentitled firewall does with rules already in place depends on the license "
               "history, which the release notes define; this script does not test traffic.")
 
     payload = {"captured_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
