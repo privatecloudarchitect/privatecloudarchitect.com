@@ -45,7 +45,7 @@ That is an enumeration rather than an impression, which matters because the whol
 objects it reaches. Neither is the blast radius on its own: a short enablement list on a policy that reaches the
 whole estate is worse than a long one on a policy that reaches nothing. The reach is larger than what the default
 policy governs. A policy takes every alert setting it does not make itself from its parent, so an alert switched on
-in the default policy is on in every policy cloned from it that leaves the alert alone. The script therefore counts
+in the default policy is on in every policy that inherits from it and leaves the alert alone. The script therefore counts
 two things: the objects the default policy governs, and the objects governed by a policy whose `parentPolicy` chain
 reaches it. The first needs the effective-policy query, which lives on the unsupported `/internal` surface and takes
 **exactly one** acknowledgment header (missing is 403, doubled is 400). The second exports each governing policy in
@@ -156,8 +156,8 @@ check 6. `listings` carries each listing as it came back: every page's HTTP stat
 many items were read, and whether the listing is complete (every page 200 and the total read in full; a listing with
 no total is never recorded as complete). `defaultPolicyReview.ownedResolved` lists your definitions on, off and
 absent, resolved through the default policy's chain, and `exportRead` says whether that policy's export was read at
-all. `report` is the text the script printed. `listings`, `ownedResolved` and `exportRead` arrive with the next
-capture: the committed `alerts.json` (2026-10-10) predates them, so its `ownedEntries` is a count of entries.
+all. `report` is the text the script printed. The committed `alerts.json` is the reference estate's capture of
+2026-11-07 and carries all three.
 
 `storm.json`: `events`, each with its hosts and clusters (counts), the window by kind and definition, the VM alerts
 that could say down, and the alerts on the VMs under its hosts now and on its clusters; `vmVocabulary`;

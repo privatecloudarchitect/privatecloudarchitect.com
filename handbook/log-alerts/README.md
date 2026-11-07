@@ -107,7 +107,8 @@ says there are more). These fields appear from the next capture: `records/deploy
   that raised an alert), a window outside 5, 15, 30, 60 and 360 minutes, a text condition without `appname`, a
   hostname condition, or an auto-cancel time below 1.
 - **Scope and the monitor read-back.** `apply` switches each alert on in the scope's own policy, which inherits the
-  hosts' current policy, and touches no other policy: an alert left unset elsewhere fires nowhere else. It then reads
+  hosts' current policy, and touches no other policy: an alert created through the API and left unset elsewhere fired
+  nowhere else on 9.1.1 (a definition from a management pack was not tested, so read its state). It then reads
   the alert's monitors in Log Management (`GET /api/v2/ops-alerts`) and switches the alert off and on until they read
   enabled; on 9.1.1 the first switch-on of a new alert left its new symptoms' monitors disabled, and an alert whose
   monitors are disabled never fires while the policy shows it enabled. A second `apply` changes nothing.

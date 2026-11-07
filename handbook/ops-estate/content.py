@@ -18,8 +18,9 @@ codebase, asked of a running VCF Operations instance.
      chapter is about, a reference left pointing at an id that a rebuild re-minted;
   4. the DEFINED-versus-SET gap: how many alert definitions exist against how many the default policy has
      an opinion about. Everything else is UNSET, which is a third origin and not a synonym for disabled;
-  5. a probe of the paths that would serve dashboards and views, recorded path by path, because an absence
-     claim needs the set it was tested against;
+  5. a probe of the per-object paths that would serve dashboards and views, recorded path by path, because an
+     absence claim needs the set it was tested against (the bulk content export, which does carry them, is a task
+     on the appliance and is not run here);
   6. and PRESENCE versus POPULATION: how many of the keys a resource kind's catalog offers actually return a
      value on objects that collect, and how many property names live on a surface the catalog never lists.
 
@@ -338,13 +339,13 @@ def main():
         else:
             say(f"\n  DEFINED IS NOT SET: not determined ({gap['error']})")
 
-    # ---- 4: what has no read surface
+    # ---- 4: what has no per-object read
     absent = []
     for p in ABSENT_CANDIDATES:
         st, _ = ops("GET", p, tok, params={"pageSize": 1})
         absent.append({"path": "/suite-api" + p, "status": st})
     served = [a for a in absent if a["status"] == 200]
-    say(f"\n  NO READ SURFACE: {len(absent)} candidate path(s) probed for dashboards and views; "
+    say(f"\n  NO PER-OBJECT READ: {len(absent)} candidate path(s) probed for dashboards and views; "
           f"{len(served)} answered 200")
 
     # ---- 5: presence is not population

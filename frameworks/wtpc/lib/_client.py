@@ -15,7 +15,7 @@ re-exchanges once and replays the request, so a converge that outlives one beare
 Requests to the Operations internal surface (any path under /internal/) automatically carry the
 X-Ops-API-use-unsupported header the web tier requires before serving that surface. The internal
 surface is unsupported by the vendor and may change between releases; this estate touches it only
-where the public API has a genuine gap (super-metric policy activation), and says so where it does.
+where the public API offers no equivalent (super-metric policy activation), and each such call is marked.
 
 Environment:
   OPS_HOST         (required)  VCF Operations FQDN

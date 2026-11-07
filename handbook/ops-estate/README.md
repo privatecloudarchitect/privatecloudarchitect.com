@@ -138,8 +138,10 @@ new id and leaves whatever referred to it pointing at nothing; step 5 of `cycle.
 
 ## Log every dashboard import
 
-Dashboards and views have no read path in the suite API (the audit's last probe shows which paths were tried),
-so nothing on the instance can tell you which dashboard is where. Keep the log yourself, one line per import:
+Dashboards and views have no per-object read in the suite API (the audit's last probe shows which paths were
+tried). They come back only inside the bulk content export (`POST /api/content/operations/export`, then
+`/export/zip`), which is not an inventory: on the reference estate's 9.1.1 a dashboards export counted one owner's
+dashboards and left them out. So nothing on the instance reliably tells you which dashboard is where. Keep the log yourself, one line per import:
 
 ```csv
 imported_utc,instance,dashboard,source_file,source_revision,imported_by
@@ -164,7 +166,7 @@ inputs) in files the converge owns, and treat the dashboard itself as a build ar
 4. **What the default policy decides.** The alert definitions present against the ones the default policy
    sets. Everything else is UNSET, a third origin and not a synonym for disabled. A custom policy may set
    alerts for the groups it governs; those are not in this count.
-5. **What has no read surface.** Every candidate path for a dashboard or a view, with its answer.
+5. **What has no per-object read.** Every per-object path probed for a dashboard or a view, with its answer.
 6. **Which catalog keys actually return a value**, for the kind in `OPS_PROBE_KIND` (default `VirtualMachine`),
    checked against `OPS_CONTROL_KEY`, a key you know returns a value on that kind (default `cpu|readyPct`).
 
@@ -214,8 +216,9 @@ looks exactly like a discovery.
 - `cycle.py`, `converge.py` and `teardown.py` write to your instance. `cycle.py` and `teardown.py` touch only
   the two demonstration super metrics declared in `desired-state.json`; `converge.py --state` creates and
   updates the super metrics in the file you give it, and deletes nothing.
-- The absence claim about dashboards and views is scoped to the paths probed, and the record carries each
-  path with its status so a later build can be rechecked rather than believed.
+- The absence claim about dashboards and views is scoped to the per-object paths probed, and the record carries
+  each path with its status so a later build can be rechecked rather than believed. The bulk export does carry
+  them; the audit does not run it, because an export is a task on the appliance.
 - **Only your own object names are published.** Every other object on the instance appears as a count: an
   estate's object names are its own business, and the audit does not need them.
 

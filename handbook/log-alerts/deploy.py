@@ -11,7 +11,7 @@
 and a policy that inherits from the scope's parent, so the members keep every other setting; then the log symptoms
 the chosen alerts need; waits until Log Management lists a monitor for each; creates the alerts; switches each one on
 in the scope's policy, and off in any policy the scope lists under `disableIn`; and reads each alert's monitors back,
-switching the alert off and on until they read enabled. A second run changes nothing and says so. `status` reads the
+switching the alert off and on until they read enabled. A second run changes nothing and reports that. `status` reads the
 group, the policy and which policy the group carries, every chosen alert's definition with its symptom set against the
 bundle's, its monitors, and how many alerts each has raised; its record names the bundle's digest, the alert ids the
 bundle holds and the ones this run read (`--only` narrows them), so a record of a subset says it is one. `teardown` removes the scope's
