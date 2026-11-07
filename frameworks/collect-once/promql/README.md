@@ -11,7 +11,7 @@ without re-deriving them. Every claim below carries its evidence; the JSON files
 | `functions.json` | the widget's Functions tab (22 functions) plus `irate` and `increase`, each with its call form, signature, standard-PromQL flag, cautions, and a live verification block | descriptions verbatim from the widget; verification by `verify_promql.py` |
 | `examples.json` | ten queries built for the collection strategy, each with the decision it serves and a verification block; the dialect facts; the cross-plane comparison | `verify_promql.py` |
 | `reconciliation.json` | every key of `metrics.json` against the live catalogs and the VMware guidance per-provider list, the acquisition profile per served name, the case pairs, the semantic findings, and the engine names the widget does not list | `verify_promql.py` |
-| `verify_promql.py` | regenerates the three JSON files against a live instance (about 250 calls, two minutes); `--guidance-xlsx <file>` adds the per-provider classification | stdlib only; credentials in-process, never printed |
+| `verify_promql.py` | regenerates the three JSON files against a live instance (about 250 calls, two minutes); `--guidance-xlsx <file>` adds the per-provider classification; `--retext` rewrites the examples' prose offline and keeps every verified result | stdlib only; credentials in-process, never printed |
 
 The VMware guidance list (`VODAP-9.1-Metrics-List-Per-Provider.xlsx`) is read from a path you give; it is not stored in this
 repository. Source of record for the strategy these examples serve: the Collect Once, Decide at Source charter (its public form is the metrics-collection chapter).
@@ -115,7 +115,7 @@ pin `feature` or a chart draws both.
 | Id | Lane | Query | Decision |
 |---|---|---|---|
 | E1 | discovery | `count by (profile) (cpu.capacity.contention.VM)` | which profile serves a name, at what cadence, and whether the 101-series ceiling is near |
-| E2 | hot-set | `topn_sum(5, cpu.capacity.contention.VM{feature='TROUBLESHOOTING'})` | the scoped hot-set the charter allows out of this plane: five series whatever the estate size |
+| E2 | hot-set | `topn_sum(5, cpu.capacity.contention.VM{feature='TROUBLESHOOTING'})` | the scoped hot-set the charter allows out of this plane: five series whatever your estate's size |
 | E3 | cross-plane | `max_over_time(net.throughput.usage.VM{vm='<vm>'}[5m])` and `avg_over_time(...)` | the store already keeps this plane's mean and in-cycle peak; ship the store's keys, not the samples |
 | E4 | cross-plane | `guest.cpu.runQueue.VM / cpu.corecount.provisioned.VM` | the planes share samples but not units: check the scale per key before joining |
 | E5 | gold | `sum by (host_fqdn) (cpu.corecount.provisioned.VM) / count by (host_fqdn) (cpu.utilization.PCORE{feature='TROUBLESHOOTING'})` | the capacity ratio (vCPU to core) per host as one number |

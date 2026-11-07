@@ -8,6 +8,7 @@ JWT. Credentials are read in-process from the catalog payload or from the enviro
 
   python verify_promql.py                      # full run (about two minutes on a Medium instance)
   python verify_promql.py --no-crossplane      # skip the Operations stats comparison
+  python verify_promql.py --retext             # offline: rewrite the examples' prose, keep every verified result
   OPS_HOST=... RTM_HOST=... OPS_API_TOKEN_FILE=... OPS_BROKER_HOST=... python verify_promql.py
 
 Every emitted "verified" block carries the date, the source, the HTTP status, and the series count the
@@ -145,7 +146,7 @@ EXAMPLES = [
   "reads": "one series per profile whose value is the number of series; a name under two profiles returns two rows, and the extract pins feature or profile."},
  {"id": "E2", "lane": "hot-set", "title": "Contention hot list at 20 seconds, bounded",
   "query": "topn_sum(5, cpu.capacity.contention.VM{feature='TROUBLESHOOTING'})",
-  "decision": "The scoped hot-set the charter allows out of Real-Time Metrics: the five most contended VMs over the window, raw 20-second values, five series whatever the estate size.",
+  "decision": "The scoped hot-set the charter allows out of Real-Time Metrics: the five most contended VMs over the window, raw 20-second values, five series whatever your estate's size.",
   "reads": "a stable legend of five VMs (MOID in the vm label, readable host in host_fqdn); the value is CPU contention percent every 20 seconds."},
  {"id": "E3", "lane": "cross-plane", "title": "The store's peak key, reproduced from the 20-second samples",
   "query": "max_over_time(net.throughput.usage.VM{vm='<vm>'}[5m])",
@@ -158,7 +159,7 @@ EXAMPLES = [
   "reads": "the run queue normalized per vCPU, the number Operations shows; without the division the two planes disagree by the vCPU count."},
  {"id": "E5", "lane": "gold", "title": "vCPU to physical core ratio per host, computed live",
   "query": "sum by (host_fqdn) (cpu.corecount.provisioned.VM) / count by (host_fqdn) (cpu.utilization.PCORE{feature='TROUBLESHOOTING'})",
-  "decision": "The capacity policy input (the charter's CPU 4:1 ratio) as one daily number per host: provisioned vCPUs over physical cores, from two families joined on host_fqdn.",
+  "decision": "The capacity policy input (the CPU overcommit ratio your policy sets; 4:1 in the reference estate's Default Policy) as one daily number per host: provisioned vCPUs over physical cores, from two families joined on host_fqdn.",
   "reads": "one series per host; 1.0 means one vCPU per core; the count of PCORE series is the host's core count."},
  {"id": "E6", "lane": "troubleshooting", "title": "The 2-second tail: kernel latency per LUN, per host",
   "query": "max_over_time(storage.latency.totalKavg.LUN{feature='ESX_TOP'}[1m])",
@@ -172,7 +173,7 @@ EXAMPLES = [
  {"id": "E8", "lane": "gold", "title": "Counters, the right function: operations churn per cluster",
   "query": "increase(vmop.vmotion.CLSTR[1h])",
   "companion": "sum by (cluster) (increase(vmop.vmotion.CLSTR[6h]))",
-  "decision": "vmop.* are cumulative counters (the vCenter data profile), so increase() gives migrations per window per cluster: the churn number for the gold layer. rate() belongs here, never on a gauge.",
+  "decision": "vmop.* are cumulative counters (the vCenter data profile), so increase() gives migrations per window per cluster: the churn number for the gold layer. rate() belongs on a counter like this one, never on a gauge.",
   "reads": "vMotions per hour per cluster MOID; 0 on a quiet cluster."},
  {"id": "E9", "lane": "discovery", "title": "Absence is a value to reconcile",
   "query": "absent(cpu.capacity.contention.VM{vm='<vm>'})",
@@ -217,10 +218,37 @@ def guidance_list(path):
     return out
 
 # ----------------------------------------------------------------------------------------------- main
+def retext():
+    """Rewrite the prose of examples.json (title, lane, decision, reads) from EXAMPLES without a live run, keeping
+    every verified block and the date it was verified. A changed query, companion or example set is refused: those
+    change what was verified, so they need a live run."""
+    path = os.path.join(HERE, "examples.json")
+    with open(path, encoding="utf-8") as f: rec = json.load(f)
+    by_id = {e["id"]: e for e in EXAMPLES}
+    if set(by_id) != {e["id"] for e in rec["examples"]}:
+        raise SystemExit("--retext: the example set differs from the record; a new or removed example needs a live run")
+    changed = []
+    for e in rec["examples"]:
+        src = by_id[e["id"]]
+        if src["query"] != e["query"] or src.get("companion") != e.get("companion"):
+            raise SystemExit(f"--retext: {e['id']}'s query differs from the record; a changed query needs a live run")
+        for k, v in src.items():
+            if k not in ("id", "query", "companion") and e.get(k) != v:
+                e[k] = v; changed.append(f"{e['id']}.{k}")
+    if changed:
+        rec["textFrom"] = TODAY
+        with open(path, "w", encoding="utf-8") as f: json.dump(rec, f, indent=1, ensure_ascii=True); f.write("\n")
+    print("--retext: " + (", ".join(changed) if changed else "nothing to change") + "; verified results kept from " + str(rec.get("generated")))
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--no-crossplane", action="store_true")
+    ap.add_argument("--retext", action="store_true", help="offline: rewrite the examples' prose from this file, keep every verified result")
     ap.add_argument("--guidance-xlsx", default="", help="path to VMware guidance's VODAP-9.1-Metrics-List-Per-Provider.xlsx (kept out of the repository); adds the per-provider classification")
-    args = ap.parse_args(); guidance = guidance_list(args.guidance_xlsx) if args.guidance_xlsx else {}
+    args = ap.parse_args()
+    if args.retext: return retext()
+    guidance = guidance_list(args.guidance_xlsx) if args.guidance_xlsx else {}
     load_env(); tok = bearer(); rtm = RTM(service_jwt(tok))
     st, ver = ops(tok, "GET", "/api/versions/current")  # the build this run read, never a constant
     if st != 200 or not ver.get("releaseName"): raise SystemExit("version read failed: HTTP %s" % st)
