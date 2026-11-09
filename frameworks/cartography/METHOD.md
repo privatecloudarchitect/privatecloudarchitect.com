@@ -15,8 +15,8 @@ lives in the chapters; this is the structure you can hold in your head.
 
 1. **Triangulate.** No single lens is sufficient. A flow shows that two machines talk, not what they
    are; a process banner names a service, not the application it serves; a security group records a
-   prior team's intent, not today's reality. Confidence is agreement across independent lenses, never
-   the word of one.
+   prior team's intent, not today's reality. Confidence counts the independent lenses that placed a
+   workload, never the word of one, and a person settles what was inferred.
 2. **Shared services first.** Extract the common services (DNS, directory, time, logging, and the VCF
    platform itself) before any boundary math. A shared service reached by everything, left in the graph,
    makes every application look adjacent to every other. Quarantine it first and the real boundaries
@@ -29,9 +29,9 @@ lives in the chapters; this is the structure you can hold in your head.
 
 | Lens | Reads | Says | Certainty |
 |---|---|---|---|
-| **Declared** (Supervisor labels) | the app, tier, and function a Kubernetes-managed workload states about itself | an authoritative self-declaration | certain, where it exists |
+| **Declared** (Supervisor labels) | the app, tier, and function a Kubernetes-managed workload states about itself | an authoritative self-declaration | authoritative where it exists, and still able to be wrong |
 | **Identity** (VCF Operations for Networks inventory) | the hosts, vCenter, NSX managers, edges and transport nodes Operations for Networks types, with their addresses | that a flow endpoint *is* VCF infrastructure | certain, for infrastructure |
-| **Flow** (VCF Operations for Networks) | east-west traffic: source, destination, port, volume | dependency edges and fan-in | traffic, not identity |
+| **Flow** (VCF Operations for Networks) | east-west traffic: source, destination, port | dependency edges and fan-in | traffic, not identity |
 | **Metadata** (as Operations for Networks collects it) | names, folders, resource pools, segments, security groups and tags | environment and security zone, a prior team's intent | asserted, and often stale |
 
 These are the four lenses the scripts read. A fifth, the services listening inside a guest as VCF Operations

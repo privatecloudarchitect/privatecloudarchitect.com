@@ -290,7 +290,7 @@ def _did_not_land(a: TagAction) -> int:
           "actuating identity lacks effective tag-assign authority on this VM class (a "
           "Supervisor-managed VM shadows a plain vCenter grant). Re-run with "
           "--actuate-as-tag-authority using a least-privilege identity that holds a global "
-          "tag-assign role. No partial state was written that vCenter would show.")
+          "tag-assign role. Tags attached earlier in this run remain; read the table above.")
     return 2
 
 
@@ -406,8 +406,9 @@ def _detach_did_not_land(a: TagAction) -> int:
 
 def coverage(plane: NativeTagPlane, verifier: VcVerifier, report: dict) -> int:
     """The drift loop's number, read-only: of the workloads the classifier walked, how many carry a governed tag,
-    per category and overall. The unclassified backlog is every walked VM with no governed tag, plus the VMs the
-    classifier held because their labels gave it no signal. Counts only."""
+    per category and overall. The unclassified backlog is every VM found on this vCenter with no governed tag, plus the
+    VMs the classifier held because it had nothing to propose (never looked up here). A tag-ready VM on another
+    vCenter leaves the count silently. Counts only."""
     census = sorted({r["vm"] for r in report.get("recommendations", [])})
     held = int(report.get("held_for_review") or 0)
     resolvable = [n for n in census if verifier.moref(n)]

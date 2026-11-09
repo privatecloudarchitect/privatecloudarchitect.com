@@ -23,7 +23,7 @@
       "lenses": [
         "confirmed"
       ],
-      "justification": "app from confirmed; in inventory but no flows observed in the window | env=prod | zone=internal | confirmed: app=monitoring, env=prod"
+      "justification": "app from confirmed; in inventory, no edge to another workload in the window (flows to shared services only, or none) | env=prod | zone=internal | confirmed: app=monitoring, env=prod"
     },
     {
       "vm": "mon-01",
@@ -35,7 +35,7 @@
       "lenses": [
         "confirmed"
       ],
-      "justification": "env from confirmed; in inventory but no flows observed in the window | env=prod | zone=internal | confirmed: app=monitoring, env=prod"
+      "justification": "env from confirmed; in inventory, no edge to another workload in the window (flows to shared services only, or none) | env=prod | zone=internal | confirmed: app=monitoring, env=prod"
     },
     {
       "vm": "shop-web-01",

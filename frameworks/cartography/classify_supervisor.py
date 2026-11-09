@@ -11,9 +11,10 @@ only with an explicit approval, dry-run first.
 Recommendation semantics, deliberately conservative:
   app        declared part-of/name label; high confidence, safe to approve
   tier       the closed layer (presentation/logic/data) derived from the SAME conservative
-             component map as function; confident components only
+             component map as function; a component outside the map yields no row
   function   the proposed governance axis; auto-ratifiable proposals (cluster nodes, db/web
-             components) are marked recommended, everything else is flagged for review
+             components) are marked recommended, the other mapped components are marked confirm,
+             and a component outside the map yields no row
   env        observed from the namespace name by token match; ALWAYS flagged for confirmation
              (an inference, never auto-approved), and the actuator writes it to the observed
              companion category, never your declared environment axis

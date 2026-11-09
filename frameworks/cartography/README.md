@@ -30,8 +30,8 @@ Discovery observes; it never declares intent. The four axes it writes are discov
 | `function` | `function` | the governance axis the tuning framework matches on; ratified, never guessed |
 | `env` | `env-observed` | the environment observed from the namespace name; your declared `env` axis is never written |
 
-Ambiguity is surfaced, not resolved: an unmapped component or a silent VM yields a flagged
-proposal for you to classify, and the closed component map never grows by guesswork.
+Ambiguity is left to you: a component the closed map does not hold, or a silent VM, yields no row, so it is
+yours to classify by hand, and the closed component map never grows by guesswork.
 
 ## Dependencies and environment
 
@@ -77,7 +77,7 @@ what the run did: the categories it defined, the decisions, how many attaches we
 counts. A record never carries a workload's or a namespace's name; the script refuses to write one that does.
 
 `--approve recommended` takes only the safe-to-approve subset (declared apps, cluster nodes,
-unambiguous components); `--approve-file` picks an explicit `vm:category` list; `env` proposals
+components the classifier maps at high confidence); `--approve-file` picks an explicit `vm:category` list; `env` proposals
 are always flagged for confirmation and so never ride `recommended`. Every executed attach is
 read back from vCenter and the run fails loud if a tag did not land, which usually means the
 assign identity cannot bind Supervisor-managed VM classes: re-run with
@@ -90,12 +90,14 @@ categories and values stay defined, since they are estate vocabulary and not per
 unless `--remove-categories` is added, which deletes the approved concepts' categories this
 framework defined (its marker in the description) and never one it did not.
 That is the scoped reversibility the framework-estate contract asks of anything that writes to
-your estate: it removes exactly what it created, and nothing else.
+your estate: the detach is value-matched to the rows you name. Whether `--remove-categories` leaves another
+workload's tag alone while a value still has live assignments has not been tested.
 
-Two reads keep the write honest. `--coverage` counts, against every workload the classifier walked,
-how many carry a value in each governed category, how many carry none (the unclassified backlog, with
-the workloads the classifier held for lack of a signal), and how many of the governed axes have a
-category on this vCenter at all. `--probe-tag-authority-define` asks the tag-authority identity to
+Two reads keep the write honest. `--coverage` counts, for every workload the classifier walked that is
+on this vCenter, how many carry a value in each governed category, how many carry none (the unclassified
+backlog, with the workloads the classifier held for lack of a signal), and how many of the governed axes
+have a category on this vCenter at all. A held workload is never looked up on vCenter, and one on another
+vCenter leaves the count silently. `--probe-tag-authority-define` asks the tag-authority identity to
 create one category; it should be refused, and if it is not, the category is deleted at once and the
 run exits 3, because the split did not hold. `records/governance/` holds both reads and a round trip
 on a throwaway VM from the reference estate, with what each run printed.
@@ -107,7 +109,7 @@ no further wiring.
 ## The offline self-test
 
 `python3 classify_supervisor.py --self-test` classifies the shipped fixture
-(`fixtures/supervisor-vms.json`, nine VMs covering every classifier branch) and compares the
+(`fixtures/supervisor-vms.json`, nine VMs covering every branch of the two functions that classify a workload) and compares the
 result against the golden queue (`fixtures/expected-recommendations.json`). The same two
 classifiers were proven field-identical to the reference implementation over the same fixture
 before publication.

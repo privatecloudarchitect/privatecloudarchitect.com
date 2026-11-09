@@ -142,8 +142,9 @@ class NativeVcenterTagProvider:
 
     def teardown_category(self, vc, vc_name: str, name: str, index: dict[str, dict],
                           *, dry_run: bool) -> CategoryReport:
-        """Delete a native category we created (its values first). A value with live assignments
-        returns 403 - detach it on the tag-association plane before teardown."""
+        """Delete a native category we created, its values first. A value delete that fails is noted on the
+        report and the category delete is still attempted; whether either succeeds while a value has live
+        assignments on other workloads has not been tested, so detach those on the tag-association plane first."""
         rep = CategoryReport(vcenter=vc_name, name=name, object_type="")
         cat = index.get(name)
         if not cat:

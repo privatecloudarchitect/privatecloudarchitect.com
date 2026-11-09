@@ -56,7 +56,7 @@
           "443/HTTPS"
         ],
         "verdict": "review",
-        "basis": "4 distinct sources but only on web port(s) 443/HTTPS, a shared service or a popular app front-end; confirm against application boundaries",
+        "basis": "4 distinct sources, no infrastructure port, web port(s) 443/HTTPS, a shared service or a popular app front-end; confirm against application boundaries",
         "sample_sources": [
           "203.0.113.30",
           "203.0.113.31",

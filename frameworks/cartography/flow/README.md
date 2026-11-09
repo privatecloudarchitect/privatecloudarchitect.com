@@ -10,7 +10,8 @@ applications and assigns each member a tier from the ports it serves.
 
 Read-only. Nothing is written and nothing is tagged: the output is a defensible proposal, every
 verdict carrying its basis, that an admin confirms and then hands to the supervisor lens's write-back
-or to their own tagging. It leaves your estate exactly as it found it.
+or to their own tagging. It leaves your estate exactly as it found it. The hand-off to the write-back goes
+through `discover_arbitration.py --export-recommendations`; the findings file is not in the write-back's schema.
 
 ## Dependencies and environment
 
@@ -42,14 +43,15 @@ python3 discover_arbitration.py --hours 168 --declared recs.json --confirmations
     --export-recommendations handoff.json --record arbitration.json   # the hand-off to the write-back
 ```
 
-The findings are two lists. **Shared services** are destinations reached by many distinct sources on
-infrastructure ports (`shared-service`), plus the ambiguous cases reached only on a web port
-(`review`, a shared service or a popular front-end, confirm which). **Applications** are the clusters
+The findings are two lists. **Shared services** are destinations reached by many distinct sources, on any
+port, that serve at least one infrastructure port (`shared-service`), plus the ambiguous cases with no
+infrastructure port (`review`, a shared service or a popular front-end, confirm which). **Applications** are the clusters
 the VM-to-VM graph decomposes into once the shared services are quarantined, each member tiered
 `web` / `app` / `data` from the ports it serves, each cluster named from its members' common stem (or
 `app-cluster-N` when there is none). Flows are a sampled behavioural signal: budget a full business
-cycle, two to four weeks, before you trust a "no dependency" conclusion, because absence of a flow is
-only evidence once you have watched long enough for it to have appeared.
+cycle before you trust a "no dependency" conclusion, two to four weeks where your Operations for Networks
+retention holds them, because absence of a flow is only evidence once you have watched long enough for it
+to have appeared.
 
 The findings file names workloads and addresses, so it stays with you. `--record` writes the run in counts and
 protocol vocabulary instead: the window, whether the search cap was hit, the flow totals, each quarantined
@@ -88,8 +90,8 @@ true on a cadence (Phase 9) is the standing governance loop.
 
 ## The review queue and the hand-off
 
-The arbitration writes nothing on the estate. Its review queue (every conflict, and every workload one lens
-or none could place) is worked into a confirmations file, one decision per line:
+The arbitration writes nothing on the estate. Its review queue (every conflict, and every workload no lens
+could place) is worked into a confirmations file, one decision per line:
 
 ```text
 order-db-01 accept              # a person read the row's conflicts and accepts it as it stands
@@ -104,9 +106,10 @@ a person decided.
 
 `--export-recommendations handoff.json` writes every row that needs no review in the supervisor lens's
 recommendations schema, which `../writeback_tags.py --recommendations` reads: one row per axis (`app`, `tier`
-as the app-layer value, `env` as the observed environment). A row is marked approve only when a person or the
-workload's own label set the value (an app or tier declared or confirmed; an env confirmed); everything
-inferred is marked confirm. Review-queue workloads are held, and an endpoint known only by its address is
+as the app-layer value, `env` as the observed environment). A row is marked approve only when a person set the
+value, or the workload's own label set it and the classifier marked that row safe (an app or tier declared or
+confirmed; an env confirmed); an app or tier the classifier held as a confirm, and everything inferred, is
+marked confirm. Review-queue workloads are held, and an endpoint known only by its address is
 left out. Give the write-back an approve file and dry-run it first: it holds any change to a value already set.
 
 `--record arbitration.json` writes the run in counts and the framework's vocabulary: the roles, the

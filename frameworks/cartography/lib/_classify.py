@@ -11,7 +11,7 @@ Two classifiers over one input: a VM's declared Kubernetes labels.
   the one discovery-authority axis the tuning framework governs on. Proposals only, never writes:
   a Kubernetes cluster-node label wins outright (k8s, high confidence, auto-ratifiable), the
   component label maps through a CLOSED conservative table (db and web high, app-ish medium), and
-  anything ambiguous or silent is flagged for the operator instead of guessed. ``vdi`` and
+  anything ambiguous or silent gets no function, so its row is left out and the operator classifies it. ``vdi`` and
   ``infra`` have no reliable label signal and are never proposed; the operator declares them.
 
 The semantics mirror the reference implementation exactly; the estate's offline gate proves the
@@ -122,7 +122,7 @@ def classify_function(vm: str, labels: dict[str, str]) -> FunctionProposal:
 
     Precedence: a Kubernetes cluster-node label wins (k8s, high); else the component label through
     the closed map (db and web high, app medium). An unmapped component or no signal yields a
-    proposal flagged for correction or declaration; never a guess."""
+    proposal with no function, which the export leaves out as a row; never a guess."""
     if labels.get(K8S_CLUSTER_LABEL):
         role = next((labels[k] for k in CAPI_ROLE_LABELS if labels.get(k)), None)
         evidence = (K8S_CLUSTER_LABEL, *(k for k in CAPI_ROLE_LABELS if labels.get(k)))

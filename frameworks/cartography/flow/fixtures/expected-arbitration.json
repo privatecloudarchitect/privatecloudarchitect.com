@@ -48,7 +48,7 @@
       "confidence": "none",
       "lenses": [],
       "conflicts": [],
-      "basis": "in inventory but no flows observed in the window | env=unknown | zone=internal",
+      "basis": "in inventory, no edge to another workload in the window (flows to shared services only, or none) | env=unknown | zone=internal",
       "app_source": null,
       "tier_source": null,
       "env_source": null,

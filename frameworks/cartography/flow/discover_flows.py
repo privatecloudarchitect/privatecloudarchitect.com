@@ -6,8 +6,8 @@ map. The flow lens is the one instrument that shows the real east-west dependenc
 flows VCF Operations for Networks already collects, quarantines the shared services (the high-fan-in
 DNS/AD/NTP/platform nodes that otherwise make every app look adjacent to every other), then clusters
 the remaining VM-to-VM graph into candidate applications and assigns each member a tier from the
-ports it serves. Nothing is written: the output is a defensible proposal an admin confirms, and the
-hand-off to the supervisor lens's write-back.
+ports it serves. Nothing is written: the output is a defensible proposal an admin confirms; the
+hand-off to the supervisor lens's write-back goes through discover_arbitration.py --export-recommendations.
 
   python3 discover_flows.py                       # pull the last 24h, print the findings
   python3 discover_flows.py --hours 168 --export findings.json
@@ -92,7 +92,7 @@ def render_summary(shared: SharedServicesReport, boundaries: BoundariesReport) -
         label = ", ".join(c.well_known) or ", ".join(map(str, c.ports))
         print(f"    {c.destination[:32]:32} fan-in {c.distinct_sources:<4} {label}")
     if review:
-        print(f"\n  REVIEW (high fan-in on web ports, a shared service OR a popular front-end): {len(review)}")
+        print(f"\n  REVIEW (high fan-in, no infrastructure port: a shared service OR a popular front-end): {len(review)}")
         for c in review:
             label = ", ".join(c.well_known) or ", ".join(map(str, c.ports))
             print(f"    {c.destination[:32]:32} fan-in {c.distinct_sources:<4} {label}")
@@ -108,8 +108,8 @@ def render_summary(shared: SharedServicesReport, boundaries: BoundariesReport) -
     if boundaries.singletons:
         print(f"\n  SINGLETONS (no qualifying coupling after exclusions): {len(boundaries.singletons)}")
         print("    " + ", ".join(boundaries.singletons))
-    print("\n  Nothing was written. Confirm these candidates, then hand the confident ones to the "
-          "supervisor lens's write-back (../writeback_tags.py) or your own tagging.")
+    print("\n  Nothing was written. Confirm these candidates, then hand them to the write-back through "
+          "discover_arbitration.py --export-recommendations, or to your own tagging.")
 
 
 def self_test(*, update: bool = False) -> int:

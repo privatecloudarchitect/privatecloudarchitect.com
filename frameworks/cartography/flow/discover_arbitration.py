@@ -5,7 +5,7 @@ No single lens is enough. Flows show who talks to whom but not what a thing is; 
 but lies when stale; a declared label is authoritative but only some workloads carry one. This is the
 capstone: it runs the flow lens (shared services, boundaries + tiers) and the metadata lens
 (environment + security zone) over one collection, then arbitrates them into a single verdict per VM,
-with a confidence that reflects how many independent lenses agree and the conflicts that need a human.
+with a confidence that counts the lenses that placed it and the conflicts that need a human.
 The optional declared lens (the supervisor lens's export) is authoritative where present.
 
   python3 discover_arbitration.py                                   # 24h, print the classifications
@@ -14,11 +14,11 @@ The optional declared lens (the supervisor lens's export) is authoritative where
       --confirmations confirmed.txt --export-recommendations handoff.json --record arbitration.json
   python3 discover_arbitration.py --self-test                       # offline: reproduce the goldens
 
-Nothing is written on the estate. The review queue (conflicts + low confidence) is the actionable output:
+Nothing is written on the estate. The review queue (every conflict, and every workload no lens placed) is the actionable output:
 work it into a confirmations file, one decision per line (`<vm> accept`, or `<vm> <app|tier|env|zone>
 <value>`), and the same file keeps those rows resolved on every later run. `--export-recommendations` then
 writes the rows that need no review in the supervisor lens's recommendations schema, approve only where a
-person or the workload's own label set the value, for `../writeback_tags.py --recommendations` (dry-run
+person set the value or the classifier marked the workload's own label safe, for `../writeback_tags.py --recommendations` (dry-run
 first). `--record` writes the run in counts and the framework's vocabulary, refusing any name or address.
 
 Dependencies: Python 3 plus `pydantic`. One plane, from the environment (see lib/_client.py):
@@ -101,7 +101,7 @@ def render_summary(arb: ArbitrationReport) -> None:
     print(f"\n  Arbitration: {arb.total_vms} VMs classified over {arb.window_hours}h.")
     print(f"  roles       : {dict(sorted(arb.role_distribution.items()))}")
     print(f"  confidence  : {dict(sorted(arb.confidence_distribution.items()))}")
-    print(f"  needs review: {arb.needs_review} (a conflict, or too few lenses to trust)\n")
+    print(f"  needs review: {arb.needs_review} (a conflict, or no lens placed it)\n")
     print(f"  REVIEW QUEUE (confirm these before any write-back): {len(arb.review_queue)}")
     for c in arb.review_queue:
         app = f" app={c.app_id}" if c.app_id else ""

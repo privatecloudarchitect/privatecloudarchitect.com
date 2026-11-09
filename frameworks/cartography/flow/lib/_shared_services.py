@@ -1,21 +1,20 @@
 """frameworks/cartography/flow/lib/_shared_services - Phase 4: shared-services extraction by fan-in.
 
-A shared service is a destination reached by many DISTINCT sources on well-known infrastructure
-ports (DNS, AD/LDAP, Kerberos, NTP, DHCP, syslog, NFS, SMTP, and the VCF platform itself): the
-high-fan-in nodes that must be quarantined BEFORE application-boundary detection (Phase 5), or every
+A shared service is a destination reached by many DISTINCT sources, on any port, that also serves at
+least one well-known infrastructure port (DNS, AD/LDAP, Kerberos, NTP, DHCP, syslog, NFS, SMTP, and
+the VCF platform itself): the high-fan-in nodes that must be quarantined BEFORE application-boundary detection (Phase 5), or every
 application appears connected to every other through them.
 
 Functional core, no I/O: `project_flows` reduces raw vRNI flows to typed projections; `analyze`
 computes the fan-in ranking into a ranked report. Every candidate carries its basis (fan-in count +
 the infra ports served) and a verdict: `shared-service` (high fan-in on infrastructure ports),
-`review` (high fan-in but only on ambiguous web ports, a shared service or a popular front-end), or
+`review` (high fan-in and no infrastructure port: web or non-standard ports, a shared service or a popular front-end), or
 `application-private` (low fan-in). A classification is a defensible candidate for confirmation,
 never an opaque auto-decision.
 
-This estate uses port-only heuristics. The pca `vcf-opsnet` CLI adds an identity anchor (vRNI's own
-authoritative entity typing) that turns a host-data-plane port guess into a proven VCF-component
-role; folding that in is a documented enhancement, and `analyze` degrades to exactly this port-only
-behaviour without it.
+Ports alone by default. Pass a `component_inventory` (the identity anchor, vRNI's own authoritative entity
+typing, from lib/_identity) and `analyze` quarantines a typed VCF component whatever its fan-in and counts a
+collision-prone port only once the inventory proves a host-data-plane role; without one it runs on ports alone.
 """
 from __future__ import annotations
 
@@ -234,7 +233,7 @@ def _classify(distinct_sources: int, infra_ports: list[int], web_ports: list[int
         return "shared-service", f"{distinct_sources} distinct sources on infrastructure port(s) {names}"
     if web_ports:
         return "review", (
-            f"{distinct_sources} distinct sources but only on web port(s) "
+            f"{distinct_sources} distinct sources, no infrastructure port, web port(s) "
             f"{', '.join(f'{p}/{AMBIGUOUS_WEB_PORTS[p]}' for p in web_ports)}, a shared service "
             "or a popular app front-end; confirm against application boundaries"
         )

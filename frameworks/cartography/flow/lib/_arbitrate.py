@@ -3,12 +3,12 @@
 Phases 4-6 each look through one lens: flow fan-in (shared services), the VM-to-VM graph (application
 boundaries + tiers), and per-VM metadata + observed exposure (environment + security zone). No single
 lens is sufficient: flows show who talks to whom but not what a thing is; names and NSX constructs show
-intent but lie when stale. This phase applies the framework's central rule: a classification is
-trustworthy only when two or more independent lenses agree, and a conflict is a finding, not noise.
+intent but lie when stale. This phase counts how many lenses placed each workload, treats a conflict
+as a finding, not noise, and leaves every inferred value for a person before anything is written.
 
 For every VM it emits ONE ArbitratedClassification: a role (shared-service / application / unclustered
-/ isolated), its app + tier + env + zone, a confidence that reflects how many independent lenses
-corroborate it, and the conflicts that need a human's confirmation. The optional fourth lens is
+/ isolated), its app + tier + env + zone, a confidence that counts the lenses that placed
+it, and the conflicts that need a human's confirmation. The optional fourth lens is
 DECLARED intent (the supervisor lens's export): authoritative where present, it names the app over an
 auto-generated cluster id, sets the tier, and confirms env, but never the security zone.
 
@@ -18,8 +18,9 @@ into an ArbitrationReport. No I/O; unit-tested with synthetic reports.
 The hand-off, also pure: `apply_confirmations` folds a person's decisions into the report, so a review row a
 person resolved stays resolved on the next run (`load_confirmations` reads them from a plain file);
 `to_recommendations` turns the rows that need no review into the supervisor lens's recommendations schema,
-which `../writeback_tags.py` reads. A row is marked approve only when a person or the workload's own label set
-the value; every inferred value is marked confirm, so the write-back's approve file stays the gate.
+which `../writeback_tags.py` reads. A row is marked approve only when a person set the value, or the workload's
+own label set it and the classifier marked that row safe; every other value is marked confirm, so the
+write-back's approve file stays the gate.
 """
 from __future__ import annotations
 
@@ -59,6 +60,8 @@ class SupervisorClassification(BaseModel):
     app: str | None = None
     tier: str | None = None
     env: str = "unknown"
+    app_held: bool = False   # the classifier marked this app a confirm, so the hand-off does not mark it approve
+    tier_held: bool = False  # the same for the tier: a person settles it first
 
 
 class ArbitratedClassification(BaseModel):
@@ -73,18 +76,18 @@ class ArbitratedClassification(BaseModel):
     service_type: str | None    # Phase 4, e.g. "53/DNS, 389/LDAP" when role == "shared-service"
     env: Env                    # Phase 6
     zone: Zone                  # Phase 6
-    confidence: Confidence      # aggregate: how many independent lenses agree
+    confidence: Confidence      # how many lenses placed this VM, each on its own axis
     lenses: tuple[str, ...]     # lenses that placed this VM: flow / identity / metadata / zone / declared / confirmed
     conflicts: tuple[str, ...]  # findings needing human confirmation (empty == clean)
     basis: str                  # one-line evidence summary
-    app_source: str | None = None   # "declared" (owner label) / "derived" (flow cluster) / "confirmed" / None
-    tier_source: str | None = None  # "derived" (served ports) / "declared" / "confirmed" / None
+    app_source: str | None = None   # "declared" (owner label) / "declared-held" (a label the classifier held as a confirm) / "derived" (flow cluster) / "confirmed" / None
+    tier_source: str | None = None  # "derived" (served ports) / "declared" / "declared-held" / "confirmed" / None
     env_source: str | None = None   # "metadata" (names, folders, segments) / "declared" / "confirmed" / None
     resolved: tuple[str, ...] = ()  # conflicts a person resolved with an accept confirmation
 
     @property
     def needs_review(self) -> bool:
-        """A conflict, or too little corroboration to trust for automated tag write-back."""
+        """A conflict, or no lens placed the VM: neither is trusted for automated tag write-back."""
         return bool(self.conflicts) or self.confidence in ("low", "none")
 
 
@@ -124,8 +127,8 @@ def _same_app_family(declared: str, observed: str) -> bool:
 
 
 def _confidence(lenses: set[str], has_conflict: bool) -> Confidence:
-    """Aggregate confidence = independent-lens agreement. A conflict is never high-confidence (it is
-    precisely the thing a human must resolve). The declared lens (owner-stated labels) and a person's
+    """Aggregate confidence = how many lenses placed the workload; it compares no values between them. A
+    conflict is never high-confidence (it is precisely the thing a human must resolve). The declared lens (owner-stated labels) and a person's
     confirmation are authoritative, so either alone is high-confidence; otherwise 2+ observed lenses is
     high, 1 is medium."""
     if has_conflict:
@@ -144,7 +147,7 @@ def arbitrate(shared: SharedServicesReport, boundaries: BoundariesReport, env_zo
               supervisor: Sequence[SupervisorClassification] | None = None) -> ArbitrationReport:
     """Merge the phase reports into one confidence-scored classification per VM. Pure + deterministic:
     index each lens, then for every VM in the union of what the lenses saw, assign a role, overlay
-    env/zone, count corroborating lenses, and surface conflicts. ``supervisor`` is the optional
+    env/zone, count the lenses that placed it, and surface conflicts. ``supervisor`` is the optional
     authoritative fourth lens (declared intent); ``None`` yields exactly the observed-lens result."""
     shared_by_dst = {c.destination: c for c in shared.candidates}
     quarantine = {c.destination for c in shared.quarantine}
@@ -214,7 +217,7 @@ def arbitrate(shared: SharedServicesReport, boundaries: BoundariesReport, env_zo
             role_basis = "no qualifying VM-to-VM coupling (isolated after shared-service exclusion)"
         else:
             role = "isolated"
-            role_basis = "in inventory but no flows observed in the window"
+            role_basis = "in inventory, no edge to another workload in the window (flows to shared services only, or none)"
 
         # overlay: env + zone lenses (count only confident placements)
         if envc and env != "unknown" and envc.env_confidence in ("high", "medium"):
@@ -232,7 +235,7 @@ def arbitrate(shared: SharedServicesReport, boundaries: BoundariesReport, env_zo
                 role = "application"
                 observed = vm_to_app[vm].app_id if vm in vm_to_app else None
                 app_id = decl.app
-                app_source = "declared"
+                app_source = "declared-held" if decl.app_held else "declared"
                 conflicts = [c for c in conflicts if "ambiguous fan-in" not in c]
                 if observed and not _same_app_family(decl.app, observed):
                     conflicts.append(f"declared app '{decl.app}' but flows couple this VM into a "
@@ -244,7 +247,7 @@ def arbitrate(shared: SharedServicesReport, boundaries: BoundariesReport, env_zo
             mapped = _declared_tier(decl.tier) if decl.tier else None
             if mapped is not None:
                 tier = mapped
-                tier_source = "declared"
+                tier_source = "declared-held" if decl.tier_held else "declared"
             if decl.env != "unknown":
                 env = decl.env
                 env_source = "declared"
@@ -372,8 +375,9 @@ def to_recommendations(report: ArbitrationReport) -> dict:
     """The write-back's input: the supervisor lens's recommendations schema, built from every row that needs no
     review. Per row, one recommendation per axis the write-back governs: `app` (an application's id), `tier`
     (as the taxonomy's app-layer value) and `env` (the observed environment). Marked approve only when a person
-    or the workload's own label set the value (app or tier declared or confirmed; env confirmed, since a declared
-    environment is itself read from a namespace name); everything inferred is marked confirm. A review-queue
+    set the value, or the workload's own label set it and the classifier marked that row safe (app or tier
+    declared or confirmed; env confirmed, since a declared environment is itself read from a namespace name); an
+    app or tier the classifier held as a confirm, and everything inferred, is marked confirm. A review-queue
     workload contributes nothing, and is counted as held; an endpoint known only by its address is left out,
     since vCenter cannot resolve it to a VM."""
     recs: list[dict] = []
@@ -415,13 +419,19 @@ def to_recommendations(report: ArbitrationReport) -> dict:
 def load_declared(path: Path) -> list[SupervisorClassification]:
     """Build the declared lens from the supervisor lens's exported recommendations
     (``classify_supervisor.py --export``): one SupervisorClassification per VM, its app / tier / env
-    taken from the matching recommendation rows. The two lenses fuse without coupling their code."""
+    taken from the matching recommendation rows, each with whether the classifier marked it safe (a row it held
+    as a confirm stays confirm in the hand-off until a person confirms it). The two lenses fuse without coupling
+    their code."""
     data = json.loads(path.read_text())
     per_vm: dict[str, dict[str, str]] = defaultdict(dict)
+    held: dict[str, set[str]] = defaultdict(set)
     for r in data.get("recommendations", []):
         vm, cat, val = r.get("vm"), r.get("category"), r.get("value")
         if vm and cat and val:
             per_vm[vm][cat] = val
+            if not r.get("recommended"):
+                held[vm].add(cat)
     return [SupervisorClassification(vm=vm, app=axes.get("app"), tier=axes.get("tier"),
-                                     env=axes.get("env", "unknown"))
+                                     env=axes.get("env", "unknown"),
+                                     app_held="app" in held[vm], tier_held="tier" in held[vm])
             for vm, axes in per_vm.items()]
