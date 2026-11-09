@@ -1,6 +1,6 @@
 # What `ledgers.py` prints
 
-Run against one VCF Automation 9.1.1.0100 organization on 2026-10-19 with all four credentials: a session login
+Run against one VCF Automation 9.1.1.0100 organization on 2026-10-19 with all three credentials: a session login
 for the tenant, a provider bearer, and a vCenter sign-in to the vCenter behind the Supervisor. Your figures will
 differ; the shapes should not.
 

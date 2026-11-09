@@ -2,11 +2,12 @@
 
 Does the metadata a workload declares reach the plane its consumers read, and does it stay there?
 
-On a VCF 9.1 All Apps organization a cloud template has no tag field. It declares Kubernetes
-labels, and every consumer that governs on metadata reads tags: VCF Operations resolves custom
-group membership, policy scope and view filters from `summary|tag` and `summary|tagJson`, and
-carries no Kubernetes label on a machine object at all. So the label is the declaration, the tag is
-a projection of it, and something has to perform that projection repeatedly.
+On the estate this was written from, the cloud templates read on a VCF 9.1.1 All Apps organization
+declare Kubernetes labels and carry no tag construct, and the consumers this record names govern on
+tags: VCF Operations resolves custom group membership, policy scope and view filters through tag rules
+on `summary|tag` and `summary|tagJson`, and the machine object read carried no Kubernetes label. So
+the label is the declaration, the tag is a projection of it, and something has to perform that
+projection repeatedly.
 
 `content.py` measures whether yours does. It is read-only and writes nothing to any plane.
 `project.py` performs the projection, on a schedule, and gates on it: a plan by default, `--apply` to write.
@@ -14,21 +15,24 @@ a projection of it, and something has to perform that projection repeatedly.
 ## Before the numbers: why there are several stores at all
 
 The honest first impression of this subject is that the platform has sprawled. Labels do not become
-tags. Tags are the wrong shape for a configuration database. A firewall group cannot read either of
-them. It looks like an accident somebody should clean up.
+tags. Tags are the wrong shape for a configuration database. A firewall group's VM Tag criterion reads
+neither of them. It looks like an accident somebody should clean up.
 
-It is not an accident, and the cleanup is not coming. **Metadata does not live anywhere.** It is
+It is not an accident, and this record does not wait for a cleanup. **Metadata does not live anywhere.** It is
 said once, in the artifact that declares the workload, and rendered into every store a consumer can
 read, the way a document is not "in" its PDF. Each consumer here is a different product with its own
-membership engine, and a shared lookup between them has never existed:
+membership engine, and a shared lookup between them is not something to wait for:
 
-| consumer | the only store it reads | why it cannot read another |
+| consumer | the store this design renders for it | why this store |
 |---|---|---|
-| VCF Operations groups, policies, views, dashboards | vSphere tag | the only metadata properties a group rule can filter on are the two tag ones; no property carries a Kubernetes label |
+| VCF Operations groups, policies, views, dashboards | vSphere tag | a tag rule matches the tag properties the object read carries; no property on that object carried a Kubernetes label |
 | a CMDB, through the ServiceNow management pack | vCenter custom attribute | a column maps one Operations property to one CMDB column, and the type enum has no tag type. From the tag plane a column receives every tag at once as an unqueryable string |
-| the distributed firewall | NSX tag | a group criterion matches `scope` and `tag` on the fabric machine, and nothing else |
+| the distributed firewall | NSX tag | a VM Tag criterion matches `scope` and `tag` on the fabric machine; a group's other criteria match other attributes |
 | Kubernetes-native policy and Antrea | the label itself | pod-level intent has its own homes and its own precedence ladder |
 | the template | label, or `tags:` on a classic organization | the organization type decides which construct exists, not the author |
+
+A VCF Operations group also has a property rule, by key, and an NSX group has criteria beyond tags; the table names
+what each consumer's rule reads in this design, not the only thing it can read.
 
 So an estate that standardizes on one store has standardized on one consumer and given up the rest.
 **The thing to standardize on is the taxonomy**: the concepts, their vocabulary, their cardinality,
@@ -153,8 +157,8 @@ fans out to, with their own credentials, and are not in this script.
 
 ## What it does not cover
 
-- **It does not read NSX.** NSX dynamic security groups read NSX tags, which are a third plane. A
-  projection does have to fan out there, because an NSX group criterion cannot read a vSphere tag;
+- **It does not read NSX.** NSX dynamic security groups built on a VM Tag criterion read NSX tags, which are a third plane. A
+  projection does have to fan out there, because an NSX group's VM Tag criterion did not read a vSphere tag on the estate this was written from;
   measuring that plane needs an NSX credential this record does not ask for.
 - **It does not read the Supervisor directly.** Declarations come from the deployment record, which
   is reachable with the same tenant credential as everything else; the per-namespace proxy needs a

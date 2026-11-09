@@ -15,7 +15,7 @@ controller actually stores it and reports what is there now:
      that it is created empty, before any node exists, so a populated pool is the end of a story whose
      beginning is only visible in the controller's event log at provision time.
 
-Read-only throughout. The controller's API is a session login rather than a bearer: POST /login with a
+Read-only throughout. The controller's API took a session login on the reference estate: POST /login with a
 username and password, then carry the session cookie and the CSRF token it sets.
 
 Run:
@@ -91,7 +91,7 @@ class Labels:
 
 
 class Avi:
-    """A session login, not a bearer: POST /login, then the cookie plus the CSRF token it sets."""
+    """A session login: POST /login, then the cookie plus the CSRF token it sets."""
 
     def __init__(self, host, user, password):
         self.host = host

@@ -7,8 +7,8 @@ Stdlib Python only; no token is printed or written.
 
 | File | What it is |
 |---|---|
-| `vks.py` | Reads every estate-management kind at the organization gateway with the verbs it **declares** and the verbs you are actually **allowed**, which are different answers; each cluster's capacity and per-component control-plane health from the fleet projection, the triage read that needs no kubeconfig; the declared Cluster API object at each Supervisor namespace endpoint with its class, version, replicas and variables; and every node machine walked back through its controller owner to the declaration that produced it. Writes `vks.json`. |
-| `vks.json` | That record from the reference estate, 2026-09-21. The chapter's plates render it. |
+| `vks.py` | Reads every estate-management kind at the organization gateway with the verbs it **declares** and the verbs you are actually **allowed**, which are different answers; each cluster's capacity and per-component control-plane health from the fleet projection, the triage read that needs no kubeconfig; the declared Cluster API object at each Supervisor namespace endpoint with its class, version, replicas and variables; and each machine's controller owner, the one link of the chain the script reads. Writes `vks.json`. |
+| `vks.json` | That record from the reference estate, 2026-10-21. The chapter's plates render it. |
 
 ## Run it
 

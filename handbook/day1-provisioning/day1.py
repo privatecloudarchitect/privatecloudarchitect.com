@@ -8,8 +8,8 @@ thing. This script puts them side by side and reports where they disagree:
 
   1. the VOCABULARY: every Day-1 kind each group declares, with the verbs the interface says you may use. The
      split between what a tenant may write and what it may only read is most of the plane's design;
-  2. the FIELD COMPARISON: the same deployments read through both faces, field by field, and specifically which
-     fields exist on one and not the other. Every field naming a person is on one side only;
+  2. the FIELD COMPARISON: the deployments read through both faces, field names one level deep, and specifically
+     which names exist on one and not the other, including the names that say who owns or changed a deployment;
   3. the CONTENT TREE: blueprints, their versions, and the catalog items a release produces, including the rule
      the interface enforces on a version object's name;
   4. the INGREDIENTS: the resource types a blueprint may declare, and the image catalog it draws on;
@@ -430,7 +430,7 @@ def main():
         raise SystemExit("no project is visible to this identity")
     home = projects[0]
 
-    # ---- 2. the same deployments, both faces, field by field
+    # ---- 2. the deployments, both faces, field names one level deep
     st, classic = c.api_all("/deployment/api/deployments")
     st, inst = c.items(CAT, "instances", home)
     cci_keys = set()
@@ -446,9 +446,9 @@ def main():
                 "classicFields": sorted(classic_keys), "cciFields": sorted(cci_keys),
                 "onlyOnClassic": only_classic, "onlyOnCci": sorted(cci_keys - classic_keys),
                 "identityFieldsOnlyOnClassic": who}
-    print(f"\n  the same deployments, both faces: classic returns {len(classic)}, CCI returns {len(inst)}")
+    print(f"\n  the deployments, both faces: classic returns {len(classic)}, CCI returns {len(inst)}")
     print(f"     fields on the classic object only: {len(only_classic)} -> {only_classic}")
-    print(f"     of those, the ones naming a person: {who}")
+    print(f"     of those, the ones saying who owns or changed it: {who}")
     print(f"     classic deployments with no owner: {surfaces['classicDeploymentsWithoutAnOwner']} of {len(classic)}")
     print(f"     fields on the CCI object only:     {sorted(cci_keys - classic_keys)}")
 

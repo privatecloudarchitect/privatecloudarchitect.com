@@ -31,15 +31,17 @@ python3 vip.py
 
 `expected-output.md` shows what it printed on the reference estate.
 
-The controller's API is a **session login, not a bearer**: `POST /login` with a username and password, then
-carry the session cookie together with the CSRF token it sets and a `Referer` header on every read. A script
-written against the bearer habit fails here in a way that looks like an authorization problem.
+On the reference estate the controller's API took a **session login**: `POST /login` with a username and password,
+then the session cookie together with the CSRF token it sets and a `Referer` header on every read. The VCF Identity
+Broker's bearer answered 401 there, and other schemes were not tried. A script written against the bearer habit fails
+in a way that looks like an authorization problem.
 
-## Forwards is the only direction that works
+## Walk it forwards
 
-A virtual service holds no pool reference. It carries a policy set, and the policy set's rules select pools, so
-the chain is four objects rather than three and the port-to-pool choice is made in the fourth. That is why one
-virtual service can front more than one pool, and why walking backwards from a pool answers nothing.
+On the reference estate's controller no virtual service held a pool reference. Each carried a policy set, and the
+policy set's rules selected pools, so the chain was four objects rather than three and the port-to-pool choice was made
+in the fourth. That is why one virtual service could front more than one pool, and why walking backwards from a pool
+answered nothing there. `vip.py` prints how many direct pool references your controller carries.
 
 ## Scope, stated plainly
 

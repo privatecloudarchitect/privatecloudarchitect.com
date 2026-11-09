@@ -2,7 +2,8 @@
 
 Run against one VCF Automation 9.1.1.0100 organization on 2026-10-22, signed in with a session login, with
 `--probe-release --project <project>`: the read is below, and the probe's own lines are in their section further
-down. Your counts will differ; the shapes should not.
+down. The values are that run's, and a few printed labels use the current script's wording. Your counts will differ;
+the shapes should not.
 
 ```
 day1.py: the Day-1 plane, read through both of its faces
@@ -22,9 +23,9 @@ day1.py: the Day-1 plane, read through both of its faces
      catalog    instancerequests         read   get,list
      image      images                   read   get,list
 
-  the same deployments, both faces: classic returns 4, CCI returns 4
+  the deployments, both faces: classic returns 4, CCI returns 4
      fields on the classic object only: 14 -> ['blueprintId', 'blueprintVersion', 'catalogItemId', 'catalogItemVersion', 'createdAt', 'createdBy', 'iconId', 'id', 'lastUpdatedAt', 'lastUpdatedBy', 'orgId', 'ownedBy', 'ownerType', 'projectId']
-     of those, the ones naming a person: ['createdBy', 'lastUpdatedBy', 'ownedBy', 'ownerType']
+     of those, the ones saying who owns or changed it: ['createdBy', 'lastUpdatedBy', 'ownedBy', 'ownerType']
      classic deployments with no owner: 0 of 4
      fields on the CCI object only:     ['annotations', 'creationTimestamp', 'finalizers', 'labels', 'managedFields', 'namespace', 'ownerReferences', 'sourceRef', 'uid']
 
@@ -45,10 +46,11 @@ blueprints, their versions, import and export requests, and instances. Everythin
 requested, and every record of what was requested, is read-only. The interface lists this itself, so ask it
 before you automate anything.
 
-**The same deployments are two different records.** The classic object carries the fields that say who owns a
-deployment, who created and last changed it, when, and what it was built from; the Cloud Consumption object
-carries none of them. Read ownership from the classic face. The script also counts classic deployments with no
-owner, which is the sign that your inventory can attribute everything.
+**The deployments are two different records.** The classic object carries the fields that say who owns a
+deployment, who created and last changed it, when, and what it was built from. Those names were not among the
+Cloud Consumption object's keys one level deep (spec, status, metadata), and the values inside its labels,
+annotations and ownerReferences were not read. Read ownership from the classic face. The script also counts
+classic deployments with no owner, which is the sign that your inventory can attribute everything.
 
 **The content tree and the catalog.** Blueprints and versions per project, and the catalog items each project
 path returns. The catalog kind is addressed under a project, yet the same set can come back under every

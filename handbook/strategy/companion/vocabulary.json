@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "2e9eed66fdcc9496ad6773e925ddb3fd52c08bf33ad5f3bad3efb83aa5ca63db"
+   "sha256": "dde7324171f40c7aaba54ad53ce351628a70a0384301a0c8c16299fe0a8f581e"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1175,7 +1175,7 @@
   },
   {
    "path": "/handbook/certs-credentials",
-   "title": "Certificates and credentials: one custodian, two planes · Private Cloud Architect"
+   "title": "Certificates and credentials: the custodian and its two planes · Private Cloud Architect"
   },
   {
    "path": "/handbook/choosing-a-pathway",
@@ -1211,7 +1211,7 @@
   },
   {
    "path": "/handbook/deployment-paths",
-   "title": "Three doors to one machine: identical inside, 17 actions apart · Private Cloud Architect"
+   "title": "Three doors to one machine: identical inside, apart in their Day-2 actions · Private Cloud Architect"
   },
   {
    "path": "/handbook/event-model",

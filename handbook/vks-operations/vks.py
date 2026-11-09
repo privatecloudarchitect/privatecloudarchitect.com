@@ -14,7 +14,7 @@ day-2 actually edits. This reads both and reports where they differ:
      control-plane health, and a phase. This is the triage read, and it needs no kubeconfig;
   3. the DECLARED CLUSTER at the namespace endpoint: its cluster class, its Kubernetes version, the replica
      counts, and the variables its topology carries;
-  4. the OWNERSHIP CHAIN: every node virtual machine walked back through its controller owner to the cluster.
+  4. the OWNERSHIP CHAIN, one link of it: each machine's controller owner, and whether each virtual machine carries one.
      This is the chapter's central claim made structural rather than asserted: a node is an output, and a
      controller owns it;
   5. the SCOPE CHECK: the same list refused at cluster scope and served under a namespace, because the first

@@ -344,7 +344,7 @@ def show_package(name: str) -> None:
     for b, n in buckets.items():
         print(f"  {n:5d}  {b}")
     if not total:
-        print("\n  EMPTY: an export of this package carries nothing. Add each object's category to it.")
+        print("\n  EMPTY: an export of this package carries nothing. Link each object to it.")
 
 
 def show_record(path: str, with_sweep: bool = True, with_package: str | None = None) -> None:

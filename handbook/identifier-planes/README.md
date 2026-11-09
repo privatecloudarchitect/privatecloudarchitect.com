@@ -1,7 +1,7 @@
 # Identifier planes
 
 You tag a machine `prod` in vSphere, write an NSX security group whose criterion is `VM Tag equals prod`,
-and the group stays empty. Nothing errors. Every object in the chain reads healthy.
+and the group stays empty, and the read that resolves it returns zero with no error.
 
 A workload on VCF 9.1 can be labelled in at least five places, and three of them use the word *tag*:
 
@@ -11,7 +11,7 @@ A workload on VCF 9.1 can be labelled in at least five places, and three of them
 | **vSphere custom attribute** | `key = value` | a different store on the same objects; not what a tag rule matches |
 | **Kubernetes label** | `key = value`, selectable | Kubernetes selectors, on the Supervisor's `VirtualMachine` |
 | **Kubernetes annotation** | `key = value`, **not** selectable | controllers write here; nothing selects on it |
-| **NSX tag** | `scope = tag` | the only plane an NSX group criterion can see |
+| **NSX tag** | `scope = tag` | what an NSX group's VM Tag criterion reads; a group's other criteria match other attributes |
 
 ## Six relationships, all of them called "sync"
 
@@ -26,7 +26,9 @@ A workload on VCF 9.1 can be labelled in at least five places, and three of them
 | **projection** | A writes into B's store, and needs a credential on B to do it |
 | **coincidence** | two planes use the same word and share nothing |
 
-The one people assume between vCenter and NSX is **reference**, and it is the one that does not happen. NSX
+The one people assume between vCenter and NSX is **reference**, and on the estate this was written from it did not
+happen (two named machines, the NSX inventory read once after the attach, the group's members
+watched for two minutes, VCF 9.1). NSX
 documents an **import** of vCenter tags, which creates NSX tags; that is a different relationship with a
 different failure mode (it is correct on the day you run it and drift by the following week).
 
@@ -65,8 +67,9 @@ That is read-only. It reports which planes it could reach and with which credent
 three), how many identifiers each plane has **defined** against how many objects **carry** one, and every
 group whose membership is defined by a tag together with whether it currently resolves to anything.
 
-That last number is the one worth scheduling. A group is a query, and a query the plane cannot answer
-returns **zero rather than an error**, so an empty group appears on no dashboard and in no alert.
+That last number is the one worth scheduling. A group is a query, and a query that matches nothing
+returns **zero rather than an error**. Whether either product raises an empty group anywhere else was not read,
+so run the check rather than wait for one.
 
 To measure the propagation question rather than read about it:
 
@@ -98,7 +101,7 @@ consumer, with an owner for every fact held on two planes. A row with no owner i
 
 ## What it does not cover
 
-It creates no NSX tag. Getting a value into the store an NSX group reads means tagging in NSX, or NSX's
+It creates no NSX tag. Getting a value into the store an NSX group's VM Tag criterion reads means tagging in NSX, or NSX's
 documented import of vCenter tags, which creates NSX tags once and is not exercised here. The Security Services
 Platform is not exercised by this script. The **write** discipline, meaning who may set a
 tag, how a machine's guess must not overwrite a human's designation, how classification gets written back

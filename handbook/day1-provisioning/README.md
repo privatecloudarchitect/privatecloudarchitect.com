@@ -131,7 +131,7 @@ what it teaches, what changed from the previous stage, how to deploy it, and wha
 
 The templates teach you to use the plane. `day1.py` reads the plane itself, through both of the interfaces
 that sit over the same objects, and reports where they disagree: the Day-1 kinds each face declares with the
-verbs it permits, the same deployments read field by field through each face, the blueprint and version tree,
+verbs it permits, the deployments read through each face, field names compared one level deep, the blueprint and version tree,
 the ingredients a blueprint may draw on, and, with `--probe-release`, what each face actually does when told
 to delete a released version. That last one creates a throwaway blueprint, releases a version, asks both
 faces to remove it, reads back what changed, and deletes the blueprint again; it never touches content it did

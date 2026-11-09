@@ -52,8 +52,8 @@ keep it for a throwaway credential.
   custom group's `resourceKindKey` is its group type, `Environment` here, and a group needs a rule or a member.
 - The 401 in step 2 is simulated by corrupting the cached bearer, because a real expiry cannot be scheduled into a
   demo; the client's path is the same one an expired bearer takes.
-- The consumption surface answers a large collection page with more than a hundred response headers (one `link`
-  header per page); the standard library refuses such an answer unless its header limit is raised, which
+- The consumption surface answers a large collection page with more than a hundred response headers (the `link`
+  header, repeated); the standard library refuses such an answer unless its header limit is raised, which
   `resilient.py` does at import. Other HTTP libraries have their own limits; check yours.
 - `paginate()` needs to know how the envelope declares its total: `pageInfo.totalCount` on VCF Operations (pages
   are 0-based), `resultTotal` on the consumption surface's cloud API (pages are 1-based and capped at 128).

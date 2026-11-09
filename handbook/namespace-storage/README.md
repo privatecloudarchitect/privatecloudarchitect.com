@@ -5,7 +5,7 @@ Companion to the chapter
 one read-only script that asks every plane which will answer "how much storage is used" and puts the answers
 next to each other. Stdlib Python only; no token, password or session id is printed or written.
 
-**Provenance:** read on VCF Automation 9.1.1.0100 on 2026-10-19 with all four credentials
+**Provenance:** read on VCF Automation 9.1.1.0100 on 2026-10-19 with all three credentials
 ([`expected-output.md`](expected-output.md)). The 9.1 run of 2026-09-21 is kept in [`records/`](records/).
 
 | File | What it is |
