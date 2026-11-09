@@ -8,7 +8,7 @@
   item: one whose declared fields agree with the cached object and the live machine is in sync. A machine whose
   Supervisor object is MISSING is drifted (f8's decision, by R1: declared present, actual missing), the MISSING the
   item and its field drift not counted; where its deployment
-  is a tombstone (DELETE_SUCCESSFUL still listing a resource) the item says so (f8: the record contradicts itself, and
+  is a tombstone (DELETE_SUCCESSFUL still listing a resource) the item records that (f8: the record contradicts itself, and
   exit 1 keys on it). Under STALE, field drift counts and carries the syncStatus. A claim whose namespace was not
   reachable, or a machine not found live that is neither MISSING nor drifted, is check_failed. An empty audit cannot be
   told from a failed listing, and exactly 200 rows may be a truncated one: both are check_failed until pathways.py
