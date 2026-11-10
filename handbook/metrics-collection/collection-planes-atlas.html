@@ -261,7 +261,8 @@ figure .strip svg{width:100%}
 .hue-rose { background:var(--rose); color:var(--rose) }
 .hue-ink { background:var(--ink-2); color:var(--ink-2) }
 .ch-rlab.hue-ink { color:var(--ink) }
-.ch-pwrap { position:relative; padding-top:42px }
+.ch-pwrap { position:relative }
+.ch-pwrap.ch-b { padding-top:42px }
 .ch-pbar { display:flex; height:22px; border-radius:3px; overflow:hidden; box-shadow:inset 0 0 0 1px var(--rule) }
 .ch-seg { display:block; height:100%; min-width:2px }
 .ch-seg.ch-rest, .ch-sw.ch-rest { background:repeating-linear-gradient(135deg,var(--rule) 0 2px,transparent 2px 7px); min-width:0 }
@@ -273,10 +274,21 @@ figure .strip svg{width:100%}
 .ch-key b { font-family:var(--mono); font-weight:600 }
 .ch-sw { display:inline-block; width:14px; height:14px; border-radius:3px; box-shadow:inset 0 0 0 1px var(--rule) }
 .ch-mini { display:inline-flex; vertical-align:-1px; width:9em; height:.8em; margin:0 .3em; border-radius:2px; overflow:hidden; box-shadow:inset 0 0 0 1px var(--rule) }
+.ch-stack { display:grid; gap:20px }
+.ch-k-band.ch-hollow { background:transparent !important; border:1.5px dashed currentColor; box-sizing:border-box }
+.ch-cw { display:flex; flex-wrap:wrap; gap:8px 18px; min-width:0; align-items:flex-end }
+.ch-cg { display:flex; flex-direction:column; gap:4px; min-width:0 }
+.ch-cgl { font-family:var(--mono); font-size:.75rem; color:var(--ink-2); white-space:nowrap }
+.ch-cells { display:flex; flex-wrap:wrap; gap:3px }
+.ch-crun { display:contents }
+.ch-c { display:block; flex:none; width:13px; height:13px; border-radius:2px }
+.ch-cl .ch-c { width:22px; height:22px; border-radius:3px }
+.ch-c.ch-chollow, .ch-sw.ch-chollow { background:transparent; box-shadow:inset 0 0 0 1px var(--ink-3) }
+.ch-ntxt { font-size:.86rem; color:var(--ink-2); line-height:1.45 }
 @media (max-width:720px) {
   .ch-rows { display:block }
   .ch-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 10px; align-items:end; margin:6px 0 }
-  .ch-row > .ch-trk, .ch-row > .ch-rlabs, .ch-row > .ch-ticks { grid-column:1 / -1 }
+  .ch-row > .ch-trk, .ch-row > .ch-rlabs, .ch-row > .ch-ticks, .ch-row > .ch-cw, .ch-row > .ch-ntxt { grid-column:1 / -1 }
   .ch-row > div:empty { display:none }
   .ch-top, .ch-axis { display:block; margin:0 }
   .ch-grp { margin-top:12px }
@@ -284,7 +296,7 @@ figure .strip svg{width:100%}
   .ch-rkey { display:flex }
   .ch-ticks .ch-wide { display:none }
 }
-@media print { .ch-trk, .ch-pbar { -webkit-print-color-adjust:exact; print-color-adjust:exact } }
+@media print { .ch-trk, .ch-pbar, .ch-c { -webkit-print-color-adjust:exact; print-color-adjust:exact } }
 :root{--rose-bg:#f8e7e5;--plum-bg:#f0e8f4}
 .node{color:var(--ink)}
 </style><div class="wrap">
