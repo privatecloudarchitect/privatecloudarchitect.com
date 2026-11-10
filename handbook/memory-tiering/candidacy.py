@@ -54,6 +54,7 @@ import argparse
 import calendar
 import collections
 import json
+import math
 import os
 import re
 import sys
@@ -86,6 +87,33 @@ NVME_COUNTERS = [NVME_USED, "mem:NVMe|latency.read_latest", "mem:NVMe|latency.wr
 DRAM_COUNTERS = ["mem:DRAM|latency.read_latest", "mem:DRAM|bandwidth.read_latest"]
 
 KB_PER_GIB, MB_PER_GIB = 1048576, 1024
+
+
+def _r1(x: float) -> float:
+    """One decimal, half up, the same in Python and in the chapter's planner (round() rounds half to even)."""
+    return math.floor(x * 10 + 0.5) / 10
+
+
+def denominators(dram: float, total: float, active: float, tier: float = 0.0) -> dict:
+    """Candidacy for one host as a percent of its DRAM, three ways, from readings in any one unit.
+
+    right       active over the DRAM tier's capacity: correct on a host with a tier and on one without
+    total       active over total capacity, today
+    afterTier   active over total capacity once a tier of `tier` is activated (None when tier is 0)
+
+    errorNow and errorAfter are those readings' errors against right, in percent. On VCF Operations 9.1.1 total capacity
+    counts the NVMe tier and leaves out what the hypervisor holds, so the error is positive on a host without a tier and
+    turns negative when one is activated: no correction factor fixes it. The chapter's planner runs a one-line JavaScript
+    twin of this function, held equal to it in a browser engine by the site's tests.
+    """
+    if not (dram > 0 and total > 0 and active >= 0 and tier >= 0):
+        raise ValueError("denominators: DRAM and total capacity are positive, active memory and the tier are not negative")
+    out = {"right": _r1(100 * active / dram), "total": _r1(100 * active / total),
+           "errorNow": _r1(100 * (dram / total - 1)), "afterTier": None, "errorAfter": None}
+    if tier > 0:
+        out["afterTier"] = _r1(100 * active / (total + tier))
+        out["errorAfter"] = _r1(100 * (dram / (total + tier) - 1))
+    return out
 
 
 def latest(tok, ids, keys):
@@ -278,9 +306,9 @@ def main(argv=None):
                # The NVMe capacity key, recorded precisely because it is NOT a tier detector.
                "nvmeCapacityKeyReads": d.get(NVME_CAP)}
         if tot:
-            wrong = 100 * a / tot
-            row["activePctOfTotal"] = round(wrong, 1)
-            row["denominatorErrorPct"] = round((wrong - 100 * a / dram) / (100 * a / dram) * 100, 1)
+            dn = denominators(dram, tot, a)
+            row["activePctOfTotal"] = dn["total"]
+            row["denominatorErrorPct"] = dn["errorNow"]
         if tier_size:
             # The 1:1 default, measured rather than assumed.
             row["upliftIfOneToOneGiB"] = round(dram / KB_PER_GIB, 1)
