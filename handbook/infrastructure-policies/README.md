@@ -8,8 +8,8 @@ one script that reads every VCF Automation infrastructure policy down to the vCe
 | File | What it is |
 |---|---|
 | `infra_policy.py` | Read-only by default: every provider policy (mandatory or optional, criteria, compatible zones, synced to vCenter), which organizations' region quotas list it, and with vCenter's credential the compute policy it names, the hosts carrying its host tag per cluster, the VMs carrying its VM tag, vCenter's namespace-level policies and the namespaces that list it. With `--probe`, the four layers built on throwaway objects, three VMs, and everything removed. |
-| `infra.json` | The read from the reference estate. The field note renders it. |
-| `infra-probe.json` | The probe's record from the same estate. The field note renders it. |
+| `infra.json` | An example record of the read, from the run on this site's reference estate on 2026-10-23; its printed lines are in `expected-output.md`. Your run writes your own. |
+| `infra-probe.json` | An example record of the probe, from the same run. Your probe writes your own. |
 | `expected-output.md` | The printed lines of both runs. |
 
 ## Run it
@@ -49,8 +49,8 @@ writes, every name starting `probe-infra`, and removes:
    is tagged or changed; only a VM carrying one of the new VM tags is bound.
 2. **Provider:** two Optional policies on them, one with the criterion guest family Linux (the probe's VMs are Ubuntu),
    one with guest family Windows. Each create is retried until VCF Automation has synced the compute policy: it is
-   refused as an unknown compute policy until then, which took from half a minute to fifteen minutes across the runs
-   on the reference estate. The wait is bounded at 25 minutes.
+   refused as an unknown compute policy until then; VMware's page says the sync might take a few minutes. The probe
+   records how long it waited, and the wait is bounded at 25 minutes.
 3. **Provider:** both added to your organization's region quota. The list is read first and written back exactly at
    the end, and the residue read compares it.
 4. **Tenant:** a namespace with the `--like` namespace's class, VPC and overrides, naming both policies, placed in a
@@ -78,23 +78,23 @@ Ubuntu image, the probe attaches the `--like` namespace's library on vCenter's n
 | 4 | A record refused to write because an estate name survived the labels |
 | 5 | An unknown or incomplete argument |
 
-## What the probe proved on the reference estate
+## What the probe proves
 
-Read on VCF Automation 9.1.1 and vCenter 9.1.1, and recorded in `infra-probe.json`:
+On VCF Automation 9.1.1 and vCenter 9.1.1:
 
-- **The VM that listed no policy** was placed, carried no VM tag, and vCenter read the compute policy `NOT_APPLICABLE`.
-- **The VM that opted in to the Linux policy** was placed carrying the compute policy's VM tag, and vCenter read `COMPLIANT`
-  once it had evaluated. Read at power-on, compliance reads `UNKNOWN`, so the probe reads it until it changes, with a bound,
+- **A VM that lists no policy** is placed, carries no VM tag, and vCenter reads the compute policy `NOT_APPLICABLE`.
+- **A VM that opts in to a policy it matches** is placed carrying the compute policy's VM tag, and vCenter reads `COMPLIANT`
+  once it has evaluated. Read at power-on, compliance reads `UNKNOWN`, so the probe reads it until it changes, with a bound,
   and records how long that took.
-- **The VM that opted in to the Windows policy** was not placed in the twenty minutes the probe watched it: its placement
-  condition still read `failed to evaluate policy ... still being evaluated: policy not ready`.
-- **The namespace in an incompatible zone** was refused.
-- **The Supervisor namespace** held one `ComputePolicy` per policy, enforcement mode `Optional`, with the criterion
-  translated into vSphere's match: guest family equals Linux.
+- **A VM that opts in to a policy it does not match** is not placed: its placement condition reads
+  `failed to evaluate policy ... still being evaluated: policy not ready` for as long as the probe watches it.
+- **A namespace in an incompatible zone** is refused.
+- **The Supervisor namespace** holds one `ComputePolicy` per policy it names, with its enforcement mode and the criterion
+  translated into vSphere's match.
 
-Eleven earlier runs on throwaway objects on 2026-10-23 shaped the script. Every run's residue read found the quota list
-as it was, and the read made before the script's own runs and the one made after them are identical: the estate's own
-policy, its compute policy and the hosts carrying its host tag were left as they were.
+Earlier runs on throwaway objects shaped the script. Every run's residue read found the quota list as it was, and the
+policies, compute policies and host tags that were there before were left as they were. An example of the probe's
+printed lines is in `expected-output.md`.
 
 ## Scope, stated plainly
 

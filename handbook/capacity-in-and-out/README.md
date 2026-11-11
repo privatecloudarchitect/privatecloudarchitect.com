@@ -9,7 +9,7 @@ or password is printed or written.
 | File | What it is |
 |---|---|
 | `ladder.py` | Reads workload domains on SDDC Manager, every Supervisor on the vCenters you name (zones with their type and drain state, service against tenant namespaces, and who holds the Supervisor's single external identity provider slot), the Automation provider plane (registered SDDC Managers, vCenters, NSX Managers, regions, zones, provider gateways, IP blocks), every organization with what it still holds, and the unmanaged VM list Automation offers for each vCenter. Prints the ladder with a PASS or FAIL per gate. Writes `ladder.json`, and refuses to write a record carrying an estate name. |
-| `ladder.json` | That record from the reference estate, 2026-09-29. The field note renders it. |
+| `ladder.json` | An example record, written by the run on this site's reference estate on 2026-09-29; its printed lines are in `expected-output.md`. Your run writes your own. |
 | `expected-output.md` | The printed ladder from the same run. |
 
 ## Run it
@@ -39,7 +39,7 @@ administrator, which is why this takes a provider bearer rather than a tenant on
 | L1 workload domains | every domain `ACTIVE` | nothing joins on top of a domain mid-operation |
 | L3 Supervisors | `RUNNING` and `READY` | the region and every namespace sit on it |
 | L3 Supervisors | no zone left half-drained | a zone marked for removal refuses new and restarting workloads and deletes itself only once empty; tenant namespaces still on it are the drain in progress |
-| L3 Supervisors | identity slot held by Automation or empty | a Supervisor takes one external identity provider and refuses a second; on the reference estate Automation holds that slot. At which step of region onboarding it registers was not observed |
+| L3 Supervisors | identity slot held by Automation or empty | a Supervisor takes one external identity provider and refuses a second. At which step of region onboarding it registers was not observed |
 | L4 provider plane | every region `READY` | a region is one NSX Manager and its Supervisors; the vendor documentation says its name and NSX Manager cannot be edited |
 | L5 tenancy | no disabled organization still holding capacity or networking | disabling an organization releases nothing: its quota keeps the Supervisor pinned in the region, and its networking and VPC stay realized |
 

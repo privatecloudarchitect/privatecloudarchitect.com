@@ -13,7 +13,7 @@ caps; this script only reads the exports you take from it, and the record here i
 | File | What it is |
 |---|---|
 | `maximums.py` | Reads the exports (one CSV per product), selects about thirty caps by the export's own row names and your sizes, and, for each plane whose settings you give it, reads SDDC Manager, vCenter, NSX and the VCF Automation provider plane with GETs only. Prints the caps with their release, the count read and the share used, and writes `maximums.json`. |
-| `maximums.json` | That record from the reference estate. The field note renders it. |
+| `maximums.json` | An example record, written by the run on this site's reference estate on 2026-10-23; its printed table is in `expected-output.md`. Your run writes your own. |
 | `expected-output.md` | The printed table from the same run. |
 
 ## Get the exports
