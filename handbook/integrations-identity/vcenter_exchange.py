@@ -843,7 +843,7 @@ def _census_of(s: Soap, who: str, tenant: str, directories: set[str], local: str
     hold, the session that read it, the way vcenter-authorization's authz.py checks it: a list without that session, or
     with no key for it, is not the whole list (exit 3). So is a list that holds nothing but the census identity's own
     sessions, by key or by its user name: an identity that may not read the others lists only its own (a directory
-    account with no administrator role did, on the reference estate), and that list says nothing of anyone else, so it
+    account with no administrator role did when measured), and that list says nothing of anyone else, so it
     is reported as such and never as an estate where no one else is signed in. With a where list, the address and last
     activity of each directory and local administrator session go into that list, never into the census."""
     try:

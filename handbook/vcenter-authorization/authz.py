@@ -1038,7 +1038,7 @@ def session_list(si):
     """Every live session on one vCenter. vCenter states no count for the list, so it is checked for the member it must
     hold: the session that read it. A refusal, or a list without that session, is a read that failed (ReadError, exit
     3). So is a list that holds nothing but the reader's own sessions: an identity that may not read the others lists
-    only its own (a directory account with no administrator role did, on the reference estate), and that list says
+    only its own (a directory account with no administrator role did when measured), and that list says
     nothing of anyone else. Read whole by an administrator, each reference vCenter listed hundreds of sessions besides
     the reader's, so a list of the reader's alone is read as filtered, never as an estate where no one else is signed
     in."""
