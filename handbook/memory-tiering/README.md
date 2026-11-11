@@ -64,10 +64,9 @@ each layer references the previous one by id):
   already exists: `force=false` skips it (safe, non-destructive), `force=true` overwrites it (only
   to push an update). The API defaults the flag to `true`/overwrite, so pass `force=false` for a
   non-destructive import; the UI's import tab likewise defaults to **Overwrite existing content**, and its
-  **Skip item(s)** is the same non-destructive choice. Built by filtering the reference instance's own export, so what ships is
-  the export format verbatim. A no-force test-import on the reference instance (2026-10-08) reported
-  all 19 skipped and none failed, and a read of every field of all 19 before and after showed no change,
-  with the instance's super metric count the same.
+  **Skip item(s)** is the same non-destructive choice. Built by filtering a live instance's own export, so what ships is
+  the export format verbatim. A no-force test-import on VCF Operations 9.1.1 (2026-10-08) skipped all 19 and failed
+  none, and every field of all 19 read the same before and after.
 - `views/memory-tiering-views.import.zip`: the lens's three views in the **Views ▸ Manage ▸ ⋯ ▸ Import** shape,
   the UI route above. Id-preserving, so the dashboard finds them.
 - `views/memory-tiering-views.contentpkg.zip`: the lens's three views (host candidates, capex
@@ -76,8 +75,7 @@ each layer references the previous one by id):
   package pair imports in order.
 - `dashboard/memory-tiering-readiness.import.zip`: the readiness dashboard in the **Dashboards ▸
   Manage ▸ ⋯ ▸ Import** shape (dashboard import is UI-only on this build; import the zip directly, do
-  not unzip it). This is the reference estate's own deploy artifact: its runbook deploys exactly
-  this file through **Manage ▸ ⋯ ▸ Import**, and the live dashboard matches the committed contents. It
+  not unzip it). It is deployed exactly as committed, through **Manage ▸ ⋯ ▸ Import**. It
   references the views and metrics by id, so import it last, after the super metrics and the views. Blank rows
   right after import mean the super metrics are not yet activated in the collecting policy,
   which is step 4 above.
@@ -152,7 +150,8 @@ It reports:
 5. **Whether the 1:1 default holds.** The uplift a 1:1 ratio would give against the tier size the host reports. Where
    the two differ, every figure derived from the assumed uplift carries the difference.
 
-[expected-output.md](expected-output.md) holds a run against the reference estate, with notes on reading it.
+[expected-output.md](expected-output.md) holds an example run, with notes on reading it: compare the shape of your
+run with it, never its numbers, which are one estate's.
 
 The api-token is read from `OPS_API_TOKEN_FILE`, a file of mode 0600, when it is set; a wider mode is refused.
 The value itself in `OPS_API_TOKEN` still works, but it lands in the shell's history and the process list, so
@@ -165,11 +164,11 @@ keep it for a throwaway credential.
   which reads as a host that collects nothing rather than as a wrong key.
 - **Detect a tier with `mem:NVMe|memory_tier_size`, never with
   `mem:NVMe|memory_tier_total_capacity`.** The capacity key can be present on every host and read zero where there
-  is no tier, so its presence proves nothing, and on the reference estate it read the same figure on two hosts
-  whose tiers differ fourfold, so its value is not the tier's size. The cleanest detector is the key set: the keys
+  is no tier, so its presence proves nothing, and on VCF Operations 9.1.1 it reads the same figure on hosts whose
+  tiers differ in size, so its value is not the tier's size. The cleanest detector is the key set: the keys
   on every host with a tier and on no host without one. `candidacy.py` reads every host's key list for it, because
-  a key on one untiered host can be missing from another; on the reference estate six keys qualified (the tier's
-  size and usage, and read and write latency and bandwidth on the NVMe side).
+  a key on one untiered host can be missing from another; on VCF Operations 9.1.1 a tier brings six such keys (the
+  tier's size and usage, and read and write latency and bandwidth on the NVMe side).
 
 ### Scope and units
 
