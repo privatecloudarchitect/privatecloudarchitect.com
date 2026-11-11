@@ -1,0 +1,77 @@
+{
+ "captured_utc": "2026-11-10T00:10:06Z",
+ "signIn": "session login",
+ "saltVersion": "3008.5",
+ "project": "{{project-1}}",
+ "namespace": "{{namespace-1}}",
+ "runId": "68c92c",
+ "windowsBootstrap": "cloudinit",
+ "windowsBootstrapPath": "cloud-init through Cloudbase-Init",
+ "linuxImage": "{{image-1}}",
+ "windowsImage": "{{image-4}}",
+ "classes": {
+  "master": "best-effort-small",
+  "windows": "best-effort-medium"
+ },
+ "storageClass": "{{storageclass-2}}",
+ "created": [
+  {
+   "kind": "Secret",
+   "role": "api-access"
+  },
+  {
+   "kind": "Secret",
+   "role": "master-bootstrap"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "master"
+  },
+  {
+   "kind": "VirtualMachineService",
+   "role": "api"
+  },
+  {
+   "kind": "Secret",
+   "role": "linux-bootstrap"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "linux"
+  },
+  {
+   "kind": "Secret",
+   "role": "windows-bootstrap"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "windows"
+  }
+ ],
+ "steps": {
+  "2": {
+   "name": "master",
+   "secondsToPoweredOn": 62,
+   "secondsToLoadBalancerAddress": 16,
+   "secondsToApiLogin": 61,
+   "apiTlsPinnedToRunCertificate": true
+  }
+ },
+ "failure": "StepFailed: machine guestcfg-68c92c-windows PoweredOn with an address: not done within 30 minutes; Windows path tried: cloud-init through Cloudbase-Init",
+ "outcome": "failed",
+ "teardown": {
+  "keysDeleted": "deleted",
+  "minionMachines": 2,
+  "loadBalancers": 1,
+  "masterMachines": 1,
+  "secrets": 4,
+  "refused": [],
+  "stillDeleting": [],
+  "residue": {
+   "secrets": [],
+   "virtualmachines": [],
+   "virtualmachineservices": []
+  },
+  "clean": true
+ }
+}

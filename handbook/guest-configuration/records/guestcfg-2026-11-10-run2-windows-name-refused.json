@@ -1,0 +1,73 @@
+{
+ "captured_utc": "2026-11-10T00:44:46Z",
+ "signIn": "session login",
+ "saltVersion": "3008.5",
+ "project": "{{project-1}}",
+ "namespace": "{{namespace-1}}",
+ "runId": "7340de",
+ "windowsBootstrap": "sysprep",
+ "windowsBootstrapPath": "Sysprep (rawSysprep)",
+ "linuxImage": "{{image-1}}",
+ "windowsImage": "{{image-4}}",
+ "classes": {
+  "master": "best-effort-small",
+  "windows": "best-effort-medium"
+ },
+ "storageClass": "{{storageclass-2}}",
+ "created": [
+  {
+   "kind": "Secret",
+   "role": "api-access"
+  },
+  {
+   "kind": "Secret",
+   "role": "master-bootstrap"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "master"
+  },
+  {
+   "kind": "VirtualMachineService",
+   "role": "api"
+  },
+  {
+   "kind": "Secret",
+   "role": "linux-bootstrap"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "linux"
+  },
+  {
+   "kind": "Secret",
+   "role": "windows-bootstrap"
+  }
+ ],
+ "steps": {
+  "2": {
+   "name": "master",
+   "secondsToPoweredOn": 47,
+   "secondsToLoadBalancerAddress": 16,
+   "secondsToApiLogin": 76,
+   "apiTlsPinnedToRunCertificate": true
+  }
+ },
+ "failure": "StepFailed: create VirtualMachine guestcfg-7340de-windows answered 422: admission webhook \"default.validating.virtualmachine.v1alpha5.vmoperator.vmware.com\" denied the request: metadata.name: Invalid value: \"guestcfg-7340de-windows\": host name may not exceed 15 characters for Windows",
+ "outcome": "failed",
+ "teardown": {
+  "keysDeleted": "deleted",
+  "minionMachines": 1,
+  "loadBalancers": 1,
+  "masterMachines": 1,
+  "secrets": 4,
+  "refused": [],
+  "stillDeleting": [],
+  "residue": {
+   "secrets": [],
+   "virtualmachines": [],
+   "virtualmachineservices": []
+  },
+  "clean": true
+ }
+}

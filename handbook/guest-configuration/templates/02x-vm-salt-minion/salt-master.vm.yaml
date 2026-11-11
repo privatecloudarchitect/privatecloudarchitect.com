@@ -1,0 +1,224 @@
+# =============================================================================
+# Template 02x-a (EXTRA CREDIT) - salt-master, a Salt master on the VM Service
+# =============================================================================
+# This branches off stage 02 (one VM that configures itself once) and stands up what
+# keeps a guest configured afterwards: an independent Salt master. It is the master
+# of guest-configuration/guestcfg.py, written out so you can read and apply it by hand;
+# that script's proof run builds this same shape and a test holds the two together.
+#
+# Three objects, the stage-02 and stage-03 shapes:
+#   1. a Secret holding the master's first-boot cloud-config
+#   2. a VirtualMachine that consumes it (Ubuntu 24.04, Salt 3008 LTS, API on TLS)
+#   3. a VirtualMachineService that exposes port 8000 (the Salt API) and nothing else.
+#      Minions dial OUT to the master on 4505 and 4506 (private VPC traffic), so those
+#      two ports need no load balancer. Delete this object when you no longer need the API.
+#
+# Before you apply it:
+#   1. Generate the API's certificate and key, and paste each into the cloud-config below:
+#        openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj /CN=salt-master \
+#          -keyout api.key -out api.crt
+#   2. Choose an API password and paste its digest below:
+#        printf '%s' "$PASSWORD" | sha256sum        # the hexadecimal digest is the value
+#   3. Fill the remaining <REPLACE_ME-...> values; each has its discovery note beside it.
+#   4. kubectl apply -f salt-master.vm.yaml -n <your-namespace>
+#   5. kubectl get virtualmachine salt-master -n <your-namespace> -o wide
+#      kubectl get virtualmachineservice salt-api -n <your-namespace>
+# Success: the VM is PoweredOn with an address, the service has an external address, and
+# https://<service-address>:8000/login accepts the eauth file account below over TLS.
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path; the chapter
+# quotes its support terms.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: salt-master-bootstrap
+  labels:
+    app: salt-master-bootstrap
+    app.kubernetes.io/name: salt-master-bootstrap
+    app.kubernetes.io/component: salt-master
+    app.kubernetes.io/part-of: guest-configuration
+type: Opaque
+stringData:
+  user-data: |
+    #cloud-config
+    hostname: salt-master
+    bootcmd:
+      - systemctl stop unattended-upgrades 2>/dev/null || true
+      - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+    packages:
+      - ca-certificates
+      - curl
+      - gnupg
+    write_files:
+      # The Salt Project's apt source, as its install guide publishes it, so the guest needs
+      # only Broadcom's package location. Moved into place by install.sh after the signing key.
+      - path: /opt/guestcfg/salt.sources
+        permissions: '0644'
+        content: |
+          X-Repolib-Name: Salt Project
+          Enabled: yes
+          Types: deb
+          URIs: https://packages.broadcom.com/artifactory/saltproject-deb
+          Signed-By: /etc/apt/keyrings/salt-archive-keyring.pgp
+          Suites: stable
+          Components: main
+      # Holds this guest to the 3008 LTS line through apt, the pin Salt's install guide gives.
+      - path: /opt/guestcfg/salt-pin
+        permissions: '0644'
+        content: |
+          Package: salt-*
+          Pin: version 3008.*
+          Pin-Priority: 1001
+      # The master's configuration. auto_accept and open_mode are written at their defaults so
+      # a reader sees them. netapi_enable_clients and external_auth allow the API only the three
+      # client types and the exact functions the proof run calls; a wider grant is yours to add.
+      # The API runs TLS with the certificate below (see the openssl command in the header).
+      - path: /opt/guestcfg/master.conf
+        permissions: '0600'
+        content: |
+          auto_accept: False
+          open_mode: False
+          file_roots:
+            base:
+              - /srv/salt
+          netapi_enable_clients:
+            - local_async
+            - runner
+            - wheel
+          rest_cherrypy:
+            port: 8000
+            ssl_crt: /etc/salt/guestcfg/api.crt
+            ssl_key: /etc/salt/guestcfg/api.key
+          external_auth:
+            file:
+              ^filename: /etc/salt/guestcfg/api.digest
+              ^hashtype: sha256
+              guestcfg-api:
+                - 'L@<REPLACE_ME-linux-minion-id>,<REPLACE_ME-windows-minion-id>':
+                    - test.ping
+                    - grains.item
+                    - state.apply
+                - '@wheel':
+                    - key.list_all
+                    - key.accept
+                    - key.delete
+                - '@runner':
+                    - jobs.lookup_jid
+      # The API account's password digest (Salt's file eauth backend, ^hashtype sha256):
+      # printf '%s' "$PASSWORD" | sha256sum
+      - path: /opt/guestcfg/api.digest
+        permissions: '0600'
+        content: |
+          guestcfg-api:<REPLACE_ME-sha256-of-api-password>
+      # The API's certificate and key, generated for this master. The key's permissions are
+      # tightened by install.sh once the salt user exists.
+      - path: /opt/guestcfg/api.crt
+        permissions: '0644'
+        content: |
+          <REPLACE_ME-tls-certificate-pem>
+      - path: /opt/guestcfg/api.key
+        permissions: '0600'
+        content: |
+          <REPLACE_ME-tls-private-key-pem>
+      # The state the proof run applies: one managed file, the same state for Linux and Windows,
+      # plus the second state that makes the drift. Add your own under /srv/salt.
+      - path: /srv/salt/guestcfg/init.sls
+        permissions: '0644'
+        content: |
+          # The baseline: one managed file, the same state on Linux and on Windows. The first apply
+          # creates it, the next finds it correct and changes nothing, and an apply after a local
+          # change puts it back. Only the path depends on the operating system.
+          {% set managed_file = 'C:\\ProgramData\\guestcfg\\managed.conf' if grains['os_family'] == 'Windows' else '/etc/guestcfg/managed.conf' %}
+
+          guestcfg-managed-file:
+            file.managed:
+              - name: {{ managed_file }}
+              - makedirs: True
+              - contents: |
+                  managed-by: salt
+                  baseline: guest-configuration
+      - path: /srv/salt/guestcfg/drift.sls
+        permissions: '0644'
+        content: |
+          # The drift for step 6: the same file, changed outside the baseline. It goes through a
+          # state because the run's API account holds only the state.apply right, no file-write
+          # right; a real change arrives another way, and the baseline answers it the same.
+          {% set managed_file = 'C:\\ProgramData\\guestcfg\\managed.conf' if grains['os_family'] == 'Windows' else '/etc/guestcfg/managed.conf' %}
+
+          guestcfg-managed-file-drift:
+            file.managed:
+              - name: {{ managed_file }}
+              - contents: |
+                  managed-by: someone-else
+      # Everything needing the network or the salt user: the signing key, the pinned 3008.5
+      # packages, CherryPy for salt-api, then the configuration files, owned so salt reads them.
+      - path: /opt/guestcfg/install.sh
+        permissions: '0700'
+        content: |
+          #!/bin/bash
+          set -uo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          log() { echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }
+          retry() { local left=$1; shift; until "$@"; do left=$((left-1)); [ "$left" -gt 0 ] || return 1; log "retrying: $*"; sleep 20; done; }
+          fetch_key() { curl -fsSL --retry 3 --retry-delay 5 "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public" | gpg --dearmor --yes -o /etc/apt/keyrings/salt-archive-keyring.pgp; }
+          apt_up() { apt-get -o DPkg::Lock::Timeout=300 update; }
+          install -d -m 755 /etc/apt/keyrings
+          retry 6 fetch_key || { log "the Salt signing key could not be fetched"; exit 1; }
+          install -m 0644 /opt/guestcfg/salt.sources /etc/apt/sources.list.d/salt.sources
+          install -m 0644 /opt/guestcfg/salt-pin /etc/apt/preferences.d/salt-pin-1001
+          retry 6 apt_up || { log "the Salt repository could not be read"; exit 1; }
+          apt_in() { apt-get -o DPkg::Lock::Timeout=300 install -y salt-common=3008.5 salt-master=3008.5 salt-api=3008.5; }
+          retry 3 apt_in || { log "the Salt master packages did not install"; exit 1; }
+          apt-mark hold salt-common salt-master salt-api
+          salt-pip install CherryPy || log "salt-pip could not add CherryPy; the API login will show whether it is needed"
+          install -d -o root -g salt -m 0750 /etc/salt/guestcfg
+          install -o root -g salt -m 0640 /opt/guestcfg/api.digest /etc/salt/guestcfg/api.digest
+          install -o root -g salt -m 0640 /opt/guestcfg/api.crt /etc/salt/guestcfg/api.crt
+          install -o root -g salt -m 0640 /opt/guestcfg/api.key /etc/salt/guestcfg/api.key
+          install -m 0644 /opt/guestcfg/master.conf /etc/salt/master.d/guestcfg.conf
+          systemctl enable salt-master salt-api
+          systemctl restart salt-master
+          sleep 10
+          systemctl restart salt-api
+          log "salt-master and salt-api restarted with the run's configuration"
+    runcmd:
+      - [bash, /opt/guestcfg/install.sh]
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: salt-master
+  labels:
+    app: salt-master
+    app.kubernetes.io/name: salt-master
+    app.kubernetes.io/component: salt-master
+    app.kubernetes.io/part-of: guest-configuration
+spec:
+  className: best-effort-small
+  imageName: <REPLACE_ME-ubuntu-24.04-image>  # the image's display name, not its vmi- id
+  storageClass: <REPLACE_ME-storage-class>  # kubectl get regionstorageclassquotas
+  powerState: PoweredOn
+  bootstrap:
+    cloudInit:
+      rawCloudConfig:
+        name: salt-master-bootstrap
+        key: user-data
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachineService
+metadata:
+  name: salt-api
+  labels:
+    app: salt-api
+    app.kubernetes.io/name: salt-api
+    app.kubernetes.io/component: salt-api
+    app.kubernetes.io/part-of: guest-configuration
+spec:
+  type: LoadBalancer
+  selector:
+    app: salt-master
+  ports:
+    - name: salt-api
+      protocol: TCP
+      port: 8000
+      targetPort: 8000

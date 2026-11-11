@@ -3,7 +3,7 @@
  "written_from": {
   "competency_map": {
    "path": "deploy/privatecloudarchitect/site/competency-map.yaml",
-   "sha256": "d14fcc9f5883d92eb7a3efb0d59eda97ece2a5688a905f9cd4a4abd18d3b9ce9"
+   "sha256": "83bea57e97c12f36dc81d0a15294c4e0e1e7ffbdc6bf2dff0803d921554dcffd"
   },
   "mastery": {
    "path": "deploy/privatecloudarchitect/site/mastery.yaml",
@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "7fdac025922df848d7709f18d0a2727d3b24e6dd4ff2b280e572af4101c831ad"
+   "sha256": "1601611e99803461c30e816e9a33c52e01cb182cac3bc5cfa654c55ff91b1d99"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -403,6 +403,19 @@
    "tier": "live,doc",
    "requires": [
     "deployment-paths",
+    "day2-pathways"
+   ]
+  },
+  {
+   "id": "guest-configuration",
+   "name": "Keep a VM's guest as declared after its first boot: a Salt master you run, minions trusted by exact id, drift named and put back, and keys retired with their machines",
+   "part": "II",
+   "job": "workload-operations",
+   "teaches": "/handbook/guest-configuration",
+   "tier": "live,doc,repo",
+   "harness": "handbook/guest-configuration",
+   "requires": [
+    "building-blueprints",
     "day2-pathways"
    ]
   },
@@ -1224,6 +1237,10 @@
   {
    "path": "/handbook/flow-collection",
    "title": "A flow is measured where it leaves · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/guest-configuration",
+   "title": "Guest configuration with Salt: keep the guest as declared after its first boot · Private Cloud Architect"
   },
   {
    "path": "/handbook/hardening-audit",

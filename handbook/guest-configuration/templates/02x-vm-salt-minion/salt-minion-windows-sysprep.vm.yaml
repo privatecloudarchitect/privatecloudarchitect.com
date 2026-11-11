@@ -1,0 +1,164 @@
+# =============================================================================
+# Template 02x-d (EXTRA CREDIT) - salt-minion-win, a Windows minion through Sysprep
+# =============================================================================
+# The Windows bootstrap that completed on the stock Windows Server 2022 image the proof runs
+# used, and the companion's default:
+# the VM Service's Sysprep provider with a raw unattend answer file. VM Operator fills the
+# {{ V1alpha5_... }} values with the machine's own network when it customizes the guest;
+# leave them as they are. The first logon downloads the pinned Salt 3008.5 installer from
+# Broadcom's package location and runs Salt's documented silent install with the master's
+# address and this minion's id.
+#
+# Two fields follow Microsoft's unattend reference rather than the VM Operator page's
+# example: each DNS server's address is the IpAddress element's value with an index as its
+# key, and the default route's Prefix is 0.0.0.0/0.
+#
+# The machine's name is its Windows host name, so keep it to 15 characters: on this path
+# VM Operator refuses a longer one.
+#
+# The administrator password is in the Secret in plain text, as Sysprep takes it: generate
+# one for this machine and keep the Secret's access as tight as the password's. The first
+# logon signs Administrator on once to run the install, and nothing in this file signs that
+# session out: sign it out on the console once the key reaches the master.
+#
+# Afterwards, compare the key's fingerprint at both ends, then accept it on the master by
+# exact id, never with salt-key -A:
+#   salt-key -f salt-minion-win         (on the master: the pending key's fingerprint)
+#   salt-call --local key.finger        (on the minion's console: its own)
+#   salt-key -a salt-minion-win         (only when the two match)
+#
+# Before you apply it: fill the <REPLACE_ME-...> values.
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path; the chapter
+# quotes its support terms.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: salt-minion-win-bootstrap
+  labels:
+    app: salt-minion-win-bootstrap
+    app.kubernetes.io/name: salt-minion-win-bootstrap
+    app.kubernetes.io/component: salt-minion
+    app.kubernetes.io/part-of: guest-configuration
+type: Opaque
+stringData:
+  unattend: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <unattend xmlns="urn:schemas-microsoft-com:unattend">
+      <settings pass="specialize">
+        <component name="Microsoft-Windows-TCPIP" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <Interfaces>
+            <Interface wcm:action="add">
+              <Ipv4Settings>
+                <DhcpEnabled>false</DhcpEnabled>
+              </Ipv4Settings>
+              <Ipv6Settings>
+                <DhcpEnabled>false</DhcpEnabled>
+              </Ipv6Settings>
+              <Identifier>{{ V1alpha5_FirstNicMacAddr }}</Identifier>
+              <UnicastIpAddresses>
+                <IpAddress wcm:action="add" wcm:keyValue="1">{{ V1alpha5_FirstIP }}</IpAddress>
+              </UnicastIpAddresses>
+              <Routes>
+                <Route wcm:action="add">
+                  <Identifier>0</Identifier>
+                  <Metric>10</Metric>
+                  <NextHopAddress>{{ (index .V1alpha5.Net.Devices 0).Gateway4 }}</NextHopAddress>
+                  <Prefix>0.0.0.0/0</Prefix>
+                </Route>
+              </Routes>
+            </Interface>
+          </Interfaces>
+        </component>
+        <component name="Microsoft-Windows-DNS-Client" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <Interfaces>
+            <Interface wcm:action="add">
+              <Identifier>{{ V1alpha5_FirstNicMacAddr }}</Identifier>
+              <DNSServerSearchOrder>
+                <IpAddress wcm:action="add" wcm:keyValue="1">{{ index .V1alpha5.Net.Nameservers 0 }}</IpAddress>
+                {{ if gt (len .V1alpha5.Net.Nameservers) 1 }}<IpAddress wcm:action="add" wcm:keyValue="2">{{ index .V1alpha5.Net.Nameservers 1 }}</IpAddress>{{ end }}
+              </DNSServerSearchOrder>
+            </Interface>
+          </Interfaces>
+        </component>
+        <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <RunSynchronous>
+            <RunSynchronousCommand wcm:action="add">
+              <Path>C:\sysprep\guestcustutil.exe restoreMountedDevices</Path>
+              <Order>1</Order>
+            </RunSynchronousCommand>
+            <RunSynchronousCommand wcm:action="add">
+              <Path>C:\sysprep\guestcustutil.exe flagComplete</Path>
+              <Order>2</Order>
+            </RunSynchronousCommand>
+            <RunSynchronousCommand wcm:action="add">
+              <Path>C:\sysprep\guestcustutil.exe deleteContainingFolder</Path>
+              <Order>3</Order>
+            </RunSynchronousCommand>
+          </RunSynchronous>
+        </component>
+      </settings>
+      <settings pass="oobeSystem">
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <InputLocale>0409:00000409</InputLocale>
+          <SystemLocale>en-US</SystemLocale>
+          <UserLocale>en-US</UserLocale>
+          <UILanguage>en-US</UILanguage>
+        </component>
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <OOBE>
+            <HideEULAPage>true</HideEULAPage>
+            <HideLocalAccountScreen>true</HideLocalAccountScreen>
+            <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+            <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+            <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+            <ProtectYourPC>3</ProtectYourPC>
+            <SkipMachineOOBE>true</SkipMachineOOBE>
+            <SkipUserOOBE>true</SkipUserOOBE>
+          </OOBE>
+          <TimeZone>UTC</TimeZone>
+          <UserAccounts>
+            <AdministratorPassword>
+              <Value>&lt;REPLACE_ME-administrator-password&gt;</Value>
+              <PlainText>true</PlainText>
+            </AdministratorPassword>
+          </UserAccounts>
+          <AutoLogon>
+            <Enabled>true</Enabled>
+            <Username>Administrator</Username>
+            <LogonCount>1</LogonCount>
+            <Password>
+              <Value>&lt;REPLACE_ME-administrator-password&gt;</Value>
+              <PlainText>true</PlainText>
+            </Password>
+          </AutoLogon>
+          <FirstLogonCommands>
+            <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+              <Order>1</Order>
+              <Description>Install the Salt minion</Description>
+              <CommandLine>powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; $url='https://packages.broadcom.com/artifactory/saltproject-generic/windows/3008.5/Salt-Minion-3008.5-Py3-AMD64-Setup.exe'; $exe=Join-Path $env:TEMP 'Salt-Minion-Setup.exe'; for($i=1;$i -le 10;$i++){ try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $exe; break } catch { if($i -eq 10){ throw }; Start-Sleep -Seconds 30 } }; Start-Process -FilePath $exe -ArgumentList '/S','/master=&lt;REPLACE_ME-master-ip&gt;','/minion-name=salt-minion-win' -Wait"</CommandLine>
+            </SynchronousCommand>
+          </FirstLogonCommands>
+        </component>
+      </settings>
+    </unattend>
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: salt-minion-win
+  labels:
+    app: salt-minion-win
+    app.kubernetes.io/name: salt-minion-win
+    app.kubernetes.io/component: salt-minion
+    app.kubernetes.io/part-of: guest-configuration
+spec:
+  className: best-effort-medium
+  imageName: <REPLACE_ME-windows-2022-image>
+  storageClass: <REPLACE_ME-storage-class>
+  powerState: PoweredOn
+  bootstrap:
+    sysprep:
+      rawSysprep:
+        name: salt-minion-win-bootstrap
+        key: unattend

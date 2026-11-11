@@ -1,0 +1,62 @@
+# =============================================================================
+# Template 02x-c (EXTRA CREDIT) - salt-minion-win, a Windows minion on the VM Service
+# =============================================================================
+# The same idea as the Linux minion, in the bootstrap Windows offers: the VM Service's
+# cloud-init provider, which on Windows is Cloudbase-Init. The user-data below starts with
+# #ps1_sysnative, which Cloudbase-Init runs as a PowerShell script at first boot. It
+# downloads the pinned Salt installer from Broadcom's package location and runs Salt's
+# documented silent install with the master's address and this minion's id.
+#
+# This shape needs a Windows image that carries Cloudbase-Init. On the stock Windows Server
+# 2022 image the proof runs used, it left the guest with link-local addresses only. An image
+# without it takes the Sysprep bootstrap instead (a rawSysprep Secret and
+# spec.bootstrap.sysprep.rawSysprep): salt-minion-windows-sysprep.vm.yaml, the path guestcfg.py
+# renders by default. guestcfg.py renders this shape when GUESTCFG_WINDOWS_BOOTSTRAP=cloudinit.
+#
+# The machine's name is its Windows host name, so keep it to 15 characters: on the Sysprep
+# path VM Operator refuses a longer one.
+#
+# Afterwards, compare the key's fingerprint at both ends, then accept it on the master by
+# exact id, never with salt-key -A:
+#   salt-key -f salt-minion-win         (on the master: the pending key's fingerprint)
+#   salt-call --local key.finger        (on the minion's console: its own)
+#   salt-key -a salt-minion-win         (only when the two match)
+#
+# Before you apply it: fill the <REPLACE_ME-...> values; each has its discovery note beside it.
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path; the chapter
+# quotes its support terms.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: salt-minion-win-bootstrap
+  labels:
+    app: salt-minion-win-bootstrap
+    app.kubernetes.io/name: salt-minion-win-bootstrap
+    app.kubernetes.io/component: salt-minion
+    app.kubernetes.io/part-of: guest-configuration
+type: Opaque
+stringData:
+  user-data: |
+    #ps1_sysnative
+    $ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; $url='https://packages.broadcom.com/artifactory/saltproject-generic/windows/3008.5/Salt-Minion-3008.5-Py3-AMD64-Setup.exe'; $exe=Join-Path $env:TEMP 'Salt-Minion-Setup.exe'; for($i=1;$i -le 10;$i++){ try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $exe; break } catch { if($i -eq 10){ throw }; Start-Sleep -Seconds 30 } }; Start-Process -FilePath $exe -ArgumentList '/S','/master=<REPLACE_ME-master-ip>','/minion-name=salt-minion-win' -Wait
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: salt-minion-win
+  labels:
+    app: salt-minion-win
+    app.kubernetes.io/name: salt-minion-win
+    app.kubernetes.io/component: salt-minion
+    app.kubernetes.io/part-of: guest-configuration
+spec:
+  className: best-effort-medium
+  imageName: <REPLACE_ME-windows-2022-image>  # the image's display name, not its vmi- id
+  storageClass: <REPLACE_ME-storage-class>  # kubectl get regionstorageclassquotas
+  powerState: PoweredOn
+  bootstrap:
+    cloudInit:
+      rawCloudConfig:
+        name: salt-minion-win-bootstrap
+        key: user-data

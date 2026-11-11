@@ -1,0 +1,109 @@
+# =============================================================================
+# Template 02x-b (EXTRA CREDIT) - salt-minion-linux, a Linux minion on the VM Service
+# =============================================================================
+# Stage 02's VM, plus the two lines that make it a minion: the master's address and its
+# own id. Salt installs from the same pinned package location as the master; the minion
+# dials out to the master on 4505 and 4506.
+#
+# The master must exist first, because this VM's configuration names its address. After
+# applying, compare the key's fingerprint at both ends, then accept it on the master by its
+# exact id, never with salt-key -A:
+#   salt-key -f salt-minion-linux       (on the master: the pending key's fingerprint)
+#   salt-call --local key.finger        (on the minion's console: its own)
+#   salt-key -a salt-minion-linux       (only when the two match)
+#
+# Before you apply it: fill the <REPLACE_ME-...> values; each has its discovery note beside it.
+#   kubectl get virtualmachine salt-master -n <your-namespace> -o jsonpath='{.status.network.primaryIP4}'
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path; the chapter
+# quotes its support terms.
+# =============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: salt-minion-linux-bootstrap
+  labels:
+    app: salt-minion-linux-bootstrap
+    app.kubernetes.io/name: salt-minion-linux-bootstrap
+    app.kubernetes.io/component: salt-minion
+    app.kubernetes.io/part-of: guest-configuration
+type: Opaque
+stringData:
+  user-data: |
+    #cloud-config
+    hostname: salt-minion-linux
+    bootcmd:
+      - systemctl stop unattended-upgrades 2>/dev/null || true
+      - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+    packages:
+      - ca-certificates
+      - curl
+      - gnupg
+    write_files:
+      - path: /opt/guestcfg/salt.sources
+        permissions: '0644'
+        content: |
+          X-Repolib-Name: Salt Project
+          Enabled: yes
+          Types: deb
+          URIs: https://packages.broadcom.com/artifactory/saltproject-deb
+          Signed-By: /etc/apt/keyrings/salt-archive-keyring.pgp
+          Suites: stable
+          Components: main
+      - path: /opt/guestcfg/salt-pin
+        permissions: '0644'
+        content: |
+          Package: salt-*
+          Pin: version 3008.*
+          Pin-Priority: 1001
+      # The minion's whole identity: the master to dial and the id it presents. Minions dial out,
+      # so this VM opens no port and needs no load balancer.
+      - path: /opt/guestcfg/minion.conf
+        permissions: '0644'
+        content: |
+          master: <REPLACE_ME-master-ip>
+          id: salt-minion-linux
+      # The same signing key and pinned packages as the master, salt-minion instead of salt-master.
+      - path: /opt/guestcfg/install.sh
+        permissions: '0700'
+        content: |
+          #!/bin/bash
+          set -uo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          log() { echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }
+          retry() { local left=$1; shift; until "$@"; do left=$((left-1)); [ "$left" -gt 0 ] || return 1; log "retrying: $*"; sleep 20; done; }
+          fetch_key() { curl -fsSL --retry 3 --retry-delay 5 "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public" | gpg --dearmor --yes -o /etc/apt/keyrings/salt-archive-keyring.pgp; }
+          apt_up() { apt-get -o DPkg::Lock::Timeout=300 update; }
+          install -d -m 755 /etc/apt/keyrings
+          retry 6 fetch_key || { log "the Salt signing key could not be fetched"; exit 1; }
+          install -m 0644 /opt/guestcfg/salt.sources /etc/apt/sources.list.d/salt.sources
+          install -m 0644 /opt/guestcfg/salt-pin /etc/apt/preferences.d/salt-pin-1001
+          retry 6 apt_up || { log "the Salt repository could not be read"; exit 1; }
+          apt_in() { apt-get -o DPkg::Lock::Timeout=300 install -y salt-common=3008.5 salt-minion=3008.5; }
+          retry 3 apt_in || { log "the Salt minion packages did not install"; exit 1; }
+          apt-mark hold salt-common salt-minion
+          install -m 0644 /opt/guestcfg/minion.conf /etc/salt/minion.d/guestcfg.conf
+          systemctl enable salt-minion
+          systemctl restart salt-minion
+          log "salt-minion restarted with the run's configuration"
+    runcmd:
+      - [bash, /opt/guestcfg/install.sh]
+---
+apiVersion: vmoperator.vmware.com/v1alpha5
+kind: VirtualMachine
+metadata:
+  name: salt-minion-linux
+  labels:
+    app: salt-minion-linux
+    app.kubernetes.io/name: salt-minion-linux
+    app.kubernetes.io/component: salt-minion
+    app.kubernetes.io/part-of: guest-configuration
+spec:
+  className: best-effort-small
+  imageName: <REPLACE_ME-ubuntu-24.04-image>  # the image's display name, not its vmi- id
+  storageClass: <REPLACE_ME-storage-class>  # kubectl get regionstorageclassquotas
+  powerState: PoweredOn
+  bootstrap:
+    cloudInit:
+      rawCloudConfig:
+        name: salt-minion-linux-bootstrap
+        key: user-data

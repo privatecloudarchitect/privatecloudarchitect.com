@@ -1,0 +1,168 @@
+{
+ "captured_utc": "2026-11-10T00:49:42Z",
+ "signIn": "session login",
+ "saltVersion": "3008.5",
+ "project": "{{project-1}}",
+ "namespace": "{{namespace-1}}",
+ "runId": "ac5bd0",
+ "windowsBootstrap": "sysprep",
+ "windowsBootstrapPath": "Sysprep (rawSysprep)",
+ "linuxImage": "{{image-1}}",
+ "windowsImage": "{{image-4}}",
+ "classes": {
+  "master": "best-effort-small",
+  "windows": "best-effort-medium"
+ },
+ "storageClass": "{{storageclass-2}}",
+ "created": [
+  {
+   "kind": "Secret",
+   "role": "api_secret"
+  },
+  {
+   "kind": "Secret",
+   "role": "master_secret"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "master"
+  },
+  {
+   "kind": "VirtualMachineService",
+   "role": "lb"
+  },
+  {
+   "kind": "Secret",
+   "role": "linux_secret"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "linux"
+  },
+  {
+   "kind": "Secret",
+   "role": "windows_secret"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "windows"
+  }
+ ],
+ "steps": {
+  "2": {
+   "name": "master",
+   "secondsToPoweredOn": 46,
+   "secondsToLoadBalancerAddress": 16,
+   "secondsToApiLogin": 76,
+   "apiTlsPinnedToRunCertificate": true
+  },
+  "3": {
+   "name": "minions",
+   "windowsBootstrap": "sysprep",
+   "linuxSecondsToPoweredOn": 47,
+   "windowsSecondsToPoweredOn": 139
+  },
+  "4": {
+   "name": "keys",
+   "secondsToBothKeys": 16,
+   "accepted": 2,
+   "otherPendingKeysLeftUnaccepted": 0,
+   "acceptanceByExactId": true
+  },
+  "5": {
+   "name": "first state",
+   "firstApply": {
+    "Linux": {
+     "states": 1,
+     "changed": 1,
+     "failed": 0,
+     "wouldChange": 0
+    },
+    "Windows": {
+     "states": 1,
+     "changed": 1,
+     "failed": 0,
+     "wouldChange": 0
+    }
+   },
+   "secondApply": {
+    "Linux": {
+     "states": 1,
+     "changed": 0,
+     "failed": 0,
+     "wouldChange": 0
+    },
+    "Windows": {
+     "states": 1,
+     "changed": 0,
+     "failed": 0,
+     "wouldChange": 0
+    }
+   },
+   "secondApplyChangedNothing": true,
+   "osFamily": [
+    "Debian",
+    "Windows"
+   ],
+   "saltVersion": "3008.5",
+   "targetedBy": "grain os_family"
+  },
+  "6": {
+   "name": "drift",
+   "Linux": {
+    "driftChanged": 1,
+    "testNamedIt": 1,
+    "applyRestoredIt": 1,
+    "testAfterRestoreWouldChange": 0
+   },
+   "Windows": {
+    "driftChanged": 1,
+    "testNamedIt": 1,
+    "applyRestoredIt": 1,
+    "testAfterRestoreWouldChange": 0
+   }
+  },
+  "7": {
+   "name": "retirement",
+   "keysDeleted": "deleted",
+   "minionMachines": 2,
+   "loadBalancers": 1,
+   "masterMachines": 1,
+   "secrets": 4,
+   "refused": [],
+   "stillDeleting": [],
+   "residue": {
+    "secrets": [],
+    "virtualmachines": [],
+    "virtualmachineservices": []
+   },
+   "clean": true
+  },
+  "8": {
+   "name": "read back",
+   "residue": {
+    "secrets": [],
+    "virtualmachines": [],
+    "virtualmachineservices": []
+   },
+   "clean": true
+  }
+ },
+ "failure": null,
+ "outcome": "complete",
+ "teardown": {
+  "keysDeleted": "deleted",
+  "minionMachines": 2,
+  "loadBalancers": 1,
+  "masterMachines": 1,
+  "secrets": 4,
+  "refused": [],
+  "stillDeleting": [],
+  "residue": {
+   "secrets": [],
+   "virtualmachines": [],
+   "virtualmachineservices": []
+  },
+  "clean": true
+ }
+}
