@@ -297,7 +297,7 @@ def amount(value: float, unit: str) -> str:
 # The renderer's format version: raised by hand when a change to the renderer changes what a served page says, and
 # pinned with a fingerprint of the served pages rendered from frozen slices (rendered/format.lock.yaml), so a served
 # page's digest names the renderer that wrote it (40-BREADTH.md step 2, S1).
-FORMAT = 10  # 10: the review's round 2 (the board as a worked example, the costs description in the reader's finance words, a driver defined); 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
+FORMAT = 11  # 11: the site's pages as a worked example under the lab-number rule (the reader's frame, the example's readings, standing and states as example output, a self-assessment of the establish steps; G-904); 10: the review's round 2 (the board as a worked example, the costs description in the reader's finance words, a driver defined); 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
 NAME = "The Architect's NOC"  # the layer's public name (DEC-01, 00-CHARTER.md section 10), on every page's eyebrow and the index's description, and on the companion's frame; "the strategy layer" stays the descriptive phrase in prose, and the pages' paths are unchanged (D-053)
 
 
@@ -391,6 +391,63 @@ def table(head: list[str], rows: list[list[str]]) -> str:
         for r in rows
     )
     return f'<div class="scroll"><table><thead><tr>{th}</tr></thead><tbody>{body}</tbody></table></div>'
+
+
+# A served page is the site's, and only the reference portfolio is ever served (served.py): on the site the reference
+# portfolio is a worked example, so its pages give the reader their own frame and keep the example's readings in example
+# output (the operator's lab-number rule, CHAPTER-DOCTRINE section 4, G-904). A review view, and an adopter's run of the
+# companion, render the portfolio's own estate as before.
+
+
+GAP = "not recorded"  # a figure no record holds
+EXAMPLE_GAP = "none set in the example"  # the same, on the site's worked example, where "not recorded" reads as the reader's
+
+
+def gap(example: bool) -> str:
+    return EXAMPLE_GAP if example else GAP
+
+
+def target_tail(target_kind: str, window: str, example: bool) -> str:
+    """A target's kind and window after its figure: on the worked example the kind is the method's (a committed or an
+    aspirational target), never read as the example estate's own commitment."""
+    if example:
+        return f"; a {E(target_kind)} target, over {E(per(window))}"
+    return f", {E(target_kind)}, over {E(per(window))}"
+
+
+def possessive(name: str) -> str:
+    """A name's possessive in the house's spelling: an apostrophe alone after a final s."""
+    return f"{name}'" if name.endswith("s") else f"{name}'s"
+
+
+def example_output(title: str, body: str) -> str:
+    """A block of the worked example's output, marked as the reference estate's so the site folds it."""
+    return f'<div class="callblk" data-plane="reference"><div class="callhd">{title}</div>{body}</div>'
+
+
+def board_title(portfolio, served: bool = False) -> str:
+    """The board's title: a worked example on the site, the estate's own board in a review view or for an adopter."""
+    if served:
+        return "What to fund first, a worked example"
+    return f"What to fund first, worked on the {portfolio.estate} estate"
+
+
+def board_description(portfolio, served: bool = False) -> str:
+    """The board's description, named as its title is."""
+    if served:
+        return "A worked example's initiatives ranked by the cost of delay, within capacity: what to fund first"
+    return f"The {portfolio.estate} estate's initiatives ranked by the cost of delay, within capacity: what to fund first"
+
+
+# The reader's self-assessment on a capability page of the worked example: each establish step ticked as done on the
+# reader's own estate, counted beside the level the ticks reach. The same text on every page, so one script hash.
+SELF_JS = (
+    "<script>document.querySelectorAll('.esl-self').forEach(function(p){var r=p.closest('.esl');"
+    "var b=r.querySelectorAll('input.esl-step'),o=p.querySelector('output'),n=b.length;"
+    "function u(){var d=0;b.forEach(function(x){if(x.checked)d++;});o.textContent=d+' of '+n;"
+    "p.setAttribute('data-done',d===n?'all':(d?'some':'none'));}"
+    "b.forEach(function(x){x.addEventListener('change',u);});u();});</script>"
+)
 
 
 def wrap(title: str, description: str, path: str, content: str) -> str:
@@ -575,6 +632,8 @@ def strategy_page(
         )
     st = pc.state[0]
     g = next(x for x in rep["grades"] if x["capability"] == cap_id and x["scope"] == st.scope)
+    example = served is not None  # the site's page: the worked example (see example_output)
+    ex: list[str] = []  # the worked example's own output, one block under the dek (example mode only)
     roles = {r.id: r.name for r in register.roles}
     parts = [
         STYLE,
@@ -639,12 +698,12 @@ def strategy_page(
                 tgt.kind,
                 tgt.source,
                 node=("capabilities", cap_id, "targets", v.id),
-                tail=f", {E(tgt.target_kind)}, over {E(per(tgt.window))}",
+                tail=target_tail(tgt.target_kind, tgt.window, example),
             )
             if tgt
             else NOT_YET
             if _held(served, ("capabilities", cap_id, "targets", v.id))
-            else "not recorded"
+            else gap(example)
         )
         got = _first_number(reading.reading) if reading else None
         try:
@@ -672,7 +731,11 @@ def strategy_page(
                 else now
             )
         rows.append([E(v.outcome), E(v.unit), target, now])
-    parts.append(table(["Value", "Unit", "Target", f"On the {E(rep['estate'])} estate"], rows))
+    if example:
+        parts.append(table(["Value", "Unit", "Target"], [r[:3] for r in rows]))
+        ex.append(table(["Value", "Reading"], [[r[0], r[3]] for r in rows]))
+    else:
+        parts.append(table(["Value", "Unit", "Target", f"On the {E(rep['estate'])} estate"], rows))
     # every value defined, with the way that is better; a measure note where the register adds one (step 10's review:
     # before this only the lead value was defined, in the dek)
     for v in cap.value:
@@ -690,7 +753,7 @@ def strategy_page(
             if measure.get("grade") and b.get("upper") is not None
             else f"open since its publication on {E(measure['t0'])}, so neither graded nor bounded yet"
         )
-        parts.append(
+        (ex if example else parts).append(
             f'<p>The latest reading of {E(measure["advisory"])}: <span class="state">{E(measure["state"])}</span>, '
             f"measured on {E(measure['provenance']['generated_at'][:10])} and {closed}; the method that reads it is "
             f"{E(status)}.</p>"
@@ -712,7 +775,7 @@ def strategy_page(
             if inv and inv.value is not None
             else NOT_YET
             if _held(served, ("capabilities", cap_id, "investment", s.id))
-            else "not recorded"
+            else gap(example)
         )
         # a step the portfolio's state leaves out is not recorded, and says so; one the projection withheld, not yet
         # published
@@ -723,7 +786,12 @@ def strategy_page(
             + (illus(done.kind, done.source) if done else illus("not_recorded"))
         )
         rows.append([E(s.step), state, cost])
-    parts.append(table(["Establish step", f"On the {E(rep['estate'])} estate", "Investment"], rows))
+    if example:
+        tick = '<input type="checkbox" class="esl-step" aria-label="done on your estate">'
+        parts.append(table(["Establish step", "Done on yours?", "Investment"], [[r[0], tick, r[2]] for r in rows]))
+        ex.append(table(["Establish step", "State"], [[r[0], r[1]] for r in rows]))
+    else:
+        parts.append(table(["Establish step", f"On the {E(rep['estate'])} estate", "Investment"], rows))
 
     parts.append("<h2>What it costs each period</h2>")
     rows = []
@@ -740,7 +808,7 @@ def strategy_page(
             if eff and eff.value is not None
             else NOT_YET
             if _held(served, ("capabilities", cap_id, "effort", loop.id))
-            else "not recorded"
+            else gap(example)
         )
         rows.append(
             [
@@ -752,9 +820,7 @@ def strategy_page(
             ]
         )
     parts.append(table(["Sustain loop", "Every", "Run by", "Kind", "Effort"], rows))
-    parts.insert(
-        standing_at,
-        _standing(
+    standing = _standing(
             cap,
             cap_id,
             rep,
@@ -769,10 +835,17 @@ def strategy_page(
             served,
             values=value_verdicts,
             drift_lines=drift_lines,
-        ),
-    )
+        )
+    if example:
+        ex.insert(0, standing)
+    else:
+        parts.insert(standing_at, standing)
 
-    parts.append(f"<h2>Who owns it, and how far the {E(rep['estate'])} estate has got</h2>")
+    parts.append(
+        "<h2>Who owns it, and how far your estate has got</h2>"
+        if example
+        else f"<h2>Who owns it, and how far the {E(rep['estate'])} estate has got</h2>"
+    )
     assigned = [
         a for a in portfolio.assignments if a.role == cap.accountable and a.scope == st.scope
     ]
@@ -794,36 +867,70 @@ def strategy_page(
     mine = [x for x in drift_lines if x["capability"] == cap_id]
     judged = [x for x in mine if x["result"] in JUDGED]
     in_sync = sum(1 for x in judged if x["result"] == "in_sync")
-    parts.append(
-        f'<p>The <a href="/strategy/roles/{E(cap.accountable)}">{E(role_text(roles[cap.accountable]))}</a>, held by '
-        f"{dept}. Each declaration has one writer: "
-        + ", ".join(
-            f"{_the(E(d.object))}, kept in {system_named(d)} and written by the "
-            f"{E(role_text(roles.get(d.writer, d.writer)))}"
-            for d in cap.declarations
-        )
-        + (
-            f". The drift read ({_drift_when(judged, cap_id)}{_drift_how(judged)}) finds {count(in_sync)} of "
-            f"{count(len(judged))} reads in sync, {_drift_per(judged, cap_id)}{_drifted_words(judged)}{_unread(mine)}.</p>"
-            if judged
-            else f". No declaration of it is read yet{_unread(mine)}.</p>"
-            if mine
-            else ". No drift read is recorded for it yet.</p>"
-        )
+    writers = ", ".join(
+        f"{_the(E(d.object))}, kept in {system_named(d)} and written by the "
+        f"{E(role_text(roles.get(d.writer, d.writer)))}"
+        for d in cap.declarations
     )
+    held_by = (
+        f'<p>The <a href="/strategy/roles/{E(cap.accountable)}">{E(role_text(roles[cap.accountable]))}</a>, held by '
+        f"{dept}."
+    )
+    drift_said = (
+        f". The drift read ({_drift_when(judged, cap_id)}{_drift_how(judged)}) finds {count(in_sync)} of "
+        f"{count(len(judged))} reads in sync, {_drift_per(judged, cap_id)}{_drifted_words(judged)}{_unread(mine)}.</p>"
+        if judged
+        else f". No declaration of it is read yet{_unread(mine)}.</p>"
+        if mine
+        else ". No drift read is recorded for it yet.</p>"
+    )
+    if example:
+        # the role and its writers are the capability's own; the department and the drift read are the example's
+        parts.append(
+            f'<p>The <a href="/strategy/roles/{E(cap.accountable)}">{E(role_text(roles[cap.accountable]))}</a> owns '
+            f"it. Each declaration has one writer: {writers}.</p>"
+        )
+        ex.append(held_by + drift_said[1:])
+    else:
+        parts.append(f"{held_by} Each declaration has one writer: {writers}{drift_said}")
     evidence = (
         f"graded on the evidence of the recorded steps{illus(g['basis'], g.get('basis_source'))}"
         f"{_unrecorded(cap, st, served)}"
         if g["steps_recorded"]
         else f"none of them recorded{illus('not_recorded')}"
     )
-    parts.append(
-        f'<p>Adoption: <span class="state">{E(words(g["level"]))}</span> ({E(LEVEL_WORDS.get(g["ordinal"], ""))}), '
-        f"{count(g['steps_done'])} of {count(g['steps'])} establish steps done, {evidence}. The bar, "
-        f"&ldquo;world-class&rdquo;, is the level {E(words(g['world_class']))} "
+    bar = (
+        f"The bar, &ldquo;world-class&rdquo;, is the level {E(words(g['world_class']))} "
         f"({E(LEVEL_WORDS.get(g['world_class_ordinal'], ''))}), the {ORDINALS.get(g['world_class_ordinal'], '')} of "
-        f"{count(g['levels'])} levels: {E(', '.join(words(x) for x in g.get('ladder', [])))}.</p>"
+        f"{count(g['levels'])} levels: {E(', '.join(words(x) for x in g.get('ladder', [])))}."
     )
+    adoption = (
+        f'<p>Adoption: <span class="state">{E(words(g["level"]))}</span> ({E(LEVEL_WORDS.get(g["ordinal"], ""))}), '
+        f"{count(g['steps_done'])} of {count(g['steps'])} establish steps done, {evidence}. {bar}</p>"
+    )
+    if example:
+        ladder = g.get("ladder", [])
+        reached = f", <i>{E(words(ladder[1]))}</i>" if len(ladder) > 1 else ""
+        parts.append(
+            f'<p class="esl-self">Your estate: <output>0 of {count(len(cap.establish))}</output> establish steps '
+            f"done, as you tick them in the table above. With every one done, adoption reaches the second level"
+            f"{reached} ({E(LEVEL_WORDS[1])}). {bar}</p>"
+        )
+        ex.append(adoption)
+        # the worked example's output, folded under the dek: its standing first, then what its readings, steps,
+        # department and drift read were
+        newest = max((r.read_at for r in pc.readings if r.read_at), default=None)
+        when = f", read {E(str(newest)[:10])}" if newest else ""
+        parts.insert(
+            standing_at,
+            example_output(
+                f"example output: what the strategy companion reports for this capability on the reference estate's "
+                f"portfolio{when}; your run reports yours",
+                "".join(ex),
+            ),
+        )
+    else:
+        parts.append(adoption)
 
     parts.append("<h2>Where each part is taught</h2>")
     rows, untaught = part_handoffs(cap, pages)
@@ -861,7 +968,9 @@ def strategy_page(
     else:  # a capability whose own territory is untaught: its untaught entries say where it was sent
         parts.append("<p>The capability as a whole is taught by no published chapter yet.</p>")
     parts.append(
-        f'<p>Across the portfolio: <a href="/strategy/board">what to fund first, worked on the {E(rep["estate"])} estate</a>; '
+        f'<p>Across the portfolio: <a href="/strategy/board">what to fund first, '
+        + ("a worked example" if example else f'worked on the {E(rep["estate"])} estate')
+        + "</a>; "
         '<a href="/strategy/costs-and-value">what each capability returns, and what it costs once and to keep</a>; '
         '<a href="/strategy">every capability and role brief</a>.</p>'
     )
@@ -873,6 +982,8 @@ def strategy_page(
         )
     )
     parts.append("</div>")
+    if example:
+        parts.append(SELF_JS)
     return "".join(parts)
 
 
@@ -1160,8 +1271,9 @@ def board_page(
     pages: dict[str, str] | None = None,
     rate_units: dict[str, str] | None = None,
     served=None,
+    example: bool = False,
 ) -> str:
-    """The board. A served one (`served`, its slice) names a capability not yet published where it blocks or is
+    """The board; on the worked example it is titled as one (G-904). A served one (`served`, its slice) names a capability not yet published where it blocks or is
     established, lists each initiative off the board after the rank, and labels the rank and the capacity line partial
     while one is (S2, S3)."""
     from generator.core import (
@@ -1174,7 +1286,9 @@ def board_page(
         STYLE,
         '<div class="esl" data-source="register portfolio" data-view="board">',
         f'<span class="eyebrow">{E(NAME)}, {E(rep["estate"])} portfolio</span>',
-        f"<h1>What to fund first, worked on the {E(rep['estate'])} estate</h1>",
+        "<h1>What to fund first, a worked example</h1>"
+        if example
+        else f"<h1>What to fund first, worked on the {E(rep['estate'])} estate</h1>",
         '<p class="dek">Each initiative ranked by what a month of waiting costs over the time it takes, an enabler by '
         "the chain it unblocks, funded within the constrained role's capacity. Every input marked illustrative was "
         "supplied for the worked example, not measured.</p>",
@@ -1197,7 +1311,7 @@ def board_page(
                 text=" then ".join(named(register, x) for x in r["chain"]),
             ),
             fig(r["duration"], None, r["duration_kind"], r["duration_source"]),
-            (NOT_YET if _effort_held(served, r["id"]) else "not recorded")
+            (NOT_YET if _effort_held(served, r["id"]) else gap(example))
             if r["added_effort_per_month"] is None
             else fig(
                 r["added_effort_per_month"],
@@ -1232,7 +1346,12 @@ def board_page(
                 + ", ".join(
                     f"{E(named(register, x['capability']))} ({NOT_YET})"
                     if served and x["capability"] in served.not_yet_published
-                    else f"{E(named(register, x['capability']))}{illus(x['kind'], x['source'])}"
+                    else f"{E(named(register, x['capability']))}"
+                    + (
+                        f" <small>({'measured' if x['kind'] == 'measured' else 'not recorded'} in the example)</small>"
+                        if example and x["kind"] in ("measured", "not_recorded")
+                        else illus(x["kind"], x["source"])
+                    )
                     + (
                         f" <small>(partial: a step {NOT_YET})</small>"
                         if served
@@ -1253,7 +1372,7 @@ def board_page(
         parts.append(
             "<p><small>The rank is partial: "
             + "; ".join(
-                f"{E(named(register, iid))}'s score is not shown: "
+                f"{E(possessive(named(register, iid)))} score is not shown: "
                 + _off_board_words(register, why)
                 for iid, why in sorted(off.items())
             )
@@ -1389,18 +1508,19 @@ def board_page(
     return "".join(parts)
 
 
-def _totals_words(totals: list[dict], held: int = 0) -> str:
+def _totals_words(totals: list[dict], held: int = 0, example: bool = False) -> str:
     """Totals per unit, each with its label; on a served page, a total with a part the projection withheld is labelled
     partial (S2), never shown as whole."""
     partial = f" <small>(partial: {count(held)} {NOT_YET})</small>" if held else ""
     return "; ".join(
         fig(t["value"], t["unit"], t["kind"], t["source"], tail=partial) for t in totals
-    ) or ("not recorded" if not held else NOT_YET)
+    ) or (gap(example) if not held else NOT_YET)
 
 
 def costs_page(rep: dict, register, pages: dict[str, str], served=None) -> str:
     """V-03's view: each capability's one-time investment set against its recurring effort and what it returns. A served
     one (`served`, its slice) lists a withheld part apart and labels each total it misses partial (S2, S3)."""
+    example = served is not None  # the site's worked example (see example_output)
     roles = {r.id: r.name for r in register.roles}
     caps = {c.id: c for c in register.capabilities}
     parts = [
@@ -1430,7 +1550,7 @@ def costs_page(rep: dict, register, pages: dict[str, str], served=None) -> str:
             for x in c["not_recorded_keep"]
             if _held(served, ("capabilities", cap.id, "effort", x))
         ]
-        once = _totals_words(c["once_total"], len(held_once))
+        once = _totals_words(c["once_total"], len(held_once), example)
         if c["once_adjusted"]:
             once += (
                 "<br><small>"
@@ -1451,7 +1571,7 @@ def costs_page(rep: dict, register, pages: dict[str, str], served=None) -> str:
             )
         if c["not_recorded_once"]:
             once += "".join(  # a part a line, so no part's own punctuation reads as a separator
-                f"<br><small>{NOT_YET if x in held_once else 'not recorded'} for "
+                f"<br><small>{NOT_YET if x in held_once else gap(example)} for "
                 f"{E(inline(part_name(cap, x)))}</small>"
                 for x in c["not_recorded_once"]
             )
@@ -1464,12 +1584,12 @@ def costs_page(rep: dict, register, pages: dict[str, str], served=None) -> str:
                     r["kind"],
                     r["source"],
                     node=("capabilities", c["capability"], "targets", r["value"]),
-                    tail=f", {E(r['target_kind'])}, over {E(per(r['window']))}",
+                    tail=target_tail(r["target_kind"], r["window"], example),
                 )
                 if r["target"] is not None
                 else f"target {NOT_YET}"
                 if _held(served, ("capabilities", c["capability"], "targets", r["value"]))
-                else "target not recorded"
+                else f"target {gap(example)}"
             )
             for r in c["returns"]
         )
@@ -1493,7 +1613,7 @@ def costs_page(rep: dict, register, pages: dict[str, str], served=None) -> str:
                 if d.cost_of_delay_through in {v.id for v in cap.value}
                 and _held(served, ("initiatives", d.id, "cost_of_delay"))
             )
-        ).removeprefix("<br>") or "not recorded"
+        ).removeprefix("<br>") or gap(example)
         rows.append(
             [
                 f'<a href="/strategy/{E(cap.id)}">{E(named(register, cap.id))}</a><br><small>the '
@@ -1501,10 +1621,10 @@ def costs_page(rep: dict, register, pages: dict[str, str], served=None) -> str:
                 returns,
                 waiting,
                 once,
-                _totals_words(c["keep_total"], len(held_keep))
+                _totals_words(c["keep_total"], len(held_keep), example)
                 + (
                     "".join(
-                        f"<br><small>{NOT_YET if x in held_keep else 'not recorded'} for "
+                        f"<br><small>{NOT_YET if x in held_keep else gap(example)} for "
                         f"{E(inline(part_name(cap, x)))}</small>"
                         for x in c["not_recorded_keep"]
                     )
@@ -2031,8 +2151,8 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
             strategy_page(cap.id, rep, reg, pf, _measures(cap, pol), lines, comp_map, pages),
         )
     out[f"board-{pf.estate}"] = (
-        f"What to fund first, worked on the {pf.estate} estate",
-        f"The {pf.estate} estate's initiatives ranked by the cost of delay, within capacity: what to fund first",
+        board_title(pf),
+        board_description(pf),
         "/strategy/board",
         board_page(rep, reg, labels, pages, {r.measure: r.unit for r in pf.conversion_rates}),
     )
@@ -2238,8 +2358,8 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         rep["provenance"]["input_digest"] = served.slice_digest(s, pol, FORMAT)
         labels = {t["id"]: t["label"] for t in pol.get("planning-tiers")}
         return (
-            f"What to fund first, worked on the {pf.estate} estate",
-            f"The {pf.estate} estate's initiatives ranked by the cost of delay, within capacity: what to fund first",
+            board_title(pf, served=True),
+            board_description(pf, served=True),
             "/strategy/board",
             board_page(
                 rep,
@@ -2248,6 +2368,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
                 pages,
                 {r.measure: r.unit for r in pf.conversion_rates},
                 served=s,
+                example=True,
             ),
         )
     if kind == "role":

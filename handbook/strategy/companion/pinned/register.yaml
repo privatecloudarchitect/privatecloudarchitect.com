@@ -139,8 +139,8 @@ capabilities:
         measure_note: >-
           Not the share that needed a person to intervene, which no field the read returns records: vSphere Lifecycle
           Manager keeps each cluster's last remediation with its status, start and end times and its failed, skipped and
-          successful hosts, and no field names a person or an intervention (read on the reference estate, 9.1.1, the
-          REST last-apply-result). Scoped to that endpoint: a failed host needing a person to finish is inferred (a retry
+          successful hosts, and no field names a person or an intervention (read on 9.1.1, the REST
+          last-apply-result). Scoped to that endpoint: a failed host needing a person to finish is inferred (a retry
           could finish it); skipped hosts are read beside, unexplained until a source defines them; only the last
           remediation is kept, so remediations are counted once each by cluster and start time across readings and the
           denominator is remediations observed, a lower bound. Who intervened is an open question: vCenter's task and
