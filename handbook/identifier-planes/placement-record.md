@@ -7,8 +7,8 @@ in is one you are assuming.
 ## 1. Every hop an identifier makes between planes
 
 One row per hop. The relationship is one of the six: replication, import, discovery, reference, projection,
-coincidence. Between vCenter and NSX, reference does not exist: an NSX group criterion reads NSX's own
-inventory.
+coincidence. Between vCenter and NSX, do not rely on reference: an NSX group's VM Tag criterion reads NSX's own
+inventory, and in the chapter's test on VCF 9.1 it did not read a vSphere tag.
 
 | from plane | to plane | relationship | what runs it | how you would notice it stopping |
 |---|---|---|---|---|

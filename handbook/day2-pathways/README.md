@@ -7,7 +7,7 @@ Three planes will accept the same change, and they do not behave alike:
 
 | plane | what happens |
 |---|---|
-| **vCenter** | the call is accepted and returns success. On a machine the Supervisor declares, the reconciler undoes it. Measured at about **12 seconds** to revert, with nothing on the vCenter side recording that it was reverted. |
+| **vCenter** | the call is accepted and returns success. On a machine the Supervisor declares, the reconciler undoes it: on VCF 9.1 it was reverted seconds later, with nothing on the vCenter side recording that it was reverted. |
 | **Supervisor** | a `PATCH` of `spec.powerState`. The change sticks, nothing waits for it, and the deployment record that claims the machine is never told. |
 | **VCF Automation** | writes that **same Supervisor field**, then blocks until the machine actually converges before reporting success. |
 
@@ -47,7 +47,7 @@ one serves and the one it prefers, and says whether the preferred one is the lin
 written against (`MEASURED_LINE`, `v1alpha5`). The delete behaviour in the next sections belongs to that line;
 the upstream project describes it differently for a newer one, so a Supervisor that prefers a newer line needs
 the delete column re-read before anyone relies on it. `versions.json` is the reference estate's answer, read
-2026-10-22: three namespaces, each serving `v1alpha1` to `v1alpha5` and preferring `v1alpha5`.
+2026-10-22, kept as example output; your run writes your own.
 
 ## The drift audit, which is why this script exists
 
@@ -60,7 +60,7 @@ For every machine claimed by a deployment it compares three views:
 The first pair is the useful one, because **both halves are inside the deployment record**. Anybody who can
 read Automation can prove drift without touching the workload plane at all.
 
-**The finding it exists to catch:** after a change made on the Supervisor, the record declared `PoweredOff`
+**The finding it exists to catch:** on VCF 9.1, after a change made on the Supervisor, the record declared `PoweredOff`
 for a machine that was `PoweredOn`, and `syncStatus` read `SUCCESS` the whole time. That field answers
 whether the record applied its manifest, not whether the machine still matches it. It does catch deletion,
 reporting `MISSING`. So the boundary is **existence against conformance**, and only one side of it is
@@ -77,13 +77,13 @@ Two rules the audit follows, both learned the hard way:
 ## Tombstones, and the order that makes one
 
 The script also counts deployments that report `DELETE_SUCCESSFUL` **and still hold a resource**. These
-cannot be retired through any API here.
+cannot be retired through any API this companion tried.
 
 The sequence that makes one, established by running all three orders:
 
 | when you delete the deployment | outcome |
 |---|---|
-| the machine still exists | the record retires, in tens of seconds |
+| the machine still exists | the record retires |
 | the machine is gone, the record has not noticed yet | still retires, more slowly |
 | the machine is gone and the record **has** noticed (`syncStatus: MISSING`) | reports `DELETE_SUCCESSFUL` and stays |
 
@@ -96,7 +96,7 @@ on the current state`. It also **keeps its name**: requesting a deployment with 
 `400 Deployment name ... already in use`, so a name your automation derives from a ticket or workload id is
 one it can never reuse.
 
-### Why it cannot be retired
+### Why no route tried retires it
 
 The Deployment Controller definition describes every delete route as one that "effectively triggers a Delete
 Day2 operation". A Day-2 operation acts on an object. Once the object is gone there is nothing to act on, so
@@ -107,7 +107,7 @@ the deployment-level call completes having done what it could, and the resource-
 **The force-delete route you will find is for a different organization type.**
 `DELETE /iaas/api/deployments/{id}?forceDelete=true` comes from a guide titled for **VM Apps**
 organizations. An All Apps org keeps no cloud accounts, zones or profiles for that service to manage, so it
-answers 403 there, and the identity is not the variable: the token used here holds Organization
+answers 403 there, and the identity is not the variable: the token used for the test held Organization
 Administrator. Watch for a name collision while reading, too: All Apps has an "IaaS Services console", which
 is not the `/iaas/api` REST service.
 
@@ -138,9 +138,9 @@ automatically deleted along with it", while a previously detached one has its ow
 survives instead of being cascade-deleted". It also documents a `vmoperator.vmware.com/keep-owner-ref`
 annotation to opt out, which only makes sense if the owner reference is normally present.
 
-On this estate it was never present: the attached volume carried no owner reference even while attached, and
-survived. Those documentation examples use `v1alpha6`; this Supervisor serves up to `v1alpha5` and answers
-404 for `v1alpha6`, so the likeliest reading is a behaviour that changed between the two. That is a reading,
+On VCF 9.1 it was never present: the attached volume carried no owner reference even while attached, and
+survived. Those documentation examples use `v1alpha6`; the Supervisor measured served up to `v1alpha5` and
+answered 404 for `v1alpha6`, so the likeliest reading is a behaviour that changed between the two. That is a reading,
 not a finding.
 
 **And the door you delete through decides it.** The same unowned volume was removed when the **deployment**
@@ -149,14 +149,14 @@ owner reference; the record did, because it was tracking it as a resource. That 
 argument here for deleting through the thing that claims a machine.
 
 **So test it rather than trusting either answer.** Assume the documented rule on a build that does not
-implement it and orphans accumulate quietly; assume this estate's result on a build that does and a volume
+implement it and orphans accumulate quietly; assume the result measured on VCF 9.1 on a build that does and a volume
 you meant to keep is cascade-deleted. Attach a throwaway volume to a throwaway machine, delete the machine,
 and look. The two answers differ by whether your data still exists.
 
 The list worth having is one read: every volume in the namespace with **no owner reference**. That is
 everything no machine deletion will ever clean up.
 
-One caution about boot disks. They come in two shapes here, `Classic` and `Managed`, and only the second is a
+One caution about boot disks. On VCF 9.1 they came in two shapes, `Classic` and `Managed`, and only the second is a
 PersistentVolumeClaim you can see in the namespace listing. A machine built by a direct create got a
 `Classic` disk that never appeared as a PVC at all; a catalog-built machine's was `Managed` and did. Both
 went with their machine, so the rule above holds either way, but a volume audit that reads only PVCs will not
@@ -164,8 +164,8 @@ see every disk an estate is paying for.
 
 ## Day-2 actions are a state machine, not a list
 
-`--probe-pathways` reads each action's `valid` flag with the machine running and again with it stopped. They
-are not the same set:
+`--probe-pathways` reads each action's `valid` flag with the machine running and again with it stopped. On VCF
+9.1 they were not the same set:
 
 | | valid |
 |---|---|
@@ -194,9 +194,10 @@ than assuming it rolled back.
 - The probe exercises the **VCFA** and **Supervisor** pathways. It does not touch vCenter: that result needs
   a vCenter credential this script deliberately does not ask for, and it is a fact about where authority
   lives rather than a Day-2 option.
-- Timings vary a great deal between runs. The spec write was steady at about twenty seconds; convergence
-  ranged from 22 to 323 seconds on the same machine shape, because it is a guest shutting down. In every run
-  the request reported success at the moment the machine converged. Treat the ordering as the finding.
+- Timings vary a great deal between runs. On VCF 9.1 the spec write came early and steady while convergence
+  varied widely on the same machine shape, because it is a guest shutting down. In every run the request
+  reported success at the moment the machine converged. Treat the ordering as the finding; the probe prints
+  your own timings.
 - The tombstone result is scoped to the APIs this handbook uses. The product UI and any provider-side or
   support tooling were not tested; the provider identity returns 500 against the tenant deployment API and is
   not a route.

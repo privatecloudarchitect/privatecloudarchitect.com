@@ -1,6 +1,6 @@
 # Expected output
 
-Three runs on the reference estate, all read-only. The figures are one modified lab's state on one date, shown for
+Three runs on the reference estate, all read-only. The figures are the reference estate's state on one date, shown for
 the transcript's shape only; they are not the product's out-of-the-box state and not a target. Your run reports
 your estate, and the audit question is whether your counts match your intent.
 

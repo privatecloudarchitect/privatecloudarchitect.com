@@ -23,8 +23,8 @@ blueprint/isolation-proof.blueprint.yaml      ConfigMap-only workload (owned, no
 blueprint/isolation-proof-vm.blueprint.yaml   real-VM variant (adds resource-level Day-2 actions)
 verify.py                        login / deploy / matrix / flip-on / flip-off
 isolation.py                     the harness: reads the design back off a running estate
-isolation.json                   the record it writes, which the chapter renders
-expected-output.md               what a passing run looks like
+isolation.json                   example output: the record of one run on the reference estate
+expected-output.md               example output: what passing runs printed, to compare yours against
 ```
 
 `verify.py` is the runbook below, executed. `isolation.py` is the separate question of whether the design
@@ -60,7 +60,7 @@ newer one.
 ### 0. Point a kubectl context at the CCI org gateway
 
 Project RBAC writes go to the Cloud Consumption Interface, not the REST membership arrays
-(which accept a PATCH, return 200, and persist nothing):
+(on 9.1, on 2026-09-18, a PATCH to them answered 200 and persisted nothing; it was not re-sent on 9.1.1):
 
 ```bash
 kubectl config set-cluster vcfa-cci --server=https://<vcfa-fqdn>/cci/kubernetes
@@ -134,15 +134,15 @@ python3 verify.py matrix --record matrix.json
 
 Every cell is a live HTTP call as that principal. Expected shape: `expected-output.md`. With `--record` it also
 writes the matrix by role (edit-1, edit-2, edit_adv, admin, and operator when `VCFA_OPERATOR_USER` and its password
-are set), with no user name and no deployment id; `matrix.json` here is that record from the reference estate, read
-on VCF Automation 9.1.1 without the operator set, so it has no operator row.
+are set), with no user name and no deployment id; `matrix.json` here is example output, that record from one run on
+the reference estate on VCF Automation 9.1.1.0100, without the operator set, so it has no operator row.
 A cross-user `not-visible(404)` is the design holding, not a failure.
 
 ### 5. The flip: prove what governance changes
 
 ```bash
 python3 verify.py flip-on   # HARD policy: all actions, only the operators group
-sleep 20                    # propagation: effects settle in ~16 to 20 seconds; do not read sooner
+sleep 20                    # propagation takes seconds: re-read until the matrix is stable
 python3 verify.py matrix    # every unnamed principal reads 0-actions; operators keep theirs
 python3 verify.py flip-off  # delete it; wait the same window; the permissive default returns
 ```

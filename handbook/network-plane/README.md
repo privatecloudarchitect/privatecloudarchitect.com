@@ -2,17 +2,18 @@
 
 Companion to the chapter
 ([privatecloudarchitect.com/handbook/network-plane](https://privatecloudarchitect.com/handbook/network-plane)):
-one read-only script that asks the networking plane to describe itself, and writes two records the chapter's
-plates render.
+one read-only script that asks the networking plane to describe itself, and writes two records. The chapter draws
+the plane; the records and the transcripts in this folder are example output, runs against the reference estate, to
+compare your own runs with.
 
 | File | What it is |
 |---|---|
 | `network.py` | Read-only. The networking API groups and every kind with its scope, declared verbs and instance count; the chain object by object, then walked outward from each VPC's subnets; the subnets and their access modes; the security strategies the platform ships, the strategy each attached profile carries, and the region's networking capabilities; and the translation rule that carries private space outward. |
-| `network-model.json` | The catalog held as families, the access modes with the platform's own description of each, the strategies with their rule templates, the profiles with the strategies each carries, the attached one with its creation time, and the region's capabilities. |
-| `chain.json` | The chain: IP blocks with their visibility, the connectivity profile, the VPC, both attachments, the gateway connection, the subnets, and the outbound translation. |
+| `network-model.json` | Example output, from that run: the catalog held as families, the access modes with the platform's own description of each, the strategies with their rule templates, the profiles with the strategies each carries, the attached one with its creation time, and the region's capabilities. |
+| `chain.json` | Example output, from that run: the chain: IP blocks with their visibility, the connectivity profile, the VPC, both attachments, the gateway connection, the subnets, and the outbound translation. |
 | `overlay.py` | Read-only, with a provider credential: what the provider runs above the gateway connection, the last object `network.py` can read. The Tier-0 gateways with their HA mode and edge clusters, each gateway connection and how many transit gateways attach to it, per NSX project its transit gateway, the connection that gateway uses (or none), its connectivity profile and its VPCs, the IP blocks by visibility, and with vCenter settings the zones and the cluster each holds. Every name is a label. |
-| `overlay.json` | That record from the reference estate's workload domain, 2026-10-22. |
-| `expected-output.md` | What both scripts printed on the reference estate: `network.py` with `--publishable`, and `overlay.py`. |
+| `overlay.json` | Example output: that record from the reference estate's workload domain, 2026-10-22. |
+| `expected-output.md` | Example output: what both scripts printed on the reference estate, `network.py` with `--publishable` and `overlay.py`, to compare your own runs against. |
 | `records/network-model-vcf-9.1.json` | The catalog record of the 9.1 run of 2026-09-21, as that run wrote it; the chapter computes what the upgrade added from it. |
 
 ## Run it
@@ -57,13 +58,13 @@ Most of what this prints is orientation. One line is not:
 ```
 
 The platform ships five named isolation strategies, one of them `none`, and marks the security profile that
-carries `none` as its default. A VPC arrives with that default profile attached: on the reference estate the record shows the
-security profile attachment created in the same second as the VPC. So a VPC that nobody has thought about runs the `none`
-strategy, and an estate that deliberately runs an open posture looks identical to one that never decided. That
+carries `none` as its default. A VPC arrives with that default profile attached: on VCF Automation 9.1.1.0100 the
+security profile attachment read was created in the same second as its VPC. So a VPC that nobody has thought about runs
+the `none` strategy, and an estate that deliberately runs an open posture looks identical to one that never decided. That
 line tells you which strategy is attached; only a recorded decision tells you whether anyone chose it.
 
 If it reports `none`, that is not a fault. It is the answer to a question worth having asked, and attaching the
-named strategy that matches your actual intent is what lets the estate answer it next time without running this
+named strategy that matches your actual intent is what lets your estate answer it next time without running this
 script.
 
 ## Scope, stated plainly

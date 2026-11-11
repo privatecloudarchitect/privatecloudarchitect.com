@@ -5,9 +5,8 @@ Run on VCF Automation 9.1.1.0100 under a session login, with `VC_HOST` set to th
 
 ## Read-only: `python3 doors.py`
 
-Run on 2026-10-28, after the provider content library was attached to the whole Supervisor: no namespace has an image
-bound to it, and every one names the library's general-purpose images at cluster scope, so every one can build. The
-record it wrote is [`doors.json`](doors.json).
+Run on 2026-10-28. Your run prints the same sections for the namespaces and project your identity can see; read the
+images line and each namespace's `can build` first. The record it wrote is [`doors.json`](doors.json).
 
 ```text
 doors.py: the same machine, through each door, and what each leaves behind

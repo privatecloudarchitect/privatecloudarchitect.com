@@ -1,6 +1,6 @@
 # Expected output
 
-What `lifecycle.py` printed on the reference estate at 2026-10-21T23:44:53Z: both instances' SDDC Managers, read-only, the primary as the instance asked about and the secondary as the rehearsal instance. It exited 0: nothing is offered, so nothing offered is unstaged.
+What `lifecycle.py` printed on the reference estate at 2026-10-21T23:44:53Z: two instances' SDDC Managers, read-only, one as the instance asked about and the other as the rehearsal instance. It exited 0: nothing was offered, so nothing offered was unstaged. Your run prints the same sections for your instances, and its counts are yours.
 
 ```
 $ python3 lifecycle.py

@@ -1,6 +1,6 @@
 # Expected output
 
-What `vks.py` printed on the reference estate at 2026-10-21T23:15:17Z: VCF 9.1.1, one organization, signed in with a session login, read-only. It names no project, namespace or cluster; the record behind it is `vks.json`.
+Example output: what `vks.py` printed on the reference estate at 2026-10-21T23:15:17Z, on VCF 9.1.1, for one organization, signed in with a session login, read-only, for you to compare the shape of your own run against. It names no project, namespace or cluster; the record behind it is `vks.json`.
 
 ```
 $ python3 vks.py
@@ -26,4 +26,4 @@ vks.py: the Kubernetes estate, read from both places it answers from
   self-rules: org gateway 153 rules (incomplete=False); namespace endpoint 198 rules (incomplete=True)
 ```
 
-Earlier the same evening, of three reads at 22:51Z, 22:58Z and 23:01Z, the 22:58Z one found both clusters at `phase=ReadyToAttach state=Unknown` with no capacity figures and no etcd health entry, while the declared clusters read `Provisioned`; the reads either side found both Ready and Healthy. Read the projection twice before acting on Unknown.
+The projection can read a cluster at `phase=ReadyToAttach state=Unknown`, with no capacity figures and no etcd health entry, while the declared cluster reads `Provisioned`: earlier the same evening on the reference estate, one read of three did, and the reads either side found both clusters Ready and Healthy. Read the projection twice before acting on Unknown.

@@ -24,7 +24,8 @@ is the org-role bypass the design contains, and it is expected.
 
 ## `matrix` after `flip-on` (one HARD policy naming only the operators group)
 
-Wait roughly 20 seconds after the flip before reading; a sooner read reports the previous regime.
+Wait out the propagation window after the flip, and re-read until the matrix is stable; a sooner read reports the
+previous regime.
 
 ```
 actor        role/group         | alpha(own=user1)   | beta(own=user2)
@@ -44,7 +45,7 @@ role included; visibility is unchanged because a Day-2 policy grants actions, ne
 
 `python3 isolation.py` under an organization administrator's session login (its summary lines), then
 `python3 verify.py matrix --record matrix.json` as the four test principals over two deployments that already existed,
-owned by the two `edit` users. Nothing was written on the estate. The membership write and the naming pass were not
+owned by the two `edit` users. Nothing was written. The membership write and the naming pass were not
 re-sent; the record carries their 9.1 readings.
 
 ```
@@ -68,7 +69,7 @@ user3        edit_adv           | 0-actions(DENY) | 0-actions(DENY)
 user4        admin              | 0-actions(DENY) | 0-actions(DENY)
 ```
 
-What to see: this is neither capture above. Every action policy in force is HARD, and two grant every action, one to a
-group in the project and one to a group across the organization. The two `edit` users act on their own deployment and
-receive 404 on each other's; `edit_adv` and `admin`, named by neither policy, see both deployments and hold no action on
-either. That is the design of the chapter, assembled: actions follow the policies, sight follows the role.
+What to see in yours: under the assembled design every action policy is HARD, so a principal holds actions only where
+a policy that grants them names it. The two `edit` users act on their own deployment and receive 404 on each other's;
+`edit_adv` and `admin`, named by no policy that grants every action, see both deployments and hold no action on either.
+Actions follow the policies, sight follows the role.

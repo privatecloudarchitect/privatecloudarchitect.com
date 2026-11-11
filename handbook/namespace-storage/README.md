@@ -11,7 +11,7 @@ next to each other. Stdlib Python only; no token, password or session id is prin
 | File | What it is |
 |---|---|
 | `ledgers.py` | Reads what the volume claims actually request, what the region storage-class quota reports (and checks what that figure is really counting, by summing the namespaces' storage limits, a class config's where a namespace sets none, and comparing), the provider plane's consumption figure, and what the datastores of one vCenter hold. Each plane past the tenant's is optional and anything it cannot reach it **names** rather than omits. Prints each plane's percentage with both halves from that plane. With `--compare` it sets each ratio beside an earlier record's. Writes `out/ledgers.json`. |
-| `ledgers.json` | That record from the reference estate. The chapter's plates render it. |
+| `ledgers.json` | That record from the reference estate, an example of what your run writes. The chapter states the behaviors it shows on the build, and carries the run's printed lines as example output. |
 | `expected-output.md` | What the script printed on the reference estate, and the comparison with the 9.1 record. |
 | `records/ledgers-vcf-9.1.json` | The 9.1 run of 2026-09-21, as that run wrote it. |
 
@@ -45,16 +45,17 @@ a record read from more ledgers; 5 an unknown argument.
 
 The ledgers answer different questions: what was asked for, what was granted, what the provider allocated, and
 what the disks hold. It becomes a defect the moment somebody makes a capacity decision from whichever one their
-tooling happened to reach, which is the whole point of printing them together; the spread on the reference
-estate is in [`expected-output.md`](expected-output.md).
+tooling happened to reach, which is the whole point of printing them together; an example of the spread is in
+[`expected-output.md`](expected-output.md).
 
 Two disciplines the script enforces on itself:
 
 - **A missing plane is named, never omitted.** A comparison missing a column still looks complete, and quietly
   becomes a different comparison.
-- **Do not add the provider rows up.** Two of the per-class figures report the same capacity, one pool seen
-  through two classes. On 9.1 their consumption matched to the byte as well; on 9.1.1 it differs, so the
-  script tests the shared capacity rather than identical rows.
+- **Do not add the provider rows up until you know what they count.** Two classes can report the same capacity,
+  which reads as one pool seen through two classes. In the read of 2026-09-21 such a pair's consumption matched to
+  the byte as well; in the read of 2026-10-19 it did not, for a reason the reads do not show, so the script tests the
+  shared capacity rather than identical rows.
 
 ## Scope, stated plainly
 

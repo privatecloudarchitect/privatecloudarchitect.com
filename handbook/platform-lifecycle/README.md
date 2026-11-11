@@ -8,7 +8,7 @@ is printed or written.
 | File | What it is |
 |---|---|
 | `lifecycle.py` | Reads the releases the instance knows about, the bundle depot counted by download status, and the upgradable state, then **joins** the offered upgrades to the bundles behind them and reports how much is still to fetch, in the API's own unit (sizeMB). Name a second instance and it compares your rehearsal instance with the one it rehearses for. It also follows a retired endpoint to the replacement its own `410` names. Writes `lifecycle.json`, and refuses to write a record carrying an instance name. |
-| `lifecycle.json` | That record from the reference estate, 2026-10-21, both instances. The chapter's plates render it; `records/lifecycle-2026-10-21.json` holds the same reading, so a new run's overwrite of this file leaves it in place. |
+| `lifecycle.json` | What a run on the reference estate wrote on 2026-10-21, two instances: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. `records/lifecycle-2026-10-21.json` holds the same reading, so a new run's overwrite of this file leaves it in place. |
 
 ## Run it
 
@@ -32,14 +32,14 @@ python3 lifecycle.py
 | 3 | a read failed, so the answer is unknown |
 | 4 | the record refused to write because an estate name survived the scrub |
 
-`expected-output.md` shows what it printed on the reference estate, and `records/lifecycle-2026-09-21.json` is the reading from a day an upgrade was on offer with nothing staged.
+`expected-output.md` shows what it printed on the reference estate, example output to compare your run's shape against, and `records/lifecycle-2026-09-21.json` is the reading from a day an upgrade was on offer with nothing staged.
 
 ## The join is the point
 
 The registry offers and the depot decides, and the two reads are rarely put side by side. An upgrade can read
 as available with none of its content downloaded, which is discovered either on an ordinary Tuesday for the
-price of two listings, or inside a change window for the price of the window. On the reference estate every
-offered upgrade was backed by nothing at all.
+price of two listings, or inside a change window for the price of the window. On a 9.1.0 build of SDDC Manager, read
+while the 9.1.1 upgrade was on offer, every offered upgrade was backed by nothing at all.
 
 Two traps the script handles so you do not have to:
 

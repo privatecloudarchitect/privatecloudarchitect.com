@@ -5,13 +5,13 @@ Companion to the chapter
 one read-only script that does the join the platform will not do for you. Stdlib Python only; no token or
 password is printed or written.
 
-**Provenance:** read on VCF Automation 9.1.1.0100 on 2026-10-19 under a session login
+**Provenance:** read on VCF Automation 9.1.1.0100, with the Supervisor at vsc9.1.1.0, on 2026-11-04 under a session login
 ([`expected-output.md`](expected-output.md)). The 9.1 run of 2026-09-21 is kept in [`records/`](records/).
 
 | File | What it is |
 |---|---|
 | `vmservice.py` | Classifies every virtual machine into the path it arrived by, **reading objects rather than trusting naming conventions**: a controller owner means a cluster minted it, a deployment resource linking it (by namespace and name) means the catalog wrapped it, and neither means somebody wrote it straight to the namespace. Also reports the kinds the VM Service publishes with their verbs, the spec and status shape of a real machine and how many machines' two power fields disagree, what a blueprint may declare, and the class catalog of every namespace read the way that answers whether anything is reserved. With `--compare` it sets the arrival counts beside an earlier record's. Writes `vmservice.json`. |
-| `vmservice.json` | That record from the reference estate. The chapter's plates render it. |
+| `vmservice.json` | The record the run of 2026-11-04 wrote on the reference estate, as example output. The chapter reads it for the behaviors it states and the date it gives. |
 | `expected-output.md` | What the script printed on the reference estate, and the comparison with the 9.1 record. |
 | `records/vmservice-vcf-9.1.json` | The 9.1 run of 2026-09-21, as that run wrote it. |
 

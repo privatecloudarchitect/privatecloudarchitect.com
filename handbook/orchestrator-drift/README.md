@@ -9,8 +9,8 @@ appliance stops running it, and puts it back. Python 3 standard library only.
 |---|---|
 | `reconcile.py` | Fetches a workflow's running definition into a normalized committed copy, diffs the copy against what runs (exit 1 on drift), and deploys the copy: a plan by default, `--apply` to send it. |
 | `fixtures/` | A small workflow three ways (committed, the same with its keys reordered, and with one value edited) and an executions answer, for the offline self-test. |
-| `records/` | The four runs on the reference estate on 2026-10-21, as counts with no name and no id: the drift found, the restore, the agreement after it, and an idempotent re-run that sent nothing. |
-| `expected-output.md` | What the self-test and those runs printed. |
+| `records/` | Example output: the records of four runs on the reference estate's embedded Orchestrator of VCF Automation 9.1.1 on 2026-10-21, as counts with no name and no id: the drift found, the restore, the agreement after it, and an idempotent re-run that sent nothing. `--record <file>` writes the same record of your own run. |
+| `expected-output.md` | Example output: what the self-test and those runs printed, to compare your own run against. The self-test prints the same line on any machine, since its fixtures ship here. |
 
 ## Run it
 
@@ -57,6 +57,6 @@ Automation 9.1.1 the embedded Orchestrator's version history gained a commit for
 - The record (`--record`) holds the operation and its counts: versions, item and attribute counts, diff lines,
   reference and execution counts, the write's status. No name, id, script or value enters it.
 - The copy is a definition, not its history: it says what runs, not why. Keep design notes beside it.
-- The records' `2-restore.json` came from the build before the full count: it capped `changedLines` at the 60 lines
-  it printed. Its 858, like `diffLines` in `1-before.json`, was counted afterwards with the same functions from the
-  two definitions as read.
+- The records' `2-restore.json` came from the build before the full count, which capped `changedLines` at the
+  lines it printed; the value in the record, like `diffLines` in `1-before.json`, was counted afterwards with the same
+  functions from the two definitions as read.

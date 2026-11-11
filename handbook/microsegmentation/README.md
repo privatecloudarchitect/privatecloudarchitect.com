@@ -32,9 +32,9 @@ Four reads, in the order that fails fastest:
 1. **Entitlement.** `regionnetworkingcapabilities/<region>` carries a capability list: a type, a
    state, and where the state is false the platform's own reason and the licence it wants. **This
    is the pre-write read.** The chapter's `Realized` check verifies a write that was accepted; it
-   cannot tell you a write was never going to be. On the reference estate on 2026-09-20 (VCF 9.1.0)
-   four capabilities were unavailable and all four were firewall capabilities (distributed, VPC
-   gateway, transit-gateway, and the security profile itself), while `NetworkSecurityGroup` was
+   cannot tell you a write was never going to be. Read on 2026-09-20 (VCF 9.1.0), every capability
+   one region reported unavailable was a firewall capability (distributed, VPC gateway,
+   transit-gateway, and the security profile itself), while `NetworkSecurityGroup` was
    entitled: **the vocabulary a rule speaks worked, and every surface that could enforce a rule
    reported itself unentitled.** That read is kept as `records/posture-2026-09-20.json`. On
    2026-10-22 (VCF 9.1.1) the same region read every capability enabled, firewall included, while
@@ -89,8 +89,8 @@ to keep them for inspection instead.
 
 **If `Firewall.DistributedFirewall` is not entitled on your region, step 2 fails** with an HTTP 500
 naming the licence, and the group from step 1 is the only thing that was created. Run `posture.py`
-first and you will know before you start. Run against the reference estate on 2026-09-20, that is
-exactly what happened: the group created and Realized in under five seconds, the section create
+first and you will know before you start. On 2026-09-20, on VCF 9.1.0 with the region unentitled, that
+is exactly what happened: the group was created and Realized, the section create
 returned `operation not supported in Region <region>: NSX licenses must have all of [DFW]`, and the
 teardown left no residue. On 2026-10-22, on VCF 9.1.1 with the region entitled, the round trip ran
 end to end: both objects Realized at every step and a read afterwards found neither
@@ -128,7 +128,7 @@ It copies the `--like` namespace's spec (class, region, VPC, service-engine grou
 | `seg-proof-server`, `seg-proof-client` | `NetworkSecurityGroup` | each names one of those two VMs and nothing else |
 | `seg-proof-drop` | `FirewallPolicy` | one rule, scoped to the two groups, so no other traffic meets it |
 
-Three things the reference estate taught it, each found by a run that failed first:
+Three things it is built around, each found on VCF 9.1.1 by a run that failed first:
 
 - **A namespace made through the API gets VM classes but may get no VM images.** The organization's library was
   not attached to the new namespace, and the tenant cannot attach it: creating the `ContentLibrary` object in the
@@ -148,11 +148,10 @@ image without `--attach-library`; 4 the record refused to write because an estat
 names, and no address or object id. The timings are upper bounds: the client tries every one to three seconds, the
 probe reads every two and the script every two.
 
-On the reference estate on 2026-10-22, on VCF 9.1.1, three runs gave the same verdict: the landed-disabled rule left
-the traffic alone for 30 seconds, the enabled rule stopped it within 11, 9 and 10 seconds of the apply and held for
-the next 30, and the disabled rule released it within 8, 4 and 11. Each run left no residue in VCF Automation or in
-vCenter. The last run's output is in [`expected-output.md`](expected-output.md); the records are `traffic.json` and
-the two under `records/`.
+On 2026-10-22, on VCF 9.1.1, three runs gave the same verdict: the landed-disabled rule left the traffic alone for
+the 30 seconds watched, the enabled rule stopped it within seconds of the apply and held for the next 30, and the
+disabled rule released it. Each run left no residue in VCF Automation or in vCenter. An example of the last run's
+output is in [`expected-output.md`](expected-output.md); the records are `traffic.json` and the two under `records/`.
 
 ## Prereqs
 
@@ -260,7 +259,7 @@ provider's allow.
 
 ## Version currency
 
-This estate runs 9.1.1, and the product has been renamed: what older corpuses call the NSX distributed
+The harness was last run on 9.1.1, and the product has been renamed: what older corpuses call the NSX distributed
 firewall is documented on the current line as **vDefend Firewall**. Two 9.1 changes matter to anyone
 who hits the entitlement refusal above:
 

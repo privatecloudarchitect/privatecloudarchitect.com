@@ -1,7 +1,7 @@
 # What the gate printed on the reference estate
 
-One run of the gate's documented path on 2026-10-07, VCF Automation 9.1 (one All Apps organization) with its
-registered standalone Orchestrator. Every object was a throwaway named `pca-gate-probe-<stamp>`: the workflow, its
+One run of the gate's documented path on 2026-10-07, on VCF Automation (one All Apps organization; the build that
+day was not recorded) with its registered standalone Orchestrator. Every object was a throwaway named `pca-gate-probe-<stamp>`: the workflow, its
 category, the subscription, and four deployments of one ConfigMap each in an existing namespace, under one
 template resource name the subscription's criteria named and nothing else in the organization carries. Host
 names, project and object identifiers are replaced by placeholders; nothing else is edited.

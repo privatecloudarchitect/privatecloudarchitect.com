@@ -6,7 +6,7 @@ One run of `demo.py --write` on a VCF Operations 9.1.1 instance and its VCF Auto
 host names replaced. No cache file was set, so step 1 minted the first bearer and step 2's re-mint is the second.
 Steps 1 to 7 wrote nothing; step 8 created one throwaway custom group, whose only rule matches no machine, and
 deleted it before the run ended, fifteen seconds after it began. A separate read afterwards found no group and no
-resource by its name, and the estate's 62 custom groups as before.
+resource by its name, and the reference estate's custom groups as before.
 
 Step 4 ran on a session bearer handed to the client in place of the refresh-token mint, because the organization's
 stored refresh token was refused at the token endpoint that day (the vcfa-api chapter's `runway.py` reads exactly
@@ -65,7 +65,7 @@ step 8 is the write itself: sent once, found by a re-read in the state it was se
 nothing, an expectation the stored object does not meet refused by name, and the delete read back as gone.
 
 A dry run proves the request a program would send, never that the platform accepts it. Step 6's request as first
-written named `Custom Group` as the group type, which none of the estate's eighteen types is, and carried no member
+written named `Custom Group` as the group type, which none of the instance's group types is, and carried no member
 criteria; its dry run printed it without complaint on every run. With the type corrected, the platform refused it
 the first time step 8 sent it (HTTP 400, "Define member criteria or objects to include"). Send a write once, on a
 throwaway, before you trust its dry run.

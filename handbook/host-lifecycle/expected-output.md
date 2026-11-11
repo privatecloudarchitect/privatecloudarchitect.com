@@ -1,9 +1,10 @@
 # What hostlife.py printed on the reference estate
 
 The run of 2026-10-25T02:28:12Z against three vCenters on VCF 9.1.1, read-only: 67 requests, 61 of them GETs and the
-rest the session sign-ins and sign-outs. The terminal showed the estate's own names; below is the same report printed
+rest the session sign-ins and sign-outs. The terminal showed that estate's own names; below is the same report printed
 from the scrubbed record with `python3 hostlife.py --from-record records/hostlife.record.json`, so every vCenter,
-cluster and host is a placeholder. The exit code was 1: the ALERT line.
+cluster and host is a placeholder. The exit code was 1: the ALERT line. Your run prints the same sections for the
+vCenters you name, and its counts are yours.
 
 ```
 $ python3 hostlife.py; echo "exit $?"
@@ -101,9 +102,9 @@ printed as above from the scrubbed record: each vCenter's lines, and each cluste
 ```
 
 The host builds are what each host runs, read from the host's own summary at the time on the line, not the image
-compliance the cluster lines print, which is the result vCenter stored. Every host here is connected, so each build is
-what it runs; a host that is not connected would be counted under its last known build and named as such. Zero
-collisions is a reading of this estate, not an assumption: a nested or cloned host can report another's hardware UUID,
+compliance the cluster lines print, which is the result vCenter stored. Every host in that run was connected, so each
+build is what it runs; a host that is not connected would be counted under its last known build and named as such. Zero
+collisions was a reading of that estate, not an assumption: a nested or cloned host can report another's hardware UUID,
 and such a pair would be counted and never joined. The depot lists differ by one image between the first vCenter and
 the other two; every image appears once, with one release date. The last remediation is the one the platform keeps;
 two clusters answer that theirs are unavailable, which is recorded as it is said, not read as none ever run. The exit

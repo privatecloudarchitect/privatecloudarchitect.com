@@ -21,7 +21,7 @@ both probes included ([`expected-output.md`](expected-output.md)). The 9.1 run o
 | File | What it is |
 |---|---|
 | `doors.py` | Reads what each door needs and which namespaces can open it, both image lists, what a deployment record claims, and one tenant bearer offered to every door. With `--probe-doors` it builds the same machine through two doors and compares them; with `--probe-vcenter` it makes one machine straight in vCenter. Writes `doors.json`, and refuses to write a record carrying an estate value. |
-| `doors.json` | That record from the reference estate, from the run with both probes. The chapter's plates render it. |
+| `doors.json` | The record the read-only run of 2026-10-28 wrote on the reference estate, as example output. The chapter reads it for the behaviors it states and the dates it gives. |
 | `expected-output.md` | What the script printed on the reference estate: read-only, the dry run, and the probes. |
 | `records/doors-vcf-9.1.json` | The 9.1 run of 2026-09-21, as that run wrote it. |
 
@@ -71,8 +71,9 @@ admission webhook say it later: a general-purpose VM image the namespace can nam
 a library attached to the whole Supervisor), and storage quota with room for a 20 GiB boot disk.
 
 The teardown waits up to ten minutes for each path, and records each machine's disk promotion state
-(`VirtualMachineDiskPromotionSynced`) when its delete is issued. On 9.1.1 the machine whose promotion had not synced
-was the slow one to go, whichever door built it, so the door does not decide which teardown is slower.
+(`VirtualMachineDiskPromotionSynced`) when its delete is issued. The direct delete finished first on the 9.1 run and on
+the 9.1.1 run, and on the 9.1.1 run the catalog machine's promotion had not synced when its delete was issued while the
+direct machine's had. Two runs cannot say whether the door or that state set the order.
 
 ## The finding
 
@@ -81,22 +82,22 @@ either, and no label or annotation anywhere on either one naming a deployment, a
 the object records which door built it. The 9.1 run found the same.
 
 Everything that differs is **outside** the machine: a deployment record holding a single link of the shape
-`cci:<project>:<namespace>:vmoperator.vmware.com/v1alpha5:VirtualMachine:<name>`. That link is what makes 17 Day-2
-actions exist on the reference estate, 5 on the deployment and 12 on the machine, along with a recorded owner, a
-lease, and the blueprint, version, catalog item and inputs the machine came from. An identical machine with no
+`cci:<project>:<namespace>:vmoperator.vmware.com/v1alpha5:VirtualMachine:<name>`. On VCF Automation 9.1.1.0100 that
+link is what makes the Day-2 actions exist, on the deployment (its lease, power, edit and delete) and on the machine
+(resize, disks, snapshots, consoles, power), along with a recorded owner, a lease, and the blueprint, version, catalog
+item and inputs the machine came from. An identical machine with no
 record has none of them, because a Day-2 action is a property of the record rather than of the virtual machine.
 
 ## Two prerequisites that bite, and are worth reading before you pick a namespace
 
-**An image counts at either scope, and the long list is mostly the wrong images.** A VM image is either bound to
+**An image counts at either scope, and a long list can hold few that count.** A VM image is either bound to
 your namespace (`virtualmachineimages`) or cluster-scoped (`clustervirtualmachineimages`), where a library attached
 to the whole Supervisor lands its images in every namespace. `doors.py` compares the two lists by id and by display
 name, counts how many cluster-scoped images are Kubernetes node images by the release their name carries, and counts
 the rest as general-purpose (`imageScope` in the record); a namespace can build when it can name a general-purpose
-image at either scope. On the reference estate on 2026-10-19 the general-purpose images were bound to three of five
-namespaces and none was cluster-scoped, so the same manifest built in three and was refused in two; on 2026-10-28,
-after the provider library was attached to the Supervisor, none was bound, every namespace named them at cluster
-scope, and every namespace could build.
+image at either scope. On VCF Automation 9.1.1.0100 a namespace with no image bound to it could build once a library of
+general-purpose images was attached to the whole Supervisor; before that, only the namespaces with an image bound to
+them could. The read-only run prints which of your namespaces can build, and why the rest cannot.
 
 **Storage quota is per namespace,** and a namespace short of room for the boot disk refuses the create.
 
@@ -107,7 +108,7 @@ cluster's machines already use, outside the folders the Supervisor owns. It asks
 by name, asks every deployment whether it claims it, weighs it against the tenant storage quota, and deletes it. If
 vCenter refuses the create, the record keeps the error type and message.
 
-On the reference estate: created, declared by none of the namespaces, claimed by no deployment, and it did not move
+On vCenter 9.1.1, as on the 9.1 run: created, declared by no namespace, claimed by no deployment, and it did not move
 the tenant storage quota while holding a disk on a datastore its cluster shares. The machine is not a worse machine;
 it is a different kind of object: not a `VirtualMachine`, so no namespace scopes it, no quota counts it, no
 reconciler maintains it and no record can claim it.
@@ -115,29 +116,29 @@ reconciler maintains it and no record can claim it.
 ## What each door asks you to be
 
 Every run holds a single tenant bearer and presents it to each door in turn. The table is measured, not documented:
-on the reference estate the Automation API, the catalog and the namespace endpoint answered it with 200, and vCenter
-with 401, naming what it takes instead. Three of the four doors are one identity question, which is why choosing the
+on 9.1 and 9.1.1 the Automation API, the catalog and the namespace endpoint answered it with 200, and vCenter with
+401, naming what it takes instead. Three of the four doors are one identity question, which is why choosing the
 catalog over `kubectl` changes what claims the machine and not who you have to be.
 
 A 200 means the door answered this **identity**. What it then permits is the project role tier, which the
 access-control chapter covers.
 
-## The action count is the surface, not the menu
+## The action list is the surface, not the menu
 
-The count above is how many actions **exist**. Each carries a `valid` flag that tracks the machine's state, and the
+The list above is the actions that **exist**. Each carries a `valid` flag that tracks the machine's state, and the
 usable set changes with power: the day2-pathways companion measures which are valid while the machine runs and
 which while it is stopped.
 
 ## Scope, stated plainly
 
 - Read-only without a probe flag. With one, every write is to an object this run created and deletes.
-- The teardown timings are one observation per run and they move with the machines' own state; quote the
-  direction and the state beside it, never a ratio between the doors.
+- The teardown timings are one observation per run; quote the direction and the state beside it, never a ratio
+  between the doors.
 - The probe compares the **direct** and **catalog** doors. The API door uses the same mechanism as the catalog, so
   it is not separately built; that is a claim about the mechanism, from reading both request surfaces, and not a
   third measurement.
-- Day-2 actions are read from whichever claimed machine the estate already has. The list is the platform's, but
-  the count is what this estate publishes.
+- Day-2 actions are read from whichever claimed machine your project already holds. The list is what the platform
+  offers that project, and your run prints yours.
 - Every organization, project, namespace, machine, cluster and datastore name in the record is a placeholder. The
   scrubber replaces every name in one pass and never reaches inside a placeholder it has written, and the
   script refuses to write a record in which a name survived.
@@ -145,7 +146,7 @@ which while it is stopped.
 ## Reading the record
 
 `needs` is the prerequisite ledger, split into `direct` and `automation`, with what each door requires and how many
-of each the estate has. `namespaces` is one row per namespace with the images bound to it (`imagesBound`), the
+of each your identity can see. `namespaces` is one row per namespace with the images bound to it (`imagesBound`), the
 general-purpose cluster images it can name (`imagesCluster`), the classes it publishes,
 its quota and whether it could build a VM today. `imageScope` compares the two image lists. `claimBuys` holds the
 shape of the claim (`linkShape`), the `deploymentActions` and `resourceActions` the claim makes possible, and the

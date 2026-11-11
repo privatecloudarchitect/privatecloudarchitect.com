@@ -48,8 +48,9 @@ posture.py: what is attached, and what can this org actually enforce?
 wrote posture.json; no VPC, profile, group or region name is recorded
 ```
 
-It exited 0: the region's firewall capabilities are entitled. On 2026-09-20 the same read found four firewall
-capabilities disabled for want of a license and exited 1; that record is `records/posture-2026-09-20.json`.
+It exited 0: the region's firewall capabilities are entitled. On 2026-09-20, on 9.1.0, the same read found the
+region's firewall capabilities disabled for want of a license and exited 1; that record is
+`records/posture-2026-09-20.json`.
 
 ## `./run.sh round-trip`, on throwaway objects, 05:48Z
 
@@ -141,8 +142,7 @@ wrote traffic.json; no project, namespace, user, organization or host name is re
 
 It exited 0: the rule stopped the client reaching the server when its one field was enabled, and released it when
 the field went back. The two runs before it, at 17:30Z and 17:38Z, made by the same measurement before its printed lines were redacted,
-gave the same verdict, blocked within 11 and 9
-seconds of the apply and released within 8 and 4; their records are `records/traffic-2026-10-22T1730Z.json` and
+gave the same verdict; their records are `records/traffic-2026-10-22T1730Z.json` and
 `records/traffic-2026-10-22T1738Z.json`. The seconds are upper bounds that include the measurement's own lag. The
 library attach went through vCenter because the tenant way was refused; on a namespace that already offers an image,
 the three lines from the tenant attempt to the image become one: `namespace offers an Ubuntu image {"attachedBy": "already attached"}`.

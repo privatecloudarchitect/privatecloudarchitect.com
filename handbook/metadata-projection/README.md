@@ -2,9 +2,8 @@
 
 Does the metadata a workload declares reach the plane its consumers read, and does it stay there?
 
-On the estate this was written from, the cloud templates read on a VCF 9.1.1 All Apps organization
-declare Kubernetes labels and carry no tag construct, and the consumers this record names govern on
-tags: VCF Operations resolves custom group membership, policy scope and view filters through tag rules
+On a VCF 9.1.1 All Apps organization, the cloud templates read declare Kubernetes labels and none
+declared a tags block (no schema was read), and the consumers this record names govern on tags: VCF Operations resolves custom group membership, policy scope and view filters through tag rules
 on `summary|tag` and `summary|tagJson`, and the machine object read carried no Kubernetes label. So
 the label is the declaration, the tag is a projection of it, and something has to perform that
 projection repeatedly.
@@ -158,7 +157,7 @@ fans out to, with their own credentials, and are not in this script.
 ## What it does not cover
 
 - **It does not read NSX.** NSX dynamic security groups built on a VM Tag criterion read NSX tags, which are a third plane. A
-  projection does have to fan out there, because an NSX group's VM Tag criterion did not read a vSphere tag on the estate this was written from;
+  projection does have to fan out there, because an NSX group's VM Tag criterion read no vSphere tag in the test the identifier planes chapter records;
   measuring that plane needs an NSX credential this record does not ask for.
 - **It does not read the Supervisor directly.** Declarations come from the deployment record, which
   is reachable with the same tenant credential as everything else; the per-namespace proxy needs a
@@ -182,12 +181,12 @@ Each of these was a defect in this script before it was a warning here.
 1. **Joining declaration to machine by name.** Two live machines can share one name in different
    namespaces. The join then reads one machine's tags and attributes them to the other. The instance
    UUID is on both sides, so there is no reason to accept an ambiguous key.
-2. **Counting a retained object as coverage.** On the estate this was written from, every tagged
-   object in one reading was a deleted machine.
+2. **Counting a retained object as coverage.** A deleted machine's retained object keeps its last
+   properties, so a reading can find every tagged object to be a deleted machine and still look healthy.
 3. **Reading `${input.environment}` as a literal.** It is a placeholder resolved at deploy time. The
    thing to check is the input's declared enum, because that is the complete set of values a
    deployer can choose.
-4. **Counting only the machines a deployment record names.** A cluster's nodes are the majority of
-   a real estate and no deployment record describes one. A ratio taken over the named machines
+4. **Counting only the machines a deployment record names.** A cluster's nodes can be most of the
+   machines a namespace holds, and no deployment record describes one. A ratio taken over the named machines
    alone is a true number about a fraction of the estate, reported as though it were about the
    estate.

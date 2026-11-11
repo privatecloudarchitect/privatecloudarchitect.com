@@ -10,12 +10,12 @@ self-test OK: a definition with its keys reordered normalizes to the committed c
 ## The reference estate, 2026-10-21
 
 One workflow on the embedded Orchestrator of VCF Automation 9.1.1, against its committed copy. The diff's own lines
-are the estate's content and are left out here; the records in `records/` carry the counts.
+are the reference estate's content and are left out here; the records in `records/` carry the counts.
 
 ```
 $ python3 reconcile.py <workflow> --diff --record records/1-before.json          # 19:51Z
 DRIFT: the committed copy (version 1.4.0, 39 items) and the running definition (version 1.2.0, 31 items) differ
-  [60 diff lines printed here, the estate's content, left out; the full diff is 858 lines]
+  [60 diff lines printed here, the reference estate's content, left out; the full diff is 858 lines]
 exit 1
 
 $ python3 reconcile.py <workflow> --deploy --apply --record records/2-restore.json   # 20:17Z
@@ -36,5 +36,5 @@ exit 0
 
 The restore ran on the build before this one, which printed its pre-flight in those words and counted at most 60
 diff lines; its in-flight count compared upper-case state names and could not have counted a run. The 0 was
-confirmed separately: of the 50 executions listed, 26 had completed and 24 had failed. The action and configuration
+confirmed separately: every execution listed had completed or failed. The action and configuration
 references this build checks were read the same way before the restore, and all resolved.

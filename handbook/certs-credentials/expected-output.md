@@ -1,6 +1,6 @@
 # Expected output
 
-What `custodian.py` printed on the reference estate at 2026-10-21T23:20:07Z: the primary instance's SDDC Manager on VCF 9.1.1, read-only. Every secret the inventory returned was destroyed on arrival; the output and `custodian.json` hold counts and dates only.
+What `custodian.py` printed on the reference estate at 2026-10-21T23:20:07Z: one instance's SDDC Manager on VCF 9.1.1, read-only. Every secret the inventory returned was destroyed on arrival; the output and `custodian.json` hold counts and dates only. Your run prints the same sections for your instance, and its counts are yours.
 
 ```
 $ python3 custodian.py

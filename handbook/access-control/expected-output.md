@@ -30,19 +30,20 @@ whoami.py: the derivation, asked of the platform rather than inferred
 wrote derivation.json: the derivation as the platform states it, group names are product rights, nothing estate-shaped
 ```
 
-Five things in that output carry the chapter:
+Five things to read in yours:
 
 - **The token field is the bearer you sent.** The gateway's answer carries it in `extra`; the script compares it with
   the bearer by digest, prints only that it matched, and keeps neither. Never log a whole self review.
-- **67 groups at the organization gateway, 2 at a namespace endpoint, for the same bearer.** None of the
-  right-named groups crosses. That is the two-surface model stated by the platform rather than argued.
+- **A group for each of your rights at the organization gateway, and only a system group and one plane-scoped group at
+  a namespace endpoint, for the same bearer.** None of the right-named groups crosses. That is the two-surface model
+  stated by the platform rather than argued.
 - **The plane-scoped group is keyed by the project, not by the user.** Every holder of that namespace resolves
   to the same subject, which is why per-user isolation lives at the project boundary.
 - **The same access review answered false without a namespace and an API group, and true with both.** An access
   review is a statement about RBAC wiring, and without scope it is not even that.
 - **Each REST membership array holds exactly the principals of one role's bindings.** `administrators` is the
   `admin` bindings, `users` the `edit` bindings, `advancedUsers` the `edit_adv` bindings, and `auditors` the
-  `view` bindings, which are empty here. The arrays are the authority projected, which is why a write to them
+  `view` bindings, which were empty in this run. The arrays are the authority projected, which is why a write to them
   persists nothing; the isolation-design companion's `isolation.py` sends that write and reads it back.
 
 ## reprobe.py: the writes, re-asked on 9.1.1
@@ -92,7 +93,7 @@ G-127 and the management ladder, in a throwaway namespace:
   wrote reprobe.json (statuses, counts and scrubbed messages)
 ```
 
-What the record holds, and what it says:
+What to read in yours, and what this run's record says:
 
 - **The import works under a session login on 9.1.1: 201, read back, removed, absent.** The automation-grant leg
   was not asked: the stored refresh token was refused at the token endpoint, so the 403 on that path is the

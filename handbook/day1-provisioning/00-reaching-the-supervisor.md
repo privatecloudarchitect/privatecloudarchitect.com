@@ -158,9 +158,9 @@ namespace is missing".
 library attached to your namespace puts its images in `virtualmachineimages`; one attached to the whole
 Supervisor puts them in `clustervirtualmachineimages`, beside the **Kubernetes node images** a VKS estate
 keeps there. So read both lists, which the command above does, and treat a display name (`NAME`) that
-carries a Kubernetes version as a node image rather than a candidate. On the reference estate on
-2026-10-29 the general-purpose library was attached to the whole Supervisor: the namespace list was
-empty, and of the 102 cluster images, 99 were node images and 3 were general-purpose.
+carries a Kubernetes version as a node image rather than a candidate. Where the general-purpose library
+is attached to the whole Supervisor, your namespace list is empty and the images you can build from sit in
+the cluster list among the node images, so pick them out by display name.
 
 Two consequences worth knowing before you pick a namespace to build in. An image bound to one namespace is
 not usable from another, so the same manifest can work in one and be refused in the next with *no VM image
@@ -169,9 +169,9 @@ fit, the refusal arrives from an admission webhook at apply time and names the r
 
 ### Re-authenticating, and the one command that is not script-safe
 
-The credential written into your kubeconfig is a **static access token with a one-hour life**, and
-there is no exec plugin, so `kubectl` cannot renew it. It does not warn you and it does not retry: it
-works, and then an hour later every command fails at once. This is the single most common way the
+The credential written into your kubeconfig is a **static access token**, short-lived (its `exp` claim
+says when yours ends), and there is no exec plugin, so `kubectl` cannot renew it. It does not warn you and
+it does not retry: it works, and then once it expires every command fails at once. This is the single most common way the
 `kubectl` steps below stop working, and it has nothing to do with the 90-day API token.
 
 ```bash

@@ -3,15 +3,15 @@
 Companion to the chapter
 ([privatecloudarchitect.com/handbook/platform-map](https://privatecloudarchitect.com/handbook/platform-map)):
 one read-only script that places your own VCF estate on the map the chapter draws, with the release each component
-runs, from the same services the chapter's figures came from. The chapter's counts and versions are rendered from the
-record in this folder.
+runs, from the same services the chapter's figures came from. The chapter draws the release; the record and the
+transcript in this folder are example output, one run against the reference estate, to compare your own run with.
 
 | File | What it is |
 |---|---|
 | `inventory.py` | Read-only, stdlib Python. Reads every SDDC Manager you name (one per VCF instance): its version, each domain's type and status, its clusters and hosts with their ESX version, and the vCenter and NSX manager it brings with theirs. Signs in to each of those vCenters as the same user and reads its Supervisors and their version, its vSphere zones and the clusters each holds, the Supervisor services installed, and how many namespaces are the platform's own, and counts the appliances it holds by the product each VM's OVF names (the platform's vendors only, no OVF version, which is the one it was deployed at). Reads the fleet: VCF Operations exchanges its session for the Fleet lifecycle service's key, and the service's component list gives each component's type, version, hosting, scope, size and nodes, matched to its instance through its vCenter, and the services runtime each runs on, by group and type; then where VCF Operations collects. Optionally reads standalone Orchestrator appliances. Ends with a release summary, an optional bill-of-materials comparison that accounts for every row of the bill (read, seen deployed, or not read here), and the placement checks the chapter teaches. Exit 0 every read answered and every check held, 1 a check differs, 2 a read failed. |
 | `bom-9.1.1.json` | All 56 rows of the VCF 9.1.1 bill of materials (its four tables: the core components, the Supervisor services, the VCF services and the add-ons), read from Broadcom's release notes on 2026-10-28. Each row names what `inventory.py` reads its version under (`read_as`), and the appliance products (`appliance`) or Supervisor service IDs (`service`) that show it deployed. Written from the handbook's platform catalog, which places every row; for another release, re-read the bill and place every row again. |
-| `inventory.json` | The record from the reference estate, 2026-10-28, written with `--record`: versions, counts and types only, with every host name, identifier and object name left out. |
-| `expected-output.md` | The transcript of that run. |
+| `inventory.json` | Example output: the record of one run against the reference estate, 2026-10-28, written with `--record`: versions, counts and types only, with every host name, identifier and object name left out. |
+| `expected-output.md` | Example output: the transcript of that run, to compare your own run against. |
 
 ## Run it
 
@@ -42,8 +42,8 @@ keep it for a throwaway credential.
   Operations rather than the Operations session itself. An identity broker on its own appliance has its own FQDN,
   which is what `OPS_BROKER_HOST` is for.
 - The release check covers every component the two inventories carry, the Supervisors the vCenters report, and any
-  standalone Orchestrator you name. A component in neither inventory and not named is not checked; on the reference
-  estate the standalone Orchestrator is exactly that kind of component, and it was the one behind the release.
+  standalone Orchestrator you name. A component in neither inventory and not named is not checked; a standalone
+  Orchestrator is that kind of component, and the kind most easily left behind a release.
 - A Supervisor's version string carries vCenter's build, so it is compared with the bill of materials by release
   only. Supervisor services (the Kubernetes service, Harbor and the rest) version on their own lines and are listed,
   not checked.
@@ -52,18 +52,19 @@ keep it for a throwaway credential.
 - It does not read what runs inside a domain beyond the Supervisor's own rungs. Whether a tenant workload sits in the
   management domain is a vCenter read of that domain's machines, which this script does not make; the namespaces a
   tenant sees are read by the construct-model companion.
-- Run on the reference estate on 2026-10-12, VCF 9.1.1: two instances, the second management-only.
+- Exercised read-only against the reference estate on VCF 9.1.1; the record and transcript here are from 2026-10-28.
 
 ## Reading the output
 
 - The instance blocks answer plate 01: one management domain per instance, any workload domains beside it, the
   vCenter and NSX manager each brings and the version each runs, and a Supervisor only where tenants are served.
-  `namespaces 14, 8 of them the platform's own (svc-)` is the Supervisor running its services in namespaces of their
-  own, which is why a namespace list or a load balancer's address range shows names no tenant created.
+  A line such as `namespaces <n>, <m> of them the platform's own (svc-)` is the Supervisor running its services in
+  namespaces of their own, which is why a namespace list or a load balancer's address range shows names no tenant
+  created.
 - The fleet table answers plate 02: `OVA` is an appliance with its own addresses, `VSP` a service on the VCF services
   runtime; `FLEET` and `INSTANCE` are its scope; the `VSP` rows' nodes are the runtime itself. In the `OPS` row,
-  `MASTER` is the analytics node and `ONE_WAY_REMOTE_COLLECTOR` a cloud proxy: three nodes there is one analytics node
-  with two proxies, not a three-node cluster.
+  `MASTER` is the analytics node and `ONE_WAY_REMOTE_COLLECTOR` a cloud proxy: a `MASTER` beside proxies is one
+  analytics node and its collectors, not a cluster of that many nodes.
 - `where VCF Operations collects` says which collector runs the adapters. The vCenter, NSX and vSAN adapters belong on
   the cloud proxies; the analytics node's own collector runs the rest you have configured there.
 - `releases` lists every release the versions read belong to; more than one is the line to read first. With `--bom`,

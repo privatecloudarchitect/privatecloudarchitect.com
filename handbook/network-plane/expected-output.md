@@ -1,7 +1,7 @@
 # What `network.py` prints
 
 Run against one VCF Automation 9.1.1.0100 organization on 2026-10-19, signed in with a session login, with
-`--publishable`, so every address below is the documentation range the records carry in place of the estate's
+`--publishable`, so every address below is the documentation range the records carry in place of that estate's
 own. Without the flag your own ranges print on screen; the records are substituted either way. Your counts will
 differ; the shapes should not.
 
@@ -53,7 +53,7 @@ wrote network-model.json (55 kinds, 5 strategies) and chain.json (3 blocks, 3 su
 ## What each block tells you
 
 - **catalog**: the networking kinds the build declares, the VPC group's held as families, and how many in each
-  family have anything on the estate. A kind the grouping does not know is printed by name.
+  family have anything on your estate. A kind the grouping does not know is printed by name.
 - **the chain**: the IP blocks with the visibility each carries, and the transit gateway's own space.
 - **subnets**: each subnet's access mode and backing, and the access modes the subnet schema documents.
 - **the isolation dial**: the strategies the platform ships, the strategy the attached profile carries (read
@@ -94,6 +94,6 @@ overlay.py: what the provider runs above a VPC
 wrote overlay.json; every object name replaced by a label
 ```
 
-Read the gateway-connection lines first: the second one carries four organizations' transit gateways to the one Tier-0,
-so those organizations share a path north while each keeps its own transit gateway. The project with no attachment
-has no path north at all.
+What to read in yours: the gateway-connection lines first. A connection that carries several transit gateways to one
+Tier-0 means those organizations share a path north while each keeps its own transit gateway. A project whose transit
+gateway reads `NO ATTACHMENT` has no path north at all.

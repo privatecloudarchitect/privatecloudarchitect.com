@@ -81,14 +81,12 @@ checks
 wrote inventory.json: versions, counts and types only, no host name, identifier or object name
 ```
 
-What to read in it. The primary instance carries one management and one workload domain, the second is
-management-only, and every domain has its own vCenter and NSX manager, the workload domain's running in the management
-domain; only the workload domain's vCenter runs a Supervisor, over three vSphere zones of one cluster each, with nine
-Supervisor services, each in a namespace of its own, and each vCenter's appliances are counted by the product their
-OVF names (plate 01). The fleet's sixteen components split into appliances from an OVA and services on the management
-services runtime, at fleet and at instance scope, with VCF Automation on a runtime of its own, typed CONSUMPTION, that
-the list carries no component for; VCF Operations is one analytics node with two cloud proxies, and the vCenter, NSX
-and vSAN adapters all run on the proxies (plate 02). The release check is the reason this run exits 1: every component
-the two inventories carry is on 9.1.1, fourteen of them on a later patch (0100, 0200), and the one component
-neither inventory carries, a standalone Orchestrator, is still on 9.1.0. Of the bill's 56 rows, twenty were read
-with their version, eleven seen deployed and twenty-five not read here: a row no read finds is reported, not dropped (plate 02).
+What to read in yours. Each instance block gives the instance's domains, each with its own vCenter and NSX manager,
+a workload domain's running in the management domain; a Supervisor where one runs, with its vSphere zones, its services
+and the namespaces they sit in; and each vCenter's appliances counted by the product their OVF names (plate 01). The
+fleet table splits into appliances from an OVA and services on the management services runtime, at fleet and at
+instance scope, with VCF Automation on a runtime of its own, typed CONSUMPTION, that the list carries no component for;
+the OPS row's nodes and the collection lines say where VCF Operations collects (plate 02). The release check exits 1
+when any component is off the release: in this run it is the one component neither inventory carries, a standalone
+Orchestrator, on an earlier release than the rest. Every row of the bill is reported read, seen deployed or not read;
+a row no read finds is reported, not dropped (plate 02).

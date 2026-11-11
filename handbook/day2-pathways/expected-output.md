@@ -1,6 +1,6 @@
 # Expected output
 
-What `pathways.py` printed on the reference estate at 2026-10-22T01:16:11Z: VCF 9.1.1, one organization, signed in with a session login, read-only (no `--probe-pathways`). It exited 1 for the two tombstones. Every estate name is a placeholder.
+What `pathways.py` printed on the reference estate at 2026-10-22T01:16:11Z: VCF 9.1.1, one organization, signed in with a session login, read-only (no `--probe-pathways`). It exited 1 for its tombstones. Every estate name is a placeholder. Your run prints the same sections for the machines your deployments claim.
 
 ```
 $ python3 pathways.py

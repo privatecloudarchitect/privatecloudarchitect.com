@@ -17,8 +17,8 @@ on disk is the evidence an auditor consumes, not a data dump.
 
 `--record FILE` also writes the run as counts, dates and product words only, with every host,
 object and principal name left out, and refuses to write the file if a name it read survived.
-[`hardening.json`](hardening.json) is that record from the reference estate, and it is what the
-chapter renders.
+[`hardening.json`](hardening.json) is that record from a run on the reference estate on 2026-10-07: example
+output, to compare your own record against.
 
 ## The reads, and where each is taught
 
@@ -69,9 +69,9 @@ keep it for a throwaway credential.
 
 Two details decide whether a plane reads or skips:
 
-- **The Operations token's role must be allowed to export a policy.** A fleet API client holding
-  only a viewer role lists the policies and is refused the export with HTTP 403, and the alert-scope
-  read becomes a skip that quotes the refusal. A skip of this kind names an owner whose credential
+- **The Operations token's role must be allowed to export a policy.** On VCF Operations 9.1.1.0 a fleet API
+  client holding only a viewer role listed the policies and was refused the export with HTTP 403, and the
+  alert-scope read became a skip that quotes the refusal. A skip of this kind names an owner whose credential
   lacks a right, not a plane without an owner.
 - **`VCFA_USER` is the bare account name.** The login principal is `<VCFA_USER>@<VCFA_ORG>`, so an
   account written as `user@domain` is refused at sign-in.
@@ -108,4 +108,5 @@ a purge, a rebuilt service); it says how far back an investigation can go today.
 
 ## Expected output
 
-See [`expected-output.md`](expected-output.md) for both reference runs and the folder shape.
+See [`expected-output.md`](expected-output.md) for three runs on the reference estate, as example output to compare
+yours against, and the folder shape.

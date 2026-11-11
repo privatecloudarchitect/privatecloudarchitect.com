@@ -4,15 +4,17 @@ Companion to the chapter
 ([privatecloudarchitect.com/handbook/access-control](https://privatecloudarchitect.com/handbook/access-control)):
 a read-only script that asks the platform to state your derived authorization on each plane, instead of
 inferring it from roles and rights, and a second that re-asks the chapter's write findings on your build, each on a
-throwaway. Stdlib Python only; no token or password is printed or written.
+throwaway. Stdlib Python only; no token or password is printed or written. The chapter teaches the model; the
+records and the transcripts in this folder are example output, runs against the reference estate, to compare your own
+runs with.
 
 | File | What it is |
 |---|---|
 | `whoami.py` | Runs a self review at the organization gateway and at a namespace's own endpoint, so you can see the two identities one bearer holds; lists the published project-role catalog; reads the ProjectRoleBinding authority beside the REST projection; asks one access review twice, once without a namespace and API group and once with both, against the matching real reads; and counts what a rules review reports in one namespace. Writes `derivation.json`, and refuses to write a record carrying any estate value or identifier. |
-| `derivation.json` | That record from the reference estate, read on VCF Automation 9.1.1.0100.25757808 on 2026-10-13. The chapter's plates render it. |
+| `derivation.json` | Example output: that record from the reference estate, read on VCF Automation 9.1.1.0100.25757808 on 2026-10-13. |
 | `reprobe.py` | The writes behind the chapter, each named by a flag and none without one: a directory group imported under the automation grant and under a session login, then removed (`--probe-import GROUP`); what a project administrator may do to projects, the update and delete sent as dry runs (`--probe-project-scope`); and a throwaway namespace where two members edit and delete each other's objects (`--probe-namespace`). Every object it makes it removes and looks for again. Writes `reprobe.json`. |
-| `reprobe.json` | That record from the reference estate, the three probes run on VCF Automation 9.1.1.0100 on 2026-10-21 on the operator's go. |
-| `expected-output.md` | The transcripts of both, with what to read in them. |
+| `reprobe.json` | Example output: that record from the reference estate, the three probes run on VCF Automation 9.1.1.0100 on 2026-10-21 on the operator's go. |
+| `expected-output.md` | Example output: the transcripts of both, with what to read in yours. |
 
 ## Run it
 
@@ -83,8 +85,8 @@ the resource rules the plane reports for you in one namespace.
 Set `VC_HOST` and the script also presents **the bearer it already holds** to vCenter and records the answer.
 It needs no vCenter credential, because the finding is the refusal.
 
-On the estate this was verified against it answered `401` as a bearer token, `401` as a session id, and `401`
-with no credential at all. Identical. The token that reads the organization gateway in the same run is not a
+On VCF Automation 9.1.1.0100 vCenter answered `401` as a bearer token, `401` as a session id, and `401` with no
+credential at all. Identical. The token that reads the organization gateway in the same run is not a
 weak credential at vCenter; it is not a credential there. vCenter takes its own sign-in and decides by its own
 grants, so no dial in this chapter sets them. Where the organization signs in through VCF single sign-on, the
 person behind both can be the same directory user, and the two grants are still made and reviewed in different

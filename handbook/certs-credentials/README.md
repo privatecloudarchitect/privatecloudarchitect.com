@@ -8,11 +8,11 @@ instance from metadata alone. Stdlib Python only. **No secret can reach its outp
 | File | What it is |
 |---|---|
 | `custodian.py` | Reads the credential inventory and the per-domain certificate plane, and computes counts and dates. Every response passes through `strip_secrets` inside the function that performs the request, which deletes each secret-bearing key on arrival and replaces it with a boolean saying whether something was there. Writes `custodian.json`, and refuses to write a record carrying an estate name or a secret-bearing key. |
-| `custodian.json` | That record from the reference estate, 2026-10-21. The chapter's plates render it. |
+| `custodian.json` | What a run on the reference estate wrote on 2026-10-21: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. |
 
 ## Run it
 
-`expected-output.md` shows what it printed on the reference estate.
+`expected-output.md` shows what it printed on the reference estate: example output to compare your own run's shape against.
 
 ```bash
 export SDDC_HOST=<sddc-manager-fqdn>
@@ -24,9 +24,9 @@ python3 custodian.py
 
 ## The one thing to know before you run anything against this endpoint
 
-`GET /v1/credentials` is an inventory endpoint **and a bulk secret export at the same time**. On the build this
-was written against, the list response carries a non-empty cleartext `password` for two account types out of
-three, with no header, flag or field marking the response as sensitive, and no separate reveal call to opt into.
+`GET /v1/credentials` is an inventory endpoint **and a bulk secret export at the same time**. Read on VCF 9.1.1,
+the list response carried a non-empty cleartext `password` for system and user accounts and withheld it for service
+accounts, with no header, flag or field marking the response as sensitive, and no separate reveal call to opt into.
 
 That makes the ordinary reflexes for handling an inventory each a disclosure:
 
@@ -66,5 +66,5 @@ back populated.
 cross-tabbed `disclosedByAccountType` and `disclosedByResourceType` against `withheldByAccountType`; the
 `BACKUP` row is worth finding, because the custodian holds the credential for the backup target and the backup
 carries the custodian's own state. `certificates` carries the per-domain read (count, nearest and furthest days
-to expiry, how many fall inside a year, and the issuing chains) alongside the estate totals, the status and
+to expiry, how many fall inside a year, and the issuing chains) alongside the totals across domains, the status and
 auto-renew tallies, and `daysSorted`, which is the horizon itself and the thing to turn into calendar entries.

@@ -8,7 +8,7 @@ Stdlib Python only; no token is printed or written.
 | File | What it is |
 |---|---|
 | `vks.py` | Reads every estate-management kind at the organization gateway with the verbs it **declares** and the verbs you are actually **allowed**, which are different answers; each cluster's capacity and per-component control-plane health from the fleet projection, the triage read that needs no kubeconfig; the declared Cluster API object at each Supervisor namespace endpoint with its class, version, replicas and variables; and each machine's controller owner, the one link of the chain the script reads. Writes `vks.json`. |
-| `vks.json` | That record from the reference estate, 2026-10-21. The chapter's plates render it. |
+| `vks.json` | Example output: the record of the run on the reference estate, 2026-10-21, every organization, project, namespace and cluster name replaced. Your run writes the record of your own in its place. |
 
 ## Run it
 
@@ -28,7 +28,7 @@ python3 vks.py
 | 2 | an argument was given, a setting is missing, or a secret file is open to group or other |
 | 3 | the sign-in or a read failed |
 
-`expected-output.md` shows what it printed on the reference estate.
+`expected-output.md` is example output: what it printed on the reference estate, to compare your own run against.
 
 ## Two surfaces, and they are not the same surface
 
@@ -37,13 +37,13 @@ without entering any cluster. The Supervisor namespace endpoint carries the decl
 API object whose topology is what day-2 actually edits. Asking the right question at the wrong one produces two
 confusions this script makes visible:
 
-- **A declared verb is not a permitted verb.** Every fleet kind declares a full write set; asked one access
-  review per kind and verb, some permit writes and some only `get`. On the reference estate the data-protection
-  kinds, `clusterpolicies` and `clusterpolicytemplates` permitted writes, while `clusters`, `clusterresources`,
-  `clusterpolicyinsights` and `clusterpolicyschemas` permitted `get` and none of the write verbs. The record
+- **A declared verb is not a permitted verb.** On VCF 9.1.1 every fleet kind declares a full write set; asked one
+  access review per kind and verb, some can permit writes and some only `get`. Which kinds refuse which writes
+  depends on the kind and on your role, and `expected-output.md` shows one session identity's answer. The record
   prints both columns, and the count of kinds where they disagree.
-- **A refusal can mean "wrong place", not "not allowed".** The same list is refused at cluster scope and served
-  under a namespace. The first reading of that refusal is the wrong one, so the script records the message.
+- **A refusal can mean "wrong place", not "not allowed".** On VCF 9.1.1 the same list was refused a session
+  identity at cluster scope and served under a namespace. The first reading of that refusal is the wrong one, so
+  the script records the message.
 
 ## Scope, stated plainly
 

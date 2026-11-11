@@ -14,7 +14,7 @@ It **creates nothing, imports nothing, and changes nothing.** Every call it make
 | `--runtimes` | every action environment: its runtime, its dependency pins, whether the appliance offers that runtime, and whether its bundle has been built |
 | `--bindings <workflow-id>` | for one workflow: which attributes read a configuration element, which actions it calls (by an action element or from a script), and how many items are inline script |
 | `--package <name>` | what one package carries, bucket by bucket. A package that lists nothing exports nothing, and the export succeeds anyway |
-| `--sweep [limit]` | reads **every** workflow definition and counts how the estate is actually built. This is the number that says how much of Part IX applies to you |
+| `--sweep [limit]` | reads **every** workflow definition and counts how your appliance's content is actually built. This is the number that says how much of Part IX applies to you |
 | `--record <file>` | the counts, as the JSON the chapters render. Includes the sweep unless you pass `--no-sweep`; `--with-package <name>` adds one package's bucket counts, not its name |
 
 ## Running it
@@ -59,11 +59,13 @@ content; the runtime binding lives inside a packaged action, so it is not on tha
 
 ## Reading the record
 
-`expected-output.md` shows what each command printed on the reference estate, and `objects.json` is the record behind the handbook's Part IX.
+Example output: `expected-output.md` shows what each command printed on the reference estate's Orchestrator, embedded in
+VCF Automation 9.1.1, on 2026-10-21, and `objects.json` is that run's record, to compare your own run against.
+`--record <file>` writes the same record of yours.
 
 `--record` emits counts and product vocabulary only, by construction. No host name, object name,
-identifier or credential from your estate appears in it, which is why it is the thing the published
-chapters render.
+identifier or credential from your estate appears in it, which is why a record can be published as
+example output.
 
 | Key | Means |
 |---|---|

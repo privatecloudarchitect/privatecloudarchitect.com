@@ -80,7 +80,7 @@ app-db-01                 best-effort-small   my-vm-image            my-storage-
 If `IMAGE` shows a `vmi-` id, that machine was pinned by id: pin the display name the image lists
 give for that id instead.
 
-Those three values are known to work together on this estate, because a machine is running on them
+Those three values are known to work together in your namespace, because a machine is running on them
 right now. Starting from a proven triple removes the most common first-attempt failure, which is a
 class, an image and a storage class that are each individually valid and not available in
 combination in your namespace.
@@ -285,8 +285,8 @@ asynchronous and a VM with a powered-on guest takes a moment.
 ## Two things that will bite you
 
 **`the server has asked for the client to provide credentials`.** This is the most common error on
-this page and it is not about your manifest. The token in your `~/.kube/config` is short-lived, an
-hour on the estate this was written against, and it expires quietly. Re-vend the context and the same
+this page and it is not about your manifest. The token in your `~/.kube/config` is short-lived (its
+`exp` claim says when yours ends), and it expires quietly. Re-vend the context and the same
 command works:
 
 ```bash

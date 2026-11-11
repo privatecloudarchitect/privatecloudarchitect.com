@@ -154,9 +154,9 @@ still refuses a body without its failure policy and validations.
 
 ## After a real write
 
-Effects settled in roughly 16 to 20 seconds on the reference estate in August 2026 (the assembled isolation
-design's `verify.py` reproduces the flip on a disposable project). A read inside that window reports the previous
-regime, so read until the count is stable:
+Policy effects take seconds to settle: measured on 9.1 on 2026-08-08, an action policy took longer to propagate than
+a role binding (the assembled isolation design's `verify.py` reproduces the flip on a disposable project). A read
+inside that window reports the previous regime, so read until the count is stable:
 
 ```
 python3 governance.py --actions <deployment-id>

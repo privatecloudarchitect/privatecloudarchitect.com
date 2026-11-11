@@ -5,9 +5,8 @@ A cluster's API server answers on a virtual IP, and "the VIP" is not one object.
 controller actually stores it and reports what is there now:
 
   1. the GRAPH: every virtual service, the address object it references, the policy set it carries, and the
-     pools that policy set selects. The chapter this ships with previously described three objects; the walk
-     finds four, and the fourth is where the port-to-pool choice is made, which is why one virtual service can
-     front more than one pool;
+     pools that policy set selects. The policy set is where the port-to-pool choice is made, which is why one
+     virtual service can front more than one pool;
   2. the ARITHMETIC: virtual services, address objects, policy sets and pools counted, with the pool total
      explained by how many selection rules each policy set carries. If those numbers do not reconcile on your
      controller, the graph has a shape this script did not expect and the difference is the finding;
@@ -15,8 +14,9 @@ controller actually stores it and reports what is there now:
      that it is created empty, before any node exists, so a populated pool is the end of a story whose
      beginning is only visible in the controller's event log at provision time.
 
-Read-only throughout. The controller's API took a session login on the reference estate: POST /login with a
-username and password, then carry the session cookie and the CSRF token it sets.
+Read-only throughout. The controller's API takes a session login: POST /login with a username and password,
+then carry the session cookie and the CSRF token it sets. The walk sends no X-Avi-Tenant header, so it reads the
+tenant the login lands in; guest-cluster objects that sit in an organization's tenant need that header (G-142).
 
 Run:
   export AVI_HOST=<avi-controller-fqdn>

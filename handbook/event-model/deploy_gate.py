@@ -13,8 +13,8 @@ Dry run by default: without --apply it prints every call it would make and chang
 Why each step is there. The workflow is imported, not typed into a console, so the script it runs is gate.py
 byte for byte, which test_gate.py has already checked off the engine. The Automation host, not the
 Orchestrator, is what dispatches an event, and it learns the Orchestrator's workflows by enumerating them on a
-schedule, so a newly imported workflow is unknown to it until the next pass (about ten minutes apart on the
-reference estate). A subscription bound before then is stored and silent; so the subscription is created only
+schedule, so a newly imported workflow is unknown to it until the next pass, and the dispatch line prints how
+long that took. A subscription bound before then is stored and silent; so the subscription is created only
 once GET /vro/workflows/{id} on the Automation host answers 200 (events.py --workflow is the same check). The
 subscription is refused without a scope, because an unscoped blocking subscription holds every delete in the
 organization. And every write is read back, because the create calls report acceptance, not effect.

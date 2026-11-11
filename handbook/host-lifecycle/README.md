@@ -10,7 +10,7 @@ Python only; no credential is printed or written.
 | File | What it is |
 |---|---|
 | `hostlife.py` | Reads, for every cluster of every vCenter you name: whether it is managed with an image, the image's parts (base image, vendor add-on, firmware and drivers add-on, components, solutions) and its stored image compliance; whether Configuration Profiles is enabled, when (from its audit records), the document's sections and counts (never a value from it), and its stored compliance with, for every drifted item, its path and its non-identifying fields; and around them the depots and the newest base image they hold, any hardware support manager, any host profile, and the Auto Deploy and Image Builder services. Exits 1 when a cluster is still on baselines or a stored compliance is not compliant. Writes `out/hostlife.record.json`, scrubbed, and refuses to write a record in which a vCenter, cluster, host or depot server name, or an address, survived. `hostlife.py plan` prints the ordered moves for your answers. |
-| `records/hostlife.record.json` | That record from the reference estate, 2026-10-25, three vCenters on VCF 9.1.1. The chapter's plates render it. |
+| `records/hostlife.record.json` | What a run on the reference estate wrote on 2026-10-25, on VCF 9.1.1: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. The chapter prints its report as example output and holds its readings to it. |
 | `expected-output.md` | What the script printed for that record, and what `plan` printed for the chapter's example answers. |
 
 ## Run it
@@ -93,7 +93,7 @@ carries the time vCenter last checked. Two things it reports are easy to misread
   there, and where the build has no JSON form it falls back to SOAP, whose property read is a read carried in a
   `POST`, as every SOAP call is.
 - No compliance check, precheck, stage, remediation, export, extract or service start is sent. The Auto Deploy rules
-  are not read: the vCenter REST API's own catalog of services, read on the reference estate, lists none for them.
+  are not read: the catalog of services the vCenter 9.1.1 REST API returned lists none for them.
 - The configuration document is reduced to its section names and counts in memory. A drifted item keeps only the
   fields whose names cannot identify anything; every other field is listed by name under `withheld`, never by value.
 - Every vCenter, cluster, host and depot server name in the record is a placeholder, and the script refuses to write a

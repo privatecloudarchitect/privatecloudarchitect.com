@@ -2,8 +2,9 @@
 
 One run of `inventory.py` against a VCF Automation 9.1.1 organization on 2026-10-20, signed in with a session login
 (`VCFA_USER`, `VCFA_PASSWORD`) and given a provider bearer for the provider edges (`VCFA_PROVIDER_BEARER_FILE`), with `naming-standard.json` beside it so the naming audit runs. Every estate name is a placeholder the script assigned in the order it met
-the object; the audit prints conformance counts and never a name. The kind counts are distinct kinds:
-SupervisorNamespace is served in two API versions and counts once, so `taxonomy.json` holds 101 entries and 100 kinds.
+the object; the audit prints conformance counts and never a name. The kind counts are distinct kinds: a kind served
+in two API versions (on 9.1.1, SupervisorNamespace) counts once, so `taxonomy.json` holds one entry more for each such
+kind than the taxonomy line counts.
 
 ```text
 inventory.py: the construct model read through the Cloud Consumption Interface, read-only
@@ -71,22 +72,22 @@ wrote taxonomy.json (100 kinds) and estate.json (2 project(s)) and naming.json (
 Read the `bound` map as the namespace's four create-time bindings. `zone` is not a `zoneName` field on the
 namespace: on 9.1 the spec carries `classConfigOverrides`, and the zone is named inside it, alongside the per-zone
 budget the namespace restates for itself. `storageClasses` and `vmClasses` are not spec fields either; the class
-config carries them and the namespace reports the effective set in its status, which is why every namespace here
-shows one storage class and four machine classes rather than the zeroes an earlier run of this script printed
-against field names that no longer exist.
+config carries them and the namespace reports the effective set in its status, which is where the script reads
+them; an earlier version of it read field names that no longer exist and printed zeroes, so a namespace of yours
+that reads zero storage classes is worth a second look before you trust the line.
 
 The four records it wrote are [`taxonomy.json`](taxonomy.json) (every VMware API group and kind the interface
 declared, with scope, verbs, and the count of each top-level kind), [`estate.json`](estate.json) (the tree),
-[`naming.json`](naming.json) (per construct, how many of that estate's names conform to the standard), and
+[`naming.json`](naming.json) (per construct, how many of the names met conform to the standard), and
 [`edges.json`](edges.json) (every edge between constructs with the field that proves it).
 
 Read an edge line as From, its cardinality, To, the tier, then how many objects stood on each side, how many To each
-From held, and how many From each To had. Every declared cardinality held on this run; one that did not would end its
-line with `NOT AS DECLARED`.
+From held, and how many From each To had. A declared cardinality your estate does not bear out ends its line with
+`NOT AS DECLARED`: read that row before you design on the edge.
 
-Six of forty-nine names conformed on that run, which is the ordinary result for an estate that grew before it had a
-standard: the region and the projects conform, and the namespaces, zones, classes, VPC, subnets, and VM classes do
-not. The verdict column is the work list, and the rename order is outermost boundary first.
+On that run the region and the projects conformed in full; the namespaces, zones, classes, VPC, subnets and VM
+classes not at all; and the virtual machines and VKS clusters in part. In yours, the verdict column is the work list,
+and the rename order is outermost boundary first.
 
 ## Asking whether the bindings hold: `--probe-bindings`
 
@@ -136,12 +137,12 @@ null either, so a namespace cannot even be released to no project. The binding i
 rather than by interface shape, and it holds whatever pathway put the namespace there.
 
 **The third row is the adoption pathway.** A namespace can be created on the Supervisor directly, and the platform
-has an import that would bring such a namespace into a project. On this estate it is refused because the Supervisor
-is attached to an NSX manager, which is what VPC networking means, and the check runs before the namespace is even
+has an import that would bring such a namespace into a project. On 9.1.0 it was refused because the Supervisor was
+attached to an NSX manager, which is what VPC networking means, and the check ran before the namespace was even
 looked up. Where that path is closed, every namespace is born through this interface, with its project chosen at
 that moment and never after. What a Supervisor on vSphere networking answers is untested here and not claimed.
 
 A documented cross-project path does exist and it is a copy, not a move: capture the namespace as a blueprint and
 redeploy it under another project, leaving the original where it is.
 
-On 9.1.1 the spec also carries `sharedSubnets` and `infraPolicyNames`, and the `bound` map counts both: none of the namespaces here names either.
+On 9.1.1 the spec also carries `sharedSubnets` and `infraPolicyNames`, and the `bound` map counts both for each of your namespaces.

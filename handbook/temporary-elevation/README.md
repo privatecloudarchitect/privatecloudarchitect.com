@@ -9,9 +9,9 @@ password is printed or written, and every secret file open to group or other is 
 | File | What it is |
 |---|---|
 | `elevation.py` | Asks your build what it can time-box: every policy type the plane declares, with every field its definition, target and scope schemas declare and the ones that could hold a time bound in the schema's own words; the published schema of the two kinds that grant access, checked against the objects; and the deployment fields that **do** carry a time bound. With `--probe-elevation <binding name>` it also moves one binding you name up a role and puts it back, reading the object directly after every step. Writes `elevation.json`. |
-| `elevation.json` | That record from the reference estate on VCF Automation 9.1.1: the enumeration read 2026-10-22 at 09:50Z, and the probe block from the 09:49Z run with the flag, on a binding made for the test. The chapter's plates render it. |
+| `elevation.json` | Example output: the record of one run on the reference estate on VCF Automation 9.1.1, the enumeration read 2026-10-22 at 09:50Z and the probe block from the 09:49Z run with the flag, on a binding made for the test. `elevation.py` writes the record of your own run. |
 | `broker.py` | The design as code you can read and run: `grant` (the approval writes the record; a scope grant records the baseline role at approval and refuses a non-member or an overlap), `check` (ownership first and absolute, then a live grant for a destructive action; prints a verdict, executes nothing), `reconcile` (the scope axis: plan by default, `--apply` writes in place and reads back, then writes a heartbeat), `heartbeat` (exits 1 when the reconciler has stopped or failed). |
-| `expected-output.md` | What both scripts printed on the reference estate. |
+| `expected-output.md` | Example output: what both scripts printed on the reference estate, to compare your own runs against. |
 
 ## Run it
 
@@ -67,7 +67,7 @@ access kinds' published schema declares, and the emptiness of `anyExpiryField` i
 rather than something you are told. The schema is read rather than the objects alone because an object shows
 only the fields that are set: an optional expiry left empty would appear on none of them.
 
-Time bounds **do** exist on this platform, on two policy types: the lease bounds a deployment's life
+Time bounds **do** exist on this platform, on two policy types of VCF Automation 9.1.1: the lease bounds a deployment's life
 (`leaseTermMax`, `leaseTotalTermMax`, `leaseGrace`, in days) and the approval policy bounds how long a request is
 kept (`autoApprovalExpiry`). Neither bounds a person's reach, and that difference is the chapter.
 

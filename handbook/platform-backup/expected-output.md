@@ -1,6 +1,6 @@
 # Expected output
 
-What `recovery.py` printed on the reference estate on 2026-10-22 at 08:32Z: VCF 9.1.1, the primary instance's
+What `recovery.py` printed on the reference estate on 2026-10-22 at 08:32Z: VCF 9.1.1, one instance's
 lifecycle manager, management vCenter and network manager, read-only. vCenter and the network manager signed in with
 a user and a password file; the lifecycle manager took a bearer file.
 
@@ -37,7 +37,8 @@ recovery.py: what protects the management plane, and whether it actually ran
 wrote recovery.json (3 of 3 plane(s) read); every address, path and account name replaced by a placeholder
 ```
 
-It exited 0: every plane's newest copy is younger than its schedule allows. It exits 1 the day one is not, which is
-the alert to schedule. The run counts and coverage are counts within each plane's history: the lifecycle manager keeps
-tasks for 365 days, so its window moves forward a day at a time, and the network manager reports only its most recent
-backup.
+It exited 0: every plane's newest copy was younger than its schedule allows. It exits 1 the day one is not, which is
+the alert to schedule. Your run prints the same sections for your planes; its counts are yours. The run counts and
+coverage are counts within each plane's history: the lifecycle manager keeps tasks for as long as its task retention
+setting says (365 days on that run), so its window moves forward a day at a time, and the network manager reports only
+its most recent backup.

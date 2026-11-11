@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "dde7324171f40c7aaba54ad53ce351628a70a0384301a0c8c16299fe0a8f581e"
+   "sha256": "cad8c09028522386543c1951c3cffe8242b28f01e4594b687833c7a69204fdaf"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1323,7 +1323,7 @@
   },
   {
    "path": "/handbook/orchestrator-objects",
-   "title": "The Orchestrator object model: six kinds, five namespaces, three bindings · Private Cloud Architect"
+   "title": "The Orchestrator object model: six kinds, typed categories, three bindings · Private Cloud Architect"
   },
   {
    "path": "/handbook/orchestrator-packaging",
@@ -1423,7 +1423,7 @@
   },
   {
    "path": "/notes/control-plane-lb-build-order",
-   "title": "The control-plane load balancer is built before the first node · Private Cloud Architect"
+   "title": "The control-plane load balancer was built before the first node · Private Cloud Architect"
   },
   {
    "path": "/notes/day2-patching-and-hardening",

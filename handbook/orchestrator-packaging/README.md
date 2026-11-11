@@ -11,8 +11,8 @@ credentials, nothing uploaded.
 | `validate_content.py` | Walks the files and folders you name and checks every workflow (`.workflow` package or its XML), action (`.action` package or its XML) and `metadata.json` it finds. Prints each finding as `file:line: rule level: message`, a summary by rule, and with `--record` a counts-only record. |
 | `metadata.example.json` | The shape of an action's interface, written before its code: a name, typed and described inputs, and the fields the result carries. `validate_content.py` checks any `metadata.json` against it (R12). |
 | `fixtures/` | Workflows, actions and a metadata file that each break chosen rules, with `expected.json`, the findings they must produce. The packaged fixtures are kept as text members and zipped when the self-test runs. |
-| `records/findings.json` | The validator run over the reference estate's Orchestrator content on 2026-10-21: counts by kind and rule, no file name and no content. |
-| `expected-output.md` | What the self-test and that run printed. |
+| `records/findings.json` | Example output: the record of a run over the reference estate's Orchestrator content on 2026-10-21, counts by kind and rule, no file name and no content. `--record <file>` writes the same record of your own run. |
+| `expected-output.md` | Example output: what the self-test and that run printed, to compare your own run against. The self-test prints the same line on any machine, since its fixtures ship here. |
 
 ## Run it
 
@@ -48,8 +48,8 @@ exit. A clean file prints nothing but the summary.
 | R11 | warning | actions | every parameter carries a description, and the module declares a result type |
 | R12 | error | `metadata.json` | a name that passes R10, and every input and output named, typed and described |
 
-R1 to R6 are the workflow rules this platform's content was built to, generalized from the validator written
-alongside the operator's deploy script. They are this tool's rules: which of them the appliance refuses today was
+R1 to R6 are workflow rules generalized from a validator written alongside a deploy script, which records refused
+imports as their origin. They are this tool's rules: which of them the appliance refuses today was
 not re-tested, so read a clean run as "meets these rules", not as "the import will succeed".
 
 ## Scope, stated plainly

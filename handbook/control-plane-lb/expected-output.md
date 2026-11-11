@@ -1,6 +1,6 @@
 # Expected output
 
-What `vip.py` printed on the reference estate at 2026-10-22T01:03:37Z: the workload Avi controller, a session login, GETs only. It exited 0: every pool holds a member. Every object name is a placeholder in `vip.json` and none is printed.
+Example output: what `vip.py` printed on the reference estate's controller at 2026-10-22T01:03:37Z, under VCF 9.1.1, with a session login and GETs only, for you to compare the shape of your own run against. It exited 0, which it does when every pool holds a member. Every object name is a placeholder in `vip.json`, and none is printed.
 
 ```
 $ python3 vip.py

@@ -8,8 +8,8 @@ answer, and reports the difference. Stdlib Python only; no credential is printed
 | File | What it is |
 |---|---|
 | `recovery.py` | Reads each plane's schedule in its own encoding, counts the calendar days its run history covers and the days it does not, checks the age of each plane's newest successful copy against the longest wait its schedule allows, computes the span the retained copies cover, diffs the copy's scope against the parts catalog where the plane publishes one, normalises the targets before comparing them, and asks each plane whether a restore has ever run on it. Exits 1 when a newest copy is overdue: that is the alert. Every response passes through `strip_secrets` inside the function that performs the request. Writes `recovery.json`, and refuses to write a record carrying an address, a path or an account name. |
-| `recovery.json` | That record from the reference estate, 2026-10-22, three planes on VCF 9.1.1. The chapter's plates render it. |
-| `expected-output.md` | What the script printed for that record. |
+| `recovery.json` | What a run on the reference estate wrote on 2026-10-22, three planes on VCF 9.1.1: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. |
+| `expected-output.md` | What the script printed on that run: example output to compare your own run's shape against. |
 | `rehearsal.md` | A record template for the restore rehearsal: what to write down before, during and after, so the result is a list rather than an impression. |
 
 ## Run it
@@ -37,13 +37,13 @@ run read fewer planes than the record on disk.
 
 ## The schedule is not the cadence
 
-Every plane encodes "when" differently, and the field that names the cadence is not the field that sets it:
+Every plane encodes "when" differently, and the field that names the cadence is not the field that sets it (VCF 9.1.1):
 
-| plane | the field that names it | what it says | the day list beside it | what actually happens |
-|---|---|---|---|---|
-| lifecycle manager | `frequency` | `WEEKLY` | all seven days named | **daily** |
-| vCenter | none | nothing | empty list | **daily** (empty means every day here) |
-| network manager | `resource_type` | `WeeklyBackupSchedule` | five integers | **weekdays only** |
+| plane | the field that names it | the field that sets it | how its day list reads |
+|---|---|---|---|
+| lifecycle manager | `frequency` | `daysOfWeek`, day names | the backup runs on each day named, so `WEEKLY` over every day named is **daily** |
+| vCenter | none | `recurrence_info.days` | an **empty** list means every day, not none |
+| network manager | `resource_type` | `days_of_week`, integers | the backup runs on each day listed; a run's date fixes how the plane numbers them |
 
 So the script takes the timestamps. It collapses every recorded run to a calendar day, then reports the days
 **between** the first and the last that carry nothing. That number is the one worth having, and it exists
@@ -52,9 +52,9 @@ nowhere in any status field.
 ## Why a gap never alerts
 
 A failed backup is a record. A backup that never started is the absence of one, and absences are not in the
-list anybody is watching. On the estate this was written against, every recorded run succeeded, no run carried
-an error, and there were still stretches of more than two weeks with no copy at all. Every dashboard built on
-last-run-status was correctly green throughout.
+list anybody is watching. A history can hold nothing but successful runs, none carrying an error, and still have
+stretches of weeks with no copy at all, and every dashboard built on last-run-status stays correctly green through
+them.
 
 **Alert on the age of the newest copy, not on the status of the last run.** It is two timestamps and one
 comparison, and it is the only signal that separates a healthy estate from a silent one. `recovery.py` makes that
@@ -62,14 +62,14 @@ comparison per plane and exits 1 when a copy is overdue, so a scheduled run of i
 
 ## Retention is copies, not days
 
-A plane that keeps the 30 most recent copies keeps 30 days only when 30 runs happened on 30 consecutive days. The
+A plane that keeps the most recent *n* copies keeps *n* days only when a run happened on each of *n* consecutive days. The
 script computes the span the retained copies actually cover from the run history (`recoveryWindow`), on the planes
 that publish both a retention count and a history to count it against.
 
 ## The history has a horizon
 
-From 9.1.1 the lifecycle manager cleans up tasks older than a retention setting (`taskRetentionDays`; 365 on the
-reference estate). A count of runs, a coverage figure and the absence of a restore task all reach back that far at most,
+From 9.1.1 the lifecycle manager cleans up tasks older than a retention setting (`taskRetentionDays`, 1 to 730
+days). A count of runs, a coverage figure and the absence of a restore task all reach back that far at most,
 so read the window's first day beside the count.
 
 ## Scope, stated plainly

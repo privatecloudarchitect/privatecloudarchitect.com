@@ -36,9 +36,9 @@ keep it for a throwaway credential.
 
 ## Scope, stated plainly
 
-- Run on one VCF Operations 9.1.1 instance and its VCF Automation on 2026-10-07, with `--write` (first on 9.1.0,
-  2026-09-16 and 2026-09-21, read-only); every number in `expected-output.md` is from the 2026-10-07 run. Your totals will differ; the shape
-  of each step should not.
+- Example output: run on the reference estate's VCF Operations 9.1.1 and its VCF Automation on 2026-10-07, with
+  `--write` (first on 9.1.0, 2026-09-16 and 2026-09-21, read-only); every number in `expected-output.md` is from the
+  2026-10-07 run, to compare your own run's shape against. Your totals will differ; the shape of each step should not.
 - Read-only unless you pass `--write`. Steps 1 to 7 send no mutation: step 6 runs `ensure()` in dry-run mode and
   prints the request it would have sent, and step 7 shows `confirm()` on reads alone. Step 8, only with `--write`,
   sends that request: it refuses to start if a custom group named `PCA - Example - resilient call throwaway (VMs)` already
@@ -46,7 +46,7 @@ keep it for a throwaway credential.
   created even when a check in between fails. It needs a credential that may create and delete custom groups. The
   one file the client writes is the cache file, atomically, at owner-only permissions.
 - A dry run proves the request a program would send, never that the platform accepts it. Step 6's request as first
-  written named `Custom Group` as the group type, which none of the reference estate's eighteen types is, and
+  written named `Custom Group` as the group type, which none of the instance's group types is, and
   carried no member criteria; its dry run printed it without complaint on every run. With the type corrected, the
   platform refused it the first time it was sent (HTTP 400, "Define member criteria or objects to include"). A
   custom group's `resourceKindKey` is its group type, `Environment` here, and a group needs a rule or a member.

@@ -26,9 +26,9 @@ A workload on VCF 9.1 can be labelled in at least five places, and three of them
 | **projection** | A writes into B's store, and needs a credential on B to do it |
 | **coincidence** | two planes use the same word and share nothing |
 
-The one people assume between vCenter and NSX is **reference**, and on the estate this was written from it did not
-happen (two named machines, the NSX inventory read once after the attach, the group's members
-watched for two minutes, VCF 9.1). NSX
+The one people assume between vCenter and NSX is **reference**, and in the test the chapter records, on VCF 9.1, it
+did not happen (two named machines, one of each kind, the NSX inventory read once after the attach, the group's
+members watched for two minutes). NSX
 documents an **import** of vCenter tags, which creates NSX tags; that is a different relationship with a
 different failure mode (it is correct on the day you run it and drift by the following week).
 

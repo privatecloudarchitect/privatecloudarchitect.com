@@ -55,8 +55,8 @@ useful call on this API.
 The flag sends that call with a grant naming a group that exists nowhere, follows the location, and reports how
 many targets would be affected and how many policies would then apply to each. It then re-reads the policy list
 and **stops hard if anything was created**. It compares each affected target with how many policies apply to it
-today, read from the decision log; the reference estate's numbers are in
-[`expected-output.md`](expected-output.md).
+today, read from the decision log; an example run's output is in
+[`expected-output.md`](expected-output.md), to compare yours against.
 
 There is a narrower mode, `?validationOnly=true`, which checks the policy body and returns it without creating
 anything: the cheap gate for a pipeline. `--authority` uses it. It refuses an action that exists nowhere and a
@@ -76,7 +76,7 @@ there, asks again, approves, and reads it gone. Teardown runs whatever happened:
 rejected, the approval policy goes before anything it could hold, then the deployment if it is still there, the
 lease and the blueprint, and a residue read counts anything named `probe-fences` that is left.
 
-On the reference estate, VCF Automation 9.1.1 on 2026-10-22, two runs gave the same answer: the deployment's lease
+On VCF Automation 9.1.1, on 2026-10-22, two runs on throwaway objects gave the same answer: the deployment's lease
 read one day after its creation; each destroy request read `APPROVAL_PENDING` within seconds; the rejection set the
 request to `APPROVAL_REJECTED` and left the deployment in place; the approval removed it within seconds; nothing was
 left behind. The account that asked was allowed to approve its own request, because the policy named it.
@@ -128,9 +128,9 @@ Field notes, all proven on the reference build:
 
 ## Verification
 
-Effects settled in roughly 16 to 20 seconds on the reference estate in August 2026; a read inside that window
-reports the previous regime. Read the action count as an affected principal, under their own session, until two
-reads agree:
+Policy effects take seconds to settle: measured on 9.1 on 2026-08-08, an action policy took longer to propagate
+than a role binding. A read inside that window reports the previous regime. Read the action count as an affected
+principal, under their own session, until two reads agree:
 
 ```
 python3 governance.py --actions <deployment-id>      # GET /deployment/api/deployments/<id>/actions, until stable

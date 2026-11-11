@@ -20,13 +20,12 @@ findings: R6 error 2, R7 warning 16, R9 note 16
 creators: {'another': 4, "the platform's default": 12}
 ```
 
-What to read in it:
+What to read in it, and in your own run:
 
-- **No workflow broke R1 to R6.** The content was built to those rules, so this is the expected result for it, and
-  a first run on content built another way is where the findings appear.
-- **Sixteen R7 warnings:** scripts in the workflows hold non-ASCII characters (an emoji, box-drawing lines). That is
-  the case the VCF Operations 9.1.1.0 release notes warn comes back from an export as a hex-encoded string.
-- **Two R6 errors** are two files that hold JSON, saved from the API under a workflow's file names. The validator
-  names them as JSON rather than reporting a broken workflow.
-- **Twelve packages keep the platform's default creator** and four carry another; `--creator` turns the first kind
-  into a warning when your convention is a creator of your own.
+- **R1 to R6 findings** (errors, and R4's warning) name a workflow that breaks a format rule, with its file and line.
+  Content built to those rules shows none, so a first run on content built another way is where they appear.
+- **R7 warnings** name scripts that hold non-ASCII characters (an emoji, box-drawing lines). That is the case the
+  VCF Operations 9.1.1.0 release notes warn comes back from an export as a hex-encoded string.
+- **An R6 error on a file that holds JSON**, such as a response saved from the API under a workflow's file name, is
+  named as JSON rather than reported as a broken workflow.
+- **R9 notes** count packages by creator; with `--creator NAME`, a package that carries another creator is a warning.

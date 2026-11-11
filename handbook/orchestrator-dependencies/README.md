@@ -10,8 +10,8 @@ no token is printed or written.
 |---|---|
 | `deploy.py` | `validate` (offline), `plan` (GETs only), `deploy` (the six layers), `readback` (the two identifier bindings, read back from the appliance) and `teardown` (deletes exactly what the manifest names). |
 | `example/` | A manifest and one of each object the six layers create: a configuration element, a Python environment, an action, and a workflow that reads the element through its `conf-id` and `conf-key`. Every name is prefixed `pca-deptest` (`pca_deptest` where a name cannot carry a dash), so a rehearsal touches nothing else. |
-| `deploy.json` | The record of the rehearsal on the reference estate's standalone Orchestrator: both deploys, both readbacks, the counts after each, the teardown and the residue read, every identifier replaced. |
-| `expected-output.md` | What the rehearsal printed. |
+| `deploy.json` | Example output: the record of the rehearsal on the reference estate's standalone Orchestrator 9.1.0.0400, with both deploys, both readbacks, the counts after each, the teardown and the residue read, every identifier replaced. `deploy --record <file>` writes a record of your own run, every identifier replaced. |
+| `expected-output.md` | Example output: what the rehearsal printed, to compare your own run against. |
 
 ## Run it
 
@@ -51,9 +51,9 @@ is how you tell.
 
 ## Package membership, and the teardown
 
-`deploy` links each object to the package as it creates it, because an export carries what the package holds. On the
-reference estate the configuration element, the environment and the workflow joined; the action link answered 404, so
-an action deployed this way is not in the package. A workflow or configuration element in a package refused delete
+`deploy` links each object to the package as it creates it, because an export carries what the package holds. On
+Orchestrator 9.1.0.0400 the configuration element, the environment and the workflow joined; the action link answered
+404, so an action deployed this way is not in the package. A workflow or configuration element in a package refused delete
 with 409 while the package existed, so `teardown` deletes the package first (which leaves its contents in place), then
 the newest layer first, and prints each refusal's reason.
 

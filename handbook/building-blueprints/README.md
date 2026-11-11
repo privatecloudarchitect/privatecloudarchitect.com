@@ -13,8 +13,8 @@ estate already holds. Stdlib Python plus PyYAML; no token or password is printed
 | File | What it is |
 |---|---|
 | `shapes.py` | Parses every blueprint's content **as YAML** and reports the census (size, input count, resource count and the resource types each one really declares), which declarable types are never used, the types the inputs are declared with and, for every string input, whether it carries a pattern, an enumeration or a default; then joins each catalog item to the blueprint of its name in any project and compares the generated schema with the blueprint's inputs. With `--validate <dir>` it also sends every `*.blueprint.yaml` under the directory to the platform's blueprint validation, beside three blueprints broken on purpose. Writes `shapes.json`, and refuses to write a record carrying an estate value. |
-| `shapes.json` | That record from the reference estate. The chapter's plates render it. |
-| `expected-output.md` | What the script printed on the reference estate, with `--validate ../day1-provisioning/templates`. |
+| `shapes.json` | Example output: the record of that run on the reference estate, every name a placeholder. The chapter's build checks each behavior it states against it. |
+| `expected-output.md` | Example output: what the script printed on the reference estate, with `--validate ../day1-provisioning/templates`, to compare your own run against. |
 | `records/shapes-vcf-9.1.json` | The 9.1 census of 2026-09-21, as that run wrote it (its project placeholders carry the collision described below). |
 
 ## Run it
@@ -42,7 +42,7 @@ blueprint or blueprint-request count moved, which a validation must never do; 5 
 any messages. The script reads the blueprint and blueprint-request counts before and after, and stops with exit 3
 if either moved. A "valid" is only worth having from a validator that can refuse, so three blueprints broken on
 purpose go with every run: an unknown resource type, a namespace missing its required fields, and content that is
-not YAML. Valid is not deployed: a blueprint that validates can still fail at request time on something only the
+not YAML. Valid is not deployed: a blueprint that validates can still fail at request time on something only your
 estate knows, such as an image that is not there.
 
 The project id comes from `GET /project-service/api/projects`, which refuses a `sort=` parameter on 9.1.1 (it

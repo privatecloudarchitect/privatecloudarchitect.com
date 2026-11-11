@@ -10,7 +10,7 @@ look on your estate, not a sample someone typed from memory.
 | File | What it is |
 |---|---|
 | `capture.py` | Performs the chapter's calls against your own VCF Automation and writes the record: flow A (the stored refresh token traded for a bearer, then one read on each API surface), flow B (the Basic session login whose bearer arrives in a response header), the count of effective rights under each bearer, and the rights present under one and absent under the other, by name. Read-only; stdlib Python; no token value is printed or written, and the script refuses to write a record in which any secret, host, or organization survived. Exit codes below. |
-| `calls.json` | The record from the reference estate, 2026-09-21: eight exchanges with their request lines, headers, bodies, status codes, elapsed times, and each bearer's own expiry claim. |
+| `calls.json` | Example output: the record `capture.py` wrote on the reference estate, 2026-09-21, for you to diff your own record against: eight exchanges with their request lines, headers, bodies, status codes, elapsed times, and each bearer's own expiry claim. |
 | `runway.py` | How long your refresh tokens have left, and whether the one you store still works: one refresh grant with the stored token (a 400 is read for its error body and never retried), then the token list read to its declared total, each token's expiry against `WARN_DAYS` (14) and `ALERT_DAYS` (7). Read-only; stdlib Python; no token value is printed. Exit codes below. |
 | `expected-output.md` | The transcripts: `capture.py` on 2026-09-21 and `runway.py` on 2026-10-07. |
 
@@ -63,12 +63,13 @@ python3 runway.py || notify-the-owner "refresh token: act now"
   DNS domain, every token, and every identifier, and the script refuses to write it if any of them survived.
 - The provider path runs only with a provider refresh token minted in the console; the provider federation
   login (the `tm_ui` bearer) is a browser flow the script does not reproduce.
-- Both bearers' expiry claims read 3,600 seconds on the reference estate, and the OAuth answer's `expires_in`
-  agreed. A refresh token came back with the OAuth bearer and was the value sent; store what comes back either way.
+- `capture.py` prints each bearer's lifetime from its own expiry claim beside the OAuth answer's `expires_in`; on
+  VCF Automation 9.1 the three agreed. A refresh token comes back with the OAuth bearer, on 9.1 the value sent;
+  store what comes back either way.
 - `runway.py` lists the tokens the bearer's user can see, which under a service account's own bearer are its own.
   The listed expiry is what a schedule warns on; the grant is the authority on whether a stored token still
-  works, because a revoked token is refused before its listed date. On 2026-10-07 the reference estate's stored
-  token, past its rotation date, answered `invalid_grant`, and the check exited 2.
+  works, because a revoked token is refused before its listed date. `expected-output.md` shows such a run: the
+  stored token answered `invalid_grant` while the list showed other tokens with time to run, and the check exited 2.
 
 ## Reading the record
 

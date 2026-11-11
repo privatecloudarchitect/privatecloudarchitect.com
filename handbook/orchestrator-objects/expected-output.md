@@ -1,7 +1,7 @@
 # Expected output
 
 What `objects.py` printed on the reference estate on 2026-10-21: the Orchestrator embedded in VCF Automation
-9.1.1, one appliance, read-only. `--bindings` is left out because it prints the estate's own attribute names,
+9.1.1, one appliance, read-only. `--bindings` is left out because it prints the reference estate's own attribute names,
 configuration keys and action paths, which is its job on your terminal and not something to publish.
 
 ## `--inventory`

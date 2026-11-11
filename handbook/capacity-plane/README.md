@@ -12,7 +12,7 @@ run the same day, with the operator's approval, into a project that held no name
 | File | What it is |
 |---|---|
 | `capacity.py` | Reads the zones (a budget in spec, a consumption in status, for both limits and reservations), every project with the bindings it holds, and every namespace (each with a per-zone budget of its own), then runs two checks: does a zone's reported consumption equal the sum of the namespaces' **limits** or of their **reservations**, for cpu and for memory, and does a namespace hold what the class it names promised, field by field. Also reads the storage ledgers and the VM class catalog. With `--probe-overrides --project <name>` it creates namespaces in that project that depart from a class config deliberately and deletes them again. Writes `capacity.json`. |
-| `capacity.json` | That record from the reference estate. The chapter's plates render it. |
+| `capacity.json` | That record from the reference estate, an example of what your run writes. The chapter states the behaviors it shows on the build, and carries the run's printed lines as example output. |
 | `expected-output.md` | What the script printed on the reference estate, the read-only run and the probe. |
 | `records/capacity-overrides-vcf-9.1.json` | The probe's section of the record from the 9.1 run of 2026-09-18, as that run wrote it. |
 
@@ -87,7 +87,8 @@ with `sumOfLimits`, `sumOfReservations`, `zoneReportsUsed` and whether they matc
 a namespace holds it (`agree` of `total`, `byField`, `widest` for the largest single divergence, `exact` for the
 namespaces that hold their class's four figures, and `storageInherited` for those that omit storage and take the
 config's limit). `storage` is the per-class ledger with a TiB conversion beside the raw figure; **do not add those
-rows up**, two of them are byte-identical views of one pool. `vmClasses` carries the catalog count and how many
+rows up** before checking whether two storage classes report one pool: rows with byte-identical figures are the sign to
+look for. `vmClasses` carries the catalog count and how many
 require a reservation. `overrides` is present when the probe ran, or when an earlier run's probe wrote it and this
 run carried it forward: `probedUtc`, the `project` it wrote into, each case with its status and outcome, how many
 namespaces it `made`, `teardownSeconds`, any `residue`, and `zonesBefore`, `zonesAfter` and `zonesReturned`.

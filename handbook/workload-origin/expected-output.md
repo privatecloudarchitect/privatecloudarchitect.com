@@ -1,7 +1,7 @@
 # Expected output
 
-Runs against the reference estate on 2026-10-07 (VCF 9.1, one Supervisor on a VPC-networked NSX), with `--scrub`,
-so every estate name is a placeholder. The Supervisor Service identifiers are the product's own and are kept.
+Runs against the reference estate on 2026-10-07 (vCenter 9.1.1 build 25712839 with the Supervisor at vsc9.1.1.0, one
+Supervisor on a VPC-networked NSX), with `--scrub`, so every estate name is a placeholder. The Supervisor Service identifiers are the product's own and are kept.
 
 ## origins.py, the estate as it stands
 
@@ -26,15 +26,14 @@ namespace origins, read 2026-10-07T18:56:08Z: 12 namespace(s) on 1 Supervisor(s)
   0 check(s) failing
 ```
 
-Five namespaces were created through VCF Automation: it holds their records, vCenter's system metadata names the
-same organization and project, and each one's VPC sits in the organization's NSX project. Seven belong to the
-Supervisor Services. None was created on the Supervisor itself.
+Each line gives a namespace's origin and its evidence: an `automation` line names the organization and project
+that VCF Automation's record and vCenter's system metadata agree on, with the VPC in the organization's NSX project,
+and a `service` line names the Supervisor Service that runs in it. Your run lists your own namespaces the same way.
 
 ## origins.py beside a throwaway created on the Supervisor
 
 One namespace was created through vCenter's API at 19:24:33Z (`POST /api/vcenter/namespaces/instances/v2` with a
-name, the Supervisor and one zone; no storage, classes, library or access entries) and reached `RUNNING` in 11
-seconds. Before the create, the Supervisor read `RUNNING`, with no upgrade in flight, and its one condition was a
+name, the Supervisor and one zone; no storage, classes, library or access entries) and reached `RUNNING`. Before the create, the Supervisor read `RUNNING`, with no upgrade in flight, and its one condition was a
 warning that a load-balancer CRD-operator system pod was not running.
 
 ```text
@@ -87,7 +86,7 @@ default project with a services subnet, an attachment to the default connectivit
 default SNAT rule, an SNAT address allocation, an address pool, a default group and a security profile attachment,
 plus an address block and a share under `/infra` and one container project. `origins.json` lists them by type.
 
-The namespace was deleted at 19:35:42Z (`DELETE /api/vcenter/namespaces/instances/{namespace}`) and was gone 34
-seconds later. Read back after that: vCenter's namespaces, folders and resource pools, every NSX policy object
-under `/orgs/default` (295 before, 295 after), every NSX object carrying the name, and VCF Automation's namespace
+The namespace was deleted at 19:35:42Z (`DELETE /api/vcenter/namespaces/instances/{namespace}`) and was gone
+within the minute. Read back after that: vCenter's namespaces, folders and resource pools, every NSX policy object
+under `/orgs/default` (the same count before and after), every NSX object carrying the name, and VCF Automation's namespace
 records were identical to the read taken just before the create.
