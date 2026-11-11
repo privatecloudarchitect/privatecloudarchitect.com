@@ -84,14 +84,13 @@ says there are more). These fields appear from the next capture: `records/deploy
   also prints the object kind the records name, which is the kind the alert takes.
 - **Noise from restarts.** `try` counts the records that came within ten minutes after the same host booted, from
   the host's own `esx.audit.host.boot` records and vCenter's. A host writes some of the records an alert would count
-  while it starts: on the reference estate, 14 of 18 SSH-enabled records and a third of the NIC link-down and
-  uplink-redundancy records. An alert on those fires at every planned restart, so route it to a queue, or read the
+  while it starts: most SSH-enabled records, and many of the NIC link-down and uplink-redundancy ones, come as a
+  host boots. An alert on those fires at every planned restart, so route it to a queue, or read the
   setting that causes it, before it reaches a pager.
 - **Noise from failures that end by themselves.** `episodes` groups the record a failure starts with into episodes
-  and says which went on to lose something. On the reference estate, over 22 days, remote logging's start record
-  began 27 episodes; messages were lost in 5, and 4 others touched most hosts at once and ended with nothing lost,
-  one on all 11. The loss record came in each of the 5 and again while the failure lasted, so the remote logging
-  alert worth paging on is the loss (LP-01 in the chapter's workshop), with the start as context. Run it both ways:
+  and says which went on to lose something. Remote logging's start record begins far more episodes than end in a
+  loss: most end with nothing lost, many on most hosts at once, while the loss record comes in every episode that lost
+  messages and again while the failure lasts. So the remote logging alert worth paging on is the loss (LP-01 in the chapter's workshop), with the start as context. Run it both ways:
   `--source vcenter` is what vCenter wrote, the default is what Log Management holds and an alert counts, and for
   one of those episodes the store held 2 of the 22 records vCenter wrote.
 - **Which object an alert can sit on.** An alert counts only records that belong to an object of its own kind.

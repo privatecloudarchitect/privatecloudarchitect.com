@@ -127,7 +127,7 @@
   "listed_in_widget": true,
   "on_guidance_page": true,
   "cautions": [
-   "Evaluated per step: over a range the answer is the union of every step's top k (6 series for k=3 over 30 minutes on 6 hosts) and the legend changes as leaders change. by (label) is accepted."
+   "Evaluated per step: over a range the answer is the union of every step's top k, so more than k series, and the legend changes as leaders change. by (label) is accepted."
   ],
   "verified": {
    "date": "2026-10-19",
@@ -177,7 +177,7 @@
   "listed_in_widget": true,
   "on_guidance_page": true,
   "cautions": [
-   "VCF-specific. Selects the n series with the highest sum over the whole query range and returns their raw values (checked against a manual sum over 6 hosts): exactly n series, stable legend. by (label) is accepted and ignored; VMware guidance says by and without are unsupported."
+   "VCF-specific. Selects the n series with the highest sum over the whole query range and returns their raw values (checked against a manual sum): exactly n series, stable legend. by (label) is accepted and ignored; VMware guidance says by and without are unsupported."
   ],
   "verified": {
    "date": "2026-10-19",
@@ -464,7 +464,7 @@
   "listed_in_widget": true,
   "on_guidance_page": true,
   "cautions": [
-   "Equals the number of decreases inside the window (167 of 181 buckets exact on a gauge); on a gauge it counts dips, not counter resets."
+   "Equals the number of decreases inside the window, as tested on a gauge; on a gauge it counts dips, not counter resets."
   ],
   "verified": {
    "date": "2026-10-19",
@@ -564,7 +564,7 @@
   "listed_in_widget": false,
   "on_guidance_page": false,
   "cautions": [
-   "Correct on the cumulative vmop.* names (vmop.vmotion.CLSTR stepped 2227 to 2230 over 24 h on the management source); returns 0 on a quiet cluster."
+   "Correct on the cumulative vmop.* names (vmop.vmotion.CLSTR steps by the migrations inside the window); returns 0 on a quiet cluster."
   ],
   "verified": {
    "date": "2026-10-19",

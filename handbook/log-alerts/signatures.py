@@ -38,8 +38,8 @@ Read-only. Three subcommands, each answering one question a log alert depends on
 
   monitor   What did Log Management build from my condition, and when does it run?
             Log Management runs each log symptom as an OpenSearch monitor, and OpenSearch logs the definition it
-            stores (`TransportIndexMonitorAction`) into the same store where the platform's own logs are collected,
-            as they are on the reference estate. For a symptom name, the latest logged definition: its schedule, the
+            stores (`TransportIndexMonitorAction`) into the same store, when that store collects the platform's own
+            logs. For a symptom name, the latest logged definition: its schedule, the
             window as a range on the event's own timestamp, and each filter as the query it became (an exact `term`
             for `vc_event_type` and `appname`, a `match_phrase` on the whole line for `text`).
 
@@ -47,7 +47,7 @@ Read-only. Three subcommands, each answering one question a log alert depends on
             A record belongs to the object its `vmw_vr_ops_id` names, and an alert counts only records of its own
             object kind. Over --hours: for each object kind, how many objects and records, and which applications
             wrote them; and for vCenter's events about a virtual machine, the object each event type binds to (on
-            the reference estate most bind to the VM's host, not the VM).
+            9.1.1 most bind to the VM's host, not the VM).
 
   fields    Does every field my query names exist here?
             Log Management's field catalog (`GET /api/v2/fields`), tallied by source and category, and with
@@ -255,8 +255,8 @@ AFTER_BOOT_MIN = 10
 def after_boot(s, body: dict, start: int, end: int) -> dict:
     """How many of a query's records came within ten minutes after the same host booted.
 
-    A host writes some of the records an alert would count while it starts: on the reference estate most of its
-    SSH-enabled records and a third of its link-down ones. An alert on such a record fires at each planned restart,
+    A host writes some of the records an alert would count while it starts: on 9.1.1 most of its SSH-enabled
+    records and many of its link-down ones. An alert on such a record fires at each planned restart,
     which is how alerts get muted. The boots are the host's own `esx.audit.host.boot` records and vCenter's events of
     the same type, matched by host name.
     """

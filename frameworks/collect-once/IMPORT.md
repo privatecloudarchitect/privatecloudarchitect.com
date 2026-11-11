@@ -66,7 +66,7 @@ placeholder, the six lists fill, and the three viewers show the message above un
 - **Heights.** The text widgets were sized for a 1380 px wide window (twelve columns). Narrower windows wrap the
   text; drag a widget taller if its last lines are cut.
 - Nothing else is environment-specific. Statkeys, units, and cadences are the product's, and the catalog text
-  cites the reference estate only where a number was measured there.
+  carries no estate's numbers: every list and chart is your instance's own.
 
 ## If something looks wrong
 

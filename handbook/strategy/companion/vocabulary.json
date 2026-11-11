@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "cad8c09028522386543c1951c3cffe8242b28f01e4594b687833c7a69204fdaf"
+   "sha256": "7fdac025922df848d7709f18d0a2727d3b24e6dd4ff2b280e572af4101c831ad"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1415,7 +1415,7 @@
   },
   {
    "path": "/notes/cloud-proxy-certificates",
-   "title": "Cloud proxy certificates in VCF Operations 9.1.1 compose as three planes, and the root ends the chain first · Private Cloud Architect"
+   "title": "Cloud proxy certificates compose as three planes, one per direction · Private Cloud Architect"
   },
   {
    "path": "/notes/configuration-maximums",
@@ -1451,7 +1451,7 @@
   },
   {
    "path": "/notes/receive-drops-and-collection-lag",
-   "title": "Receive drops per VM and per vNIC exist in three collectors and ship switched off in VCF Operations; measured on the reference estate, logs reached search in seconds, flows and alerts in minutes · Private Cloud Architect"
+   "title": "Receive drops per VM and per vNIC exist in three collectors and ship switched off in VCF Operations; logs reach search in seconds, flows and alerts in minutes · Private Cloud Architect"
   },
   {
    "path": "/notes/selfsubject-review-returns-the-bearer",

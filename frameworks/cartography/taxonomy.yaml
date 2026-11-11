@@ -7,8 +7,8 @@
 # discovery, so machine observation and operator intent cannot collide.
 #
 # The `category` field is the live name on YOUR estate. If your estate namespaces its categories
-# (the reference estate runs these axes as identity.app, identity.app-layer, identity.function,
-# lifecycle.env-observed), rename them here or point CARTOGRAPHY_TAXONOMY at an alternate copy;
+# (for example as identity.app, identity.app-layer, identity.function, lifecycle.env-observed),
+# rename them here or point CARTOGRAPHY_TAXONOMY at an alternate copy;
 # every script resolves concept to category through this file. `values: open` marks an open
 # registry: the category is created empty and values mint as ratified recommendations land.
 

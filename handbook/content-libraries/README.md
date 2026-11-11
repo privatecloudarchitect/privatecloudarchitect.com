@@ -3,10 +3,11 @@
 `libraries.py` answers that for a VCF Automation organization, namespace by namespace, by reading the layer each answer
 lives on. It is read-only.
 
-Proven on VCF Automation 9.1.1.0100 and vCenter 9.1.1 on 2026-10-28 and 2026-10-29, on an estate where the provider
-content library had just been rebuilt: every namespace saw the rebuilt library's images through the Supervisor, every
-namespace's own vCenter setting was empty, a blueprint pinned by id before the rebuild resolved nowhere, and once the
-demo blueprints pinned by display name, every pin resolved and every image lock held.
+Proven on VCF Automation 9.1.1.0100 and vCenter 9.1.1 on 2026-10-28 and 2026-10-29, after a provider content library
+rebuild. A run tells you whether every namespace sees the provider's images through the Supervisor (a namespace's own
+vCenter setting reads empty even when it does), whether a pin by id survived a rebuild (it cannot: a rebuild gives every
+image a new id), and whether each display-name pin resolves and each image lock holds. `expected-output.md` is what it
+printed then, an example to compare your run with.
 
 ## Run it
 

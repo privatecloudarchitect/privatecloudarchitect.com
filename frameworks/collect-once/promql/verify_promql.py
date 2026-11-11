@@ -8,7 +8,7 @@ JWT. Credentials are read in-process from the catalog payload or from the enviro
 
   python verify_promql.py                      # full run (about two minutes on a Medium instance)
   python verify_promql.py --no-crossplane      # skip the Operations stats comparison
-  python verify_promql.py --retext             # offline: rewrite the examples' prose, keep every verified result
+  python verify_promql.py --retext             # offline: rewrite the examples' prose and the functions' cautions, keep every verified result
   OPS_HOST=... RTM_HOST=... OPS_API_TOKEN_FILE=... OPS_BROKER_HOST=... python verify_promql.py
 
 Every emitted "verified" block carries the date, the source, the HTTP status, and the series count the
@@ -125,11 +125,11 @@ CAUTIONS = {
  "rate": ["Counter semantics apply: on a gauge (cpu.usagemhz.HOST, a series with many decreases) rate() returned no negative value and sat far closer to a reset-adding computation than to a plain first-to-last delta; the dialect block of examples.json records this run's counts and errors. The example in VMware guidance rate(cpu.capacity.usage.HOST{host='host-17'}[5m]) applies it to a gauge and overstates change.",
           "Use avg_over_time or max_over_time for a level; rate and increase only on cumulative names (vmop.*.CLSTR and DCENTER, envoy_*_total)."],
  "irate": ["Same counter semantics as rate; on a gauge it returned no negative value and did not match a last-two-points delta."],
- "increase": ["Correct on the cumulative vmop.* names (vmop.vmotion.CLSTR stepped 2227 to 2230 over 24 h on the management source); returns 0 on a quiet cluster."],
- "resets": ["Equals the number of decreases inside the window (167 of 181 buckets exact on a gauge); on a gauge it counts dips, not counter resets."],
- "topk": ["Evaluated per step: over a range the answer is the union of every step's top k (6 series for k=3 over 30 minutes on 6 hosts) and the legend changes as leaders change. by (label) is accepted."],
+ "increase": ["Correct on the cumulative vmop.* names (vmop.vmotion.CLSTR steps by the migrations inside the window); returns 0 on a quiet cluster."],
+ "resets": ["Equals the number of decreases inside the window, as tested on a gauge; on a gauge it counts dips, not counter resets."],
+ "topk": ["Evaluated per step: over a range the answer is the union of every step's top k, so more than k series, and the legend changes as leaders change. by (label) is accepted."],
  "bottomk": ["Per step, as topk; the union of every step's bottom k."],
- "topn_sum": ["VCF-specific. Selects the n series with the highest sum over the whole query range and returns their raw values (checked against a manual sum over 6 hosts): exactly n series, stable legend. by (label) is accepted and ignored; VMware guidance says by and without are unsupported."],
+ "topn_sum": ["VCF-specific. Selects the n series with the highest sum over the whole query range and returns their raw values (checked against a manual sum): exactly n series, stable legend. by (label) is accepted and ignored; VMware guidance says by and without are unsupported."],
  "bottomn_sum": ["VCF-specific. Mirror of topn_sum: the n series with the lowest sum over the range, raw values returned."],
  "absent": ["Returns one series valued 1 when the selector matches nothing (an unknown name or an unmatched label), and nothing when it matches. The reconcile-absence guard for a scoped extract."],
  "absent_over_time": ["As absent, over the range."],
@@ -159,7 +159,7 @@ EXAMPLES = [
   "reads": "the run queue normalized per vCPU, the number Operations shows; without the division the two planes disagree by the vCPU count."},
  {"id": "E5", "lane": "gold", "title": "vCPU to physical core ratio per host, computed live",
   "query": "sum by (host_fqdn) (cpu.corecount.provisioned.VM) / count by (host_fqdn) (cpu.utilization.PCORE{feature='TROUBLESHOOTING'})",
-  "decision": "The capacity policy input (the CPU overcommit ratio your policy sets; 4:1 in the reference estate's Default Policy) as one daily number per host: provisioned vCPUs over physical cores, from two families joined on host_fqdn.",
+  "decision": "The capacity policy input (the CPU overcommit ratio your policy sets, read from its capacity settings) as one daily number per host: provisioned vCPUs over physical cores, from two families joined on host_fqdn.",
   "reads": "one series per host; 1.0 means one vCPU per core; the count of PCORE series is the host's core count."},
  {"id": "E6", "lane": "troubleshooting", "title": "The 2-second tail: kernel latency per LUN, per host",
   "query": "max_over_time(storage.latency.totalKavg.LUN{feature='ESX_TOP'}[1m])",
@@ -219,9 +219,9 @@ def guidance_list(path):
 
 # ----------------------------------------------------------------------------------------------- main
 def retext():
-    """Rewrite the prose of examples.json (title, lane, decision, reads) from EXAMPLES without a live run, keeping
-    every verified block and the date it was verified. A changed query, companion or example set is refused: those
-    change what was verified, so they need a live run."""
+    """Rewrite the prose of examples.json (title, lane, decision, reads) from EXAMPLES, and each function's cautions in
+    functions.json from CAUTIONS, without a live run, keeping every verified block and the date it was verified. A
+    changed query, companion or example set is refused: those change what was verified, so they need a live run."""
     path = os.path.join(HERE, "examples.json")
     with open(path, encoding="utf-8") as f: rec = json.load(f)
     by_id = {e["id"]: e for e in EXAMPLES}
@@ -235,6 +235,15 @@ def retext():
         for k, v in src.items():
             if k not in ("id", "query", "companion") and e.get(k) != v:
                 e[k] = v; changed.append(f"{e['id']}.{k}")
+    fpath = os.path.join(HERE, "functions.json")
+    with open(fpath, encoding="utf-8") as f: fns = json.load(f)
+    fchanged = []
+    for fn in fns:
+        if fn.get("cautions") != CAUTIONS.get(fn["name"], []):
+            fn["cautions"] = CAUTIONS.get(fn["name"], []); fchanged.append(f"{fn['name']}.cautions")
+    if fchanged:
+        with open(fpath, "w", encoding="utf-8") as f: json.dump(fns, f, indent=1, ensure_ascii=True); f.write("\n")
+    changed += fchanged
     if changed:
         rec["textFrom"] = TODAY
         with open(path, "w", encoding="utf-8") as f: json.dump(rec, f, indent=1, ensure_ascii=True); f.write("\n")
@@ -244,7 +253,7 @@ def retext():
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--no-crossplane", action="store_true")
-    ap.add_argument("--retext", action="store_true", help="offline: rewrite the examples' prose from this file, keep every verified result")
+    ap.add_argument("--retext", action="store_true", help="offline: rewrite the examples' prose and the functions' cautions from this file, keep every verified result")
     ap.add_argument("--guidance-xlsx", default="", help="path to VMware guidance's VODAP-9.1-Metrics-List-Per-Provider.xlsx (kept out of the repository); adds the per-provider classification")
     args = ap.parse_args()
     if args.retext: return retext()

@@ -11,16 +11,16 @@ without re-deriving them. Every claim below carries its evidence; the JSON files
 | `functions.json` | the widget's Functions tab (22 functions) plus `irate` and `increase`, each with its call form, signature, standard-PromQL flag, cautions, and a live verification block | descriptions verbatim from the widget; verification by `verify_promql.py` |
 | `examples.json` | ten queries built for the collection strategy, each with the decision it serves and a verification block; the dialect facts; the cross-plane comparison | `verify_promql.py` |
 | `reconciliation.json` | every key of `metrics.json` against the live catalogs and the VMware guidance per-provider list, the acquisition profile per served name, the case pairs, the semantic findings, and the engine names the widget does not list | `verify_promql.py` |
-| `verify_promql.py` | regenerates the three JSON files against a live instance (about 250 calls, two minutes); `--guidance-xlsx <file>` adds the per-provider classification; `--retext` rewrites the examples' prose offline and keeps every verified result | stdlib only; credentials in-process, never printed |
+| `verify_promql.py` | regenerates the three JSON files against a live instance (about 250 calls, two minutes); `--guidance-xlsx <file>` adds the per-provider classification; `--retext` rewrites the examples' prose and the functions' cautions offline and keeps every verified result | stdlib only; credentials in-process, never printed |
 
 The VMware guidance list (`VODAP-9.1-Metrics-List-Per-Provider.xlsx`) is read from a path you give; it is not stored in this
 repository. Source of record for the strategy these examples serve: the Collect Once, Decide at Source charter (its public form is the metrics-collection chapter).
 
 ## 1. How it was verified
 
-One VCF 9.1 estate, 2026-09-16 (UTC). Real-Time Metrics on the reference instance, read through `/data-query-service`
-with the service JWT the suite API mints (`the harness's rtmlib.py`). Sources: three vCenter
-instance ids listed by `GET /api/v1/vcenters/metrics_config` and three NSX manager cluster ids carried by Operations as
+One VCF 9.1 instance, 2026-09-16 (UTC). Real-Time Metrics read through `/data-query-service`
+with the service JWT the suite API mints (`the harness's rtmlib.py`). Sources: the vCenter
+instance ids listed by `GET /api/v1/vcenters/metrics_config` and the NSX manager cluster ids carried by Operations as
 the `MANAGEMENT_CLUSTER_UUID` identifier of transport nodes. Operations stats for the cross-plane comparison came from
 `POST /suite-api/api/resources/stats/query` on the same VMs, keyed on `VMEntityVCID` + `VMEntityObjectID`. VMware guidance's
 per-provider list was retrieved the same day from the link on the Real-Time Metrics policy page.
@@ -105,7 +105,7 @@ Cadence, measured the same day on both vCenter sources: every name under the ESX
 a median change spacing of 20 seconds; the ESX Top profile serves 30 per minute. The VMware guidance list documents the same
 thing for the VC sheet as `Sampling Interval 20.0, Collection Interval 300.0`: the 300 is how often the collector polls,
 the 20 is the spacing of the samples it brings back. Nineteen names serve both a 20-second and a 2-second series under
-one name (21 carry `feature='ESX_TOP'` on the workload source; the VMware guidance ESXi sheet marks the same 21 as ESXTop-capable);
+one name (21 carry `feature='ESX_TOP'` on a source; the VMware guidance ESXi sheet marks the same 21 as ESXTop-capable);
 pin `feature` or a chart draws both.
 
 ## 6. The examples and the decisions they serve
@@ -125,14 +125,14 @@ pin `feature` or a chart draws both.
 | E9 | discovery | `absent(cpu.capacity.contention.VM{vm='<vm>'})` | the reconcile-absence rule as a query |
 | E10 | troubleshooting | `mem.tier.consumed.MEMTYPE{feature='ESX_TOP'}` | tiering engagement per host and tier at 2 seconds |
 
-The cross-plane comparison behind E3 and E4 (36 five-minute buckets per VM, three VMs per name, management source;
-the workload source gave the same picture):
+The cross-plane comparison behind E3 and E4 (36 five-minute buckets per VM, three VMs per name, on one source; a second source gave the same
+picture):
 
 | Real-Time Metrics name (20 s) | Operations keys | Mean ratio, median | Peak ratio, median |
 |---|---|---|---|
 | `net.throughput.usage.VM` | `net\|usage_average`, `net\|20_sec_peak_usage_average` | 0.98 | 0.95 to 0.97 |
 | `guest.contextSwapRate.VM` | `guest\|contextSwapRate_latest`, `guest\|20_sec_peak_contextSwapRate_latest` | 1.00 | 1.00 |
-| `guest.cpu.runQueue.VM` | `guest\|cpu_queue`, `guest\|20_sec_peak_cpu_queue` | equals the VM's vCPU count (4, 16, 24) | same |
+| `guest.cpu.runQueue.VM` | `guest\|cpu_queue`, `guest\|20_sec_peak_cpu_queue` | equals the VM's vCPU count | same |
 | `guest.disk.requestQueueAvg.VM` | `guest\|disk_queue`, `guest\|20_sec_peak_disk_queue` | 100 | 100 |
 
 Reading: the analytics store's 5-minute mean and its `20_sec_peak` keys are the rollups of the same 20-second samples

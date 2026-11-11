@@ -15,7 +15,7 @@ that feeds an ELT warehouse. Source of record: the Collect Once, Decide at Sourc
 
 The 2026-09-16 universal pass replaced one customer's metric list with the VM utilization catalog any warehouse asks for
 (a vCenter counter column with statistics levels, a guest-OS-through-Tools family, the decision keys only Operations carries)
-and cites the reference estate only where a number was measured; the dashboard, tab, and widget ids changed so the build
+and carries no estate's numbers; the dashboard, tab, and widget ids changed so the build
 sits beside an earlier import. Every statkey is present on the 9.1 instance the views were authored against (read live 2026-09-16); every quoted metric
 definition is VMware guidance's sentence; every number is a live measurement recorded in the charter; every PromQL query in the
 guide was executed against this instance's Real-Time Metrics on 2026-09-16 by `promql/verify_promql.py`, whose
