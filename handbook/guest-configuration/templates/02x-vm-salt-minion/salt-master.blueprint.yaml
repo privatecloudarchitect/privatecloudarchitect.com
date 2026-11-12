@@ -19,8 +19,9 @@
 #
 # The API account's grant names the two minion ids given as inputs. A master that minions
 # join for years grows that grant by editing its configuration as each one joins, which no
-# run of the companion exercised. No login is set on the master: add stage 02's operator
-# user, with sudo, if you mean to run salt-key on it by hand.
+# run of the companion exercised. No login is set on the master: to run salt-key on it by
+# hand, add one, as salt-master.vm.yaml's salt-operator block shows (not a user
+# named operator, which Ubuntu's base system already has as a group).
 #
 # What is new beside salt-master.vm.yaml, and nothing else:
 #   * the API account's digest line, the API's certificate and its key arrive as

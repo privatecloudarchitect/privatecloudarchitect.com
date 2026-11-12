@@ -1,0 +1,231 @@
+# =============================================================================
+# VM Apps (EXTRA CREDIT) - salt-minion-linux, a Linux minion as a Cloud.vSphere.Machine
+# =============================================================================
+# The All Apps Linux minion in the VM Apps dialect, rendered by guestcfg.py and held to
+# it by a test: Salt 3008 LTS pinned, the master's address and the minion's own id. The
+# same differences as the master's header lists: placement by mappings and a tag, the
+# salt-operator login, and the install as a per-boot script (G-988).
+#
+# Trust, two ways, as on All Apps:
+#   * No key pair (the default): the minion makes its own key, the master holds it
+#     pending, and you compare its base64 body's hash on both sides before you accept
+#     it by its exact id (walkthrough page 02):
+#       sudo grep -v -- ----- /etc/salt/pki/master/minions_pre/<app_name>-linux | tr -d '\n' | sha256sum
+#       sudo grep -v -- ----- /etc/salt/pki/minion/minion.pub | tr -d '\n' | sha256sum
+#       sudo salt-key -a <app_name>-linux -y    (on the master, only when the two are equal)
+#   * A key pair generated on the master (wheel key.gen_accept, or salt-key --gen-keys and
+#     a copy into the accepted folder), each half one line of base64, as minion_pem_b64
+#     and minion_pub_b64: the key is accepted from the start and never pending.
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path.
+# =============================================================================
+
+name: vmapps-salt-minion-linux
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  A Salt Project 3008 LTS minion on Ubuntu 24.04 as a VM Apps machine, joining the
+  master at the address you give.
+
+inputs:
+
+  app_name:
+    type: string
+    title: Name
+    description: >-
+      The master's app_name. The machine and its minion id are <app_name>-linux,
+      the id the master's API grant names.
+    pattern: '^[a-z][a-z0-9-]{1,10}$'
+    default: salt
+
+  # --- Placement, as in V01: mappings and a tag ---------------------------------
+  image:
+    type: string
+    title: Image mapping
+    description: >-
+      An Ubuntu 24.04 image mapping.  GET /iaas/api/images lists the mappings.
+
+  flavor:
+    type: string
+    title: Flavor mapping (size)
+    description: >-
+      The smallest size suits a lesson minion.  GET /iaas/api/flavors lists the mappings.
+
+  network_tag:
+    type: string
+    title: Network constraint tag
+    description: >-
+      A tag, key:value, on the network profile of the network the master and its
+      minions share. GET /iaas/api/network-profiles lists each profile's tags.
+    pattern: '^[^:\s]+:[^\s]+$'
+
+  ip_assignment:
+    type: string
+    title: Address assignment
+    description: >-
+      static when the network's profile hands out addresses from an IP range or an
+      IPAM integration; dynamic when the network runs DHCP.
+    enum: [static, dynamic]
+    default: static
+
+  operator_ssh_public_key:
+    type: string
+    title: Your SSH public key (one line)
+    description: >-
+      The one line of your ~/.ssh/id_ed25519.pub. cloud-init gives it to the
+      salt-operator login, with sudo; the machine accepts no password login. Not a
+      user named operator: Ubuntu's base system already has a group of that name.
+    pattern: '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/=]+( [^\n]*)?$'
+
+  salt_master_address:
+    type: string
+    title: Salt master address
+    description: The master deployment's master_address output.
+    pattern: '^[0-9a-zA-Z.:-]+$'
+
+  minion_pem_b64:
+    type: string
+    title: Seeded private key (base64, optional)
+    description: >-
+      Empty, or one line of base64 of a private key generated on the master for
+      <app_name>-linux. Marked encrypted; deleted from beside the install script
+      before anything in it can exit.
+    encrypted: true
+    default: ''
+
+  minion_pub_b64:
+    type: string
+    title: Seeded public key (base64, optional)
+    description: Empty, or one line of base64 of the matching public key.
+    default: ''
+
+resources:
+
+  # The network the machines share, found by its tag (V01). Minions dial out to the
+  # master on 4505 and 4506 on this network; nothing else needs to reach them.
+  Network:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: ${input.network_tag}
+
+  Minion:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: ${input.app_name}-linux
+      image: ${input.image}
+      flavor: ${input.flavor}
+      networks:
+        - network: ${resource.Network.id}
+          assignment: ${input.ip_assignment}
+      cloudConfig: |
+        #cloud-config
+        hostname: ${input.app_name}-linux
+        users:
+          - default
+          - name: salt-operator
+            groups: [sudo]
+            shell: /bin/bash
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            lock_passwd: true
+            ssh_authorized_keys:
+              - ${input.operator_ssh_public_key}
+        bootcmd:
+          - systemctl stop unattended-upgrades 2>/dev/null || true
+          - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        write_files:
+          - path: /opt/guestcfg/salt.sources
+            permissions: '0644'
+            content: |
+              X-Repolib-Name: Salt Project
+              Enabled: yes
+              Types: deb
+              URIs: https://packages.broadcom.com/artifactory/saltproject-deb
+              Signed-By: /etc/apt/keyrings/salt-archive-keyring.pgp
+              Suites: stable
+              Components: main
+          - path: /opt/guestcfg/salt-pin
+            permissions: '0644'
+            content: |
+              Package: salt-*
+              Pin: version 3008.*
+              Pin-Priority: 1001
+          - path: /opt/guestcfg/minion.conf
+            permissions: '0644'
+            content: |
+              master: ${input.salt_master_address}
+              id: ${input.app_name}-linux
+          - path: /opt/guestcfg/minion.pem
+            permissions: '0600'
+            encoding: b64
+            content: '${input.minion_pem_b64}'
+          - path: /opt/guestcfg/minion.pub
+            permissions: '0644'
+            encoding: b64
+            content: '${input.minion_pub_b64}'
+          - path: /opt/guestcfg/install.sh
+            permissions: '0700'
+            content: |
+              #!/bin/bash
+              set -uo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              log() { echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }
+              retry() { local left=$1; shift; until "$@"; do left=$((left-1)); [ "$left" -gt 0 ] || return 1; log "retrying: $*"; sleep 20; done; }
+              fetch_key() { curl -fsSL --retry 3 --retry-delay 5 "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public" | gpg --dearmor --yes -o /etc/apt/keyrings/salt-archive-keyring.pgp; }
+              apt_up() { apt-get -o DPkg::Lock::Timeout=300 update; }
+              if [ -s /opt/guestcfg/minion.pem ] && [ -s /opt/guestcfg/minion.pub ]; then
+                install -d -m 0700 /etc/salt/pki/minion
+                install -m 0400 /opt/guestcfg/minion.pem /etc/salt/pki/minion/minion.pem
+                install -m 0644 /opt/guestcfg/minion.pub /etc/salt/pki/minion/minion.pub
+                rm -f /opt/guestcfg/minion.pem
+                log "the key pair generated on the master is in place before the minion first starts"
+              else
+                rm -f /opt/guestcfg/minion.pem
+                log "no key pair was seeded: the minion makes its own at first start"
+              fi
+              install -d -m 755 /etc/apt/keyrings
+              retry 6 fetch_key || { log "the Salt signing key could not be fetched"; exit 1; }
+              install -m 0644 /opt/guestcfg/salt.sources /etc/apt/sources.list.d/salt.sources
+              install -m 0644 /opt/guestcfg/salt-pin /etc/apt/preferences.d/salt-pin-1001
+              retry 6 apt_up || { log "the Salt repository could not be read"; exit 1; }
+              apt_in() { apt-get -o DPkg::Lock::Timeout=300 install -y salt-common=3008.5 salt-minion=3008.5; }
+              retry 3 apt_in || { log "the Salt minion packages did not install"; exit 1; }
+              apt-mark hold salt-common salt-minion
+              install -m 0644 /opt/guestcfg/minion.conf /etc/salt/minion.d/guestcfg.conf
+              systemctl enable salt-minion
+              systemctl restart salt-minion
+              log "salt-minion restarted with the run's configuration"
+          - path: /opt/guestcfg/apt-timeouts
+            permissions: '0644'
+            content: |
+              Acquire::http::Timeout "30";
+              Acquire::https::Timeout "30";
+              Acquire::Retries "3";
+          - path: /var/lib/cloud/scripts/per-boot/10-guestcfg.sh
+            permissions: '0755'
+            content: |
+              #!/bin/bash
+              set -uo pipefail
+              [ -f /var/lib/guestcfg/installed ] && exit 0
+              export DEBIAN_FRONTEND=noninteractive
+              log() { echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }
+              systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+              dpkg --configure -a || true
+              install -m 0644 /opt/guestcfg/apt-timeouts /etc/apt/apt.conf.d/99guestcfg-timeouts
+              prereq() { apt-get -o DPkg::Lock::Timeout=300 update && apt-get -o DPkg::Lock::Timeout=300 install -y ca-certificates curl gnupg; }
+              left=6; until prereq; do left=$((left-1)); [ "$left" -gt 0 ] || { log "the install's prerequisites did not install"; exit 1; }; sleep 30; done
+              bash /opt/guestcfg/install.sh || { log "install.sh failed; the next boot runs it again"; exit 1; }
+              install -d -m 0755 /var/lib/guestcfg
+              touch /var/lib/guestcfg/installed
+              log "installed; later boots skip this script"
+
+outputs:
+
+  minion_id:
+    description: The id the minion presents, and the one to accept.
+    value: ${input.app_name}-linux
+
+  sign_in:
+    description: The minion's login, with the SSH key you gave.
+    value: ssh salt-operator@${resource.Minion.address}

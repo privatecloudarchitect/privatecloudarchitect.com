@@ -1,0 +1,136 @@
+# =============================================================================
+# VM Apps (EXTRA CREDIT) - salt-minion-win, a Windows minion as a Cloud.vSphere.Machine
+# =============================================================================
+# The Windows minion in the VM Apps dialect. On All Apps the companion's Windows minion
+# goes through the VM Service's Sysprep path; here it is the VM Apps organization's own
+# Windows form: cloudConfig is a MIME multipart document whose one part,
+# #ps1_sysnative, Cloudbase-Init runs at first boot. That part sets the built-in
+# Administrator's password from the admin_password input and enables the account, then
+# runs the same PowerShell install the All Apps paths run (guestcfg.py renders both, and
+# a test holds this file to it): the pinned Salt 3008.5 installer from Broadcom's package
+# location, silent, with the master's address and this minion's id. Not remoteAccess:
+# on the image the proof used it set no password that Administrator, Admin or
+# cloudbase-init accepted (G-989).
+#
+# The machine's name is its Windows host name, so <app_name>-win stays within 15
+# characters.
+#
+# Accept the key by exact id, after comparing it: hash the pending key's base64 body on
+# the master, and on the minion, signed in as Administrator over RDP or at the console,
+# run walkthrough page 05's PowerShell line, which hashes the same body:
+#   sudo grep -v -- ----- /etc/salt/pki/master/minions_pre/<app_name>-win | tr -d '\n' | sha256sum
+#   sudo salt-key -a <app_name>-win -y    (only when the two hashes are equal)
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path.
+# =============================================================================
+
+name: vmapps-salt-minion-windows
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  A Salt Project 3008 LTS minion on Windows Server 2022 as a VM Apps machine, joining
+  the master at the address you give.
+
+inputs:
+
+  app_name:
+    type: string
+    title: Name
+    description: >-
+      The master's app_name. The machine and its minion id are <app_name>-win, the
+      id the master's API grant names; 15 characters at most in all.
+    pattern: '^[a-z][a-z0-9-]{1,10}$'
+    default: salt
+
+  # --- Placement, as in V01: mappings and a tag ---------------------------------
+  image:
+    type: string
+    title: Image mapping
+    description: >-
+      A Windows Server 2022 image mapping.  GET /iaas/api/images lists the mappings.
+
+  flavor:
+    type: string
+    title: Flavor mapping (size)
+    description: >-
+      Two vCPUs and 8 GiB suit Windows.  GET /iaas/api/flavors lists the mappings.
+
+  network_tag:
+    type: string
+    title: Network constraint tag
+    description: >-
+      A tag, key:value, on the network profile of the network the master and its
+      minions share. GET /iaas/api/network-profiles lists each profile's tags.
+    pattern: '^[^:\s]+:[^\s]+$'
+
+  ip_assignment:
+    type: string
+    title: Address assignment
+    description: >-
+      static when the network's profile hands out addresses from an IP range or an
+      IPAM integration; dynamic when the network runs DHCP.
+    enum: [static, dynamic]
+    default: static
+
+  admin_password:
+    type: string
+    title: Administrator password
+    description: >-
+      The built-in Administrator's password, set at first boot, and your login to
+      compare the minion's key. At least 12 characters (this blueprint's own floor),
+      within your image's password policy, and no single quote: the first boot writes it
+      into a PowerShell string. Marked
+      encrypted so the platform stores it as a secret and the request form masks it.
+    encrypted: true
+    pattern: "^[^']{12,127}$"
+
+  salt_master_address:
+    type: string
+    title: Salt master address
+    description: The master deployment's master_address output.
+    pattern: '^[0-9a-zA-Z.:-]+$'
+
+resources:
+
+  # The network the machines share, found by its tag (V01). Minions dial out to the
+  # master on 4505 and 4506 on this network; nothing else needs to reach them.
+  Network:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: ${input.network_tag}
+
+  Minion:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: ${input.app_name}-win
+      image: ${input.image}
+      flavor: ${input.flavor}
+      networks:
+        - network: ${resource.Network.id}
+          assignment: ${input.ip_assignment}
+      cloudConfig: |
+        Content-Type: multipart/mixed; boundary="==guestcfg=="
+        MIME-Version: 1.0
+
+        --==guestcfg==
+        Content-Type: text/x-shellscript; charset="us-ascii"
+        MIME-Version: 1.0
+        Content-Transfer-Encoding: 7bit
+        Content-Disposition: attachment; filename="salt-minion.ps1"
+
+        #ps1_sysnative
+        $ErrorActionPreference='Stop'; Set-LocalUser -Name Administrator -Password (ConvertTo-SecureString -String '${input.admin_password}' -AsPlainText -Force); Enable-LocalUser -Name Administrator
+        $ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; $url='https://packages.broadcom.com/artifactory/saltproject-generic/windows/3008.5/Salt-Minion-3008.5-Py3-AMD64-Setup.exe'; $exe=Join-Path $env:TEMP 'Salt-Minion-Setup.exe'; for($i=1;$i -le 10;$i++){ try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $exe; break } catch { if($i -eq 10){ throw }; Start-Sleep -Seconds 30 } }; Start-Process -FilePath $exe -ArgumentList '/S','/master=${input.salt_master_address}','/minion-name=${input.app_name}-win' -Wait
+        --==guestcfg==--
+
+outputs:
+
+  minion_id:
+    description: The id the minion presents, and the one to accept.
+    value: ${input.app_name}-win
+
+  address:
+    description: The minion's address, for RDP as Administrator with the password you gave.
+    value: ${resource.Minion.address}

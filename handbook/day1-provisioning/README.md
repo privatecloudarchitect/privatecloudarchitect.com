@@ -61,6 +61,9 @@ lands in a Supervisor namespace your platform vends you. The
 
 ## Start here
 
+0. **Is your organization VM Apps, not All Apps?** Read [`vm-apps/README.md`](./vm-apps/README.md) first: how to
+   tell, the four V-stages that teach this series' first habits in the VM Apps dialect, and where VM Apps ends and
+   how an organization moves to All Apps. Everything else on this page is for All Apps.
 1. **Cannot yet run `kubectl get supervisornamespaces`?** Read
    [`00-reaching-the-supervisor.md`](./00-reaching-the-supervisor.md): install the
    vcf CLI, authenticate, and get the context these templates run against.

@@ -18,8 +18,8 @@
 #
 # The API account's grant below names two minion ids. A master that minions join for years
 # grows that grant by editing its configuration as each one joins, which no run of the
-# companion exercised. No login is set on this machine: add stage 02's operator user, with
-# sudo, if you mean to run salt-key on it by hand.
+# companion exercised. The salt-operator account below signs in with your SSH public key, so you
+# can run salt-key here by hand (walkthroughs 01 to 06); drop it for a master no one logs in to.
 #
 # Before you apply it:
 #   1. Generate the API's certificate and key, and paste each into the cloud-config below:
@@ -50,6 +50,18 @@ stringData:
   user-data: |
     #cloud-config
     hostname: salt-master
+    # The operator login, for the by-hand walkthroughs (01 to 06 in this folder): your SSH public
+    # key, no password, sudo for the lessons that change a managed file. cloud-init's default
+    # user stays. Drop these lines and the machine has no login, the shape the proof runs built.
+    users:
+      - default
+      - name: salt-operator     # not operator: Ubuntu already has a group of that name
+        groups: [sudo]
+        shell: /bin/bash
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        lock_passwd: true
+        ssh_authorized_keys:
+          - <REPLACE_ME-your-ssh-public-key>      # cat ~/.ssh/id_ed25519.pub
     bootcmd:
       - systemctl stop unattended-upgrades 2>/dev/null || true
       - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true

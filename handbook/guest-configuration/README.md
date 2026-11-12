@@ -1,11 +1,45 @@
 # Guest configuration with Salt
 
-Companion to the handbook's [guest configuration chapter](https://privatecloudarchitect.com/handbook/guest-configuration), extra credit that nothing later in the handbook depends on.
-Stage 02 of the template series ends with a machine that configures itself once, at first boot. This folder holds what
-keeps that guest configured afterwards, on the free, community-driven Salt Project's path:
+Companion to the handbook's [guest configuration chapter](https://privatecloudarchitect.com/handbook/guest-configuration),
+extra credit that nothing later in the handbook depends on. Stage 02 of the [day-1 series](../day1-provisioning/README.md)
+ends with a machine that configures itself once, at first boot. This folder takes you from there to a Salt master you
+run yourself, minions you trust one at a time, states that keep each guest configured, and the same three machines as
+VCF Automation blueprints, on the free, community-driven Salt Project's path.
+
+**Which Salt.** This is Salt Project, the free community tool, run by you, on your own master. It is not VMware Salt
+(a licensed VCF Advanced Service) and it is not the Salt that VCF runs for its own components, which is not a master
+for your workloads. Nothing later in the handbook depends on this track.
+
+## Start here: the walkthrough
+
+Eight pages, in order. Each one teaches one idea, builds or changes one thing with `kubectl` and `ssh`, shows what each
+command printed when the walkthrough was proven, names the things that will bite you, and ends with a table of what you
+did and where it goes in a pipeline. Page 00 says what you need; every later page starts where the one before it ended.
+
+| Page | The idea | You finish with |
+|---|---|---|
+| [00 Before you start](00-before-you-start.md) | there are three Salts, and you run only one; one master, minions that join it | a namespace you know can host the lessons |
+| [01 A master by hand](01-a-master-by-hand.md) | a master is a VM you declare; its API is TLS with an account that can do only what you list | an API sign-in over TLS, and an empty key list |
+| [02 One minion and its key](02-one-minion-and-its-key.md) | a minion is an identity: compare its key out of band, then accept it by exact id | one trusted Linux minion answering a ping |
+| [03 Your first state](03-your-first-state.md) | a state declares the end, so the second apply changes nothing | two applies, the second with no change |
+| [04 Drift](04-drift.md) | `test=True` names drift and changes nothing; then an apply corrects it | a drift named, then gone |
+| [05 A Windows minion](05-a-windows-minion.md) | the same minion through Sysprep, its key checked at the console | the same state applied to Windows, unchanged |
+| [06 Retire a minion](06-retire-a-minion.md) | the key, then the machine, then the master | a namespace read back with nothing left |
+| [07 The same, as blueprints](07-the-same-as-blueprints.md) | the master once, minions that take its address as an input | a complete run through VCF Automation, read step by step |
+
+The hand-applied templates carry an optional login, `salt-operator`, which pages 01 to 06 use to sign in to the master
+and the Linux minion. The blueprints carry none: a master no one signs in to is the shape to run.
+
+**Your organization is VM Apps?** [`vm-apps/README.md`](vm-apps/README.md) takes these eight pages through the VM Apps
+dialect by difference, with three blueprints proven there: the master at its own address, the same key checks, the
+same states. Read this walkthrough's pages as you go; the VM Apps page says only what changes.
+
+## What is in this folder
 
 | What | Where |
 |---|---|
+| `00-before-you-start.md` to `07-the-same-as-blueprints.md` | The walkthrough, above. |
+| `vm-apps/` | The walkthrough on a VM Apps organization, by difference, and its three `Cloud.vSphere.Machine` blueprints: `salt-master.blueprint.yaml`, `salt-minion-linux.blueprint.yaml` and `salt-minion-windows.blueprint.yaml`, each machine's first boot rendered by `guestcfg.py` and held to it by a test. |
 | `guestcfg.py` | Stands up an independent Salt master, a Linux minion and a Windows minion on the VM Service, directly at the namespace endpoint or through VCF Automation blueprints, walks the guest-configuration lifecycle, removes every object it made, and writes a scrubbed record. Standard library; no token, password or private key is printed or written. |
 | `states/guestcfg/` | The three small Salt states a run applies: `init.sls`, one managed file for Linux and Windows; `drift.sls`, the drift for step 6; and `probe.sls`, reads that change nothing (the minion's own public key and its fingerprints, the directory it keeps its key pair in, and on Windows the signed-in sessions). |
 | `templates/02x-vm-salt-minion/` | The same shapes for readers. To apply by hand: `salt-master.vm.yaml`, `salt-minion-linux.vm.yaml`, `salt-minion-windows-sysprep.vm.yaml` (the default Windows path) and `salt-minion-windows.vm.yaml` (cloud-init, for an image built with Cloudbase-Init), with `<REPLACE_ME-...>` placeholders. As VCF Automation blueprints in stage 02's shape: `salt-master.blueprint.yaml`, `salt-minion-linux.blueprint.yaml` and `salt-minion-windows-sysprep.blueprint.yaml`, each taking inputs. All densely commented, and a test holds each to what the run renders. They sit in this folder, beside the script, because the template series' folder is enumerated and pinned at six stages: this branch does not change that count. |
@@ -13,13 +47,15 @@ keeps that guest configured afterwards, on the free, community-driven Salt Proje
 | `expected-output.md` | What the script printed: the two complete runs of 2026-11-11 (directly at the namespace endpoint, and through the three blueprints), then two runs of an earlier revision, 2026-11-10. |
 | `records/` | Each of those runs' records under its date: the two complete runs of 2026-11-11, and from 2026-11-10 the cloud-init path on Windows and the Windows name refused on the Sysprep path. |
 
-**Which Salt.** This is Salt Project, the free community tool, run by you, on your own master. It is not VMware Salt
-(a licensed VCF Advanced Service) and it is not the Salt that VCF runs for its own components, which is not a master
-for your workloads. Nothing later in the handbook depends on this track.
+## The harness: guestcfg.py
+
+`guestcfg.py` runs the whole walkthrough as one program, from the master to the read-back, on either path, and writes a
+scrubbed record of what it did. Use it to check your namespace before page 01 (`guestcfg.py read`), to run the lessons
+again end to end once you know them, and to compare your estate's behavior with the runs recorded here.
 
 **Provenance:** run on VCF Automation 9.1.1 under a session login, in throwaway namespaces created for the runs
 ([`expected-output.md`](expected-output.md)). On 2026-11-11 the second proof completed every step twice: through VCF
-Automation from the three blueprints as they stood at the repository's commit `108782b3` (run A5; since then, in
+Automation from the three blueprints as they stood that day (run A5; since then, in
 `salt-minion-linux.blueprint.yaml` the deletion of the seeded private key's copy moved before anything in the install can
 exit; comments changed, as did the description of the master blueprint's address output), and directly at the namespace
 endpoint with a key generated on the master for the Linux minion and the load balancer's source ranges read (run B,
@@ -29,7 +65,15 @@ each tore down cleanly. On 2026-11-10, an earlier revision completed with Syspre
 kept in [`records/`](records/): the cloud-init path on Windows, and the Windows name refused on the Sysprep path. Each
 run's teardown removed everything it made and read the namespace back with nothing left.
 
-## Run it
+The walkthrough itself was proven page by page on 2026-11-12, by hand, in a throwaway namespace, and each page shows
+what its commands printed there. Four steps ran in another form than the page gives: page 01's password went through a
+shell variable and `-d password=` rather than a file and `--data-urlencode`; page 01 applied its two files in separate
+commands, and its load balancers' addresses were read with the same `jsonpath` one service at a time; page 03 listed the
+states without printing `init.sls`, which the page shows as the file ships; and page 05's console step was not run
+(G-987). Page 07 reads run A5's record; the blueprints have changed since only in comments, one output's description
+and the Linux install's order.
+
+### Run it
 
 ```bash
 export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org> VCFA_USER=<account>
@@ -73,7 +117,7 @@ Exit codes: 0 done; 2 a sign-in was refused, a precondition was not met, or a st
 something this run created could not be removed; 5 an unknown argument. An unknown argument is refused before any
 client opens; `--help` prints the usage and does nothing else.
 
-## What a run does
+### What a run does
 
 | Step | What it does | What it proves |
 |---|---|---|
@@ -107,7 +151,7 @@ machines underneath it, waits for each to be gone, deletes the blueprints, and r
 project's deployments and blueprints by the run's names. A teardown on the supervisor path refuses to delete an object a
 deployment made, and says to set `GUESTCFG_VIA=automation`. The automation path takes the Sysprep blueprint for Windows.
 
-## Reach: how a script outside the VPC talks to a master inside it
+### Reach: how a script outside the VPC talks to a master inside it
 
 The master sits on the namespace's private VPC network and the script runs from somewhere else. The Salt API therefore
 needs a way in, and it gets the narrowest one that does the job: the stage 03 load-balancer shape, one
@@ -140,7 +184,7 @@ the two minions it expects, and the password is held only in a Kubernetes Secret
 in Salt's `file` eauth backend, never the password itself. The master's Salt configuration keeps `auto_accept: False`
 and `open_mode: False`, and enables only the three API clients the run uses.
 
-## Windows: two ways to bootstrap, one that is named when it fails
+### Windows: two ways to bootstrap, one that is named when it fails
 
 `GUESTCFG_WINDOWS_BOOTSTRAP=sysprep`, the default, takes the path Windows carries as shipped: `spec.bootstrap.sysprep.rawSysprep`
 over a Secret holding an unattend answer file, the VM Operator project's minimal raw Sysprep configuration plus an
@@ -172,7 +216,7 @@ job, and 20 for a machine's delete; on the automation path, 45 for a deployment 
 deleted; and 3 for each source-range setting to be read. The script prints a progress line at regular intervals while it
 waits.
 
-## Trust: accept the ones you expect
+### Trust: accept the ones you expect
 
 The master never accepts a key on its own. The run lists pending keys and accepts exactly the two minion ids it expects
 (the machines' own names, `guestcfg-<run>-linux` and `gc-<run>-win`; a Windows machine's name is its host name, and on the Sysprep path VM Operator refuses one over 15 characters). A third machine cannot be created in this
@@ -184,15 +228,22 @@ the probes.
 
 Before acceptance the run has the master's view of a pending key and no second source to check it against, so
 acceptance is by exact expected id, which trusts the id the minion declares. By hand, do better: compare the key itself,
-out of band, before you accept it. Print the pending key on the master with `sudo salt-key -p <minion-id>`, read the
-minion's own `minion.pub` in the directory its `pki_dir` names (`/etc/salt/pki/minion` on Linux, readable by root,
-`C:\ProgramData\Salt Project\Salt\conf\pki\minion` on Windows, each read from a 3008.5 minion installed as this
-folder installs it), and accept with `sudo salt-key -a <minion-id>` only when the lines between `BEGIN PUBLIC KEY` and
-`END PUBLIC KEY` are the same. That needs a way into both machines that is not Salt, a console or SSH with a login given
-at create: the master and Linux minion templates here carry none, so add stage 02's operator user, with `sudo`, if you
-mean to compare by hand; on the Sysprep path the Administrator password you give is the Windows login. How to reach a VM
-Service machine's console on 9.1.1 is not established here, and no run compared by hand. Where it fits, a key generated
-on the master (below) needs no comparison.
+out of band, before you accept it, as walkthrough pages 02 and 05 do. Hash the key's base64 body, the lines between
+`BEGIN PUBLIC KEY` and `END PUBLIC KEY` joined into one, on each side: on the master,
+`sudo grep -v -- ----- /etc/salt/pki/master/minions_pre/<minion-id> | tr -d '\n' | sha256sum`; on a Linux minion the
+same over its own `/etc/salt/pki/minion/minion.pub`; on a Windows minion page 05's PowerShell line over
+`C:\ProgramData\Salt Project\Salt\conf\pki\minion\minion.pub` (each the directory a 3008.5 minion's own `pki_dir`
+names, installed as this folder installs it). Accept with `sudo salt-key -a <minion-id>` only when the two are equal.
+Hash the body, not the file: the master stores the key without its final newline, so a `sha256sum` of each whole file
+differs for the same key (G-980). The comparison needs a way into both machines that is not Salt: the hand-applied
+templates' optional `salt-operator` login for the master and the Linux minion, and for Windows the machine's web
+console (`vcf vm web-console <vm>`) with the Administrator password the Sysprep answer file sets. In the walkthrough's
+proof the Linux comparison ran on both sides before acceptance. On Windows, `vcf vm web-console` was not run on the
+minion; a console request made by hand on another machine was answered, but the proof's workstation had no route to the
+Supervisor's console address, so no console was opened (G-987), and page 05's PowerShell line was proven through Salt
+after acceptance. On a VM Apps organization the same line ran over the Administrator's own sign-in before the accept
+([`vm-apps/README.md`](vm-apps/README.md)). Where it fits, a key generated on the master (below)
+needs no comparison.
 
 Do not compare fingerprints for this on Salt 3008.5. `salt-key -f` on the master and `salt-call --local key.finger` on
 the minion hash different text: the minion's `key.finger` hashes the lines inside `minion.pub`, header and footer
@@ -224,7 +275,7 @@ characters", a PEM private key is longer, and splitting it across commands was n
 acceptance by exact id. Run B's record, written before this wording, gives an earlier reason in
 `steps.keysGenerated.windowsNotSeededBecause`.
 
-## What the runs confirmed, and what they did not
+### What the runs confirmed, and what they did not
 
 Each behavior below held on VCF Automation 9.1.1, on 2026-11-10 or in the second proof of 2026-11-11; the runs' own
 output, with their timings, is in [`expected-output.md`](expected-output.md), and that is the place to compare your run
@@ -242,8 +293,8 @@ with.
 - The `file` eauth backend with a SHA-256 digest, the `L@` target and the `@wheel` and `@runner` rights worked as
   configured: the run accepted keys, generated one, pinged, applied states, read keys and deleted them with no other
   right.
-- The three blueprints validated with no error, deployed through VCF Automation as the run read them at commit
-  `108782b3`, the master's first and then the two minions' with its address as an input, and the teardown deleted the
+- The three blueprints validated with no error, deployed through VCF Automation as the run read them that day, the
+  master's first and then the two minions' with its address as an input, and the teardown deleted the
   minions' keys, then the deployments, the minions' first, then the master's, then the blueprints. The master
   blueprint's one-entry array input, `["0.0.0.0/0"]`, reached the `VirtualMachineService`'s `loadBalancerSourceRanges`
   unchanged in runs A4 and A5; a longer list was not run.
@@ -259,11 +310,13 @@ with.
   VM Service supplied.
 
 Not exercised: a Windows image built with Cloudbase-Init, a guest that cannot reach the package location (an internal
-mirror), a key compared by hand, out of band, before acceptance (the run reads the two copies after acceptance, which is
-not a trust check), a key seeded into a Windows minion, a master's API grant grown as minions join, and a
-run that reaches any of its time limits other than the Windows address.
+mirror), a Windows key compared at the console before acceptance (the walkthrough's proof opened no console, above; the
+harness reads the two copies after acceptance, which is not a trust check), a key seeded into a Windows minion, a
+master's API grant grown as minions join, the three blueprints through a catalog form rather than the API, and a run
+that reaches any of its time limits other than the Windows address. A Linux key compared by hand before acceptance was
+exercised in the walkthrough's proof of 2026-11-12 (page 02).
 
-## Reading the record
+### Reading the record
 
 `guestcfg.json` is written after every `run --execute`, success or failure, with every estate name replaced by a
 placeholder and refused if a secret or an estate value survives. `steps` carries each step's result, `created` what the

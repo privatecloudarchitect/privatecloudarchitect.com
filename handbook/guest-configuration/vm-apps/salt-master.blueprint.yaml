@@ -1,0 +1,396 @@
+# =============================================================================
+# VM Apps (EXTRA CREDIT) - salt-master, a Salt master as a Cloud.vSphere.Machine
+# =============================================================================
+# The All Apps master (../templates/02x-vm-salt-minion/salt-master.blueprint.yaml) in
+# the VM Apps dialect: one Ubuntu 24.04 machine, Salt Project 3008 LTS pinned, the API on
+# TLS with a narrow account, no automatic key acceptance. The configuration it writes is
+# the All Apps master's, line for line: guestcfg.py renders both, and a test holds this
+# file to its renderer.
+#
+# What differs on VM Apps, and why:
+#   * Placement by mappings and a tag (template V01), not a namespace, class and image.
+#   * No load balancer. The master sits on a network your administrator routes, so the
+#     API (8000) and SSH (22) are reached at the master's own address. If your
+#     workstation cannot route to that network, you need a jump host on it.
+#   * A login, salt-operator, with your SSH key: on VM Apps there is no kubectl, so the
+#     key list is read on the master itself (walkthrough pages 01, 02 and 05).
+#   * The install runs as a per-boot script with a done marker, not a runcmd: vSphere's
+#     guest customization can reboot the machine in the middle of cloud-init's first
+#     boot, and cloud-init never runs again a once-per-instance module it started (G-988). apt's waits are
+#     bounded.
+#
+# Before you request it, make the three encoded inputs, each one line (as for All Apps):
+#   openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj /CN=salt-master \
+#     -keyout api.key -out api.crt
+#   openssl base64 -A -in api.crt          # api_tls_cert_b64
+#   openssl base64 -A -in api.key          # api_tls_key_b64
+#   printf 'guestcfg-api:%s\n' "$(printf '%s' "$PASSWORD" | sha256sum | cut -d' ' -f1)" \
+#     | openssl base64 -A                  # api_digest_b64, from the API password you choose
+# Then give the master's address (its output) to each minion as salt_master_address.
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path.
+# =============================================================================
+
+name: vmapps-salt-master
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  An independent Salt master (Salt Project 3008 LTS) on Ubuntu 24.04 as a VM Apps
+  machine, its API over TLS at the master's own address. Minions join it through their
+  own blueprints, given that address.
+
+inputs:
+
+  app_name:
+    type: string
+    title: Name
+    description: >-
+      Lowercase slug the machines' names derive from: <app_name>-master here, and
+      <app_name>-linux and <app_name>-win for the minions, so the API's grant below
+      names them. Keep it to 11 characters: a Windows name holds 15.
+    pattern: '^[a-z][a-z0-9-]{1,10}$'
+    default: salt
+
+  # --- Placement, as in V01: mappings and a tag ---------------------------------
+  image:
+    type: string
+    title: Image mapping
+    description: >-
+      An Ubuntu 24.04 image mapping.  GET /iaas/api/images lists the mappings.
+
+  flavor:
+    type: string
+    title: Flavor mapping (size)
+    description: >-
+      Two vCPUs and 4 GiB suit a lesson master.  GET /iaas/api/flavors lists the mappings.
+
+  network_tag:
+    type: string
+    title: Network constraint tag
+    description: >-
+      A tag, key:value, on the network profile of the network the master and its
+      minions share. GET /iaas/api/network-profiles lists each profile's tags.
+    pattern: '^[^:\s]+:[^\s]+$'
+
+  ip_assignment:
+    type: string
+    title: Address assignment
+    description: >-
+      static when the network's profile hands out addresses from an IP range or an
+      IPAM integration; dynamic when the network runs DHCP.
+    enum: [static, dynamic]
+    default: static
+
+  operator_ssh_public_key:
+    type: string
+    title: Your SSH public key (one line)
+    description: >-
+      The one line of your ~/.ssh/id_ed25519.pub. cloud-init gives it to the
+      salt-operator login, with sudo; the machine accepts no password login. Not a
+      user named operator: Ubuntu's base system already has a group of that name.
+    pattern: '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/=]+( [^\n]*)?$'
+
+  # --- The master's API, as on All Apps -----------------------------------------
+  linux_minion_id:
+    type: string
+    title: Linux minion id
+    description: >-
+      The id the API account may reach: <app_name>-linux, the Linux minion
+      blueprint's machine name.
+    pattern: '^[a-z][a-z0-9-]{1,30}$'
+
+  windows_minion_id:
+    type: string
+    title: Windows minion id
+    description: >-
+      The id the API account may reach: <app_name>-win, the Windows minion
+      blueprint's machine name.
+    pattern: '^[a-z][a-z0-9-]{1,14}$'
+
+  api_digest_b64:
+    type: string
+    title: API account digest line (base64)
+    description: >-
+      One line of base64 of the line guestcfg-api:<SHA-256 of the API password>,
+      ending in a newline (the header shows the command). The guest never receives
+      the password itself.
+    encrypted: true
+
+  api_tls_cert_b64:
+    type: string
+    title: API TLS certificate (base64)
+    description: 'One line of base64 of the API''s PEM certificate:  openssl base64 -A -in api.crt'
+    pattern: '^[A-Za-z0-9+/]+={0,2}$'
+
+  api_tls_key_b64:
+    type: string
+    title: API TLS private key (base64)
+    description: >-
+      One line of base64 of the API's PEM private key:  openssl base64 -A -in
+      api.key. Marked encrypted; never echoed back in an output.
+    encrypted: true
+
+resources:
+
+  # The network the machines share, found by its tag (V01). Minions dial out to the
+  # master on 4505 and 4506 on this network; nothing else needs to reach them.
+  Network:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: ${input.network_tag}
+
+  Master:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: ${input.app_name}-master
+      image: ${input.image}
+      flavor: ${input.flavor}
+      networks:
+        - network: ${resource.Network.id}
+          assignment: ${input.ip_assignment}
+      cloudConfig: |
+        #cloud-config
+        hostname: ${input.app_name}-master
+        users:
+          - default
+          - name: salt-operator
+            groups: [sudo]
+            shell: /bin/bash
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            lock_passwd: true
+            ssh_authorized_keys:
+              - ${input.operator_ssh_public_key}
+        bootcmd:
+          - systemctl stop unattended-upgrades 2>/dev/null || true
+          - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        write_files:
+          - path: /opt/guestcfg/salt.sources
+            permissions: '0644'
+            content: |
+              X-Repolib-Name: Salt Project
+              Enabled: yes
+              Types: deb
+              URIs: https://packages.broadcom.com/artifactory/saltproject-deb
+              Signed-By: /etc/apt/keyrings/salt-archive-keyring.pgp
+              Suites: stable
+              Components: main
+          - path: /opt/guestcfg/salt-pin
+            permissions: '0644'
+            content: |
+              Package: salt-*
+              Pin: version 3008.*
+              Pin-Priority: 1001
+          - path: /opt/guestcfg/master.conf
+            permissions: '0600'
+            content: |
+              auto_accept: False
+              open_mode: False
+              file_roots:
+                base:
+                  - /srv/salt
+              netapi_enable_clients:
+                - local_async
+                - runner
+                - wheel
+              rest_cherrypy:
+                port: 8000
+                ssl_crt: /etc/salt/guestcfg/api.crt
+                ssl_key: /etc/salt/guestcfg/api.key
+              external_auth:
+                file:
+                  ^filename: /etc/salt/guestcfg/api.digest
+                  ^hashtype: sha256
+                  guestcfg-api:
+                    - 'L@${input.linux_minion_id},${input.windows_minion_id}':
+                        - test.ping
+                        - grains.item
+                        - state.apply
+                    - '@wheel':
+                        - key.list_all
+                        - key.accept
+                        - key.delete
+                        - key.finger
+                        - key.print
+                    - '@runner':
+                        - jobs.lookup_jid
+          - path: /opt/guestcfg/api.digest
+            permissions: '0600'
+            encoding: b64
+            content: '${input.api_digest_b64}'
+          - path: /opt/guestcfg/api.crt
+            permissions: '0644'
+            encoding: b64
+            content: '${input.api_tls_cert_b64}'
+          - path: /opt/guestcfg/api.key
+            permissions: '0600'
+            encoding: b64
+            content: '${input.api_tls_key_b64}'
+          - path: /srv/salt/guestcfg/init.sls
+            permissions: '0644'
+            content: |
+              # The baseline: one managed file, the same state on Linux and on Windows. The first apply
+              # creates it, the next finds it correct and changes nothing, and an apply after a local
+              # change puts it back. Only the path depends on the operating system.
+              {% set managed_file = 'C:\\ProgramData\\guestcfg\\managed.conf' if grains['os_family'] == 'Windows' else '/etc/guestcfg/managed.conf' %}
+
+              guestcfg-managed-file:
+                file.managed:
+                  - name: {{ managed_file }}
+                  - makedirs: True
+                  - contents: |
+                      managed-by: salt
+                      baseline: guest-configuration
+          - path: /srv/salt/guestcfg/drift.sls
+            permissions: '0644'
+            content: |
+              # The drift for step 6: the same file, changed outside the baseline. It goes through a
+              # state because the run's API account holds only the state.apply right, no file-write
+              # right; a real change arrives another way, and the baseline answers it the same.
+              {% set managed_file = 'C:\\ProgramData\\guestcfg\\managed.conf' if grains['os_family'] == 'Windows' else '/etc/guestcfg/managed.conf' %}
+
+              guestcfg-managed-file-drift:
+                file.managed:
+                  - name: {{ managed_file }}
+                  - contents: |
+                      managed-by: someone-else
+          - path: /srv/salt/guestcfg/probe.sls
+            permissions: '0644'
+            content: |
+              # The probes: reads only, and nothing on the guest changes. The minion reads its own key with the
+              # functions salt-call --local runs, called by the minion itself while it renders this file, so the
+              # probe needs no path to salt-call on either system. The run compares the public key itself with
+              # the one the master holds for this minion's id; on Salt 3008.5 the two fingerprints differ for the
+              # same key, so they are recorded and never compared to decide trust (G-980).
+              {% set own_fingerprint = salt['key.finger']() %}
+              {% set own_sha256 = salt['key.finger'](hash_type='sha256') %}
+              {% set hash_type = salt['config.get']('hash_type') %}
+              {% set pki_dir = salt['config.get']('pki_dir') %}
+              {% set own_pub = salt['file.read'](pki_dir ~ '/minion.pub') %}
+              {% set own_pub_head = own_pub.splitlines()[0] if own_pub else 'unread' %}
+              {% set own_pub_body = own_pub.splitlines()[1:-1] | join('') if own_pub else 'unread' %}
+              {% set own_pub_lines = own_pub.splitlines() | map('length') | join(',') if own_pub else 'unread' %}
+              {% set own_pub_file_sha256 = salt['file.get_hash'](pki_dir ~ '/minion.pub', 'sha256') %}
+
+              guestcfg-probe-own-fingerprint:
+                test.show_notification:
+                  - text: 'own-fingerprint {{ own_fingerprint }}'
+
+              # The same fingerprint with SHA-256 named, the hash type this minion defaults to, and the first line of its public key,
+              # which names the key's PEM form: what tells a different key from the same key hashed or stored differently.
+              guestcfg-probe-own-sha256:
+                test.show_notification:
+                  - text: 'own-sha256 {{ own_sha256 }}'
+
+              guestcfg-probe-hash-type:
+                test.show_notification:
+                  - text: 'hash-type {{ hash_type }}'
+
+              guestcfg-probe-pub-head:
+                test.show_notification:
+                  - text: 'pub-head {{ own_pub_head }}'
+
+              # The public key itself, its body joined into one line, and the length of each of its lines: a public key is public,
+              # and the two tell the same key written in another layout from a different key.
+              guestcfg-probe-pub-body:
+                test.show_notification:
+                  - text: 'pub-body {{ own_pub_body }}'
+
+              guestcfg-probe-pub-lines:
+                test.show_notification:
+                  - text: 'pub-lines {{ own_pub_lines }}'
+
+              # SHA-256 of the whole minion.pub file. Salt 3008.5's master fingerprints the whole PEM it holds for an id, where the
+              # minion's key.finger hashes only the lines between the header and the footer, so the two fingerprints differ for the
+              # same key; a hash of the whole file is the minion-side read that can match the master's.
+              guestcfg-probe-pub-file-sha256:
+                test.show_notification:
+                  - text: 'pub-file-sha256 {{ own_pub_file_sha256 }}'
+
+              # Where this minion keeps its key pair, as its own configuration resolves it: the directory a key generated on the
+              # master would be seeded into on this system.
+              guestcfg-probe-pki-dir:
+                test.show_notification:
+                  - text: 'pki-dir {{ pki_dir }}'
+              {% if grains['os_family'] == 'Windows' %}
+
+              # The sessions signed in on Windows, read with quser. Under the minion service quser reported no
+              # signed-in user with exit 0 and "No User exists for *" on stderr (G-982); 1 counts as success too.
+              # The run records the exit, stdout and stderr, and judges on the text.
+              guestcfg-probe-signed-in-sessions:
+                cmd.run:
+                  - name: quser
+                  - success_retcodes:
+                    - 1
+              {% endif %}
+          - path: /opt/guestcfg/install.sh
+            permissions: '0700'
+            content: |
+              #!/bin/bash
+              set -uo pipefail
+              export DEBIAN_FRONTEND=noninteractive
+              log() { echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }
+              retry() { local left=$1; shift; until "$@"; do left=$((left-1)); [ "$left" -gt 0 ] || return 1; log "retrying: $*"; sleep 20; done; }
+              fetch_key() { curl -fsSL --retry 3 --retry-delay 5 "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public" | gpg --dearmor --yes -o /etc/apt/keyrings/salt-archive-keyring.pgp; }
+              apt_up() { apt-get -o DPkg::Lock::Timeout=300 update; }
+              install -d -m 755 /etc/apt/keyrings
+              retry 6 fetch_key || { log "the Salt signing key could not be fetched"; exit 1; }
+              install -m 0644 /opt/guestcfg/salt.sources /etc/apt/sources.list.d/salt.sources
+              install -m 0644 /opt/guestcfg/salt-pin /etc/apt/preferences.d/salt-pin-1001
+              retry 6 apt_up || { log "the Salt repository could not be read"; exit 1; }
+              apt_in() { apt-get -o DPkg::Lock::Timeout=300 install -y salt-common=3008.5 salt-master=3008.5 salt-api=3008.5; }
+              retry 3 apt_in || { log "the Salt master packages did not install"; exit 1; }
+              apt-mark hold salt-common salt-master salt-api
+              if /opt/saltstack/salt/bin/python3 -c 'import cherrypy'; then log "CherryPy imports in Salt's own Python: salt-api has its web server"; else log "CherryPy does not import in Salt's own Python: salt-api cannot serve"; fi
+              install -d -o root -g salt -m 0750 /etc/salt/guestcfg
+              install -o root -g salt -m 0640 /opt/guestcfg/api.digest /etc/salt/guestcfg/api.digest
+              install -o root -g salt -m 0640 /opt/guestcfg/api.crt /etc/salt/guestcfg/api.crt
+              install -o root -g salt -m 0640 /opt/guestcfg/api.key /etc/salt/guestcfg/api.key
+              install -m 0644 /opt/guestcfg/master.conf /etc/salt/master.d/guestcfg.conf
+              systemctl enable salt-master salt-api
+              systemctl restart salt-master
+              sleep 10
+              systemctl restart salt-api
+              log "salt-master and salt-api restarted with the run's configuration"
+          - path: /opt/guestcfg/apt-timeouts
+            permissions: '0644'
+            content: |
+              Acquire::http::Timeout "30";
+              Acquire::https::Timeout "30";
+              Acquire::Retries "3";
+          - path: /var/lib/cloud/scripts/per-boot/10-guestcfg.sh
+            permissions: '0755'
+            content: |
+              #!/bin/bash
+              set -uo pipefail
+              [ -f /var/lib/guestcfg/installed ] && exit 0
+              export DEBIAN_FRONTEND=noninteractive
+              log() { echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }
+              systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+              dpkg --configure -a || true
+              install -m 0644 /opt/guestcfg/apt-timeouts /etc/apt/apt.conf.d/99guestcfg-timeouts
+              prereq() { apt-get -o DPkg::Lock::Timeout=300 update && apt-get -o DPkg::Lock::Timeout=300 install -y ca-certificates curl gnupg; }
+              left=6; until prereq; do left=$((left-1)); [ "$left" -gt 0 ] || { log "the install's prerequisites did not install"; exit 1; }; sleep 30; done
+              bash /opt/guestcfg/install.sh || { log "install.sh failed; the next boot runs it again"; exit 1; }
+              install -d -m 0755 /var/lib/guestcfg
+              touch /var/lib/guestcfg/installed
+              log "installed; later boots skip this script"
+
+outputs:
+
+  master_address:
+    description: >-
+      The master's own address: give it to each minion blueprint as
+      salt_master_address.
+    value: ${resource.Master.address}
+
+  sign_in:
+    description: The master's login, with the SSH key you gave.
+    value: ssh salt-operator@${resource.Master.address}
+
+  api_login:
+    description: >-
+      The Salt API's sign-in over TLS. Pin the certificate you gave as
+      api_tls_cert_b64; it is made for the name salt-master.
+    value: "curl --cacert api.crt --resolve salt-master:8000:${resource.Master.address} https://salt-master:8000/login"

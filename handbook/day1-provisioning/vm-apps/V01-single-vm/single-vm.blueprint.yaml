@@ -1,0 +1,119 @@
+# =============================================================================
+# Template V01 (VM APPS, CRAWL) - A single virtual machine, in the VM Apps dialect
+# =============================================================================
+# The VM Apps branch of the series. Your organization is a VM Apps organization, so
+# it places machines the way Aria Automation did: through cloud accounts, cloud
+# zones, image and flavor mappings, and network and storage profiles your cloud
+# administrator defines. This template is stage 01's lesson in that dialect: one
+# Ubuntu machine that boots and runs, and nothing else.
+#
+# Read stage 01 first (../../templates/01-single-vm/): the idea is the same and is
+# taught there once. What differs here:
+#   * The machine is a Cloud.vSphere.Machine, not a manifest in a Supervisor
+#     namespace. There is no namespace and no kubectl.
+#   * You name an image MAPPING and a flavor MAPPING, not an image and a class.
+#     A mapping is a name your administrator points at an image (or a size) in
+#     each region, so one blueprint deploys the same way wherever it is placed.
+#       GET /iaas/api/images     lists the image mappings (mapping keys)
+#       GET /iaas/api/flavors    lists the flavor mappings
+#   * Placement is by TAG. The machine's network names a tag; VCF Automation finds
+#     a network profile (and so a region and zone in your project) that carries
+#     it. Your administrator's tags are the vocabulary; ask for the one that names
+#     the network your machines belong on.
+#       GET /iaas/api/network-profiles   lists each profile with its tags
+#   * Storage comes from the region's default storage profile unless you add a
+#     constraint (storage: constraints: - tag: <a storage profile's tag>).
+#
+# Where this leads: All Apps does the same with a namespace, a VM class and an
+# image's display name, and carries on to containers and Kubernetes, which VM
+# Apps does not. The branch's README says where it ends and how an organization
+# moves; read it before you build a catalog on this dialect.
+#
+# Authoring this file changes nothing. Deploying it is the step that creates the
+# machine. Validate first.
+# =============================================================================
+
+name: vmapps-single-vm
+version: 1.0.0
+
+# formatVersion 2 is required the moment you want an `outputs:` block (below).
+formatVersion: 2
+
+description: |
+  One Ubuntu machine on an existing NSX network, placed by tag, sized and imaged by
+  mapping: the VM Apps form of stage 01.
+
+inputs:
+
+  app_name:
+    type: string
+    title: Application name
+    description: >-
+      Lowercase kebab-case slug the machine's name derives from. Named for function,
+      not a person or a mascot.
+    pattern: '^[a-z][a-z0-9-]{2,30}$'
+    default: hello-vm
+
+  image:
+    type: string
+    title: Image mapping
+    description: >-
+      The name of an image mapping for Ubuntu 24.04, as your administrator defined it.
+      GET /iaas/api/images lists the mappings.
+
+  flavor:
+    type: string
+    title: Flavor mapping (size)
+    description: >-
+      The name of a flavor mapping, as your administrator defined it.
+      GET /iaas/api/flavors lists the mappings.
+
+  network_tag:
+    type: string
+    title: Network constraint tag
+    description: >-
+      A tag, key:value, that the network profile holding your machines' network
+      carries. GET /iaas/api/network-profiles lists each profile's tags.
+    pattern: '^[^:\s]+:[^\s]+$'
+
+  ip_assignment:
+    type: string
+    title: Address assignment
+    description: >-
+      static when the network's profile hands out addresses from an IP range or an
+      IPAM integration; dynamic when the network runs DHCP. Ask your administrator.
+    enum: [static, dynamic]
+    default: static
+
+resources:
+
+  # The network the machine joins: one that already exists, found by its tag.
+  # networkType: existing never creates a network; it selects one.
+  Network:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: ${input.network_tag}
+
+  # The machine. image and flavor are mapping names; VCF Automation resolves each
+  # to the region the network's tag placed the machine in.
+  VM:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: ${input.app_name}
+      image: ${input.image}
+      flavor: ${input.flavor}
+      networks:
+        - network: ${resource.Network.id}
+          assignment: ${input.ip_assignment}
+
+outputs:
+
+  vm_name:
+    description: The machine's name in vCenter, which VCF Automation derives from the name property.
+    value: ${resource.VM.resourceName}
+
+  address:
+    description: The machine's address on the network the tag selected.
+    value: ${resource.VM.address}

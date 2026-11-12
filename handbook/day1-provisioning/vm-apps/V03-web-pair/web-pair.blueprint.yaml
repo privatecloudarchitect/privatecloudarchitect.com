@@ -1,0 +1,230 @@
+# =============================================================================
+# Template V03 (VM APPS, WALK) - A load-balanced web pair
+# =============================================================================
+# Stage 03's lesson in the VM Apps dialect: two identical web servers behind one
+# front door, so the application survives losing a machine.
+#
+# Read stage 03 first (../../templates/03-web-pair/): composition, and why an L4
+# front door is all a web pair needs, are taught there. What is new since V02:
+#   * a second machine, identical to the first (both take one cloudConfig)
+#   * a Cloud.NSX.LoadBalancer that fronts both on port 80
+#   * the wiring: the load balancer's instances are the two machines' ids. Stage 03
+#     wires the same thing with a label and a selector; here the blueprint names the
+#     machines directly.
+#
+# The load balancer needs the network's profile to offer NSX load balancing. Ask your
+# administrator which tag names such a network before you request this; a profile
+# without it was not tried in the branch's proof.
+#
+# This is where VM Apps' road narrows. Stage 04 (containers beside a VM) and every
+# stage after it need an All Apps organization: the branch's README says why, and
+# what each V-stage becomes there.
+# =============================================================================
+
+name: vmapps-web-pair
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  Two identical nginx machines behind one NSX load balancer on port 80. The VM Apps
+  form of stage 03, and the last stage VM Apps can follow.
+
+inputs:
+
+  # --- Unchanged from V02 ----------------------------------------------------
+  app_name:
+    type: string
+    title: Application name
+    pattern: '^[a-z][a-z0-9-]{2,30}$'
+    default: hello-pair
+
+  image:
+    type: string
+    title: Image mapping
+    description: 'An Ubuntu 24.04 image mapping.  GET /iaas/api/images'
+
+  flavor:
+    type: string
+    title: Flavor mapping (size)
+    description: 'GET /iaas/api/flavors'
+
+  network_tag:
+    type: string
+    title: Network constraint tag
+    description: >-
+      A network profile's tag, key:value, for a profile that offers NSX load
+      balancing.  GET /iaas/api/network-profiles
+    pattern: '^[^:\s]+:[^\s]+$'
+
+  ip_assignment:
+    type: string
+    title: Address assignment
+    enum: [static, dynamic]
+    default: static
+
+  admin_username:
+    type: string
+    title: Admin username
+    pattern: '^[a-z_][a-z0-9_-]{1,30}$'
+    default: appadmin
+
+  admin_password:
+    type: string
+    title: Admin password
+    encrypted: true
+
+resources:
+
+  Network:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: ${input.network_tag}
+
+  # NEW: a second machine, the first one's twin. Both take the same cloudConfig, so
+  # each serves a page that names its own host, which is how you see the load balancer
+  # alternate. Two declared machines, as in stage 03, rather than one machine with
+  # count: 2: a count relies on your project's naming template to number the machines,
+  # and on the project the branch was proven in the request failed at once with
+  # "Allocated resource names count does not match resource count" (G-990). Web2 is
+  # Web1 but for its name; keep the two the same when you change one.
+  Web1:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: ${input.app_name}-1
+      image: ${input.image}
+      flavor: ${input.flavor}
+      networks:
+        - network: ${resource.Network.id}
+          assignment: ${input.ip_assignment}
+      cloudConfig: |
+        #cloud-config
+        users:
+          - default
+          - name: ${input.admin_username}
+            groups: [sudo]
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            lock_passwd: false
+            shell: /bin/bash
+        chpasswd:
+          users:
+            - name: ${input.admin_username}
+              password: ${input.admin_password}
+              type: text
+          expire: false
+        ssh_pwauth: true
+        # The setup is a script cloud-init runs at EVERY boot until it has finished once,
+        # not stage 02's packages: and runcmd:. On VM Apps, vSphere's guest customization
+        # runs beside cloud-init on first boot and can reboot the machine while cloud-init
+        # is still installing; cloud-init never runs a once-per-instance module again once
+        # it has started it, so a package install cut off by that reboot never comes back
+        # (G-988). A per-boot script with a
+        # done marker finishes on whichever boot reaches its end, and does nothing after.
+        write_files:
+          - path: /var/lib/cloud/scripts/per-boot/10-web-setup.sh
+            permissions: '0755'
+            content: |
+              #!/bin/bash
+              set -euo pipefail
+              [ -f /var/lib/web-setup.done ] && exit 0
+              export DEBIAN_FRONTEND=noninteractive
+              systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+              dpkg --configure -a || true        # finish an install a reboot interrupted
+              # Bounded waits: apt's own default can wait on a stalled mirror for good.
+              apt_get() { apt-get -o DPkg::Lock::Timeout=300 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=3 "$@"; }
+              retry() { local n=1; until "$@"; do [ "$n" -ge 6 ] && return 1; n=$((n+1)); sleep 30; done; }
+              retry apt_get update
+              retry apt_get install -y nginx
+              cat > /var/www/html/index.html <<HTML
+              <!doctype html><html><body style="font-family:sans-serif;margin:3em">
+              <h1>${input.app_name}</h1>
+              <p>Served by <strong>$(hostname)</strong>, one of two behind the load balancer.</p>
+              </body></html>
+              HTML
+              systemctl enable nginx
+              systemctl restart nginx
+              touch /var/lib/web-setup.done
+
+  Web2:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: ${input.app_name}-2
+      image: ${input.image}
+      flavor: ${input.flavor}
+      networks:
+        - network: ${resource.Network.id}
+          assignment: ${input.ip_assignment}
+      cloudConfig: |
+        #cloud-config
+        users:
+          - default
+          - name: ${input.admin_username}
+            groups: [sudo]
+            sudo: ALL=(ALL) NOPASSWD:ALL
+            lock_passwd: false
+            shell: /bin/bash
+        chpasswd:
+          users:
+            - name: ${input.admin_username}
+              password: ${input.admin_password}
+              type: text
+          expire: false
+        ssh_pwauth: true
+        # The setup is a script cloud-init runs at EVERY boot until it has finished once,
+        # not stage 02's packages: and runcmd:. On VM Apps, vSphere's guest customization
+        # runs beside cloud-init on first boot and can reboot the machine while cloud-init
+        # is still installing; cloud-init never runs a once-per-instance module again once
+        # it has started it, so a package install cut off by that reboot never comes back
+        # (G-988). A per-boot script with a
+        # done marker finishes on whichever boot reaches its end, and does nothing after.
+        write_files:
+          - path: /var/lib/cloud/scripts/per-boot/10-web-setup.sh
+            permissions: '0755'
+            content: |
+              #!/bin/bash
+              set -euo pipefail
+              [ -f /var/lib/web-setup.done ] && exit 0
+              export DEBIAN_FRONTEND=noninteractive
+              systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+              dpkg --configure -a || true        # finish an install a reboot interrupted
+              # Bounded waits: apt's own default can wait on a stalled mirror for good.
+              apt_get() { apt-get -o DPkg::Lock::Timeout=300 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Retries=3 "$@"; }
+              retry() { local n=1; until "$@"; do [ "$n" -ge 6 ] && return 1; n=$((n+1)); sleep 30; done; }
+              retry apt_get update
+              retry apt_get install -y nginx
+              cat > /var/www/html/index.html <<HTML
+              <!doctype html><html><body style="font-family:sans-serif;margin:3em">
+              <h1>${input.app_name}</h1>
+              <p>Served by <strong>$(hostname)</strong>, one of two behind the load balancer.</p>
+              </body></html>
+              HTML
+              systemctl enable nginx
+              systemctl restart nginx
+              touch /var/lib/web-setup.done
+
+  # NEW: the front door. One route, TCP 80 to TCP 80 on each machine, round robin.
+  # L4 is enough for a pair of identical servers, as in stage 03.
+  LoadBalancer:
+    type: Cloud.NSX.LoadBalancer
+    properties:
+      network: ${resource.Network.id}
+      instances:
+        - ${resource.Web1.id}
+        - ${resource.Web2.id}
+      routes:
+        - protocol: TCP
+          port: 80
+          algorithm: ROUND_ROBIN
+
+outputs:
+
+  front_door:
+    description: >-
+      The load balancer's address. Request it a few times: each answer names the
+      machine that served it.
+    value: http://${resource.LoadBalancer.address}/
+
+  web_servers:
+    description: The two machines' own addresses.
+    value: '${resource.Web1.address} ${resource.Web2.address}'

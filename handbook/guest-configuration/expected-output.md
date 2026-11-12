@@ -101,9 +101,9 @@ exit 0
 
 `GUESTCFG_VIA=automation GUESTCFG_PROJECT=<the-project-holding-the-namespace> python3 guestcfg.py run --execute`, with
 `GUESTCFG_API_SOURCE_RANGES` unset, so the master blueprint's `api_source_ranges` input was `0.0.0.0/0`. The run created
-the three blueprints from the files beside the script as they stood at the repository's commit `108782b3`, validated
+the three blueprints from the files beside the script as they stood that day, validated
 each, deployed the master, read its address, deployed the two minions with it, and its teardown deleted the minions'
-keys, then the deployments, the minions' first, then the master's, then the blueprints. Since that commit, in
+keys, then the deployments, the minions' first, then the master's, then the blueprints. Since that run, in
 `salt-minion-linux.blueprint.yaml` the deletion of the seeded private key's copy moved before anything in the install can
 exit; comments changed, as did the description of the master blueprint's address output. Record:
 [`records/guestcfg-2026-11-11-runA5-automation.json`](records/guestcfg-2026-11-11-runA5-automation.json).

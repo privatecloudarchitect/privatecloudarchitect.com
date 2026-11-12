@@ -63,6 +63,9 @@ Optional environment:
                                read after each whether the API answers from here, and restore the original ranges.
                                What it finds never fails the run; a refused patch does
   GUESTCFG_RUNNER_ADDRESS      this runner's own address as the load balancer sees it, for the third read above
+  GUESTCFG_OPERATOR_SSH_KEY    one SSH public key line (supervisor path): the master and the Linux minion get an
+                               account named salt-operator that signs in with it (no password, sudo), for the by-hand
+                               walkthroughs; never printed or recorded. Unset, the user-data is the proven shape
   GUESTCFG_RUN_ID              for teardown: the run to remove, when the namespace holds more than one
   OUT_DIR                      where guestcfg.json goes (default the current directory)
 
@@ -625,8 +628,97 @@ def _load_states():
     return out
 
 
+# Not "operator": Ubuntu's base system already has a group of that name (gid 37), so useradd refuses a user named
+# operator, cloud-init logs it and carries on, and SSH says only "Permission denied" (walkthrough proof, 2026-11-12).
+OPERATOR_USER = "salt-operator"
+
+
+def operator_users(operator_key):
+    """The optional operator login for the by-hand walkthroughs: cloud-init's default user kept, and one named account
+    that signs in with the reader's SSH public key only (no password), with sudo for the lessons that change a managed
+    file. Absent, it renders nothing, so a run without a key builds exactly the user-data the proofs ran."""
+    if not operator_key:
+        return ""
+    return ("users:\n"
+            "  - default\n"
+            f"  - name: {OPERATOR_USER}\n"
+            "    groups: [sudo]\n"
+            "    shell: /bin/bash\n"
+            "    sudo: ALL=(ALL) NOPASSWD:ALL\n"
+            "    lock_passwd: true\n"
+            "    ssh_authorized_keys:\n"
+            f"      - {operator_key}\n")
+
+
+def operator_key_from_env():
+    """GUESTCFG_OPERATOR_SSH_KEY, one public key line, or None. A private key, or anything that is not one line of a
+    public key, is refused before anything opens."""
+    raw = (os.environ.get("GUESTCFG_OPERATOR_SSH_KEY") or "").strip()
+    if not raw:
+        return None
+    if "\n" in raw or "PRIVATE KEY" in raw or not re.match(r"^(ssh-(ed25519|rsa)|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/=]+( \S.*)?$", raw):
+        raise ValueError("GUESTCFG_OPERATOR_SSH_KEY must be one public key line (ssh-ed25519, ssh-rsa or ecdsa-sha2-*)")
+    return raw
+
+
+# ---- VM Apps: the same install, run so that a reboot in the middle of the first boot cannot strand it (G-988)
+
+VM_APPS_BOOT = "/var/lib/cloud/scripts/per-boot/10-guestcfg.sh"
+VM_APPS_DONE = "/var/lib/guestcfg/installed"
+
+
+def apt_timeouts():
+    """apt's waits, bounded: on a stalled mirror apt-get otherwise waits on one connection for good (G-988)."""
+    return 'Acquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::Retries "3";\n'
+
+
+def vm_apps_boot_script():
+    """On VM Apps, vSphere's guest customization can reboot the machine while cloud-init's first boot is still running,
+    and cloud-init never runs again a once-per-instance module it started (G-988). So the install is not a runcmd: this script, in
+    cloud-init's per-boot directory, runs at every boot until it has finished once. It finishes an interrupted dpkg,
+    bounds apt's waits, installs what the install script needs, runs the same install.sh the supervisor path runs, and
+    sets its marker only when that succeeds; on a later boot the marker makes it exit at once."""
+    return textwrap.dedent(f"""\
+        #!/bin/bash
+        set -uo pipefail
+        [ -f {VM_APPS_DONE} ] && exit 0
+        export DEBIAN_FRONTEND=noninteractive
+        log() {{ echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }}
+        systemctl stop unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+        dpkg --configure -a || true
+        install -m 0644 /opt/guestcfg/apt-timeouts /etc/apt/apt.conf.d/99guestcfg-timeouts
+        prereq() {{ apt-get -o DPkg::Lock::Timeout=300 update && apt-get -o DPkg::Lock::Timeout=300 install -y ca-certificates curl gnupg; }}
+        left=6; until prereq; do left=$((left-1)); [ "$left" -gt 0 ] || {{ log "the install's prerequisites did not install"; exit 1; }}; sleep 30; done
+        bash /opt/guestcfg/install.sh || {{ log "install.sh failed; the next boot runs it again"; exit 1; }}
+        install -d -m 0755 {os.path.dirname(VM_APPS_DONE)}
+        touch {VM_APPS_DONE}
+        log "installed; later boots skip this script"
+        """)
+
+
+def _vm_apps_files():
+    return ("  - path: /opt/guestcfg/apt-timeouts\n"
+            "    permissions: '0644'\n"
+            "    content: |\n" + _block(apt_timeouts(), 6) + "\n"
+            f"  - path: {VM_APPS_BOOT}\n"
+            "    permissions: '0755'\n"
+            "    content: |\n" + _block(vm_apps_boot_script(), 6) + "\n")
+
+
+def _first_boot_tail(vm_apps):
+    """How the install runs: a runcmd on the VM Service, the per-boot script on VM Apps (written by write_files, which
+    finishes before the customization's reboot)."""
+    return _vm_apps_files() if vm_apps else "runcmd:\n  - [bash, /opt/guestcfg/install.sh]\n"
+
+
+_PACKAGES = ("packages:\n"
+             "  - ca-certificates\n"
+             "  - curl\n"
+             "  - gnupg\n")
+
+
 def render_master_user_data(name, linux_id, windows_id, api_digest_line, tls_cert, tls_key, states, encoded=False,
-                            gen_accept=False):
+                            gen_accept=False, operator_key=None, vm_apps=False):
     """The master's first boot: Salt 3008 LTS, its configuration, the API's certificate and the states the run applies.
     With encoded, the digest line, the certificate and the key are each one line of base64 that write_files decodes:
     the shape of salt-master.blueprint.yaml, whose inputs carry them."""
@@ -648,13 +740,11 @@ def render_master_user_data(name, linux_id, windows_id, api_digest_line, tls_cer
                      "    content: |\n" + _block(tls_key, 6) + "\n")
     return ("#cloud-config\n"
             f"hostname: {name}\n"
+            + operator_users(operator_key) +
             "bootcmd:\n"
             "  - systemctl stop unattended-upgrades 2>/dev/null || true\n"
             "  - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true\n"
-            "packages:\n"
-            "  - ca-certificates\n"
-            "  - curl\n"
-            "  - gnupg\n"
+            + ("" if vm_apps else _PACKAGES) +
             "write_files:\n"
             "  - path: /opt/guestcfg/salt.sources\n"
             "    permissions: '0644'\n"
@@ -670,11 +760,10 @@ def render_master_user_data(name, linux_id, windows_id, api_digest_line, tls_cer
             "  - path: /opt/guestcfg/install.sh\n"
             "    permissions: '0700'\n"
             "    content: |\n" + _block(linux_master_install(), 6) + "\n"
-            "runcmd:\n"
-            "  - [bash, /opt/guestcfg/install.sh]\n")
+            + _first_boot_tail(vm_apps))
 
 
-def render_linux_user_data(name, master_ip, pem_b64=None, pub_b64=None):
+def render_linux_user_data(name, master_ip, pem_b64=None, pub_b64=None, operator_key=None, vm_apps=False):
     """A Linux minion's first boot: the same repository, the master's address, the minion's own id. Given a key pair
     (each one line of base64, both empty for none: the shape of salt-minion-linux.blueprint.yaml), write_files holds
     it beside the script and the install puts a non-empty pair in place before the minion first starts."""
@@ -684,13 +773,11 @@ def render_linux_user_data(name, master_ip, pem_b64=None, pub_b64=None):
                  + _b64_file("/opt/guestcfg/minion.pub", "0644", pub_b64 or "")) if seeded else ""
     return ("#cloud-config\n"
             f"hostname: {name}\n"
+            + operator_users(operator_key) +
             "bootcmd:\n"
             "  - systemctl stop unattended-upgrades 2>/dev/null || true\n"
             "  - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true\n"
-            "packages:\n"
-            "  - ca-certificates\n"
-            "  - curl\n"
-            "  - gnupg\n"
+            + ("" if vm_apps else _PACKAGES) +
             "write_files:\n"
             "  - path: /opt/guestcfg/salt.sources\n"
             "    permissions: '0644'\n"
@@ -705,8 +792,7 @@ def render_linux_user_data(name, master_ip, pem_b64=None, pub_b64=None):
             "  - path: /opt/guestcfg/install.sh\n"
             "    permissions: '0700'\n"
             "    content: |\n" + _block(linux_minion_install(seeded=seeded), 6) + "\n"
-            "runcmd:\n"
-            "  - [bash, /opt/guestcfg/install.sh]\n")
+            + _first_boot_tail(vm_apps))
 
 
 def windows_install_snippet(master_ip, minion_id, exe_url=SALT_WIN_EXE):
@@ -741,6 +827,35 @@ def sign_out_command():
 def render_windows_user_data(minion_id, master_ip):
     """A Windows minion's first boot through Cloudbase-Init: user-data its first line marks as PowerShell."""
     return "#ps1_sysnative\n" + windows_install_snippet(master_ip, minion_id) + "\n"
+
+
+def windows_admin_password_line(admin_password):
+    """VM Apps: the first boot sets the built-in Administrator's password and enables the account, the login a reader
+    signs in with to compare the minion's key. On the reference estate's image remoteAccess set no password any
+    account accepted (G-989), so the first boot does it. The password is a single-quoted PowerShell string, so the
+    blueprint's input refuses a single quote."""
+    return ("$ErrorActionPreference='Stop'; "
+            f"Set-LocalUser -Name Administrator -Password (ConvertTo-SecureString -String '{admin_password}' -AsPlainText -Force); "
+            "Enable-LocalUser -Name Administrator")
+
+
+def render_windows_vm_apps_cloud_config(minion_id, master_ip, admin_password):
+    """A Windows minion's cloudConfig on VM Apps: the Administrator's password, then the same PowerShell install, as
+    one part of a MIME multipart document, the form the VM Apps organization's own Windows blueprints hand to
+    Cloudbase-Init."""
+    return ('Content-Type: multipart/mixed; boundary="==guestcfg=="\n'
+            "MIME-Version: 1.0\n"
+            "\n"
+            "--==guestcfg==\n"
+            'Content-Type: text/x-shellscript; charset="us-ascii"\n'
+            "MIME-Version: 1.0\n"
+            "Content-Transfer-Encoding: 7bit\n"
+            'Content-Disposition: attachment; filename="salt-minion.ps1"\n'
+            "\n"
+            "#ps1_sysnative\n"
+            + windows_admin_password_line(admin_password) + "\n"
+            + windows_install_snippet(master_ip, minion_id) + "\n"
+            "--==guestcfg==--\n")
 
 
 def render_windows_unattend(minion_id, master_ip, admin_password):
@@ -1143,7 +1258,15 @@ def run_settings(bootstrap):
     for value in [runner] + [r for r in (ranges or []) if r not in (ANY_SOURCE, TEST_NET_1)]:
         if value:
             L.get("address", value)
+    try:
+        operator = operator_key_from_env()
+    except ValueError as e:
+        raise Refusal(str(e)) from None
+    if operator:
+        L.hold(operator)  # not a secret, but it names the reader: never in stdout or the record
     if via == "automation":
+        if operator:
+            raise Refusal("GUESTCFG_OPERATOR_SSH_KEY runs on the supervisor path: the blueprints take no operator login")
         if not os.environ.get("GUESTCFG_PROJECT"):
             raise Refusal("GUESTCFG_VIA=automation needs GUESTCFG_PROJECT: the project the blueprints and deployments are made in")
         if bootstrap != "sysprep":
@@ -1163,7 +1286,8 @@ def run_settings(bootstrap):
     for name in BLUEPRINT_FILES.values():
         if via == "automation" and not os.path.isfile(os.path.join(TEMPLATES, name)):
             raise Refusal(f"the blueprint file {name} is not beside this script in templates/02x-vm-salt-minion/")
-    return {"via": via, "keys": keys, "sourceRanges": ranges, "proveSourceRanges": prove, "runnerAddress": runner}
+    return {"via": via, "keys": keys, "sourceRanges": ranges, "proveSourceRanges": prove, "runnerAddress": runner,
+            "operatorKey": operator}
 
 
 def classic_project(e, name):
@@ -1348,7 +1472,7 @@ class Run:
         plan = self.plan
         api_digest_line, tls_cert, tls_key = self.run_secrets()
         user_data = render_master_user_data(n["master"], n["linux"], n["windows"], api_digest_line, tls_cert, tls_key, _load_states(),
-                                            gen_accept=plan["keys"] == "preseed")
+                                            gen_accept=plan["keys"] == "preseed", operator_key=plan.get("operatorKey"))
         L.hold(user_data)
         self.create("secrets", secret_manifest(n["api_secret"], {"username": API_USER, "password": self.api_password, "tls.crt": tls_cert},
                                                "salt-api", self.run_id))
@@ -1575,8 +1699,9 @@ class Run:
         n = self.n
         plan = self.plan
         seed = self.seeds.get(n["linux"])
-        linux_data = render_linux_user_data(n["linux"], self.master_ip, seed["pem_b64"], seed["pub_b64"]) if seed else \
-            render_linux_user_data(n["linux"], self.master_ip)
+        operator = self.plan.get("operatorKey")
+        linux_data = render_linux_user_data(n["linux"], self.master_ip, seed["pem_b64"], seed["pub_b64"], operator_key=operator) \
+            if seed else render_linux_user_data(n["linux"], self.master_ip, operator_key=operator)
         if seed:
             L.hold(linux_data)
         self.create("secrets", secret_manifest(n["linux_secret"], {"user-data": linux_data}, "salt-minion", self.run_id))

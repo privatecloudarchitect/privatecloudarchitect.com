@@ -24,16 +24,15 @@
 # command to finish", so the sign-out does not trust its Order: it waits until the salt-minion
 # service runs and the installer has exited, 60 minutes at most, and then signs out.
 #
-# Afterwards, accept the key on the master by exact id, never with salt-key -A. To compare
-# the key itself first, out of band, you need a way into the master and this minion that
-# is not Salt: the master's template carries no login (add stage 02's operator user, with
-# sudo), and here the Administrator password you give is the login. How to reach a VM
-# Service machine's console on 9.1.1 is not established here, and no run of the companion
-# compared by hand. Then:
-#   sudo salt-key -p salt-minion-win    (on the master: the pending public key)
-#   type "C:\ProgramData\Salt Project\Salt\conf\pki\minion\minion.pub"
-#                                       (on the minion, as Administrator: its own key)
-#   sudo salt-key -a salt-minion-win    (only when the lines between BEGIN and END match)
+# Afterwards, accept the key on the master by exact id, never with salt-key -A, and compare it
+# first through a channel that is not Salt. Walkthrough page 05 (05-a-windows-minion.md) shows
+# how: on the master, hash the pending key's base64 body; on this minion, open its web console
+# (vcf vm web-console salt-minion-win), sign in as Administrator with the password you put
+# below, and run the page's PowerShell line, which hashes the same body. The proof of that page
+# ran the master's half, proved the PowerShell line through Salt after the accept, and opened
+# no console (G-987). Then:
+#   sudo grep -v -- ----- /etc/salt/pki/master/minions_pre/salt-minion-win | tr -d '\n' | sha256sum
+#   sudo salt-key -a salt-minion-win -y    (only when the two hashes are equal)
 # Do not compare salt-key -f with salt-call --local key.finger on Salt 3008.5: the master
 # hashes the whole PEM it holds and the minion only the lines inside it, so the two
 # fingerprints differ for the same key. No key generated on the master is seeded on
