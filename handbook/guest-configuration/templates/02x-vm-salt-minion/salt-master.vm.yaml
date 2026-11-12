@@ -11,7 +11,15 @@
 #   2. a VirtualMachine that consumes it (Ubuntu 24.04, Salt 3008 LTS, API on TLS)
 #   3. a VirtualMachineService that exposes port 8000 (the Salt API) and nothing else.
 #      Minions dial OUT to the master on 4505 and 4506 (private VPC traffic), so those
-#      two ports need no load balancer. Delete this object when you no longer need the API.
+#      two ports need no load balancer. Delete this object when you no longer need the API,
+#      and limit who reaches 8000 at your network's edge: VM Operator ignores the service's
+#      loadBalancerSourceRanges where the load balancer provider does not support it, so
+#      prove yours before relying on it (guestcfg.py, GUESTCFG_PROVE_SOURCE_RANGES=1).
+#
+# The API account's grant below names two minion ids. A master that minions join for years
+# grows that grant by editing its configuration as each one joins, which no run of the
+# companion exercised. No login is set on this machine: add stage 02's operator user, with
+# sudo, if you mean to run salt-key on it by hand.
 #
 # Before you apply it:
 #   1. Generate the API's certificate and key, and paste each into the cloud-config below:
@@ -71,8 +79,9 @@ stringData:
           Pin-Priority: 1001
       # The master's configuration. auto_accept and open_mode are written at their defaults so
       # a reader sees them. netapi_enable_clients and external_auth allow the API only the three
-      # client types and the exact functions the proof run calls; a wider grant is yours to add.
-      # The API runs TLS with the certificate below (see the openssl command in the header).
+      # client types and the exact functions the proof run calls (key.print and key.finger are
+      # the probe's reads of what the master holds); a wider grant is yours to add. The API runs TLS with the
+      # certificate below (see the openssl command in the header).
       - path: /opt/guestcfg/master.conf
         permissions: '0600'
         content: |
@@ -102,6 +111,8 @@ stringData:
                     - key.list_all
                     - key.accept
                     - key.delete
+                    - key.finger
+                    - key.print
                 - '@runner':
                     - jobs.lookup_jid
       # The API account's password digest (Salt's file eauth backend, ^hashtype sha256):
@@ -150,8 +161,82 @@ stringData:
               - name: {{ managed_file }}
               - contents: |
                   managed-by: someone-else
+      # The probes the proof run reads, which change nothing: each minion's own public key, to
+      # compare with the one the master holds for its id (salt-key -p <minion-id>), its two
+      # fingerprints, its pki_dir, and on Windows the signed-in sessions.
+      - path: /srv/salt/guestcfg/probe.sls
+        permissions: '0644'
+        content: |
+          # The probes: reads only, and nothing on the guest changes. The minion reads its own key with the
+          # functions salt-call --local runs, called by the minion itself while it renders this file, so the
+          # probe needs no path to salt-call on either system. The run compares the public key itself with
+          # the one the master holds for this minion's id; on Salt 3008.5 the two fingerprints differ for the
+          # same key, so they are recorded and never compared to decide trust (G-980).
+          {% set own_fingerprint = salt['key.finger']() %}
+          {% set own_sha256 = salt['key.finger'](hash_type='sha256') %}
+          {% set hash_type = salt['config.get']('hash_type') %}
+          {% set pki_dir = salt['config.get']('pki_dir') %}
+          {% set own_pub = salt['file.read'](pki_dir ~ '/minion.pub') %}
+          {% set own_pub_head = own_pub.splitlines()[0] if own_pub else 'unread' %}
+          {% set own_pub_body = own_pub.splitlines()[1:-1] | join('') if own_pub else 'unread' %}
+          {% set own_pub_lines = own_pub.splitlines() | map('length') | join(',') if own_pub else 'unread' %}
+          {% set own_pub_file_sha256 = salt['file.get_hash'](pki_dir ~ '/minion.pub', 'sha256') %}
+
+          guestcfg-probe-own-fingerprint:
+            test.show_notification:
+              - text: 'own-fingerprint {{ own_fingerprint }}'
+
+          # The same fingerprint with SHA-256 named, the hash type this minion defaults to, and the first line of its public key,
+          # which names the key's PEM form: what tells a different key from the same key hashed or stored differently.
+          guestcfg-probe-own-sha256:
+            test.show_notification:
+              - text: 'own-sha256 {{ own_sha256 }}'
+
+          guestcfg-probe-hash-type:
+            test.show_notification:
+              - text: 'hash-type {{ hash_type }}'
+
+          guestcfg-probe-pub-head:
+            test.show_notification:
+              - text: 'pub-head {{ own_pub_head }}'
+
+          # The public key itself, its body joined into one line, and the length of each of its lines: a public key is public,
+          # and the two tell the same key written in another layout from a different key.
+          guestcfg-probe-pub-body:
+            test.show_notification:
+              - text: 'pub-body {{ own_pub_body }}'
+
+          guestcfg-probe-pub-lines:
+            test.show_notification:
+              - text: 'pub-lines {{ own_pub_lines }}'
+
+          # SHA-256 of the whole minion.pub file. Salt 3008.5's master fingerprints the whole PEM it holds for an id, where the
+          # minion's key.finger hashes only the lines between the header and the footer, so the two fingerprints differ for the
+          # same key; a hash of the whole file is the minion-side read that can match the master's.
+          guestcfg-probe-pub-file-sha256:
+            test.show_notification:
+              - text: 'pub-file-sha256 {{ own_pub_file_sha256 }}'
+
+          # Where this minion keeps its key pair, as its own configuration resolves it: the directory a key generated on the
+          # master would be seeded into on this system.
+          guestcfg-probe-pki-dir:
+            test.show_notification:
+              - text: 'pki-dir {{ pki_dir }}'
+          {% if grains['os_family'] == 'Windows' %}
+
+          # The sessions signed in on Windows, read with quser. Under the minion service quser reported no
+          # signed-in user with exit 0 and "No User exists for *" on stderr (G-982); 1 counts as success too.
+          # The run records the exit, stdout and stderr, and judges on the text.
+          guestcfg-probe-signed-in-sessions:
+            cmd.run:
+              - name: quser
+              - success_retcodes:
+                - 1
+          {% endif %}
       # Everything needing the network or the salt user: the signing key, the pinned 3008.5
-      # packages, CherryPy for salt-api, then the configuration files, owned so salt reads them.
+      # packages, a check that salt-api's web server (CherryPy, which salt-common 3008.5 carries
+      # in Salt's own Python) imports, then the configuration files, owned so salt reads them.
+      # Nothing is installed from the Python Package Index.
       - path: /opt/guestcfg/install.sh
         permissions: '0700'
         content: |
@@ -170,7 +255,7 @@ stringData:
           apt_in() { apt-get -o DPkg::Lock::Timeout=300 install -y salt-common=3008.5 salt-master=3008.5 salt-api=3008.5; }
           retry 3 apt_in || { log "the Salt master packages did not install"; exit 1; }
           apt-mark hold salt-common salt-master salt-api
-          salt-pip install CherryPy || log "salt-pip could not add CherryPy; the API login will show whether it is needed"
+          if /opt/saltstack/salt/bin/python3 -c 'import cherrypy'; then log "CherryPy imports in Salt's own Python: salt-api has its web server"; else log "CherryPy does not import in Salt's own Python: salt-api cannot serve"; fi
           install -d -o root -g salt -m 0750 /etc/salt/guestcfg
           install -o root -g salt -m 0640 /opt/guestcfg/api.digest /etc/salt/guestcfg/api.digest
           install -o root -g salt -m 0640 /opt/guestcfg/api.crt /etc/salt/guestcfg/api.crt

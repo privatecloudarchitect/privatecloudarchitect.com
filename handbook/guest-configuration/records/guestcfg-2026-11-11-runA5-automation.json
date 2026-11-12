@@ -1,0 +1,256 @@
+{
+ "captured_utc": "2026-11-11T21:10:32Z",
+ "signIn": "session login",
+ "saltVersion": "3008.5",
+ "project": "{{project-1}}",
+ "namespace": "{{namespace-1}}",
+ "runId": "906e54",
+ "windowsBootstrap": "sysprep",
+ "windowsBootstrapPath": "Sysprep (rawSysprep)",
+ "via": "automation",
+ "viaPath": "VCF Automation blueprints",
+ "keys": "accept",
+ "sourceRanges": [
+  "0.0.0.0/0"
+ ],
+ "proveSourceRanges": false,
+ "linuxImage": "{{image-1}}",
+ "windowsImage": "{{image-4}}",
+ "classes": {
+  "master": "best-effort-small",
+  "windows": "best-effort-medium"
+ },
+ "storageClass": "{{storageclass-2}}",
+ "created": [
+  {
+   "kind": "Blueprint",
+   "role": "bp_master"
+  },
+  {
+   "kind": "Blueprint",
+   "role": "bp_linux"
+  },
+  {
+   "kind": "Blueprint",
+   "role": "bp_windows"
+  },
+  {
+   "kind": "Deployment",
+   "role": "master"
+  },
+  {
+   "kind": "Deployment",
+   "role": "linux"
+  },
+  {
+   "kind": "Deployment",
+   "role": "windows"
+  }
+ ],
+ "steps": {
+  "2": {
+   "name": "master",
+   "via": "automation",
+   "blueprints": {
+    "master": {
+     "valid": true,
+     "warnings": 0
+    },
+    "linux": {
+     "valid": true,
+     "warnings": 0
+    },
+    "windows": {
+     "valid": true,
+     "warnings": 0
+    }
+   },
+   "secondsToMasterDeployment": 110,
+   "secondsToPoweredOn": 6,
+   "secondsToLoadBalancerAddress": 6,
+   "secondsToApiLogin": 92,
+   "apiTlsPinnedToRunCertificate": true,
+   "sourceRanges": {
+    "requested": [
+     "0.0.0.0/0"
+    ],
+    "readBack": [
+     "0.0.0.0/0"
+    ],
+    "carried": true
+   }
+  },
+  "3": {
+   "name": "minions",
+   "via": "automation",
+   "windowsBootstrap": "sysprep",
+   "linuxSecondsToPoweredOn": 47,
+   "windowsSecondsToPoweredOn": 54,
+   "secondsToMinionDeployments": {
+    "linux": 47,
+    "windows": 0
+   }
+  },
+  "4": {
+   "name": "keys",
+   "secondsToBothKeys": 78,
+   "accepted": 2,
+   "otherPendingKeysLeftUnaccepted": 0,
+   "acceptanceByExactId": true
+  },
+  "5": {
+   "name": "first state",
+   "firstApply": {
+    "Linux": {
+     "states": 1,
+     "changed": 1,
+     "failed": 0,
+     "wouldChange": 0
+    },
+    "Windows": {
+     "states": 1,
+     "changed": 1,
+     "failed": 0,
+     "wouldChange": 0
+    }
+   },
+   "secondApply": {
+    "Linux": {
+     "states": 1,
+     "changed": 0,
+     "failed": 0,
+     "wouldChange": 0
+    },
+    "Windows": {
+     "states": 1,
+     "changed": 0,
+     "failed": 0,
+     "wouldChange": 0
+    }
+   },
+   "secondApplyChangedNothing": true,
+   "osFamily": [
+    "Debian",
+    "Windows"
+   ],
+   "saltVersion": "3008.5",
+   "targetedBy": "grain os_family"
+  },
+  "probes": {
+   "name": "probes",
+   "Linux": {
+    "sameKey": true,
+    "fingerprintsAgree": false,
+    "pkiDir": "/etc/salt/pki/minion",
+    "minion": {
+     "default": "b2:0f:0f:ac:9d:fd:03:cd:15:f5:b6:b2:03:3a:00:fe:e4:90:36:74:4f:1d:49:6a:5e:87:e3:66:16:f4:04:52",
+     "sha256": "b2:0f:0f:ac:9d:fd:03:cd:15:f5:b6:b2:03:3a:00:fe:e4:90:36:74:4f:1d:49:6a:5e:87:e3:66:16:f4:04:52",
+     "hashType": "sha256",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24",
+     "pubFileSha256": "c2eb4ab242965f6a3f5a706a42f1f44e4c7af96633233fa4e3d6ccea5f027669"
+    },
+    "master": {
+     "default": "13:f3:83:54:d6:b3:c4:f3:79:5c:27:a9:30:c2:1b:db:61:c2:a7:4d:b9:bb:66:61:1a:c6:40:00:76:d8:64:67",
+     "sha256": "13:f3:83:54:d6:b3:c4:f3:79:5c:27:a9:30:c2:1b:db:61:c2:a7:4d:b9:bb:66:61:1a:c6:40:00:76:d8:64:67",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24"
+    },
+    "fileSha256MatchesMaster": false,
+    "sha256Matches": false,
+    "samePemForm": true,
+    "sameLayout": true
+   },
+   "Windows": {
+    "sameKey": true,
+    "fingerprintsAgree": false,
+    "pkiDir": "C:\\ProgramData\\Salt Project\\Salt\\conf\\pki\\minion",
+    "minion": {
+     "default": "dd:9d:f9:85:25:0c:27:e4:7d:ec:f1:23:b8:c9:3e:57:6e:24:24:c0:56:a3:c1:e3:34:f8:68:1b:70:7a:f5:6d",
+     "sha256": "dd:9d:f9:85:25:0c:27:e4:7d:ec:f1:23:b8:c9:3e:57:6e:24:24:c0:56:a3:c1:e3:34:f8:68:1b:70:7a:f5:6d",
+     "hashType": "sha256",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24",
+     "pubFileSha256": "a93ab8f608b1004145a65df9e0543754d0e6c13ac076cf4ba49ae6c8d5148f55"
+    },
+    "master": {
+     "default": "6a:90:64:83:b2:52:37:57:ac:46:82:cb:01:7e:af:c0:69:ce:27:a6:43:c6:66:1d:df:f7:0d:43:bc:92:66:35",
+     "sha256": "6a:90:64:83:b2:52:37:57:ac:46:82:cb:01:7e:af:c0:69:ce:27:a6:43:c6:66:1d:df:f7:0d:43:bc:92:66:35",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24"
+    },
+    "fileSha256MatchesMaster": false,
+    "sha256Matches": false,
+    "samePemForm": true,
+    "sameLayout": true,
+    "sessions": {
+     "read": true,
+     "quserExit": 0,
+     "stdoutLines": 0,
+     "signedInSessions": 0,
+     "stderr": "No User exists for *",
+     "noUserSignedIn": true
+    }
+   }
+  },
+  "6": {
+   "name": "drift",
+   "Linux": {
+    "driftChanged": 1,
+    "testNamedIt": 1,
+    "applyRestoredIt": 1,
+    "testAfterRestoreWouldChange": 0
+   },
+   "Windows": {
+    "driftChanged": 1,
+    "testNamedIt": 1,
+    "applyRestoredIt": 1,
+    "testAfterRestoreWouldChange": 0
+   }
+  },
+  "7": {
+   "name": "retirement",
+   "keysDeleted": "deleted",
+   "deployments": 3,
+   "blueprints": 3,
+   "refused": [],
+   "stillDeleting": [],
+   "residue": {
+    "secrets": [],
+    "virtualmachines": [],
+    "virtualmachineservices": [],
+    "deployments": [],
+    "blueprints": []
+   },
+   "clean": true
+  },
+  "8": {
+   "name": "read back",
+   "residue": {
+    "secrets": [],
+    "virtualmachines": [],
+    "virtualmachineservices": [],
+    "deployments": [],
+    "blueprints": []
+   },
+   "clean": true
+  }
+ },
+ "failure": null,
+ "outcome": "complete",
+ "teardown": {
+  "keysDeleted": "deleted",
+  "deployments": 3,
+  "blueprints": 3,
+  "refused": [],
+  "stillDeleting": [],
+  "residue": {
+   "secrets": [],
+   "virtualmachines": [],
+   "virtualmachineservices": [],
+   "deployments": [],
+   "blueprints": []
+  },
+  "clean": true
+ }
+}

@@ -1,0 +1,292 @@
+# =============================================================================
+# Template 02x-b as a blueprint (EXTRA CREDIT) - salt-minion-linux, a Linux minion
+# through VCF Automation
+# =============================================================================
+# Stage 02's blueprint without its operator login (no user or password is set), plus what
+# makes its machine a Salt minion: the master's address and the minion's own id, and, when
+# you have one, a key pair generated on the master.
+# It is salt-minion-linux.vm.yaml beside this file in stage 02's blueprint shape; a test
+# holds its Secret and machine to what guestcfg.py renders.
+#
+# The master comes first, from salt-master.blueprint.yaml or any master you run, because
+# this machine's configuration names its address. The master exists before any minion
+# that joins it, as a deployment of its own, and a guest that read its address at boot
+# would need a token in the guest, so salt_master_address is an input: read it with the
+# command in the master deployment's outputs.
+#
+# Trust, two ways:
+#   * No key pair (the default): the minion makes its own key at first start and the
+#     master holds it pending; accept it by its exact id, never with salt-key -A. To
+#     compare the key itself first, out of band, you need a way into the master and
+#     this minion that is not Salt; neither blueprint carries a login, so add stage
+#     02's operator user, with sudo, if you mean to compare by hand. No run of the
+#     companion compared by hand. Then:
+#       sudo salt-key -p <app_name>-linux       (on the master: the pending public key)
+#       sudo cat /etc/salt/pki/minion/minion.pub   (on the minion: its own)
+#       sudo salt-key -a <app_name>-linux       (only when the lines between BEGIN and END match)
+#     Not salt-key -f against salt-call --local key.finger: on Salt 3008.5 the master
+#     hashes the whole PEM it holds and the minion only the lines inside it, so the two
+#     fingerprints differ for the same key.
+#   * A key pair generated on the master, which accepts its public key at once (the wheel
+#     function key.gen_accept, or salt-key --gen-keys and a copy into the accepted
+#     folder, as Salt's page on preseeding shows). Give each half as one line of base64:
+#       openssl base64 -A -in minion.pem   # minion_pem_b64
+#       openssl base64 -A -in minion.pub   # minion_pub_b64
+#     The minion presents it at first start and is never pending. Whoever can read this
+#     deployment's Secret holds the minion's identity until the Secret is deleted.
+# Salt 3008 LTS from Broadcom's package location: Salt Project, the free path; the
+# chapter quotes its support terms.
+# =============================================================================
+
+name: salt-minion-linux
+version: 1.0.0
+formatVersion: 2
+
+description: |
+  An Ubuntu 24.04 machine in a Supervisor namespace you already have, joined at first
+  boot to the Salt master whose address you give, as a Salt Project 3008 LTS minion.
+
+inputs:
+
+  # --- As in stage 02 ----------------------------------------------------------
+  app_name:
+    type: string
+    title: Name
+    description: >-
+      Lowercase kebab-case slug every object's name derives from: <app_name>-linux (the
+      machine, its host name and its minion id) and <app_name>-linux-bootstrap.
+    pattern: '^[a-z][a-z0-9-]{2,40}$'
+    default: salt
+
+  target_namespace_name:
+    type: string
+    title: Target Supervisor namespace
+    description: >-
+      The Supervisor namespace to deploy into, vended to you by your platform team.
+      Discover with:  kubectl get supervisornamespaces
+    pattern: '^[a-z][a-z0-9-]+$'
+
+  vm_image:
+    type: string
+    title: Ubuntu 24.04 image (display name)
+    description: >-
+      The image's display name, not its vmi- id, which a rebuilt library changes.
+        kubectl get clustervirtualmachineimages,virtualmachineimages -o custom-columns=ID:.metadata.name,NAME:.status.name
+
+  storage_class:
+    type: string
+    title: Storage class
+    description: 'Where the boot disk lives.  kubectl get regionstorageclassquotas'
+
+  vm_class:
+    type: string
+    title: VM class (size)
+    description: 'The governed size class.  kubectl get virtualmachineclasses'
+    default: best-effort-small
+
+  # --- New for a minion ----------------------------------------------------------
+  run_label:
+    type: string
+    title: Run label (optional)
+    description: >-
+      Written as the label handbook-guestcfg-run on both objects, so one run's objects
+      stay findable by label. guestcfg.py sets its run id here. Empty, the label is
+      present with no value.
+    pattern: '^([a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)?$'
+    default: ''
+
+  salt_master_address:
+    type: string
+    title: Salt master address
+    description: >-
+      The address the minion dials on 4505 and 4506: the master's own address on the
+      namespace network. For salt-master.blueprint.yaml:  kubectl get virtualmachine
+      <app_name>-master -n <namespace> -o jsonpath='{.status.network.primaryIP4}'
+    pattern: '^[A-Za-z0-9]([A-Za-z0-9.-]{0,61}[A-Za-z0-9])?$'
+
+  minion_pem_b64:
+    type: string
+    title: Seeded private key (base64, optional)
+    description: >-
+      One line of base64 of a minion private key generated on the master, whose public
+      key the master has accepted. Empty, the default, seeds nothing. Marked encrypted;
+      it reaches only this deployment's Secret and the minion's key directory.
+    encrypted: true
+    default: ''
+
+  minion_pub_b64:
+    type: string
+    title: Seeded public key (base64, optional)
+    description: >-
+      One line of base64 of the matching public key. Empty, the default, seeds nothing.
+    pattern: '^([A-Za-z0-9+/]+={0,2})?$'
+    default: ''
+
+# -----------------------------------------------------------------------------
+# RESOURCES
+# -----------------------------------------------------------------------------
+resources:
+
+  # As in stage 02: reference the namespace you were vended.
+  Namespace:
+    type: CCI.Supervisor.Namespace
+    properties:
+      existing: true
+      name: ${input.target_namespace_name}
+
+  # The minion's first boot, carried in a Secret as in stage 02.
+  Bootstrap:
+    type: CCI.Supervisor.Resource
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: ${input.app_name}-linux-bootstrap
+          labels:
+            app: ${input.app_name}-linux-bootstrap
+            app.kubernetes.io/name: ${input.app_name}-linux-bootstrap
+            app.kubernetes.io/component: salt-minion
+            app.kubernetes.io/part-of: guest-configuration
+            app.kubernetes.io/managed-by: vcf-automation
+            handbook-guestcfg-run: '${input.run_label}'
+        type: Opaque
+        stringData:
+          user-data: |
+            #cloud-config
+            hostname: ${input.app_name}-linux
+            bootcmd:
+              - systemctl stop unattended-upgrades 2>/dev/null || true
+              - systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+            packages:
+              - ca-certificates
+              - curl
+              - gnupg
+            write_files:
+              # The same apt source and 3008 pin as the master.
+              - path: /opt/guestcfg/salt.sources
+                permissions: '0644'
+                content: |
+                  X-Repolib-Name: Salt Project
+                  Enabled: yes
+                  Types: deb
+                  URIs: https://packages.broadcom.com/artifactory/saltproject-deb
+                  Signed-By: /etc/apt/keyrings/salt-archive-keyring.pgp
+                  Suites: stable
+                  Components: main
+              - path: /opt/guestcfg/salt-pin
+                permissions: '0644'
+                content: |
+                  Package: salt-*
+                  Pin: version 3008.*
+                  Pin-Priority: 1001
+              # The minion's whole identity: the master to dial and the id it presents. Minions dial out,
+              # so this machine opens no port and needs no load balancer.
+              - path: /opt/guestcfg/minion.conf
+                permissions: '0644'
+                content: |
+                  master: ${input.salt_master_address}
+                  id: ${input.app_name}-linux
+              # An optional key pair generated on the master, each half ONE line of base64. Empty, the
+              # default, writes two empty files and install.sh seeds nothing. Given, install.sh puts the
+              # pair in the minion's key directory before the package first starts the minion, and
+              # deletes this copy of the private key before anything in it can exit.
+              - path: /opt/guestcfg/minion.pem
+                permissions: '0600'
+                encoding: b64
+                content: '${input.minion_pem_b64}'
+              - path: /opt/guestcfg/minion.pub
+                permissions: '0644'
+                encoding: b64
+                content: '${input.minion_pub_b64}'
+              # The seeded pair, when there is one, in place first, and the copy of its private key
+              # deleted before anything that can exit; then the same signing key and pinned packages
+              # as the master, salt-minion instead of salt-master.
+              - path: /opt/guestcfg/install.sh
+                permissions: '0700'
+                content: |
+                  #!/bin/bash
+                  set -uo pipefail
+                  export DEBIAN_FRONTEND=noninteractive
+                  log() { echo "[guestcfg $(date -u +%H:%M:%SZ)] $*"; }
+                  retry() { local left=$1; shift; until "$@"; do left=$((left-1)); [ "$left" -gt 0 ] || return 1; log "retrying: $*"; sleep 20; done; }
+                  fetch_key() { curl -fsSL --retry 3 --retry-delay 5 "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public" | gpg --dearmor --yes -o /etc/apt/keyrings/salt-archive-keyring.pgp; }
+                  apt_up() { apt-get -o DPkg::Lock::Timeout=300 update; }
+                  if [ -s /opt/guestcfg/minion.pem ] && [ -s /opt/guestcfg/minion.pub ]; then
+                    install -d -m 0700 /etc/salt/pki/minion
+                    install -m 0400 /opt/guestcfg/minion.pem /etc/salt/pki/minion/minion.pem
+                    install -m 0644 /opt/guestcfg/minion.pub /etc/salt/pki/minion/minion.pub
+                    rm -f /opt/guestcfg/minion.pem
+                    log "the key pair generated on the master is in place before the minion first starts"
+                  else
+                    rm -f /opt/guestcfg/minion.pem
+                    log "no key pair was seeded: the minion makes its own at first start"
+                  fi
+                  install -d -m 755 /etc/apt/keyrings
+                  retry 6 fetch_key || { log "the Salt signing key could not be fetched"; exit 1; }
+                  install -m 0644 /opt/guestcfg/salt.sources /etc/apt/sources.list.d/salt.sources
+                  install -m 0644 /opt/guestcfg/salt-pin /etc/apt/preferences.d/salt-pin-1001
+                  retry 6 apt_up || { log "the Salt repository could not be read"; exit 1; }
+                  apt_in() { apt-get -o DPkg::Lock::Timeout=300 install -y salt-common=3008.5 salt-minion=3008.5; }
+                  retry 3 apt_in || { log "the Salt minion packages did not install"; exit 1; }
+                  apt-mark hold salt-common salt-minion
+                  install -m 0644 /opt/guestcfg/minion.conf /etc/salt/minion.d/guestcfg.conf
+                  systemctl enable salt-minion
+                  systemctl restart salt-minion
+                  log "salt-minion restarted with the run's configuration"
+            runcmd:
+              - [bash, /opt/guestcfg/install.sh]
+
+  # Stage 02's machine, pointed at the Secret above.
+  MinionVM:
+    type: CCI.Supervisor.Resource
+    dependsOn:
+      - Bootstrap
+    properties:
+      context: ${resource.Namespace.id}
+      manifest:
+        apiVersion: vmoperator.vmware.com/v1alpha5
+        kind: VirtualMachine
+        metadata:
+          name: ${input.app_name}-linux
+          labels:
+            app: ${input.app_name}-linux
+            app.kubernetes.io/name: ${input.app_name}-linux
+            app.kubernetes.io/component: salt-minion
+            app.kubernetes.io/part-of: guest-configuration
+            app.kubernetes.io/managed-by: vcf-automation
+            handbook-guestcfg-run: '${input.run_label}'
+        spec:
+          className: ${input.vm_class}
+          imageName: ${input.vm_image}
+          storageClass: ${input.storage_class}
+          powerState: PoweredOn
+          bootstrap:
+            cloudInit:
+              rawCloudConfig:
+                name: ${input.app_name}-linux-bootstrap
+                key: user-data
+
+# -----------------------------------------------------------------------------
+# OUTPUTS
+# -----------------------------------------------------------------------------
+outputs:
+
+  namespace_name:
+    description: The Supervisor namespace this minion landed in.
+    value: ${resource.Namespace.name}
+
+  minion_id:
+    description: >-
+      The minion's id, which is its machine name and its host name: the exact id to
+      accept on the master, and the one the master's API account names.
+    value: ${input.app_name}-linux
+
+  print_the_pending_key:
+    description: >-
+      Without a seeded key pair, run this on the master and compare the public key it
+      prints with the minion's own /etc/salt/pki/minion/minion.pub; accept with salt-key
+      -a and the exact id only when the lines between BEGIN and END match. With a seeded
+      pair, the key is accepted already and is never pending.
+    value: 'salt-key -p ${input.app_name}-linux'

@@ -1,16 +1,24 @@
 # =============================================================================
 # Template 02x-b (EXTRA CREDIT) - salt-minion-linux, a Linux minion on the VM Service
 # =============================================================================
-# Stage 02's VM, plus the two lines that make it a minion: the master's address and its
-# own id. Salt installs from the same pinned package location as the master; the minion
+# Stage 02's VM without its operator login (no user or password is set), plus the two
+# lines that make it a minion: the master's address and its own id. Salt installs from the same pinned package location as the master; the minion
 # dials out to the master on 4505 and 4506.
 #
 # The master must exist first, because this VM's configuration names its address. After
-# applying, compare the key's fingerprint at both ends, then accept it on the master by its
-# exact id, never with salt-key -A:
-#   salt-key -f salt-minion-linux       (on the master: the pending key's fingerprint)
-#   salt-call --local key.finger        (on the minion's console: its own)
-#   salt-key -a salt-minion-linux       (only when the two match)
+# applying, accept the key on the master by its exact id, never with salt-key -A. To
+# compare the key itself first, out of band, you need a way into the master and this
+# minion that is not Salt, a console or SSH with a login given at create. Neither this
+# template nor the master's carries one, so add stage 02's operator user, with sudo, to
+# both if you mean to compare by hand; no run of the companion compared by hand. Then:
+#   sudo salt-key -p salt-minion-linux       (on the master: the pending public key)
+#   sudo cat /etc/salt/pki/minion/minion.pub (on the minion: its own, in its pki_dir)
+#   sudo salt-key -a salt-minion-linux       (only when the lines between BEGIN and END match)
+# Do not compare salt-key -f with salt-call --local key.finger on Salt 3008.5: the master
+# hashes the whole PEM it holds and the minion only the lines inside it, so the two
+# fingerprints differ for the same key.
+# Where it fits, a key generated on the master and seeded instead needs no comparison:
+# salt-minion-linux.blueprint.yaml takes one.
 #
 # Before you apply it: fill the <REPLACE_ME-...> values; each has its discovery note beside it.
 #   kubectl get virtualmachine salt-master -n <your-namespace> -o jsonpath='{.status.network.primaryIP4}'

@@ -18,14 +18,28 @@
 #
 # The administrator password is in the Secret in plain text, as Sysprep takes it: generate
 # one for this machine and keep the Secret's access as tight as the password's. The first
-# logon signs Administrator on once to run the install, and nothing in this file signs that
-# session out: sign it out on the console once the key reaches the master.
+# logon signs Administrator on once to run the install (Order 1), and the second first-logon
+# command (Order 2) signs that session out with shutdown.exe /l. Microsoft's page for Order
+# says these commands "are now started at the same time, and no longer wait for the previous
+# command to finish", so the sign-out does not trust its Order: it waits until the salt-minion
+# service runs and the installer has exited, 60 minutes at most, and then signs out.
 #
-# Afterwards, compare the key's fingerprint at both ends, then accept it on the master by
-# exact id, never with salt-key -A:
-#   salt-key -f salt-minion-win         (on the master: the pending key's fingerprint)
-#   salt-call --local key.finger        (on the minion's console: its own)
-#   salt-key -a salt-minion-win         (only when the two match)
+# Afterwards, accept the key on the master by exact id, never with salt-key -A. To compare
+# the key itself first, out of band, you need a way into the master and this minion that
+# is not Salt: the master's template carries no login (add stage 02's operator user, with
+# sudo), and here the Administrator password you give is the login. How to reach a VM
+# Service machine's console on 9.1.1 is not established here, and no run of the companion
+# compared by hand. Then:
+#   sudo salt-key -p salt-minion-win    (on the master: the pending public key)
+#   type "C:\ProgramData\Salt Project\Salt\conf\pki\minion\minion.pub"
+#                                       (on the minion, as Administrator: its own key)
+#   sudo salt-key -a salt-minion-win    (only when the lines between BEGIN and END match)
+# Do not compare salt-key -f with salt-call --local key.finger on Salt 3008.5: the master
+# hashes the whole PEM it holds and the minion only the lines inside it, so the two
+# fingerprints differ for the same key. No key generated on the master is seeded on
+# this path, the companion's choice: one first-logon CommandLine holds at most 1024
+# characters, a PEM private key is longer, and splitting it across commands was neither
+# built nor run.
 #
 # Before you apply it: fill the <REPLACE_ME-...> values.
 # Salt 3008 LTS from Broadcom's package location: Salt Project, the free path; the chapter
@@ -137,6 +151,11 @@ stringData:
               <Order>1</Order>
               <Description>Install the Salt minion</Description>
               <CommandLine>powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='Stop'; $url='https://packages.broadcom.com/artifactory/saltproject-generic/windows/3008.5/Salt-Minion-3008.5-Py3-AMD64-Setup.exe'; $exe=Join-Path $env:TEMP 'Salt-Minion-Setup.exe'; for($i=1;$i -le 10;$i++){ try { [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $exe; break } catch { if($i -eq 10){ throw }; Start-Sleep -Seconds 30 } }; Start-Process -FilePath $exe -ArgumentList '/S','/master=&lt;REPLACE_ME-master-ip&gt;','/minion-name=salt-minion-win' -Wait"</CommandLine>
+            </SynchronousCommand>
+            <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+              <Order>2</Order>
+              <Description>Sign the first logon out once the install has finished</Description>
+              <CommandLine>powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$deadline=(Get-Date).AddMinutes(60); while((Get-Date) -lt $deadline){ $svc=Get-Service salt-minion -ErrorAction SilentlyContinue; $setup=Get-Process Salt-Minion-Setup -ErrorAction SilentlyContinue; if($svc -and $svc.Status -eq 'Running' -and -not $setup){ break }; Start-Sleep -Seconds 10 }; shutdown.exe /l"</CommandLine>
             </SynchronousCommand>
           </FirstLogonCommands>
         </component>

@@ -1,0 +1,293 @@
+{
+ "captured_utc": "2026-11-11T19:20:00Z",
+ "signIn": "session login",
+ "saltVersion": "3008.5",
+ "project": "{{project-1}}",
+ "namespace": "{{namespace-1}}",
+ "runId": "09af90",
+ "windowsBootstrap": "sysprep",
+ "windowsBootstrapPath": "Sysprep (rawSysprep)",
+ "via": "supervisor",
+ "viaPath": "directly at the namespace endpoint",
+ "keys": "preseed",
+ "sourceRanges": null,
+ "proveSourceRanges": true,
+ "linuxImage": "{{image-1}}",
+ "windowsImage": "{{image-4}}",
+ "classes": {
+  "master": "best-effort-small",
+  "windows": "best-effort-medium"
+ },
+ "storageClass": "{{storageclass-2}}",
+ "created": [
+  {
+   "kind": "Secret",
+   "role": "api_secret"
+  },
+  {
+   "kind": "Secret",
+   "role": "master_secret"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "master"
+  },
+  {
+   "kind": "VirtualMachineService",
+   "role": "lb"
+  },
+  {
+   "kind": "Secret",
+   "role": "linux_secret"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "linux"
+  },
+  {
+   "kind": "Secret",
+   "role": "windows_secret"
+  },
+  {
+   "kind": "VirtualMachine",
+   "role": "windows"
+  }
+ ],
+ "steps": {
+  "2": {
+   "name": "master",
+   "via": "supervisor",
+   "secondsToPoweredOn": 51,
+   "secondsToLoadBalancerAddress": 4,
+   "secondsToApiLogin": 76,
+   "apiTlsPinnedToRunCertificate": true,
+   "sourceRanges": {
+    "requested": null,
+    "readBack": [],
+    "carried": null
+   }
+  },
+  "sourceRanges": {
+   "name": "source ranges",
+   "reads": [
+    {
+     "setting": "TEST-NET-1",
+     "ranges": [
+      "192.0.2.0/24"
+     ],
+     "outcome": "answered",
+     "waitSeconds": 180,
+     "readsAnswered": 13,
+     "reads": 13
+    },
+    {
+     "setting": "any source",
+     "ranges": [
+      "0.0.0.0/0"
+     ],
+     "outcome": "answered",
+     "waitSeconds": 180,
+     "readsAnswered": 13,
+     "reads": 13
+    },
+    {
+     "setting": "the runner's own address",
+     "ranges": [
+      "{{cidr-1}}"
+     ],
+     "outcome": "answered",
+     "waitSeconds": 180,
+     "readsAnswered": 13,
+     "reads": 13
+    }
+   ],
+   "restored": null,
+   "secondsToAnswerAfterRestore": 0,
+   "runnerAddressKnown": true
+  },
+  "keysGenerated": {
+   "name": "keys generated on the master",
+   "seeded": [
+    "Linux"
+   ],
+   "notSeeded": [
+    "Windows"
+   ],
+   "windowsNotSeededBecause": "the Salt pages read for it state the Linux minion's key files, not the 3008 Windows minion's key directory",
+   "fingerprintReadAtGeneration": true
+  },
+  "3": {
+   "name": "minions",
+   "via": "supervisor",
+   "windowsBootstrap": "sysprep",
+   "linuxSecondsToPoweredOn": 52,
+   "windowsSecondsToPoweredOn": 75
+  },
+  "4": {
+   "name": "keys",
+   "secondsToBothKeys": 62,
+   "accepted": 2,
+   "otherPendingKeysLeftUnaccepted": 0,
+   "acceptanceByExactId": true,
+   "generatedOnTheMaster": {
+    "seeded": 1,
+    "answeredPing": true,
+    "secondsToPing": 2,
+    "neverPending": true,
+    "fingerprintIsTheGeneratedOne": true
+   }
+  },
+  "5": {
+   "name": "first state",
+   "firstApply": {
+    "Linux": {
+     "states": 1,
+     "changed": 1,
+     "failed": 0,
+     "wouldChange": 0
+    },
+    "Windows": {
+     "states": 1,
+     "changed": 1,
+     "failed": 0,
+     "wouldChange": 0
+    }
+   },
+   "secondApply": {
+    "Linux": {
+     "states": 1,
+     "changed": 0,
+     "failed": 0,
+     "wouldChange": 0
+    },
+    "Windows": {
+     "states": 1,
+     "changed": 0,
+     "failed": 0,
+     "wouldChange": 0
+    }
+   },
+   "secondApplyChangedNothing": true,
+   "osFamily": [
+    "Debian",
+    "Windows"
+   ],
+   "saltVersion": "3008.5",
+   "targetedBy": "grain os_family"
+  },
+  "probes": {
+   "name": "probes",
+   "Linux": {
+    "sameKey": true,
+    "fingerprintsAgree": false,
+    "pkiDir": "/etc/salt/pki/minion",
+    "minion": {
+     "default": "e6:e8:a6:7e:8d:7a:bb:eb:04:4b:ce:d8:8b:a8:cb:ce:2d:5b:c4:04:5a:87:f5:8d:93:11:14:65:c5:d7:a0:26",
+     "sha256": "e6:e8:a6:7e:8d:7a:bb:eb:04:4b:ce:d8:8b:a8:cb:ce:2d:5b:c4:04:5a:87:f5:8d:93:11:14:65:c5:d7:a0:26",
+     "hashType": "sha256",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24",
+     "pubFileSha256": "b8c3d527478666a46668912e6ca340638c8a25e35d1286ad36b4cc8c50654cf6"
+    },
+    "master": {
+     "default": "b8:c3:d5:27:47:86:66:a4:66:68:91:2e:6c:a3:40:63:8c:8a:25:e3:5d:12:86:ad:36:b4:cc:8c:50:65:4c:f6",
+     "sha256": "b8:c3:d5:27:47:86:66:a4:66:68:91:2e:6c:a3:40:63:8c:8a:25:e3:5d:12:86:ad:36:b4:cc:8c:50:65:4c:f6",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24"
+    },
+    "fileSha256MatchesMaster": true,
+    "sha256Matches": false,
+    "samePemForm": true,
+    "sameLayout": true
+   },
+   "Windows": {
+    "sameKey": true,
+    "fingerprintsAgree": false,
+    "pkiDir": "C:\\ProgramData\\Salt Project\\Salt\\conf\\pki\\minion",
+    "minion": {
+     "default": "2e:3b:a7:45:47:3e:fb:ac:c3:69:5f:90:9c:9b:4e:f3:02:ee:c4:cd:42:57:e0:0d:f5:66:c1:53:fc:2a:fa:26",
+     "sha256": "2e:3b:a7:45:47:3e:fb:ac:c3:69:5f:90:9c:9b:4e:f3:02:ee:c4:cd:42:57:e0:0d:f5:66:c1:53:fc:2a:fa:26",
+     "hashType": "sha256",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24",
+     "pubFileSha256": "3ad6a3c6f9e9baa02a0e6e2c844bb816ecdca94a7a36124556a30958d9b55a08"
+    },
+    "master": {
+     "default": "e8:71:7f:73:29:cc:fa:ec:ab:e1:7b:b4:26:86:2f:ec:77:70:35:9b:66:fa:f0:28:07:92:22:41:4c:9b:74:5f",
+     "sha256": "e8:71:7f:73:29:cc:fa:ec:ab:e1:7b:b4:26:86:2f:ec:77:70:35:9b:66:fa:f0:28:07:92:22:41:4c:9b:74:5f",
+     "pubHead": "-----BEGIN PUBLIC KEY-----",
+     "pubLines": "26,64,64,64,64,64,64,8,24"
+    },
+    "fileSha256MatchesMaster": false,
+    "sha256Matches": false,
+    "samePemForm": true,
+    "sameLayout": true,
+    "sessions": {
+     "read": true,
+     "quserExit": 0,
+     "stdoutLines": 0,
+     "signedInSessions": 0,
+     "stderr": "No User exists for *",
+     "noUserSignedIn": true
+    }
+   }
+  },
+  "6": {
+   "name": "drift",
+   "Linux": {
+    "driftChanged": 1,
+    "testNamedIt": 1,
+    "applyRestoredIt": 1,
+    "testAfterRestoreWouldChange": 0
+   },
+   "Windows": {
+    "driftChanged": 1,
+    "testNamedIt": 1,
+    "applyRestoredIt": 1,
+    "testAfterRestoreWouldChange": 0
+   }
+  },
+  "7": {
+   "name": "retirement",
+   "keysDeleted": "deleted",
+   "minionMachines": 2,
+   "loadBalancers": 1,
+   "masterMachines": 1,
+   "secrets": 4,
+   "refused": [],
+   "stillDeleting": [],
+   "residue": {
+    "secrets": [],
+    "virtualmachines": [],
+    "virtualmachineservices": []
+   },
+   "clean": true
+  },
+  "8": {
+   "name": "read back",
+   "residue": {
+    "secrets": [],
+    "virtualmachines": [],
+    "virtualmachineservices": []
+   },
+   "clean": true
+  }
+ },
+ "failure": null,
+ "outcome": "complete",
+ "teardown": {
+  "keysDeleted": "deleted",
+  "minionMachines": 2,
+  "loadBalancers": 1,
+  "masterMachines": 1,
+  "secrets": 4,
+  "refused": [],
+  "stillDeleting": [],
+  "residue": {
+   "secrets": [],
+   "virtualmachines": [],
+   "virtualmachineservices": []
+  },
+  "clean": true
+ }
+}
