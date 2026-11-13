@@ -39,7 +39,62 @@ version, add it to your project's catalog, and request it from the form. Or subm
 the API, which is how the proof deployed each one: a blueprint created in the project, then a deployment request; the
 catalog form was not run. Each input's description names the read that gives you its value: `GET /iaas/api/images` for the image
 mappings, `GET /iaas/api/flavors` for the flavor mappings, and `GET /iaas/api/network-profiles` for each profile's
-tags.
+tags. To request a released template from the catalog by API instead of the form, the next section has the script.
+
+## Requesting it from the catalog by API, and what changed since Aria Automation 8.18
+
+A released version reaches a project's catalog in two steps, and only the first is automatic. The project's template
+content source lists it: on 9.1.1 the source's items named a version as soon as it was released, and a second source
+for the same project answered `400`, "A source with provided configuration already exists". Then the source, or the
+item, has to be entitled to the project, which Broadcom's guide calls creating entitlement and which on 9.1.1 was a
+content sharing policy: the item appeared in the project's catalog within seconds of one. A project whose sharing policy
+shares another source does not see its own released templates. Both are your administrator's to set up;
+`GET /catalog/api/items?projects=<project-id>` is what your project sees.
+
+Once the item is there, a script can request it the way the form does.
+[`request_catalog_item.py`](request_catalog_item.py) does it the way Broadcom's 9.1 VM Apps programming guide does, and
+prints beside each step what an Aria Automation 8.18 script did there. Without `--execute` it only signs in, checks and
+prints the request it would send, with an input shown as hidden when its schema marks it `encrypted`, or when its name
+says it is a secret (password, passwd, pwd, secret, token, private key). On 9.1.1 the catalog marked every secret input
+this branch read as `encrypted`, in the template items' version schemas and in an Orchestrator workflow item's own
+schema; the name rule is there so the mask never rests on one flag. Keep the inputs file at mode 0600: an input can be
+a password, and the script refuses a file open to group or other. An item that is not versioned, as a workflow item
+read, is requested with no version and its own inputs (that request was not run live; the proof requested a template).
+[`request_catalog_item.expected.md`](request_catalog_item.expected.md) is what each kind of run printed on 9.1.1.
+
+The request itself did not change. The sign-in did:
+
+| Step | Aria Automation 8.18 | VCF Automation 9.1.1, VM Apps organization |
+|---|---|---|
+| A refresh token | `POST /csp/gateway/am/api/login?access_token` with a username and password; the token is "valid for 90 days" and "You cannot revoke the refresh token" | made by a person in the UI: the tenant's name ▸ My Account (under User Settings) ▸ API Tokens ▸ New. "As of VCF 9.0, the Identity Service API is no longer used to obtain a refresh token programmatically." 90 days by default; revoking one on 9.1.1 answered `204`, and the next exchange was refused |
+| The bearer | `POST /iaas/api/login` with `{"refreshToken": ...}`; "The access token is valid for eight hours" | `POST /tm/oauth/tenant/<org>/token`, form `grant_type=refresh_token`; one hour (the same exchange at `/oauth/tenant/<org>/token`, without `/tm`, also answered on 9.1.1). Or a session as `user@org` |
+| Item, versions, the name not yet used | `GET /catalog/api/items/{id}/versions`, `GET /deployment/api/deployments?name=` | the same calls; the guide adds `?apiVersion=` |
+| The request | `POST /catalog/api/items/{id}/request` with `deploymentName`, `projectId`, `version`, `inputs` | the same call and body, with `?apiVersion=2020-08-25`; the answer is a list of `{deploymentId, deploymentName}` |
+| Sign out | the guide gives no sign-out call; it says the access token "times out" after 25 minutes of inactivity, and "You can revoke an access token at any time." | `DELETE /cloudapi/1.0.0/sessions/current` with `Accept: application/json;version=40.0`, for either kind of bearer |
+
+So a script that worked against 8.18 changes three things, all at the edges: where its refresh token comes from, where
+it trades that token for a bearer, and how it reads the request's answer. Keeping either 8.18 sign-in call does not
+work on 9.1.1: on a VM Apps organization this branch measured the Identity Service login answering `404`, and
+`/iaas/api/login` refusing a 9.1 API token with `invalid_grant`. Both guides print the request's answer as one object;
+the catalog API describes an array, and 9.1.1 answered with one, so a script that reads `.deploymentId` off the
+answer stops there. The script reads either.
+
+Sending a request twice makes two deployments, so the script treats the deployment's name, in the project, as the
+request's key. When a deployment of that name exists, made from this catalog item, it reports it or waits on it and
+sends nothing, with or without the inputs; a version or an input given that differs from what it was made with stops it
+with exit 4, and so does a name that two deployments share or that a deployment from another item holds. After a
+request with no clear answer (none, a `5xx`, or a `2xx` without a deployment id) it lists by name for a minute and never
+sends again; when nothing is visible by then it exits 6 and says the request may still be in flight. `--delete
+--execute` removes only one deployment, made by this item and owned by the signed-in user (`--any-owner` for another
+owner's), and without `--execute` it prints the owner and creator first. A redirect from `VCFA_HOST` is refused rather
+than followed, so the credential reaches that host only.
+
+How it was proven, on VCF Automation 9.1.1 in a VM Apps organization on 2026-11-13: V01 released as a throwaway
+catalog item and shared to one project, then the script run five ways, with both sign-ins. The request answered with a
+list and the deployment was created, passing through `CHECKING_APPROVAL`; a second `--execute` with the same name and
+no inputs found it and sent nothing; `--delete --execute` removed it. Every session the script opened was signed out
+with `204`. The template, the sharing and the deployment were deleted afterwards and nothing was left in VCF
+Automation or vCenter. The script's 48 offline tests hold each refusal above.
 
 ## The one thing VM Apps adds to cloud-init: the first boot can be cut short
 
