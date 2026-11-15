@@ -49,6 +49,11 @@ library gives every image a new id, and an id pinned before the rebuild resolves
 in place keeps its id while the bits change. So neither handle freezes the bits, and the practice is to pin by display
 name and hold the pin with a lock.
 
+The publisher's side of the same rule: publish each build as a new library item under a versioned name, and update in
+place only an OS line's channel, an item under a version-free name, and only with the files of a release that has
+passed its gates. A blueprint of record pins and locks a release's name (`"name": "versioned"`). A lock on a channel
+(`"name": "floating"`) reads RE-QUALIFY at every update, by design, until it is qualified again.
+
 A lock is an `image-lock.json` beside the blueprint, written from one qualification deploy: the pin, the image's
 fingerprint, the guest's own OS reading and the date. `--lock` checks that the pin resolves to one image and that the
 image's fingerprint equals the lock's, and prints HELD, RE-QUALIFY, AMBIGUOUS, UNRESOLVED or NOT CHECKED. The
