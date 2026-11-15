@@ -7,8 +7,8 @@ durable tags with confidence and evidence attached, holds every proposal for you
 and writes only what you approve, on the vCenter-native tag plane, with every write verified
 against the source of truth, and reverses cleanly with a scoped un-write.
 
-The classify-and-write path and the scoped un-write were both proven by a live round trip on the
-reference estate before publication, on exactly these bytes: a real classification tag was detached
+The classify-and-write path and the scoped un-write were both proven by a live round trip before
+publication, on exactly these bytes: a real classification tag was detached
 and verified gone from the vCenter source of truth, the teardown re-run to prove an idempotent
 no-op, then the tag restored and verified, leaving the estate exactly as found. The run date and
 shape are recorded in the companion build records, and the decision core additionally carries an
@@ -99,8 +99,8 @@ backlog, with the workloads the classifier held for lack of a signal), and how m
 have a category on this vCenter at all. A held workload is never looked up on vCenter, and one on another
 vCenter leaves the count silently. `--probe-tag-authority-define` asks the tag-authority identity to
 create one category; it should be refused, and if it is not, the category is deleted at once and the
-run exits 3, because the split did not hold. `records/governance/` holds both reads and a round trip
-on a throwaway VM from the reference estate, with what each run printed.
+run exits 3, because the split did not hold. `records/governance/` holds example output: both reads and a round
+trip on a throwaway VM, with what each run printed.
 
 The handoff this slice exists for: once `function` (and your declared `env` and `sla`) are on a
 workload, the tuning estate's posture groups absorb it on the next membership re-resolution, with

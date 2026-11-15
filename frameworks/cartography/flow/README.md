@@ -56,7 +56,7 @@ to have appeared.
 The findings file names workloads and addresses, so it stays with you. `--record` writes the run in counts and
 protocol vocabulary instead: the window, whether the search cap was hit, the flow totals, each quarantined
 service's fan-in and ports, and the boundaries' sizes and tiers; the script refuses to write one in which a name
-or an address survived. `records/` holds that record from the reference estate and what the run printed.
+or an address survived. `records/` holds that record as example output, with what the run printed.
 
 ## The offline self-test
 
@@ -115,7 +115,7 @@ left out. Give the write-back an approve file and dry-run it first: it holds any
 `--record arbitration.json` writes the run in counts and the framework's vocabulary: the roles, the
 confidence spread, how often each lens placed a workload, the review queue by conflict kind, the identity
 anchor's typed components, the confirmations and the hand-off's size; it refuses a record in which a workload,
-an application id or an address survived. `records/arbitration/` holds the reference estate's record, the two
+an application id or an address survived. `records/arbitration/` holds example output: a record, the two
 dry runs of the write-back reading its hand-off, and what each printed.
 
 ## The method and the other lens

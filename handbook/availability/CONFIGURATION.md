@@ -189,9 +189,9 @@ configuration tile). The console flow handles certificate acceptance for you.
 3. **Trust the signing CA, not endpoint certificates.** Adapter TLS trust is chain-based
    against the global certificate store (`GET`/`POST /api/certificate`; the POST is multipart
    with a `certificateFile` PEM). The test-connection call returns only the endpoint's leaf
-   certificate, and trusting it is not enough: on our estate, the instance kept reporting
-   "Certificate validation failed" after the vCenter leaf and every ESX host leaf were trusted,
-   and cleared on the first poll after the vCenter's **VMCA root CAs** were added. Fetch them
+   certificate, and trusting it is not enough: with the vCenter leaf and every ESX host leaf trusted,
+   an instance can keep reporting "Certificate validation failed" until the first poll after
+   the vCenter's **VMCA root CAs** are added. Fetch them
    from the vCenter's own bundle at `https://<vcenter-fqdn>/certs/download.zip` (trust the
    `CN=CA, DC=vsphere, DC=local` roots, including the `O=localhost` pre-rename identity if the
    bundle carries one), then stop and start the instance.
@@ -205,9 +205,9 @@ starting with the services your commitments name.
 
 **Both discovery modes are agentless.** Service Discovery and the Application Discovery layer on
 top of it (rule-based multi-tier applications composed from discovered services) both run through
-VMware Tools plus vCenter privileges, not an installed agent. This is not just the documented
-design; it is verified: on the reference estate, Service Discovery found PostgreSQL, Active
-Directory, and Tomcat on management VMs that carry no agent object at all. The product-managed
+VMware Tools plus vCenter privileges, not an installed agent. This is the documented
+design, and a run shows it: Service Discovery reports services such as PostgreSQL, Active
+Directory and Tomcat on VMs that carry no agent object at all. The product-managed
 agent (the Telegraf-based OS and Application Monitoring pack in §4) is a separate sensor, so a
 service type like PostgreSQL can be monitored two ways, agentlessly here or by the agent there.
 
@@ -313,10 +313,10 @@ rules that cost us real debugging time, both proven:
 Scope alerting to a dedicated group and policy, never to everything: an alert without a scoped
 group pages on objects you never meant.
 
-**On automation.** The reference estate drives every step above from committed generators and
-reconcilers (a declarative checks file for the ping endpoints, generators for the super metrics
-and views). Those are the estate's own tooling, not shipped here; this directory ships the
-outputs (the import packages) plus `editor-formulas.yaml` for building the metrics by hand. At
+**On automation.** Every step above can be driven from committed generators and reconcilers (a
+declarative checks file for the ping endpoints, generators for the super metrics and views).
+The generators are not shipped here; this directory ships their outputs (the import packages)
+plus `editor-formulas.yaml` for building the metrics by hand. At
 scale, treat each step's API calls above as the contract and wrap them in whatever
 configuration-management you already run; nothing here needs a bespoke controller, only the
 calls in the right order with the right cardinality.

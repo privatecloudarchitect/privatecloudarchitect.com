@@ -10,7 +10,7 @@ Stdlib Python only; no token is printed or written.
 | `alerts.py` | Read-only. Reads the complete field list of every alert definition, reviews the default policy's enablement list for the definitions you own, measures what that policy governs and what it reaches through the policies that inherit from it, reads every symptom condition and its wait and cancel, counts the dials yours beside the vendor's, checks the outbound rules against every filter the API defines, and checks whether anything keeps a child's alert quiet while its parent fails. Writes `alerts.json`. |
 | `storm.py` | Read-only. Reads the instance's alert history around every host failure it still holds: what the host, its NSX transport node, its cluster and the VMs raised, and whether any VM alert said a VM was down. Writes `storm.json`. |
 | `parent_aware.py` | Builds a parent-aware VM alert and a host roll-up from throwaway objects, watches what the platform raises, and removes everything. A dry run unless given `--execute`. Writes `parent-aware.json`. |
-| `alerts.json`, `storm.json`, `parent-aware.json` | The three records from the reference estate. The chapter's plates render them. |
+| `alerts.json`, `storm.json`, `parent-aware.json` | Example output: one run of each script, the records the chapter's plates render. Compare your run's shape with them. |
 | `opslib.py` | The broker exchange and request helper, shared with the ops-estate harness. |
 
 ## Run it
@@ -139,7 +139,7 @@ field guide the chapter cites.
   query, which are `POST`s that read.
 - `parent_aware.py --execute` creates a custom group, a policy, two symptoms and three alerts, all named
   `zz-throwaway parent-aware <UTC> - ...`, and deletes them. Nothing else on the instance is changed.
-- Outbound delivery to another system is not exercised, on this estate or any other.
+- Outbound delivery to another system is not exercised by any script here.
 - **Only your own object names are published.** Hosts, clusters and VMs appear as counts and labels; definitions
   appear under the product's names.
 
@@ -156,8 +156,8 @@ check 6. `listings` carries each listing as it came back: every page's HTTP stat
 many items were read, and whether the listing is complete (every page 200 and the total read in full; a listing with
 no total is never recorded as complete). `defaultPolicyReview.ownedResolved` lists your definitions on, off and
 absent, resolved through the default policy's chain, and `exportRead` says whether that policy's export was read at
-all. `report` is the text the script printed. The committed `alerts.json` is the reference estate's capture of
-2026-11-07 and carries all three.
+all. `report` is the text the script printed. The committed `alerts.json` is example output, a capture of
+2026-11-07, and carries all three.
 
 `storm.json`: `events`, each with its hosts and clusters (counts), the window by kind and definition, the VM alerts
 that could say down, and the alerts on the VMs under its hosts now and on its clusters; `vmVocabulary`;

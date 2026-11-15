@@ -125,6 +125,6 @@ What the record says of the parity gate:
 A declared policy the run cannot find is keyed by a hash of the name you declared, so the record names nothing either
 way.
 
-`runway.json` in this folder is the reference estate's run of 2026-10-18 on VCF Operations 9.1.1.0 (build
+`runway.json` in this folder is example output, a run of 2026-10-18 on VCF Operations 9.1.1.0 (build
 25679751), the record the chapter renders. It was written before the stable keys and the `parity` field existed, so it
 carries neither; the next capture carries both.

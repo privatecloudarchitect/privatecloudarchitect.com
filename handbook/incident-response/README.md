@@ -9,7 +9,7 @@ token is printed or written.
 |---|---|
 | `triage.py` | Reads every alert instance and profiles the open ones by age, impact badge, concentration and control state; ranks the definitions that fill the queue; audits whatever failure record you keep. Writes `triage.json`. |
 | `failure-record.template.md` | A record entry carrying every field the audit counts: symptom, root cause with its layer from a fixed list of five, fix, evidence, a cross-link. |
-| `triage.json` | The run on the reference estate, 2026-10-19, VCF Operations 9.1.1.0 (build 25679751). The chapter renders it. |
+| `triage.json` | Example output: a run of 2026-10-19 on VCF Operations 9.1.1.0 (build 25679751). The chapter renders it. |
 | `expected-output.md` | The transcripts behind that record. |
 | `opslib.py` | The broker exchange and request helper, shared with the other Part IV harnesses. |
 

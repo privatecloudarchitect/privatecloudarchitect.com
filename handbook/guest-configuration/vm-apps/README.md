@@ -55,7 +55,7 @@ curl -sS --cacert api.crt --resolve salt-master:8000:$M https://salt-master:8000
   --data-urlencode "password=$(cat api.password)"
 ```
 
-What the master answered on the reference estate, 2026-11-12, once its deployment was `CREATE_SUCCESSFUL`: the
+Example output, what the master answered on 2026-11-12 once its deployment was `CREATE_SUCCESSFUL`: the
 version and the key list, then the API's answer as the proof's script reduced it, to its account and its rights (the
 full answer has page 01's form):
 
@@ -164,7 +164,7 @@ Rejected Keys:
 
 What the proof printed, shortened: the two keys deleted by id, then, after both minions' deployments were deleted, the
 master's empty list. The master's deployment went last. Afterwards the project listed none of the proof's deployments
-or blueprints, and none of the reference estate's vCenters held a machine from them.
+or blueprints, and no vCenter held a machine from them.
 
 ## Page 07: on VM Apps the blueprints are the path
 

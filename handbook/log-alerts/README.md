@@ -20,7 +20,7 @@ Proven on VCF 9.1.1 (VCF Operations and Log Management 9.1.1, three vCenters and
 | `bundle/storage-path-health.json` | the storage path catalog: 24 log symptoms and 11 alerts, each identifier graded by how it was validated on 9.1.1 | |
 | `bundle/storage-path-runbook.md` | what to do when each alert fires | |
 | `scope.example.json` | the one file you edit: owner prefix, scope name, clusters, parent policy | |
-| `records/` | the runs on the reference estate the chapter renders, every estate value replaced by a placeholder | |
+| `records/` | example output: the runs the chapter renders, every estate value replaced by a placeholder | |
 
 ## Run it
 
@@ -146,6 +146,6 @@ the JSON (the chapter's workshop builds the entries), run `plan`, then `apply --
 
 ## Expected output
 
-[`expected-output.md`](expected-output.md) holds the runs on the reference estate the chapter shows: the identifiers
+[`expected-output.md`](expected-output.md) holds example output, the runs the chapter shows: the identifiers
 seen, the tries, the deploy (first run and second run), the episodes from each source, the bindings, two monitors, and
 the proof. The status run is kept as its record, `records/deploy-status.record.json`.

@@ -14,8 +14,8 @@ dependency-free view you can stand up in an afternoon. It is L1 of the five laye
 into this dashboard with nothing to undo.
 
 **Provenance:** every view, column, band, and formula here was proven on a live VCF Operations
-9.1 instance (2026-08-17 and 2026-08-18), including the import shape itself. The no-force
-content-import recognition test on the reference instance reports the shipped packages as
+9.1 instance (2026-08-17 and 2026-08-18), including the import shape itself. A no-force
+content import of the shipped packages into an instance that already holds them reports
 `skipped N, failed 0`, which is the id-preserving proof.
 
 ## Reading the arm back: `promise.py`
@@ -57,7 +57,7 @@ uptime it is **blind, not down**: the guest is running and Tools is silent. A ma
 NOT_EXISTING belongs to a machine that was deleted; it keeps its last values, a KPI of zero among them, so it is
 counted apart and never as a machine. A powered-off machine also keeps its last uptime, so a latest uptime above
 zero says nothing about now: the script reads its age, and prints what the uptime alone would have said beside the
-answer. [expected-output.md](expected-output.md) holds a run against the reference estate.
+answer. [expected-output.md](expected-output.md) holds example output, a run to compare yours with.
 
 It writes `promise.json`, names no address, check or machine, and changes nothing.
 
@@ -122,8 +122,8 @@ or API, is walked screen by screen in [IMPORTING.md](../../IMPORTING.md) at the 
    **overwrites** it, which you want only to push an update to an environment that already has an
    earlier version. The API defaults the flag to `true`/overwrite, so pass `force=false`
    explicitly when you want the skip-existing behavior.
-   Built as a verbatim filter of the reference instance's own export, so what ships is the
-   export format exactly.
+   Built as a verbatim filter of an instance's own export, so what ships is the export format
+   exactly.
    - `supermetrics/availability-slis.import.json`: the same five metrics in readable, id-keyed
      form (names, formulas, object types, units), which the **Super Metrics ▸ ⋯ ▸ Import** route
      above takes, keeping each id.

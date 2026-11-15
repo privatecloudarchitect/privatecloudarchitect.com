@@ -86,7 +86,7 @@ python3 guestcfg.py run --dry-run       # the blueprints, deployments and object
 python3 guestcfg.py run --execute
 ```
 
-What run A5 printed on the reference estate, 2026-11-11, from step 2 to the end, with its probes' lines left out (the
+Example output, what run A5 printed on 2026-11-11 from step 2 to the end, with its probes' lines left out (the
 whole run is in [`expected-output.md`](expected-output.md)). It ran with no source ranges set, so the API's input was
 `0.0.0.0/0`:
 

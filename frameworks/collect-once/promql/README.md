@@ -25,6 +25,10 @@ the `MANAGEMENT_CLUSTER_UUID` identifier of transport nodes. Operations stats fo
 `POST /suite-api/api/resources/stats/query` on the same VMs, keyed on `VMEntityVCID` + `VMEntityObjectID`. VMware guidance's
 per-provider list was retrieved the same day from the link on the Real-Time Metrics policy page.
 
+Example output, the catalog sizes that instance answered. A source's count follows its collection profiles and what it
+runs, so read your own with `verify_promql.py`, which prints the catalog per source; the widget's tab and the guidance
+list are the lists the product shows and documents.
+
 | Catalog | Names |
 |---|---|
 | Engine catalog (`/api/v1/metadata` without a source) | 437 |
@@ -37,12 +41,15 @@ per-provider list was retrieved the same day from the link on the Real-Time Metr
 
 ## 2. Three catalogs that disagree pairwise
 
+Example output: the widget's 1,345 keys sorted against that instance's catalogs. On yours the split follows your
+deployment's size, profiles and features.
+
 | Status of a `metrics.json` key | Count | Meaning |
 |---|---|---|
 | served on a vCenter source | 175 | the key returns series here; the acquisition profile per name is in `reconciliation.json` |
 | served on an NSX source | 77 | the key is an NSX family name served under the NSX cluster id as `sourceId` |
 | case pair | 4 | the copyable key differs from a served key only by letter case and returns nothing; the VMware guidance list shows why (section 3) |
-| not in this deployment's catalog | 1,089 | by the VMware guidance list: 538 ESXi Verbose, 271 ESXi Standard, 131 vSAN Verbose, 85 VC Verbose, 12 vSAN Essential, 11 ESXi Essential, 6 NSX Essential, 3 VC Essential, and 32 keys the list does not carry. Standard needs a Large deployment, Verbose is off by default, and vSAN is not in use on this estate |
+| not in this deployment's catalog | 1,089 | by the VMware guidance list: 538 ESXi Verbose, 271 ESXi Standard, 131 vSAN Verbose, 85 VC Verbose, 12 vSAN Essential, 11 ESXi Essential, 6 NSX Essential, 3 VC Essential, and 32 keys the list does not carry. Standard needs a Large deployment, Verbose is off by default, and that instance ran no vSAN |
 
 The widget against the VMware guidance list: 1,305 of the widget's keys are in the list, 40 are not (32 `vna.*`, 7 `platform.*`,
 1 `tn-traffic.*`), and 173 of the list's keys (NSX edge families: `disk.*`, `edge_*`, and more) are not in the widget.
@@ -173,9 +180,9 @@ range call, an unpinned name that serves two cadences, a join across planes with
 
 ## 8. Open items
 
-- The Standard profile (Large deployments only), the Verbose profile, and vSAN were not available on this estate; their families stay unverified beyond the VMware guidance list.
-- The third vCenter source id that `metrics_config` lists (`ce1826a6-...`, 171 catalog names) served no host series in the last 15 minutes; its identity was not established in this pass.
-- Thirty-two Essentials keys in the VMware guidance list are not in this deployment's catalog: 11 ESXi (GPU device counters and a memory-tier latency), 12 vSAN, 6 NSX edge datapath, 3 VC cluster rollups; `reconciliation.json` names them under VMware guidance list's per-key block.
+- The Standard profile (Large deployments only), the Verbose profile, and vSAN were outside the verified instance; their families stay unverified beyond the VMware guidance list.
+- A source id that `metrics_config` lists can serve a catalog and no host series: one did on the verified instance, and its identity was not established. Establish what each listed id is before a pipeline relies on it.
+- Essentials keys in the VMware guidance list can be missing from a deployment's catalog (on the verified instance: GPU device counters, a memory-tier latency, vSAN, NSX edge datapath and VC cluster rollups); `reconciliation.json` names each one under the guidance list's per-key block.
 
 ## 9. VMware guidance read for this reference (VCF 9.1)
 

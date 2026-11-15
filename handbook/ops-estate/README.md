@@ -94,8 +94,8 @@ The list read returns `>` and `<` as `&gt;` and `&lt;` in both the formula and t
 writes the decoded text and `converge.py` compares decoded text; compared raw, every super metric with a
 comparison operator would read as drifted and be rewritten on every run.
 
-This companion converges super metrics. The reference estate runs the same converge across tags, groups,
-policies, super metrics, views and alerts, in dependency order; these files are its smallest complete form.
+This companion converges super metrics. The same converge extends across tags, groups, policies, super metrics,
+views and alerts, in dependency order; these files are its smallest complete form.
 
 ## Prove the converge on your instance: `cycle.py`
 
@@ -140,8 +140,8 @@ new id and leaves whatever referred to it pointing at nothing; step 5 of `cycle.
 
 Dashboards and views have no per-object read in the suite API (the audit's last probe shows which paths were
 tried). They come back only inside the bulk content export (`POST /api/content/operations/export`, then
-`/export/zip`), which is not an inventory: on the reference estate's 9.1.1 a dashboards export counted one owner's
-dashboards and left them out. So nothing on the instance reliably tells you which dashboard is where. Keep the log yourself, one line per import:
+`/export/zip`), which is not an inventory: on 9.1.1 a dashboards export has counted one owner's dashboards
+and left them out. So nothing on the instance reliably tells you which dashboard is where. Keep the log yourself, one line per import:
 
 ```csv
 imported_utc,instance,dashboard,source_file,source_revision,imported_by
@@ -224,7 +224,7 @@ looks exactly like a discovery.
 
 ## Reading the records
 
-The two records in this folder are the reference estate's runs; each carries its capture time and build.
+The two records in this folder are example output; each carries its capture time and build.
 
 `content.json`: `census` is one row per class with the total, how many are yours, how many hold their grammar
 by meaning (`conformingByMeaning`, with each failing name and its reasons) and how many have four or more fields

@@ -4,8 +4,8 @@ The code and records behind [privatecloudarchitect.com](https://privatecloudarch
 Foundation 9.1. Its chapters run in parts from the platform itself through tenancy, the workload planes,
 operations, observability, optimization, security, discovery, Orchestrator content and identity, with field notes,
 playbooks, a solution and a demo beside them, and every claim on it is marked with the evidence it rests on. This repository is where that evidence
-can be run: each folder below backs one page, and running it on your own estate shows you the same thing the page
-shows from the reference estate, or tells you where your estate differs.
+can be run: each folder below backs one page, and running it on your own estate shows you what the page teaches,
+on your estate, with the folder's example output to compare your run against.
 
 ## Where to start
 
@@ -58,8 +58,9 @@ Framework estates carry five further clauses:
    else.
 7. **Dependencies are declared.** Most folders need only the Python standard library. Where one needs a library
    (pyVmomi to read vCenter, PyYAML, cryptography, ldap3, pydantic), its README names it.
-8. **The reference estate is one usage.** Nothing estate-specific lives in the universal layer; your estate enters
-   through the declared parameters, never through edits to shared logic.
+8. **Every example here is one usage.** Your environment is the input, and nothing in the method depends on the
+   estate it was proven on. Nothing estate-specific lives in the universal layer; your estate enters through the
+   declared parameters, never through edits to shared logic.
 9. **Round-tripped before publication.** Every slice was converged, verified and torn down live on the exact bytes
    published here.
 

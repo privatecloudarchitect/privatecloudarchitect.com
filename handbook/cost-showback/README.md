@@ -98,7 +98,7 @@ count.
 
 `coverage.json` carries key names, counts and which drivers match their reference; it names no object and keeps no
 amount. A cost key named after something on your estate (an additional cost's own name, after a colon) is recorded by
-its family only. `coverage.json` in this folder is the reference estate's run of 2026-11-07 on VCF Operations 9.1.1.0
+its family only. `coverage.json` in this folder is example output, a run of 2026-11-07 on VCF Operations 9.1.1.0
 (build 25679751), the record the chapter renders. It carries, per driver, `costReported`, `referenceReported` and a
 `matchesReference` that can be `null`; `priceInputs.status`, `modesStatus` and `lastCalculationStatus`, with `modes` or
 `lastCalculation` `null` when their read was refused; `showback.groupsRead`; and `currencyStatus`.

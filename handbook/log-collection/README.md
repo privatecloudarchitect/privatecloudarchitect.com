@@ -122,5 +122,5 @@ refuses to write a record in which one survived (`scrub.py`).
 
 ## Expected output
 
-[`expected-output.md`](expected-output.md) holds two runs against the reference estate: the source proof with one host
+[`expected-output.md`](expected-output.md) holds example output, two runs: the source proof with one host
 gone silent, and every read after the repair, with notes on reading them.

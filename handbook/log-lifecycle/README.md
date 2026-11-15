@@ -16,7 +16,7 @@ Proven on VCF 9.1.1 (Log Management 9.1.1.0, small size, one node) on 2026-10-15
 | `lifecycle.py plan` | The shard arithmetic of the 9.1 design page for a size, a replica count, a number of partitions and the retentions you name | nothing |
 | `lifecycle.py trial filter\|mask\|partition` | A throwaway rule whose condition is an application name made for the run, labelled lines to a syslog listener you name, the store read back, then the rule deleted and read back absent | the rule and the lines (with `--send`) |
 | `lifecycle.py trial forwarder` | Log Management's connection test against a destination you name | nothing |
-| `records/` | The runs on the reference estate the chapter renders, every estate value replaced by a placeholder | |
+| `records/` | Example output: the runs the chapter renders, every estate value replaced by a placeholder | |
 
 ## Run it
 

@@ -191,7 +191,7 @@ python3 record_dryrun.py --against dryrun-<last week>.json # and print what move
 
 With `--against` it prints the steps that appeared or went, the exit codes that moved and the summary lines that
 changed, and exits 1 when the pending list (the steps with a non-zero exit) differs: the change nobody declared.
-`dryrun-2026-10-08.json` beside `dryrun.json` is an earlier run of the reference estate, for trying the comparison.
+`dryrun-2026-10-08.json` beside `dryrun.json` is example output from an earlier run, for trying the comparison.
 
 ### Is any of it governing anything? `audit_deployment.py`
 
@@ -222,8 +222,8 @@ Four reads, in the order a deployment fails:
    posture can have the right dials and compute none of the metrics its scorecard renders. Note that the
    settings endpoint does **not** serve the overcommit dials; it serves time-remaining criticality thresholds.
 4. **The ratio worth publishing**: how many framework policies govern at least one object, over how many
-   exist. On the reference estate it read **2 of 6** on 2026-10-22 (`deployment.json`), while every other count in
-   the inventory read healthy.
+   exist. It can sit well under one while every other count in the inventory reads healthy, which is why it is the
+   one to publish; `deployment.json` is example output with such a reading.
 
 It writes `deployment.json`, names no machine, host or cluster, and changes nothing.
 

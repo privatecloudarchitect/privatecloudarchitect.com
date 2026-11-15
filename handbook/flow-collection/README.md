@@ -70,8 +70,8 @@ this folder of a full clone.
   under any other number it sends an NSX profile's, whose kind `flow_paths.py` reports. "Registered, nothing in the
   window" means the collector holds the host's templates for that domain and received no record from it in the
   window. A host under "hosts that sent nothing" exports nothing in the window, whatever the switch settings say.
-  Sequence failures are counted per exporter; on the reference estate every switch exporter shows them and the NSX
-  profile's exporters none, and why was not read.
+  Sequence failures are counted per exporter. Compare exporters of one kind with each other before reading a count:
+  every exporter of one kind can show them while another kind shows none, and the record does not say why.
 - **Attribution, in the store** (`flow_paths.py`, the tally). A host at zero in the tally has no named workloads: it
   exports nothing, or Operations for Networks cannot name its VMs (a host missing from its inventory, or addresses it
   binds to several VMs). The exporter list tells the two apart. A switch without the collector, or with silent port
@@ -81,8 +81,8 @@ this folder of a full clone.
   list and the source's state after any change, and again later: an update of a source can leave its switch with no
   collector.
 - **Testing with traffic.** A TCP conversation becomes a flow only once its handshake completes; a probe nobody
-  answers is rejected and never appears. Test with a connection that completes, and give it several minutes: the
-  reference estate's completed test conversations took four to eight minutes to become searchable.
+  answers is rejected and never appears. Test with a connection that completes, and allow several minutes before searching:
+  a completed conversation can take that long to become searchable.
 - **The records.** `flow-paths.record.json`: `operations_for_networks.nodes` and `.sources` (one per data source;
   `proxy_id` names the collector, `vcfManaged` the owner of a change, `ipfix_enabled_for` the switches Operations for
   Networks enabled, `ipfix_enabling_failed` those it could not, `ipfix_enabled` for NSX), `.flows_last_hour`; `nsx`
@@ -104,4 +104,4 @@ script refuses to write a record in which an estate value survived (`scrub.py`).
 
 ## Expected output
 
-[`expected-output.md`](expected-output.md) holds a run of each against the reference estate.
+[`expected-output.md`](expected-output.md) holds example output, a run of each, to compare yours with.
