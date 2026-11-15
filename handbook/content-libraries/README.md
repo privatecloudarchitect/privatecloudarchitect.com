@@ -75,6 +75,11 @@ fingerprint is SHA-256 over the library item's sorted `name:bytes` file pairs; s
 }
 ```
 
+A `"lockVersion": 2` lock, written from an image pipeline's publish record, holds one fingerprint per library item in
+place of `fingerprint`: `"fingerprints": [{"kind", "value", "files", "library", "libraryId", "itemId", "role"}]`. A
+library's copy of an item is not the same size as its source, so `--lock` matches the image a pin resolves to by the
+item it comes from, and an item the lock names no fingerprint for reads RE-QUALIFY. Version 1 locks read as before.
+
 ## Scope, stated plainly
 
 - It reads one organization, as that organization's account. A namespace whose endpoint does not answer is reported as

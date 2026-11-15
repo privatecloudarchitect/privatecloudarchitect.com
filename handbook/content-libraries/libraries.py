@@ -28,6 +28,8 @@ can name and where they come from, the Kubernetes release images apart, and any 
                      must resolve to one image, and that image's fingerprint (SHA-256 over its library item's
                      sorted name:bytes file pairs) must equal the lock's. HELD, RE-QUALIFY (the bits under the
                      pin changed since qualification, or a rebuild changed a size), or NOT CHECKED (unread).
+                     A lockVersion 2 entry holds one fingerprint per library item; the image is matched by the
+                     item it comes from, and an item the lock names no fingerprint for reads RE-QUALIFY.
   --namespace NAME   read one namespace instead of every namespace the account can list
   --vcenter          also read the provider side from vCenter: the Supervisor's library list and each namespace's
                      own library setting (VC_HOST, VC_USER, VC_PASSWORD_FILE)
@@ -333,6 +335,7 @@ def read_namespace(t, ep, ns):
                         "scope": scope,
                         "os": (st.get("osInfo") or {}).get("type"),
                         "contentVersion": st.get("providerContentVersion"),
+                        "item": st.get("providerItemID"),
                         "ready": any(
                             c.get("type") == "Ready" and c.get("status") == "True"
                             for c in st.get("conditions") or []
@@ -386,12 +389,19 @@ def find_locks(path):
     for f in files:
         try:
             lock = json.load(open(f, encoding="utf-8"))
-            assert lock.get("lockVersion") == 1
+            version = lock.get("lockVersion")
+            assert version in (1, 2)
             for e in lock["images"]:
-                assert e["pin"] and e["fingerprint"]["value"].startswith("sha256:")
+                prints = [e["fingerprint"]] if version == 1 else e["fingerprints"]
+                assert e["pin"] and prints and all(p["value"].startswith("sha256:") for p in prints)
+                assert version == 1 or all(p.get("itemId") for p in prints)
                 out.append((f, e))
         except (OSError, ValueError, KeyError, TypeError, AssertionError):
-            stop(2, f"{f} is not an image lock this reads (lockVersion 1, images[].pin, images[].fingerprint.value)")
+            stop(
+                2,
+                f"{f} is not an image lock this reads (lockVersion 1 with images[].fingerprint, or 2 with "
+                "images[].fingerprints[].itemId)",
+            )
     return out
 
 
@@ -407,6 +417,10 @@ def lock_verdict(entry, images, prints):
     seen = prints.get(image["id"])
     if seen is None:
         return "NOT CHECKED"
+    if "fingerprints" in entry:
+        # lockVersion 2: the fingerprint of the library item this image comes from; none for that item is re-qualify
+        hit = next((p for p in entry["fingerprints"] if image.get("item") and p["itemId"] == image["item"]), None)
+        return "HELD" if hit and seen == hit["value"] else "RE-QUALIFY"
     return "HELD" if seen == entry["fingerprint"]["value"] else "RE-QUALIFY"
 
 
