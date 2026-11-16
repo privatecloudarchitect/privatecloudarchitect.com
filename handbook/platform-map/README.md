@@ -52,7 +52,7 @@ keep it for a throwaway credential.
 - It does not read what runs inside a domain beyond the Supervisor's own rungs. Whether a tenant workload sits in the
   management domain is a vCenter read of that domain's machines, which this script does not make; the namespaces a
   tenant sees are read by the construct-model companion.
-- Exercised read-only against the reference estate on VCF 9.1.1; the record and transcript here are from 2026-10-28.
+- Exercised read-only on VCF 9.1.1; the record and transcript here are example output from a run of 2026-10-28.
 
 ## Reading the output
 

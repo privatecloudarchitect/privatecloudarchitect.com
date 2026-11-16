@@ -115,7 +115,7 @@ Content-Type: application/json
 <the file's body, with your UUIDs and group names filled in>
 ```
 
-Field notes, all proven on the reference build:
+Field notes, each the product's behavior on VCF Automation 9.1 and, re-read, 9.1.1.0100, as the provenance above records it:
 
 - `orgId` and `projectId` are **bare UUIDs**, not `urn:` forms.
 - `typeId` on 9.1 is `com.vmware.policy.deployment.action`.

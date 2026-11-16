@@ -99,7 +99,7 @@ surface was not asked, rather than guessing.
   networking answers is not something this run can tell you. Note also that an empty or malformed import body
   answers "This operation is denied", which reads like a rights problem and is not; the script sends a
   well-formed one.
-- Exercised read-only against one organization of the reference estate on 9.1.1, under a session login, the
+- Exercised read-only against one organization on VCF Automation 9.1.1, under a session login, the
   provider edges under a provider bearer; the records here are from 2026-10-20. The bindings were asked on
   2026-09-17, on 9.1.0, and have not been asked again on 9.1.1: the probe sends refused writes, and it is re-run only against a
   namespace made for the purpose. Your counts will differ, the shapes should not.

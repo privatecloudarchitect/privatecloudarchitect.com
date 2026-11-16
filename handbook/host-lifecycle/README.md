@@ -10,7 +10,7 @@ Python only; no credential is printed or written.
 | File | What it is |
 |---|---|
 | `hostlife.py` | Reads, for every cluster of every vCenter you name: whether it is managed with an image, the image's parts (base image, vendor add-on, firmware and drivers add-on, components, solutions) and its stored image compliance; whether Configuration Profiles is enabled, when (from its audit records), the document's sections and counts (never a value from it), and its stored compliance with, for every drifted item, its path and its non-identifying fields; and around them the depots and the newest base image they hold, any hardware support manager, any host profile, and the Auto Deploy and Image Builder services. Exits 1 when a cluster is still on baselines or a stored compliance is not compliant. Writes `out/hostlife.record.json`, scrubbed, and refuses to write a record in which a vCenter, cluster, host or depot server name, or an address, survived. `hostlife.py plan` prints the ordered moves for your answers. |
-| `records/hostlife.record.json` | What a run on the reference estate wrote on 2026-10-25, on VCF 9.1.1: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. The chapter prints its report as example output and holds its readings to it. |
+| `records/hostlife.record.json` | Example output: the record a run of 2026-10-25 wrote on VCF 9.1.1, for comparing its shape with yours. Its counts are that run's, never what yours should hold. The chapter prints its report as example output and holds its readings to it. |
 | `expected-output.md` | What the script printed for that record, and what `plan` printed for the chapter's example answers. |
 
 ## Run it

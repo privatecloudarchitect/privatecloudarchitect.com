@@ -8,7 +8,7 @@ is printed or written.
 | File | What it is |
 |---|---|
 | `lifecycle.py` | Reads the releases the instance knows about, the bundle depot counted by download status, and the upgradable state, then **joins** the offered upgrades to the bundles behind them and reports how much is still to fetch, in the API's own unit (sizeMB). Name a second instance and it compares your rehearsal instance with the one it rehearses for. It also follows a retired endpoint to the replacement its own `410` names. Writes `lifecycle.json`, and refuses to write a record carrying an instance name. |
-| `lifecycle.json` | What a run on the reference estate wrote on 2026-10-21, two instances: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. `records/lifecycle-2026-10-21.json` holds the same reading, so a new run's overwrite of this file leaves it in place. |
+| `lifecycle.json` | Example output: the record a run of 2026-10-21 wrote over two instances, for comparing its shape with yours. Its counts are that run's, never what yours should hold. `records/lifecycle-2026-10-21.json` holds the same reading, so a new run's overwrite of this file leaves it in place. |
 
 ## Run it
 

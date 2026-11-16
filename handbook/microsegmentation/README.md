@@ -208,7 +208,7 @@ One more read-path detail: the **list** view of `firewallpolicies` trims `rules[
 
 ## Expected output
 
-See [`expected-output.md`](expected-output.md) for the three transcripts from the reference estate on 2026-10-22:
+See [`expected-output.md`](expected-output.md) for example output, three transcripts of runs on 2026-10-22:
 `posture.py` read-only, `./run.sh round-trip` on throwaway objects, and `traffic.py` on throwaway objects.
 
 ## Where a rule about a pod belongs

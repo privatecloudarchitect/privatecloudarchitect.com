@@ -14,7 +14,7 @@ answer.
 |---|---|
 | `origins.py` | Read-only, stdlib Python. Reads every namespace on each Supervisor from vCenter (with its system metadata and its VPC), the namespace each installed Supervisor Service runs in, and the namespace records VCF Automation holds, then gives each namespace one origin: `automation`, `service`, `supervisor`, `orphan` or `record-only`. With `--record` it also checks your origin record. Exit 0 every namespace has an origin and every check holds, 1 a check fails, 2 a read failed. |
 | `origin-record.example.csv` | The shape of the record you keep: one row per namespace created on the Supervisor, saying whether it is provisional and, if so, who may decide it has become permanent. |
-| `origins.json` | The record from the reference estate, 2026-10-07, written with `--scrub --json` while one throwaway namespace created through vCenter stood beside the reference estate's own, with the throwaway's outcome added under `probe`: the Supervisor's state before the create, the evidence the script read, the record check both ways, what the create made in vCenter and NSX, and the residue read after the delete. |
+| `origins.json` | Example output: the record a run of 2026-10-07 wrote with `--scrub --json`, while one throwaway namespace created through vCenter stood beside the namespaces already there, with the throwaway's outcome added under `probe`: the Supervisor's state before the create, the evidence the script read, the record check both ways, what the create made in vCenter and NSX, and the residue read after the delete. |
 | `expected-output.md` | The transcripts of those runs. |
 
 ## Run it

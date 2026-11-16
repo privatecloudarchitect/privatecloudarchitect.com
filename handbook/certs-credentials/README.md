@@ -8,7 +8,7 @@ instance from metadata alone. Stdlib Python only. **No secret can reach its outp
 | File | What it is |
 |---|---|
 | `custodian.py` | Reads the credential inventory and the per-domain certificate plane, and computes counts and dates. Every response passes through `strip_secrets` inside the function that performs the request, which deletes each secret-bearing key on arrival and replaces it with a boolean saying whether something was there. Writes `custodian.json`, and refuses to write a record carrying an estate name or a secret-bearing key. |
-| `custodian.json` | What a run on the reference estate wrote on 2026-10-21: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. |
+| `custodian.json` | Example output: the record a run of 2026-10-21 wrote, for comparing its shape with yours. Its counts are that run's, never what yours should hold. |
 
 ## Run it
 

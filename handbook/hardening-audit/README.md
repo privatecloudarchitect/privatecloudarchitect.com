@@ -36,8 +36,8 @@ output, to compare your own record against.
 
 Every figure the loop reports is YOUR estate's current state at the run date, nothing more. The
 audit question each finding asks is "is this intended," answered against your own records or the
-vendor's documented defaults, never against another estate's counts: a reference estate is a
-modified instance whose own tooling has toggled the very surfaces this loop reads.
+vendor's documented defaults, never against another estate's counts: any working estate may be a modified
+instance, as the one these records came from is, its own tooling having toggled the very surfaces this loop reads.
 
 ## Three planes, each optional, one owner each
 

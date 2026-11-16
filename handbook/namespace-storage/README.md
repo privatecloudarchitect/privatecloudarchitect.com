@@ -11,8 +11,8 @@ next to each other. Stdlib Python only; no token, password or session id is prin
 | File | What it is |
 |---|---|
 | `ledgers.py` | Reads what the volume claims actually request, what the region storage-class quota reports (and checks what that figure is really counting, by summing the namespaces' storage limits, a class config's where a namespace sets none, and comparing), the provider plane's consumption figure, and what the datastores of one vCenter hold. Each plane past the tenant's is optional and anything it cannot reach it **names** rather than omits. Prints each plane's percentage with both halves from that plane. With `--compare` it sets each ratio beside an earlier record's. Writes `out/ledgers.json`. |
-| `ledgers.json` | That record from the reference estate, an example of what your run writes. The chapter states the behaviors it shows on the build, and carries the run's printed lines as example output. |
-| `expected-output.md` | What the script printed on the reference estate, and the comparison with the 9.1 record. |
+| `ledgers.json` | Example output: the record one run wrote, to compare with what your run writes. The chapter states the behaviors it shows on the build, and carries the run's printed lines as example output. |
+| `expected-output.md` | Example output: what the script printed for one run, and its comparison with the 9.1 record. |
 | `records/ledgers-vcf-9.1.json` | The 9.1 run of 2026-09-21, as that run wrote it. |
 
 ## Run it

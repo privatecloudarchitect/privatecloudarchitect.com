@@ -8,7 +8,7 @@ answer, and reports the difference. Stdlib Python only; no credential is printed
 | File | What it is |
 |---|---|
 | `recovery.py` | Reads each plane's schedule in its own encoding, counts the calendar days its run history covers and the days it does not, checks the age of each plane's newest successful copy against the longest wait its schedule allows, computes the span the retained copies cover, diffs the copy's scope against the parts catalog where the plane publishes one, normalises the targets before comparing them, and asks each plane whether a restore has ever run on it. Exits 1 when a newest copy is overdue: that is the alert. Every response passes through `strip_secrets` inside the function that performs the request. Writes `recovery.json`, and refuses to write a record carrying an address, a path or an account name. |
-| `recovery.json` | What a run on the reference estate wrote on 2026-10-22, three planes on VCF 9.1.1: an example of the record your run writes, for comparing its shape. Its counts are that estate's, never what yours should hold. |
+| `recovery.json` | Example output: the record a run of 2026-10-22 wrote for three planes on VCF 9.1.1, for comparing its shape with yours. Its counts are that run's, never what yours should hold. |
 | `expected-output.md` | What the script printed on that run: example output to compare your own run's shape against. |
 | `rehearsal.md` | A record template for the restore rehearsal: what to write down before, during and after, so the result is a list rather than an impression. |
 

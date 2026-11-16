@@ -22,7 +22,7 @@ both probes included ([`expected-output.md`](expected-output.md)). The 9.1 run o
 |---|---|
 | `doors.py` | Reads what each door needs and which namespaces can open it, both image lists, what a deployment record claims, and one tenant bearer offered to every door. With `--probe-doors` it builds the same machine through two doors and compares them; with `--probe-vcenter` it makes one machine straight in vCenter. Writes `doors.json`, and refuses to write a record carrying an estate value. |
 | `doors.json` | The record the read-only run of 2026-10-28 wrote on the reference estate, as example output. The chapter reads it for the behaviors it states and the dates it gives. |
-| `expected-output.md` | What the script printed on the reference estate: read-only, the dry run, and the probes. |
+| `expected-output.md` | Example output, what the script printed: the read-only run, the dry run and the probes. |
 | `records/doors-vcf-9.1.json` | The 9.1 run of 2026-09-21, as that run wrote it. |
 
 ## Run it

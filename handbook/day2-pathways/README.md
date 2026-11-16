@@ -16,7 +16,7 @@ The two that stick are the same mechanism. Automation is not a parallel control 
 
 ## Run it
 
-`expected-output.md` shows what the read-only audit printed on the reference estate; `records/pathways-2026-09-21.json` is the probe run of 2026-09-21. Exit 0: nothing to act on. Exit 1: a claimed machine drifted silently or a deleted deployment still holds a resource. Exit 2: usage or a secret file open to group or other. Exit 3: the sign-in or a read failed. Exit 4: the record refused to write.
+`expected-output.md` is example output: what the read-only audit printed in one run; `records/pathways-2026-09-21.json` is the probe run of 2026-09-21. Exit 0: nothing to act on. Exit 1: a claimed machine drifted silently or a deleted deployment still holds a resource. Exit 2: usage or a secret file open to group or other. Exit 3: the sign-in or a read failed. Exit 4: the record refused to write.
 
 ```bash
 export VCFA_HOST=<automation-fqdn> VCFA_ORG=<org>

@@ -13,15 +13,15 @@ not proven on the one you are about to get.
 | `upgrade_risk.py` | Read-only, stdlib Python. Reads every action environment, action, workflow definition, plug-in, plug-in host, scheduled task and policy on your Orchestrator and checks them against the release you are moving to (R1 to R12, below). With `--files` it runs the script checks on exported `.py`, `.ps1` and `.js` files, so content kept in source control is checked with no instance at all. With `--compare` it diffs two probe records. Exit 0 nothing at risk, 1 at least one finding, 2 a read failed, 5 unknown option. |
 | `probe.py` | Measures what each runtime actually provides, on throwaway objects. Plan by default. With `--execute` it creates up to four action environments, five actions in a new action module and one workflow in a new folder, runs the workflow once, prints and records the Python version and distributions, the PowerShell version and modules (with an import test of the names older scripts use), which JavaScript constructs the engine accepts and what each returns, and what an environment on a selector the instance no longer offers does. Then it deletes every object it created and reads each one back. Exit 0 clean, 1 an object it created is still there (its id is printed), 2 a call failed, 5 unknown option. |
 | `qualify.py` | Runs your own actions on the target runtime, on throwaway copies. Reads each named action from the source instance (script, inputs, its environment's packages), builds a throwaway environment on the target instance's newest runtime of that family with the same packages and reports whether the install settles, copies the actions there, compiles each one and resolves its imports on that runtime, runs the cases you give it, then deletes everything and reads each object back. Source and target can be one instance or two. `--without` and `--pin` try a candidate package set on the copies, never on the source. Plan by default. Exit 0 every action loaded and every case passed, 1 something did not or a throwaway survived, 2 a call failed, 5 unknown option. |
-| `targets/9.1.1.json`, `targets/9.1.0.0400.json` | What each release was measured to offer on the reference estate on 2026-10-16: runtime selectors, default memory, plug-ins, the Python distributions, the PowerCLI modules and the JavaScript constructs. `upgrade_risk.py --target` reads one. For another release, run `probe.py` on an instance of it and build the file the same way, or point `--target-host` at that instance. |
+| `targets/9.1.1.json`, `targets/9.1.0.0400.json` | What each release offers, as `probe.py` measured it on an instance of that release on 2026-10-16: runtime selectors, default memory, plug-ins, the Python distributions, the PowerCLI modules and the JavaScript constructs. `upgrade_risk.py --target` reads one. For another release, run `probe.py` on an instance of it and build the file the same way, or point `--target-host` at that instance. |
 | `records/` | The two probe records, the two scan records (counts only) and the two qualification records behind the tables below. |
 | `examples/at-risk/`, `examples/fixed/` | Three scripts, a Python port check, a PowerCLI report and a JavaScript lookup, each as written for an older release and as fixed. `upgrade_risk.py --files` flags every at-risk one and clears the fixed ones. |
-| `examples/cases.json` | The case file format `qualify.py --cases` reads, with the two cases the reference estate ran: an action's own input names, and the fields its result must hold. |
-| `expected-output.md` | Transcripts of every command on this page, from the reference estate. |
+| `examples/cases.json` | The case file format `qualify.py --cases` reads, with two example cases: an action's own input names, and the fields its result must hold. |
+| `expected-output.md` | Example output: a transcript of one run of every command on this page. |
 
 ## What the upgrade does to a script, measured
 
-Read on the reference estate on 2026-10-16, on a standalone Orchestrator at 9.1.0.0400 and the
+Measured with `probe.py` on 2026-10-16, on a standalone Orchestrator at 9.1.0.0400 and the
 Orchestrator embedded in VCF Automation 9.1.1.0100, whose `/vco/api/about` reports 9.1.1.0.25643527.
 
 | | 9.1.0.0400 | 9.1.1 |
@@ -45,8 +45,8 @@ Four facts follow from those runs, and they decide how to read everything else h
    `powercli:9.0.0-powershell-7.4` ran on PowerShell 7.6.2. The 9.1.0.0400 instance did the same
    with `python:3.10` (ran on 3.11.13) and `powercli:13-powershell-7.4` (ran on 7.4.11).
 3. **Only the environment carries the flag.** An action bound to such an environment reports no validation
-   message of its own. On the reference estate 17 actions sit on environments flagged
-   `MISSING_RUNTIME` and every one of them reads clean. A scriptable task with its own runtime
+   message of its own: on 9.1.1 the probe's two actions on its `MISSING_RUNTIME` environments, one
+   Python and one PowerCLI, imported with no validation message. A scriptable task with its own runtime
    carries its own flag.
 4. **So what breaks is the code meeting a newer runtime, not the selector.** A Python script that
    imports a module Python 3.13 removed, a PowerShell script that imports `VMware.PowerCLI`, a
@@ -66,16 +66,16 @@ Three more measurements belong beside them:
   certificates from different issuers, so the run does not separate the release from the
   certificate as the cause: run `probe.py` on your target and read the line.
 - **A package that installed on the old runtime can stop installing on the new one, and the
-  environment reports it only in its status.** `qualify.py` rebuilt the reference estate's DNS actions'
-  environment (`pykerberos` 1.2.4, `pywinrm` 0.5.0, `requests` 2.28.1, `urllib3` 1.26.15,
-  `requests-credssp`) on Python 3.14: it settled at `STALE_BUNDLE` in 11 seconds and held it, so the
-  actions never loaded. Split across throwaway environments, `pykerberos`, pinned or unpinned, stopped
-  at `STALE_BUNDLE`, and the other four installed (`UP_TO_DATE` in 22 seconds). None of the four
-  actions on that environment uses Kerberos (three connect over CredSSP, one over NTLM), so the remedy
-  was that one package: `qualify.py --without pykerberos` loaded all four on Python 3.14.5, and the
-  environment was then rebuilt on `python:3.14` without it. The same run on the
-  scan-automation module (`requests` and `urllib3` unpinned) installed, and all 13 actions compiled and
-  resolved their imports on Python 3.14.5, with both cases in `examples/cases.json` passing.
+  environment reports it only in its status.** On 9.1.1, an environment holding `pykerberos` 1.2.4 with
+  `pywinrm` 0.5.0, `requests` 2.28.1, `urllib3` 1.26.15 and `requests-credssp`, rebuilt by `qualify.py` on
+  Python 3.14, settled at `STALE_BUNDLE` and held it, so its actions never loaded. Split across throwaway
+  environments, `pykerberos`, pinned or unpinned, stopped at `STALE_BUNDLE`, and the other four installed
+  (`UP_TO_DATE`). When none of an environment's actions uses the package that stops (read their imports
+  and the protocols they connect with), the remedy is to drop that one package: `qualify.py --without <package>`
+  shows whether every action loads without it, and the environment can then be rebuilt on the new
+  runtime without it. A module whose environment pins neither `requests` nor `urllib3` installed on Python
+  3.14.5, its actions compiled and resolved their imports, and both example cases in `examples/cases.json`
+  passed.
 - **The JavaScript engine still refuses classes and async functions, and `let` in a loop is not
   per iteration.** The probe's closure test answers 2 on both releases, the pre-2015 behavior, so
   code that relies on a fresh binding per pass gets the last value on either engine.
