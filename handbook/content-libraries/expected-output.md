@@ -46,9 +46,9 @@ findings: none
 record: libraries.json
 ```
 
-A lock reads RE-QUALIFY when the fingerprint the namespace serves differs from the lock's: since the copies VCF
-Automation makes carry no checksum, the fingerprint covers the item's file names and sizes, so it catches a changed
-name or size, not a same-size change. NOT CHECKED means the fingerprint could not be read, which is not a pass.
+A lock reads RE-QUALIFY when the fingerprint the namespace serves differs from the lock's: a namespace's image lists
+its files' names and sizes only, and the copies VCF Automation makes carry no checksum, so the fingerprint covers the
+item's file names and sizes, and it catches a changed name or size, not a same-size change. NOT CHECKED means the fingerprint could not be read, which is not a pass.
 
 ## A pin left over from before a library rebuild
 

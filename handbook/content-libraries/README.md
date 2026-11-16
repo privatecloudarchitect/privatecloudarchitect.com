@@ -92,8 +92,10 @@ RE-QUALIFY. Version 1 locks read as before.
   whose observed id is a record, not a pin.
 - A display name two images carry was refused at admission on VCF 9.1.1, in the one case tried (a namespace image beside
   a cluster image); the script reports such a pin as ambiguous rather than guessing.
-- The fingerprint covers file names and sizes, because the library copies VCF Automation makes carry no checksum: it
-  catches a changed name or size, not a same-size change. A lock re-reads neither the image's bits nor the guest.
+- The fingerprint covers file names and sizes, because a namespace's image lists only those, and the copies VCF
+  Automation and a subscribed library make carry no checksum: it catches a changed name or size, not a same-size change,
+  and it names one library item, since the library stores each upload of a file at a size of its own. A lock re-reads
+  neither the image's bits nor the guest.
 - It checks the namespaces when it runs; a request made in between, through the catalog UI for instance, is not
   guarded by it. Run it on a schedule to find a change after the fact.
 
