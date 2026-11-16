@@ -27,11 +27,11 @@ one, and nothing is written to the platform on it.
 |---|---|
 | `vcenter_exchange.py` | The session census and the exchange. Read-only. Writes `exchange.json` with every estate name replaced, and refuses to write a record in which one survived. |
 | `api_client.py` | One API client for one integration: plan it (the default), create it, rotate its token, retire the old one, remove it. Writes `api_client.json` the same way, and a state file you keep and do not publish. |
-| `exchange.json` | The census and the exchange on the reference estate, 2026-10-13, read as an API client. The chapter's plates render it. |
-| `api_client_refused.json`, `api_client.json`, `api_client_overlap.json`, `api_client_retire.json`, `api_client_teardown.json` | One throwaway client: a create over the broker's TTL policy refused before any write, then the client made, its token rotated with the old one still trading, the old one retired, and the client removed, on the reference estate, 2026-11-06. |
+| `exchange.json` | Example output: the census and the exchange of 2026-10-13, read as an API client. The chapter's plates render it. |
+| `api_client_refused.json`, `api_client.json`, `api_client_overlap.json`, `api_client_retire.json`, `api_client_teardown.json` | Example output, a run of 2026-11-06 on one throwaway client: a create over the broker's TTL policy refused before any write, then the client made, its token rotated with the old one still trading, the old one retired, and the client removed. |
 | `api_client_rotate.json` | The earlier `--rotate` of 2026-10-13, which deleted the old token in the same run; kept as the register's evidence for the overlap it showed. |
 | `service_account.py` | One VCF Automation service account for one integration: plan it (the default), create it, revoke and remove it. Writes `service_account.json` the same way, and a state file you keep and do not publish. |
-| `service_account.json`, `service_account_teardown.json` | One throwaway service account made, revoked and removed in a throwaway All Apps organization on the reference estate, 2026-10-13. |
+| `service_account.json`, `service_account_teardown.json` | Example output, a run of 2026-10-13: one throwaway service account made, revoked and removed in a throwaway All Apps organization. |
 | `expected-output.md` | The transcripts of those runs, with what to read in them, and of a replayed run. |
 | `replay/vcenter_exchange/` | A recorded answer set made from `exchange.json`, every name a placeholder, for `--replay`: the exchange and the census run on it with no estate and send nothing. |
 | `replay/api_client/` | The answers `api_client.py`'s reads get, made from `api_client.json`, `api_client_overlap.json` and `api_client_instance.json`, every name a placeholder; under `--replay` the script runs its plan alone. |
@@ -84,8 +84,8 @@ python3 vcenter_exchange.py --sessions --redact     # the census, printed with p
 ```
 
 The census flags every directory-account session from a client other than the vSphere Client: a REST integration on
-a password (`vAPI`, `curl`, a product's own agent) as much as a vSphere SDK. On the reference estate the vSphere Client's
-sessions read `vSphereUI`, and that is the only agent the census treats as a person's. Name another in
+a password (`vAPI`, `curl`, a product's own agent) as much as a vSphere SDK. In every session list this handbook read, the
+vSphere Client's sessions read `vSphereUI`, and that is the only agent the census treats as a person's. Name another in
 `INTERACTIVE_AGENTS` (comma-separated, versions left off) only if your vSphere Client's agent reads another name; never
 name a scripting client there, because every account's sessions from it would then pass unflagged, and the run prints a
 note when the variable is set. A person who signs in with PowerCLI is flagged too: once its owner confirms it is that
@@ -118,9 +118,8 @@ python3 vcenter_exchange.py                         # the exchange and both sess
 python3 vcenter_exchange.py --sessions --redact     # and the census, read as the client
 ```
 
-**Which role the census needs, as tested.** On the reference estate an API client holding `vcf_viewer` at realm scope
-saw only its own session in every vCenter's session list, on three of three vCenters; the same client rebound to
-`vcf_administrator` read every list. A role between the two was not tried, nor a vCenter outside VCF single sign-on. A
+**Which role the census needs, as tested.** An API client holding `vcf_viewer` at realm scope saw only its own session
+in every vCenter's session list it read; the same client rebound to `vcf_administrator` read every list. A role between the two was not tried, nor a vCenter outside VCF single sign-on. A
 list that holds only the census's own session, or only sessions under the census identity's own name, is reported as a
 failed read (exit 3), never as an empty estate, and so is a list that does not hold the session that read it. If the
 census's client holds `vcf_administrator`, give it nothing else to do and keep its token on its own rotation.
@@ -181,8 +180,8 @@ The addresses and times are printed on your terminal only and are never written 
 share carries none of them. Two things the address cannot do. The
 [vSphere Web Services API reference for `UserSession`](https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.UserSession.html)
 describes `ipAddress` as "The client identity. It could be IP address, or pipe name depended on client binding". And
-on the reference estate the two local administrator sessions from the `vAPI` agent gave a loopback address, while the
-four from the Java and XML-WS agents gave private addresses (one management vCenter, 2026-10-15, one read): a loopback
+local administrator sessions from the `vAPI` agent gave a loopback address, while those from the Java and XML-WS
+agents gave private addresses (one management vCenter on 9.1.1, one read): a loopback
 address names the vCenter itself, so the client behind those sessions has to be found another way.
 
 ### A person's pair, acknowledged: `--ack`
@@ -236,8 +235,8 @@ seven-day span.
 
 It lists, per vCenter, the sessions (a directory account or the local administrator, with its client agent) present in
 every record, and those that came and went with the dates each was seen. The unit it compares is one account with one
-client agent: several sessions an account holds open from the same agent count once, so on the reference estate's read
-six local administrator sessions from three agents compared as three. A directory account appears by its placeholder
+client agent: several sessions an account holds open from the same agent count once, so six local administrator
+sessions from three agents compare as three. A directory account appears by its placeholder
 in the latest record and its fingerprint; a run without `--redact` prints each directory account's fingerprint beside
 its name, which is how you match them. Then it lists every pair from a client other than the vSphere Client seen in any
 record, with how many records it was seen in: a directory account's marked acknowledged until a date or not
@@ -264,14 +263,12 @@ because recorded answers are no read of your estate.
 ### What the census does not read: vCenter's sign-in events
 
 vCenter's sign-in and sign-out events reach back further than a session list, and the census does not read them. On
-one management vCenter of the reference estate (VCF 9.1.1, build 25712839, 2026-10-15, read-only) the event retention
-read `event.maxAge` 30 with `event.maxAgeEnabled` true, and seven days of sign-in events held four directory accounts,
-each with sign-ins from an agent other than the vSphere Client, while the session list held none of them at that
-moment. Two things kept those events out of the census. A REST session (`POST /api/session`, and the older
+a management vCenter of VCF 9.1.1 (build 25712839, read-only), seven days of sign-in events held directory accounts
+with sign-ins from an agent other than the vSphere Client while the session list held none of them at that moment; the
+retention is set by `event.maxAge` with `event.maxAgeEnabled`, so read both on yours. Two things kept those events out of the census. A REST session (`POST /api/session`, and the older
 `/rest/com/vmware/cis/session`) left no sign-in event, only a sign-out event once it was closed, under the agent
-`vapi-endpoint` whatever agent the client sent; and of the 96 `VMware vim-java` and `VcApiGw` sign-ins of the three
-accounts that also signed in at the vSphere Client, 92 fell within ten seconds of a `vSphereUI` sign-in of the same
-account. Whether those are the vSphere Client's own sessions was not settled, so a census of the events would flag the people it exists to clear. Until
+`vapi-endpoint` whatever agent the client sent; and most `VMware vim-java` and `VcApiGw` sign-ins of accounts that
+also signed in at the vSphere Client fell within ten seconds of a `vSphereUI` sign-in of the same account. Whether those are the vSphere Client's own sessions was not settled, so a census of the events would flag the people it exists to clear. Until
 it is, read the events by hand when the list leaves a question: the
 [vSphere Web Services API reference for `UserLoginSessionEvent`](https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.event.UserLoginSessionEvent.html)
 describes it as "This event records a user logon", with `userAgent` "The user agent or application".
@@ -400,7 +397,7 @@ under the mode gives the maximums, or that the policy was not read.
 2. `POST /ssorealms/{realm}/api-clients` with `clientId`, `clientName` and `clientDescription`.
 3. `PUT /ssorealms/{realm}/principals/{client uuid}/roles`: one role, `scopeType` `SSO_REALM`, or with `--scope instance`
    `VCF_INSTANCE` with the instance's id, read first from `GET /ssorealms/{realm}`'s coverage. The fleet takes only these
-   two scopes, never a folder. On the reference estate it refused `vcf_viewer` at an instance's scope ("Invalid role
+   two scopes, never a folder. Tested live, it refused `vcf_viewer` at an instance's scope ("Invalid role
    scope for the given role") and took `sddc_viewer`, which bundles only an instance's components (vCenter ReadOnly, NSX
    auditor). Holding it at one instance, the client reached that instance's vCenters (a REST session seeing their VMs, a
    SOAP sign-in); on the vCenter outside it a REST session still opened and saw no VM, and the SOAP sign-in was refused.
@@ -537,13 +534,13 @@ Steps 1 to 4 run only when an API client's credential is given.
 - `api_client.py` writes only with `--execute`: one client, one role binding, one token, a new token, the old tokens'
   removal, or the client's. A create refuses a client id that exists; every later write acts only on a client its state
   file records, and never on the client the run is signed in as, a rotation included.
-- Lifetimes are checked twice. Before anything is sent, against the broker's fixed ranges as the reference estate's
-  broker held them: an API token of 1,440 to 259,200 minutes (one day, under the documented 30 days, to the documented
+- Lifetimes are checked twice. Before anything is sent, against the broker's fixed ranges as measured on identity
+  broker 9.1.1: an API token of 1,440 to 259,200 minutes (one day, under the documented 30 days, to the documented
   180) and an access token of 30 to 480. With `--execute`, against the maximums the broker's TTL policy publishes, read
-  before any write: the reference estate's read 60 minutes and 259,200, and refused bearers of 61 and 480 minutes as over
-  its 60. The access maximum follows the fleet's IAM `accessTokenTtl` setting: set to 120 for a run, the policy read 120. A broker that does not answer the read (the route is new in identity broker 9.1.1) leaves the lifetimes to its
+  before any write: a bearer lifetime over the policy's access maximum was refused, one minute over it and far over it
+  alike. The access maximum follows the fleet's IAM `accessTokenTtl` setting: set to 120 for a run, the policy read 120. A broker that does not answer the read (the route is new in identity broker 9.1.1) leaves the lifetimes to its
   own check when the token is issued, and the record shows the policy as not read. The API maximum is held on the route's documented
-  purpose; on the reference estate it equalled the fixed 180 days, so it was never seen to bind on its own.
+  purpose; where this handbook read it, it equalled the fixed 180 days, so it was never seen to bind on its own.
 - A rotation was run on VCF 9.1.1 twice. On 2026-10-13 the earlier one-step `--rotate` showed the client holding two
   active tokens, the old token trading before the delete and refused after it (HTTP 400). On 2026-10-15 the two-step
   form ran: `--rotate` left two active tokens with the old one still trading and deleted nothing, `--retire-old` then
@@ -578,9 +575,9 @@ Steps 1 to 4 run only when an API client's credential is given.
   apart, and accounts named `svc-` counted as VCF's integration accounts), a domain in `OTHER_DOMAINS` is another
   provider's, any other domain is not placed (the read fails, exit 3), and a principal with no domain is counted apart
   as one. Each session's client agent is recorded
-  without its version. Every agent but `vSphereUI` counts as a program; that rule comes from the agents seen on the
-  reference estate's lists, where the one session from the vSphere Client read `vSphereUI`, not from a vendor list, so
-  read the agents yourself.
+  without its version. Every agent but `vSphereUI` counts as a program; that rule comes from the session lists this
+  handbook read, where the vSphere Client's session read `vSphereUI`, not from a vendor list, so read the agents
+  yourself.
 - No local account is named in the record, because a local account's name can carry estate names; the census counts
   them. Directory accounts and API clients are recorded as placeholders, with their agents.
 - A session list shows what is signed in at the moment of the read; the census is a sample, and `--compare` states how

@@ -133,30 +133,28 @@ so keep it for a throwaway credential.
 
 ## Scope, stated plainly
 
-- Proven on the reference estate. On VCF 9.1.1 on 2026-10-21: seventeen pairs, every login path its catalog signs in
-  by but the tenant OAuth grant, all matching the chapter. On one VCF Operations 9.1.0 instance with Real-Time Metrics
-  deployed, on 2026-09-16: eighteen pairs, the tenant OAuth grant among them, seventeen matching the chapter and one
-  correcting it.
+- Proven by live runs before publication. On VCF 9.1.1 on 2026-10-21, every login path its catalog signs in by but the
+  tenant OAuth grant, all matching the chapter. On a VCF Operations 9.1.0 instance with Real-Time Metrics deployed, on
+  2026-09-16, the tenant OAuth grant among them, all matching the chapter but one, which corrected it.
 - The provider api-token path runs only when you supply a provider refresh token minted in the console; the
   provider federation login (the `tm_ui` bearer) is a browser flow the harness does not reproduce.
 - The Basic session login sends a password. Use a dedicated account, and read the count it prints beside the
   OAuth bearer's: the difference is the identity-management delta the chapter calls the arrival rule.
 - Read-only against the platform. The one file the script writes is the refresh-token file, and only when the
-  platform answers with a different value than it was sent; on the reference estate it never did.
+  platform answers with a different value than it was sent; in the runs this handbook made, the platform always
+  answered with the value it was sent.
 - A deleted or rotated api-token is refused at the broker, and not with 401: with HTTP 500 on the 9.1.0 run of
   2026-09-16, and a deleted API client token with HTTP 400 on 9.1.1 (2026-10-13 and 2026-10-15). One past its expiry
   date is not tested. Both scripts say so when it happens, and exit 3.
 - The replay sets were made from X-126's record, which keeps each door's status and each token's claim names and
   lifetime, never a value: every value in them is a placeholder, and a token in them is made unsigned at answer time.
 - `catalog_check.py` reads metadata you keep; it never reads a backend, so it cannot tell whether the value in the
-  vault still works. That is what `claims.py` and `doors.py` are for. It was run on the example catalog and, on
-  2026-11-02, on the reference estate's own catalog, exported to this form from the reference tooling's typed catalog
-  (`pca secrets export-catalog`): 62 credentials, every one marked `fail` because that catalog records an owner, a
-  backend and the rotation dates for each but no scope, 40 of them also due inside the 14-day window and 2 past their
-  date. Its record, `catalog_check.json` beside this script, is that run, every name a placeholder, and the
-  enterprise strategy layer's drift read reads it. Its `--census` join was run once on the reference estate's census
-  record, with a scratch catalog naming one client: that client joined, and the three no entry named failed
-  (2026-10-15). That record predates the list totals the join now requires, so the same record is refused today until
+  vault still works. That is what `claims.py` and `doors.py` are for. It was run on the example catalog and on a
+  working catalog exported to this form from a typed catalog (`pca secrets export-catalog`): every credential there was
+  marked `fail`, because that catalog records an owner, a backend and the rotation dates for each but no scope, and
+  some were also due inside the 14-day window or past their date. Its record, `catalog_check.json` beside this script, is that run, every name a placeholder, and the
+  enterprise strategy layer's drift read reads it. Its `--census` join was run once on a live census record, with a
+  scratch catalog naming one client: that client joined, and every client no entry named failed. That record predates the list totals the join now requires, so the same record is refused today until
   `census.py` is run again. Its refusals of a census that did not read, its token states and its zero-client line were
   run on synthetic records and on records `census.py`'s own code wrote from a fake fleet, a page of one entry at a
   time past fifty included, and are held by its tests.
@@ -166,7 +164,7 @@ so keep it for a throwaway credential.
 - `claims.py` prints `principal: a PERSON` when the bearer names someone (a pipeline holding that token dies with
   their account) and `principal: a CLIENT` when it names a machine identity, the shape automation should hold; each
   with the claims that decided it. The broker's bearer states `prn_type` (`USER` for a person's api-token and
-  `SERVICE` for an API client's, read on the reference estate). A JWT whose claims decide neither prints
+  `SERVICE` for an API client's, as this handbook read them). A JWT whose claims decide neither prints
   `principal: not determined` and exits 3: the absence of a person's claim is not a machine.
 - `doors.py` prints one row per pair. `accepted` is a status below 400, `refused` is 401 or 403. `MATCH` and
   `DIFFERS` compare the row with the chapter's matrix; `DIFFERS` is a finding to report, because the matrix is

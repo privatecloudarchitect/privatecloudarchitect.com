@@ -154,7 +154,8 @@ for a throwaway local account and a throwaway folder: its plan wrote nothing, `-
 and read both back, and a second `-Execute` wrote nothing. It resolves the account to exactly one principal before
 any write, so a name that matches several principals is refused before a role is made. The others have not run
 against a vCenter: `Find-PassThroughJob.ps1`, `New-JobCredential.ps1`, `Invoke-VcJob.ps1` and
-`Test-WalkReadiness.ps1`. DPAPI and Windows pass-through need a Windows host, and the reference lab has no vCenter 8.
+`Test-WalkReadiness.ps1`. DPAPI and Windows pass-through need a Windows host, and this handbook had no vCenter 8 to
+test them on.
 
 ## Tests
 

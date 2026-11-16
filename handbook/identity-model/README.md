@@ -9,7 +9,7 @@ written.
 | File | What it is |
 |---|---|
 | `census.py` | Reads the brokers from the identity plane (never the fleet inventory), each realm and the VCF instances it covers, the realm's identity provider and its directories with protocol and port, the two ways a vCenter grant can spell a principal (the directory's domain and the realm's name, each in capitals) and the third string an API client's session carries (the broker tenant), the API clients with their tokens' lifetimes and each token's runway (its days left, and when it was last exchanged for a bearer), the emergency clients, the fleet's token settings and roles, each VCF Automation organization's ways in, and the broker each vCenter signs in through. `--orgs-only` reads only the organizations, on a VCF Automation provider credential alone. `--egress-metadata-url` asks each broker to fetch a SAML metadata URL itself, proving or refuting its reach to a cloud identity provider. Writes `census.json`, and refuses to write a record carrying any estate value. |
-| `census.json` | That record from the reference estate, 2026-10-15, written by `census.py` as it stands: every call answered, and every paged list's pages carry the total stated and the distinct entries read (`listed`). It was made without `FINGERPRINT_KEY_FILE`, so it carries no fingerprints and `catalog_check.py --census` refuses it as a usage error (exit 5); join a record from your own run, made with your key. |
+| `census.json` | Example output: a run of 2026-10-15 on VCF 9.1.1, written by `census.py` as it stands: every call answered, and every paged list's pages carry the total stated and the distinct entries read (`listed`). It was made without `FINGERPRINT_KEY_FILE`, so it carries no fingerprints and `catalog_check.py --census` refuses it as a usage error (exit 5); join a record from your own run, made with your key. |
 | `expected-output.md` | The transcript of that run, with what to read in it, a run whose credential could not read the fleet identity plane, and a replayed run. |
 | `replay/census/` | A recorded answer set made from `census.json`, every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
 
@@ -71,10 +71,10 @@ python3 census.py --orgs-only --redact    # the organizations block alone; exit 
 ```
 
 It reads no broker, so it calls an organization's OIDC issuer the broker only when the issuer's host is in
-`BROKER_HOSTS`. Name every broker there, the embedded broker inside each management vCenter included: on the
-reference estate the provider consumption organization's issuer was on an embedded broker, and it read `oidc`
+`BROKER_HOSTS`. Name every broker there, the embedded broker inside each management vCenter included: on VCF
+9.1.1 a provider consumption organization's issuer can sit on an embedded broker, and such an organization read `oidc`
 (issuer `other`) until `BROKER_HOSTS` named the management vCenters, then `oidc-broker`, as the full census reads it
-(2026-10-15, one run). So `--orgs-only` refuses to start without `BROKER_HOSTS`: unset, an organization on a broker
+(one run). So `--orgs-only` refuses to start without `BROKER_HOSTS`: unset, an organization on a broker
 reads as on a provider of its own and the run exits 0 on a reading it was never given the means to make. And an
 organization signing in through VCF single sign-on, whose issuer is a broker by definition, read with an issuer
 `BROKER_HOSTS` does not name fails the read (`NOT PLACED`, exit 3): the brokers given miss the one the platform signs in
@@ -112,8 +112,8 @@ identity plane was not tried.
 
 - Read-only by default. Every call to VCF Operations and VCF Automation is a GET, or a POST to a `.../query`
   endpoint, which searches and changes nothing. On each vCenter the script opens a session and closes it. With
-  `--orgs-only` it calls VCF Automation only: on the reference estate, 31 reads of ten organizations on a provider
-  bearer, with no VCF Operations credential set (2026-10-15, one run).
+  `--orgs-only` it calls VCF Automation only, on a provider bearer with no VCF Operations credential set (proven in
+  one run).
 - A list is complete only when it is read whole: the fleet's roles, API clients and API tokens page by page (page
   from 0, `pageSize` in the query) and VCF Automation's organizations (page from 1), until the count of distinct
   entries, a duplicate counted once by its id, equals the total the answer states (`pageInfo.totalCount`,
@@ -122,8 +122,8 @@ identity plane was not tried.
   marked, the run exits 3, and what was read so far never stands for the list. Each page call in the record carries
   `listed`, the total stated and the distinct entries read, so a tool that reads the record can check the list was
   read whole. Forced to a page size of one, the fleet's three lists and the organizations each read one entry per
-  call and the same entries as at the default size, none twice (2026-10-15, one run on the reference estate, whose
-  lists are shorter than one default page, made before the distinct count and the `listed` numbers were added);
+  call and the same entries as at the default size, none twice (one run, on lists shorter than one default page,
+  made before the distinct count and the `listed` numbers were added);
   more than a page, the shapes above and a page the server serves smaller than asked are held by the tests. On that
   run every list answer carried its list, the empty ones included. The committed record's run (2026-10-15, one run)
   carries `listed` on each list's pages, every one read to the total it stated.
@@ -146,8 +146,8 @@ identity plane was not tried.
   service, the connection the provider administrator configures for organizations that belong to the provider; the
   census reads the organization's mode, not which directory that connection names. A Supervisor's issuer is read
   from each provider's own record; the Supervisor's provider list does not carry it.
-- The flag and the issuer's host are read together because they answer different questions. On the reference estate
-  (2026-10-15, one read), the System organization's OIDC settings carried the `vidb` flag on, with its issuer on the
+- The flag and the issuer's host are read together because they answer different questions. Read once on VCF 9.1.1,
+  the System organization's OIDC settings carried the `vidb` flag on, with its issuer on the
   instance broker that holds the realm; the provider consumption organization's carried it off, with its issuer on an
   embedded broker that holds no realm, whose discovery document answered and named that issuer. The census calls the
   second `oidc-broker` only because its issuer's host is a broker's; whether its people are the realm's people was
@@ -161,9 +161,9 @@ identity plane was not tried.
   its own token: integrations-identity's `api_client.py --teardown` refuses a client it did not make and the client the
   run is signed in as.
 - The broker tenant (`BROKER_TENANT`, CUSTOMER by default) is the realm's path segment at the broker, where the API
-  token is traded; on the reference estate an API client's own vCenter session read `CUSTOMER\<client id>`. It is
-  not the realm's name, and the census prints both. `OPS_REALM`, its earlier name, is still read when `BROKER_TENANT` is unset, with a notice. VCF Automation was read with a provider bearer (the refresh-token path was not exercised
-  on the reference estate), and vCenter with a VCF single sign-on user's password; the least privilege each plane
+  token is traded; an API client's own vCenter session carries it, read as `CUSTOMER\<client id>` on VCF 9.1.1. It is
+  not the realm's name, and the census prints both. `OPS_REALM`, its earlier name, is still read when `BROKER_TENANT` is unset, with a notice. VCF Automation was read with a provider bearer (this handbook did not test the
+  refresh-token path), and vCenter with a VCF single sign-on user's password; the least privilege each plane
   needs was not tested. The egress option was run once, against Entra ID's federation metadata for one tenant.
 - What it cannot see: whether an emergency client's token still works (the census reads its status, it does not
   use it), whether the directory accepts the bind it is configured for, and the roles a VCF Automation

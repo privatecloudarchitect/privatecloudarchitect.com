@@ -10,8 +10,8 @@ and the probes.
 | File | What it is |
 |---|---|
 | `authz.py` | The census (read-only), the realm-spelled grants named (`--where-realm`) and removed (`--remove`, plan first), every grant saved to a file of your own and two saves compared (`--save-permissions`, `--compare-permissions`), and the probes (opt-in, and they write to vCenter: a throwaway folder, tag category and tag they create and remove, grants for the length of one case, a throwaway tag on a VM you own for `--supervisor-vm`, and six `authz-probe-*` roles kept by design, each recorded the moment it is made in a ledger of your own, `authz-probe-roles.state.json`). Writes `authz.json` with every estate name replaced, and refuses to write a record in which one survived. |
-| `authz.json` | That record from the reference estate, read 2026-10-19 on three vCenter 9.1.1 instances with all three probes. The chapter's plates render it. |
-| `replay/authz/` | A recorded answer set made from the reference estate's record of 2026-10-06 (the `authz.json` this folder shipped before the 9.1.1 refresh), every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
+| `authz.json` | Example output: a read of 2026-10-19 on vCenter 9.1.1 with all three probes. The chapter's plates render it. |
+| `replay/authz/` | A recorded answer set made from the census record of 2026-10-06 (the `authz.json` this folder shipped before the 9.1.1 refresh), every name a placeholder, for `--replay`: the census runs on it with no estate and sends nothing. |
 
 ## Try it without an estate
 
@@ -40,8 +40,8 @@ replayed run never overwrites `authz.json`. The record and a list `--save-permis
 
 ### A replayed run
 
-The first command, run in this folder: the reference estate's three vCenters, read from recorded answers with nothing
-sent. The first line is written to standard error. The counts by class and the four custom roles whose copies differ
+Example output of the first command, run in this folder: the 2026-10-06 record's vCenters, read from recorded answers
+with nothing sent. The first line is written to standard error. The counts by class and the four custom roles whose copies differ
 are that record's; it counted local grants as one class, so the set splits them into the Administrators group's
 one global grant and VCF-managed accounts. It exits 3 because no session list was read.
 
@@ -104,9 +104,9 @@ where nothing flags it, while the directory domains still name their own grants.
 on which the realm names no grant while grants of an unplaced domain are there (one in none of `DIRECTORY_DOMAINS`,
 `LOCAL_DOMAIN`, `REALM_DOMAIN` and `OTHER_DOMAINS`) prints `NOT PLACED` with those domains, on the terminal only,
 records `realmNamedNothing`, and exits 3. Check `REALM_DOMAIN` against the realm's name, and name in `OTHER_DOMAINS`
-each domain you know is another identity provider's. On the reference estate, with the realm spelled right and no
-realm-spelled grant left, the workload vCenter that runs a Supervisor needed one such domain named before the run
-exited 0 (X-207).
+each domain you know is another identity provider's. A workload vCenter that runs a Supervisor can hold such a domain:
+with the realm spelled right and no realm-spelled grant left, one needed that domain named before the run exited 0
+(X-207).
 
 ### The realm is not the directory domain
 
@@ -126,7 +126,7 @@ REALM_DOMAIN (<domain>) and DIRECTORY_DOMAINS (<domain>) name the same domain. R
 
 ### An API client's grant is kept
 
-A grant whose domain is the broker tenant, `BROKER_TENANT` (`CUSTOMER` when unset, as on the reference estate), is
+A grant whose domain is the broker tenant, `BROKER_TENANT` (`CUSTOMER` when unset), is
 classed `API client (broker tenant)`, whatever the name after it. An API client signed in through the SAML exchange
 carries the broker tenant and its clientId, and the spelling cannot tell a clientId from a person's name. Such a grant
 is an integration's own access: review it with the integration's owner, never remove it as clutter. The census counts
@@ -232,7 +232,7 @@ per-vCenter counts, totals and a digest of its grants.
 principal (its name, and whether it is a user or a group) and the role. On the terminal only, it prints each grant added,
 removed or changed (a grant that started or stopped propagating); a grant given another role on the same entity shows as
 one removed and one added. vCenter's list can carry one grant more than once, under different permission ids and
-identical otherwise (one key on one vCenter of the reference estate held two): the save reports such a key, and the compare counts
+identical otherwise (as measured on vCenter 9.1.1, one key can hold two): the save reports such a key, and the compare counts
 the grants under such a key, so one of the two gone is one removal. It exits 1 on any difference and 0 on none. It exits 3, comparing nothing, when either file is
 unreadable, partial, edited after it was written, written by a replayed run, or not written by `--save-permissions`. A vCenter read in one file only
 is named `NOT COMPARED`, and the files are not shown equal: exit 3, unless a vCenter both read differs (1). A host typed
@@ -308,7 +308,7 @@ digest of its instance UUID, never the UUID or the host's name, so an entry is r
   ledger forgets each one read back gone (and each it named that is no longer listed under its id). A role carrying one
   of the six names that the ledger does not name with that id is left alone and printed as `KEPT` (exit 2).
 - `--adopt-probe-role NAME=ID` records in the ledger a role a run made before the ledger existed: the record of such a
-  run names its roles without an id (the reference estate's run of 2026-10-06 is one), so nothing can tell them from a
+  run names its roles without an id (the `authz.json` this folder shipped from a run of 2026-10-06 is one), so nothing can tell them from a
   role made again under the name. Run it with `VC_HOSTS` naming that one vCenter. Before the census and every probe, the
   vCenter must list a role under that name with that id and exactly the privileges the name declares, or the run stops
   with nothing written (exit 5). It writes the ledger only, never vCenter; the probes and `--remove-probe-roles` in the
@@ -353,8 +353,8 @@ Removing a role leaves its reserved group behind (below); removing that takes th
      named with a UUID at the end. Leave them to VCF, and read them as the evidence of what each integration holds.
      The census sorts by name, so an account you named `svc-` yourself lands here: check the names.
    - `local, Administrators`: the local administrator and the Administrators group. Read the group's members: from
-     vCenter 9.1.1 the VCF Administrator role maps to it, and on the reference estate a directory administrators
-     group is nested in it on every vCenter.
+     vCenter 9.1.1 the VCF Administrator role maps to it, and a directory administrators group can be nested in
+     it.
      Keep the administrator vaulted, as the way back in.
    - `local, other`: every other local group or user, the ones an administrator made and the groups vCenter or
      another product ships under their own names, which the census cannot tell apart by name. Read each, members
@@ -385,9 +385,8 @@ Removing a role leaves its reserved group behind (below); removing that takes th
   it) on an estate that has a realm, not on one without. An estate with no realm yet was not run.
 - A misspelled `REALM_DOMAIN` was run once (X-207), on one management vCenter holding one realm-spelled grant the run
   made on a folder it made and removed: `NOT PLACED` and exit 3, where the version before this check read the same grant
-  as another provider's and exited 0. Spelled right, across the reference estate's three vCenters, the workload vCenter
-  that runs a Supervisor held 12 grants of one domain no domain given placed, and the run exited 3 until that domain was
-  named in `OTHER_DOMAINS`, then 0. Which product those grants belong to was not read in that run.
+  as another provider's and exited 0. Spelled right, a workload vCenter that runs a Supervisor held grants of a domain
+  no domain given placed, and the run exited 3 until that domain was named in `OTHER_DOMAINS`, then 0. Which product those grants belong to was not read in that run.
 - The refusal of a realm typed as a directory, another provider's or the local domain is the script's code and its
   tests; no run was made with one. So are `--remove`'s session guard, the census's `realmSignedIn`, and the refusal of
   a session list that holds only the reader's own sessions: no run was made with a live session spelled in the realm
@@ -398,9 +397,9 @@ Removing a role leaves its reserved group behind (below); removing that takes th
   vCenter, one run each; that the name after `CUSTOMER\` is the client's clientId was read for two clients.
 - Paging: each vCenter's own API metadata (vSphere API 9.0.0.0 onward) defines both lists as paged. A call that sets no
   iteration returns "only the first permissions that fit in a size defined by the service" (the role list reads the
-  same), and a page size the client sets may be lowered by a service policy. On 2026-10-15, on the reference estate's
-  three 9.1.1 vCenter instances, one call with no iteration returned every permission (270 on the largest) and every
-  role, with no marker; walked one item per page, both lists returned the same sets. So the census's paged path has run
+  same), and a page size the client sets may be lowered by a service policy. As measured on vCenter 9.1.1, one call with
+  no iteration returned every permission and every role, with no marker, on every list this handbook read; walked one
+  item per page, both lists returned the same sets. So the census's paged path has run
   only in its tests.
 - **The probes' roles are kept, on purpose.** On a vCenter joined to VCF single sign-on, VCF creates a local
   group `vcf_reserved_<role id>` for every role created there, and deleting the role leaves the group behind.
@@ -416,18 +415,16 @@ Removing a role leaves its reserved group behind (below); removing that takes th
   name, counts as someone's access. It works one vCenter at a time and prints each one's result as it is done, so a run
   that stops shows which were done; a vCenter it could not finish is recorded with the roles it removed before the
   error (exit 3). These guards and `--remove-probe-roles` are the script's code and its tests; no run was made with
-  them. A read-only read of the reference estate (X-311, 2026-10-17) found the six roles the 2026-10-06 run made still
-  there, five on one management vCenter and one on the workload vCenter, each holding the privileges its name declares
-  and granted to no one but its own reserved group, and each vCenter's instance UUID read as a UUID. On 2026-10-19 the
-  six read the same again, and `--adopt-probe-role` recorded them in the reference estate's ledger, one vCenter per run
-  (five, then one), each run's own check of name, id and privileges passing first (X-339); the probes run next reused
+  them. A read-only read (X-311) found the six roles an earlier run made still in place on the vCenters it ran on, each
+  holding the privileges its name declares and granted to no one but its own reserved group, and each vCenter's
+  instance UUID read as a UUID. A later read found the six the same, and `--adopt-probe-role` recorded them in the
+  ledger, one vCenter per run, each run's own check of name, id and privileges passing first (X-339); the probes run next reused
   all six, creating and reconciling none, and left each granted to no one but its own reserved group (X-340).
 - The census sorts a local group named `vcf_reserved_` and a role id, matched whole, as a reserved group: a group you
   named with that prefix and anything else is read as `local, other`.
 - A probe that stopped on an error, the `--supervisor-vm` lookup before the census, and `--remove-probe-roles` across
   vCenters that fail part way are the script's code and its tests; no run stopped so.
-- `--save-permissions` and `--compare-permissions` were run once, read-only, on the reference estate's three 9.1.1
-  vCenter instances (X-220, 2026-10-15): two saves wrote every grant at mode 0600 and compared equal, and two copies
+- `--save-permissions` and `--compare-permissions` were run once, read-only, on vCenter 9.1.1 (X-220): two saves wrote every grant at mode 0600 and compared equal, and two copies
   altered after they were written were refused. Every list came in one page there, so the paging past one page, the
   refusal of a list not read whole and the compare across two vCenter sets are the script's tests (recorded answers).
 - The reserved groups list no members: vCenter's user directory returns none for them, even for a group
@@ -438,7 +435,7 @@ Removing a role leaves its reserved group behind (below); removing that takes th
 ## Reading the record
 
 - `vcenters.<vc>.byClass`: permission counts by class and scope (`global` or `object`). A record written before the
-  local split carries one `local` class (the reference estate's of 2026-10-06 did); the shipped `authz.json` carries the
+  local split carries one `local` class (the one this folder shipped from 2026-10-06 did); the shipped `authz.json` carries the
   three. A record carries the `API client (broker tenant)` class only when a grant in the broker tenant was read, and
   the shipped one read none. A vCenter that was not read carries only `error`.
 - `realmSpelling`: present when the run declared `--no-realm`, saying the realm-spelled class was not applicable.

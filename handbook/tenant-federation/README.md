@@ -9,8 +9,8 @@ only when Entra is reached with a certificate rather than a client secret. No se
 | File | What it is |
 |---|---|
 | `org_federation.py` | Plans by default: prints the request bodies the organization will be sent, the checklist the tenant's identity administrator works through on Entra ID (with the read-only app the provider asks for, and the name claim kept as the user principal name, which the leaver job looks each account up by), the checklist you work through in the organization, and the proof checklist, each with its owner, and changes nothing. `--execute` builds a throwaway organization, an Entra app and one entitlement group, and wires them; `--prove` reads both sides back and checks each setting the build depends on; `--teardown --execute` deletes what it built and checks that nothing is left. For a real tenant's organization, which `--execute` refuses, `--prove --org` proves it read-only and `--configure --org` writes the provider's side from what the tenant handed over; neither needs a state file. Writes `federation.json` (or `prove.json`, `configure.json`), and refuses to write a record carrying any estate value. |
-| `federation.json` | That record from the reference estate. The chapter's plates render it. |
-| `update_key_refresh.json`, `update_keys.json`, `update_secret.json`, `update_metadata.json` | The day-2 writer's records, one per kind of write, from a throwaway OIDC organization and a throwaway SAML one on the reference estate. federation-operations' plates render them. |
+| `federation.json` | Example output: a run of 2026-10-12 that built, proved and tore down a throwaway classic organization over SAML. The chapter's plates render it. |
+| `update_key_refresh.json`, `update_keys.json`, `update_secret.json`, `update_metadata.json` | Example output: the day-2 writer's records of 2026-10-13, one per kind of write, from a throwaway OIDC organization and a throwaway SAML one. federation-operations' plates render them. |
 | `expected-output.md` | A run's transcript, with what to read in it, and a replayed run. |
 | `replay/org_federation/` | A recorded answer set built from `federation.json` and the `update_*.json` records, every name a placeholder, for `--replay`: the script runs on it with no estate and sends nothing. |
 
@@ -64,7 +64,7 @@ python3 org_federation.py --protocol oidc --org-type all-apps --prove
 python3 org_federation.py --protocol oidc --org-type all-apps --teardown --execute
 ```
 
-A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. On the reference estate the runs used a provider System Administrator's bearer and a certificate; the api-token and the client secret paths were not exercised there. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused the write that disables a local account (403), the write a provider bearer carried, so give every write here a provider bearer. With both files set, the script uses the bearer. Every secret's file (the bearer, the api-token, a client secret, the key) is read only at mode 0600: one open to group or other is refused unread, with the fix (`chmod 600` on the file), and the run exits 5 with nothing sent.
+A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. The runs behind this companion used a provider System Administrator's bearer and a certificate; this handbook did not test the api-token and the client secret paths. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused the write that disables a local account (403), the write a provider bearer carried, so give every write here a provider bearer. With both files set, the script uses the bearer. Every secret's file (the bearer, the api-token, a client secret, the key) is read only at mode 0600: one open to group or other is refused unread, with the fix (`chmod 600` on the file), and the run exits 5 with nothing sent.
 
 ## Exit codes
 
@@ -77,8 +77,8 @@ A provider bearer lasts an hour, so mint it just before each run, as the platfor
 | 5 | not run as asked, and nothing sent: an unknown, missing or malformed argument (`--group` without `ROLE=NAME`, `--keys` without `--update`, `--enable` without `--configure`, `--groups-only` without `--group` or with `--enable` or `--user-key`), a missing environment variable or credential (`ENTRA_CLIENT_ID` without its credential among them), an `ENTRA_TENANT_ID` that is neither a tenant id nor a domain Entra names a tenant for, a file that cannot be read, a credential file that is empty, a secret's file open to group or other (refused unread, with the fix: `chmod 600`), metadata that is not the tenant's or names no signing certificate that reads, `SECRET_DAYS` of a year or more, a `--replay` directory that cannot be read or holds no replay set, a Python older than 3.9 |
 
 The Entra app the script runs as creates and deletes app registrations, service principals, their role
-assignments and permission grants, and groups, and sets a service principal's claims policy. On the reference
-estate it ran as an app holding, among other Microsoft Graph application permissions, `Application.ReadWrite.All`,
+assignments and permission grants, and groups, and sets a service principal's claims policy. This handbook
+ran it as an app holding, among other Microsoft Graph application permissions, `Application.ReadWrite.All`,
 `AppRoleAssignment.ReadWrite.All`, `DelegatedPermissionGrant.ReadWrite.All`, `Group.ReadWrite.All`,
 `User.ReadWrite.All` and `Policy.ReadWrite.ApplicationConfiguration`; a smaller set was not tried. Those are
 tenant-wide powers: run it in a tenant made for trials, or as an app you remove afterwards.
@@ -156,7 +156,7 @@ each changing field as `old -> new`, the values a rollback writes back by hand (
   Graph listed a certificate just added to the app later than Entra's metadata named it); without it, metadata naming
   none of the certificates the organization holds while it holds SAML users, enabled or not. Entra names the same identity-provider entity id, the tenant's issuer, in every app's metadata in one tenant,
   so another app's metadata reads as the tenant's; only the certificates tell two apps apart (read on two SAML apps of
-  the lab's tenant, X-250). The plan prints the certificates kept, dropped and added by thumbprint.
+  one tenant, X-250). The plan prints the certificates kept, dropped and added by thumbprint.
 
 A missing `APP_CLIENT_ID` over OIDC, or metadata that is not the tenant's, is a usage error (exit 5) and sends
 nothing. Every list it reads (organizations, users, groups, roles) is read until its distinct items reach the total
@@ -177,8 +177,8 @@ sign-in. `--prove --org` cannot see Entra: VCF Automation imported a group name 
 carried, and the proof passed it; the watch's `group_names` check, through the tenant's read-only app, failed on it,
 and `--configure` given that app now refuses such an import before it is sent.
 
-On the reference estate (2026-10-15, X-192): a throwaway All Apps OIDC organization keyed on `oid`, built by
-`--execute` and then configured as if someone else had built it. The plan named two changes, the key refresh (moved
+This handbook proved `--configure --org` live (X-192) on a throwaway All Apps OIDC organization keyed on `oid`,
+built by `--execute` and then configured as if someone else had built it. The plan named two changes, the key refresh (moved
 to 24 hours for the run) and a client secret the tenant side added and handed over; `--execute` wrote both in one
 round trip, imported a second group with Organization Administrator, and every check read back; a second run wrote
 nothing; a switch to SAML and a switch to `preferred_username` were refused with nothing written; and `--prove --org`
@@ -229,9 +229,9 @@ certificate, are usage errors (exit 5): nothing is sent.
 A settings write carries the client secret, because VCF Automation refuses an OIDC settings write without it: the one
 the organization holds, read and sent back in memory, or the new one; neither is printed or written.
 
-On the reference estate (2026-10-13, a throwaway All Apps organization over OIDC and one over
-SAML, built and removed by the run): the key refresh was written to 24 hours and back to one hour, the keys the
-provider publishes were written (all six already held), a secret rotated at Entra was written and read back, and the
+This handbook ran the writer live on a throwaway All Apps organization over OIDC and one over
+SAML, built and removed by the run: the key refresh was written to 24 hours and back to one hour, the keys the
+provider publishes were written (every one already held), a secret rotated at Entra was written and read back, and the
 SAML metadata Entra publishes for the app was written, with the same signing certificate. Every changed field read back
 as written. On OIDC the check compares every settings field except the key-refresh fields, the keys and the secret; on
 SAML it checks only that the organization holds the metadata's certificates and that SAML stayed enabled, so the keys

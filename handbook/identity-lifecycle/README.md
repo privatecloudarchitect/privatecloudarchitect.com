@@ -10,11 +10,11 @@ with a certificate. No token, secret or password is printed or written.
 | File | What it is |
 |---|---|
 | `leavers.py` | Finds every organization federated to one Entra tenant from the organization's own settings (OIDC by an issuer on the tenant, SAML by metadata naming it), reads each account against Entra and both gates a sign-in passes (the app's assignment, and a group imported into the organization that the sign-in can carry), and reports every leaver, the tokens it holds (how many, and the last one's end date, for every account) and what the run would do. It lists every role granted to a federated account directly, and flags an account disabled here whose name an enabled, entitled Entra user now holds; `--ack` silences a flag a person has decided on, until a date. `--execute --org` closes the confirmed leavers of one organization, and refuses an organization where an unusual share reads gone; `--close-now --org --user` closes one named, federated account at once, without asking Entra (under `oid`, by the object id the leaver notice carries; a principal name is resolved and checked by the plan only). An organization with its federation switched off is listed, and exits 3 while it still holds an enabled federated account or a token of one. Every list is read to the total it states, or the run exits 3. On a provider API token it reads the token's own end date and flags it inside `WARN_DAYS`. Each state has its own exit code. Writes `leavers.json`, and refuses to write a record carrying any estate value. |
-| `leavers.json` | That record from the reference estate: a read-only run on 2026-10-15 at 21:14 UTC of the script as it stands, on the provider API token the estate keeps, covering every organization federated to the lab tenant and the three with their federation switched off. |
+| `leavers.json` | Example output: a read-only run of 2026-10-15 at 21:14 UTC of the script as it stands, on a provider API token, covering every organization federated to one Entra tenant and every organization with its federation switched off; the record the chapter renders. |
 | `replay/leavers/` | A recorded answer set made from `leavers.json`, every name a placeholder, for `--replay`: `leavers.py` runs on it with no estate, reaches every decision the record holds, and sends nothing. |
 | `expected-output.md` | The transcript of that run, and of earlier runs of earlier versions, each labeled with its date: the report with its one flag acknowledged, a closed leaver, the urgent close on a Basic provider session's bearer, a run given `--expect-tenants`, and the leaver test before and after a close, with what to read in them; and a replayed run of each script on its recorded set. |
 | `leaver_test.py` | The leaver test, read-only: for one test user removed at Entra, reads that its account is disabled with no API token left, that its own API token no longer refreshes, and that Entra's sign-in log holds a refused sign-in to the organization's app, each against the deadline you promise (below). |
-| `replay/leaver_test/` | A recorded answer set made from the passing run of the leaver test over SAML on the reference estate (2026-10-15), every name a placeholder, for `--replay`: `leaver_test.py` runs on it with no estate and sends nothing. |
+| `replay/leaver_test/` | A recorded answer set made from a passing run of the leaver test over SAML (2026-10-15), every name a placeholder, for `--replay`: `leaver_test.py` runs on it with no estate and sends nothing. |
 
 ## Try it without an estate
 
@@ -98,8 +98,8 @@ when that Entra user is newer than the account (an account named by the name bef
 `oid`). The printed match gives both dates beside the object id: the Entra user's `createdDateTime`, and the account's
 creation as the audit trail records it (`GET /cloudapi/1.0.0/auditTrail`, the account's import event at its first
 sign-in, or its create event; the account record itself carries no creation time). An account older than the audit
-trail's reach has no such event, and the trail's oldest event bounds it (on the reference estate the trail reached back
-about 39 days on 2026-10-15). A date the guard needs that did not read, or that carries no time stamp, is a read that
+trail's reach has no such event, and the trail's oldest event bounds it, so read how far back your trail reaches
+before you rely on the guard. A date the guard needs that did not read, or that carries no time stamp, is a read that
 failed (exit 3), never a pass. The dates catch a name given to someone new after the departure. They do not catch an
 existing person renamed onto the name, whose Entra user and account both predate the departure: a close by that name
 would disable that person and leave the departed person's account open. So `--close-now --execute` under `oid` takes
@@ -147,15 +147,15 @@ to this tenant in a form the script does not read, then reads `uncovered: no sch
 one on another provider is counted and not read. Without the flag, an organization federated elsewhere is counted
 and not read, and changes no exit: tenant A's schedule can exit 0 while tenant B's leavers go unread. A list that
 leaves out the run's own tenant, or a domain name Entra knows as no tenant, is a usage error (exit 5); a discovery
-read that failed is 3. On the reference estate, which has one Entra tenant, the flag read the same organizations and
-exited as without it (2026-10-15), by the tenant's id and by its domain name; an uncovered organization is held by
-the script's tests.
+read that failed is 3. This handbook tested the flag live against a single Entra tenant: it read the same
+organizations and exited as without it, given the tenant's id and given its domain name; an uncovered organization is
+held by the script's tests.
 
 ### Your provider credential
 
 By hand, the script runs on a provider bearer (`VCFA_PROVIDER_BEARER_FILE`, a file of mode 0600 under your home,
 outside any clone, where no commit can carry it), the credential a provider call presents. It acts in every organization, so hold it as tier-0 and delete it when the work ends. Two
-sign-ins give one, and a close held on each on the reference estate:
+sign-ins give one, and this handbook proved a close on each:
 
 - **The provider portal's sign-in.** Sign in at `https://<automation-fqdn>/provider`; the bearer is what the portal
   sends, the `Authorization` header of any `/cloudapi/` call in the browser's developer tools, after `Bearer `. The
@@ -193,19 +193,17 @@ A scheduled report holds a provider API token instead (`VCFA_PROVIDER_REFRESH_TO
 at `/oauth/provider/token` for a bearer each run. The close does not run on one (below): run `--execute` and
 `--close-now --execute` on a provider bearer.
 
-The token ends. The one the reference estate holds ended 90 days after it was saved, less the three minutes between
-its mint and its file being written; the site setting `apiTokenDurationMinutes` (read at `GET
-/api/admin/extension/settings/general`) held 129600, which is 90 days, and whether that setting sets a provider token's
-lifetime was not tested by changing it (2026-10-15, one token). Neither the mint calls below nor the token API's create
+The token ends. A provider API token measured on VCF Automation 9.1 ended 90 days after its mint (one token). The site
+setting to read on yours is `apiTokenDurationMinutes` (`GET /api/admin/extension/settings/general`); whether it sets a
+provider token's lifetime, this handbook did not test by changing it. Neither the mint calls below nor the token API's create
 body offer a lifetime, and the portal's create box asks for a name. So the report reads its own token's end date on
 every run: its session's user (`GET /cloudapi/1.0.0/sessions/current`), then the provider's token list (`GET
 /cloudapi/1.0.0/tokens`, no tenant context), and the one `REFRESH` token that user owns (set
 `VCFA_PROVIDER_TOKEN_NAME` to the name it was minted with when the user owns several); `expirationTimeUtc` is the end.
 Inside `WARN_DAYS` (default 30, the federation watch's) the report flags it, exit 4, and a read of it that failed is
 exit 3; the record's `credential` names the token (as a placeholder), its end and the days left, and the report prints
-it as a `credential:` line. Run on the reference estate's token on 2026-10-15, the report read an end of 2026-11-04
-(20.4 days): flagged at the default window, not at a window of 5 days, and on a provider bearer it said there is no
-end date to read. Rotate it as the platform-identity chapter's plate 04, "Your provider API token", shows
+it as a `credential:` line. Tested live on a token inside the default window, the report flagged it at the default
+and not at a window shorter than its days left, and on a provider bearer it said there is no end date to read. Rotate it as the platform-identity chapter's plate 04, "Your provider API token", shows
 ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)): record the rotation date before you issue the
 new token, mint it, swap the 0600 file and set `VCFA_PROVIDER_TOKEN_NAME` to the new token's name in the same change,
 run the report once on it, revoke the old one and read the list back. Until the old one is revoked the job's user owns
@@ -230,10 +228,9 @@ POST https://<automation-fqdn>/oauth/provider/token      (form)
 
 The token appears in the provider's token list (`GET /cloudapi/1.0.0/tokens`) under the client's name, type
 `REFRESH`; retire it with `DELETE /cloudapi/1.0.0/tokens/{id}`, after which its refresh answers 400 `invalid_grant`.
-The registered client stays: the API reference has no delete path for it. On the reference estate, 2026-10-13, a
-token minted this way for a provider System Administrator carried a report run over every federated organization with
-no call refused, reaching the provider bearer's decision on 11 of 12 accounts (the twelfth made between the two runs),
-and read back with rotation not required. The close was refused on such a token: the write that disables the account answered 403 and the
+The registered client stays: the API reference has no delete path for it. On VCF Automation 9.1, a token minted this
+way for a provider System Administrator carried a report run over every federated organization with no call refused,
+reaching the provider bearer's decision on every account both runs read, and read back with rotation not required. The close was refused on such a token: the write that disables the account answered 403 and the
 account stayed enabled (a local user in a classic organization, one run; a federated account's close on that token was
 not run), so the script reported that the close did not hold. The closes that held in the two end-to-end runs (2026-10-13: a leaver closed with `--execute --org --user`,
 and an organization keyed on `oid`) ran on a provider bearer from the provider portal's sign-in: each run's harness
@@ -243,8 +240,7 @@ own organization could not be made, the organization already holding its one loc
 provider session carried it (above), but as a System Administrator, with that person's password. Not tried: that
 existing local user, and a directory service account granted a provider role through the portal flow. The narrowest
 provider role that lets the job pass was not measured. Scheduling the close would mean holding an administrator's
-credential in the scheduler: the reference estate's own job signs in as the SSO administrator through the provider
-portal's sign-in.
+credential in the scheduler, such as an SSO administrator's, signing in through the provider portal's sign-in.
 
 So the close is a person's step. Schedule the report on the token and alert on any non-zero exit: on 1 run the close,
 `--execute --org` (or `--close-now`) on a provider bearer (above); on 3 fix the read before trusting any
@@ -348,15 +344,15 @@ A refusal for any other reason, a wrong password among them, proves nothing abou
 | 0 | every check passed, each by the deadline | keep the record (`leaver-test.json`) as the test's evidence |
 | 5 | a usage error: a missing or bad argument or variable, an unreadable file, a credential file that is empty or open to group or other (refused unread, with the fix: `chmod 600`), a `--user` that selects no account or more than one, a `--replay` directory that cannot be read or holds no replay set; nothing is sent | fix the invocation |
 
-On the reference estate, 2026-10-15, the test ran once over each protocol, on a throwaway All Apps organization built
-for it with its own app and entitled group: over OIDC the test user was disabled at Entra, over SAML taken out of the
+This handbook ran the test once over each protocol, on a throwaway All Apps organization built for it with its own
+app and entitled group: over OIDC the test user was disabled at Entra, over SAML taken out of the
 entitled group. Before the removal the script exited 1 both times (the account enabled, its token listed, the refresh
 answered 200). After `leavers.py` closed the account it exited 3 while Entra's log did not yet hold the refused
-attempt, then 0: 6.5 minutes after the removal over OIDC (refused with 50057, logged for an attempt 19 s after the
-removal) and 7.1 minutes after over SAML (50105, 17 s after). The disabled user's browser sign-in stopped at the user
-name page, and Entra still logged the attempt as refused. The log was read by the lab's automation app, which holds
-`AuditLog.Read.All` among wider permissions, in a tenant holding an Entra ID P2 trial licence: a tenant without one, and
-an app holding only `AuditLog.Read.All`, were not tested.
+attempt, then 0 once it did, within minutes of the removal over each protocol (Entra refused with 50057 over OIDC and
+50105 over SAML, each logged for an attempt seconds after the removal). The disabled user's browser sign-in stopped at the user
+name page, and Entra still logged the attempt as refused. The log was read by an app holding
+`AuditLog.Read.All` among wider permissions, in a tenant holding an Entra ID P2 trial licence: this handbook did not test
+a tenant without one, or an app holding only `AuditLog.Read.All`.
 
 What the test does not cover: a session the leaver already holds (an open browser session's bearer is not read; see
 the chapter for what ends one), API tokens on other planes, and the fleet's own users behind the identity broker.
@@ -368,7 +364,7 @@ the chapter for what ends one), API tokens on other planes, and the fleet's own 
   organization that the sign-in carries, or a role granted to the account directly. Accounts are matched to Entra by
   the key the organization names them with (see Scope). Local accounts are out of scope.
 - **Entra's gate is read from direct membership.** Entra admits only a direct member of a group assigned to the app;
-  a user whose only path is a group nested inside an assigned one was refused at Entra on the reference estate,
+  a user whose only path is a group nested inside an assigned one was refused at Entra when this handbook tested it,
   although Graph's transitive read counted it a member. So the script reads each gate group's direct members
   (`GET /groups/{id}/members`, every page), and such a user reads leaver, its reason saying to make the user a
   direct member. With the app's group claims set to `ApplicationGroup`, only an imported group that is also assigned
@@ -377,10 +373,10 @@ the chapter for what ends one), API tokens on other planes, and the fleet's own 
 - **A direct role keeps an account.** VCF Automation refuses a federated user who maps to no imported group and holds
   no direct role. An account that passes Entra's gate, is carried by no imported group and holds a role directly is
   the other case, so it reads keep (`assigned at Entra and holds a direct role`) and is flagged `direct-role`, exit 4,
-  for a person to decide and acknowledge. It is never closed as a leaver. On the reference estate such a user, assigned
+  for a person to decide and acknowledge. It is never closed as a leaver. On VCF Automation 9.1 such a user, assigned
   to the app directly, signed in holding that role alone, and was refused at sign-in once the role was dropped
-  (2026-10-15, classic and All Apps organizations over OIDC and SAML, one run each); the keep and the flag are held
-  by the script's tests.
+  (classic and All Apps organizations over OIDC and SAML, one run each); the keep and the flag are held by the
+  script's tests.
 - **How a name is looked up.** By `userPrincipalName`, then by `mail`, then by `otherMails`, each a `/users` filter
   Microsoft Graph serves by default (no `ConsistencyLevel` header, no `$count`). Every lookup is read, and exactly one
   Entra user across them is the person; more than one reads undetermined. The user found is the person only when the
@@ -412,21 +408,21 @@ the chapter for what ends one), API tokens on other planes, and the fleet's own 
   Microsoft Graph's paging guidance says a page may hold none); so is a membership answer (`checkMemberGroups`)
   without its list, which leaves the account undetermined. The call that ended a
   read in part carries a `shape` in the record naming why. A page size of 1 over more than 50 items is held by the
-  script's tests; the reference estate's lists fit on one page.
+  script's tests; this handbook did not test a live list longer than one page.
 - **A federation switched off is listed, never dropped.** An organization with OIDC and SAML both off is not judged:
   the script cannot ask Entra about people who cannot sign in through it. It reads the organization's accounts and
   tokens instead, because an enabled federated account comes back when the federation is switched on, and whether
   an API token of a federated account stops refreshing while it is off was not tested. One that holds either is unreadable (exit 3), its
   reason naming the counts: close a leaver's account there with `--close-now`, by the object id where the
   organization stores `oid` as its key (the close reads the key it stores, switched off or not), or switch the
-  federation back on so the report judges them. One that holds neither is listed (`nothing for this report to judge`) and changes no exit. On the
-  reference estate, 2026-10-15, three organizations were listed, none holding anything federated.
+  federation back on so the report judges them. One that holds neither is listed (`nothing for this report to judge`) and changes no exit. This
+  handbook proved the listing live on switched-off organizations holding nothing federated.
 - **It alerts, and acts, only on what three reads agree on.** Entra's directory reads settle after a change. Every
   leaver still enabled or holding a token is read again three times, ten seconds apart, in a report as with
   `--execute`, and counts as open (exit 1), or is closed, only when every read says leaver; a leaver whose reads
   disagree reads undetermined (exit 3), its reason naming the reads, and the next run reads it again. An
-  organization's leavers are read in the same three rounds, so the wait does not grow with their number: on the
-  reference estate three such reads of an organization's leaver took 22 to 23 s (2026-10-15). A leaver already
+  organization's leavers are read in the same three rounds, so the wait does not grow with their number: the two
+  ten-second pauses between the rounds add 20 s to an organization's read, whatever its leavers. A leaver already
   disabled with no token is not read again.
 - **It acts only on a named organization.** `--execute` needs `--org`; `--user` narrows it to one account, chosen and
   printed before anything is judged or sent, as for `--close-now` above. Every account is still read and reported.
@@ -442,8 +438,8 @@ the chapter for what ends one), API tokens on other planes, and the fleet's own 
   SAML account created at first sign-in while the provider sent no email claim holds a value the platform refuses on
   update; when the write is refused naming the email field, it goes again with the email cleared, the one other field
   it changes, and the record's `email_cleared` marks it. A leaver already disabled with no
-  token is in step, so a re-run changes nothing. A close leaves roles granted directly in place: the account closed
-  on the reference estate kept its direct role, and the report flags it until a person removes it.
+  token is in step, so a re-run changes nothing. A close leaves roles granted directly in place: a closed account
+  keeps its direct role, and the report flags it until a person removes it.
 - **What it never acts on.** A role granted to a federated account directly is listed and flagged, because a new
   person later given the same name signed in to the same account and held it (over SAML and over OIDC keyed on
   `preferred_username`, with the account enabled). The flag's words follow the organization's user key: keyed on a
@@ -451,8 +447,8 @@ the chapter for what ends one), API tokens on other planes, and the fleet's own 
   it is enabled again; under `oid`, a later holder of the name signs in to a new account and does not reach them. An
   account disabled here whose name an enabled, entitled Entra
   user now holds is flagged, because if that is a different person, enabling the account hands them its roles: on
-  the reference estate (2026-10-15, All Apps organizations over SAML and over OIDC keyed on `preferred_username`, one
-  run each), a new person given a departed person's name was refused at sign-in while the closed account stayed
+  VCF Automation 9.1 (All Apps organizations over SAML and over OIDC keyed on `preferred_username`, one run each), a
+  new person given a departed person's name was refused at sign-in while the closed account stayed
   disabled, and no account was made for them; enabled again, the account let them in holding its direct role. Both
   are decisions for a person.
 - **What the name check cannot see.** The flag above fires only on an account disabled here. An account never closed,
@@ -498,12 +494,12 @@ script itself never removes a role.
 - Each organization's accounts are matched to Entra by the key the organization names them with, read from its own
   settings: by name for OIDC keyed on `preferred_username` and for SAML keyed on Entra's name claim, and by object id
   for OIDC keyed on `oid`. An organization keyed on anything else has every account undetermined, never a leaver, and
-  an account whose name does not fit its organization's key is undetermined too. Matching by object id ran once on
-  the reference estate (2026-10-13), on an All Apps organization keyed on `oid` for the run: two accounts named by
-  object id read keep, one was closed with `--close-now`, the other read leaver once disabled at Entra and was closed;
-  the accounts named by principal name read undetermined. A principal name given to `--user` under `oid` is resolved
-  as above; that resolution ran read-only against the lab tenant on 2026-10-15, where each of ten federated accounts'
-  principal names selected that account from a copy of its organization's list renamed to object ids, in both jobs.
+  an account whose name does not fit its organization's key is undetermined too. This handbook ran
+  matching by object id live once, on an All Apps organization keyed on `oid` for the run: the accounts named by
+  object id read keep, one of them was closed with `--close-now`, and another read leaver once disabled at Entra and
+  was closed; the accounts named by principal name read undetermined. A principal name given to `--user` under `oid`
+  is resolved as above; that resolution ran read-only against a live Entra tenant, where each federated account's
+  principal name selected that account from a copy of its organization's list renamed to object ids, in both jobs.
   Selection on a live organization keyed on `oid` ran later that day, on an All Apps organization built keyed on
   `oid` for the run, with two throwaway users: the report kept both accounts by object id; the plan given a
   principal name, with `--left-on` after the user's creation, resolved it through Graph and selected that account,
@@ -512,21 +508,21 @@ script itself never removes a role.
   disabled at Entra, closed its account. `--close-now`'s name guard (`--left-on`) is held by the script's tests, among
   them a name reused by a newer Entra user, and an existing person renamed onto the name, whom the dates pass and
   whose name `--execute` refuses; the audit trail's import and create events it reads were each found, read-only,
-  for every account of the lab's four throwaway organizations on 2026-10-15, and Entra's `createdDateTime` on every
-  user the lab tenant's app read. Live, once the first user's name went to a new Entra user, who signed in to a new
+  for every account of the throwaway organizations this handbook built, and Entra's `createdDateTime` on every user
+  the tenant's app read. Live, once the first user's name went to a new Entra user, who signed in to a new
   account, the plan with `--left-on` the departure day refused the name (exit 5); both users were made that day, so
   the first user's own name was refused the same way before the reuse, and a reuse long after a departure was not
   run live.
-- What the name match covers, and what it was tested on. Every federated account on the reference estate was found
-  by its `userPrincipalName` (2026-10-15). The `mail` and `otherMails` lookups found a throwaway member user whose
+- What the name match covers, and what it was tested on. Every federated account this handbook tested live was
+  found by its `userPrincipalName`. The `mail` and `otherMails` lookups found a throwaway member user whose
   `mail` and `otherMails` each held an address other than its `userPrincipalName`, the shape of a name claim sourced
   from mail: three reads each, once Graph's reads had settled after the user was made (2026-10-15). Such a find reads
   undetermined unless its organization is declared with `--name-claim <org>=mail`, so an organization whose name
   claim is sourced from mail, or whose people include Entra guests (their `userPrincipalName` in the tenant carries
   `#EXT#`), is declared once and then reads like any other. That user was never signed in to VCF Automation, so no
   organization whose name claim is sourced from another attribute was run end to end, declared or not; the
-  declaration is held by the script's tests. An Entra guest was not tested: the reference tenant refused the
-  throwaway guest's invitation. A name no lookup finds is judged as above: undetermined when no account
+  declaration is held by the script's tests. This handbook did not test an Entra guest: the tenant it tested
+  in refused the throwaway guest's invitation. A name no lookup finds is judged as above: undetermined when no account
   of the organization is found, and a leaver otherwise, with the mass-close guard between it and `--execute`.
 - What it cannot see: whether a revoked token was in use, sessions a leaver already holds, and the fleet's own users
   behind the identity broker (that half of the job is a design today). Of the sessions: a user disabled at the
@@ -542,22 +538,19 @@ script itself never removes a role.
   belongs to the same person; it
   flags the case and acts on nothing.
 - Measured on VCF Automation 9.1 against Entra ID with a provider bearer and a Graph certificate, and with a provider
-  API token (2026-10-13: a report run held; a close was refused 403); the Graph client-secret path was not exercised
-  on the reference estate. The Graph application permissions the reads need were measured on a throwaway app before
+  API token (a report run held; a close was refused 403); this handbook did not test the Graph client-secret path. The Graph application permissions the reads need were measured on a throwaway app before
   the `mail` and `otherMails` lookups were added: `Application.Read.All`, `User.Read.All` and `GroupMember.Read.All`,
   and with the last one missing every account reads undetermined. The two newer lookups and the direct-member reads
-  ran on the lab's automation app, which holds wider permissions; that the three suffice for them was not measured,
+  ran on an app holding wider permissions; that the three suffice for them was not measured,
   though Microsoft Graph's reference lists `GroupMember.Read.All` among the application permissions for a group's
-  members. On 2026-10-15 the report exited 4 on the reference estate (one flag, nothing open, nothing unread), and 0
-  with that flag acknowledged; re-run that day with the direct-member reads, it reached the same decision on every
-  account, no gate group had a group among its direct members, and no federated user was in a gate group only
-  through nesting. Re-run once more with every open leaver confirmed over three reads, it reached the same decision
-  on every account again and exited 4, in 30.2 s against 30.7 s for the version before (95 calls each); no leaver was
-  open, so none was read again, and the three reads, timed apart on each organization's in-step leaver, took 22 to
-  23 s and agreed. Run again at 21:14 UTC as the script stands, on the provider API token the estate keeps, it made
-  103 calls with none refused, listed three organizations with their federation switched off and nothing federated in
-  them, reached the same decision on every account, and exited 4 on that flag and on its own token, 20.1 days from its
-  end (`leavers.json`); each SAML organization's user key is recorded as Entra's name claim, whose namespace the scrub
+  members. Live, the report exited 4 on a flag with nothing open and nothing unread, and 0 with that flag
+  acknowledged; re-run with the direct-member reads, it reached the same decision on every account, on gate groups
+  holding no group among their direct members, so that run did not exercise a user reached only through nesting.
+  Re-run once more with every open leaver confirmed over three reads, it reached the same decision on every account
+  again, took no longer than the version before, and the three reads of each organization's in-step leaver agreed.
+  Example output: the run of 2026-10-15 at 21:14 UTC as the script stands, on a provider API token, is the record
+  `leavers.json` renders; it made every call with none refused and exited 4 on that flag and on its own token's
+  approaching end. Each SAML organization's user key is recorded as Entra's name claim, whose namespace the scrub
   keeps as product vocabulary.
 
 ## Reading the record

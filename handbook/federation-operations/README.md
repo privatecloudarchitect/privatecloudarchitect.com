@@ -10,7 +10,7 @@ secret or password is printed or written.
 | File | What it is |
 |---|---|
 | `watch.py` | Reads each organization's OIDC or SAML settings, imported groups and local administrators from VCF Automation, the keys the provider publishes, and (optionally) the app behind the organization from Microsoft Graph, then runs nine checks: key refresh, keys held, PKCE, the client secret's end date, the SAML certificate's end date, whether the organization's metadata holds every signing certificate, imported group names against the groups assigned to the app, the app's own gate, and a local user holding the organization's top role (Organization Administrator in an All Apps organization, Organization Owner in a classic one) for the day the provider refuses; a run declared `--provider-only` with `--tenant-attested` adds a tenth, `tenant_report`, the age of the tenant's last report of its rollover dates. On a provider API token the run also checks that token's own end date (`own_token`). `--expect-tenants` names every tenant a schedule covers. `--why` is the sign-in router: what a user saw in, where it was refused and what to read first out. Writes `watch.json`, and refuses to write a record carrying any estate value. |
-| `watch.json` | That record from the reference estate, 2026-10-16, four throwaway organizations (classic and All Apps, OIDC and SAML), read through the tenant's read-only app. |
+| `watch.json` | Example output: a run of 2026-10-16 over a throwaway organization of each type (classic and All Apps) on each protocol (OIDC and SAML), read through the tenant's read-only app. |
 | `watch_passing.json`, `watch_group_renamed.json`, `watch_restored.json` | The watch on one throwaway All Apps organization over OIDC built to pass, 2026-10-13: after its first scheduled key refresh (every check ok but `secret_end`, which warned because the run gave its rotated secret 30 days, inside the 30-day window; exit 1), with the entitled group renamed at Entra (`group_names` fails; exit 2), and with the name restored (exit 1 again). The day-2 writes that set it up are the tenant-federation companion's `update_*.json`. |
 | `expected-output.md` | The transcript of that run, with what to read in it, and a replayed run. |
 | `replay/watch/` | A recorded answer set built from `watch.json`, every name a placeholder, for `--replay`: the watch runs on it with no estate and sends nothing. |
@@ -167,18 +167,17 @@ refresh that failed.
   `app_gate` and `group_names` read the tenant's Entra app in Microsoft Graph, so they run through a read-only app
   the tenant registers and consents in its own directory; without one, the run says they were not run and exits 3,
   and until the app is held the tenant runs them and reports them.
-- The Graph application permission those checks need is `Application.Read.All`, measured on 2026-10-13 by narrowing:
-  a throwaway app on the lab tenant ran this script read-only under six sets of `Application.Read.All`,
+- The Graph application permission those checks need is `Application.Read.All`, measured by narrowing: a throwaway
+  app ran this script read-only under six sets of `Application.Read.All`,
   `User.Read.All` and `GroupMember.Read.All`. With `Application.Read.All` alone every Graph check ran; in every set
   without it, none did. In one run holding `Application.Read.All` and `GroupMember.Read.All` the Graph checks were
   skipped with an HTTP error; that run was not repeated and is not explained. The app was deleted and purged.
 - Measured on VCF Automation 9.1 against Entra ID, with a provider System Administrator's bearer, and with a Graph
   certificate (the reference run) and a Graph client secret (the permission measurement). On 2026-10-15 it ran once on
   a provider API token minted for the run from that bearer, on two standing organizations: no read was refused, every
-  check read the same state as on the bearer, the token's own end date read 90 days out, and the token was revoked after. One
-  schedule per tenant and the declared
-  provider-only run were read on 2026-10-15 on two standing organizations of the lab's one Entra tenant, with a run
-  tenant and a tenant list made up for the run; an organization federated to a second real tenant was not run. No provider identity narrower than an administrator was proven for a
+  check read the same state as on the bearer, the token's own end date read 90 days out, and the token was revoked
+  after. One schedule per tenant and the declared provider-only run were read on standing organizations of a single Entra tenant, with a run tenant and a tenant list
+  made up for the run; this handbook did not run an organization federated to a second real tenant. No provider identity narrower than an administrator was proven for a
   scheduled job: a dedicated local user of the System organization could not be made (the organization already held
   its one local user), and the System organization's existing local user and a directory account granted a provider
   role were not tried. Hold whatever credential the schedule uses as tier-0.
@@ -313,13 +312,13 @@ the run returned. Organizations are `{{org-1}}` and onward, tenants `{{tenant-1}
 run under `--replay` writes `inventory.replay.json` and marks it `"replay": true` at its top level; a live run's record
 carries no such key.
 
-**Scope.** Run read-only on 2026-10-16 against the reference estate's VCF Automation and the lab's one Entra tenant,
-on a provider bearer: ten organizations listed and nine read (four federated to the tenant, one over OIDC to another
-provider, one on VCF single sign-on, three with neither protocol on and no Entra tenant stored), every request a GET.
+**Scope.** Run read-only against a live VCF Automation and a single Entra tenant, on a provider bearer, every request a
+GET, over organizations federated to the tenant, over OIDC to another provider, on VCF single sign-on, and with neither
+protocol on and no Entra tenant stored.
 The tenant's watch schedule, pointed at the `watch.json` this folder then held (written on 2026-10-12), read as a
-missed run (its record about 95 hours old, and lacking `mode`, `judged` and `run_errors`); its leaver schedule,
+missed run (its record days old, and lacking `mode`, `judged` and `run_errors`); its leaver schedule,
 pointed at the identity-lifecycle companion's `leavers.json`, read as on time and from a run that read; exit 1. Run
 again that evening against the `watch.json` a new watch run had just written, it read the watch schedule as on time and
-from a run that read and the consent as the file states, and the leaver schedule's record, by then 25.5 hours old, as
-a missed run; exit 1. A second tenant, a tenant that withholds the app, a switched-off organization holding a stored
+from a run that read and the consent as the file states, and the leaver schedule's record, by then more than a day old,
+as a missed run; exit 1. A second tenant, a tenant that withholds the app, a switched-off organization holding a stored
 tenant, a reused name and a refused read are held by the companion's tests, not by a run.
