@@ -113,6 +113,14 @@ python3 guestcfg.py run --execute
 A run can outlast one bearer, so a bearer that ends is renewed with the same sign-in and the request sent again; the password or
 token stays in memory for the length of the run for that reason.
 
+Every exit closes the session the run opened, a refusal, a failure and `SIGTERM` included: `DELETE
+/cloudapi/1.0.0/sessions/current` with `Accept: application/json;version=40.0`, for a session login and an exchanged
+token alike, and the run prints `signed out: ...`, or what the sign-out answered when it did not close. It closes only a
+session this run minted, never one read from a kubeconfig or a cache. Closing is not revoking: on VCF Automation 9.1.1 a
+signed-out bearer was still answered by some APIs minutes after the sign-out, so treat it as a secret until its exp
+claim, an hour where measured. The runs in
+`expected-output.md` predate this line.
+
 Exit codes: 0 done; 2 a sign-in was refused, a precondition was not met, or a step failed and the teardown ran; 3
 something this run created could not be removed; 5 an unknown argument. An unknown argument is refused before any
 client opens; `--help` prints the usage and does nothing else.

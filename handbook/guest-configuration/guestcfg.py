@@ -305,6 +305,32 @@ class Estate:
             raise Refusal(f"the {self.kind} answered without a bearer")
         L.hold(self.bearer)
 
+    def sign_out(self):
+        """Close the session behind the bearer this Estate minted, and only that one: it never reads a bearer from a
+        cache or a kubeconfig, so it never signs out one another process may hold (G-993). DELETE
+        /cloudapi/1.0.0/sessions/current takes the versioned Accept and closes a session sign-in and an exchanged token
+        alike (204 on VCF Automation 9.1.1, for both kinds of bearer; G-993). Closing is not revoking: on 9.1.1 some
+        APIs still answered a signed-out bearer minutes later (G-994), so a bearer stays a secret until its exp claim.
+        Returns the line to print and never raises, so it cannot hide the run's own outcome."""
+        if not self.bearer:
+            return None
+        req = urllib.request.Request(f"https://{self.host}/cloudapi/1.0.0/sessions/current", method="DELETE",
+                                     headers={"Authorization": f"Bearer {self.bearer}",
+                                              "Accept": "application/json;version=40.0"})
+        status = None
+        try:
+            with urllib.request.urlopen(req, context=ctx(), timeout=15) as r:
+                status = r.status
+        except urllib.error.HTTPError as ex:
+            status = ex.code
+        except (urllib.error.URLError, OSError):
+            status = None
+        self.bearer = None
+        if status is not None and 200 <= status < 300:
+            return f"signed out: the {self.kind}'s session closed ({status}); its bearer is not revoked (G-994)"
+        return (f"sign-out answered {status or 'nothing'}: the {self.kind}'s session may stay open until VCF Automation "
+                "times it out; its bearer stays valid until its exp claim")
+
     def call(self, url, method="GET", payload=None, renewed=False, content_type="application/json"):
         data = json.dumps(payload).encode() if payload is not None else None
         req = urllib.request.Request(url, data=data, method=method, headers={
@@ -2584,6 +2610,7 @@ def main(argv=None):
     command, flag = parse(argv)
     execute = flag == "--execute"
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    e = None
     try:
         e = sign_in()
         if command == "teardown":
@@ -2604,6 +2631,10 @@ def main(argv=None):
     except Refusal as ex:
         print(f"REFUSED: {L.scrub(str(ex), addresses=True)}")
         return 2
+    finally:   # every exit, a refusal, a failure or SIGTERM included, closes the session this run opened
+        line = e.sign_out() if e is not None else None
+        if line:
+            print(L.scrub(line, addresses=True))
 
 
 if __name__ == "__main__":
