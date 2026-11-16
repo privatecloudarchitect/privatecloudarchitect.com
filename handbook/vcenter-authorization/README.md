@@ -138,6 +138,16 @@ that is not realm-spelled, and names the class. On your terminal, as the script'
      API client (broker tenant): 2 grant(s) in CUSTOMER, the broker tenant: an integration's own access: review it with the integration's owner, never remove it as clutter
 ```
 
+Deleting a global grant held by a principal vCenter cannot resolve is a step this companion has not taken. On vCenter
+9.1.1 vpxd dumped core once while deleting, through this same API, a global permission held by an API client's own
+principal, its last log lines inside that delete. A realm-spelled grant's principal resolves to nobody behind an AD or
+LDAP provider, so a global realm-spelled grant falls in the same untested class: remove one with `--remove` only in a
+window you could take a vpxd restart in, or through the vSphere Client. No census this handbook ran found a
+realm-spelled global grant.
+
+When vCenter refuses a call, its reason (the error type and each message's id and text) is kept beside the status,
+so a refused grant's line names why, not only the status.
+
 Two guards keep the class apart, each a usage error found before anything is read (exit 5). A `REALM_DOMAIN` equal to
 the broker tenant is refused, because the census tests the realm first and would class every API client's grant
 realm-spelled and offer it for removal. A `BROKER_TENANT` equal to a `DIRECTORY_DOMAINS` or `LOCAL_DOMAIN` entry is

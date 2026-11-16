@@ -627,11 +627,25 @@ def secret(name):
     return os.environ.get(name, "")
 
 
+def _error_reason(e):
+    """vCenter's error body for a refused call, reduced to what names the reason (``error_type`` and each message's
+    ``id`` and ``default_message``), or None when the body is not that JSON."""
+    try:
+        doc = json.loads(e.read() or b"null")
+    except (ValueError, OSError, AttributeError):
+        return None
+    if not isinstance(doc, dict):
+        return None
+    msgs = [{k: m.get(k) for k in ("id", "default_message")} for m in doc.get("messages") or [] if isinstance(m, dict)]
+    return {"error_type": doc.get("error_type"), "messages": msgs}
+
+
 class Rest:
     """The vSphere Automation API under one session, closed on exit."""
 
     def __init__(self, host, user, password):
         self.host = host
+        self.last_error = None
         basic = base64.b64encode(f"{user}:{password}".encode()).decode()
         st, body = self.call("POST", "/api/session", headers={"Authorization": f"Basic {basic}"})
         self.token = body if st in (200, 201) and isinstance(body, str) else None
@@ -645,11 +659,16 @@ class Rest:
             data = json.dumps(body).encode()
             h["Content-Type"] = "application/json"
         rq = urllib.request.Request(f"https://{self.host}{path}", data=data, method=method, headers=h)
+        self.last_error = None
         try:
             with _urlopen(rq, context=ctx(), timeout=60) as r:
                 raw = r.read()
                 status = r.status
         except urllib.error.HTTPError as e:
+            # the refusal's own reason, kept beside the status: a 400 with no reason cannot say whether the object, the
+            # role or the principal was refused (X-387). The second value stays None, so every caller that reads it as
+            # "no answer" still does; the reason is read with refusal()
+            self.last_error = _error_reason(e)
             return e.code, None
         except (urllib.error.URLError, OSError):
             return None, None
@@ -657,6 +676,15 @@ class Rest:
             return status, (json.loads(raw) if raw else None)
         except ValueError:  # an answer that is not JSON carries nothing the read needs: the caller reads it as unread
             return status, None
+
+    def refusal(self):
+        """The last refused call's reason as one short line ("", when it gave none): the error type, then each message's
+        id and text, as vCenter's error body states them."""
+        err = self.last_error or {}
+        parts = [str(err["error_type"])] if err.get("error_type") else []
+        for m in err.get("messages") or []:
+            parts.append(" ".join(str(x) for x in (m.get("id"), m.get("default_message")) if x))
+        return "; ".join(p for p in parts if p)
 
     def close(self):
         if self.token:
@@ -1649,12 +1677,13 @@ def grant_global(rest, principal, group, role_id, propagate):
         "object": {"id": "GlobalAcl", "type": "GlobalAcl"},
         "principal": {"domain": domain, "name": name, "type": "GROUP" if group else "USER"},
         "role": str(role_id), "propagating": propagate})
+    why = rest.refusal()   # read now: the list below is another call, and resets it
     for p in permissions(rest):
         who = p["info"]["principal"]
         if (p["info"]["object"]["type"] == "GlobalAcl" and who["domain"].upper() == domain.upper()
                 and who["name"].lower() == name.lower() and p["info"]["role"] == str(role_id)):
             return p["permission"], f"created {st}"
-    return None, f"create answered {st}, not found in the list"
+    return None, f"create answered {st}, not found in the list" + (f" ({why})" if why else "")
 
 
 def ungrant_global(rest, permission):
