@@ -64,8 +64,8 @@ says what a source serves.
 |---|---|---|
 | `vcResources.priviledgedcpuusage.VCRES` is misspelled | the VMware guidance list carries the same misspelled key (VC sheet, label "CPU Privileged", Verbose profile, 300-second sampling); no source on this Essentials deployment serves either spelling | a defect in the metric definition itself, not in the widget: report as a key correction that keeps the old key as an alias; a warehouse mapping carries the key verbatim until then |
 | `mem.swapIn.HOST`, `mem.swapOut.HOST`, `mem.swapIn.VM`, `mem.swapOut.VM` return nothing while `mem.swapin.HOST` and the others serve | the VMware guidance list carries both spellings as distinct definitions: the mixed-case keys are Verbose-profile metrics sampled at 300 seconds whose label is the raw key; the lowercase keys are Essentials at 20 seconds ("Memory Swapped In") | not a typo. Report the naming hazard (two keys that differ only by case) and the missing labels; on an Essentials deployment the mixed-case keys are simply not collected |
-| "High VCPU Ready Percentage" is mapped to `platform.vcpu_utilization_hist_max` and "High VCPU Usage Percentage" to `platform.vcpu.ready_hist_max` | the keys' own words say the opposite, the values agree with the keys (utilization 42 to 76 on NSX edge nodes, ready 0.8 to 5.1), and neither key is in the VMware guidance list | text bug in the widget's own catalog: the two friendly names are swapped |
-| "Failed Requests To SDK Endpoint" is mapped to the bare `envoy_cluster_upstream_rq` | the key carries `envoy_cluster_name` and `envoy_response_code`; on this build its only series is `envoy_response_code='503'` on cluster `localhost 8085` | the name encodes a label filter the key does not; report as a design gap |
+| "High VCPU Ready Percentage" is mapped to `platform.vcpu_utilization_hist_max` and "High VCPU Usage Percentage" to `platform.vcpu.ready_hist_max` | the keys' own words say the opposite, the values agree with the keys (on NSX edge nodes the utilization key's values run an order of magnitude above the ready key's), and neither key is in the VMware guidance list | text bug in the widget's own catalog: the two friendly names are swapped |
+| "Failed Requests To SDK Endpoint" is mapped to the bare `envoy_cluster_upstream_rq` | the key carries `envoy_cluster_name` and `envoy_response_code` labels, and the name applies neither as a filter | the name encodes a label filter the key does not; report as a design gap |
 | "Failed Requests To UI Endpoint" is mapped to `envoy_cluster_upstream_rq_retry_success` | the key counts successful retries on `vsphere-ui-http2-cluster`; the VMware guidance list carries the same name for it | the name contradicts the key in the definition itself |
 | "Request Count To UI Endpoint" is mapped to `envoy_cluster_upstream_rq_total` | the key serves two clusters; the VMware guidance list carries the key twice, as "Request Count To SDK Endpoint" and "Request Count To UI Endpoint" | the definitions are label-filtered variants of one key and the picker keeps one name per key; report as a design gap |
 | 51 widget names differ from the VMware guidance labels | mostly NSX names ("Error Packet Drop" against "Packet drops due to errors") | cosmetic; key a warehouse mapping on `key`, never on `name` |
@@ -80,14 +80,14 @@ The widget lists 22 functions. The call form is the thing to know:
 - **count, then snapshot**: `topk(k, x)`, `bottomk(k, x)`, `topn_sum(n, x)`, `bottomn_sum(n, x)`.
 - **clip** functions take a range vector, the metric with a window such as `[5m]`: the six `_over_time` functions, `rate`, `resets`, `absent_over_time`; and `irate` and `increase`, which the engine serves although the widget does not list them (`irate` is in VMware guidance, `increase` is not).
 
-Semantics verified on the build (the numbers sit in `examples.json` under `dialect` and in `functions.json` under `cautions`):
+Semantics verified on the build. `functions.json` carries each function's caution; the run's own counts and errors sit in `examples.json` under `dialect`, example output to compare your run with:
 
 | Function | What the engine does |
 |---|---|
-| `topn_sum`, `bottomn_sum` | VCF-specific. Select the n series with the highest or lowest **sum over the whole query range** and return their raw values: exactly n series, a stable legend (checked against a manual sum over 6 hosts). `by (label)` is accepted and ignored; VMware guidance says `by` and `without` are unsupported. |
-| `topk`, `bottomk` | Per step. Over a range the answer is the union of every step's top k (6 series for k=3 over 30 minutes on 6 hosts) and the legend changes as leaders change. |
-| `rate`, `irate` | **Counter semantics on a gauge.** On `cpu.usagemhz.HOST` (84 decreases in 181 samples) `rate()` returned no negative value and matched a reset-adding computation (mean absolute error 4 against 282 for a plain first-to-last delta). The example in VMware guidance `rate(cpu.capacity.usage.HOST{host='host-17'}[5m])` applies it to a gauge and overstates change. Use `avg_over_time` or `max_over_time` for a level; `rate` and `increase` only on cumulative names (`vmop.*`, `envoy_*_total`). |
-| `resets` | The number of decreases inside the window (167 of 181 buckets exact on a gauge). On a gauge it counts dips. |
+| `topn_sum`, `bottomn_sum` | VCF-specific. Select the n series with the highest or lowest **sum over the whole query range** and return their raw values: exactly n series, a stable legend (checked against a manual sum). `by (label)` is accepted and ignored; VMware guidance says `by` and `without` are unsupported. |
+| `topk`, `bottomk` | Per step. Over a range the answer is the union of every step's top k, so more than k series, and the legend changes as leaders change. |
+| `rate`, `irate` | **Counter semantics on a gauge.** On `cpu.usagemhz.HOST`, a series with many decreases, `rate()` returned no negative value and sat far closer to a reset-adding computation than to a plain first-to-last delta. The example in VMware guidance `rate(cpu.capacity.usage.HOST{host='host-17'}[5m])` applies it to a gauge and overstates change. Use `avg_over_time` or `max_over_time` for a level; `rate` and `increase` only on cumulative names (`vmop.*`, `envoy_*_total`). |
+| `resets` | The number of decreases inside the window, as tested on a gauge. On a gauge it counts dips. |
 | `absent`, `absent_over_time` | One series valued 1 when the selector matches nothing (an unknown name or an unmatched label); nothing when it matches. |
 | `count_over_time` | Counts raw samples: 3 per minute on the 20-second profiles, 30 per minute on the ESX Top profile. The cadence instrument. |
 
@@ -105,15 +105,15 @@ Semantics verified on the build (the numbers sit in `examples.json` under `diale
 | `+ - * / % ^` between a series and a number, or between two series whose labels match; comparisons with `bool`; `and`, `or`, `unless` | `on`, `ignoring`, `group_left`; unary minus; the `@` modifier |
 | `sum`, `min`, `max`, `avg`, `count`, `topk`, `bottomk`, `topn_sum`, `bottomn_sum` | `stddev`, `stdvar`, `quantile`, `count_values`, `group` |
 | the six `_over_time` functions, `rate`, `irate`, `increase`, `resets`, `abs`, `ceil`, `floor`, `absent`, `absent_over_time` | `round`, `sqrt`, `log`, `delta`, `deriv`, `predict_linear`, `sort_desc`, `clamp_max`, `label_replace`, `label_join`, `histogram_quantile`, `quantile_over_time`, `stddev_over_time`, `changes`, `time()`, `vector()`, `scalar()` |
-| `offset` parses | it returned the unshifted series point for point (61 of 61); VMware guidance lists it unsupported in 9.1 |
+| `offset` parses | it returned the unshifted series point for point; VMware guidance lists it unsupported in 9.1 |
 
 Cadence, measured the same day on both vCenter sources: every name under the ESXi 20-second profile, the vCenter
 20-second data profile, and the PerformanceManager profile (whose name carries `300`) serves 3 samples per minute with
 a median change spacing of 20 seconds; the ESX Top profile serves 30 per minute. The VMware guidance list documents the same
 thing for the VC sheet as `Sampling Interval 20.0, Collection Interval 300.0`: the 300 is how often the collector polls,
-the 20 is the spacing of the samples it brings back. Nineteen names serve both a 20-second and a 2-second series under
-one name (21 carry `feature='ESX_TOP'` on a source; the VMware guidance ESXi sheet marks the same 21 as ESXTop-capable);
-pin `feature` or a chart draws both.
+the 20 is the spacing of the samples it brings back. Some names serve both a 20-second and a 2-second series under
+one name (the 2-second series is the one with `feature='ESX_TOP'`, and the VMware guidance ESXi sheet marks which names are
+ESXTop-capable); pin `feature` or a chart draws both.
 
 ## 6. The examples and the decisions they serve
 
@@ -132,8 +132,8 @@ pin `feature` or a chart draws both.
 | E9 | discovery | `absent(cpu.capacity.contention.VM{vm='<vm>'})` | the reconcile-absence rule as a query |
 | E10 | troubleshooting | `mem.tier.consumed.MEMTYPE{feature='ESX_TOP'}` | tiering engagement per host and tier at 2 seconds |
 
-The cross-plane comparison behind E3 and E4 (36 five-minute buckets per VM, three VMs per name, on one source; a second source gave the same
-picture):
+Example output, the cross-plane comparison behind E3 and E4 on the verified instance (36 five-minute buckets per VM, three VMs per name, on
+one source; a second source gave the same picture):
 
 | Real-Time Metrics name (20 s) | Operations keys | Mean ratio, median | Peak ratio, median |
 |---|---|---|---|
