@@ -1,12 +1,12 @@
 {
  "schema": 1,
- "commit": "c86aab57c890f11fe70153bfd36feedff85646c2",
+ "commit": "b2aedb00a790ab5c247c3ad4ec3fd31c6deb966b",
  "written_by": "docs/design/enterprise-strategy-layer/generator/pin_companion.py",
  "register": {
   "source": "docs/design/enterprise-strategy-layer/register.yaml",
-  "source_sha256": "7558ffbfb1c5b46e482737b012da5b5cb897474bc47d9de7638871ef5c46cf25",
+  "source_sha256": "17193e9d0cf65d5be51c235d37c779ceb4d0a8b2ca61d7350998aa3180ef46b3",
   "copy": "docs/design/enterprise-strategy-layer/companion/pinned/register.yaml",
-  "copy_sha256": "7558ffbfb1c5b46e482737b012da5b5cb897474bc47d9de7638871ef5c46cf25"
+  "copy_sha256": "17193e9d0cf65d5be51c235d37c779ceb4d0a8b2ca61d7350998aa3180ef46b3"
  },
  "policy": {
   "source": "docs/design/enterprise-strategy-layer/policy.yaml",

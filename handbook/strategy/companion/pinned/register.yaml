@@ -1255,7 +1255,7 @@ capabilities:
         handoff:
           - {kind: taught, pages: ["/handbook/log-alerts"], what: "[[ch:log-alerts]]'s plate 02: find the identifier the platform writes, starting from the word"}
       - id: conditions-accepted
-        step: "Each condition written as the API accepts and shown to count on stored events; the sign-in condition waits for the integration that fails thousands of times a week to be fixed by its owner, or the baseline hides the attempt that matters"
+        step: "Each condition written as the API accepts and shown to count on stored events; the sign-in condition waits until any integration that fails sign-in routinely is fixed by its owner, or the baseline hides the attempt that matters"
         requires: [step:identifiers-found]
         proven_by: "the symptom definitions the API accepted, each shown counting on stored events; the sign-in baseline read in the try record"
         investment_unit: person-days
