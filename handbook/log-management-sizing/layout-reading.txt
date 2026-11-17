@@ -1,0 +1,13 @@
+read at 2026-11-16T21:46:47Z
+log store image tag: 3.6.0-fips-1.0
+nodes: 3 control plane, 4 workers
+node size: 3 x control plane, 4 vCPU 10 GiB
+node size: 4 x worker, 24 vCPU 47 GiB
+workers carrying a taint: 0
+log-store: 1 ready, 1 container(s), requests cpu 5 memory 10Gi
+log-processor: 1 ready, 2 container(s), requests cpu 3 100m memory 6Gi 128Mi
+replica pods on distinct workers: 2 of 2 pods
+pod autoscalers targeting the log store or log processor: 0 (of 6 in the cluster)
+gateway pods: 1, requests cpu 4,5m memory 2Gi,32Mi
+node address pools: 1, 30 addresses, 7 in use, 23 free
+cluster autoscaler deployments: 1

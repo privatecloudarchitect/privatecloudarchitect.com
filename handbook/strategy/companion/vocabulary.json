@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "4b0c9642698ecd384232453659e56a7c4e9d7d01644855abb92d94d84f8496d6"
+   "sha256": "2a8d6fd7d2d6429b48805ee347cabff1b90bf2d76aeba06b333cb1d0ff6348ed"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1457,6 +1457,10 @@
   {
    "path": "/notes/infrastructure-policies",
    "title": "An infrastructure policy is a vCenter compute policy carried down four layers, and an Optional one binds only the VM that asks · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/log-management-sizing",
+   "title": "A Log Management replica is a log processor and a log store on shared worker nodes, and three choices in VCF Operations decide every node and address under it · Private Cloud Architect"
   },
   {
    "path": "/notes/name-reuse-inherits-an-account",
