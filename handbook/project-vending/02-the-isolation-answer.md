@@ -61,9 +61,8 @@ creating projects: not as bureaucracy, but as the isolation unit itself.
 
 Do not count users; count trust boundaries.
 
-- A ten-person team that trusts itself with each other's namespaces is **one**
-  project.
-- Ten engineers who must not touch each other's services are **ten** projects.
+- A team that trusts itself with each other's namespaces is **one** project.
+- People who must not touch each other's services get **one project apiece**.
 - A user who only deploys from the catalog and never needs kubectl does not need
   their own project at all; they belong in a shared project on the group pattern.
 
