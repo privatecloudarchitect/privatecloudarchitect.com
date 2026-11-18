@@ -9,8 +9,8 @@ alerts of the framework on your own VCF Operations instance.
 
 The converge mechanics (adopt-or-create by name, verify, scoped teardown, re-converge) were proven by a full round
 trip on a live VCF Operations 9.1 estate on 2026-08-15. The files have changed since (the D-038 names, the tier
-model's binding rule, read-back after every write), and the current tree was last run as a dry run against the
-estate it was published from on 2026-10-08 (`dryrun.json`, written by `record_dryrun.py`): every parity gate green,
+model's binding rule, read-back after every write), and the scripts were last run as a dry run against the estate
+they were published from on 2026-10-22 (`dryrun.json`, written by `record_dryrun.py`): every parity gate green,
 with the pending steps and the refusals it reports listed in that record.
 
 ## What adopting means
