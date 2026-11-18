@@ -91,8 +91,9 @@ and the rename order is outermost boundary first.
 
 ## Asking whether the bindings hold: `--probe-bindings`
 
-With the flag, the same run adds a fifth section and a fourth record. This is the chapter's claim about the
-crossroads put to the platform rather than asserted:
+With the flag, a run adds a fifth section and a fourth record. This is the chapter's claim about the crossroads put
+to the platform rather than asserted. The section below is not from the 9.1.1 run above: it is the probe's run on
+VCF Automation 9.1.0, captured 2026-09-17 into `bindings.json`, and the flag has not been run on 9.1.1 since:
 
 ```
   bindings: asking namespace-1 whether its create-time bindings and its parent can be changed

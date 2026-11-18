@@ -1,0 +1,72 @@
+{
+ "captured": "2026-11-18T09:58:07Z",
+ "command": "revoke",
+ "role": {
+  "exists": true,
+  "marked": true,
+  "privileges": 179
+ },
+ "recipe": {
+  "privileges": 179,
+  "actions": [
+   "Power Off VM-VMWARE-VirtualMachine",
+   "Power On VM-VMWARE-VirtualMachine"
+  ],
+  "recent_tasks": true,
+  "api_write": true
+ },
+ "scope": {
+  "exists": true,
+  "id": "{{id-1}}",
+  "marked": true,
+  "ids": [
+   "{{id-2}}"
+  ],
+  "all": false
+ },
+ "group": {
+  "imported": true,
+  "id": "{{id-3}}",
+  "marked": true,
+  "permissions": [
+   {
+    "roleName": "{{role-1}}",
+    "scopeId": "{{id-1}}",
+    "allowAllObjects": false
+   }
+  ]
+ },
+ "in_source": true,
+ "vcf_roles": [],
+ "findings": [],
+ "sent": [
+  [
+   "DELETE /api/auth/usergroups/<group>",
+   204
+  ],
+  [
+   "DELETE /api/auth/roles/{{role-1}}",
+   204
+  ],
+  [
+   "DELETE /api/auth/scopes",
+   200
+  ]
+ ],
+ "after": {
+  "role": {
+   "exists": false
+  },
+  "scope": {
+   "exists": false
+  },
+  "group": {
+   "imported": false
+  }
+ },
+ "held": {
+  "role_gone": true,
+  "scope_gone": true,
+  "group_without_the_role": true
+ }
+}

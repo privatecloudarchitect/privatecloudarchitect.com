@@ -1,0 +1,28 @@
+{
+ "captured": "2026-11-18T09:57:34Z",
+ "command": "who",
+ "tasks": [
+  {
+   "task": "{{id-1}}",
+   "read": 200,
+   "action": "Power Off VM",
+   "state": "COMPLETED_SUCCESSFULLY",
+   "submittedBy": "{{person-1}}",
+   "authSource": "VCF SSO",
+   "started": "2026-11-18T09:53:57.077Z",
+   "completed": "2026-11-18T09:54:13.009Z",
+   "object": "{{vm-1}}"
+  },
+  {
+   "task": "{{id-2}}",
+   "read": 200,
+   "action": "Power On VM",
+   "state": "COMPLETED_SUCCESSFULLY",
+   "submittedBy": "{{person-1}}",
+   "authSource": "VCF SSO",
+   "started": "2026-11-18T09:56:43.861Z",
+   "completed": "2026-11-18T09:57:12.924Z",
+   "object": "{{vm-1}}"
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "captured": "2026-11-18T09:54:13Z",
+ "command": "act",
+ "object": "{{vm-1}}",
+ "action": "Power Off VM",
+ "query": 200,
+ "offered": true,
+ "execute": 200,
+ "task": "{{id-1}}",
+ "status": {
+  "state": "COMPLETED_SUCCESSFULLY",
+  "submittedBy": "{{person-1}}",
+  "authSource": "VCF SSO"
+ }
+}

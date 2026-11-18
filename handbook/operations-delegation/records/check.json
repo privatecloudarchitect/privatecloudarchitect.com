@@ -1,0 +1,51 @@
+{
+ "captured": "2026-11-18T09:53:45Z",
+ "command": "check",
+ "member": "{{person-1}}",
+ "role": "{{role-1}}",
+ "rows": [
+  {
+   "check": "the member's record lists the team's group",
+   "expected": "listed",
+   "got": "listed",
+   "held": true
+  },
+  {
+   "check": "the member holds no permission of its own",
+   "expected": "none",
+   "got": "0 of its own",
+   "held": true
+  },
+  {
+   "check": "a named object is readable",
+   "object": "{{vm-1}}",
+   "expected": 200,
+   "got": 200,
+   "held": true
+  },
+  {
+   "check": "its Power Off VM query is answered",
+   "object": "{{vm-1}}",
+   "expected": 200,
+   "got": 200,
+   "held": true,
+   "message": null
+  },
+  {
+   "check": "an object outside the scope is invisible",
+   "object": "{{vm-2}}",
+   "expected": 404,
+   "got": 404,
+   "held": true,
+   "message": "No such Resource - {{id-1}}."
+  },
+  {
+   "check": "its Power Off VM query is refused",
+   "object": "{{vm-2}}",
+   "expected": "refused",
+   "got": 500,
+   "held": true,
+   "message": "User does not have access to resource {{id-1}}"
+  }
+ ]
+}

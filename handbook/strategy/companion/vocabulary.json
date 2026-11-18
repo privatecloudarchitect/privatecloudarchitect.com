@@ -3,7 +3,7 @@
  "written_from": {
   "competency_map": {
    "path": "deploy/privatecloudarchitect/site/competency-map.yaml",
-   "sha256": "83bea57e97c12f36dc81d0a15294c4e0e1e7ffbdc6bf2dff0803d921554dcffd"
+   "sha256": "76ba2a47e13c0925abf0393408f395ff1edc56f53ac6fe9f0f84b35eaa15db4b"
   },
   "mastery": {
    "path": "deploy/privatecloudarchitect/site/mastery.yaml",
@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "2a8d6fd7d2d6429b48805ee347cabff1b90bf2d76aeba06b333cb1d0ff6348ed"
+   "sha256": "cc73f8cc31d2b38170eccab46b76eeded4074480aee9c2fa4abb8ff16131e39d"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -290,6 +290,23 @@
    ],
    "related": [
     "service-accounts"
+   ]
+  },
+  {
+   "id": "operations-delegation",
+   "name": "Delegate Day-2 work to a team through VCF Operations: one role and one scope on its directory group, no VCF role and nothing in vCenter, the boundary proved from inside and the person who acted read where it is recorded",
+   "part": "I",
+   "job": "tenancy",
+   "teaches": "/handbook/operations-delegation",
+   "tier": "live,doc,repo",
+   "harness": "handbook/operations-delegation",
+   "requires": [
+    "identity-model"
+   ],
+   "related": [
+    "vcenter-authorization",
+    "access-control",
+    "alerting-doctrine"
    ]
   },
   {
@@ -1325,6 +1342,10 @@
   {
    "path": "/handbook/network-plane",
    "title": "The network plane: the VPC is the isolation unit, chosen once per namespace · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/operations-delegation",
+   "title": "Delegating Day-2 work through VCF Operations · Private Cloud Architect"
   },
   {
    "path": "/handbook/ops-estate",

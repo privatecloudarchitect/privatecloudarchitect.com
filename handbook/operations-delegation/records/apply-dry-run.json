@@ -1,0 +1,31 @@
+{
+ "captured": "2026-11-18T08:44:33Z",
+ "command": "apply",
+ "role": {
+  "exists": false,
+  "privileges": 0
+ },
+ "recipe": {
+  "privileges": 179,
+  "actions": [
+   "Power Off VM-VMWARE-VirtualMachine",
+   "Power On VM-VMWARE-VirtualMachine"
+  ],
+  "recent_tasks": true,
+  "api_write": true
+ },
+ "scope": {
+  "exists": false
+ },
+ "group": {
+  "imported": false
+ },
+ "in_source": true,
+ "vcf_roles": [],
+ "findings": [],
+ "would": [
+  "create role {{role-1}} (179 privileges: ReadOnly's, the actions, Recent Tasks, All other Read, Write APIs)",
+  "create scope {{scope-1}} (SPECIFIC: 1 VM)",
+  "import {{group-1}} from VCF SSO with role {{role-1}} on scope {{scope-1}}"
+ ]
+}
