@@ -8,7 +8,7 @@ answer, and reports the difference. Stdlib Python only; no credential is printed
 | File | What it is |
 |---|---|
 | `recovery.py` | Reads each plane's schedule in its own encoding, counts the calendar days its run history covers and the days it does not, checks the age of each plane's newest successful copy against the longest wait its schedule allows, computes the span the retained copies cover, diffs the copy's scope against the parts catalog where the plane publishes one, normalises the targets before comparing them, and asks each plane whether a restore has ever run on it. Exits 1 when a newest copy is overdue: that is the alert. Every response passes through `strip_secrets` inside the function that performs the request. Writes `recovery.json`, and refuses to write a record carrying an address, a path or an account name. |
-| `recovery.json` | Example output: the record a run of 2026-10-22 wrote for three planes on VCF 9.1.1, for comparing its shape with yours. Its counts are that run's, never what yours should hold. |
+| `recovery.json` | Example output: the record a run of 2026-11-19 wrote for three planes on VCF 9.1.1, for comparing its shape with yours. Its counts are that run's, never what yours should hold. |
 | `expected-output.md` | What the script printed on that run: example output to compare your own run's shape against. |
 | `rehearsal.md` | A record template for the restore rehearsal: what to write down before, during and after, so the result is a list rather than an impression. |
 
@@ -69,8 +69,8 @@ that publish both a retention count and a history to count it against.
 ## The history has a horizon
 
 From 9.1.1 the lifecycle manager cleans up tasks older than a retention setting (`taskRetentionDays`, 1 to 730
-days). A count of runs, a coverage figure and the absence of a restore task all reach back that far at most,
-so read the window's first day beside the count.
+days). A count of runs and a coverage figure reach back that far at most, so read the window's first day beside
+the count.
 
 ## Scope, stated plainly
 
@@ -95,8 +95,10 @@ so read the window's first day beside the count.
 the counts and statuses; `coverage` is the important one (`windowDays`, `daysCovered`, `daysUncovered`, `gaps`,
 `longestGap` and `gapsBySize` with dates); `parts` carries the catalog, the selection and
 `deselectedDefaults`, which is the subtraction the schedule never mentions; `target` is normalised so the
-planes can be compared; and `restoreEvidence` is each plane's answer to whether a restore has ever run, quoted
-rather than summarised. `age` is the alert's arithmetic (`newestCopyUtc`, `ageHours`, `allowedHours`, `overdue`), and
+planes can be compared; and `restoreEvidence` is the vCenter's and the network manager's answer to whether a
+restore has ever run, quoted rather than summarised. The lifecycle manager gave no such answer: `GET /v1/restores/tasks`
+answered 404 on 9.1.1, and VMware's procedure reads a restore by the id its start returned, so `restoreRead` records the list's status, the restore `SDDC_RESTORE_ID` names when you give
+one, the task types that name a restore, and how many tasks carry no type, which a filter by type cannot see. `age` is the alert's arithmetic (`newestCopyUtc`, `ageHours`, `allowedHours`, `overdue`), and
 `recoveryWindow` is the span the retained copies cover. At the top, `distinctTargets` against `planesRead` is how many
 separate places the management plane's copies actually land, and `planesOverdue` is the number the exit code acts on.
 
@@ -104,4 +106,6 @@ separate places the management plane's copies actually land, and `planesOverdue`
 
 No read says whether a copy can be put back. Book a restore rehearsal on the rehearsal instance, follow the vendor's
 procedure for the component at the build you run, and fill in [`rehearsal.md`](rehearsal.md): what came back, what
-needed replaying by hand, how long it took, and what the restored component (not the restore task) shows.
+needed replaying by hand, how long it took, and what the restored component (not the restore task) shows. Keep the
+id the lifecycle manager's restore returns: reading it is the documented way back to that restore's result, and
+`SDDC_RESTORE_ID=<id> python3 recovery.py` reads it.

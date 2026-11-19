@@ -16,8 +16,9 @@ configuration AND the run history on each plane, and puts them side by side:
      does not say which defaults were deselected, and that subtraction is the interesting half;
   4. the TARGET each plane writes to, compared, because a recovery plan has as many single points as the
      targets have in common;
-  5. the RESTORE EVIDENCE: whether a restore has ever run here. Each plane answers differently, and one of
-     them answers with an HTTP 500 whose message reads like a broken endpoint;
+  5. the RESTORE EVIDENCE: whether a restore has ever run here. Each plane answers differently: one with an
+     HTTP 500 whose message reads like a broken endpoint, one with a state, and the lifecycle manager by the id its
+     restore returned, VMware's documented read, since /v1/restores/tasks answers no list (SDDC_RESTORE_ID, below);
   6. the AGE of the newest successful copy on each plane, against the longest wait the schedule allows plus a
      margin. This is the alert the chapter asks for: a skipped run leaves no failed record, so a rule watching
      for failures stays green, while the age of the newest copy keeps growing. The script exits 1 when any
@@ -41,6 +42,7 @@ Run (each plane is optional; give the ones you want read):
          # or, instead of the user and password: VC_SESSION_FILE=/path/to/session-id         (mode 0600)
   export NSX_HOST=<nsx-manager-fqdn>  NSX_USER=<user>  NSX_PASSWORD_FILE=/path/to/password   # mode 0600
          # or, instead: NSX_BASIC_FILE=/path/to/user:password                                (mode 0600)
+  export SDDC_RESTORE_ID=<id>          # optional: the id POST /v1/restores/tasks returned, kept when a restore ran
   export BACKUP_AGE_MARGIN_HOURS=6     # optional: slack past the longest scheduled wait before a copy is overdue
   export TLS_VERIFY=false              # only on a self-signed lab CA
   python3 recovery.py
@@ -58,9 +60,10 @@ import re
 import ssl
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
-UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+UUID =re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 IPV4 = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 FINGERPRINT = re.compile(r"\b(?:SHA256|SHA1|MD5):[A-Za-z0-9+/=:]{10,}")
 
@@ -241,6 +244,17 @@ def split_location(url, L):
             "directory": L.get("path", m.group(3) or "")}
 
 
+def restore_read_line(rr):
+    """The lifecycle manager's answer to whether a restore has ever run, from what this run could read: a restore it
+    was given the id of, or else the plain statement that there is no list to ask and the id is the handle."""
+    one = rr.get("byId")
+    if one:
+        return (f"the restore SDDC_RESTORE_ID names: HTTP {one['status']}"
+                + (f", {one['state']}" if one.get("state") else ""))
+    return (f"no list at /v1/restores/tasks (HTTP {rr['listStatus']}): VMware's procedure reads a restore by the id "
+            "its start returned; set SDDC_RESTORE_ID to read one")
+
+
 def reader(host, headers):
     """One GET helper per plane, with the secret strip applied before anything else can see the body."""
 
@@ -297,8 +311,26 @@ def read_sddc(L, now, margin):
             seconds = round((parse_utc(steps[-1]["completionTimestamp"])
                              - parse_utc(steps[0]["creationTimestamp"])).total_seconds())
     # From 9.1.1 the task list has a horizon: tasks older than the retention setting are cleaned up, so a count of
-    # runs, or the absence of a restore task, reaches back that far at most. An older build answers 404 here.
+    # runs reaches back that far at most. An older build answers 404 here.
     st_s, ts = get("/v1/tasks/config/settings")
+    # Has a restore ever run? VMware's procedure restores the lifecycle manager onto a newly deployed appliance,
+    # starts the restore with POST /v1/restores/tasks and monitors it by the id that call returns
+    # (GET /v1/restores/tasks/{id}). The collection itself answered 404 on 9.1.1.0200, so the documented answer is
+    # the id kept when the restore ran (SDDC_RESTORE_ID). The task list is read for a type that names a restore as
+    # well, and the tasks with no type are counted, because a filter by type cannot see them: no type named a
+    # restore there on 2026-11-19, on an estate where none had run, so whether a restore is listed is not known.
+    st_c, _ = get("/v1/restores/tasks")
+    named = collections.Counter(e.get("type") for e in tasks if "RESTORE" in str(e.get("type") or "").upper())
+    by_id = None
+    rid = os.environ.get("SDDC_RESTORE_ID", "").strip()
+    if rid:
+        st_i, one = get("/v1/restores/tasks/" + urllib.parse.quote(rid, safe=""))
+        # No restore has run where this was written, so the response's fields are unread: take whichever of the
+        # two usual state fields it carries, and keep its field names so a reader can see what came back.
+        by_id = {"status": st_i,
+                 "state": next((one.get(k) for k in ("status", "state") if isinstance(one, dict) and one.get(k)),
+                               None),
+                 "fields": sorted(one) if isinstance(one, dict) else None}
     interval = 1 if str(s0.get("frequency")).upper() == "HOURLY" else longest_interval_hours(s0.get("daysOfWeek") or [])
     return {"plane": "the lifecycle manager", "reached": True,
             "configured": bool(cfg.get("isConfigured")),
@@ -323,7 +355,9 @@ def read_sddc(L, now, margin):
             "recoveryWindow": recovery_window(good, (s0.get("retentionPolicy") or {}).get("numberOfMostRecentBackups")),
             "taskRetentionDays": ts.get("retentionDays") if st_s == 200 and isinstance(ts, dict) else None,
             "whatARunDoes": sub, "aRunTakesSeconds": seconds,
-            "tasksRead": len(tasks)}
+            "tasksRead": len(tasks),
+            "restoreRead": {"listStatus": st_c, "byId": by_id, "taskTypesNamingRestore": dict(named),
+                            "tasksWithoutType": sum(1 for e in tasks if not e.get("type"))}}
 
 
 def vcenter_session(host):
@@ -543,14 +577,16 @@ def main():
 
     print("\n  HAS A RESTORE EVER RUN HERE?")
     for p in reached:
-        ev = p.get("restoreEvidence")
+        ev, rr = p.get("restoreEvidence"), p.get("restoreRead")
         if ev:
             print(f"     {p['plane']:<26} HTTP {ev.get('status')}  "
                   f"{ev.get('state') or ''} {str(ev.get('description') or ev.get('message') or '')[:90]}")
-        else:
-            horizon = (f", and it keeps tasks for {p['taskRetentionDays']} days" if p.get("taskRetentionDays")
-                       else "")
-            print(f"     {p['plane']:<26} no task of that type among {p.get('tasksRead')} read{horizon}")
+        elif rr:
+            print(f"     {p['plane']:<26} " + restore_read_line(rr))
+            horizon = f", kept {p['taskRetentionDays']} days" if p.get("taskRetentionDays") else ""
+            kinds = ", ".join(f"{t} {n}" for t, n in sorted(rr["taskTypesNamingRestore"].items())) or "none"
+            print(f"     {'':<26} its task list, {p.get('tasksRead')} read{horizon}: types naming a restore: {kinds}; "
+                  f"{rr['tasksWithoutType']} carry no type")
 
     # A run that reached fewer planes than a previous one must not overwrite the richer record. This is
     # the sibling of G-166: there the loss came from an optional probe, here from partial credentials,

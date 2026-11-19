@@ -1,5 +1,5 @@
 {
- "captured_utc": "2026-10-22T08:32:39Z",
+ "captured_utc": "2026-11-19T05:24:29Z",
  "planes": [
   {
    "plane": "the lifecycle manager",
@@ -37,22 +37,22 @@
     "fingerprintPinned": true
    },
    "runs": {
-    "total": 320,
+    "total": 321,
     "byStatus": {
-     "Successful": 320
+     "Successful": 321
     },
     "carryingAnError": 0,
     "hourOfDay": {
-     "4": 320
+     "4": 321
     }
    },
    "coverage": {
-    "firstDay": "2025-10-24",
-    "lastDay": "2026-10-22",
-    "windowDays": 364,
-    "daysCovered": 320,
-    "daysUncovered": 44,
-    "gaps": 4,
+    "firstDay": "2025-11-19",
+    "lastDay": "2026-11-19",
+    "windowDays": 366,
+    "daysCovered": 321,
+    "daysUncovered": 45,
+    "gaps": 5,
     "longestGapDays": 19,
     "longestGap": [
      "2026-08-19",
@@ -78,12 +78,17 @@
       "days": 2,
       "from": "2025-11-27",
       "to": "2025-11-28"
+     },
+     {
+      "days": 1,
+      "from": "2026-11-01",
+      "to": "2026-11-01"
      }
     ]
    },
    "age": {
-    "newestCopyUtc": "2026-10-22T04:00:01Z",
-    "ageHours": 4.5,
+    "newestCopyUtc": "2026-11-19T04:00:00Z",
+    "ageHours": 1.4,
     "scheduledIntervalHours": 24,
     "marginHours": 6.0,
     "allowedHours": 30.0,
@@ -91,9 +96,9 @@
    },
    "recoveryWindow": {
     "keepsMostRecent": 14,
-    "successfulCopiesCounted": 320,
+    "successfulCopiesCounted": 321,
     "spanDays": 13.0,
-    "oldestRetainedUtc": "2026-10-09T04:00:02Z"
+    "oldestRetainedUtc": "2026-11-06T04:00:01Z"
    },
    "taskRetentionDays": 365,
    "whatARunDoes": [
@@ -106,8 +111,14 @@
     "DeleteOldSddcManagerBackups",
     "UnquiesceSystem"
    ],
-   "aRunTakesSeconds": 32,
-   "tasksRead": 1130
+   "aRunTakesSeconds": 29,
+   "tasksRead": 1022,
+   "restoreRead": {
+    "listStatus": 404,
+    "byId": null,
+    "taskTypesNamingRestore": {},
+    "tasksWithoutType": 284
+   }
   },
   {
    "plane": "the management vCenter",
@@ -160,7 +171,7 @@
     ]
    },
    "runs": {
-    "total": 397,
+    "total": 424,
     "mostRecent": {
      "state": "SUCCEEDED",
      "progress": 100,
@@ -169,11 +180,11 @@
    },
    "coverage": {
     "firstDay": "2025-08-29",
-    "lastDay": "2026-10-21",
-    "windowDays": 419,
-    "daysCovered": 391,
-    "daysUncovered": 28,
-    "gaps": 4,
+    "lastDay": "2026-11-18",
+    "windowDays": 447,
+    "daysCovered": 418,
+    "daysUncovered": 29,
+    "gaps": 5,
     "longestGapDays": 20,
     "longestGap": [
      "2026-08-18",
@@ -199,12 +210,17 @@
       "days": 1,
       "from": "2025-11-27",
       "to": "2025-11-27"
+     },
+     {
+      "days": 1,
+      "from": "2026-10-31",
+      "to": "2026-10-31"
      }
     ]
    },
    "age": {
-    "newestCopyUtc": "2026-10-22T00:03:19Z",
-    "ageHours": 8.5,
+    "newestCopyUtc": "2026-11-19T00:02:43Z",
+    "ageHours": 5.4,
     "scheduledIntervalHours": 24,
     "marginHours": 6.0,
     "allowedHours": 30.0,
@@ -213,8 +229,8 @@
    "recoveryWindow": {
     "keepsMostRecent": 30,
     "successfulCopiesCounted": 30,
-    "spanDays": 29.0,
-    "oldestRetainedUtc": "2026-09-23T00:02:23Z"
+    "spanDays": 30.0,
+    "oldestRetainedUtc": "2026-10-20T00:04:50Z"
    },
    "restoreEvidence": {
     "status": 500,
@@ -254,13 +270,13 @@
     "overall": "SUCCESS",
     "clusterBackupsReported": 1,
     "inventoryBackupsReported": 1,
-    "mostRecentClusterBackupUtc": "2026-10-22T07:00:00Z",
+    "mostRecentClusterBackupUtc": "2026-11-18T07:00:00Z",
     "historyDepth": "only the most recent is reported"
    },
    "coverage": null,
    "age": {
-    "newestCopyUtc": "2026-10-22T07:00:47Z",
-    "ageHours": 1.5,
+    "newestCopyUtc": "2026-11-18T07:00:43Z",
+    "ageHours": 22.4,
     "scheduledIntervalHours": 72,
     "marginHours": 6.0,
     "allowedHours": 78.0,

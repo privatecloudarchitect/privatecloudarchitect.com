@@ -5,8 +5,8 @@ repeatable on an ordinary afternoon; whether a copy can be put back is known onl
 half of the recovery posture no read replaces.
 
 Hold the rehearsal on an instance where a restore that goes wrong costs an afternoon: the rehearsal instance the
-platform-lifecycle chapter teaches you to keep, never the instance the copies protect. Follow the vendor's documented
-restore procedure for that component at the build you run, and write down which one.
+platform-lifecycle chapter teaches you to keep, restored from its own copies, never an instance production depends
+on. Follow the vendor's documented restore procedure for that component at the build you run, and write down which one.
 
 ## Before
 
@@ -36,6 +36,7 @@ restore procedure for that component at the build you run, and write down which 
 | What came back cleanly | |
 | What needed replaying by hand | |
 | Checks on the restored component | read the component itself, not the restore task: its inventory, its own reads, and for the network manager its segments, gateways, firewall rules and any load-balancer controllers it deployed |
+| Restore id, for the lifecycle manager | the id its restore's start returned (`POST /v1/restores/tasks`): `GET /v1/restores/tasks` answered 404 on 9.1.1, and reading this id is the documented way back to the result; `SDDC_RESTORE_ID=<id> python3 recovery.py` reads it |
 | What the task reported | a restore task can report a result the component contradicts; record both |
 | What `recovery.py` says now | its `HAS A RESTORE EVER RUN HERE?` lines after the rehearsal |
 | Gaps found | each with an owner |
