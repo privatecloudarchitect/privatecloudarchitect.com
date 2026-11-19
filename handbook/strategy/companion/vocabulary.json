@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "cc73f8cc31d2b38170eccab46b76eeded4074480aee9c2fa4abb8ff16131e39d"
+   "sha256": "620afc142df367d9f7ea20b1213f532cf278beb106242bca54ec8bfb3632d72f"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -1522,6 +1522,10 @@
   {
    "path": "/notes/vcfa-project-vending",
    "title": "A tenant project and its first namespace stand up entirely by API · Private Cloud Architect"
+  },
+  {
+   "path": "/notes/vm-apps-organization-set-up-in-order",
+   "title": "A new VM Apps organization is set up in ten phases across two sign-in planes, and the organization's first user is the one place the planes meet · Private Cloud Architect"
   },
   {
    "path": "/notes/vsphere-8-to-vsphere-foundation-9-1-1",
