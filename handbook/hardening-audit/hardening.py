@@ -8,7 +8,9 @@ fields are stripped before anything touches disk.
 
 The loop spans three token planes, and each is optional: set the environment
 for the planes you have, and the reads you cannot run are recorded as skips
-with their reason, which is itself part of the posture record.
+with their reason, which is itself part of the posture record. A plane whose
+sign-in is refused is recorded the same way: its reads are skips quoting the
+refusal, and the other planes still read.
 
   SDDC Manager plane (certificates, credentials, backup):
     SDDC_HOST, SDDC_USERNAME, SDDC_PASSWORD
@@ -21,6 +23,8 @@ with their reason, which is itself part of the posture record.
     VCFA_HOST, VCFA_ORG, VCFA_USER, VCFA_PASSWORD
     VCFA_USER is the bare account name; the login principal is
     <VCFA_USER>@<VCFA_ORG>, so a user@domain name here is refused.
+    The run signs its session out when these reads finish, so a scheduled run
+    leaves no session open; a close that fails is printed as a WARN line.
 
   AUDIT_MIN_DAYS (optional): how far back the audit trail must answer. When set,
   a trail whose oldest readable event is younger than this is a finding.
@@ -119,6 +123,27 @@ def vcfa_session():
     if not tok:
         raise RuntimeError("session login returned no access-token header")
     return tok
+
+
+def vcfa_signout(tok):
+    """Close the session vcfa_session() opened, and only that one: the bearer is the one this run minted, never one
+    read from a cache another process may hold (G-993). DELETE /cloudapi/1.0.0/sessions/current takes the versioned
+    Accept (204 on VCF Automation 9.1.1; 406 without the version, G-993). Closing is not revoking: on 9.1.1 some APIs
+    still answered a signed-out bearer minutes later (G-994), so the bearer is never written anywhere.
+    Returns None when the session closed, else the line to print; never raises, so it cannot hide the run's outcome."""
+    status = None
+    try:
+        status, _, _ = http("DELETE", f"https://{os.environ['VCFA_HOST']}/cloudapi/1.0.0/sessions/current",
+                            headers={"Authorization": f"Bearer {tok}", "Accept": "application/json;version=40.0"},
+                            timeout=15)
+    except urllib.error.HTTPError as ex:
+        status = ex.code
+    except (urllib.error.URLError, OSError):
+        status = None
+    if status is not None and 200 <= status < 300:
+        return None
+    return (f"sign-out answered {status or 'nothing'}: the VCF Automation session may stay open until it times out; "
+            "the reads above were made")
 
 
 def vcfa(path, tok, accept="application/json"):
@@ -456,11 +481,27 @@ def main():
         "vcfa": all(os.environ.get(k) for k in ("VCFA_HOST", "VCFA_ORG", "VCFA_USER", "VCFA_PASSWORD")),
     }
     records, all_findings, skips = {}, [], []
+    refused = {}  # plane -> why its sign-in failed: each of its reads is then a skip with that reason
+
+    def sign_in(plane, fn):
+        """A plane's sign-in, made once. A refusal is not a crash: the other planes' reads still run, and this
+        plane's reads are recorded as skips that quote it, so the folder and its exit code say what was missed."""
+        if not planes[plane]:
+            return None
+        try:
+            return fn()
+        except Exception as e:
+            refused[plane] = f"{plane} sign-in failed: {type(e).__name__}: {str(e)[:120]}"
+            return None
 
     def run(name, plane, fn, *args):
         if not planes[plane]:
             skips.append((name, f"{plane} environment not set"))
             say(f"  SKIP {name:16} ({plane} environment not set)")
+            return
+        if plane in refused:
+            skips.append((name, refused[plane]))
+            say(f"  SKIP {name:16} ({refused[plane]})")
             return
         try:
             record, findings = fn(*args)
@@ -473,15 +514,22 @@ def main():
 
     say(f"HARDENING LOOP - {stamp}")
     say()
-    stok = sddc_token() if planes["sddc"] else None
+    stok = sign_in("sddc", sddc_token)
     run("certificates", "sddc", read_certificates, stok)
     run("credentials", "sddc", read_credentials, stok)
     run("backup", "sddc", read_backup, stok)
     run("alert-scope", "ops", read_alert_scope)
-    vtok = vcfa_session() if planes["vcfa"] else None
-    run("firewall-floor", "vcfa", read_firewall_floor, vtok)
-    run("access", "vcfa", read_access, vtok)
-    run("audit-trail", "vcfa", read_audit_trail, vtok)
+    vtok = sign_in("vcfa", vcfa_session)
+    try:
+        run("firewall-floor", "vcfa", read_firewall_floor, vtok)
+        run("access", "vcfa", read_access, vtok)
+        run("audit-trail", "vcfa", read_audit_trail, vtok)
+    finally:
+        # The session this run opened closes when its reads finish, whatever they did. A failed close is printed,
+        # never counted as a skip: the reads it follows were made.
+        unclosed = vcfa_signout(vtok) if vtok else None
+        if unclosed:
+            say(f"  WARN {unclosed}")
     builds = read_builds(stok)
     read_against = ", ".join(f"{k} {v or 'unknown'}" for k, v in builds.items()) or "no plane set"
     say(f"  read against        {read_against}")

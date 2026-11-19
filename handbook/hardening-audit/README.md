@@ -76,6 +76,14 @@ Two details decide whether a plane reads or skips:
 - **`VCFA_USER` is the bare account name.** The login principal is `<VCFA_USER>@<VCFA_ORG>`, so an
   account written as `user@domain` is refused at sign-in.
 
+A refused sign-in skips that plane, not the run: its reads are recorded as skips that quote the refusal, the
+other planes still read, and the folder is written with exit code 2.
+
+The run signs its VCF Automation session out as soon as the tenancy reads finish, whatever they returned, so a
+scheduled run leaves no session open behind it. Signing out closes the session, not the bearer it issued: on
+9.1.1 some APIs still answered a signed-out bearer minutes later, so the bearer is never written anywhere. A close
+that fails prints a `WARN` line and leaves the exit code alone, since the reads before it were made.
+
 Exit code 0 when every read was made and none found anything, 1 when every read was made and findings are
 present, and 2 when a read was skipped: the folder is incomplete, and a scheduler that watched only for
 findings would file it as clean. Stdlib Python only.
