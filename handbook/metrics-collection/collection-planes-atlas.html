@@ -121,7 +121,9 @@ svg .band{opacity:.9}
 
 /* node diagrams: HTML boxes on a grid, connectors drawn by the runtime from real geometry */
 .diagram{position:relative;display:grid;align-items:stretch;padding:8px 4px 4px}
-.diagram .edges{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:1}
+/* the connector layer keeps the size the runtime gives it (the diagram's scroll size): a figure's svg rule shrank it to
+   the frame when a diagram is wider than its frame, and every connector was drawn at that scale */
+.diagram .edges{position:absolute;left:0;top:0;pointer-events:none;overflow:visible;z-index:1;width:auto;height:auto;min-width:0;max-width:none}
 .diagram .edges>path{fill:none;stroke-linecap:round}
 .node{position:relative;z-index:2;background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:10px 12px 8px;min-width:0;font-size:.86rem;line-height:1.38;color:var(--ink-2)}
 .node h4{margin:0 0 4px;font:600 .92rem/1.3 var(--body);color:var(--ink)}
