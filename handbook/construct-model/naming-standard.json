@@ -34,6 +34,14 @@
    "pattern": "^[a-z][a-z0-9-]+-[a-z]+$"
   },
   {
+   "construct": "day2-action-policy",
+   "plane": "tenancy",
+   "plane_title": "Tenancy and governance",
+   "convention": "Members: (<kind>) <who> | Action Scope: <actions> | Visibility: <extent> via <role>",
+   "example": "Members: (Group) checkout-engineers | Action Scope: ALL | Visibility: own via edit",
+   "pattern": "^Members: \\((Group|User)\\) [^|]+ \\| Action Scope: [^|]+ \\| Visibility: [^|]+$"
+  },
+  {
    "construct": "region",
    "plane": "compute",
    "plane_title": "Provider compute",
@@ -64,6 +72,14 @@
    "convention": "ns-<profile>-<size>",
    "example": "ns-general-small",
    "pattern": "^ns-[a-z]+-(tiny|small|medium|large|xlarge)$"
+  },
+  {
+   "construct": "namespace-class-config",
+   "plane": "compute",
+   "plane_title": "Provider compute",
+   "convention": "nscfg-<profile>-<size>",
+   "example": "nscfg-general-small",
+   "pattern": "^nscfg-[a-z]+-(tiny|small|medium|large|xlarge)$"
   },
   {
    "construct": "vm-class",
