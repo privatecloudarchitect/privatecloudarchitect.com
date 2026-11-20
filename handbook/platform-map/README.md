@@ -57,7 +57,10 @@ keep it for a throwaway credential.
 ## Reading the output
 
 - The instance blocks answer plate 01: one management domain per instance, any workload domains beside it, the
-  vCenter and NSX manager each brings and the version each runs, and a Supervisor only where tenants are served.
+  vCenter and NSX manager each brings and the version each runs, and where each Supervisor sits. The chapter places
+  Supervisors where tenants are served, in workload domains; VMware's Supervisor design reads "A VCF domain can
+  include one or more of the supported vSphere Supervisor Models", so `DIFFERS` on a management domain's Supervisor
+  line is a placement to explain, not an error.
   A line such as `namespaces <n>, <m> of them the platform's own (svc-)` is the Supervisor running its services in
   namespaces of their own, which is why a namespace list or a load balancer's address range shows names no tenant
   created.

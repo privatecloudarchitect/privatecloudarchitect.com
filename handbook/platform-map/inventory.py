@@ -26,7 +26,7 @@ you hold is your own:
   4  optionally, the standalone VCF Operations orchestrator appliances you name (GET /vco/api/about, which needs no
      sign-in): neither SDDC Manager nor the fleet list carries one, so nothing else here would see its version
   5  the checks the chapter teaches: one management domain per instance, a vCenter and an NSX manager for every
-     domain, a Supervisor only in a workload domain, one services runtime per instance, one release across every
+     domain, a Supervisor only in a workload domain (the chapter's placement), one services runtime per instance, one release across every
      component read, and with --bom FILE every component against that release's bill of materials, every row of
      the bill reported read (its version compared), seen deployed (an appliance or a Supervisor service it names) or not
      read here

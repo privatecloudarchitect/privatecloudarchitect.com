@@ -138,6 +138,22 @@
    "pattern": "^[a-z]{2}-[a-z]+-\\d+-t0-[a-z]+$"
   },
   {
+   "construct": "provider-gateway",
+   "plane": "network",
+   "plane_title": "NSX network",
+   "convention": "<region>-pgw-<role>[-<ordinal>]",
+   "example": "eu-west-1-pgw-edge",
+   "pattern": "^[a-z]{2}-[a-z]+-\\d+-pgw-[a-z]+(-\\d{2,})?$"
+  },
+  {
+   "construct": "nsx-edge-cluster",
+   "plane": "network",
+   "plane_title": "NSX network",
+   "convention": "<region>-ec-<ordinal>",
+   "example": "eu-west-1-ec-01",
+   "pattern": "^[a-z]{2}-[a-z]+-\\d+-ec-\\d{2,}$"
+  },
+  {
    "construct": "transit-gateway",
    "plane": "network",
    "plane_title": "NSX network",
