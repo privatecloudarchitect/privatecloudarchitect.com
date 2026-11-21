@@ -77,9 +77,9 @@
    "construct": "namespace-class-config",
    "plane": "compute",
    "plane_title": "Provider compute",
-   "convention": "nscfg-<profile>-<size>",
-   "example": "nscfg-general-small",
-   "pattern": "^nscfg-[a-z]+-(tiny|small|medium|large|xlarge)$"
+   "convention": "<its class's name>",
+   "example": "ns-general-small",
+   "pattern": "^ns-[a-z]+-(tiny|small|medium|large|xlarge)$"
   },
   {
    "construct": "vm-class",
