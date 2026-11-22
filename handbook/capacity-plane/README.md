@@ -82,7 +82,9 @@ though it were a newer one.
 own object name answered. `zones` and `namespaces` carry the budgets as read; `bindings` lists each project with
 the namespaces it hosts and the region, class and VPC bindings it holds. `ledger` is the check, one row per zone
 with `sumOfLimits`, `sumOfReservations`, `zoneReportsUsed` and whether they match, the same for memory
-(`memorySumOfLimits`, `memoryReportsUsed`, `memoryBalances`), and what is left (`cpuFree`, `memoryFree`) and drawn
+(`memorySumOfLimits`, `memoryReportsUsed`, `memoryBalances`), and what is left (`cpuFree`, `memoryFree`, each from
+`admission()`, the rule the handbook's planner runs: the grant less what is used, and a create asking for more
+refused) and drawn
 (`reservationDrawnDown` of `reservationBudget`). `configs` is what each class promises and `contract` is how often
 a namespace holds it (`agree` of `total`, `byField`, `widest` for the largest single divergence, `exact` for the
 namespaces that hold their class's four figures, and `storageInherited` for those that omit storage and take the

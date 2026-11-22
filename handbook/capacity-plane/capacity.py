@@ -238,6 +238,19 @@ class Cci:
             return None, str(e)
 
 
+def admission(granted, used, request):
+    """One column of one zone against one create: what is left, the zone's grant less what it reports used, and the
+    answer a create asking for `request` from that column can expect. On VCF Automation 9.1.1.0100 the probe sent a
+    create whose cpu limit was more than its zone had left and it was refused, the refusal saying the request exceeds
+    the available; the same create into a zone with room was admitted. A request equal to what is left was not sent, so
+    it is answered "at the edge" rather than guessed; the memory column is the same subtraction, which the probe did not
+    exhaust. The handbook's capacity plane runs a JavaScript twin of this, held equal to it by the site's tests."""
+    if min(granted, used, request) < 0:
+        raise ValueError("a grant, a consumption and a request are each zero or more")
+    left = granted - used
+    return {"left": left, "answer": "refused" if request > left else "at the edge" if request == left else "admitted"}
+
+
 def zone_figures(c, L):
     """What every zone reports used right now, keyed by its placeholder: the four consumption figures."""
     out = {}
@@ -485,8 +498,8 @@ def main():
                        "zoneReportsUsed": zv["used"]["cpu"], "matches": verdict,
                        "memorySumOfLimits": cl["memoryLimit"], "memoryReportsUsed": zv["used"]["memory"],
                        "memoryBalances": mem_balances,
-                       "cpuFree": zv["budget"]["cpuLimit"] - zv["used"]["cpu"],
-                       "memoryFree": zv["budget"]["memoryLimit"] - zv["used"]["memory"],
+                       "cpuFree": admission(zv["budget"]["cpuLimit"], zv["used"]["cpu"], 0)["left"],
+                       "memoryFree": admission(zv["budget"]["memoryLimit"], zv["used"]["memory"], 0)["left"],
                        "reservationBudget": zv["budget"]["cpuReservation"],
                        "reservationDrawnDown": zv["used"]["cpuReservation"]})
         print(f"     {zv['name']:<16} {cl['namespaces']} namespace(s); zone reports {zv['used']['cpu']} used; "
