@@ -66,6 +66,16 @@ def binding_name(kind, subject):
     return f"cci:{kind.lower()}:{subject[:-1] if subject.endswith('@') else subject}"
 
 
+
+def grants_written(tenants):
+    """What the design writes in one shared project for `tenants` tenant groups: one ProjectRoleBinding per tenant group
+    beside the administrators' binding to admin, and one HARD action policy per tenant beside the operators' grant, the
+    first of them shipped together. Nothing is written per person: a member joins the group at the identity provider.
+    The handbook's planner runs a JavaScript twin of this, held equal to it by the site's tests."""
+    if isinstance(tenants, bool) or not isinstance(tenants, int) or tenants < 1:
+        raise ValueError("a shared project holds one tenant group or more")
+    return {"bindings": tenants + 1, "policies": tenants + 1, "perPerson": 0}
+
 def ctx():
     verify = os.environ.get("TLS_VERIFY", "true").strip().lower() not in ("0", "false", "no", "off")
     return ssl.create_default_context() if verify else ssl._create_unverified_context()
