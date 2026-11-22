@@ -53,9 +53,12 @@ read -rs SDDC_PASSWORD && export SDDC_PASSWORD
 # Operations plane (alert scope): the api-token flow from the identity chapter
 export OPS_HOST=<ops-fqdn> OPS_BROKER_HOST=<broker-fqdn>
 export OPS_API_TOKEN_FILE=<a file holding your api-token, mode 0600>
-# Tenancy plane (firewall floor, access, audit trail): an organization session
-export VCFA_HOST=<automation-fqdn> VCFA_ORG=<organization> VCFA_USER=<account, without @domain>
-read -rs VCFA_PASSWORD && export VCFA_PASSWORD
+# Tenancy plane (firewall floor, access, audit trail): the organization's API token, or a session login
+export VCFA_HOST=<automation-fqdn> VCFA_ORG=<organization>
+( umask 077; mkdir -p ~/.vcf && cat > ~/.vcf/vcfa-api-token )   # paste the API token, then Ctrl-D
+export VCFA_REFRESH_TOKEN_FILE=~/.vcf/vcfa-api-token              # mode 0600, exchanged for a bearer
+# or a session login: VCFA_USER=<account, without @domain> with VCFA_PASSWORD_FILE (mode 0600) or VCFA_PASSWORD
+# the run prints which way it signed in, and --record keeps it as planes.vcfa: api-token or session
 # How far back the audit trail must answer (optional; a shorter trail is a finding)
 export AUDIT_MIN_DAYS=90
 export OPS_TLS_VERIFY=false  # only on a self-signed lab CA
@@ -97,6 +100,11 @@ fixed and the later run that no longer reports it. A row with no `fixed_on` is a
 row with no `verified_by_run` is a fix nobody has read back.
 
 ## How far back the trail answers
+
+The audit-trail read also says whose events it can see: it tallies the newest events (up to 1,000) by the
+id of the user who made each, against the signed-in identity's. On VCF Automation 9.1.1 an Organization
+Auditor's trail held only events that identity made (G-1037), so when every event read is the identity's
+own the read reports that its scope is the identity's, a finding, and leaves the window unjudged.
 
 The audit trail answers only as far back as its oldest event. The audit-trail read reports that event's date beside the count, and `AUDIT_MIN_DAYS` turns the
 window you decided into a check: when the oldest event this session can read is younger than the

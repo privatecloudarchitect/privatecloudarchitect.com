@@ -20,14 +20,27 @@ refusal, and the other planes still read.
     holding only a viewer role lists the policies and is refused the export
     (HTTP 403), and the read is then recorded as a skip.
   Consumption plane (firewall floor, access, audit trail):
-    VCFA_HOST, VCFA_ORG, VCFA_USER, VCFA_PASSWORD
-    VCFA_USER is the bare account name; the login principal is
-    <VCFA_USER>@<VCFA_ORG>, so a user@domain name here is refused.
+    VCFA_HOST, VCFA_ORG, and one way to sign in:
+      VCFA_REFRESH_TOKEN_FILE  a file holding an API token minted for the
+        organization, mode 0600 (or VCFA_REFRESH_TOKEN, the value itself, which
+        lands in the shell's history); exchanged for a bearer at the tenant's
+        token endpoint, so a scheduled run holds no password
+      VCFA_USER with VCFA_PASSWORD_FILE (or VCFA_PASSWORD)  a session login
+    The API token is used when both are set. VCFA_USER is the bare account name;
+    the login principal is <VCFA_USER>@<VCFA_ORG>, so a user@domain name here is
+    refused. A file open to group or other is refused before it is read.
     The run signs its session out when these reads finish, so a scheduled run
     leaves no session open; a close that fails is printed as a WARN line.
 
   AUDIT_MIN_DAYS (optional): how far back the audit trail must answer. When set,
   a trail whose oldest readable event is younger than this is a finding.
+
+  The audit-trail read also says whose events it can see: it tallies the newest
+  events (up to TRAIL_SAMPLE) by the id of the user who made each, against the
+  signed-in identity's id. On VCF Automation 9.1.1 an Organization Auditor's trail
+  held only events that identity made (G-1037), so when every event read is the
+  identity's own the read reports that its scope is the identity's, a finding,
+  and leaves the window unjudged.
 
   Set OPS_TLS_VERIFY=false to skip TLS verification on every plane (self-signed lab CA).
 
@@ -51,7 +64,8 @@ import urllib.parse
 import urllib.request
 import zipfile
 
-from opslib import bearer as ops_bearer, ops
+from opslib import bearer as ops_bearer
+from opslib import ops, secret
 
 EXPIRY_HORIZON_DAYS = 90
 # The consumption surface serves its API in two numbering schemes and marks the older one (40.x) deprecated;
@@ -111,9 +125,27 @@ def sddc(path, tok):
     return json.loads(raw)
 
 
+def vcfa_sign_in_kind():
+    """Which way the tenancy plane signs in: "api-token" when the organization's API token is set (it wins over a
+    password), else "session". The transcript and the record carry it, so a run's record says which credential read."""
+    return "api-token" if any(os.environ.get(k) for k in ("VCFA_REFRESH_TOKEN_FILE", "VCFA_REFRESH_TOKEN")) else "session"
+
+
 def vcfa_session():
+    """A bearer for the consumption plane, this run's own: the organization's API token (VCFA_REFRESH_TOKEN_FILE or
+    VCFA_REFRESH_TOKEN) exchanged at the tenant's token endpoint, or else a session login as <VCFA_USER>@<VCFA_ORG>.
+    vcfa_signout() closes it when the reads finish, whichever way it was minted."""
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    user, pw = os.environ["VCFA_USER"], os.environ["VCFA_PASSWORD"]
+    refresh = secret("VCFA_REFRESH_TOKEN")
+    if refresh:
+        st, raw, _ = http("POST", f"https://{host}/oauth/tenant/{org}/token",
+                          body={"grant_type": "refresh_token", "refresh_token": refresh}, form=True,
+                          headers={"Accept": "application/json"})
+        tok = json.loads(raw or b"{}").get("access_token")
+        if not tok:
+            raise RuntimeError("the token endpoint answered without an access token")
+        return tok
+    user, pw = os.environ["VCFA_USER"], secret("VCFA_PASSWORD")
     import base64
     basic = base64.b64encode(f"{user}@{org}:{pw}".encode()).decode()
     st, raw, hdrs = http("POST", f"https://{host}/cloudapi/1.0.0/sessions",
@@ -168,7 +200,7 @@ def _keys(obj):
 
 def read_certificates(tok):
     domains = sddc("/v1/domains", tok).get("elements", [])
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     horizon = now + datetime.timedelta(days=EXPIRY_HORIZON_DAYS)
     per_domain, findings = [], []
     for d in domains:
@@ -322,6 +354,49 @@ def read_access(tok):
     return {"projects": per_project}, []
 
 
+TRAIL_SAMPLE = 1000   # the newest events the actor tally reads, 128 a page
+TRAIL_PAGE = 128
+
+
+def trail_actors(tok):
+    """Whose events this identity's trail holds: the signed-in user's id (sessions/current) against each event's user id,
+    over the newest TRAIL_SAMPLE events. An event's actor is not the person: on 9.1.1 it named the API client a token
+    acted through, or nothing (G-1037), so the tally reads the event's user. Returns counts and booleans only; no name or
+    id leaves this function. {"compared": "user.id", "examined", "own", "others", "noUser", "onlyOwn"}, or
+    {"compared": None, "unread": why} when the identity could not be read."""
+    try:
+        me = (vcfa("/cloudapi/1.0.0/sessions/current", tok, accept=CLOUDAPI_ACCEPT).get("user") or {})
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        return {"compared": None, "unread": f"the signed-in identity did not read ({type(e).__name__})"}
+    if not me.get("id"):
+        return {"compared": None, "unread": "the session named no user id"}
+    SEEN.add(me.get("name") or "")
+    own = others = none = examined = 0
+    pages = -(-TRAIL_SAMPLE // TRAIL_PAGE)
+    for n in range(1, pages + 1):
+        try:
+            values = vcfa(f"/cloudapi/1.0.0/auditTrail?sortDesc=timestamp&page={n}&pageSize={TRAIL_PAGE}", tok,
+                          accept=CLOUDAPI_ACCEPT).get("values") or []
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            return {"compared": None, "unread": f"page {n} of the trail did not read ({type(e).__name__})"}
+        for ev in values[:TRAIL_SAMPLE - examined]:
+            uid = (ev.get("user") or {}).get("id")
+            SEEN.add((ev.get("user") or {}).get("name") or "")
+            if not uid:
+                none += 1
+            elif uid == me["id"]:
+                own += 1
+            else:
+                others += 1
+            examined += 1
+        if len(values) < TRAIL_PAGE or examined >= TRAIL_SAMPLE:
+            break
+    if not examined:
+        return {"compared": None, "unread": "the trail returned no events"}   # no events says nothing of whose it holds
+    return {"compared": "user.id", "examined": examined, "own": own, "others": others, "noUser": none,
+            "onlyOwn": others == 0 and none == 0}
+
+
 def read_audit_trail(tok):
     def page(order):
         return vcfa(f"/cloudapi/1.0.0/auditTrail?pageSize=1&{order}=timestamp", tok, accept=CLOUDAPI_ACCEPT)
@@ -339,11 +414,19 @@ def read_audit_trail(tok):
     findings = []
     if oldest:
         t0 = datetime.datetime.fromisoformat(oldest.replace("Z", "+00:00"))
-        record["windowDays"] = (datetime.datetime.now(datetime.timezone.utc) - t0).days
+        record["windowDays"] = (datetime.datetime.now(datetime.UTC) - t0).days
+    record["actors"] = trail_actors(tok)
+    if record["actors"].get("onlyOwn"):
+        findings.append(f"audit trail: every event this identity can read is one it made ({record['actors']['examined']} "
+                        "of the newest, compared by user id), so this trail's scope is the identity's, not the "
+                        "organization's; judge audit logging and retention from an identity whose trail shows other "
+                        "users' events (G-1037)")
     want = os.environ.get("AUDIT_MIN_DAYS", "").strip()
     if want:
         record["minDays"] = int(want)
-        if record["windowDays"] is None or record["windowDays"] < int(want):
+        if record["actors"].get("onlyOwn"):
+            pass   # the window of one identity's own events says nothing of the organization's retention
+        elif record["windowDays"] is None or record["windowDays"] < int(want):
             findings.append(f"audit trail: the oldest event this session can read is {record['windowDays']} "
                             f"day(s) old, short of the {int(want)} decided; an incident older than that "
                             "cannot be answered from this trail")
@@ -432,9 +515,10 @@ def distil(records, findings, skips, planes, transcript, stamp, builds):
             base.update(projects=len(r["projects"]), bindings=n, byRole=roles, bySubjectKind=kinds)
         elif name == "audit-trail":
             base.update(events=r["events"], oldest=r["oldest"], newest=r["newest"],
-                        windowDays=r["windowDays"], minDays=r["minDays"], olderOnRequest=r["olderOnRequest"])
+                        windowDays=r["windowDays"], minDays=r["minDays"], olderOnRequest=r["olderOnRequest"],
+                        actors=r.get("actors"))
         rd[name] = base
-    return {"captured": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    return {"captured": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "date": stamp, "tool": "hardening.py", "builds": builds, "planes": planes, "reads": rd,
             "findings": findings, "skips": [{"read": n, "reason": r} for n, r in skips],
             "transcript": transcript, "exit": exit_code(findings, skips)}
@@ -478,7 +562,9 @@ def main():
     planes = {
         "sddc": all(os.environ.get(k) for k in ("SDDC_HOST", "SDDC_USERNAME", "SDDC_PASSWORD")),
         "ops": bool(os.environ.get("OPS_HOST")) and any(os.environ.get(k) for k in ("OPS_API_TOKEN_FILE", "OPS_API_TOKEN")),
-        "vcfa": all(os.environ.get(k) for k in ("VCFA_HOST", "VCFA_ORG", "VCFA_USER", "VCFA_PASSWORD")),
+        "vcfa": all(os.environ.get(k) for k in ("VCFA_HOST", "VCFA_ORG")) and (
+            any(os.environ.get(k) for k in ("VCFA_REFRESH_TOKEN_FILE", "VCFA_REFRESH_TOKEN"))
+            or (bool(os.environ.get("VCFA_USER")) and any(os.environ.get(k) for k in ("VCFA_PASSWORD_FILE", "VCFA_PASSWORD")))),
     }
     records, all_findings, skips = {}, [], []
     refused = {}  # plane -> why its sign-in failed: each of its reads is then a skip with that reason
@@ -520,6 +606,8 @@ def main():
     run("backup", "sddc", read_backup, stok)
     run("alert-scope", "ops", read_alert_scope)
     vtok = sign_in("vcfa", vcfa_session)
+    if vtok:
+        say(f"  signed in tenancy   by {'API token' if vcfa_sign_in_kind() == 'api-token' else 'session login'}")
     try:
         run("firewall-floor", "vcfa", read_firewall_floor, vtok)
         run("access", "vcfa", read_access, vtok)
@@ -558,7 +646,8 @@ def main():
         say(f"  ! {fnd}")
     if record_path:
         write_record(record_path, distil(records, all_findings, skips,
-                                         {k: ("set" if v else "not set") for k, v in planes.items()},
+                                         {k: (("set" if k != "vcfa" else vcfa_sign_in_kind()) if v else "not set")
+                                          for k, v in planes.items()},
                                          transcript, stamp, builds))
         print(f"\nwrote {record_path}: counts, dates and product words only, no host, object or principal name")
     return exit_code(all_findings, skips)
