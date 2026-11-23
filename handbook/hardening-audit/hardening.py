@@ -37,10 +37,11 @@ refusal, and the other planes still read.
 
   The audit-trail read also says whose events it can see: it tallies the newest
   events (up to TRAIL_SAMPLE) by the id of the user who made each, against the
-  signed-in identity's id. On VCF Automation 9.1.1 an Organization Auditor's trail
-  held only events that identity made (G-1037), so when every event read is the
-  identity's own the read reports that its scope is the identity's, a finding,
-  and leaves the window unjudged.
+  signed-in identity's id. On VCF Automation 9.1.1 a session signed in by an
+  organization API token held only the events made through that token's client,
+  whatever its role, while a session sign-in held every user's (G-1037), so when
+  every event read is the identity's own the read reports that its scope is the
+  identity's, a finding, and leaves the window unjudged.
 
   Set OPS_TLS_VERIFY=false to skip TLS verification on every plane (self-signed lab CA).
 
@@ -419,8 +420,8 @@ def read_audit_trail(tok):
     if record["actors"].get("onlyOwn"):
         findings.append(f"audit trail: every event this identity can read is one it made ({record['actors']['examined']} "
                         "of the newest, compared by user id), so this trail's scope is the identity's, not the "
-                        "organization's; judge audit logging and retention from an identity whose trail shows other "
-                        "users' events (G-1037)")
+                        "organization's; judge audit logging and retention from a session sign-in, or an identity whose "
+                        "trail shows other users' events (G-1037)")
     want = os.environ.get("AUDIT_MIN_DAYS", "").strip()
     if want:
         record["minDays"] = int(want)

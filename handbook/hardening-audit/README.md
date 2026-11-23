@@ -102,9 +102,11 @@ row with no `verified_by_run` is a fix nobody has read back.
 ## How far back the trail answers
 
 The audit-trail read also says whose events it can see: it tallies the newest events (up to 1,000) by the
-id of the user who made each, against the signed-in identity's. On VCF Automation 9.1.1 an Organization
-Auditor's trail held only events that identity made (G-1037), so when every event read is the identity's
-own the read reports that its scope is the identity's, a finding, and leaves the window unjudged.
+id of the user who made each, against the signed-in identity's. On VCF Automation 9.1.1 a session signed
+in by an organization API token held only the events made through that token's client, whatever its role,
+while a session sign-in held every user's, the Organization Auditor's included (G-1037). So when every event
+read is the identity's own the read reports that its scope is the identity's, a finding, and leaves the
+window unjudged; read the trail from a session sign-in to judge it.
 
 The audit trail answers only as far back as its oldest event. The audit-trail read reports that event's date beside the count, and `AUDIT_MIN_DAYS` turns the
 window you decided into a check: when the oldest event this session can read is younger than the
