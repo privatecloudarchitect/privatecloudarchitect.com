@@ -26,9 +26,19 @@ refusal, and the other planes still read.
         lands in the shell's history); exchanged for a bearer at the tenant's
         token endpoint, so a scheduled run holds no password
       VCFA_USER with VCFA_PASSWORD_FILE (or VCFA_PASSWORD)  a session login
-    The API token is used when both are set. VCFA_USER is the bare account name;
-    the login principal is <VCFA_USER>@<VCFA_ORG>, so a user@domain name here is
-    refused. A file open to group or other is refused before it is read.
+    The API token is used when both are set. VCFA_USER (and VCFA_TRAIL_USER) is the
+    account's login name: the bare name for a local account, the UPN for a directory
+    account in an organization that signs in by UPN; the principal sent is
+    <name>@<VCFA_ORG>. A file open to group or other is refused before it is read.
+  The audit trail, optionally, by a session sign-in of its own: VCFA_TRAIL_USER with
+    VCFA_TRAIL_PASSWORD_FILE (or VCFA_TRAIL_PASSWORD), on the same host and
+    organization. On VCF Automation 9.1.1 a session signed in by an organization API
+    token held only the events made through that token's client, whatever its role,
+    while a session sign-in held every user's, the Organization Auditor's included
+    (G-1037). So a run whose other reads use an API token reads the trail by a session
+    sign-in, the same auditor's: signed in for that read alone and signed out straight
+    after. A trail API token is refused for that reason. Unset, the trail is read on
+    the tenancy session, as before, and the read reports its narrower scope.
     The run signs its session out when these reads finish, so a scheduled run
     leaves no session open; a close that fails is printed as a WARN line.
 
@@ -126,18 +136,25 @@ def sddc(path, tok):
     return json.loads(raw)
 
 
-def vcfa_sign_in_kind():
-    """Which way the tenancy plane signs in: "api-token" when the organization's API token is set (it wins over a
-    password), else "session". The transcript and the record carry it, so a run's record says which credential read."""
-    return "api-token" if any(os.environ.get(k) for k in ("VCFA_REFRESH_TOKEN_FILE", "VCFA_REFRESH_TOKEN")) else "session"
+def vcfa_sign_in_kind(prefix="VCFA"):
+    """Which way a consumption-plane identity signs in: "api-token" when its API token is set (it wins over a password),
+    else "session". prefix is VCFA for the tenancy reads and VCFA_TRAIL for the audit trail's own identity. The
+    transcript and the record carry it, so a run's record says which credential read."""
+    return "api-token" if any(os.environ.get(f"{prefix}_{k}") for k in ("REFRESH_TOKEN_FILE", "REFRESH_TOKEN")) else "session"
 
 
-def vcfa_session():
-    """A bearer for the consumption plane, this run's own: the organization's API token (VCFA_REFRESH_TOKEN_FILE or
-    VCFA_REFRESH_TOKEN) exchanged at the tenant's token endpoint, or else a session login as <VCFA_USER>@<VCFA_ORG>.
-    vcfa_signout() closes it when the reads finish, whichever way it was minted."""
+def vcfa_identity_set(prefix="VCFA"):
+    """Whether a consumption-plane identity is given: an API token, or an account and its password."""
+    return (any(os.environ.get(f"{prefix}_{k}") for k in ("REFRESH_TOKEN_FILE", "REFRESH_TOKEN"))
+            or (bool(os.environ.get(f"{prefix}_USER")) and any(os.environ.get(f"{prefix}_{k}") for k in ("PASSWORD_FILE", "PASSWORD"))))
+
+
+def vcfa_session(prefix="VCFA"):
+    """A bearer for the consumption plane, this run's own: the identity's API token (<prefix>_REFRESH_TOKEN_FILE or
+    <prefix>_REFRESH_TOKEN) exchanged at the tenant's token endpoint, or else a session login as
+    <<prefix>_USER>@<VCFA_ORG>. vcfa_signout() closes it when its reads finish, whichever way it was minted."""
     host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
-    refresh = secret("VCFA_REFRESH_TOKEN")
+    refresh = secret(f"{prefix}_REFRESH_TOKEN")
     if refresh:
         st, raw, _ = http("POST", f"https://{host}/oauth/tenant/{org}/token",
                           body={"grant_type": "refresh_token", "refresh_token": refresh}, form=True,
@@ -146,7 +163,7 @@ def vcfa_session():
         if not tok:
             raise RuntimeError("the token endpoint answered without an access token")
         return tok
-    user, pw = os.environ["VCFA_USER"], secret("VCFA_PASSWORD")
+    user, pw = os.environ[f"{prefix}_USER"], secret(f"{prefix}_PASSWORD")
     import base64
     basic = base64.b64encode(f"{user}@{org}:{pw}".encode()).decode()
     st, raw, hdrs = http("POST", f"https://{host}/cloudapi/1.0.0/sessions",
@@ -156,6 +173,15 @@ def vcfa_session():
     if not tok:
         raise RuntimeError("session login returned no access-token header")
     return tok
+
+
+def trail_session():
+    """The audit trail's own bearer, by a session sign-in only: an organization API token's session reads only the events
+    made through its own client, whatever its role (G-1037), so a trail credential given as a token is refused, with
+    that reason, rather than read the narrow trail the run exists to avoid."""
+    if any(os.environ.get(k) for k in ("VCFA_TRAIL_REFRESH_TOKEN_FILE", "VCFA_TRAIL_REFRESH_TOKEN")):
+        raise RuntimeError("the trail signs in by session, not a token: a token's session reads only its client's events (G-1037)")
+    return vcfa_session("VCFA_TRAIL")
 
 
 def vcfa_signout(tok):
@@ -563,10 +589,11 @@ def main():
     planes = {
         "sddc": all(os.environ.get(k) for k in ("SDDC_HOST", "SDDC_USERNAME", "SDDC_PASSWORD")),
         "ops": bool(os.environ.get("OPS_HOST")) and any(os.environ.get(k) for k in ("OPS_API_TOKEN_FILE", "OPS_API_TOKEN")),
-        "vcfa": all(os.environ.get(k) for k in ("VCFA_HOST", "VCFA_ORG")) and (
-            any(os.environ.get(k) for k in ("VCFA_REFRESH_TOKEN_FILE", "VCFA_REFRESH_TOKEN"))
-            or (bool(os.environ.get("VCFA_USER")) and any(os.environ.get(k) for k in ("VCFA_PASSWORD_FILE", "VCFA_PASSWORD")))),
+        "vcfa": all(os.environ.get(k) for k in ("VCFA_HOST", "VCFA_ORG")) and vcfa_identity_set(),
     }
+    # the audit trail's own identity (G-1037): a plane of its own when given, so a refused sign-in skips the trail read and
+    # never falls back to the tenancy session without saying so
+    planes["vcfaTrail"] = all(os.environ.get(k) for k in ("VCFA_HOST", "VCFA_ORG")) and vcfa_identity_set("VCFA_TRAIL")
     records, all_findings, skips = {}, [], []
     refused = {}  # plane -> why its sign-in failed: each of its reads is then a skip with that reason
 
@@ -612,7 +639,19 @@ def main():
     try:
         run("firewall-floor", "vcfa", read_firewall_floor, vtok)
         run("access", "vcfa", read_access, vtok)
-        run("audit-trail", "vcfa", read_audit_trail, vtok)
+        if planes["vcfaTrail"]:
+            ttok = sign_in("vcfaTrail", trail_session)
+            if ttok:
+                say(f"  signed in audit trail by {'API token' if vcfa_sign_in_kind('VCFA_TRAIL') == 'api-token' else 'session login'}"
+                    " (a second identity)")
+            try:
+                run("audit-trail", "vcfaTrail", read_audit_trail, ttok)
+            finally:
+                unclosed_trail = vcfa_signout(ttok) if ttok else None
+                if unclosed_trail:
+                    say(f"  WARN audit trail {unclosed_trail}")
+        else:
+            run("audit-trail", "vcfa", read_audit_trail, vtok)
     finally:
         # The session this run opened closes when its reads finish, whatever they did. A failed close is printed,
         # never counted as a skip: the reads it follows were made.
@@ -647,7 +686,9 @@ def main():
         say(f"  ! {fnd}")
     if record_path:
         write_record(record_path, distil(records, all_findings, skips,
-                                         {k: (("set" if k != "vcfa" else vcfa_sign_in_kind()) if v else "not set")
+                                         {k: ("same as tenancy" if k == "vcfaTrail" and not v and planes["vcfa"] else
+                                              ((vcfa_sign_in_kind() if k == "vcfa" else vcfa_sign_in_kind("VCFA_TRAIL") if k == "vcfaTrail"
+                                                else "set") if v else "not set"))
                                           for k, v in planes.items()},
                                          transcript, stamp, builds))
         print(f"\nwrote {record_path}: counts, dates and product words only, no host, object or principal name")

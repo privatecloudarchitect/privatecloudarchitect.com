@@ -59,6 +59,10 @@ export VCFA_HOST=<automation-fqdn> VCFA_ORG=<organization>
 export VCFA_REFRESH_TOKEN_FILE=~/.vcf/vcfa-api-token              # mode 0600, exchanged for a bearer
 # or a session login: VCFA_USER=<account, without @domain> with VCFA_PASSWORD_FILE (mode 0600) or VCFA_PASSWORD
 # the run prints which way it signed in, and --record keeps it as planes.vcfa: api-token or session
+# the audit trail by a session sign-in of its own (optional): an API token's session reads only its own client's events
+export VCFA_TRAIL_USER=<login name: the UPN for a directory account>
+export VCFA_TRAIL_PASSWORD_FILE=~/.vcf/vcfa-trail-password       # mode 0600; signed in for the trail read alone
+# --record keeps it as planes.vcfaTrail: session, or same as tenancy when unset
 # How far back the audit trail must answer (optional; a shorter trail is a finding)
 export AUDIT_MIN_DAYS=90
 export OPS_TLS_VERIFY=false  # only on a self-signed lab CA
