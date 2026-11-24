@@ -1,0 +1,17 @@
+{
+  "treeName": "ESX hosts",
+  "syncClasses": [
+    {
+      "classIdentifier": "ESX host",
+      "vROps": {"type": {"resourceKind": "HostSystem", "adapterKind": "VMWARE"}},
+      "serviceNow": {"type": {"cmdbCiClass": "cmdb_ci_esx_server"}},
+      "identifierMapping": [
+        {"serviceNowId": {"column": "correlation_id"}, "vropsId": {"type": "UUID", "field": ""}},
+        {"serviceNowId": {"column": "object_id"}, "vropsId": {"type": "IDENTIFIER", "field": "VMEntityObjectID"}},
+        {"serviceNowId": {"column": "vcenter_uuid"}, "vropsId": {"type": "IDENTIFIER", "field": "VMEntityVCID"}}
+      ],
+      "dataColumns": [{"cmdbColumn": "name", "vropsType": "NAME", "vropsField": ""}],
+      "relationships": []
+    }
+  ]
+}

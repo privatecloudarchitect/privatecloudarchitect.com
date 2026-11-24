@@ -1,0 +1,206 @@
+{
+ "subcommand": "snow",
+ "at": "2026-11-23T165942Z",
+ "facts": {
+  "classes": [
+   "cmdb_ci_vcenter_datastore",
+   "cmdb_ci_vcenter_datacenter",
+   "cmdb_ci_esx_server",
+   "cmdb_ci_vcenter_cluster",
+   "cmdb_ci_vcenter",
+   "cmdb_ci_vmware_instance"
+  ],
+  "elements": [
+   "state",
+   "priority",
+   "assignment_group"
+  ]
+ },
+ "checks": [
+  {
+   "verdict": "FAILS",
+   "check": "the discovery source VMwareTVS exists on cmdb_ci.discovery_source",
+   "detail": ""
+  },
+  {
+   "verdict": "FAILS",
+   "check": "a reconciliation rule for VMwareTVS on cmdb_ci_vcenter_datastore",
+   "detail": ""
+  },
+  {
+   "verdict": "FAILS",
+   "check": "cmdb_ci_vcenter_datastore's identification rule is independent or depends on something",
+   "detail": "rule from cmdb_ci_vm_object, independent False, depends_on 0"
+  },
+  {
+   "verdict": "FAILS",
+   "check": "a reconciliation rule for VMwareTVS on cmdb_ci_vcenter_datacenter",
+   "detail": ""
+  },
+  {
+   "verdict": "FAILS",
+   "check": "cmdb_ci_vcenter_datacenter's identification rule is independent or depends on something",
+   "detail": "rule from cmdb_ci_logical_datacenter, independent False, depends_on 0"
+  },
+  {
+   "verdict": "FAILS",
+   "check": "a reconciliation rule for VMwareTVS on cmdb_ci_esx_server",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "cmdb_ci_esx_server's identification rule is independent or depends on something",
+   "detail": "rule from cmdb_ci_esx_server, independent True, depends_on 0"
+  },
+  {
+   "verdict": "FAILS",
+   "check": "a reconciliation rule for VMwareTVS on cmdb_ci_vcenter_cluster",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "cmdb_ci_vcenter_cluster's identification rule is independent or depends on something",
+   "detail": "rule from cmdb_ci_host_cluster, independent False, depends_on 1"
+  },
+  {
+   "verdict": "FAILS",
+   "check": "a reconciliation rule for VMwareTVS on cmdb_ci_vcenter",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "cmdb_ci_vcenter's identification rule is independent or depends on something",
+   "detail": "rule from cmdb_ci_appl, independent False, depends_on 1"
+  },
+  {
+   "verdict": "FAILS",
+   "check": "a reconciliation rule for VMwareTVS on cmdb_ci_vmware_instance",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "cmdb_ci_vmware_instance's identification rule is independent or depends on something",
+   "detail": "rule from cmdb_ci_vm_instance, independent False, depends_on 3"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "cmdb_ci_vcenter_datastore: no CI from VMwareTVS yet",
+   "detail": "run snow again after the first sync"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "cmdb_ci_vcenter_datacenter: no CI from VMwareTVS yet",
+   "detail": "run snow again after the first sync"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "cmdb_ci_esx_server: no CI from VMwareTVS yet",
+   "detail": "run snow again after the first sync"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "cmdb_ci_vcenter_cluster: no CI from VMwareTVS yet",
+   "detail": "run snow again after the first sync"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "cmdb_ci_vcenter: no CI from VMwareTVS yet",
+   "detail": "run snow again after the first sync"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "cmdb_ci_vmware_instance: no CI from VMwareTVS yet",
+   "detail": "run snow again after the first sync"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads sys_user_has_role (all configurations)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads security_acl_detail (all configurations)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads sys_security_operation (all configurations)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads cmdb_metadata_hosting (resource grouping)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads cmdb_metadata_reference (resource grouping)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads cmdb_metadata_containment (resource grouping)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads sys_dictionary (resource grouping)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads sys_glide_object (resource grouping)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads sys_choice (alerting)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads incident (alerting)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads sys_db_object (cmdb sync)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads cmdb_reconciliation_definition (cmdb sync)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "the account reads cmdb_rel_type (cmdb sync)",
+   "detail": "answered 200"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "em_alert on this instance",
+   "detail": "answered 400: the ALERT destination writes to this table, so use INCIDENT"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "em_event on this instance",
+   "detail": "answered 400: the EVENT destination writes to this table, so use INCIDENT"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "incident.state is a primitive column",
+   "detail": "type integer"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "incident.priority is a primitive column",
+   "detail": "type integer"
+  },
+  {
+   "verdict": "FAILS",
+   "check": "incident.assignment_group is a primitive column",
+   "detail": "type reference"
+  }
+ ]
+}

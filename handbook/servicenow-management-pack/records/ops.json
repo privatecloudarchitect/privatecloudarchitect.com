@@ -1,0 +1,90 @@
+{
+ "subcommand": "ops",
+ "at": "2026-11-23T165728Z",
+ "facts": {
+  "pack": [
+   "ServiceNow Management Pack 9.1.1.0.25703502"
+  ],
+  "credential_kinds": {
+   "ServiceNow Credentials": [
+    "sn_username",
+    "sn_password"
+   ],
+   "ServiceNow + Proxy Credentials": [
+    "proxy_username",
+    "proxy_password",
+    "sn_username",
+    "sn_password"
+   ]
+  },
+  "plugin_credential_types": [
+   "basic"
+  ],
+  "rule_properties": [
+   "caller_id",
+   "category",
+   "subcategory",
+   "business_service",
+   "contact_type",
+   "state",
+   "close_code",
+   "close_notes",
+   "hold_reason",
+   "impact",
+   "urgency",
+   "priority",
+   "assignment_group",
+   "assigned_to",
+   "severity",
+   "upon_approval",
+   "problem_id",
+   "caused_by",
+   "rfc"
+  ],
+  "adapters": 1,
+  "plugins": 1,
+  "rules_on_plugins": 0
+ },
+ "checks": [
+  {
+   "verdict": "HOLDS",
+   "check": "the ServiceNow Management Pack is installed",
+   "detail": "ServiceNow Management Pack 9.1.1.0.25703502"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "the pack's credential kinds",
+   "detail": "ServiceNow Credentials (sn_username, sn_password); ServiceNow + Proxy Credentials (proxy_username, proxy_password, sn_username, sn_password)"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "the ServiceNow plug-in's credential types",
+   "detail": "basic"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "a notification rule on the plug-in sets",
+   "detail": "caller_id, category, subcategory, business_service, contact_type, state, close_code, close_notes, hold_reason, impact, urgency, priority, assignment_group, assigned_to, severity, upon_approval, problem_id, caused_by, rfc; cmdb_ci is not among them"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "adapter '{{adapter-1}}': every integer setting is set",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "adapter '{{adapter-1}}': sn_ssl_config is one of No SSL, No Verify, Verify",
+   "detail": "Verify"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "adapter '{{adapter-1}}' is stopped: it syncs nothing and opens nothing",
+   "detail": "STOPPED None"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "ServiceNow plug-in instances",
+   "detail": "{{plugin-1}} (on)"
+  }
+ ]
+}

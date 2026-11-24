@@ -135,6 +135,7 @@ Framework estates carry five further clauses:
 | [`handbook/flow-collection/`](handbook/flow-collection/) | [Flow collection](https://privatecloudarchitect.com/handbook/flow-collection) | `flow_paths.py`: the Operations for Networks collector, every source's IPFIX state and the hour's flows by the host each endpoint runs on. Read-only |
 | [`handbook/log-lifecycle/`](handbook/log-lifecycle/) | [Log lifecycle](https://privatecloudarchitect.com/handbook/log-lifecycle) | `lifecycle.py`: what your Log Management store keeps, sends, masks and drops and how far back it reaches, the shard budget, and trials that prove a rule on labelled lines |
 | [`handbook/log-alerts/`](handbook/log-alerts/) | [Log alerts](https://privatecloudarchitect.com/handbook/log-alerts) | Builds VCF Operations log alerts that fire: find the identifier the platform writes, try the query, switch a bundle on for one group, and prove it with labelled lines; ships a storage path catalog |
+| [`handbook/servicenow-management-pack/`](handbook/servicenow-management-pack/) | [Connecting VCF Operations to ServiceNow](https://privatecloudarchitect.com/handbook/servicenow-management-pack) | Checks, read-only, what the ServiceNow Management Pack and VCF Operations' ServiceNow plug-in need on each side: the pack's file offline, its adapter and the plug-in's rules in VCF Operations, and in ServiceNow the discovery source, the reconciliation and identification rules, the account's reads and one CI per object. Python stdlib. |
 
 ### Part V · Optimization and economics
 

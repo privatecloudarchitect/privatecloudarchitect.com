@@ -1,0 +1,74 @@
+{
+ "subcommand": "file",
+ "at": "2026-11-24T014615Z",
+ "facts": {
+  "file": "config.json",
+  "builtInTree": false,
+  "customTrees": true,
+  "classes": [
+   "cmdb_ci_esx_server"
+  ]
+ },
+ "checks": [
+  {
+   "verdict": "HOLDS",
+   "check": "custom trees are enabled and the custom_trees directory holds a tree",
+   "detail": "examples/custom_trees"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "custom class 'ESX host' maps identifiers",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "custom class 'ESX host' maps the name column",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "syncMode is one of the page's three",
+   "detail": "POPULATE_ONLY"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "objectIdentifierSource",
+   "detail": "UUID: it applies to VMs only. MOID, the page's choice for a first population, is reassigned when a VM moves to another vCenter; UUID is optional on a VM. On a populated CMDB keep the format its object_id column already holds"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "every name filter key names a class the trees sync",
+   "detail": "1 key(s)"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "name filter 'ESX host' EXCLUDES the names it matches",
+   "detail": "^(?!esx01\\.example\\.com$).*$"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "every alertingConfig has its own callerId",
+   "detail": "VCF Operations - host tier"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "alertingConfig 'VCF Operations - host tier' narrows its scope to object types",
+   "detail": "its scope takes object types only, so its own creates are not bounded by a rule's object scope"
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "alertingConfig 'VCF Operations - host tier' names its alert definitions",
+   "detail": ""
+  },
+  {
+   "verdict": "HOLDS",
+   "check": "alertingConfig 'VCF Operations - host tier' retrieves primitive columns only",
+   "detail": "by a list of common reference columns; snow --elements reads each column's type"
+  },
+  {
+   "verdict": "NOTE",
+   "check": "this file turns on the pack's alert sync (alertingConfigs)",
+   "detail": "it adds to incidents a notification rule on the ServiceNow plug-in opens with the caller callerId names; on 9.1.1.0 it also opened records of its own: count the records one alert makes after three cycles"
+  }
+ ]
+}

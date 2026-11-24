@@ -3,7 +3,7 @@
  "written_from": {
   "competency_map": {
    "path": "deploy/privatecloudarchitect/site/competency-map.yaml",
-   "sha256": "76ba2a47e13c0925abf0393408f395ff1edc56f53ac6fe9f0f84b35eaa15db4b"
+   "sha256": "9a0ad338b84b1de2ce60704a7b023f14dcbdd4ccbe669ace983c5a6cf22751fb"
   },
   "mastery": {
    "path": "deploy/privatecloudarchitect/site/mastery.yaml",
@@ -11,7 +11,7 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "620afc142df367d9f7ea20b1213f532cf278beb106242bca54ec8bfb3632d72f"
+   "sha256": "b8d2745ce74b95d4065e569ade5008e92baf40a4ca07b271a4458274973f3ebc"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
@@ -685,6 +685,23 @@
    "related": [
     "incident-response",
     "ops-estate"
+   ]
+  },
+  {
+   "id": "servicenow-management-pack",
+   "name": "Connect VCF Operations to ServiceNow: each object one CI that later syncs update, each alert one incident the plug-in's rule opens and the pack's alert sync gives its CI, both sides checked read-only before any change",
+   "part": "IV",
+   "job": "alerting",
+   "teaches": "/handbook/servicenow-management-pack",
+   "tier": "live,doc,repo",
+   "harness": "handbook/servicenow-management-pack",
+   "requires": [
+    "incident-response",
+    "alerting-doctrine"
+   ],
+   "related": [
+    "service-accounts",
+    "log-alerts"
    ]
   },
   {
@@ -1394,6 +1411,10 @@
   {
    "path": "/handbook/service-accounts",
    "title": "Service accounts: the identity your automation holds · Private Cloud Architect"
+  },
+  {
+   "path": "/handbook/servicenow-management-pack",
+   "title": "Connecting VCF Operations to ServiceNow: one CI per object, one incident per alert · Private Cloud Architect"
   },
   {
    "path": "/handbook/temporary-elevation",

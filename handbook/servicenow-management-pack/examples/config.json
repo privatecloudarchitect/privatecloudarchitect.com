@@ -1,0 +1,33 @@
+{
+  "cmdbSync": {
+    "syncMode": "POPULATE_ONLY",
+    "objectIdentifierSource": "UUID",
+    "builtInTreeEnabled": false,
+    "customTreesEnabled": true,
+    "nameFilter": {"ESX host": "^(?!esx01\\.example\\.com$).*$"}
+  },
+  "resourceTypes": [
+    {
+      "vROps": {"type": {"resourceKind": "HostSystem", "adapterKind": "VMWARE"}},
+      "serviceNow": {"type": {"cmdbCiClass": "cmdb_ci_esx_server"}},
+      "identifierMapping": [
+        {"serviceNowId": {"column": "object_id"}, "vropsId": {"type": "IDENTIFIER", "field": "VMEntityObjectID"}},
+        {"serviceNowId": {"column": "vcenter_uuid"}, "vropsId": {"type": "IDENTIFIER", "field": "VMEntityVCID"}}
+      ]
+    }
+  ],
+  "alertingConfigs": [
+    {
+      "callerId": "VCF Operations - host tier",
+      "serviceNowDestination": "INCIDENT",
+      "retrieveUpdates": true,
+      "vropsSuspendMinutes": 10,
+      "serviceNowElementsToRetrieve": ["state", "priority"],
+      "filters": {
+        "scope": {"type": "objectTypes", "objectTypes": ["HostSystem"]},
+        "trigger": {"type": "alertDefinitions", "alertDefinitions": ["AlertDefinition-<your definition id>"]},
+        "criticality": [], "alertStates": [], "alertStatus": [], "collectorOrCollectorGroup": ""
+      }
+    }
+  ]
+}
