@@ -198,9 +198,19 @@ virtualmachine.vmoperator.vmware.com/hello-vm created (server dry run)
 virtualmachineservice.vmoperator.vmware.com/hello-vm-web created (server dry run)
 ```
 
-`--dry-run=server` sends the manifest to the real API and asks it to validate and discard. It catches
-a misspelled field, an image that is not in this namespace, and a quota that will not fit, without
-creating anything. Make it a habit now: it is the same habit that protects a production apply later.
+`--dry-run=server` sends the manifest to the real API and asks it to validate and discard. The
+validating is proven here: a misspelled field is refused outright. The discarding is a property of each
+kind on each endpoint, not of the flag. On VCF Automation's tenant API several kinds accept it and apply
+the change anyway, projects, role bindings, namespace classes, class configs and VPCs among them, and
+this handbook has not yet proven the discard for these three kinds. So read back straight after it:
+
+```bash
+kubectl get secret/hello-vm-bootstrap virtualmachine/hello-vm virtualmachineservice/hello-vm-web
+```
+
+All three should answer `NotFound`. If any of them is listed, the rehearsal built it, and step 4 is already
+done: read what it made rather than applying again. Make the read-back the habit, with or without the flag:
+it is the same habit that protects a production apply later.
 
 ## Step 4: build it
 

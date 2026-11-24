@@ -9,9 +9,10 @@ prefix, reads back what the write did, removes it, and checks that nothing is le
                            each as Organization User; read back, its members counted, deleted, and looked for again.
                            GROUP must exist in the directory and must not be imported yet; pick one with no members.
   --probe-project-scope    as a project administrator: the access review for creating, updating and deleting a
-                           project, then a project create under a throwaway name, and an update of the spec and a delete of a
-                           project it does not belong to, both sent as dry runs so nothing can change there (the
-                           platform refuses a change outside the spec before it asks who you are).
+                           project, then a project create under a throwaway name, and an update and a delete of a project
+                           it does not belong to. That project is a second throwaway the organization administrator makes
+                           for the run, never one the run did not make: the CCI gateway accepts dryRun=All on projects
+                           and applies the change anyway (G-164), so a dry run would protect nothing.
   --probe-namespace        a throwaway Supervisor namespace in PROJECT, its spec copied from TEMPLATE_NAMESPACE: the
                            advanced member's create (the role reads namespaces but does not create them), the project
                            administrator's create, then on the namespace's own endpoint two members each create a
@@ -25,7 +26,7 @@ survived. Stdlib only; no secret is printed or written; every password and token
 Env:  VCFA_HOST, VCFA_ORG; VCFA_USER and VCFA_PASSWORD_FILE (an organization administrator, for the session login,
       the reads and the cleanup); VCFA_REFRESH_TOKEN_FILE (the automation grant, for --probe-import; without it that leg is recorded as not asked);
       VCFA_TEST_USERS (member,advanced,admin: three directory users bound edit, edit_adv and admin in PROJECT) and
-      VCFA_TEST_PASSWORD_FILE; PROJECT, FOREIGN_PROJECT (one the admin is not bound in), TEMPLATE_NAMESPACE;
+      VCFA_TEST_PASSWORD_FILE; PROJECT, TEMPLATE_NAMESPACE;
       TLS_VERIFY=false on a self-signed lab CA; OUT (reprobe.json)
 Exit: 0 recorded · 1 the record would carry an estate value, so it was not written · 2 a precondition refused the
       run, nothing written · 3 a call failed · 5 usage: no probe, an unknown option, an unset variable, or a credential
@@ -244,43 +245,63 @@ def bound_roles(http, bearer, project):
 
 
 def probe_project_scope(http, env, scrub):
-    org, admin, t = env["org"], env["admin"], env["test"]
+    """G-126 as the project administrator. Every write goes to a project this run makes: its own create, and the update
+    and the delete it should not be allowed, sent to a second throwaway the organization administrator makes for the run
+    and the test administrator is not bound in. Neither is sent as a dry run: the CCI gateway accepts dryRun=All on
+    projects and applies the change anyway (G-164), so the flag would protect nothing. The second throwaway is read
+    back, then removed and waited out whatever happened, an exception included."""
+    org, admin, t, project = env["org"], env["admin"], env["test"], env["project"]
     otok, _ = http.session(admin["user"], org, admin["password"])
-    project, foreign = env["project"], env["foreign"]
     if bound_roles(http, otok, project).get(t["admin"]) != "admin":
         raise Refused("the test administrator is not bound admin in PROJECT")
-    if t["admin"] in bound_roles(http, otok, foreign):
-        raise Refused("the test administrator is bound in FOREIGN_PROJECT; pick a project it does not belong to")
-    st, before, _ = http.call("GET", f"{CCI}/apis/{PROJ}/projects/{foreign}", bearer=otok)
-    if st != 200:
-        raise RuntimeError(f"reading the foreign project answered HTTP {st}")
-    tok, _ = http.session(t["admin"], org, t["password"])
-    out = {"access_review": {"create any": ssar(http, tok, "create"),
-                             "update the foreign project": ssar(http, tok, "update", foreign),
-                             "delete the foreign project": ssar(http, tok, "delete", foreign)}}
-    print(f"  access reviews as the project administrator: {out['access_review']}")
-    name = f"{PREFIX}-{int(time.time())}"
-    scrub.add(name, "throwaway-project")
-    st, b, _ = http.call("POST", f"{CCI}/apis/{PROJ}/projects", bearer=tok,
-                         body={"apiVersion": PROJ, "kind": "Project", "metadata": {"name": name},
-                               "spec": {"description": f"{PREFIX}: created and removed by one run"}})
-    out["create"] = {"status": st, "message": scrub(message(b)) if st >= 400 else ""}
-    if st in (200, 201):
-        st_d, _, _ = http.call("DELETE", f"{CCI}/apis/{PROJ}/projects/{name}", bearer=otok)
-        out["create"]["deleted"] = st_d
-        out["create"]["gone_after_s"] = wait_gone(http, f"/apis/{PROJ}/projects", otok, name)
-    print(f"  project create:                      HTTP {st}")
-    st, b, _ = http.call("PATCH", f"{CCI}/apis/{PROJ}/projects/{foreign}?dryRun=All", bearer=tok,
-                         body={"spec": {"description": f"{PREFIX}: a dry run"}}, ctype="application/merge-patch+json")
-    out["update_foreign_dry_run"] = {"status": st, "message": scrub(message(b)) if st >= 400 else ""}
-    print(f"  update of the foreign project, dry:  HTTP {st}")
-    st, b, _ = http.call("DELETE", f"{CCI}/apis/{PROJ}/projects/{foreign}?dryRun=All", bearer=tok)
-    out["delete_foreign_dry_run"] = {"status": st, "message": scrub(message(b)) if st >= 400 else ""}
-    print(f"  delete of the foreign project, dry:  HTTP {st}")
-    st, after, _ = http.call("GET", f"{CCI}/apis/{PROJ}/projects/{foreign}", bearer=otok)
+    stamp = int(time.time())
+    other = f"{PREFIX}-{stamp}-other"
+    scrub.add(other, "throwaway-other-project")
+    st, _, _ = http.call("POST", f"{CCI}/apis/{PROJ}/projects", bearer=otok,
+                         body={"apiVersion": PROJ, "kind": "Project", "metadata": {"name": other},
+                               "spec": {"description": f"{PREFIX}: a project the administrator is not in, made and removed by one run"}})
+    if st not in (200, 201):
+        raise RuntimeError(f"making the throwaway project to test against answered HTTP {st}")
     rv = lambda o: (o.get("metadata") or {}).get("resourceVersion") if isinstance(o, dict) else None
-    out["foreign_unchanged"] = st == 200 and rv(after) == rv(before)
-    print(f"  the foreign project unchanged afterwards: {out['foreign_unchanged']}")
+    out = {}
+    try:
+        if t["admin"] in bound_roles(http, otok, other):
+            raise Refused("the test administrator is bound in the throwaway project the run made")
+        st, before, _ = http.call("GET", f"{CCI}/apis/{PROJ}/projects/{other}", bearer=otok)
+        if st != 200:
+            raise RuntimeError(f"reading the throwaway project answered HTTP {st}")
+        tok, _ = http.session(t["admin"], org, t["password"])
+        out["access_review"] = {"create any": ssar(http, tok, "create"),
+                                "update a project it is not in": ssar(http, tok, "update", other),
+                                "delete a project it is not in": ssar(http, tok, "delete", other)}
+        print(f"  access reviews as the project administrator: {out['access_review']}")
+        name = f"{PREFIX}-{stamp}"
+        scrub.add(name, "throwaway-project")
+        st, b, _ = http.call("POST", f"{CCI}/apis/{PROJ}/projects", bearer=tok,
+                             body={"apiVersion": PROJ, "kind": "Project", "metadata": {"name": name},
+                                   "spec": {"description": f"{PREFIX}: created and removed by one run"}})
+        out["create"] = {"status": st, "message": scrub(message(b)) if st >= 400 else ""}
+        if st in (200, 201):
+            st_d, _, _ = http.call("DELETE", f"{CCI}/apis/{PROJ}/projects/{name}", bearer=otok)
+            out["create"]["deleted"] = st_d
+            out["create"]["gone_after_s"] = wait_gone(http, f"/apis/{PROJ}/projects", otok, name)
+        print(f"  project create:                      HTTP {out['create']['status']}")
+        st, b, _ = http.call("PATCH", f"{CCI}/apis/{PROJ}/projects/{other}", bearer=tok,
+                             body={"spec": {"description": f"{PREFIX}: changed by the project administrator"}},
+                             ctype="application/merge-patch+json")
+        out["update_other"] = {"status": st, "message": scrub(message(b)) if st >= 400 else ""}
+        print(f"  update of a project it is not in:    HTTP {st}")
+        st, b, _ = http.call("DELETE", f"{CCI}/apis/{PROJ}/projects/{other}", bearer=tok)
+        out["delete_other"] = {"status": st, "message": scrub(message(b)) if st >= 400 else ""}
+        print(f"  delete of a project it is not in:    HTTP {st}")
+        st, after, _ = http.call("GET", f"{CCI}/apis/{PROJ}/projects/{other}", bearer=otok)
+        out["other_unchanged"] = st == 200 and rv(after) == rv(before)
+        print(f"  that project unchanged afterwards:   {out['other_unchanged']}")
+    finally:
+        http.call("DELETE", f"{CCI}/apis/{PROJ}/projects/{other}", bearer=otok)
+        out["other_gone_after_s"] = wait_gone(http, f"/apis/{PROJ}/projects", otok, other)
+        gone = out["other_gone_after_s"]
+        print(f"  that project removed:                {f'after {gone} s' if gone is not None else 'NOT confirmed gone'}")
     return out
 
 
@@ -428,8 +449,7 @@ def main():
     try:
         host, org = os.environ["VCFA_HOST"], os.environ["VCFA_ORG"]
         users = [u.strip() for u in os.environ.get("VCFA_TEST_USERS", "").split(",") if u.strip()]
-        env = {"org": org, "project": os.environ.get("PROJECT"), "foreign": os.environ.get("FOREIGN_PROJECT"),
-               "template": os.environ.get("TEMPLATE_NAMESPACE"),
+        env = {"org": org, "project": os.environ.get("PROJECT"), "template": os.environ.get("TEMPLATE_NAMESPACE"),
                "admin": {"user": os.environ["VCFA_USER"], "password": read_secret("VCFA_PASSWORD_FILE")}}
         if group and os.environ.get("VCFA_REFRESH_TOKEN_FILE"):
             env["refresh"] = read_secret("VCFA_REFRESH_TOKEN_FILE")
@@ -437,8 +457,6 @@ def main():
             if len(users) != 3 or not env["project"]:
                 raise Refused("VCFA_TEST_USERS (member,advanced,admin) and PROJECT are required")
             env["test"] = dict(zip(("member", "advanced", "admin"), users), password=read_secret("VCFA_TEST_PASSWORD_FILE"))
-        if "--probe-project-scope" in argv and not env["foreign"]:
-            raise Refused("FOREIGN_PROJECT is required for --probe-project-scope")
         if "--probe-namespace" in argv and not env["template"]:
             raise Refused("TEMPLATE_NAMESPACE is required for --probe-namespace")
     except KeyError as e:
@@ -449,7 +467,7 @@ def main():
         sys.exit(2)
 
     http, scrub = Http(host), Scrub()
-    for real, label in ((host, "host"), (org, "org"), (env["project"], "project"), (env["foreign"], "foreign-project"),
+    for real, label in ((host, "host"), (org, "org"), (env["project"], "project"),
                         (env["template"], "template-namespace"), (env["admin"]["user"], "org-admin")):
         scrub.add(real, label)
     for role, user in (env.get("test") or {}).items():

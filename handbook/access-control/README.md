@@ -36,7 +36,7 @@ The re-probes write, so each runs only when you name it, and each checks its pre
 export VCFA_USER=<org-admin> VCFA_PASSWORD_FILE=/path/to/password             # mode 0600: session login, reads, cleanup
 export VCFA_TEST_USERS=<member>,<advanced>,<admin>                            # bound edit, edit_adv, admin in PROJECT
 export VCFA_TEST_PASSWORD_FILE=/path/to/test-password                         # mode 0600
-export PROJECT=<project> FOREIGN_PROJECT=<one-the-admin-is-not-in> TEMPLATE_NAMESPACE=<a-namespace-in-PROJECT>
+export PROJECT=<project> TEMPLATE_NAMESPACE=<a-namespace-in-PROJECT>
 export OUT=reprobe.json
 
 python3 reprobe.py --probe-import "<a directory group with no members>"       # VCFA_REFRESH_TOKEN_FILE adds the grant leg

@@ -52,7 +52,14 @@ Three runs on 2026-10-21 against the same organization on VCF Automation 9.1.1.0
 throwaway objects: `--probe-import <GROUP>` with a directory group that held no members, `--probe-project-scope`, and
 `--probe-namespace`. The test users are three directory users bound edit (through a group), edit_adv and admin in one
 project; the foreign project is one the administrator is not bound in. Every password came from a file of mode 0600.
-The three runs are shown in that order. One line is marked: the run printed the readiness wait with an HTTP label,
+The three runs are shown in that order.
+
+The project-scope run is the script's earlier version. It sent the update and the delete of the foreign project as dry
+runs, a project the run had not made, and only the platform's refusal kept that project as it was: the CCI gateway
+accepts dryRun=All on projects and applies the change anyway (G-164). The script now makes a second throwaway project
+for those two calls, sends them as plain calls, and removes it afterwards, so a run of it prints "update of a project
+it is not in", "delete of a project it is not in", "that project unchanged afterwards" and "that project removed" in
+place of the three foreign-project lines below. One line is marked: the run printed the readiness wait with an HTTP label,
 which the script has since corrected to seconds.
 
 ```text
