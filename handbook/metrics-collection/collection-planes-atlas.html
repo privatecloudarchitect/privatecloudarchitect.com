@@ -926,7 +926,25 @@ figure .strip svg{width:100%}
   var NS="http://www.w3.org/2000/svg";
   function pt(r,box,side){var x=r.left-box.left,y=r.top-box.top,w=r.width,h=r.height;
     if(side==="right")return[x+w,y+h/2];if(side==="left")return[x,y+h/2];if(side==="top")return[x+w/2,y];return[x+w/2,y+h];}
+  // A group's label clears the connectors that cross its row (2026-11-23, f8's finding on isolation-design 06): after
+  // the edges are drawn, the label starts at the first gap along its row wide enough for its text and clear of every
+  // crossing by CLR px, and stays home when nothing crosses it or no gap fits (render_validate's label_cross reports
+  // what stays). Every draw starts from home, so a resize or the stacked layout keeps no offset from another width.
+  var CLR=6;
+  function clearLabels(d,svg,box){
+    var paths=svg?Array.prototype.slice.call(svg.querySelectorAll(":scope > path")):[];
+    d.querySelectorAll(":scope > .ngroup > .n-tag").forEach(function(t){t.style.marginLeft="";
+      if(!paths.length||!t.textContent||!t.getClientRects().length)return;
+      var rg=document.createRange();rg.selectNodeContents(t);var tr=rg.getBoundingClientRect(),gr=t.getBoundingClientRect();if(!tr.width)return;
+      var y0=tr.top-box.top-CLR,y1=tr.bottom-box.top+CLR,home=tr.left-box.left,room=gr.right-box.left,w=tr.width,xs=[];
+      paths.forEach(function(p){var L=p.getTotalLength();for(var s=0;s<=L;s+=2){var q=p.getPointAtLength(s);
+        if(q.y>=y0&&q.y<=y1&&q.x>=home-CLR&&q.x<=room+CLR)xs.push(q.x);}});
+      if(!xs.length)return;xs.sort(function(a,b){return a-b;});var at=home;
+      for(var i=0;i<xs.length;i++){if(xs[i]+CLR<=at)continue;if(xs[i]-CLR>=at+w)break;at=xs[i]+CLR;}
+      if(at>home&&at+w<=room)t.style.marginLeft=(at-home).toFixed(1)+"px";});
+  }
   function draw(d){
+    d.querySelectorAll(":scope > .ngroup > .n-tag").forEach(function(t){t.style.marginLeft="";});
     var svg=d.querySelector("svg.edges"),specEl=d.querySelector("script.edge-spec");if(!svg||!specEl)return;
     var spec=[];try{spec=JSON.parse(specEl.textContent);}catch(e){return;}
     var box=d.getBoundingClientRect();while(svg.firstChild)svg.removeChild(svg.firstChild);
@@ -945,6 +963,7 @@ figure .strip svg{width:100%}
       if(e.arrow){var id="m"+e.cls.replace(/[^a-z0-9]/g,"");if(!mk[id]){var m=document.createElementNS(NS,"marker");m.setAttribute("id",id+"-"+d.id);m.setAttribute("viewBox","0 0 10 10");m.setAttribute("refX","9");m.setAttribute("refY","5");m.setAttribute("markerWidth","7");m.setAttribute("markerHeight","7");m.setAttribute("orient","auto-start-reverse");var tp=document.createElementNS(NS,"path");tp.setAttribute("d","M0,0 L10,5 L0,10 z");tp.setAttribute("class","fill-"+e.cls.replace("ln-",""));m.appendChild(tp);defs.appendChild(m);mk[id]=1;}
         path.setAttribute("marker-end","url(#"+id+"-"+d.id+")");}
       svg.appendChild(path);});
+    clearLabels(d,svg,box);
   }
   function drawAll(){document.querySelectorAll(".diagram").forEach(draw);}
   function clampLabels(){document.querySelectorAll("svg text[data-max]").forEach(function(t){try{var max=parseFloat(t.getAttribute("data-max"));var len=t.getComputedTextLength();if(len>max+0.5){t.setAttribute("textLength",max);t.setAttribute("lengthAdjust","spacingAndGlyphs");}}catch(e){}});}
