@@ -7,10 +7,12 @@ pre-push, and no page computes "overdue" from the day it builds.
   * **The day judged** is an argument, the run's UTC date by default, so a test pins it.
   * **Files only.** The check reads the register, the policy, the reference portfolio, the files the gates reference
     and its own run records. It reads no estate, holds no credential and makes no network call (3c's condition).
-  * **Where a run is recorded.** The spool and the commit are arguments. By default the spool is
-    `docs/design/enterprise-strategy-layer/runs/spool/` in the main checkout (`git rev-parse --git-common-dir`), so a run
-    from a worktree lands where a run from the checkout does, and the commit is `HEAD`. The scheduled run passes both,
-    because it runs in an export of `main` that has no `.git`.
+  * **Where a run is recorded.** The spool and the commit are arguments. By default a run is written to
+    `docs/design/enterprise-strategy-layer/runs/spool/` in the checkout whose code runs: the main checkout's when this
+    code is the main checkout's, this worktree's own when it runs in a worktree (`default_spool`; G-943). Runs and
+    watch reads are read from the main checkout's spool and this checkout's own (`spools`), so a worktree's check
+    still judges the agents' records. The commit is `HEAD`. The scheduled run passes both paths, because it runs in
+    an export of `main` that has no `.git`.
   * **Its own freshness first.** It judges the newest earlier record before writing this run's.
   * **The watch reads.** A machine-readable watch source is read by the watch reader (`instrument/watch.py`, on its
     own scheduled agent, never by the check), which writes one dated record per read to a second spool beside the
@@ -50,6 +52,7 @@ if str(LAYER) not in sys.path:
 
 from generator import core, gates, models  # noqa: E402
 from generator.gates import Finding, Result, Sources, _f  # noqa: E402
+from generator.migrate import MigrationError, upgrade  # noqa: E402
 from generator.models import SCHEMA_VERSIONS, parse_day, parse_stamp  # noqa: E402
 from generator.policy import Loaded, add  # noqa: E402
 
@@ -126,14 +129,50 @@ def main_checkout(cwd: Path = ROOT) -> Path | None:
     return Path(r.stdout.strip()).parent if r.returncode == 0 else None
 
 
-def default_spool() -> Path | None:
+def _write_root() -> Path | None:
+    """The checkout a record is written into by default: the main checkout when this code is the main checkout's,
+    this worktree's own folder when this code runs in a worktree, None outside a git checkout (an export, which
+    passes its spools). The rule (G-943): a worktree's code may carry a record schema newer than the models main has
+    committed, and a record in the shared spool that main's check cannot type leaves every run from main and from
+    every other worktree, the scheduled agents' included, with the date gate unjudged until that code lands. So a
+    worktree writes into its own spool, never the main checkout's; `--spool` and `--repo` still say otherwise on
+    purpose (the scheduled wrapper runs main's own code and passes main's spools)."""
     top = main_checkout()
-    return top / SPOOL if top else None
+    if top is None:
+        return None
+    return top if top.resolve() == ROOT.resolve() else ROOT
+
+
+def default_spool() -> Path | None:
+    root = _write_root()
+    return root / SPOOL if root else None
 
 
 def default_watch_spool() -> Path | None:
+    root = _write_root()
+    return root / WATCH_SPOOL if root else None
+
+
+def spools(rel: str) -> list[Path]:
+    """Where records are read from by default: the spool written by default and, when that is a worktree's own, the
+    main checkout's spool before it (the agents' records), each once. Reading is one-way: a worktree reads the shared
+    spool and writes its own (G-943); the main checkout's code, and a default pointed elsewhere, read the one spool
+    they write; an export has no default and names its spools."""
+    written = default_spool() if rel == SPOOL else default_watch_spool()
+    if written is None:
+        return []
     top = main_checkout()
-    return top / WATCH_SPOOL if top else None
+    own = (ROOT / rel).resolve()
+    if top is not None and written.resolve() == own and top.resolve() != ROOT.resolve():
+        return [top / rel, written]
+    return [written]
+
+
+def _spool_paths(spool) -> list[Path]:
+    """One spool or several, as `records` and `watch_reads` take them."""
+    if spool is None:
+        return []
+    return [spool] if isinstance(spool, Path) else list(spool)
 
 
 def default_commit() -> str | None:
@@ -177,13 +216,14 @@ def _record(text: str, rel: str, line: int) -> dict:
     return r
 
 
-def records(spool: Path | None, log: Path | None = None) -> list[dict]:
-    """Every run on record, the spool's and the tracked log's, oldest first; a record that cannot be read is a
-    SourceError at its file and line."""
+def records(spool, log: Path | None = None) -> list[dict]:
+    """Every run on record, the spool's (one path, or several: the main checkout's and a worktree's own) and the
+    tracked log's, oldest first; a record that cannot be read is a SourceError at its file and line."""
     out = []
-    if spool and spool.is_dir():
-        for p in sorted(spool.glob("*.json")):
-            out.append(_record(gates.read_text(p, _rel(p)), _rel(p), 1))
+    for folder in _spool_paths(spool):
+        if folder.is_dir():
+            for p in sorted(folder.glob("*.json")):
+                out.append(_record(gates.read_text(p, _rel(p)), _rel(p), 1))
     if log and log.exists():
         rel = _rel(log)
         for n, x in enumerate(gates.read_text(log, rel).splitlines(), 1):
@@ -221,7 +261,8 @@ class Read:
 
 def _watch_record(text: str, rel: str, line: int) -> Read:
     """One watch read record through its model, or a SourceError at its file and line: a record that does not parse,
-    that the model refuses, or that is dated after now."""
+    that the model refuses, or that is dated after now. A record at an earlier schema is read at the current one through
+    its migration (schema 1 records read as GET with no links), so the spool and the tracked log hold both forms."""
     try:
         data = json.loads(text)
     except ValueError as e:
@@ -229,7 +270,12 @@ def _watch_record(text: str, rel: str, line: int) -> Read:
             f"{rel}: {type(e).__name__}: {e}", at=(rel, line + getattr(e, "lineno", 1) - 1)
         ) from e
     try:
+        data, _notes = upgrade("watch_read", data)
         typed = models.WatchRead.model_validate(data)
+    except MigrationError as e:
+        raise gates.SourceError(
+            f"{rel}: a watch read record its model refuses ({e})", at=(rel, line)
+        ) from e
     except ValidationError as e:
         first = e.errors()[0]
         where = ".".join(str(x) for x in first["loc"]) or "the record"
@@ -244,13 +290,14 @@ def _watch_record(text: str, rel: str, line: int) -> Read:
     return Read(typed.model_dump(by_alias=True), (rel, line))
 
 
-def watch_reads(spool: Path | None, log: Path | None = None) -> list[Read]:
-    """Every watch read on record, the watch spool's and the tracked watch log's, oldest first, each typed through its
-    model; a record that cannot be read is a SourceError at its file and line."""
+def watch_reads(spool, log: Path | None = None) -> list[Read]:
+    """Every watch read on record, the watch spool's (one path, or several) and the tracked watch log's, oldest first,
+    each typed through its model; a record that cannot be read is a SourceError at its file and line."""
     out: list[Read] = []
-    if spool and spool.is_dir():
-        for p in sorted(spool.glob("*.json")):
-            out.append(_watch_record(gates.read_text(p, _rel(p)), _rel(p), 1))
+    for folder in _spool_paths(spool):
+        if folder.is_dir():
+            for p in sorted(folder.glob("*.json")):
+                out.append(_watch_record(gates.read_text(p, _rel(p)), _rel(p), 1))
     if log and log.exists():
         rel = _rel(log)
         for n, x in enumerate(gates.read_text(log, rel).splitlines(), 1):
@@ -685,11 +732,16 @@ def run(
     log: Path | None = None,
     watch_spool: Path | None = None,
     watch_log: Path | None = None,
+    read_spools=None,
+    read_watch_spools=None,
 ) -> tuple[list[Result], list[Listed], dict]:
+    """One run: every gate, then the date gate over the runs and watch reads on record, the run written to `spool`.
+    `read_spools` and `read_watch_spools` name where records are read from when that differs from where this run is
+    written (a worktree reads the main checkout's spool too); absent, the write spools are read."""
     results = gates.run(s)
     earlier = reads = None
     try:
-        earlier = records(spool, log or s.root / LOG)
+        earlier = records(read_spools if read_spools is not None else spool, log or s.root / LOG)
     except (
         gates.SourceError
     ) as e:  # a run record that cannot be read leaves the date gate unjudged, said at its line
@@ -698,7 +750,10 @@ def run(
         )
     if earlier is not None:
         try:
-            reads = watch_reads(watch_spool, watch_log or s.root / WATCH_LOG)
+            reads = watch_reads(
+                read_watch_spools if read_watch_spools is not None else watch_spool,
+                watch_log or s.root / WATCH_LOG,
+            )
         except gates.SourceError as e:  # the same for the watch reader's records
             unread = DateResult(
                 "GATE-13",
@@ -737,7 +792,7 @@ def run(
     return results, listed, rec
 
 
-def fold(spool: Path | None, log: Path) -> int:
+def fold(spool, log: Path) -> int:
     """Append to the tracked log each spooled run it does not hold yet, oldest first: how a strategy release puts every
     run on record in git. Returns how many it added; the spool is left as it is."""
     held = {r["run_at"] for r in records(None, log)}
@@ -750,7 +805,7 @@ def fold(spool: Path | None, log: Path) -> int:
     return len(new)
 
 
-def fold_watch(spool: Path | None, log: Path) -> int:
+def fold_watch(spool, log: Path) -> int:
     """Append to the tracked watch log each spooled watch read it does not hold yet, oldest first, each typed on the
     way (a record the model refuses folds nothing and is named at its line). Returns how many it added; the spool is
     left as it is."""
@@ -764,7 +819,7 @@ def fold_watch(spool: Path | None, log: Path) -> int:
     return len(new)
 
 
-def staleness(spool: Path | None, log: Path, day: date, pol: Loaded, portfolio: dict) -> str | None:
+def staleness(spool, log: Path, day: date, pol: Loaded, portfolio: dict) -> str | None:
     """The one warning line `make verify-prepush` shows, or None when the newest run is in time and found nothing due."""
     runs = records(spool, log)
     if not runs:
@@ -832,13 +887,16 @@ def main(argv: list[str]) -> int:
         help="fold the spool's new runs, and the watch spool's new reads, into the tracked logs",
     )
     a = ap.parse_args(argv)
+    # written to one spool (a worktree's own by default, G-943); read from the main checkout's and this checkout's
     spool = a.spool or default_spool()
     watch_spool = a.watch_spool or default_watch_spool()
+    read_from = [a.spool] if a.spool else spools(SPOOL)
+    read_watch_from = [a.watch_spool] if a.watch_spool else spools(WATCH_SPOOL)
     if (
         a.fold
     ):  # a release step on the run records alone: it reads no source and records no run of its own
         try:
-            print(f"strategy check: {fold(spool, gates.ROOT / LOG)} run(s) folded into {LOG}")
+            print(f"strategy check: {fold(read_from, gates.ROOT / LOG)} run(s) folded into {LOG}")
         except (
             gates.SourceError
         ) as e:  # a record it cannot read is named in the one form; nothing is folded
@@ -853,7 +911,7 @@ def main(argv: list[str]) -> int:
             return 1
         try:
             print(
-                f"strategy check: {fold_watch(watch_spool, gates.ROOT / WATCH_LOG)} watch read(s) folded into "
+                f"strategy check: {fold_watch(read_watch_from, gates.ROOT / WATCH_LOG)} watch read(s) folded into "
                 f"{WATCH_LOG}"
             )
         except gates.SourceError as e:
@@ -884,7 +942,7 @@ def main(argv: list[str]) -> int:
     if a.staleness:
         # a warning, never a failure: a record that cannot be read is said, and the pre-push goes on
         try:
-            line = staleness(spool, s.root / LOG, a.day, pol, s.portfolio.data) if pol else None
+            line = staleness(read_from, s.root / LOG, a.day, pol, s.portfolio.data) if pol else None
         except Exception as e:  # a warning, never a failure, whatever a record holds
             line = (
                 f"strategy check: its run records or its dates could not be read ({type(e).__name__}: "
@@ -896,7 +954,7 @@ def main(argv: list[str]) -> int:
         return 0
     if a.if_due and pol is not None:
         try:  # a date it cannot read (a cycle anchor the calendar lacks) is said and recorded, never a traceback
-            is_due = due(pol, s.portfolio.data, a.day, records(spool, s.root / LOG))
+            is_due = due(pol, s.portfolio.data, a.day, records(read_from, s.root / LOG))
         except (
             gates.SourceError
         ):  # a run record it cannot read: the run is due, and judging names the record
@@ -920,6 +978,8 @@ def main(argv: list[str]) -> int:
         a.commit or default_commit(),
         record=not a.no_record,
         watch_spool=watch_spool,
+        read_spools=read_from,
+        read_watch_spools=read_watch_from,
     )
     took = (datetime.now(UTC) - started).total_seconds()
     for r in results:  # each gate's state, then each of its failures in its one form

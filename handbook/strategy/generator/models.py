@@ -43,7 +43,7 @@ SCHEMA_VERSIONS = {
     "pins": 1,
     "catalog_map": 2,
     "practice": 1,  # instrument/practice.py's record (40-BREADTH.md step 4, batch 1)
-    "watch_read": 1,  # instrument/watch.py's record of one read of a watch entry's source (charter section 5.8)
+    "watch_read": 2,  # 2: each fetch's method and a POST body's digest, and the links a source gives its candidates (the design of 2026-11-24, part 4); 1: instrument/watch.py's record of one read of a watch entry's source (charter section 5.8)
     "driver_stresses_draft": 1,  # drafts/driver-stresses.yaml, DEC-19's draft, read by no gate (40-BREADTH.md step 5)
     "front_door": 3,  # 3: each door's order and the layer's gloss; 2: a link's words and the brief's label; 1: the feed the home renderer reads (DEC-06)
 }
@@ -1792,6 +1792,10 @@ class WatchFetch(Strict):
     status: int | None  # None when no response came
     bytes: int | None
     sha256: str | None = Field(default=None, max_length=64)
+    # schema 2: the request's method, and for a POST the digest of the body the reader sent (a constant of the reader,
+    # never a value from the register or a page), so the record names what was asked without holding it
+    method: Literal["GET", "POST"] = "GET"
+    request_sha256: str | None = Field(default=None, max_length=64)
 
 
 class WatchRead(Strict):
@@ -1821,6 +1825,9 @@ class WatchRead(Strict):
     dated: dict[str, Annotated[str, Field(max_length=120)]] = Field(
         default_factory=dict
     )  # each candidate's own date in the source, as written
+    links: dict[str, Annotated[str, Field(max_length=2000)]] = Field(
+        default_factory=dict
+    )  # schema 2: the URL the source gives for a candidate (an advisory's page; a catalog row's note), as written
     previous: str | None = Field(
         max_length=120
     )  # what `new` is against: the previous record's read_at, or the entry's day
@@ -1832,8 +1839,10 @@ class WatchRead(Strict):
     def _consistent(self) -> WatchRead:
         if self.read_at[:10] != self.day:
             raise ValueError(f"a watch read's day {self.day} is not its read_at's ({self.read_at})")
-        if not self.fetched and (self.candidates or self.new):
+        if not self.fetched and (self.candidates or self.new or self.links):
             raise ValueError("a watch read that fetched nothing selects nothing")
+        if set(self.links) - set(self.candidates):
+            raise ValueError("every linked item of a watch read is one of its candidates")
         if self.fetched and self.error:
             raise ValueError("a watch read that fetched carries no error")
         if not self.fetched and not self.error:

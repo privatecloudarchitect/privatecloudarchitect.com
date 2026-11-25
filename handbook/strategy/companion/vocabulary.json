@@ -7,7 +7,7 @@
   },
   "mastery": {
    "path": "deploy/privatecloudarchitect/site/mastery.yaml",
-   "sha256": "c4e59dd1a42448b36dc9be50611f8ea381c55db33ed1019d93ace0137bf047bf"
+   "sha256": "32780fef3d5148f973bc48035af4a64fa633ad28c98c3edac1a2e5b76b9ce107"
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",

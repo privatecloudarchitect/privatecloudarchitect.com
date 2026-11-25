@@ -28,6 +28,10 @@ In a portfolio:
 A typed form schema 3 adds beside a plain one (an untaught entry, an unconverted measure, a name, a lane and message on
 an untaught hand-off, a drift read not covered) needs no migration: the plain form is still read.
 
+The watch reader's record (`watch_read`) moves to schema 2 with the design of 2026-11-24, part 4: each fetch names its
+method and, for a POST, the digest of the body the reader sent, and the record carries the links a source gives its
+candidates. A schema 1 record was read by GET and recorded no link, so its migration writes exactly that.
+
 A node-level migration (`NODE_MIGRATIONS`) carries a recorded approval's node forward to the current schema in memory,
 so a node approved under one schema is compared with today's under another; a stored approval is never rewritten.
 """
@@ -368,6 +372,19 @@ def catalog_map_1_to_2(doc: dict) -> dict:
     """Schema 2 adds an untaught placement's `territory` and `message` (40-BREADTH.md step 3). No file was written at
     schema 1 (the model shipped with step 2a, the file lands in step 3), so there is nothing to carry; the version
     moves so the lock's pin of schema 1 is never edited (GATE-14, clause 14.7)."""
+    doc["schema"] = 2
+    return doc
+
+
+@migration("watch_read", 1)
+def watch_read_1_to_2(doc: dict) -> dict:
+    """Schema 2 of the watch reader's record (the design of 2026-11-24, part 4): each fetch names its method and, for a
+    POST, the digest of the body the reader sent; the record carries the links a source gives its candidates. A schema
+    1 record was read by GET and recorded no link, which is what the migration writes."""
+    for f in doc.get("fetches") or []:
+        f.setdefault("method", "GET")
+        f.setdefault("request_sha256", None)
+    doc.setdefault("links", {})
     doc["schema"] = 2
     return doc
 

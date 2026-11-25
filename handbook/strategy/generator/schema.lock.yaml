@@ -15,6 +15,6 @@ lanes: {1: 68fe86402487ec91}   # lanes.yaml
 pins: {1: f91b45c836a64ffa}   # records/pinned/pins.yaml
 catalog_map: {1: ee770436e3fd043a, 2: f25a6c03c90f33f0}   # 1: the model, no file; 2: an untaught placement's territory and message, the file (step 3)
 practice: {1: 4f78629ade5e766d}   # instrument/practice.py's record of the layer's own practice (step 4, batch 1)
-watch_read: {1: 70520d0f32b85ef8}   # instrument/watch.py's record of one read of a watch entry's source (charter section 5.8, the operator's ruling of 2026-10-31)
+watch_read: {1: 70520d0f32b85ef8, 2: ba033d47003a24f2}   # 2: each fetch's method and a POST body's digest, and the links a source gives its candidates (the design of 2026-11-24, part 4); 1: instrument/watch.py's record of one read of a watch entry's source (charter section 5.8, the operator's ruling of 2026-10-31)
 driver_stresses_draft: {1: fbfc7609e1c43611}   # drafts/driver-stresses.yaml, DEC-19's draft (40-BREADTH.md step 5)
 front_door: {1: 21ffb2f4babbfa4b, 2: 791a5684a4baaf63, 3: f2b015965d6f95f9}   # the feed the home renderer reads (DEC-06; 50-FRONT-DOOR.md section 9); 2: a link's words and the brief's label; 3: each door's order and the layer's gloss

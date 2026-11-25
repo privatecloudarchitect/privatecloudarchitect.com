@@ -46,6 +46,7 @@ E = html.escape
 GENERATED = re.compile(r'(<p class="prov"[^>]*>)Generated \S+ by')
 PROV_OPEN = re.compile(r'<p class="prov"[^>]*>')
 STAMPED = re.compile(r"Generated (\S+) by")
+PROV_FOLD = '<details class="fold esl-prov">'  # the fold the provenance line stands in, the one opened at the foot
 
 
 def stampless(text: str) -> str:
@@ -81,6 +82,7 @@ STYLE = """<style>
   border:1px solid var(--line-2);border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap}
 .esl .state{font-weight:600}
 .esl .prov{color:var(--faint);font-size:14px;border-top:1px solid var(--line);margin-top:28px;padding-top:10px}
+.esl details.esl-prov{margin-top:28px}  /* the provenance fold stands off the content above it, as the line did */
 @media (max-width:640px){
  .esl table,.esl table tbody{display:block;width:100%;min-width:0}  /* the layout's tables keep a min-width */
  .esl table thead{display:none}
@@ -140,6 +142,27 @@ def every(iso: str) -> str:
     return named.get(m, span(iso)) if m else span(iso)
 
 
+DAYS = {"year": 365, "month": 30, "week": 7, "day": 1}  # a duration's rough length, to order cadences only
+
+
+def _days(iso: str) -> int:
+    """A duration's rough length in days, for ordering loops by cadence (a week before a month before a quarter);
+    never shown, so the calendar's variation does not matter."""
+    return sum(n * DAYS[unit] for n, unit in _all_parts(iso))
+
+
+def _loop_effort_head(loops) -> tuple[str, dict[str, str]]:
+    """The effort column's head and each loop's unit as its cell prints it: when every loop's effort unit names one
+    period ("person-hours per month"), the period is said once in the head, "Effort, per month", and each cell keeps
+    the amount's own noun, so a loop run every quarter no longer reads as costed per quarter (the educator review,
+    S8); otherwise the head is "Effort" and each cell carries its whole unit."""
+    split = {lp.id: lp.effort_unit.partition(" per ") for lp in loops}
+    periods = {p for _n, sep, p in split.values() if sep}
+    if len(periods) == 1 and all(sep for _n, sep, _p in split.values()):
+        return f"Effort, per {periods.pop()}", {i: n for i, (n, _s, _p) in split.items()}
+    return "Effort", {lp.id: lp.effort_unit for lp in loops}
+
+
 def words(ident: str) -> str:
     """An id as words, for a reader: restore-recency as restore recency."""
     return str(ident).replace("-", " ")
@@ -160,17 +183,6 @@ def system_named(declaration) -> str:
     if declaration.system_name:
         return E(declaration.system_name)
     return f"<code>{E(declaration.system)}</code>"
-
-
-def _the(text: str) -> str:
-    """ "the X" unless X already opens with an article or a quantifier: the register writes "each policy's enablement
-    list" and "the statistics level" as objects, and a page never doubles the article (step 10's review)."""
-    low = text.lower()
-    return (
-        text
-        if low.startswith(("the ", "each ", "every ", "a ", "an ", "all ", "one ", "any "))
-        else f"the {text}"
-    )
 
 
 def _public(text: str) -> str:
@@ -297,7 +309,7 @@ def amount(value: float, unit: str) -> str:
 # The renderer's format version: raised by hand when a change to the renderer changes what a served page says, and
 # pinned with a fingerprint of the served pages rendered from frozen slices (rendered/format.lock.yaml), so a served
 # page's digest names the renderer that wrote it (40-BREADTH.md step 2, S1).
-FORMAT = 11  # 11: the site's pages as a worked example under the lab-number rule (the reader's frame, the example's readings, standing and states as example output, a self-assessment of the establish steps; G-904); 10: the review's round 2 (the board as a worked example, the costs description in the reader's finance words, a driver defined); 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
+FORMAT = 15  # 15: the educator review's round 3, part 4 (an aspirational target takes "an"; a driver's heading in sentence case; the provenance line folded at the foot as a chapter folds its sources); 14: the educator review's round 3, part 3 (a "Taught at" column on the establish and sustain tables in place of the hand-off table and the whole-capability line, the untaught parts listed under the tables); 13: the educator review's round 3, part 2 (every role's brief opens on what it owns and names the chapters that teach its work; its declarations, drift reads and watch sources as tables; its loops ordered by cadence; a capability page's declarations as a table and its effort column headed by the one period); 12: the educator review's round 3, part 1 (a capability page's dek leads with what it serves and who owns it and names the lead value in its unit; a reading-free verdict line under the dek; the reader's own count under the establish table); 11: the site's pages as a worked example under the lab-number rule (the reader's frame, the example's readings, standing and states as example output, a self-assessment of the establish steps; G-904); 10: the review's round 2 (the board as a worked example, the costs description in the reader's finance words, a driver defined); 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
 NAME = "The Architect's NOC"  # the layer's public name (DEC-01, 00-CHARTER.md section 10), on every page's eyebrow and the index's description, and on the companion's frame; "the strategy layer" stays the descriptive phrase in prose, and the pages' paths are unchanged (D-053)
 
 
@@ -407,11 +419,16 @@ def gap(example: bool) -> str:
     return EXAMPLE_GAP if example else GAP
 
 
+def article(word: str) -> str:
+    """The indefinite article a word takes by its first letter: "an aspirational target", "a committed target"."""
+    return "an" if word[:1].lower() in "aeiou" else "a"
+
+
 def target_tail(target_kind: str, window: str, example: bool) -> str:
     """A target's kind and window after its figure: on the worked example the kind is the method's (a committed or an
     aspirational target), never read as the example estate's own commitment."""
     if example:
-        return f"; a {E(target_kind)} target, over {E(per(window))}"
+        return f"; {article(target_kind)} {E(target_kind)} target, over {E(per(window))}"
     return f", {E(target_kind)}, over {E(per(window))}"
 
 
@@ -508,45 +525,62 @@ def handoffs(cap, comp_map: dict, pages: dict[str, str]) -> list[tuple[str, str,
 COMPANION = "https://github.com/privatecloudarchitect/privatecloudarchitect.com/"
 
 
-def part_handoffs(cap, pages: dict[str, str]) -> tuple[list[list[str]], list[tuple[str, str]]]:
-    """Per establish step and sustain loop: (rows of part, where, what) for what is taught or served, and (category,
-    what) for what is not taught yet. A site page must be published; the one place off the site a hand-off may go is
-    the public companion repository."""
+def part_handoffs(cap, pages: dict[str, str]) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
+    """Per establish step and sustain loop, keyed by the part's id, its "Taught at" cell: each hand-off's page linked
+    by its title, with the hand-off's kind and what the page gives on a line beneath; a part no page teaches or serves
+    reads "not taught yet". Beside the cells, (category, what, part) for each part not taught yet, which the page
+    lists under the tables with its category (the educator review, S4: a part is printed once, the hand-off beside
+    it). A site page must be published; the one place off the site a hand-off may go is the public companion
+    repository."""
     _not_strategy(
         cap.id,
         [p for part in [*cap.establish, *cap.sustain] for h in part.handoff or [] for p in h.pages],
     )
-    rows, untaught, missing = [], [], []
-    for kind_label, parts in (("once", cap.establish), ("each period", cap.sustain)):
-        for part in parts:
-            text = getattr(part, "step", None) or part.loop
-            for h in part.handoff or []:
-                if h.kind == "untaught":
-                    untaught.append(
-                        (h.category, h.what, text)
-                    )  # the model holds every untaught part to its category; the part named with it
-                    continue
-                links = []
-                for page in h.pages:
-                    if page.startswith("/"):
-                        if page not in pages:
-                            missing.append(page)
-                            continue
-                        links.append(f'<a href="{E(page)}">{E(pages[page].split(" · ")[0])}</a>')
-                    elif page.startswith(COMPANION):
-                        links.append(f'<a href="{E(page)}">the companion</a>')
-                    else:
+    cells, untaught, missing = {}, [], []
+    for part in [*cap.establish, *cap.sustain]:
+        text = getattr(part, "step", None) or part.loop
+        said = []
+        for h in part.handoff or []:
+            if h.kind == "untaught":
+                untaught.append(
+                    (h.category, h.what, text)
+                )  # the model holds every untaught part to its category; the part named with it
+                continue
+            links = []
+            for page in h.pages:
+                if page.startswith("/"):
+                    if page not in pages:
                         missing.append(page)
-                rows.append(
-                    [
-                        f"{E(text)} <small>({E(kind_label)})</small>",
-                        f"{E(h.kind)}: " + ", ".join(links),
-                        E(h.what),
-                    ]
-                )
+                        continue
+                    links.append(f'<a href="{E(page)}">{E(pages[page].split(" · ")[0])}</a>')
+                elif page.startswith(COMPANION):
+                    links.append(f'<a href="{E(page)}">the companion</a>')
+                else:
+                    missing.append(page)
+            # the title links on one line, the kind and the gloss on the next (a cell's <small> is its own line)
+            said.append(", ".join(links) + f"<small>{E(h.kind)}: {E(h.what)}</small>")
+        cells[part.id] = "".join(said) or NOT_TAUGHT
     if missing:
         raise ValueError(f"{cap.id} hands a part to what is not published: {', '.join(missing)}")
-    return rows, untaught
+    return cells, untaught
+
+
+def _untaught_list(untaught: list[tuple[str, str, str]]) -> str:
+    """The parts not taught on the site yet, each under its category with what the hand-off says of it; empty when
+    every part is taught or served."""
+    if not untaught:
+        return ""
+    by_category: dict[str, list[tuple[str, str]]] = {}
+    for c, w, part in untaught:
+        by_category.setdefault(c, []).append((part, w))
+    return (
+        "<p>Not taught on the site yet, each a candidate for a chapter:</p><ul>"
+        + "".join(  # each part on its own line: a part's text is sentence-case and never opens mid-sentence
+            f"<li><b>{E(c)}</b>" + "".join(f"<br>{E(part)} ({E(w)})" for part, w in items) + "</li>"
+            for c, items in by_category.items()
+        )
+        + "</ul>"
+    )
 
 
 def _overrides(rep: dict) -> str:
@@ -599,12 +633,86 @@ def _provenance(p: dict, published: bool = False) -> str:
     data = E(
         json.dumps({k: v for k, v in p.items() if k != "generated_at"}, sort_keys=True), quote=True
     )
+    # folded at the foot as a chapter folds its sources (the site's details.fold), the line itself unchanged: the
+    # gates and the stamp readers find it by its element (PROV_OPEN), and the build sets the route behind a
+    # capability's page above the fold (site, PROV_FOLD)
     return (
+        f'{PROV_FOLD}<summary class="fold-swap"><span class="when-closed">Show how this page was generated</span>'
+        '<span class="when-open">Hide how this page was generated</span></summary>'
         f'<p class="prov" data-prov="{data}">Generated {E(p.get("generated_at", ""))} by {E(methods)}, under '
         f"policy version {p['policy_version']}; schemas {E(schemas)}; drift-read contract {E(contracts)}; inputs "
         f"{E(p['input_digest'])}, overrides {E(p['overrides_digest'])}."
         + ("" if published else " Rendered for review, not published.")
-        + "</p>"
+        + "</p></details>"
+    )
+
+
+def _join(items: list[str]) -> str:
+    """Names in a sentence: one alone, two with "and", more with commas and a final "and"."""
+    if len(items) <= 1:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " and " + items[-1]
+
+
+def _costed(figs: list[dict], held: int, example: bool, one: str, many: str) -> str:
+    """What a capability's establish steps or sustain loops cost in the portfolio rendered, summed per unit from the
+    figures the tables below print and as the costs view sums them (core._totals), each total with its kind beside
+    it; partial where the served projection withheld a part; the parts no figure prices counted beside the total; and
+    the gap said where no part is priced."""
+    from generator.core import _totals
+
+    totals = _totals(figs)
+    unpriced = sum(1 for f in figs if f["value"] is None) - held
+    if not totals:
+        return NOT_YET if held else "no figure"
+    said = _totals_words(totals, held, example)
+    if unpriced:
+        said += (
+            f" <small>({count(unpriced)} of {count(len(figs))} {one if len(figs) == 1 else many} unpriced)</small>"
+        )
+    return said
+
+
+def _verdict_line(cap, cap_id, pc, g, roles, whole, served, estate: str, example: bool) -> str:
+    """The verdict a reader takes in before any reading (the educator review, S3): who owns the capability, how many
+    steps establish it and how many loops keep it with what they cost in the portfolio rendered, the pages that teach
+    and serve it, and the bar. Every figure is one the body prints, in the body's words; no reading enters."""
+    from generator.core import _figure
+
+    once = [dict(_figure(pc.investment.get(s.id), s.investment_unit), part=s.id) for s in cap.establish]
+    keep = [dict(_figure(pc.effort.get(lp.id), lp.effort_unit), part=lp.id) for lp in cap.sustain]
+    held_once = sum(
+        1 for s in cap.establish if _held(served, ("capabilities", cap_id, "investment", s.id))
+    )
+    held_keep = sum(1 for lp in cap.sustain if _held(served, ("capabilities", cap_id, "effort", lp.id)))
+    frame = "in the worked example" if example else f"on the {E(estate)} estate"
+    costs = (
+        f"It takes {_plural(len(cap.establish), 'establish step', 'establish steps')} to bring into being and "
+        f"{_plural(len(cap.sustain), 'sustain loop', 'sustain loops')} to keep; {frame}, "
+        f"{_costed(once, held_once, example, 'step', 'steps')} once and "
+        f"{_costed(keep, held_keep, example, 'loop', 'loops')} each period."
+    )
+    links = {"taught by": [], "serves it": [], "background": []}
+    for kind, path, title in whole:
+        links[kind].append(f'<a href="{E(path)}">{E(title.split(" · ")[0])}</a>')
+    said = []
+    if links["taught by"]:
+        said.append(f"{_join(links['taught by'])} {'teaches' if len(links['taught by']) == 1 else 'teach'} it")
+    if links["serves it"]:
+        said.append(f"{_join(links['serves it'])} {'serves' if len(links['serves it']) == 1 else 'serve'} it")
+    if links["background"]:
+        said.append(f"{_join(links['background'])} {'is' if len(links['background']) == 1 else 'are'} background")
+    if said:
+        taught = "; ".join(said)
+        taught = taught[0].upper() + taught[1:] + "."
+    elif cap.practice:
+        taught = "No chapter teaches it: it is the strategy layer's own practice, and these pages serve it."
+    else:
+        taught = "No published chapter teaches it yet."
+    bar = f"The bar is {E(words(g['world_class']))}: {E(LEVEL_WORDS.get(g['world_class_ordinal'], ''))}."
+    return (
+        f'<p class="esl-verdict">The <a href="/strategy/roles/{E(cap.accountable)}">'
+        f"{E(role_text(roles[cap.accountable]))}</a> owns it. {costs} {taught} {bar}</p>"
     )
 
 
@@ -642,9 +750,23 @@ def strategy_page(
         f"<h1>{E(cap.outcome)}</h1>",
     ]
     lead = next((v for v in cap.value if v.stages), cap.value[0])
+    # the dek leads with what the capability serves and who owns it, then names the lead value in its unit; the
+    # value's measure, its formula, is defined once, under "What it is worth" (the educator review, S1)
     parts.append(
-        f'<p class="dek">{E(lead.outcome)}: {E(lead.measure)}. It serves {E(lead.serves)}, and '
-        f"the {E(role_text(roles[cap.accountable]))} owns it.</p>"
+        f'<p class="dek">It serves {E(lead.serves)}, and the {E(role_text(roles[cap.accountable]))} owns it. '
+        f"{E(lead.outcome)}, its lead value, is read in {E(lead.unit)}.</p>"
+    )
+    bar = (
+        f"The bar, &ldquo;world-class&rdquo;, is the level {E(words(g['world_class']))} "
+        f"({E(LEVEL_WORDS.get(g['world_class_ordinal'], ''))}), the {ORDINALS.get(g['world_class_ordinal'], '')} of "
+        f"{count(g['levels'])} levels: {E(', '.join(words(x) for x in g.get('ladder', [])))}."
+    )
+    # the verdict a reader takes in before any reading: the owner, the parts that establish and keep the capability
+    # with their recorded cost, the pages that teach it, and the bar (the educator review, S3)
+    parts.append(
+        _verdict_line(
+            cap, cap_id, pc, g, roles, handoffs(cap, comp_map, pages), served, rep["estate"], example
+        )
     )
     if cap.practice:
         # the layer's own practice is keyed to the outside model's capability it implements, never to a handbook
@@ -760,6 +882,7 @@ def strategy_page(
         )
 
     parts.append("<h2>What it costs once</h2>")
+    taught_at, untaught = part_handoffs(cap, pages)  # the hand-off beside each part (the educator review, S4)
     rows = []
     for s in cap.establish:
         done = st.steps.get(s.id)
@@ -785,16 +908,32 @@ def strategy_page(
             else ("done" if done and done.done else "open")
             + (illus(done.kind, done.source) if done else illus("not_recorded"))
         )
-        rows.append([E(s.step), state, cost])
+        rows.append([E(s.step), state, cost, taught_at[s.id]])
     if example:
         tick = '<input type="checkbox" class="esl-step" aria-label="done on your estate">'
-        parts.append(table(["Establish step", "Done on yours?", "Investment"], [[r[0], tick, r[2]] for r in rows]))
+        parts.append(
+            table(
+                ["Establish step", "Done on yours?", "Investment", "Taught at"],
+                [[r[0], tick, r[2], r[3]] for r in rows],
+            )
+        )
         ex.append(table(["Establish step", "State"], [[r[0], r[1]] for r in rows]))
+        # the reader's own count stands directly under the ticks it counts (the educator review, S3)
+        ladder = g.get("ladder", [])
+        reached = f", <i>{E(words(ladder[1]))}</i>" if len(ladder) > 1 else ""
+        parts.append(
+            f'<p class="esl-self">Your estate: <output>0 of {count(len(cap.establish))}</output> establish steps '
+            f"done, as you tick them in the table above. With every one done, adoption reaches the second level"
+            f"{reached} ({E(LEVEL_WORDS[1])}). {bar}</p>"
+        )
     else:
-        parts.append(table(["Establish step", f"On the {E(rep['estate'])} estate", "Investment"], rows))
+        parts.append(
+            table(["Establish step", f"On the {E(rep['estate'])} estate", "Investment", "Taught at"], rows)
+        )
 
     parts.append("<h2>What it costs each period</h2>")
     rows = []
+    effort_head, shown_unit = _loop_effort_head(cap.sustain)
     for loop in cap.sustain:
         eff = pc.effort.get(loop.id)
         cost = (
@@ -804,6 +943,7 @@ def strategy_page(
                 eff.kind,
                 eff.source,
                 node=("capabilities", cap_id, "effort", loop.id),
+                text=amount(eff.value, shown_unit[loop.id]),
             )
             if eff and eff.value is not None
             else NOT_YET
@@ -817,9 +957,11 @@ def strategy_page(
                 "the " + E(role_text(roles.get(loop.runner, loop.runner))),
                 E(loop.toil),
                 cost,
+                taught_at[loop.id],
             ]
         )
-    parts.append(table(["Sustain loop", "Every", "Run by", "Kind", "Effort"], rows))
+    parts.append(table(["Sustain loop", "Every", "Run by", "Kind", effort_head, "Taught at"], rows))
+    parts.append(_untaught_list(untaught))
     standing = _standing(
             cap,
             cap_id,
@@ -842,7 +984,7 @@ def strategy_page(
         parts.insert(standing_at, standing)
 
     parts.append(
-        "<h2>Who owns it, and how far your estate has got</h2>"
+        "<h2>Who owns it</h2>"
         if example
         else f"<h2>Who owns it, and how far the {E(rep['estate'])} estate has got</h2>"
     )
@@ -867,10 +1009,24 @@ def strategy_page(
     mine = [x for x in drift_lines if x["capability"] == cap_id]
     judged = [x for x in mine if x["result"] in JUDGED]
     in_sync = sum(1 for x in judged if x["result"] == "in_sync")
-    writers = ", ".join(
-        f"{_the(E(d.object))}, kept in {system_named(d)} and written by the "
-        f"{E(role_text(roles.get(d.writer, d.writer)))}"
-        for d in cap.declarations
+    # a declaration a row: what is declared, where it is kept, who writes it (the educator review, S7)
+    writers = (
+        ("<p>Each declaration has one writer.</p>" if cap.declarations else "<p>No declaration of it is recorded.</p>")
+        + (
+            table(
+                ["Declaration", "Kept in", "Written by"],
+                [
+                    [
+                        E(d.object),
+                        system_named(d),
+                        "the " + E(role_text(roles.get(d.writer, d.writer))),
+                    ]
+                    for d in cap.declarations
+                ],
+            )
+            if cap.declarations
+            else ""
+        )
     )
     held_by = (
         f'<p>The <a href="/strategy/roles/{E(cap.accountable)}">{E(role_text(roles[cap.accountable]))}</a>, held by '
@@ -888,34 +1044,22 @@ def strategy_page(
         # the role and its writers are the capability's own; the department and the drift read are the example's
         parts.append(
             f'<p>The <a href="/strategy/roles/{E(cap.accountable)}">{E(role_text(roles[cap.accountable]))}</a> owns '
-            f"it. Each declaration has one writer: {writers}.</p>"
+            f"it.</p>{writers}"
         )
         ex.append(held_by + drift_said[1:])
     else:
-        parts.append(f"{held_by} Each declaration has one writer: {writers}{drift_said}")
+        parts.append(f"{held_by.removesuffix('.')}{drift_said}{writers}")
     evidence = (
         f"graded on the evidence of the recorded steps{illus(g['basis'], g.get('basis_source'))}"
         f"{_unrecorded(cap, st, served)}"
         if g["steps_recorded"]
         else f"none of them recorded{illus('not_recorded')}"
     )
-    bar = (
-        f"The bar, &ldquo;world-class&rdquo;, is the level {E(words(g['world_class']))} "
-        f"({E(LEVEL_WORDS.get(g['world_class_ordinal'], ''))}), the {ORDINALS.get(g['world_class_ordinal'], '')} of "
-        f"{count(g['levels'])} levels: {E(', '.join(words(x) for x in g.get('ladder', [])))}."
-    )
     adoption = (
         f'<p>Adoption: <span class="state">{E(words(g["level"]))}</span> ({E(LEVEL_WORDS.get(g["ordinal"], ""))}), '
         f"{count(g['steps_done'])} of {count(g['steps'])} establish steps done, {evidence}. {bar}</p>"
     )
     if example:
-        ladder = g.get("ladder", [])
-        reached = f", <i>{E(words(ladder[1]))}</i>" if len(ladder) > 1 else ""
-        parts.append(
-            f'<p class="esl-self">Your estate: <output>0 of {count(len(cap.establish))}</output> establish steps '
-            f"done, as you tick them in the table above. With every one done, adoption reaches the second level"
-            f"{reached} ({E(LEVEL_WORDS[1])}). {bar}</p>"
-        )
         ex.append(adoption)
         # the worked example's output, folded under the dek: its standing first, then what its readings, steps,
         # department and drift read were
@@ -932,41 +1076,8 @@ def strategy_page(
     else:
         parts.append(adoption)
 
-    parts.append("<h2>Where each part is taught</h2>")
-    rows, untaught = part_handoffs(cap, pages)
-    if rows:
-        parts.append(table(["Part", "Where", "What it gives"], rows))
-    if untaught:
-        by_category: dict[str, list[tuple[str, str]]] = {}
-        for c, w, part in untaught:
-            by_category.setdefault(c, []).append((part, w))
-        parts.append(
-            "<p>Not taught on the site yet, each a candidate for a chapter:</p><ul>"
-            + "".join(  # each part on its own line: a part's text is sentence-case and never opens mid-sentence
-                f"<li><b>{E(c)}</b>"
-                + "".join(f"<br>{E(part)} ({E(w)})" for part, w in items)
-                + "</li>"
-                for c, items in by_category.items()
-            )
-            + "</ul>"
-        )
-    whole = handoffs(cap, comp_map, pages)
-    if whole:
-        parts.append(
-            "<p>The capability as a whole: "
-            + ", ".join(
-                f'<a href="{E(path)}">{E(title.split(" · ")[0])}</a> ({E(kind)})'
-                for kind, path, title in whole
-            )
-            + ".</p>"
-        )
-    elif cap.practice:
-        parts.append(
-            "<p>The capability as a whole is the strategy layer's own practice: no chapter teaches it, and these pages "
-            "serve it, by the layer's decision to place them on the site.</p>"
-        )
-    else:  # a capability whose own territory is untaught: its untaught entries say where it was sent
-        parts.append("<p>The capability as a whole is taught by no published chapter yet.</p>")
+    # where the capability as a whole is taught, served or has its background is the verdict line's, under the dek;
+    # where each part is taught stands beside the part, in the tables above (the educator review, S3 and S4)
     parts.append(
         f'<p>Across the portfolio: <a href="/strategy/board">what to fund first, '
         + ("a worked example" if example else f'worked on the {E(rep["estate"])} estate')
@@ -1691,6 +1802,27 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
             "<p>No capability, initiative or watch entry of the register names this role yet; the catalog's "
             "breadth adds them.</p>"
         )
+    else:
+        # the chapters that teach the role's work, right after the dek: the same list the landing page's operator
+        # door draws from the feed (role_chapters), so the brief hands off where the door does (the educator
+        # review, S6)
+        taught = _taught_at(brief, caps, comp_map, pages)
+        parts.append("<h2>Chapters that teach this role's work</h2>")
+        if taught:
+            parts.append(
+                "<ul>"
+                + "".join(
+                    f'<li><a href="{E(p)}">{E(pages[p].split(" · ")[0])}</a></li>' for p in taught
+                )
+                + "</ul>"
+            )
+        elif role_work(brief):
+            parts.append(f"<p>Its work is {NOT_TAUGHT}: no published chapter teaches it.</p>")
+        else:
+            parts.append(
+                "<p>No capability of the register is this role's work yet, so no chapter is named; what it "
+                "sponsors and watches is below.</p>"
+            )
     if brief["accountable_for"]:
 
         def links(cid: str, which: str) -> str:
@@ -1736,29 +1868,37 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
             )
         )
     if brief["writes"]:
-        parts.append("<h2>Writes</h2><p>")
+        # a declaration a row, so a declaration's own commas never read as a separator (the educator review, S7)
+        parts.append("<h2>Writes</h2>")
         parts.append(
-            "; ".join(
-                f"{_the(E(w['object']))}, kept in "
-                + system_named(
-                    next(
-                        d
-                        for d in caps[w["capability"]].declarations
-                        if d.system == w["system"] and d.object == w["object"]
-                    )
-                )
-                + f" ({E(named(register, w['capability']))})"
-                for w in brief["writes"]
+            table(
+                ["Declaration", "Kept in", "Capability"],
+                [
+                    [
+                        E(w["object"]),
+                        system_named(
+                            next(
+                                d
+                                for d in caps[w["capability"]].declarations
+                                if d.system == w["system"] and d.object == w["object"]
+                            )
+                        ),
+                        f'<a href="/strategy/{E(w["capability"])}">{E(named(register, w["capability"]))}</a>',
+                    ]
+                    for w in brief["writes"]
+                ],
             )
-            + ".</p>"
         )
     if brief["runs"]:
+        # the loops grouped by cadence, the shortest first, the register's order within one (the educator review,
+        # S8); a cadence the policy cannot put in days keeps the register's order
         parts.append("<h2>Runs</h2>")
         parts.append(
             table(
-                ["Loop", "Every", "Capability"],
+                ["Every", "Loop", "Capability"],
                 [
                     [
+                        E(every(r["cadence"])),
                         E(
                             next(
                                 lp.loop
@@ -1766,10 +1906,9 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
                                 if lp.id == r["loop"]
                             )
                         ),
-                        E(every(r["cadence"])),
-                        E(named(register, r["capability"])),
+                        f'<a href="/strategy/{E(r["capability"])}">{E(named(register, r["capability"]))}</a>',
                     ]
-                    for r in brief["runs"]
+                    for r in sorted(brief["runs"], key=lambda r: _days(r["cadence"]))
                 ],
             )
         )
@@ -1783,19 +1922,21 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
             + "</ul>"
         )
     if brief["drift_reads"]:
+        # a read a row: the companion, what its check compares, the capability (the educator review, S7)
+        parts.append("<h2>Reads its drift with</h2>")
         parts.append(
-            "<h2>Reads its drift with</h2><p>"
-            + "; ".join(
-                (
-                    f"<code>{E(d['companion'])}</code>: {E(d['check'])}"
-                    if d["companion"]
-                    # a read no companion makes yet (schema 3, charter section 5.6): said, never left blank
-                    else f"no companion yet: {E(d.get('not_covered') or '')}"
-                )
-                + f" ({E(named(register, d['capability']))})"
-                for d in brief["drift_reads"]
+            table(
+                ["Companion", "What it compares", "Capability"],
+                [
+                    [
+                        f"<code>{E(d['companion'])}</code>" if d["companion"] else "no companion yet",
+                        # a read no companion makes yet (schema 3, charter section 5.6): said, never left blank
+                        E(d["check"]) if d["companion"] else E(d.get("not_covered") or ""),
+                        f'<a href="/strategy/{E(d["capability"])}">{E(named(register, d["capability"]))}</a>',
+                    ]
+                    for d in brief["drift_reads"]
+                ],
             )
-            + ".</p>"
         )
     if brief["sponsors"]:
         parts.append(
@@ -1804,20 +1945,21 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
             + ".</p>"
         )
     if brief["reads"]:
+        # a source a row, its interval beside it; the reader is this role, as the brief's own heading says, so no
+        # column repeats it (the educator review, S7)
         watch = {w.id: w for w in register.watch_list}
-        rnames = {r.id: r.name for r in register.roles}
-
-        def watch_words(wid: str) -> str:
-            w = watch.get(wid)
-            if w is None:
-                return E(named(register, wid))
-            return (
-                f"{E(named(register, wid))} (every {E(every(w.every))}, read by the "
-                f"{E(role_text(rnames.get(w.reader, w.reader)))})"
-            )
-
+        parts.append("<h2>Watches</h2>")
         parts.append(
-            "<h2>Watches</h2><p>" + "; ".join(watch_words(x) for x in brief["reads"]) + ".</p>"
+            table(
+                ["Source", "Every"],
+                [
+                    [
+                        E(named(register, wid)),
+                        E(every(watch[wid].every)) if wid in watch else "",
+                    ]
+                    for wid in brief["reads"]
+                ],
+            )
         )
     parts.append(_provenance(prov, path in pages))
     parts.append("</div>")
@@ -1927,7 +2069,8 @@ def drivers_page(register, pages: dict[str, str], prov: dict) -> str:
         "capability is stressed once a batch writes it.</p>",
     ]
     for d in register.drivers:
-        parts.append(f"<h2>{E(words(d.id))}</h2>")
+        heading = words(d.id)
+        parts.append(f"<h2>{E(heading[:1].upper() + heading[1:])}</h2>")  # sentence case, as every heading is
         parts.append(f"<p>Triggered by {E(d.trigger_when)}.</p>")
         rows = []
         for row in reopens[d.id]:
@@ -2241,13 +2384,18 @@ def _site_slice(view: str, reg, comp_map: dict, pages: dict) -> dict:
     """The site's vocabulary one served view reads: the titles of the pages it hands off to or links, each competency
     that teaches its capabilities, which job is the foundation, and every strategy page's path (blank titled)."""
     kind, _, ident = view.partition(":")
-    caps = (
-        [c for c in reg.capabilities if c.id == ident]
-        if kind == "capability"
-        else [c for c in reg.capabilities if c.accountable == ident]
-        if kind == "role"
-        else []
-    )
+    if kind == "capability":
+        caps = [c for c in reg.capabilities if c.id == ident]
+    elif kind == "role":
+        # the role's work, as its brief shows it and as its chapters section hands it off: what it is accountable
+        # for, and what it writes, runs or owns the targets of (role_work)
+        from generator import core
+
+        brief = next(b for b in core.role_briefs(reg) if b["role"] == ident)
+        work = role_work(brief)
+        caps = [c for c in reg.capabilities if c.id in work]
+    else:
+        caps = []
     wanted = {p for p in pages if p == "/strategy" or p.startswith("/strategy/")}
     taught = {cid for c in caps for cid in c.taught_by}
     comps = [x for x in comp_map["competencies"] if x["id"] in taught]
@@ -2585,11 +2733,11 @@ def site(reg=None, pf=None, pol=None) -> tuple[dict[str, str], list[dict]]:
         )
         cap = caps.get(path)
         if cap:
-            if content.count('<p class="prov"') != 1:
+            if content.count('<p class="prov"') != 1 or content.count(PROV_FOLD) != 1:
                 raise ValueError(
                     f"{path}: the page has no single provenance line to set the route behind it above"
                 )
-            content = content.replace('<p class="prov"', ROUTE_BEHIND + '\n<p class="prov"', 1)
+            content = content.replace(PROV_FOLD, ROUTE_BEHIND + "\n" + PROV_FOLD, 1)
         file = site_file(path)
         frags[file] = content.rstrip("\n") + "\n"
         # a capability's entry carries the jobs it serves, which pair its page with the routes that own them, and,
@@ -2654,8 +2802,12 @@ def site_pages(pol) -> tuple[dict, dict[str, str]]:
 FRONT_DOOR = (
     SITE / "src" / "strategy-front-door.json"
 )  # beside pages.json; the home renderer reads it, and only it
-# the layer's name glossed where a reader first meets it on the landing page, in DEC-01's descriptive phrase
-LAYER_GLOSS = "the strategy layer: every capability the platform keeps, what it returns and costs, and the role that holds it"
+# the front door names the layer plainly first (the operator, 2026-11-24, on the front review's 2.2), and glosses it where a
+# reader first meets it, the gloss naming DEC-01's name once; NAME stays on the layer's own pages' eyebrows
+FRONT_LABEL = "The strategy layer"
+LAYER_GLOSS = (
+    f"{NAME[:1].lower()}{NAME[1:]}: every capability the platform keeps, what it returns and costs, and the role that holds it"
+)
 NOT_TAUGHT = "not taught yet"  # the empty state the role page prints, carried in the feed so the page types no literal
 BRIEF = "role brief"  # what a role's page calls itself (its eyebrow), carried in the feed as the door's word for it
 ROLE_WORK = (
@@ -2665,6 +2817,27 @@ ROLE_WORK = (
 )  # with `accountable_for`, the relations a role's brief shows as the role's own work
 
 
+def role_work(brief: dict) -> set[str]:
+    """The capabilities a role's brief shows as the role's own work: those it is accountable for, and those whose
+    declarations it writes, whose loops it runs or whose targets it owns (sponsoring and reading are initiatives and
+    watch entries, not capabilities)."""
+    return set(brief["accountable_for"]) | {x["capability"] for k in ROLE_WORK for x in brief[k]}
+
+
+def _taught_at(brief: dict, caps: dict, comp_map: dict, pages: dict[str, str]) -> list[str]:
+    """The published chapters that teach one role's work, classed through the same hand-offs as the role page, so a
+    foundation chapter the brief shows as background is never among them; in the competency map's order, each once.
+    The one list the operator's door and the brief's own section are drawn from."""
+    order = {c["teaches"]: i for i, c in enumerate(comp_map["competencies"]) if c.get("teaches")}
+    paths = {
+        p
+        for cid in role_work(brief)
+        for kind, p, _title in handoffs(caps[cid], comp_map, pages)
+        if kind == "taught by"
+    }
+    return sorted(paths, key=lambda p: (order.get(p, len(order)), p))
+
+
 def role_chapters(reg, comp_map: dict, pages: dict[str, str]) -> dict[str, list[str]]:
     """Per role, the published chapters that teach the capabilities its brief shows as the role's work (accountable
     for, writes, runs, measures; sponsoring and reading are initiatives and watch entries, not capabilities), classed
@@ -2672,21 +2845,8 @@ def role_chapters(reg, comp_map: dict, pages: dict[str, str]) -> dict[str, list[
     a door; in the competency map's order, each once."""
     from generator import core
 
-    order = {c["teaches"]: i for i, c in enumerate(comp_map["competencies"]) if c.get("teaches")}
     caps = {c.id: c for c in reg.capabilities}
-    out = {}
-    for brief in core.role_briefs(reg):
-        work = set(brief["accountable_for"]) | {
-            x["capability"] for k in ROLE_WORK for x in brief[k]
-        }
-        paths = {
-            p
-            for cid in work
-            for kind, p, _title in handoffs(caps[cid], comp_map, pages)
-            if kind == "taught by"
-        }
-        out[brief["role"]] = sorted(paths, key=lambda p: (order.get(p, len(order)), p))
-    return out
+    return {b["role"]: _taught_at(b, caps, comp_map, pages) for b in core.role_briefs(reg)}
 
 
 def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
@@ -2735,7 +2895,7 @@ def front_door(reg, pol, comp_map: dict, pages: dict[str, str]) -> dict:
     content = {
         "readers": readers,
         "labels": {
-            "layer": NAME,
+            "layer": FRONT_LABEL,
             "layer_gloss": LAYER_GLOSS,
             "not_taught": NOT_TAUGHT,
             "brief": BRIEF,
