@@ -8,8 +8,11 @@ policy: {1: 5e326a1eef52829a, 2: 24738334933d73b0}   # 2: each golden names its 
 drift_read: {1: d65f66fe51531b73}
 series: {1: a1981529d76a4898}
 advisory: {1: a507501e9192ec23}
-lines: {1: 4c30a19979658bdc}
+lines: {1: 4c30a19979658bdc, 2: 4ebc60ae365c4088}   # 2: whether a line's components follow the stack's release number, with its basis (the design of 2026-11-24, part 3.5)
 lead_time: {1: 76fb7bc5472e2e34}
+appliance_series: {1: d01565b510ea069b}   # instrument/appliances.py's dated reading of the management components' versions (the design of 2026-11-24, part 3.5)
+appliance_lead_time: {1: f002fe5e720036e0}   # the method fixed-version-lead-time's output over the appliance series (part 3.5)
+attention: {1: 182e36be23dd34fc}   # schedule/attention.py's record of what reached a person and how (part 5; DEC-22)
 outside_model: {1: 01b10e81fb155530}   # research/outside-model.yaml (40-BREADTH.md step 2)
 lanes: {1: 68fe86402487ec91}   # lanes.yaml
 pins: {1: f91b45c836a64ffa}   # records/pinned/pins.yaml

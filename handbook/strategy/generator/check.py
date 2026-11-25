@@ -23,12 +23,20 @@ pre-push, and no page computes "overdue" from the day it builds.
 
 A strategy release folds the spool's new records into the tracked `runs/log.jsonl`, so every run is on record in git.
 
+  * **The attention path** (the design of 2026-11-24, part 5; DEC-22). `--judge` judges every gate and the date gate
+    on the day and prints the run record as JSON, recording nothing: the scheduled agent runs it every day after its
+    `--if-due` run (which records weekly), and pipes it into `schedule/attention.py`, so a finding reaches a person the
+    day it appears, not the day a run is due. Clause 13.10 refuses a read whose new candidate a source linked to an
+    advisory page that has no record under `instrument/advisories/`. The attention records (`runs/attention-spool/`,
+    folded into `runs/attention.jsonl`) are read here for the warning line, which names the first open item.
+
 Run from the repository root: docs/design/enterprise-strategy-layer/generator/check.py [--day YYYY-MM-DD]
-[--spool DIR] [--watch-spool DIR] [--commit SHA] [--git DIR] [--if-due] [--no-record] [--staleness] [--fold].
-`--fold` appends the spool's new runs to the tracked log, and the watch spool's new reads to the tracked watch log,
-which each strategy release commits. `--git` names the checkout that
-resolves a method's pinned commit (GATE-14), the main checkout by default; an export passes it. `--staleness` prints the one warning line
-`make verify-prepush` shows and always exits 0.
+[--spool DIR] [--watch-spool DIR] [--commit SHA] [--git DIR] [--if-due] [--no-record] [--staleness] [--fold]
+[--judge].
+`--fold` appends the spool's new runs to the tracked log, the watch spool's new reads to the tracked watch log and
+the attention spool's new records to the tracked attention log, which each strategy release commits. `--git` names
+the checkout that resolves a method's pinned commit (GATE-14), the main checkout by default; an export passes it.
+`--staleness` prints the one warning line `make verify-prepush` shows and always exits 0.
 """
 
 from __future__ import annotations
@@ -62,6 +70,12 @@ WATCH_SPOOL = (
     "docs/design/enterprise-strategy-layer/runs/watch-spool"  # the watch reader's records, unfolded
 )
 WATCH_LOG = "docs/design/enterprise-strategy-layer/runs/watch.jsonl"  # the folded reads, tracked
+ATTENTION_SPOOL = "docs/design/enterprise-strategy-layer/runs/attention-spool"  # schedule/attention.py's records, unfolded
+ATTENTION_LOG = "docs/design/enterprise-strategy-layer/runs/attention.jsonl"  # the folded attention records, tracked
+ADVISORIES = "docs/design/enterprise-strategy-layer/instrument/advisories"  # the advisory records, each naming its page
+# an advisory page the support portal serves, as a source links a candidate to it (a catalog row's notes, the portal
+# list's notificationUrl); 13.10 asks for a record of each such page a new candidate names
+ADVISORY_PAGE = re.compile(r"^https://support\.broadcom\.com/.*/SecurityAdvisories/0/\d+/?$")
 
 # What the check reads, and so what an export of `main` must hold for it: the scheduled run exports these and nothing
 # else, and a test runs the check from such an export, so a read this list lacks fails there first.
@@ -109,6 +123,7 @@ READS = (
     "lab/state/images",  # the catalog sweep's dated records, the pinned copy self-service-provisioning's drift read reads (1b, step 7)
     "platform/tests/test_enterprise_strategy_generator.py",
     "platform/tests/test_enterprise_strategy_lead_time.py",
+    "platform/tests/test_enterprise_strategy_appliances.py",  # the appliance measure's golden test (GATE-14's 14.6 looks for it)
 )
 
 
@@ -153,12 +168,29 @@ def default_watch_spool() -> Path | None:
     return root / WATCH_SPOOL if root else None
 
 
+def default_attention_spool() -> Path | None:
+    root = _write_root()
+    return root / ATTENTION_SPOOL if root else None
+
+
+def _written_by_default(rel: str) -> Path | None:
+    """The spool written by default for one of the three record kinds, read through the module's names so a test that
+    points one elsewhere is followed."""
+    if rel == SPOOL:
+        return default_spool()
+    if rel == WATCH_SPOOL:
+        return default_watch_spool()
+    if rel == ATTENTION_SPOOL:
+        return default_attention_spool()
+    raise ValueError(f"{rel!r} is not a spool this check writes")
+
+
 def spools(rel: str) -> list[Path]:
     """Where records are read from by default: the spool written by default and, when that is a worktree's own, the
     main checkout's spool before it (the agents' records), each once. Reading is one-way: a worktree reads the shared
     spool and writes its own (G-943); the main checkout's code, and a default pointed elsewhere, read the one spool
     they write; an export has no default and names its spools."""
-    written = default_spool() if rel == SPOOL else default_watch_spool()
+    written = _written_by_default(rel)
     if written is None:
         return []
     top = main_checkout()
@@ -186,10 +218,18 @@ def default_commit() -> str | None:
 
 
 def _rel(path: Path) -> str:
-    try:
-        return path.resolve().relative_to(gates.ROOT).as_posix()
-    except ValueError:  # a spool outside the checkout is named by its own path
-        return str(path)
+    """A record's file as a finding names it: a repository path, relative to this checkout or, for a record in the
+    main checkout's spool read from a worktree (G-943), to the main checkout, so a finding names a path a reader can
+    open in either; a spool outside both is named by its own path."""
+    resolved = path.resolve()
+    roots = [gates.ROOT.resolve()]
+    top = main_checkout()
+    if top is not None and top.resolve() not in roots:
+        roots.append(top.resolve())
+    for root in roots:
+        if resolved.is_relative_to(root):
+            return resolved.relative_to(root).as_posix()
+    return str(path)
 
 
 def _record(text: str, rel: str, line: int) -> dict:
@@ -316,6 +356,72 @@ def newest_read(entry: str, reads: list[Read]) -> Read | None:
     as no read."""
     mine = [r for r in reads if r.entry == entry and r.record["fetched"]]
     return max(mine, key=lambda r: r.record["read_at"]) if mine else None
+
+
+def newest_record(entry: str, reads: list[Read]) -> Read | None:
+    """The newest record of the entry, fetched or not."""
+    mine = [r for r in reads if r.entry == entry]
+    return max(mine, key=lambda r: r.record["read_at"]) if mine else None
+
+
+# ── the attention records (schedule/attention.py; DEC-22) ───────────────────────────────────────────────────────────
+def _attention_record(text: str, rel: str, line: int) -> dict:
+    """One attention record through its model, or a SourceError at its file and line."""
+    try:
+        data = json.loads(text)
+    except ValueError as e:
+        raise gates.SourceError(
+            f"{rel}: {type(e).__name__}: {e}", at=(rel, line + getattr(e, "lineno", 1) - 1)
+        ) from e
+    try:
+        data, _notes = upgrade("attention", data)
+        typed = models.AttentionRecord.model_validate(data)
+    except MigrationError as e:
+        raise gates.SourceError(
+            f"{rel}: an attention record its model refuses ({e})", at=(rel, line)
+        ) from e
+    except ValidationError as e:
+        first = e.errors()[0]
+        where = ".".join(str(x) for x in first["loc"]) or "the record"
+        raise gates.SourceError(
+            f"{rel}: an attention record its model refuses ({where}: {first['msg']})",
+            at=(rel, line),
+        ) from e
+    return typed.model_dump(by_alias=True)
+
+
+def attention_records(spool, log: Path | None = None) -> list[dict]:
+    """Every attention record on record, the spool's (one path, or several) and the tracked log's, oldest first, each
+    typed at the boundary; a record that cannot be read is a SourceError at its file and line."""
+    out: list[dict] = []
+    for folder in _spool_paths(spool):
+        if folder.is_dir():
+            for p in sorted(folder.glob("*.json")):
+                out.append(_attention_record(gates.read_text(p, _rel(p)), _rel(p), 1))
+    if log and log.exists():
+        rel = _rel(log)
+        for n, x in enumerate(gates.read_text(log, rel).splitlines(), 1):
+            if x.strip():
+                out.append(_attention_record(x, rel, n))
+    seen, unique = set(), []
+    for r in sorted(out, key=lambda r: r["run_at"]):
+        if r["run_at"] not in seen:
+            seen.add(r["run_at"])
+            unique.append(r)
+    return unique
+
+
+def advisory_sources(root: Path) -> set[str]:
+    """The page each advisory record under instrument/advisories names as its source, as written (13.10)."""
+    from generator.policy import read_yaml
+
+    out: set[str] = set()
+    folder = root / ADVISORIES
+    for p in sorted(folder.glob("*.yaml")) if folder.is_dir() else []:
+        rec = read_yaml(p)
+        if isinstance(rec, dict) and rec.get("source"):
+            out.add(str(rec["source"]).rstrip("/"))
+    return out
 
 
 def _ruled(candidate: str, entry: str, register: dict) -> bool:
@@ -505,6 +611,40 @@ def gate_13(
                     f"and the ruling was due by {deadline}",
                     "record a trigger event (re-opened, spawned or no_change) or a signal of the entry naming each, "
                     "in the register (charter section 5.8)",
+                    line=r.at[1],
+                )
+            )
+
+    # 13.10: a watch read whose new candidate a source linked to an advisory page (the catalog row's notes, the portal
+    # list's own link) that has no record under instrument/advisories naming that page as its source: the ruling 13.8
+    # asks for rests on the page, so the record is due by the same day, or the read is refused at its record
+    recorded = advisory_sources(s.root)
+    for r in reads:
+        w = by_id.get(r.entry)
+        if not r.record["fetched"] or not r.record["new"] or w is None:
+            continue
+        deadline = add(r.day, w["every"])
+        if day <= deadline:
+            continue
+        links = r.record.get("links") or {}
+        missing = [
+            c
+            for c in r.record["new"]
+            if (u := links.get(c)) and ADVISORY_PAGE.match(u) and u.rstrip("/") not in recorded
+        ]
+        if missing:
+            shown = ", ".join(missing[:5]) + (
+                f" and {len(missing) - 5} more" if len(missing) > 5 else ""
+            )
+            found.append(
+                _f(
+                    "13.10",
+                    r.at[0],
+                    (),
+                    f"the watch read of {r.entry} on {r.record['day']} links {len(missing)} new "
+                    f"candidate{'s' if len(missing) != 1 else ''} ({shown}) to an advisory page with no record under "
+                    f"{ADVISORIES}, and the record was due by {deadline}",
+                    "write the record from a fresh fetch of the page (instrument/advisory_record.py fetch <URL>)",
                     line=r.at[1],
                 )
             )
@@ -819,8 +959,41 @@ def fold_watch(spool, log: Path) -> int:
     return len(new)
 
 
-def staleness(spool, log: Path, day: date, pol: Loaded, portfolio: dict) -> str | None:
-    """The one warning line `make verify-prepush` shows, or None when the newest run is in time and found nothing due."""
+def fold_attention(spool, log: Path) -> int:
+    """Append to the tracked attention log each spooled attention record it does not hold yet, oldest first, each typed
+    on the way: the control's evidence in git (the design of 2026-11-24, part 5.3). Returns how many it added."""
+    held = {r["run_at"] for r in attention_records(None, log)}
+    new = [r for r in attention_records(spool) if r["run_at"] not in held]
+    if new:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with log.open("a", encoding="utf-8") as f:
+            for r in new:
+                f.write(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n")
+    return len(new)
+
+
+def attention_line(pol: Loaded, portfolio: dict, attention: dict | None) -> str | None:
+    """What the warning line says of the newest attention record: the first open item in words and the count, when
+    the policy's channels carry the warning line and the record holds an item; None otherwise (DEC-22)."""
+    if not attention or not attention.get("items"):
+        return None
+    channels = _effective(pol, portfolio, "attention")["channels"]
+    if "prepush-warning" not in channels:
+        return None
+    items = attention["items"]
+    first = next((x for x in items if x["state"] == "overdue"), items[0])
+    overdue = sum(x["state"] == "overdue" for x in items)
+    count = (
+        f"{len(items)} open, {overdue} overdue" if overdue else f"{len(items)} open"
+    ) + f" at {attention['run_at'][:10]}"
+    return gates.one_line(f"attention: {first['text']} ({count})")
+
+
+def staleness(
+    spool, log: Path, day: date, pol: Loaded, portfolio: dict, attention: dict | None = None
+) -> str | None:
+    """The one warning line `make verify-prepush` shows, or None when the newest run is in time and found nothing due
+    and the newest attention record holds no open item (`attention`, when passed)."""
     runs = records(spool, log)
     if not runs:
         return "strategy check: no run recorded; run make strategy-check, and install the scheduled agent if it is not (D4-15)"
@@ -834,7 +1007,8 @@ def staleness(spool, log: Path, day: date, pol: Loaded, portfolio: dict) -> str 
         if entry.get("at_cycle_start") and last < c <= day
     ]  # the same comparison `due` makes
     n = newest.get("due_items", 0)
-    if not late and not started and not n:
+    told = attention_line(pol, portfolio, attention)
+    if not late and not started and not n and not told:
         return None
     parts = [f"strategy check: last run {newest['run_at'][:10]}"]
     if late:
@@ -843,6 +1017,8 @@ def staleness(spool, log: Path, day: date, pol: Loaded, portfolio: dict) -> str 
         parts.append(f"a cycle started on {started[-1]} since")
     if n:
         parts.append(f"it found {n} due item{'s' if n != 1 else ''}")
+    if told:
+        parts.append(told)
     return ", ".join(parts) + "; run make strategy-check"
 
 
@@ -884,7 +1060,20 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--fold",
         action="store_true",
-        help="fold the spool's new runs, and the watch spool's new reads, into the tracked logs",
+        help="fold the spool's new runs, the watch spool's new reads and the attention spool's new records into the "
+        "tracked logs",
+    )
+    ap.add_argument(
+        "--judge",
+        action="store_true",
+        help="judge every gate and the date gate on the day, print the run record as JSON and record nothing (the "
+        "attention path's daily read, DEC-22)",
+    )
+    ap.add_argument(
+        "--attention-spool",
+        type=Path,
+        default=None,
+        help="the attention records (schedule/attention.py), read for the warning line and folded",
     )
     a = ap.parse_args(argv)
     # written to one spool (a worktree's own by default, G-943); read from the main checkout's and this checkout's
@@ -892,6 +1081,7 @@ def main(argv: list[str]) -> int:
     watch_spool = a.watch_spool or default_watch_spool()
     read_from = [a.spool] if a.spool else spools(SPOOL)
     read_watch_from = [a.watch_spool] if a.watch_spool else spools(WATCH_SPOOL)
+    read_attention_from = [a.attention_spool] if a.attention_spool else spools(ATTENTION_SPOOL)
     if (
         a.fold
     ):  # a release step on the run records alone: it reads no source and records no run of its own
@@ -924,6 +1114,21 @@ def main(argv: list[str]) -> int:
                 )
             )
             return 1
+        try:
+            print(
+                f"strategy check: {fold_attention(read_attention_from, gates.ROOT / ATTENTION_LOG)} attention "
+                f"record(s) folded into {ATTENTION_LOG}"
+            )
+        except gates.SourceError as e:
+            print(
+                gates.scrub(
+                    e.failure(
+                        "nothing folded: an attention record could not be read",
+                        "fix the record and fold again",
+                    )
+                )
+            )
+            return 1
         return 0
     try:
         s = Sources.read()
@@ -942,7 +1147,17 @@ def main(argv: list[str]) -> int:
     if a.staleness:
         # a warning, never a failure: a record that cannot be read is said, and the pre-push goes on
         try:
-            line = staleness(read_from, s.root / LOG, a.day, pol, s.portfolio.data) if pol else None
+            attention = None
+            try:  # the newest attention record, so the line names the first open item (DEC-22); unreadable: no item
+                told = attention_records(read_attention_from, s.root / ATTENTION_LOG)
+                attention = told[-1] if told else None
+            except gates.SourceError:
+                attention = None
+            line = (
+                staleness(read_from, s.root / LOG, a.day, pol, s.portfolio.data, attention)
+                if pol
+                else None
+            )
         except Exception as e:  # a warning, never a failure, whatever a record holds
             line = (
                 f"strategy check: its run records or its dates could not be read ({type(e).__name__}: "
@@ -976,11 +1191,14 @@ def main(argv: list[str]) -> int:
         a.day,
         spool,
         a.commit or default_commit(),
-        record=not a.no_record,
+        record=not (a.no_record or a.judge),
         watch_spool=watch_spool,
         read_spools=read_from,
         read_watch_spools=read_watch_from,
     )
+    if a.judge:  # the record alone, as JSON, for the attention path; nothing is written
+        print(json.dumps(rec, sort_keys=True))
+        return 1 if any(r.state in ("refused", "not_covered") for r in results) else 0
     took = (datetime.now(UTC) - started).total_seconds()
     for r in results:  # each gate's state, then each of its failures in its one form
         print(f"{r.gate}: {r.state}")

@@ -376,6 +376,19 @@ def catalog_map_1_to_2(doc: dict) -> dict:
     return doc
 
 
+@migration("lines", 1)
+def lines_1_to_2(doc: dict) -> dict:
+    """Schema 2 of the line map (the design of 2026-11-24, part 3.5): each mapping may say whether its line's
+    management components carry the stack's three-part release number in their own versions, with the words that say
+    so. A schema 1 mapping said nothing, which is what the migration writes: a three-part fixed version on such a line
+    stays unreadable until a reading says."""
+    for m in doc.get("lines") or []:
+        m.setdefault("components_follow_stack", None)
+        m.setdefault("components_follow_stack_basis", None)
+    doc["schema"] = 2
+    return doc
+
+
 @migration("watch_read", 1)
 def watch_read_1_to_2(doc: dict) -> dict:
     """Schema 2 of the watch reader's record (the design of 2026-11-24, part 4): each fetch names its method and, for a

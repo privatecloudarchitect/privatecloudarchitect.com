@@ -36,8 +36,11 @@ SCHEMA_VERSIONS = {
     "drift_read": 1,
     "series": 1,
     "advisory": 1,
-    "lines": 1,
+    "lines": 2,  # 2: whether a line's components follow the stack's three-part release number (the design of 2026-11-24, part 3.5; the appliance read's step)
     "lead_time": 1,
+    "appliance_series": 1,  # instrument/appliances.py's dated reading of each management component's running version (the design of 2026-11-24, part 3.5)
+    "appliance_lead_time": 1,  # the method fixed-version-lead-time's output, one advisory over the appliance series (part 3.5)
+    "attention": 1,  # schedule/attention.py's record of what reached a person and how (the design of 2026-11-24, part 5; DEC-22)
     "outside_model": 1,
     "lanes": 1,
     "pins": 1,
@@ -307,6 +310,18 @@ class CompletenessValue(_Value):
     cross_checks: list[str]
 
 
+class AttentionValue(_Value):
+    """The attention path's parameters (DEC-22; the design of 2026-11-24, part 5.2): how long before an item's due day
+    it is first told as due soon, how often an overdue item is said again, the channels that carry an item, and the
+    one outbound command the operator names (null: none; it reaches the network from their machine, so it is off until
+    they set it)."""
+
+    ahead: Duration
+    remind: Duration
+    channels: list[Literal["desktop", "session-start", "prepush-warning"]]
+    command: str | None
+
+
 ENTRY_VALUES: dict[str, Any] = {
     "cycle": CycleValue,
     "review-intervals": KeyedBy("half_life_tiers", Duration),
@@ -329,6 +344,7 @@ ENTRY_VALUES: dict[str, Any] = {
         "carry", "wait"
     ],  # DEC-21: carry a capability no lane can yet measure, or hold it unwritten
     "completeness": CompletenessValue,  # the outside model and the cross-checks the catalog's map is held to (GATE-2)
+    "attention": AttentionValue,  # DEC-22: how a new candidate or an overdue ruling reaches a person (schedule/attention.py)
 }
 
 
@@ -1492,6 +1508,22 @@ class LineMapping(Strict):
     line: str
     grade: str
     basis: str
+    # schema 2: whether the line's management components carry the stack's three-part release number in their own
+    # versions (the 9.x components do: a fixed version "9.1.2" on a 9.1.x.x row is the component's 9.1.2.0; the 5.x
+    # components do not), with the words it rests on; None where no reading says, so a three-part fixed version on
+    # that line stays unreadable (advisory.read_components)
+    components_follow_stack: bool | None = None
+    components_follow_stack_basis: str | None = None
+
+    @model_validator(mode="after")
+    def _a_claim_has_its_basis(self) -> LineMapping:
+        if self.components_follow_stack is not None and not (
+            self.components_follow_stack_basis or ""
+        ).strip():
+            raise ValueError(
+                f"the line {self.line} says whether its components follow the stack's numbering and gives no basis"
+            )
+        return self
 
 
 class LineMap(Strict):
@@ -1546,6 +1578,155 @@ class LeadTime(Strict):
     stages: dict[str, Span] | None
     release_dates: list[ReleaseDate]
     provenance: MeasureProvenance
+
+
+# ── the appliance read: each management component's running version (the design of 2026-11-24, parts 3.4 and 3.5) ───
+class ApplianceComponent(Strict):
+    """One management component as it reports itself: its class (the advisory rows' component name where one exists:
+    vCenter, SDDC Manager, NSX, VCF Operations, VCF Automation; else the fleet lifecycle's component type), where it
+    runs as a placeholder (never a name or an address), the version within its release line, the build apart, which
+    read gave it, and whether it was read at all (an unread component keeps every measure open, with its reason)."""
+
+    read_as: str = Field(alias="class")
+    where: str
+    source: str
+    version: str | None
+    build: str | None
+    read: bool
+    why: str | None = None
+
+    @model_validator(mode="after")
+    def _read_or_said_why(self) -> ApplianceComponent:
+        if self.read and not self.version:
+            raise ValueError(f"a component read ({self.where}) carries its version")
+        if not self.read and not (self.why or "").strip():
+            raise ValueError(f"a component not read ({self.where}) says why")
+        return self
+
+
+class ApplianceProvenance(Strict):
+    instrument: str
+    instrument_sha: str
+    reader: str
+    policy_version: int
+    appliance_schema: int
+    input_digest: str
+    generated_at: str
+
+
+class ApplianceReading(Strict):
+    appliance_schema: int
+    read_at: Stamp
+    source: str
+    identity: str  # the catalog identity the reads were made as, by its reference (never a value)
+    components: list[ApplianceComponent]
+    cross_checks: list[ApplianceComponent]  # the same versions as another plane knows them (VCF Operations' domains)
+    components_read: int
+    components_named: int
+    failure: str | None
+    provenance: ApplianceProvenance
+
+
+class ApplianceInstance(Strict):
+    where: str
+    version: str | None
+    at_or_above: bool
+    why: str | None = None
+
+
+class ApplianceLine(Strict):
+    required_version: str | None
+    required_fixed_version: str | None
+    per_cve: dict[str, dict[str, Any]]
+    no_inline_fix: list[str]
+    unreadable: list[dict[str, Any]]
+    instances: list[ApplianceInstance]
+    exposed: int
+    of: int
+
+
+class ApplianceLeadTime(Strict):
+    """The method fixed-version-lead-time's output: one advisory's appliance rows over the appliance series, lead_time's
+    rule applied to versions within a line. Open while any listed component in the estate is below its line's required
+    version, unread, or on an unreadable line; closed at the first reading at which every one is at or above."""
+
+    advisory: str
+    revision: str
+    t0: str
+    product: str
+    components: dict[str, dict[str, ApplianceLine]]  # class, then release line, at the newest reading
+    unreadable: list[dict[str, Any]]
+    not_in_estate: list[str]
+    out_of_scope_rows: list[dict[str, Any]]
+    line_mapping: list[dict[str, Any]]
+    readings: list[str]
+    state: Literal["open", "closed"]
+    closing_reading: str | None = None
+    total_days: Bound | None
+    stages: dict[str, Span | None] | None
+    stages_why: str | None = None
+    provenance: MeasureProvenance
+
+
+# ── the attention record: what reached a person, and how (the design of 2026-11-24, part 5; DEC-22) ─────────────────
+ATTENTION_KINDS = (
+    "new-candidate",
+    "ruling-overdue",
+    "advisory-record-missing",
+    "fetch-failed",
+    "check-refused",
+    "check-missed",
+    "assessment-overdue",
+)
+
+
+class AttentionItem(Strict):
+    kind: Literal[
+        "new-candidate",
+        "ruling-overdue",
+        "advisory-record-missing",
+        "fetch-failed",
+        "check-refused",
+        "check-missed",
+        "assessment-overdue",
+    ]
+    entry: str | None  # the watch entry, where the item is one
+    candidate: str | None  # the candidate, clause or initiative the item names
+    due: Day | None
+    state: Literal["open", "overdue"]
+    link: str | None = Field(default=None, max_length=2000)  # the URL the source gave, where one exists
+    text: str = Field(max_length=2000)  # the item in words, no estate identifier (gates.scrub)
+
+    @property
+    def key(self) -> str:
+        return f"{self.kind}|{self.entry or ''}|{self.candidate or ''}"
+
+
+class Notified(Strict):
+    key: str
+    reason: Literal["new", "due-soon", "overdue", "reminder"]
+    channel: Literal["desktop", "command"]
+    at: Stamp
+
+
+class AttentionRecord(Strict):
+    schema_: int = Field(alias="schema")
+    run_at: Stamp
+    day: Day
+    after: Literal["watch", "check", "session"]
+    channels: list[str]  # the channels the policy enabled at this run (the lane card and the warning read them)
+    items: list[AttentionItem]
+    notified: list[Notified]
+    judged: str | None = None  # the judged check's run_at, where one was read
+
+    @model_validator(mode="after")
+    def _each_item_once(self) -> AttentionRecord:
+        keys = [x.key for x in self.items]
+        if len(keys) != len(set(keys)):
+            raise ValueError("an attention record names each item once")
+        if self.run_at[:10] != self.day:
+            raise ValueError(f"an attention record's day {self.day} is not its run_at's ({self.run_at})")
+        return self
 
 
 # ── the outside model's named capabilities (research/outside-model.yaml; 40-BREADTH.md steps 1 and 2) ───────────────
@@ -1869,6 +2050,9 @@ MODELS: dict[str, type[BaseModel]] = {
     "front_door": FrontDoor,
     "watch_read": WatchRead,
     "driver_stresses_draft": DriverStressesDraft,
+    "appliance_series": ApplianceReading,
+    "appliance_lead_time": ApplianceLeadTime,
+    "attention": AttentionRecord,
 }
 
 

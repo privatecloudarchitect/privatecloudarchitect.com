@@ -978,18 +978,32 @@ def thaw(data: dict) -> tuple[Slice, Any]:
 ASKS = "docs/design/enterprise-strategy-layer/records/asks"
 
 
-def ask(portfolio: Portfolio, addresses: list[Address], decision: str, day: str) -> dict:
+def ask(
+    portfolio: Portfolio,
+    addresses: list[Address],
+    decision: str,
+    day: str,
+    entries: list[str] | None = None,
+    policy=None,
+) -> dict:
     """The nodes an ask puts to the operator, each with its form and digest as the ask shows them; an approval is
-    recorded by copying these after the ruling, never by computing digests then."""
+    recorded by copying these after the ruling, never by computing digests then. `entries` names policy entries put
+    to the operator in the same ask (a ruling that sets a value, DEC-22's `attention`): each travels as the entry as
+    policy.yaml holds it, addressed `policy/entries/<id>`, its ruling recorded in the charter (section 10) and in the
+    entry's `decided_by`, since the policy's entries are not the portfolio's nodes and no approval list covers them."""
     have = dict(approvable(portfolio))
     missing = [a for a in addresses if a not in have]
     if missing:
         raise ValueError(f"no approvable node at {', '.join('/'.join(a) for a in missing)}")
-    return {
-        "date": day,
-        "decision": decision,
-        "nodes": [{"path": list(a), "node": have[a], "digest": digest(have[a])} for a in addresses],
-    }
+    nodes = [{"path": list(a), "node": have[a], "digest": digest(have[a])} for a in addresses]
+    for entry_id in entries or []:
+        if policy is None:
+            raise ValueError("a policy entry is asked with the policy it is read from")
+        held = policy.entry(entry_id).model_dump(mode="json", by_alias=True)
+        nodes.append(
+            {"path": ["policy", "entries", entry_id], "node": held, "digest": digest(held)}
+        )
+    return {"date": day, "decision": decision, "nodes": nodes}
 
 
 def main(argv: list[str]) -> int:
@@ -1000,14 +1014,20 @@ def main(argv: list[str]) -> int:
     import sys
     from pathlib import Path
 
-    from .policy import load_portfolio
+    from .policy import load_policy, load_portfolio
 
     parser = argparse.ArgumentParser(prog="served.py")
     sub = parser.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("ask")
     a.add_argument("--decision", required=True)
     a.add_argument(
-        "--node", action="append", required=True, help="an address, its segments joined by /"
+        "--node", action="append", default=[], help="an address, its segments joined by /"
+    )
+    a.add_argument(
+        "--entry",
+        action="append",
+        default=[],
+        help="a policy entry put to the operator in this ask, by its id (the entry as policy.yaml holds it)",
     )
     a.add_argument(
         "--day", required=True, help="the day the ask is put, YYYY-MM-DD (no page reads the clock)"
@@ -1024,7 +1044,16 @@ def main(argv: list[str]) -> int:
 
     a_day(args.day, "the ask's day")
     day = args.day
-    record = ask(load_portfolio(), [tuple(n.split("/")) for n in args.node], args.decision, day)
+    if not args.node and not args.entry:
+        raise SystemExit("an ask names a node (--node) or a policy entry (--entry)")
+    record = ask(
+        load_portfolio(),
+        [tuple(n.split("/")) for n in args.node],
+        args.decision,
+        day,
+        entries=args.entry,
+        policy=load_policy() if args.entry else None,
+    )
     if args.label:
         if not re.fullmatch(r"[a-z0-9-]{1,40}", args.label):
             raise SystemExit("--label is lower-case letters, digits and hyphens, at most 40")

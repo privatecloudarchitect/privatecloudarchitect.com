@@ -192,6 +192,11 @@ CLAUSES: dict[str, tuple[str, str]] = {
         "GATE-13",
         "the companion's vocabulary file absent or written from a site file that has since changed (listed, not refused)",
     ),
+    "13.10": (
+        "GATE-13",
+        "a watch read whose new candidate a source linked to an advisory page that has no record under "
+        "`docs/design/enterprise-strategy-layer/instrument/advisories/` by the day the entry is next due",
+    ),
     "14.1": (
         "GATE-14",
         "in the strategy layer's code (`docs/design/enterprise-strategy-layer/generator/`, which holds the generator, "

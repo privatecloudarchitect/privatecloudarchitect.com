@@ -26,8 +26,8 @@
 # Field paths below: `file.a.b`, `[]` for every item of a list, `*` for every key of a map, `**` for any depth.
 
 schema: 2
-policy_version: 8                        # 2026-11-05: PH4 exited and the first cycle is anchored at that day (cycle; 40-BREADTH.md step 13)
-effective_from: "2026-11-05"             # the date the current policy_version took effect; 7: 2026-11-04; 6: 2026-10-30; 5: 2026-10-29; 4: 2026-10-28; 3: 2026-10-28; 2: 2026-10-26; 1: 2026-10-25
+policy_version: 9                        # 2026-11-24: the attention path (attention, DEC-22) and the appliance measure's method selected (measure-methods); 8: 2026-11-05, PH4 exited and the first cycle anchored (cycle; 40-BREADTH.md step 13)
+effective_from: "2026-11-24"             # the date the current policy_version took effect; 8: 2026-11-05; 7: 2026-11-04; 6: 2026-10-30; 5: 2026-10-29; 4: 2026-10-28; 3: 2026-10-28; 2: 2026-10-26; 1: 2026-10-25
 
 shapes:                                  # the forms other files use to point at this one
   history_item: {value: "the replaced value", since: "the policy version it arrived in", until_version: "the last policy version it held in", ended: "the date it stopped applying"}
@@ -110,7 +110,7 @@ vocabularies:                            # closed lists; each names the fields i
     members: [current, shadow, retired]
     fields: ["policy.methods[].status"]
   readers:
-    members: [generator, gates, strategy-check, adopter-companion, adapters, instrument]
+    members: [generator, gates, strategy-check, adopter-companion, adapters, instrument, attention]   # attention: schedule/attention.py (DEC-22)
     fields: ["policy.entries[].read_by[]"]
   change_classes:
     members: [data, method, schema, doctrine]
@@ -192,7 +192,26 @@ entries:
     effective_from: "2026-10-28"
     overridable: true                    # an estate runs its own check on its own cadence
     change: data
-    read_by: [strategy-check]
+    read_by: [strategy-check, attention]   # attention: a recorded run older than `every` is an item a person is told of (check-missed)
+    history: []
+
+  # DEC-22 (the operator, 2026-11-24, section 1.1): how a new candidate or an overdue ruling reaches a person. The
+  # scheduled agents judge every day and record weekly (the check's `--judge` after its `--if-due`); what they find goes
+  # through schedule/attention.py to the channels named here, and nothing else on the operator's machine changes: the
+  # agents' plists hold no task detail beyond --watch or --check, so no reinstall. `ahead`: how long before an item's due
+  # day it is told as due soon; `remind`: how often an overdue item is said again while it stays overdue; `channels`:
+  # desktop (a macOS notification), session-start (the lane card every lane session prints on start and resume),
+  # prepush-warning (the warning line of make verify-prepush naming the first item); `command`: one outbound sender
+  # (mail, chat) the operator names, which receives each item line on its standard input; null until they do, because
+  # it reaches the network from their machine and each such write is asked for by name (the rule of 2026-11-01).
+  - id: attention
+    value: {ahead: P1D, remind: P1D, channels: [desktop, session-start, prepush-warning], command: null}
+    decided_by: [DEC-22]
+    since: 9
+    effective_from: "2026-11-24"
+    overridable: true                    # an estate names its own channels and its own sender
+    change: data
+    read_by: [strategy-check, attention]
     history: []
 
   # DEC-12: the planning tiers on the operator's scale (section 1); what a tier measures is the method planning-horizon
@@ -254,16 +273,25 @@ entries:
     history: []
 
   # R-08 and DEC-02: how each value measure is computed; this entry alone names the method and its version for a value
+  # Version 9 (the operator's ruling of 2026-11-24, section 1.1, widening the capability to every management component):
+  # the appliance half's value selects fixed-version-lead-time version 1, in shadow until the operator adopts it from
+  # its first readings, as fixed-build-lead-time was adopted at PH2's exit (D4-14).
   - id: measure-methods
     value:
       advisory-to-fixed-build: {method: fixed-build-lead-time, version: 1}
+      advisory-to-fixed-appliance-version: {method: fixed-version-lead-time, version: 1}
     decided_by: [R-08, DEC-02]
-    since: 2
-    effective_from: "2026-10-26"
+    since: 9
+    effective_from: "2026-11-24"
     overridable: false
     change: method
     read_by: [instrument, generator]
-    history: []
+    history:
+      - value:
+          advisory-to-fixed-build: {method: fixed-build-lead-time, version: 1}
+        since: 2
+        until_version: 8
+        ended: "2026-11-24"
 
   # DEC-17 (e) and (f): the adoption bar
   - id: adoption-method
@@ -501,6 +529,27 @@ methods:                                 # one implementation behind one interfa
         summing to the total; the fixed image released 20 days before t0, reported beside; a fixture with one unread host
         stays open
       test: "platform/tests/test_enterprise_strategy_lead_time.py::test_the_golden_values_on_the_committed_series"
+
+  - id: fixed-version-lead-time
+    version: 1
+    status: shadow                       # selected for the appliance half's value since policy version 9 (the operator's ruling of 2026-11-24, section 1.1); adopted from shadow by a later ruling, as fixed-build-lead-time was (D4-14)
+    decided_by: [R-08, DEC-02]
+    since: 9
+    definition: {text: "the design of 2026-11-24, part 3.5 (kept in the lead's session), ratified by the operator's widening of the capability (section 1.1): lead_time's rule applied to versions within a release line, over instrument/appliances.py's dated reading and advisory.py's component reading", at_commit: "ba167710"}
+    parameters:
+      version_rule: "a component is compared as a version within its own release line, padded to four parts, never as a build and never across lines; a three-part fixed version is the stack's release number, read as the component's version at that release only on a line whose map says its components follow the stack's numbering"
+      line_rule: "a component's line is the line map's prefix its reported version starts with; a version no mapping covers is line not listed and keeps the measure open"
+      unknown: "any shortfall keeps the measure open: a component not read, a listed component class absent from the estate's reading, a line with no comparable fixed version (a support contract, a knowledge base article, an update form with no documented mapping, a stack release on a line whose map does not say)"
+      stages: [vendor-lag, remediation-lag]
+      stage_rule: "each stage runs from t0, clamped there; the vendor's ends at the first platform-lifecycle reading whose releases list the fixed version as available to the instance, the remediation's at the measure's end; each stage end is a bound with two ends (lead_time's rule); a stage with no reading to end it is reported as not read, never as zero"
+    reads_entries: []
+    golden:
+      holds: >-
+        built with the appliance read of 2026-11-24: VMSA-2026-0009 open on the committed reading, every vCenter
+        instance below its 9.1.x.x line's required 9.1.1.0200 while every SDDC Manager instance is at it; a fixture
+        reading at the required version closes it at that reading with the bounds lead_time's rule gives; a component
+        not read keeps it open
+      test: "platform/tests/test_enterprise_strategy_appliances.py::test_the_golden_values_on_the_committed_appliance_reading"
 
 provenance:                              # stamped on every generated output (GATE-14)
   fields:
