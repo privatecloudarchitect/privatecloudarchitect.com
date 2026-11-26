@@ -64,7 +64,7 @@ python3 org_federation.py --protocol oidc --org-type all-apps --prove
 python3 org_federation.py --protocol oidc --org-type all-apps --teardown --execute
 ```
 
-A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. The runs behind this companion used a provider System Administrator's bearer and a certificate; this handbook did not test the api-token and the client secret paths. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused the write that disables a local account (403), the write a provider bearer carried, so give every write here a provider bearer. With both files set, the script uses the bearer. Every secret's file (the bearer, the api-token, a client secret, the key) is read only at mode 0600: one open to group or other is refused unread, with the fix (`chmod 600` on the file), and the run exits 5 with nothing sent.
+A provider bearer lasts an hour, so mint it just before each run, as the platform-identity chapter's "Mint a provider bearer" shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity#mint-a-provider-bearer)). `VCFA_PROVIDER_REFRESH_TOKEN_FILE` takes a provider api-token instead and trades it for a bearer, and `ENTRA_CLIENT_SECRET_FILE` takes a client secret instead of a certificate. The runs behind this companion used a provider System Administrator's bearer and a certificate; this handbook did not test the api-token and the client secret paths. Whether a provider api-token's bearer may create organizations, write their settings or import their groups was not tried, and in the identity-lifecycle companion a provider api-token's bearer was refused the write that disables a local account (403), the write a provider bearer carried, so give every write here a provider bearer. With both files set, the script uses the bearer. Every secret's file (the bearer, the api-token, a client secret, the key) is read only at mode 0600: one open to group or other is refused unread, with the fix (`chmod 600` on the file), and the run exits 5 with nothing sent.
 
 ## Exit codes
 
@@ -98,7 +98,7 @@ take it.
 
 ```bash
 export VCFA_HOST=<automation-fqdn> ENTRA_TENANT_ID=<tenant-id or one of its domain names>
-export VCFA_PROVIDER_BEARER_FILE=<file, mode 0600>    # a provider bearer: platform-identity's plate 04, "Your provider bearer"
+export VCFA_PROVIDER_BEARER_FILE=<file, mode 0600>    # a provider bearer: platform-identity's "Mint a provider bearer"
 export APP_CLIENT_ID=<the app's client id> APP_SECRET_FILE=<the secret the tenant handed over, mode 0600>   # OIDC
 # export METADATA_FILE=<the app's federation metadata>                                                     # SAML
 export ENTRA_CLIENT_ID=<the tenant's read-only app> ENTRA_CLIENT_SECRET_FILE=<its secret, mode 0600>   # the watch's app
@@ -208,7 +208,7 @@ certificate confirms it.
 
 ```bash
 export VCFA_HOST=<automation-fqdn> ENTRA_TENANT_ID=<tenant-id>
-export VCFA_PROVIDER_BEARER_FILE=<file, mode 0600>    # a provider bearer, as for --configure: platform-identity's plate 04, "Your provider bearer"
+export VCFA_PROVIDER_BEARER_FILE=<file, mode 0600>    # a provider bearer, as for --configure: platform-identity's "Mint a provider bearer"
 export ORG=<the organization>
 
 python3 org_federation.py --update --key-refresh               # plan: automatic refresh on, strategy ADD, every hour

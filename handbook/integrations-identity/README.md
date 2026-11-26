@@ -436,8 +436,8 @@ id; the script refuses an id.
 
 ```bash
 export VCFA_HOST=<vcf-automation-fqdn>
-export VCFA_PROVIDER_BEARER_FILE=~/.vcf/provider-bearer     # mode 0600, outside this clone; platform-identity's plate 04,
-                                                            # "Your provider bearer", the credential the reference runs used
+export VCFA_PROVIDER_BEARER_FILE=~/.vcf/provider-bearer     # mode 0600, outside this clone; platform-identity's
+                                                            # "Mint a provider bearer", the credential the reference runs used
 export TLS_VERIFY=false                                     # only on a self-signed lab CA
 
 python3 service_account.py --org tenant-a --name backup-01 --role "Organization User"
@@ -460,7 +460,7 @@ python3 service_account.py --org tenant-a --name backup-01 --teardown --token-fi
 | Env | Meaning |
 |---|---|
 | `VCFA_HOST` | the VCF Automation FQDN (required to execute) |
-| `VCFA_PROVIDER_BEARER_FILE` | a provider bearer, mode 0600, minted just before the run as the platform-identity chapter's plate 04, "Your provider bearer", shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity)): the credential every reference run used |
+| `VCFA_PROVIDER_BEARER_FILE` | a provider bearer, mode 0600, minted just before the run as the platform-identity chapter's "Mint a provider bearer" shows ([privatecloudarchitect.com/handbook/platform-identity](https://privatecloudarchitect.com/handbook/platform-identity#mint-a-provider-bearer)): the credential every reference run used |
 | `VCFA_PROVIDER_REFRESH_TOKEN_FILE` | instead, a provider API token, mode 0600, traded at `/oauth/provider/token` for a bearer; untried for these writes (how to mint one is platform-identity's plate 04) |
 | `STATE` | the state file the create writes and the teardown reads (default `service_account.<org>.<name>.state.json`) |
 | `TLS_VERIFY` | `false` only on a self-signed lab CA |

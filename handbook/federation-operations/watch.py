@@ -65,7 +65,7 @@ date undetermined (exit 3). On a provider bearer the check does not run: a beare
 schedule.
 
 Env:  VCFA_HOST; VCFA_PROVIDER_REFRESH_TOKEN_FILE (a provider api-token, traded at /oauth/provider/token) or
-      VCFA_PROVIDER_BEARER_FILE (a provider bearer, minted as platform-identity's plate 04, "Your provider bearer",
+      VCFA_PROVIDER_BEARER_FILE (a provider bearer, minted as platform-identity's "Mint a provider bearer"
       shows); VCFA_PROVIDER_TOKEN_NAME (optional: the name the provider API token was minted under, the client name
       it was registered with); TLS_VERIFY=false on a self-signed lab CA (applies
       to VCF Automation and to a non-Entra keys endpoint, never to Entra or Graph); ENTRA_TENANT_ID (the tenant this run

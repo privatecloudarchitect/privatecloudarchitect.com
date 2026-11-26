@@ -33,7 +33,7 @@ deletes nothing, and a create that could not read it registers nothing.
 
 Env:  VCFA_HOST                           VCF Automation FQDN (required)
       VCFA_PROVIDER_BEARER_FILE           a provider bearer (mode 0600), minted just before the run as the platform-identity
-                                          chapter's plate 04, "Your provider bearer", shows. The reference runs sent every
+                                          chapter's "Mint a provider bearer" shows. The reference runs sent every
                                           call on a provider System Administrator's bearer, and no narrower provider
                                           role was tried
       VCFA_PROVIDER_REFRESH_TOKEN_FILE    instead, a provider API token, traded at /oauth/provider/token for a bearer

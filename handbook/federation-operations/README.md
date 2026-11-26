@@ -48,7 +48,7 @@ it as a run that did not read. The transcripts are under "A replayed run" in `ex
 ```bash
 export VCFA_HOST=<automation-fqdn>
 export VCFA_PROVIDER_BEARER_FILE=/path/to/provider-bearer             # mode 0600; or VCFA_PROVIDER_REFRESH_TOKEN_FILE
-                                                                    # a bearer: platform-identity's plate 04, "Your provider bearer"
+                                                                    # a bearer: platform-identity's "Mint a provider bearer"
 export VCFA_PROVIDER_TOKEN_NAME=<the name the token was minted under>  # with a provider API token: which one is the watch's
 export TLS_VERIFY=false                                             # only on a self-signed lab CA
 # the rollover checks, through this tenant's read-only app (Microsoft Graph application permission Application.Read.All)
