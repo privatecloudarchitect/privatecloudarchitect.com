@@ -11,8 +11,15 @@ pre-push, and no page computes "overdue" from the day it builds.
     `docs/design/enterprise-strategy-layer/runs/spool/` in the checkout whose code runs: the main checkout's when this
     code is the main checkout's, this worktree's own when it runs in a worktree (`default_spool`; G-943). Runs and
     watch reads are read from the main checkout's spool and this checkout's own (`spools`), so a worktree's check
-    still judges the agents' records. The commit is `HEAD`. The scheduled run passes both paths, because it runs in
-    an export of `main` that has no `.git`.
+    still judges the agents' records. The scheduled run passes both paths, because it runs in an export of `main` that
+    has no `.git`.
+  * **The run record's `commit`** (the operator's rule of 2026-11-25: a committed file names only landed commits;
+    G-947). The scheduled run passes `--commit`, the sha of `main` it exported, which is landed by construction, with
+    `--git` naming the checkout that resolves it; the record says `source: export`. A run from a checkout names no
+    commit, since the writer cannot know whether a worktree's HEAD will land, and `--fold` writes null on any
+    `source: checkout` record as it enters the tracked log. A record from a checkout folded before 2026-11-25 keeps its
+    `commit` as written, kept as dated history on the operator's ruling: the worktree commit at run time, which may not
+    be on main (`generator/citations.py`, `RUN_LOG_HISTORY_THROUGH`).
   * **Its own freshness first.** It judges the newest earlier record before writing this run's.
   * **The watch reads.** A machine-readable watch source is read by the watch reader (`instrument/watch.py`, on its
     own scheduled agent, never by the check), which writes one dated record per read to a second spool beside the
@@ -35,7 +42,8 @@ Run from the repository root: docs/design/enterprise-strategy-layer/generator/ch
 [--judge].
 `--fold` appends the spool's new runs to the tracked log, the watch spool's new reads to the tracked watch log and
 the attention spool's new records to the tracked attention log, which each strategy release commits. `--git` names
-the checkout that resolves a method's pinned commit (GATE-14), the main checkout by default; an export passes it.
+the checkout that resolves a method's pinned commit (GATE-14, an ancestor of the commit judged): an export passes it
+with `--commit`, the commit its files stand at; a run from a checkout resolves against its own HEAD.
 `--staleness` prints the one warning line `make verify-prepush` shows and always exits 0.
 """
 
@@ -205,16 +213,6 @@ def _spool_paths(spool) -> list[Path]:
     if spool is None:
         return []
     return [spool] if isinstance(spool, Path) else list(spool)
-
-
-def default_commit() -> str | None:
-    r = subprocess.run(
-        ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
-        capture_output=True,
-        text=True,
-        env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},
-    )
-    return r.stdout.strip() if r.returncode == 0 else None
 
 
 def _rel(path: Path) -> str:
@@ -909,6 +907,8 @@ def run(
     rec = {
         "run_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "day": day.isoformat(),
+        # the landed commit an export judged; none from a checkout, which the fold writes null (G-947); on a record
+        # from a checkout folded before 2026-11-25, the worktree commit at run time, which may not be on main
         "commit": commit,
         "source": "checkout"
         if main_checkout(s.root)
@@ -934,9 +934,15 @@ def run(
 
 def fold(spool, log: Path) -> int:
     """Append to the tracked log each spooled run it does not hold yet, oldest first: how a strategy release puts every
-    run on record in git. Returns how many it added; the spool is left as it is."""
+    run on record in git. A run from a checkout enters with `commit` null: its writer could not know whether that HEAD
+    would land, and the fold is the moment the record enters git (the operator's rule of 2026-11-25; G-947). Returns
+    how many it added; the spool is left as it is."""
     held = {r["run_at"] for r in records(None, log)}
-    new = [r for r in records(spool) if r["run_at"] not in held]
+    new = [
+        {**r, "commit": None} if r.get("source") == "checkout" else r
+        for r in records(spool)
+        if r["run_at"] not in held
+    ]
     if new:
         log.parent.mkdir(parents=True, exist_ok=True)
         with log.open("a", encoding="utf-8") as f:
@@ -1050,9 +1056,17 @@ def main(argv: list[str]) -> int:
     ap.add_argument(
         "--watch-spool", type=Path, default=None, help="the watch reader's unfolded records"
     )
-    ap.add_argument("--commit", default=None)
     ap.add_argument(
-        "--git", type=Path, default=None, help="the checkout that resolves pinned commits"
+        "--commit",
+        default=None,
+        help="the landed commit an export of main stands at (the scheduled wrapper passes main's own); a run from a "
+        "checkout names none",
+    )
+    ap.add_argument(
+        "--git",
+        type=Path,
+        default=None,
+        help="the checkout that resolves pinned commits, judged against --commit; this checkout's own HEAD when absent",
     )
     ap.add_argument("--if-due", action="store_true")
     ap.add_argument("--no-record", action="store_true")
@@ -1142,7 +1156,9 @@ def main(argv: list[str]) -> int:
         print(gates.scrub(e.failure()))  # its one form: the file and line, the rule and the edit
         _record_unjudged(a, spool, why)
         return 1
-    s.git = a.git or main_checkout()
+    # an export: its files stand at --commit in the checkout --git names (GATE-14 asks for ancestors of it)
+    if a.git:
+        s.git, s.tip = a.git, a.commit
     pol = s.loaded()
     if a.staleness:
         # a warning, never a failure: a record that cannot be read is said, and the pre-push goes on
@@ -1190,7 +1206,7 @@ def main(argv: list[str]) -> int:
         s,
         a.day,
         spool,
-        a.commit or default_commit(),
+        a.commit,
         record=not (a.no_record or a.judge),
         watch_spool=watch_spool,
         read_spools=read_from,

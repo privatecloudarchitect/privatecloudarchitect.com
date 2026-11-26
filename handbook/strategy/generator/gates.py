@@ -20,9 +20,7 @@ import ast
 import html
 import importlib.util
 import json
-import os
 import re
-import subprocess
 import sys
 import unicodedata
 from dataclasses import dataclass, field, replace
@@ -43,6 +41,7 @@ if str(LAYER) not in sys.path:
     sys.path.insert(0, str(LAYER))
 
 from generator import (  # noqa: E402
+    citations,
     core,
     models,
     scrublist,
@@ -213,7 +212,12 @@ CLAUSES: dict[str, tuple[str, str]] = {
     ),
     "14.4": ("GATE-14", "a value in a field a vocabulary covers that the vocabulary does not list"),
     "14.5": ("GATE-14", "a generated output without its provenance"),
-    "14.6": ("GATE-14", "a method version without its pinned definition and golden fixture"),
+    "14.6": (
+        "GATE-14",
+        "a method version without its pinned definition and golden fixture, its pin a commit that is not an "
+        "ancestor of the commit judged, or its pin null once the policy version has risen past the version that "
+        "defined it",
+    ),
     "14.7": (
         "GATE-14",
         "a change to the typed models of a file whose structural fingerprint no longer matches the one pinned for "
@@ -529,6 +533,8 @@ class Sources:
     )
     root: Path = ROOT
     git: Path | None = None  # the checkout that resolves a pinned commit; the files' own when None
+    # the commit the files stand at in `git` (an export's); that checkout's HEAD when None
+    tip: str | None = None
     # a run's import (step 9): each field `ownership.imports` names, with the address prefixes it supplies (served.address_of);
     # None where no import is passed, and 14.9 is then not judged
     imports: dict[str, list[str]] | None = None
@@ -3098,22 +3104,51 @@ def gate_14(s: Sources, code: list[Path] | None = None) -> list[Finding]:
                     line=_line_at(page, m.start()) if m else _root_line(page),
                 )
             )
-    for i, m in enumerate(
-        raw.get("methods") or [] if s.judges("14.6") else []
-    ):  # a git and test lookup
+    # 14.6, a git and test lookup. A pin names the landed commit at which the ratifying words stand, and must be an
+    # ancestor of the commit judged: reachability, never existence, since a commit a rebase rewrote still exists (FM4 of
+    # the review of 2026-11-25; G-947). A method defined in this policy version may carry a null pin until its release
+    # lands (the pending-pin rule); once `policy_version` rises past its `since`, a null pin is refused.
+    reacher = None
+    policy_version = raw.get("policy_version")
+    for i, m in enumerate(raw.get("methods") or [] if s.judges("14.6") else []):
         d = m.get("definition") or {}
         golden = m.get("golden")
         problems = []
         if not d.get("text"):
             problems.append("no definition")
-        if not d.get("at_commit"):
-            problems.append("a definition pinned to no commit")
-        elif subprocess.run(
-            ["git", "-C", str(s.git or s.root), "cat-file", "-e", f"{d['at_commit']}^{{commit}}"],
-            env={**os.environ, "GIT_NO_LAZY_FETCH": "1"},  # never fetch from a promisor remote
-            capture_output=True,
-        ).returncode:
-            problems.append(f"a definition pinned to {d['at_commit']}, which is not a commit here")
+        pin = d.get("at_commit")
+        if not pin:
+            if m.get("since") == policy_version:
+                out.append(
+                    _f(
+                        "14.6",
+                        s.policy,
+                        ("methods", i),
+                        f"the method {m.get('id')} version {m.get('version')} is pending its pin (defined in policy "
+                        f"version {policy_version}, this one)",
+                        "pin at_commit to the landed commit of the release that defined it before policy_version "
+                        "rises, when a null pin is refused",
+                        listed=True,
+                    )
+                )
+            else:
+                problems.append(
+                    f"a definition pinned to no commit, though it was defined in policy version {m.get('since')} "
+                    f"and the policy is at {policy_version}"
+                )
+        else:
+            if reacher is None:
+                reacher = citations.Reacher(s.git or s.root, s.tip or "HEAD")
+                if (
+                    not reacher.known
+                ):  # neither a pass nor a refusal: the gate has not judged (P-027)
+                    raise citations.UnresolvedError(
+                        f"14.6 cannot resolve a pinned commit: {s.git or s.root} is no git checkout with "
+                        f"{s.tip or 'HEAD'}; pass --git"
+                    )
+            state = reacher.reach(str(pin))
+            if state is not citations.Reach.ANCESTOR:
+                problems.append(f"a definition pinned to {pin}, which is {state.value}")
         test = (golden or {}).get("test") if isinstance(golden, dict) else None
         if not test:
             problems.append("no golden test named")

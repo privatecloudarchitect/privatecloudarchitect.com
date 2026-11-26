@@ -38,14 +38,15 @@ SCHEMA_VERSIONS = {
     "advisory": 1,
     "lines": 2,  # 2: whether a line's components follow the stack's three-part release number (the design of 2026-11-24, part 3.5; the appliance read's step)
     "lead_time": 1,
-    "appliance_series": 1,  # instrument/appliances.py's dated reading of each management component's running version (the design of 2026-11-24, part 3.5)
+    "appliance_series": 2,  # 2: a row from another plane graded against a second source (SDDC Manager, the review of 2026-11-25, O7); 1: instrument/appliances.py's dated reading of each management component's running version (the design of 2026-11-24, part 3.5)
     "appliance_lead_time": 1,  # the method fixed-version-lead-time's output, one advisory over the appliance series (part 3.5)
     "attention": 1,  # schedule/attention.py's record of what reached a person and how (the design of 2026-11-24, part 5; DEC-22)
     "outside_model": 1,
     "lanes": 1,
     "pins": 1,
     "catalog_map": 2,
-    "practice": 1,  # instrument/practice.py's record (40-BREADTH.md step 4, batch 1)
+    "practice": 2,  # 2: the inputs by sha256, the commit null unless landed (the operator's rule of 2026-11-25; G-947); 1: instrument/practice.py's record (40-BREADTH.md step 4, batch 1)
+    "companion_pins": 2,  # companion/pinned/pins.json; 2: no commit, the sources by sha256 alone (G-947); 1 was untyped
     "watch_read": 2,  # 2: each fetch's method and a POST body's digest, and the links a source gives its candidates (the design of 2026-11-24, part 4); 1: instrument/watch.py's record of one read of a watch entry's source (charter section 5.8)
     "driver_stresses_draft": 1,  # drafts/driver-stresses.yaml, DEC-19's draft, read by no gate (40-BREADTH.md step 5)
     "front_door": 3,  # 3: each door's order and the layer's gloss; 2: a link's words and the brief's label; 1: the feed the home renderer reads (DEC-06)
@@ -1517,9 +1518,10 @@ class LineMapping(Strict):
 
     @model_validator(mode="after")
     def _a_claim_has_its_basis(self) -> LineMapping:
-        if self.components_follow_stack is not None and not (
-            self.components_follow_stack_basis or ""
-        ).strip():
+        if (
+            self.components_follow_stack is not None
+            and not (self.components_follow_stack_basis or "").strip()
+        ):
             raise ValueError(
                 f"the line {self.line} says whether its components follow the stack's numbering and gives no basis"
             )
@@ -1581,6 +1583,19 @@ class LeadTime(Strict):
 
 
 # ── the appliance read: each management component's running version (the design of 2026-11-24, parts 3.4 and 3.5) ───
+class ApplianceCrossSource(Strict):
+    """The second source a row's version was checked against (schema 2): SDDC Manager's own `GET /v1/sddc-managers`,
+    by a placeholder; its version and build, whether it was read (and why not), and whether it equals the row's."""
+
+    source: str
+    where: str | None
+    version: str | None
+    build: str | None
+    read: bool
+    why: str | None = None
+    equal: bool | None
+
+
 class ApplianceComponent(Strict):
     """One management component as it reports itself: its class (the advisory rows' component name where one exists:
     vCenter, SDDC Manager, NSX, VCF Operations, VCF Automation; else the fleet lifecycle's component type), where it
@@ -1594,6 +1609,12 @@ class ApplianceComponent(Strict):
     build: str | None
     read: bool
     why: str | None = None
+    # schema 2 (the review of 2026-11-25, O7): a row whose version comes from another plane (SDDC Manager's, from VCF
+    # Operations' VcfAdapterInstance property) carries the second source it was checked against and a grade: `read`
+    # when SDDC Manager's own API agrees, `inferred` when only the property was read, `disputed` when the two differ,
+    # which keeps every measure open. None on a row read from the component's own interface or the fleet's list.
+    grade: Literal["read", "inferred", "disputed"] | None = None
+    cross_source: ApplianceCrossSource | None = None
 
     @model_validator(mode="after")
     def _read_or_said_why(self) -> ApplianceComponent:
@@ -1601,6 +1622,16 @@ class ApplianceComponent(Strict):
             raise ValueError(f"a component read ({self.where}) carries its version")
         if not self.read and not (self.why or "").strip():
             raise ValueError(f"a component not read ({self.where}) says why")
+        if self.grade in ("read", "disputed") and not (
+            self.cross_source and self.cross_source.read
+        ):
+            raise ValueError(
+                f"a row graded {self.grade} ({self.where}) carries the second source it was read from"
+            )
+        if self.grade is None and self.cross_source is not None:
+            raise ValueError(
+                f"a row checked against a second source ({self.where}) carries its grade"
+            )
         return self
 
 
@@ -1620,7 +1651,9 @@ class ApplianceReading(Strict):
     source: str
     identity: str  # the catalog identity the reads were made as, by its reference (never a value)
     components: list[ApplianceComponent]
-    cross_checks: list[ApplianceComponent]  # the same versions as another plane knows them (VCF Operations' domains)
+    cross_checks: list[
+        ApplianceComponent
+    ]  # the same versions as another plane knows them (VCF Operations' domains)
     components_read: int
     components_named: int
     failure: str | None
@@ -1654,7 +1687,9 @@ class ApplianceLeadTime(Strict):
     revision: str
     t0: str
     product: str
-    components: dict[str, dict[str, ApplianceLine]]  # class, then release line, at the newest reading
+    components: dict[
+        str, dict[str, ApplianceLine]
+    ]  # class, then release line, at the newest reading
     unreadable: list[dict[str, Any]]
     not_in_estate: list[str]
     out_of_scope_rows: list[dict[str, Any]]
@@ -1694,7 +1729,9 @@ class AttentionItem(Strict):
     candidate: str | None  # the candidate, clause or initiative the item names
     due: Day | None
     state: Literal["open", "overdue"]
-    link: str | None = Field(default=None, max_length=2000)  # the URL the source gave, where one exists
+    link: str | None = Field(
+        default=None, max_length=2000
+    )  # the URL the source gave, where one exists
     text: str = Field(max_length=2000)  # the item in words, no estate identifier (gates.scrub)
 
     @property
@@ -1714,7 +1751,9 @@ class AttentionRecord(Strict):
     run_at: Stamp
     day: Day
     after: Literal["watch", "check", "session"]
-    channels: list[str]  # the channels the policy enabled at this run (the lane card and the warning read them)
+    channels: list[
+        str
+    ]  # the channels the policy enabled at this run (the lane card and the warning read them)
     items: list[AttentionItem]
     notified: list[Notified]
     judged: str | None = None  # the judged check's run_at, where one was read
@@ -1725,7 +1764,9 @@ class AttentionRecord(Strict):
         if len(keys) != len(set(keys)):
             raise ValueError("an attention record names each item once")
         if self.run_at[:10] != self.day:
-            raise ValueError(f"an attention record's day {self.day} is not its run_at's ({self.run_at})")
+            raise ValueError(
+                f"an attention record's day {self.day} is not its run_at's ({self.run_at})"
+            )
         return self
 
 
@@ -1949,9 +1990,37 @@ class PracticeMeasure(Strict):
         return self
 
 
+PRACTICE_INPUTS = (
+    "register",
+    "portfolio",
+    "policy",
+)  # the order inputs_sha256 joins their digests in
+
+
+class PracticeInput(Strict):
+    """One file a practice record was read from: its repository path and the sha256 of its bytes as read."""
+
+    path: str
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+def inputs_digest(inputs: dict[str, str]) -> str:
+    """The sha256 over the inputs' digests, register, portfolio and policy in that order, newline-joined."""
+    return hashlib.sha256("\n".join(inputs[k] for k in PRACTICE_INPUTS).encode()).hexdigest()
+
+
 class PracticeRecord(Strict):
-    """One dated reading of the practice's measures (schema 1): the day it was read as of, the run's stamp, the
-    commit, the schemas and the policy version, and each measure by its id."""
+    """One dated reading of the practice's measures (schema 2): the day it was read as of, the run's stamp, the
+    inputs it was read from, the schemas and the policy version, and each measure by its id.
+
+    Schema 2 (the operator's rule of 2026-11-25: a committed file names only landed commits) names the inputs by
+    content: `inputs` holds the register, the portfolio and the policy, each by its path and the sha256 of its bytes as
+    read, and `inputs_sha256` the sha256 over the three digests in that order, newline-joined. `commit` stays for one
+    schema version (expand, then contract, charter section 5.12): it is null unless the caller passed `--landed` with a
+    commit already on main, since a writer in a release worktree cannot know whether its HEAD will land. A record
+    migrated from schema 1 carries `inputs` and `inputs_sha256` null, the files it read being gone, and its `commit` as
+    the schema 1 writer wrote it: the worktree commit at run time, which may not be on main. The commit that added a
+    record, and whether its parent's files are the inputs, is `instrument/practice.py locate`'s answer from git."""
 
     schema_: int = Field(alias="schema")
     read_at: Stamp
@@ -1960,9 +2029,46 @@ class PracticeRecord(Strict):
     tree: (
         Literal["clean", "modified"] | None
     )  # the layer's files as the commit holds them, or with edits
+    inputs: dict[Literal["register", "portfolio", "policy"], PracticeInput] | None
+    inputs_sha256: str | None = Field(pattern=r"^[0-9a-f]{64}$")
     schemas: dict[str, int]
     policy_version: int
     measures: dict[str, PracticeMeasure]
+
+    @model_validator(mode="after")
+    def _inputs_whole(self) -> PracticeRecord:
+        if (self.inputs is None) != (self.inputs_sha256 is None):
+            raise ValueError(
+                "a practice record carries its inputs and their digest together, or neither"
+            )
+        if self.inputs is not None:
+            if set(self.inputs) != set(PRACTICE_INPUTS):
+                raise ValueError(f"a practice record's inputs are the {', '.join(PRACTICE_INPUTS)}")
+            if self.inputs_sha256 != inputs_digest({k: v.sha256 for k, v in self.inputs.items()}):
+                raise ValueError("inputs_sha256 is not the digest of the inputs' digests")
+        return self
+
+
+class PinnedCopy(Strict):
+    """One pinned copy the companion recognizes the reference by: its source and copy, each by path and sha256."""
+
+    source: str
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    copy_: str = Field(alias="copy")
+    copy_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    projection: str | None = None  # the portfolio's copy is the served projection, and says so
+
+
+class CompanionPins(Strict):
+    """`companion/pinned/pins.json`, the companion's pins (schema 2): each source and copy by its sha256, and no
+    commit. Schema 1 also carried the writer's HEAD, a pre-land commit a rebase rewrote (G-947); the pins never needed
+    it, since the companion recognizes the reference portfolio by digest alone (`companion/adopt.py`)."""
+
+    schema_: int = Field(alias="schema")
+    written_by: str
+    register_: PinnedCopy = Field(alias="register")  # `register` is a class method of every model
+    policy: PinnedCopy
+    portfolio: PinnedCopy
 
 
 class WatchFetch(Strict):
@@ -2047,6 +2153,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "pins": Pins,
     "catalog_map": CatalogMap,
     "practice": PracticeRecord,
+    "companion_pins": CompanionPins,
     "front_door": FrontDoor,
     "watch_read": WatchRead,
     "driver_stresses_draft": DriverStressesDraft,

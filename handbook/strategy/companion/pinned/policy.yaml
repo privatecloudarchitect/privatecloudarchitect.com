@@ -456,7 +456,12 @@ entries:
     history: []
 
 methods:                                 # one implementation behind one interface per version; a version's definition is
-                                         # pinned to the commit that ratified it, so writing version 2 never rewrites 1
+                                         # pinned to the commit that ratified it, so writing version 2 never rewrites 1.
+                                         # The pin is a landed commit, an ancestor of the commit judged (GATE-14, 14.6):
+                                         # a method defined in this policy version may carry `at_commit: null` until its
+                                         # release lands, and the null is refused once policy_version rises past its
+                                         # `since`, so the next policy change fills it with the landed commit the
+                                         # registry line names (the operator's rule of 2026-11-25; G-947)
   - id: cd3-chain
     version: 1
     status: current
@@ -532,7 +537,7 @@ methods:                                 # one implementation behind one interfa
 
   - id: fixed-version-lead-time
     version: 1
-    status: shadow                       # selected for the appliance half's value since policy version 9 (the operator's ruling of 2026-11-24, section 1.1); adopted from shadow by a later ruling, as fixed-build-lead-time was (D4-14)
+    status: shadow                       # selected for the appliance half's value since policy version 9 (the operator's ruling of 2026-11-24, section 1.1); adopted from shadow by a later ruling, as fixed-build-lead-time was (D4-14). A stated condition of that ruling (the review of 2026-11-25, O7): every component class's source graded read, or, for SDDC Manager, whose version is VCF Operations' VcfAdapterInstance property, its mapping record lab/state/strategy/2026-11-25T185137Z-vcf-version-mapping.json (OBS+DOC, agreement on both instances) with the appliance read's cross-check showing no disputed row
     decided_by: [R-08, DEC-02]
     since: 9
     definition: {text: "the design of 2026-11-24, part 3.5 (kept in the lead's session), ratified by the operator's widening of the capability (section 1.1): lead_time's rule applied to versions within a release line, over instrument/appliances.py's dated reading and advisory.py's component reading", at_commit: "ba167710"}

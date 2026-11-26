@@ -4,8 +4,10 @@ reference portfolio, written under `companion/pinned/` by a strategy release and
 The adopter's companion mirrors these copies to the companion repository in step 12 (never the live files, a rendered
 view or a fixture), and recognizes the reference portfolio by digest alone: `pins.json` records the sha256 of each
 source as it stood at the pin and of each copy written, so a run passing either file is the reference run and every
-other portfolio is an adopter's, whatever its estate says (3c's judgment, S2). The portfolio's copy is the served
-projection (the approved nodes, every withheld node removed; 40-BREADTH.md step 2), filtered as the served views are.
+other portfolio is an adopter's, whatever its estate says (3c's judgment, S2). From schema 2 the pins carry no
+commit: a release writes them before it lands, and a commit named then is one a rebase rewrites (G-947). The
+portfolio's copy is the served projection (the approved nodes, every withheld node removed; 40-BREADTH.md step 2),
+filtered as the served views are.
 
 Run from the repository root: python3 docs/design/enterprise-strategy-layer/generator/pin_companion.py --write
 """
@@ -15,7 +17,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -63,28 +64,18 @@ def projected_portfolio(root: Path = ROOT) -> str:
     return yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=120)
 
 
-def _commit(root: Path) -> str | None:
-    try:
-        return subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
-
-
 def build(root: Path = ROOT) -> dict[str, bytes]:
-    """Each pinned copy's bytes by its file name under companion/pinned/, and pins.json last."""
+    """Each pinned copy's bytes by its file name under companion/pinned/, and pins.json last: schema 2, each source
+    and copy by its sha256 and no commit (a writer that runs before the land names no commit; G-947)."""
+    from generator.models import SCHEMA_VERSIONS, CompanionPins
+
     copies = {
         "register.yaml": (root / SOURCES["register"]).read_bytes(),
         "policy.yaml": (root / SOURCES["policy"]).read_bytes(),
         "portfolio.example.yaml": projected_portfolio(root).encode("utf-8"),
     }
     pins = {
-        "schema": 1,
-        "commit": _commit(root),
+        "schema": SCHEMA_VERSIONS["companion_pins"],
         "written_by": "docs/design/enterprise-strategy-layer/generator/pin_companion.py",
     }
     for name, rel in SOURCES.items():
@@ -103,6 +94,7 @@ def build(root: Path = ROOT) -> dict[str, bytes]:
         "the served projection: the approved nodes, every withheld node removed, the approvals left out, and the "
         "initiatives the projection holds off the board left out with the decision-log entries that name them"
     )
+    CompanionPins.model_validate(pins)
     copies["pins.json"] = (json.dumps(pins, indent=1, ensure_ascii=False) + "\n").encode("utf-8")
     return copies
 
@@ -116,8 +108,9 @@ def write(root: Path = ROOT) -> Path:
 
 
 def current(root: Path = ROOT) -> list[str]:
-    """The pinned files whose bytes differ from a fresh build (the digest of the clock-free parts): what a release
-    must rewrite. pins.json is compared without its commit."""
+    """The pinned files whose bytes differ from a fresh build: what a release must rewrite. Every byte is a function
+    of the sources, pins.json included since schema 2 dropped the writer's HEAD, so a rebase that moves no source
+    leaves nothing stale."""
     out = []
     fresh = build(root)
     for name, data in fresh.items():
@@ -125,15 +118,12 @@ def current(root: Path = ROOT) -> list[str]:
         if not path.exists():
             out.append(f"{name} is absent")
             continue
-        held = path.read_bytes()
-        if name == "pins.json":
-            a, b = json.loads(held), json.loads(data)
-            a.pop("commit", None)
-            b.pop("commit", None)
-            if a != b:
-                out.append("pins.json records other digests")
-        elif held != data:
-            out.append(f"{name} differs from its source")
+        if path.read_bytes() != data:
+            out.append(
+                "pins.json records other digests or another schema"
+                if name == "pins.json"
+                else f"{name} differs from its source"
+            )
     return out
 
 

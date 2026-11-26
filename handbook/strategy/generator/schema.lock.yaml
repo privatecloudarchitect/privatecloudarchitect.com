@@ -10,14 +10,15 @@ series: {1: a1981529d76a4898}
 advisory: {1: a507501e9192ec23}
 lines: {1: 4c30a19979658bdc, 2: 4ebc60ae365c4088}   # 2: whether a line's components follow the stack's release number, with its basis (the design of 2026-11-24, part 3.5)
 lead_time: {1: 76fb7bc5472e2e34}
-appliance_series: {1: d01565b510ea069b}   # instrument/appliances.py's dated reading of the management components' versions (the design of 2026-11-24, part 3.5)
+appliance_series: {1: d01565b510ea069b, 2: 729f43123bc38442}   # 2: a row from another plane graded against a second source, SDDC Manager's own API (the review of 2026-11-25, O7); 1: instrument/appliances.py's dated reading of the management components' versions (the design of 2026-11-24, part 3.5)
 appliance_lead_time: {1: f002fe5e720036e0}   # the method fixed-version-lead-time's output over the appliance series (part 3.5)
 attention: {1: 182e36be23dd34fc}   # schedule/attention.py's record of what reached a person and how (part 5; DEC-22)
 outside_model: {1: 01b10e81fb155530}   # research/outside-model.yaml (40-BREADTH.md step 2)
 lanes: {1: 68fe86402487ec91}   # lanes.yaml
 pins: {1: f91b45c836a64ffa}   # records/pinned/pins.yaml
 catalog_map: {1: ee770436e3fd043a, 2: f25a6c03c90f33f0}   # 1: the model, no file; 2: an untaught placement's territory and message, the file (step 3)
-practice: {1: 4f78629ade5e766d}   # instrument/practice.py's record of the layer's own practice (step 4, batch 1)
+practice: {1: 4f78629ade5e766d, 2: 5894f9c79001b58d}   # 2: the inputs by sha256 and the commit null unless landed (the operator's rule of 2026-11-25; G-947); 1: instrument/practice.py's record of the layer's own practice (step 4, batch 1)
+companion_pins: {2: ba9b0b9273aa63e5}   # companion/pinned/pins.json; 2: no commit, the sources by sha256 alone (G-947); schema 1 was untyped
 watch_read: {1: 70520d0f32b85ef8, 2: ba033d47003a24f2}   # 2: each fetch's method and a POST body's digest, and the links a source gives its candidates (the design of 2026-11-24, part 4); 1: instrument/watch.py's record of one read of a watch entry's source (charter section 5.8, the operator's ruling of 2026-10-31)
 driver_stresses_draft: {1: fbfc7609e1c43611}   # drafts/driver-stresses.yaml, DEC-19's draft (40-BREADTH.md step 5)
 front_door: {1: 21ffb2f4babbfa4b, 2: 791a5684a4baaf63, 3: f2b015965d6f95f9}   # the feed the home renderer reads (DEC-06; 50-FRONT-DOOR.md section 9); 2: a link's words and the brief's label; 3: each door's order and the layer's gloss

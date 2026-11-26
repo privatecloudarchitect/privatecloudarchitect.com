@@ -32,6 +32,11 @@ The watch reader's record (`watch_read`) moves to schema 2 with the design of 20
 method and, for a POST, the digest of the body the reader sent, and the record carries the links a source gives its
 candidates. A schema 1 record was read by GET and recorded no link, so its migration writes exactly that.
 
+The practice record and the companion's pins move to schema 2 with the operator's rule of 2026-11-25 (a committed
+file names only landed commits; G-947): the practice record gains its inputs by sha256, which a schema 1 record cannot
+be given after the fact (its migration writes them null and keeps its commit as written), and the pins lose the
+writer's HEAD.
+
 A node-level migration (`NODE_MIGRATIONS`) carries a recorded approval's node forward to the current schema in memory,
 so a node approved under one schema is compared with today's under another; a stored approval is never rewritten.
 """
@@ -398,6 +403,44 @@ def watch_read_1_to_2(doc: dict) -> dict:
         f.setdefault("method", "GET")
         f.setdefault("request_sha256", None)
     doc.setdefault("links", {})
+    doc["schema"] = 2
+    return doc
+
+
+@migration("practice", 1)
+def practice_1_to_2(doc: dict) -> dict:
+    """Schema 2 of the practice record (the operator's rule of 2026-11-25, G-947): the record names its inputs by
+    sha256, and its commit only when the caller asserts it landed. A schema 1 record named the writer's HEAD and no
+    input; the files it read are gone from the working tree, so no digest can be computed for it, and the migration
+    writes `inputs` and `inputs_sha256` null. Its `commit` is kept as the schema 1 writer wrote it: the worktree
+    commit at run time, which may not be on main."""
+    doc.setdefault("inputs", None)
+    doc.setdefault("inputs_sha256", None)
+    doc["schema"] = 2
+    return doc
+
+
+@migration("appliance_series", 1)
+def appliance_series_1_to_2(doc: dict) -> dict:
+    """Schema 2 of the appliance reading (the review of 2026-11-25, O7): a row whose version comes from another plane
+    is graded against a second source. At schema 1 SDDC Manager's rows were VCF Operations' `VcfAdapterInstance`
+    property alone, never checked against SDDC Manager's own API, so each is graded `inferred` with no second source,
+    which is what it was; every other row was read from the component's own interface or the fleet's list and takes
+    no grade. The reading keeps its key, `appliance_schema`; the harness reads it as `schema` (instrument/appliances.py,
+    `load_reading`)."""
+    for row in doc.get("components") or []:
+        if row.get("class") == "SDDC Manager":
+            row.setdefault("grade", "inferred")
+            row.setdefault("cross_source", None)
+    doc["schema"] = 2
+    return doc
+
+
+@migration("companion_pins", 1)
+def companion_pins_1_to_2(doc: dict) -> dict:
+    """Schema 2 of the companion's pins (G-947): the writer's HEAD leaves, since a commit a rebase rewrites is no
+    identity, and the companion recognizes the reference by the sources' and copies' sha256 alone, which stay."""
+    doc.pop("commit", None)
     doc["schema"] = 2
     return doc
 
