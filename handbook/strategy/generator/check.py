@@ -743,7 +743,7 @@ def _vocabulary(s: Sources) -> list[Finding]:
     out = []
     for name, source in vocabulary.SOURCES.items():
         recorded = ((data.get("written_from") or {}).get(name) or {}).get("sha256")
-        current = vocabulary.sha256_of(s.root / source) if (s.root / source).exists() else None
+        current = vocabulary.digest(name, s.root / source) if (s.root / source).exists() else None
         if recorded != current:
             out.append(
                 _f(

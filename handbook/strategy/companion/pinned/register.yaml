@@ -71,6 +71,7 @@ planned_capabilities:                    # step 5's initiatives name three prere
 
 capabilities:
   - id: fleet-patch-window
+    name: "Fleet patch window"
     object_in_focus: "the fleet's ESX hosts against published advisories"
     parent: null
     outcome: "A published advisory is closed across the fleet within its target window"
@@ -153,6 +154,7 @@ capabilities:
         target_owner: platform-team
 
   - id: platform-restore
+    name: "Platform restore"
     object_in_focus: "the management plane's backups"
     parent: null
     outcome: "The management plane can be restored from a copy no older than its schedule allows"
@@ -616,6 +618,7 @@ capabilities:
         target_owner: platform-team
 
   - id: non-human-identity
+    name: "Non-human identity"
     object_in_focus: "every actor that is not a person, and the credential it holds"
     parent: null
     outcome: "No integration or automation signs in on a person's account or a break-glass account, and every credential an automation holds has a named owner and a rotation date that has not passed"
@@ -1124,6 +1127,7 @@ capabilities:
         target_owner: observability-team
 
   - id: actionable-alerting
+    name: "Actionable alerting"
     object_in_focus: "every alert definition, policy and notification rule of the Operations instance"
     parent: null
     outcome: "Every alert reaches the right person once, about the object they can act on, scoped by the policy that enables it and with its threshold in the metric"
@@ -1236,6 +1240,7 @@ capabilities:
         target_owner: observability-team
 
   - id: threat-alerting
+    name: "Threat alerting"
     object_in_focus: "the four signals of the chapter's workshop in the host and vCenter records: a shell or SSH switched on, a host firewall off, sign-in failures"
     parent: null
     outcome: "A shell or SSH switched on, a host firewall off, a sign-in failure burst, each raises an alert on the object it is about within minutes, switched on where the host lives and proven: an ESX host's signal by a labelled line sent, a vCenter event by its identifier in the catalog and the first real event"
@@ -1350,6 +1355,7 @@ capabilities:
         target_owner: observability-team
 
   - id: incident-handling
+    name: "Incident handling"
     object_in_focus: "the open alert queue and the failure record"
     parent: null
     outcome: "Every alert that pages is handled as an incident or recognised as a standing condition, routed by its impact badge and symptom, and its cause recorded with the layer it sat in"
@@ -1594,6 +1600,7 @@ capabilities:
         target_owner: platform-team
 
   - id: capacity-headroom
+    name: "Capacity headroom"
     object_in_focus: "every cluster's capacity against the demand on it, per model and axis"
     parent: null
     outcome: "For each capacity model, the first axis of the first cluster to run out is known, graded by the governing policy's thresholds, refused when the ruler has drifted, and hardware is scheduled from it by a named owner"
@@ -1706,6 +1713,7 @@ capabilities:
         target_owner: platform-team
 
   - id: tenancy-model
+    name: "Tenancy model"
     object_in_focus: "the containment spine of every tenant: organization, project, Supervisor namespace, workload, with the names and the bindings each carries"
     parent: null
     outcome: "A tenancy layout decided once, every construct named to the published grammar, each namespace's region, class and VPC fixed at create, and the inventory re-read after every upgrade against both"
@@ -1920,6 +1928,7 @@ capabilities:
         target_owner: security-team
 
   - id: self-service-provisioning
+    name: "Self-service provisioning"
     object_in_focus: "the catalog a tenant requests from: blueprints, their released versions, the items and images they deploy from, and the deployments they own"
     parent: null
     outcome: "Teams request their own workloads from a catalog whose items are the tenant interface: each face asked what it allows, ownership read where it lives, content removed cleanly, blueprints keyed on identifiers"
@@ -2379,6 +2388,7 @@ capabilities:
         target_owner: platform-team
 
   - id: workload-day2
+    name: "Workload day-2"
     object_in_focus: "every machine a deployment claims: the plane that changes it, the record that declares it, and what each delete leaves behind"
     parent: null
     outcome: "Create, change and delete run through the plane that claims the machine, drift between record and machine is audited on a schedule, and no deleted deployment holds a resource"

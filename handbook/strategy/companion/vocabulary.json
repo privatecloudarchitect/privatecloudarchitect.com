@@ -11,11 +11,16 @@
   },
   "pages": {
    "path": "deploy/privatecloudarchitect/site/src/pages.json",
-   "sha256": "64c4d96e40bc1cbb8ee70c58320956702bdb5106f1a767b12ddd3bdc33048c55"
+   "sha256": "a5492b66810f3e4a7645e777ce772c71aec98bb3657b8204a2b351e3d39c9915"
   },
   "ladder": {
    "path": "docs/design/standup-dependency-ladder/00-CHARTER.md",
    "sha256": "43ba4400efb809765130b471f17ae9467bed0b1e4d2f68dc3ce4b23dcceea4a3"
+  },
+  "glossary": {
+   "path": "docs/design/enterprise-strategy-layer/00-CHARTER.md",
+   "sha256": "f48aefb1876d4d44491b9aad05fe08ad128c16d7a604fd22fd52334130c449f7",
+   "section": "Glossary"
   }
  },
  "jobs": [
@@ -1594,7 +1599,7 @@
   },
   {
    "path": "/strategy/actionable-alerting",
-   "title": "Every alert reaches the right person once, about the object they can act on, scoped by the policy that enables it and with its threshold in the metric"
+   "title": "Actionable alerting"
   },
   {
    "path": "/strategy/agents",
@@ -1602,7 +1607,7 @@
   },
   {
    "path": "/strategy/benefits-management",
-   "title": "Every value a capability promises is measured by its instrument against a recorded target, and each target has a held owner in every scope the capability is planned in"
+   "title": "Benefits management"
   },
   {
    "path": "/strategy/board",
@@ -1610,7 +1615,7 @@
   },
   {
    "path": "/strategy/capacity-headroom",
-   "title": "For each capacity model, the first axis of the first cluster to run out is known, graded by the governing policy's thresholds, refused when the ruler has drifted, and hardware is scheduled from it by a named owner"
+   "title": "Capacity headroom"
   },
   {
    "path": "/strategy/costs-and-value",
@@ -1622,35 +1627,35 @@
   },
   {
    "path": "/strategy/fleet-patch-window",
-   "title": "A published advisory is closed across the fleet within its target window"
+   "title": "Fleet patch window"
   },
   {
    "path": "/strategy/incident-handling",
-   "title": "Every alert that pages is handled as an incident or recognised as a standing condition, routed by its impact badge and symptom, and its cause recorded with the layer it sat in"
+   "title": "Incident handling"
   },
   {
    "path": "/strategy/innovation-management",
-   "title": "Each cycle's scan is recorded over every area, and each technology signal ends in an initiative with a radar stance or a recorded no change"
+   "title": "Innovation management"
   },
   {
    "path": "/strategy/inventory-of-record",
-   "title": "Your estate holds one governed inventory of its workloads: each walked workload carries its application, tier and environment as facts the classifier proposed and a person ratified, and the count of workloads carrying none is read on a schedule"
+   "title": "Inventory of record"
   },
   {
    "path": "/strategy/non-human-identity",
-   "title": "No integration or automation signs in on a person's account or a break-glass account, and every credential an automation holds has a named owner and a rotation date that has not passed"
+   "title": "Non-human identity"
   },
   {
    "path": "/strategy/platform-restore",
-   "title": "The management plane can be restored from a copy no older than its schedule allows"
+   "title": "Platform restore"
   },
   {
    "path": "/strategy/portfolio-management",
-   "title": "Every initiative is ranked by cost of delay in one common unit and funded in rank order within each constrained role's capacity, what cannot be converted shown beside the rank"
+   "title": "Portfolio management"
   },
   {
    "path": "/strategy/program-and-project-management",
-   "title": "Interdependent initiatives are delivered in prerequisite order: no plan runs ahead of what it stands on, each chain is funded item by item, and every planning assessment is within its review interval"
+   "title": "Program and project management"
   },
   {
    "path": "/strategy/roles/application-team",
@@ -1682,23 +1687,23 @@
   },
   {
    "path": "/strategy/self-service-provisioning",
-   "title": "Teams request their own workloads from a catalog whose items are the tenant interface: each face asked what it allows, ownership read where it lives, content removed cleanly, blueprints keyed on identifiers"
+   "title": "Self-service provisioning"
   },
   {
    "path": "/strategy/strategy-management",
-   "title": "The platform's direction is held current: every guidance assessment within its review interval, every driver's stress on record, and each trigger event ruled on in the cycle it arrives"
+   "title": "Strategy management"
   },
   {
    "path": "/strategy/tenancy-model",
-   "title": "A tenancy layout decided once, every construct named to the published grammar, each namespace's region, class and VPC fixed at create, and the inventory re-read after every upgrade against both"
+   "title": "Tenancy model"
   },
   {
    "path": "/strategy/threat-alerting",
-   "title": "A shell or SSH switched on, a host firewall off, a sign-in failure burst, each raises an alert on the object it is about within minutes, switched on where the host lives and proven: an ESX host's signal by a labelled line sent, a vCenter event by its identifier in the catalog and the first real event"
+   "title": "Threat alerting"
   },
   {
    "path": "/strategy/workload-day2",
-   "title": "Create, change and delete run through the plane that claims the machine, drift between record and machine is audited on a schedule, and no deleted deployment holds a resource"
+   "title": "Workload day-2"
   }
  ],
  "rungs": [
@@ -1709,5 +1714,59 @@
   "R4",
   "R5",
   "R6"
+ ],
+ "glossary": [
+  {
+   "term": "Ledger",
+   "definition": "one of the three non-empty lists every capability carries: establish, sustain, value."
+  },
+  {
+   "term": "Declaration",
+   "definition": "a part of a capability as the enforcing system holds it, with exactly one writer role."
+  },
+  {
+   "term": "Drift read",
+   "definition": "a scheduled read of one declaration against what runs, its result in sync, drifted, check failed or not covered; the declaration's writer acts on what it finds."
+  },
+  {
+   "term": "Adoption level",
+   "definition": "the graded bar, 0 to 4, derived from evidence per capability per scope."
+  },
+  {
+   "term": "Adoption bar",
+   "definition": "established, sustained on cadence, value measured, every declaration's writer owned and its drift read, gaps covered by unexpired exceptions."
+  },
+  {
+   "term": "Illustrative",
+   "definition": "a figure or decision supplied for the reference portfolio's worked example, labelled wherever shown, never accepted in an adopter's portfolio."
+  },
+  {
+   "term": "Instrument",
+   "definition": "the read that measures a value (a companion, a product metric, a named external source)."
+  },
+  {
+   "term": "Cost of delay",
+   "definition": "what each period of waiting costs, through a value measure, with an urgency profile."
+  },
+  {
+   "term": "Conversion rate",
+   "definition": "an expected loss per unit of a value measure, with its method, source and range, the only way unlike measures enter one rank."
+  },
+  {
+   "term": "Common unit (cu)",
+   "definition": "the one unit every cost of delay is converted into, through a conversion rate, so unlike measures enter one rank; CD3 is in common units per month per person-week."
+  },
+  {
+   "term": "CD3",
+   "definition": "cost of delay, in one common unit, divided by duration on the constrained role's time; the prioritization rule, in common units per month per person-week."
+  },
+  {
+   "term": "Enabler",
+   "definition": "an initiative that establishes a capability others require and changes no value measure itself; it has no cost of delay of its own and is ranked by its chain."
+  },
+  {
+   "term": "Chain rule",
+   "definition": "an initiative that establishes a capability scores the higher of its own CD3 and the best chain with the dependents it alone unblocks."
+  }
  ]
 }

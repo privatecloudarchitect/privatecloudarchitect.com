@@ -81,6 +81,11 @@ STYLE = """<style>
 .esl .illus{display:inline-block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--soft);
   border:1px solid var(--line-2);border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap}
 .esl .state{font-weight:600}
+.esl dl.glossary{margin:6px 0 14px;max-width:78ch}
+.esl dl.glossary dt{font-weight:600;margin-top:10px}
+.esl dl.glossary dd{margin:2px 0 0;color:var(--ink)}
+.esl a.term{color:inherit;text-decoration:underline dotted;text-underline-offset:3px}  /* a defined term's first use */
+.esl .outcome{font-size:18px;line-height:1.5;color:var(--ink);margin:4px 0 10px;max-width:72ch}  /* the outcome under the name */
 .esl .prov{color:var(--faint);font-size:14px;border-top:1px solid var(--line);margin-top:28px;padding-top:10px}
 .esl details.esl-prov{margin-top:28px}  /* the provenance fold stands off the content above it, as the line did */
 @media (max-width:640px){
@@ -168,13 +173,116 @@ def words(ident: str) -> str:
     return str(ident).replace("-", " ")
 
 
+def _sentence(text: str) -> str:
+    """A name in sentence case: its first letter capital, the rest as written."""
+    return text[:1].upper() + text[1:]
+
+
 def named(register, ident: str) -> str:
     """A capability, an initiative, a watch entry or a planned capability as a page names it: its `name` where the
-    register gives one (schema 3), its id in words otherwise."""
+    register gives one (schema 3), as written, its id in words otherwise. One case rule (the educator review, S2): a
+    name is in sentence case, so every column that names things reads the same."""
     for x in [*register.capabilities, *register.initiatives, *register.watch_list]:
         if x.id == ident:
-            return x.name or words(ident)
-    return words(ident)
+            return x.name or _sentence(words(ident))
+    return _sentence(words(ident))
+
+
+# The words these pages use, as the layer's charter defines them: read from the companion's vocabulary file, which
+# vocabulary.py writes from the charter's glossary, its one writer, so the site and an adopter's companion render the
+# same words (the educator review, S5).
+VOCABULARY_FILE = Path(__file__).resolve().parent.parent / "companion" / "vocabulary.json"
+GLOSSARY_ANCHOR = "how-to-read"
+# The forms a page uses for each defined term, longest first, so "common unit" wins over "cu" and a plural over its root
+TERM_FORMS = {"Ledger": ["ledgers", "ledger"], "Declaration": ["declarations", "declaration"],
+              "Drift read": ["drift reads", "drift read"], "Adoption level": ["adoption levels", "adoption level"],
+              "Adoption bar": ["adoption bar"], "Illustrative": ["illustrative"], "Instrument": ["instruments", "instrument"],
+              "Cost of delay": ["cost of delay"], "Conversion rate": ["conversion rates", "conversion rate"],
+              "Common unit (cu)": ["common units", "common unit", "cu"], "CD3": ["CD3"],
+              "Enabler": ["enablers", "enabler"], "Chain rule": ["chain rule"]}
+_SKIP_TAGS = {"a", "h1", "h2", "h3", "h4", "h5", "h6", "code", "pre", "script", "style", "title", "summary", "th",
+              "dt", "caption"}  # headings, a table's or a list's labels, links and code keep their words plain
+# the labelling furniture a gate reads by its text: a figure's wrapper and kind, the illustrative pill and the
+# illustrative inputs list (GATE-7), never split by a link
+_SKIP_ATTRS = re.compile(r'data-node|data-kind|class="[^"]*\billus')
+# a defined word inside a longer phrase the world outside the layer owns means that phrase's thing, never the term:
+# data protection's "transfer instrument" is not the read that measures a value (a homonym the drivers view carries)
+NOT_THE_TERM = {"Instrument": ["transfer instruments", "transfer instrument"]}
+_VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
+
+
+def glossary() -> list[dict]:
+    """The hub block's terms and definitions, in its order, from the companion's vocabulary (empty when absent)."""
+    try:
+        return json.loads(VOCABULARY_FILE.read_text(encoding="utf-8")).get("glossary") or []
+    except (OSError, ValueError):
+        return []
+
+
+def term_id(term: str) -> str:
+    return "t-" + re.sub(r"[^a-z0-9]+", "-", term.lower()).strip("-")
+
+
+def register_names(register) -> list[str]:
+    """Every name a page prints for the register's things, so a term inside one is never taken for the term."""
+    return [named(register, x.id) for x in [*register.capabilities, *register.initiatives, *register.watch_list]]
+
+
+def link_terms(body: str, terms: list[dict], hub: str = "/strategy", names: list[str] | None = None) -> str:
+    """Each defined term's first use on a page, linked to its entry in the hub's block with its definition as the
+    link's title; later uses stay plain. Never inside a heading, a link, code, a figure's wrapper, its label or the
+    illustrative inputs list, so no figure's kind, no gate's text and no heading changes (the educator review, S5)."""
+    pending = {e["term"]: e["definition"] for e in terms if e["term"] in TERM_FORMS}
+    out, stack = [], []   # one flag per open element: True where its words are never linked
+    for tok in re.split(r"(<[^>]+>)", body):
+        if tok.startswith("<"):
+            m = re.match(r"<(/?)([a-zA-Z0-9]+)", tok)
+            if m and m.group(2).lower() not in _VOID_TAGS and not tok.endswith("/>"):
+                if m.group(1) == "/":
+                    if stack:
+                        stack.pop()
+                else:
+                    stack.append(m.group(2).lower() in _SKIP_TAGS or bool(_SKIP_ATTRS.search(tok)))
+            out.append(tok)
+            continue
+        if any(stack) or not pending or not tok.strip():
+            out.append(tok)
+            continue
+        names_in = None  # the register names in this run, found only once a term matches in it
+        for term in sorted(list(pending), key=lambda x: -max(len(f) for f in TERM_FORMS[x])):
+            if term not in pending:
+                continue
+            forms = "|".join(re.escape(f) for f in TERM_FORMS[term])
+            flags = re.IGNORECASE if term != "CD3" else 0
+            hits = list(re.finditer(rf"(?<![\w-])({forms})(?![\w-])", tok, flags))
+            if not hits:
+                continue
+            # a defined word inside a name ("Fleet patch instrument") is the name's, and inside a phrase the world
+            # owns (NOT_THE_TERM) is that phrase's: neither is the term
+            if names_in is None:
+                names_in = [(x.start(), x.end()) for n in names or [] for x in re.finditer(re.escape(n), tok, re.I)]
+            theirs = names_in + [(x.start(), x.end()) for ph in NOT_THE_TERM.get(term, [])
+                                 for x in re.finditer(rf"(?<![\w-]){re.escape(ph)}(?![\w-])", tok, re.I)]
+            m = next((x for x in hits if not any(a <= x.start() and x.end() <= b for a, b in theirs)), None)
+            if m:
+                title = html.escape(_sentence(pending.pop(term)), quote=True)
+                tok = (tok[:m.start()] + f'<a class="term" href="{hub}#{term_id(term)}" title="{title}">{m.group(1)}</a>'
+                       + tok[m.end():])
+                break  # one term per text run, so a link never lands inside another
+        out.append(tok)
+    return "".join(out)
+
+
+# the board's rank table heads its score and its chain with their units and meaning (the educator review, S5)
+BOARD_SCORE = "Score, cu per month per person-week"
+BOARD_CHAIN = "Chain: what it unblocks"
+
+
+def first_clause(text: str) -> str:
+    """An outcome's first clause, for a column that lists many (the hub, a brief's Accountable for): up to its first
+    semicolon, colon or full stop. A sentence with none is whole; a clause is never cut inside, so a list stays a
+    list (the educator review, S2)."""
+    return re.split(r"(?<=[;:.])\s", text.strip(), maxsplit=1)[0].rstrip(";:.")
 
 
 def system_named(declaration) -> str:
@@ -309,7 +417,7 @@ def amount(value: float, unit: str) -> str:
 # The renderer's format version: raised by hand when a change to the renderer changes what a served page says, and
 # pinned with a fingerprint of the served pages rendered from frozen slices (rendered/format.lock.yaml), so a served
 # page's digest names the renderer that wrote it (40-BREADTH.md step 2, S1).
-FORMAT = 15  # 15: the educator review's round 3, part 4 (an aspirational target takes "an"; a driver's heading in sentence case; the provenance line folded at the foot as a chapter folds its sources); 14: the educator review's round 3, part 3 (a "Taught at" column on the establish and sustain tables in place of the hand-off table and the whole-capability line, the untaught parts listed under the tables); 13: the educator review's round 3, part 2 (every role's brief opens on what it owns and names the chapters that teach its work; its declarations, drift reads and watch sources as tables; its loops ordered by cadence; a capability page's declarations as a table and its effort column headed by the one period); 12: the educator review's round 3, part 1 (a capability page's dek leads with what it serves and who owns it and names the lead value in its unit; a reading-free verdict line under the dek; the reader's own count under the establish table); 11: the site's pages as a worked example under the lab-number rule (the reader's frame, the example's readings, standing and states as example output, a self-assessment of the establish steps; G-904); 10: the review's round 2 (the board as a worked example, the costs description in the reader's finance words, a driver defined); 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
+FORMAT = 16  # 16: the educator review's S2 and S5 (the capability's name heads its page and titles it, the outcome under it; the hub's "How to read these pages" from the charter's glossary through the vocabulary, each term's first use linked, every eyebrow linking the block; the board's headers carry their units). 15: 15: the educator review's round 3, part 4 (an aspirational target takes "an"; a driver's heading in sentence case; the provenance line folded at the foot as a chapter folds its sources); 14: the educator review's round 3, part 3 (a "Taught at" column on the establish and sustain tables in place of the hand-off table and the whole-capability line, the untaught parts listed under the tables); 13: the educator review's round 3, part 2 (every role's brief opens on what it owns and names the chapters that teach its work; its declarations, drift reads and watch sources as tables; its loops ordered by cadence; a capability page's declarations as a table and its effort column headed by the one period); 12: the educator review's round 3, part 1 (a capability page's dek leads with what it serves and who owns it and names the lead value in its unit; a reading-free verdict line under the dek; the reader's own count under the establish table); 11: the site's pages as a worked example under the lab-number rule (the reader's frame, the example's readings, standing and states as example output, a self-assessment of the establish steps; G-904); 10: the review's round 2 (the board as a worked example, the costs description in the reader's finance words, a driver defined); 9: the review's words (the index's holder column, the drivers' and role briefs' headings, one term per concept in the descriptions); 8: schema 7's versions in the provenance line and the input digest they enter (a typed door link's words); 7: schema 6's versions in the provenance line and the input digest they enter (the front door's readers, DEC-06); 6: the agentic page and the drivers' view served from their slices (step 12); 5: the layer's public name on every page (step 11, DEC-01); 4: the standing line, every value defined with its direction, the drift read's instrument and comparison, the levels in words, the public wording (step 10); 3: schema 5's versions in the provenance line (step 5); 2: schema 4's and a drift read no companion makes yet, said (step 4)
 NAME = "The Architect's NOC"  # the layer's public name (DEC-01, 00-CHARTER.md section 10), on every page's eyebrow and the index's description, and on the companion's frame; "the strategy layer" stays the descriptive phrase in prose, and the pages' paths are unchanged (D-053)
 
 
@@ -746,8 +854,11 @@ def strategy_page(
     parts = [
         STYLE,
         '<div class="esl" data-source="register portfolio" data-view="capability">',
-        f'<span class="eyebrow">{E(NAME)}, capability</span>',
-        f"<h1>{E(cap.outcome)}</h1>",
+        f'<span class="eyebrow"><a href="/strategy#how-to-read">{E(NAME)}</a>, capability</span>',
+        # the capability's name heads its page, and its outcome, whole, as the register words it, is the first line
+        # under it (the educator review, S2)
+        f"<h1>{E(named(register, cap_id))}</h1>",
+        f'<p class="outcome">{E(cap.outcome)}</p>',
     ]
     lead = next((v for v in cap.value if v.stages), cap.value[0])
     # the dek leads with what the capability serves and who owns it, then names the lead value in its unit; the
@@ -1396,7 +1507,7 @@ def board_page(
     parts = [
         STYLE,
         '<div class="esl" data-source="register portfolio" data-view="board">',
-        f'<span class="eyebrow">{E(NAME)}, {E(rep["estate"])} portfolio</span>',
+        f'<span class="eyebrow"><a href="/strategy#how-to-read">{E(NAME)}</a>, {E(rep["estate"])} portfolio</span>',
         "<h1>What to fund first, a worked example</h1>"
         if example
         else f"<h1>What to fund first, worked on the {E(rep['estate'])} estate</h1>",
@@ -1441,8 +1552,8 @@ def board_page(
             [
                 "Rank",
                 "Initiative",
-                "Score",
-                "Chain",
+                BOARD_SCORE,
+                BOARD_CHAIN,
                 _unit_head(b["ranked"]),
                 _effort_head(b["ranked"]),
             ],
@@ -1637,7 +1748,7 @@ def costs_page(rep: dict, register, pages: dict[str, str], served=None) -> str:
     parts = [
         STYLE,
         '<div class="esl" data-source="register portfolio" data-view="costs">',
-        f'<span class="eyebrow">{E(NAME)}, {E(rep["estate"])} portfolio</span>',
+        f'<span class="eyebrow"><a href="/strategy#how-to-read">{E(NAME)}</a>, {E(rep["estate"])} portfolio</span>',
         "<h1>What each capability returns, and what it costs once and to keep</h1>",
         '<p class="dek">Each capability\'s values say what it returns, and the cost of delay what waiting loses; '
         "one-time work brings it into being, and recurring work keeps it. Each is in its own unit, summed only within a "
@@ -1769,7 +1880,7 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
     parts = [
         STYLE,
         '<div class="esl" data-source="register" data-view="role">',
-        f'<span class="eyebrow">{E(NAME)}, {BRIEF}</span>',
+        f'<span class="eyebrow"><a href="/strategy#how-to-read">{E(NAME)}</a>, {BRIEF}</span>',
         f"<h1>{E(brief['name'])}: the {BRIEF}</h1>",
     ]
     held = ("accountable_for", "writes", "runs", "measures", "drift_reads", "sponsors", "reads")
@@ -1840,7 +1951,7 @@ def role_page(brief: dict, register, comp_map: dict, pages: dict[str, str], prov
                 [
                     [
                         f'<a href="/strategy/{E(cid)}">{E(named(register, cid))}</a>',
-                        E(caps[cid].outcome),
+                        E(first_clause(caps[cid].outcome)),
                         links(cid, "taught by") or NOT_TAUGHT,
                         links(cid, "background") or "none",
                     ]
@@ -2002,7 +2113,7 @@ def agents_page(register, pages: dict[str, str], prov: dict) -> str:
     parts = [
         STYLE,
         '<div class="esl" data-source="register" data-view="agents">',
-        f'<span class="eyebrow">{E(NAME)}, the agentic layer</span>',
+        f'<span class="eyebrow"><a href="/strategy#how-to-read">{E(NAME)}</a>, the agentic layer</span>',
         "<h1>Where agents enter, layer by layer</h1>",
         '<p class="dek">In the operating stack an agent helps run the platform; in the product stack the enterprise\'s '
         "own applications embed agents and run as workloads. Each row is what the register says of one layer: where an "
@@ -2060,7 +2171,7 @@ def drivers_page(register, pages: dict[str, str], prov: dict) -> str:
     parts = [
         STYLE,
         '<div class="esl" data-source="register" data-view="drivers">',
-        f'<span class="eyebrow">{E(NAME)}, the drivers</span>',
+        f'<span class="eyebrow"><a href="/strategy#how-to-read">{E(NAME)}</a>, the drivers</span>',
         "<h1>Each driver, the capabilities it stresses, and the initiatives it re-opens</h1>",
         f'<p class="dek">{_driver_kinds(register, html=True)}. Each one stresses capabilities, and a '
         "trigger on it re-opens the guidance of the initiatives that establish or improve them.</p>",
@@ -2122,8 +2233,35 @@ def drivers_page(register, pages: dict[str, str], prov: dict) -> str:
     return "".join(parts)
 
 
+def _how_to_read(levels: list[tuple[int, str]] | None, bar: str | None, terms: list[dict] | None = None) -> str:
+    """The hub's "How to read these pages": each defined term with its definition, as the charter words it, and the
+    adoption levels in order with the bar named, the levels read from the policy through the loader (GATE-14's clause
+    14.1: no level is typed here). Every view's eyebrow links to it (the educator review, S5)."""
+    terms = glossary() if terms is None else terms
+    if not terms:
+        return ""
+    rows = "".join(f'<dt id="{term_id(e["term"])}">{E(e["term"])}</dt><dd>{E(_sentence(e["definition"]))}</dd>'
+                   for e in terms)
+    ladder = ""
+    if levels:
+        steps = "; ".join(f"{o}, {E(words(i))}: {E(LEVEL_WORDS.get(o, ''))}" for o, i in levels)
+        ladder = f"<p>The adoption levels, in order: {steps}.{f' The bar is {E(words(bar))}.' if bar else ''}</p>"
+    return (f'<h2 id="{GLOSSARY_ANCHOR}">How to read these pages</h2>'
+            "<p>The words these pages use, as the strategy layer's charter defines them.</p>"
+            f'<dl class="glossary">{rows}</dl>{ladder}')
+
+
+def _levels(pol) -> tuple[list[tuple[int, str]], str | None]:
+    """The adoption method's levels as (ordinal, id) in order, and the bar's level, from the policy."""
+    if pol is None:
+        return [], None
+    return ([(lv.ordinal, lv.id) for lv in sorted(pol.selected("adoption-method").levels, key=lambda lv: lv.ordinal)],
+            pol.get("world-class-bar")["world_class_level"])
+
+
 def index_page(
-    prov: dict, register, pages: dict[str, str], review: list[tuple[str, str]] | None = None
+    prov: dict, register, pages: dict[str, str], review: list[tuple[str, str]] | None = None,
+    levels: list[tuple[int, str]] | None = None, bar: str | None = None, terms: list[dict] | None = None,
 ) -> str:
     """The strategy layer's index: every capability, the board, the costs and value, every role brief, and the
     register's two views (the agentic page and the drivers' view). With
@@ -2139,13 +2277,14 @@ def index_page(
         "<h1>Capabilities, what they return and cost, and who holds them</h1>",
         '<p class="dek">Each capability is an outcome the platform keeps; its page says what it returns, what it costs once and '
         "to keep, and the chapters that teach it. An estate's portfolio ranks what it funds first.</p>",
+        _how_to_read(levels, bar, terms),
         "<h2>Capabilities</h2>",
         table(
             ["Capability", "Outcome", "Held by"],
             [
                 [
                     f'<a href="/strategy/{E(c.id)}">{E(named(register, c.id))}</a>',
-                    E(c.outcome),
+                    E(first_clause(c.outcome)),
                     f'<a href="/strategy/roles/{E(c.accountable)}">{E(roles[c.accountable].name)}</a>',
                 ]
                 for c in register.capabilities
@@ -2287,7 +2426,7 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
     out = {}
     for cap in reg.capabilities:
         out[f"strategy-{cap.id}"] = (
-            cap.outcome,
+            named(reg, cap.id),  # the page's title is the capability's name (S2)
             f"{cap.object_in_focus[:1].upper()}{cap.object_in_focus[1:]}: what it returns, what it costs once and "
             "to keep, who owns it, and where each part is taught",
             f"/strategy/{cap.id}",
@@ -2332,13 +2471,17 @@ def views(reg=None, pf=None, pol=None, report=None) -> dict[str, tuple[str, str,
         f"{NAME}: every capability with what it returns, what it costs and the role that holds it; the board, the costs "
         "and value, and the role briefs",
         "/strategy",
-        index_page(_used(rep, "register"), reg, pages, review=[(v[0], v[2]) for v in out.values()]),
+        index_page(_used(rep, "register"), reg, pages, review=[(v[0], v[2]) for v in out.values()],
+                   levels=_levels(pol)[0], bar=_levels(pol)[1]),
     )
     # a review view marks each figure whose node no approval covers as it stands (40-BREADTH.md step 2)
     from generator import served
 
     held = served.awaiting(pf)
-    return {name: (*v[:3], served.mark_awaiting(v[3], held)) for name, v in out.items()}
+    terms = glossary()
+    names = register_names(reg)
+    return {name: (*v[:3], served.mark_awaiting(v[3] if name == "index" else link_terms(v[3], terms, names=names), held))
+            for name, v in out.items()}
 
 
 def _site_vocabulary(pol) -> tuple[dict, dict]:
@@ -2413,6 +2556,9 @@ def _site_slice(view: str, reg, comp_map: dict, pages: dict) -> dict:
             ],
             "jobs": [{"id": j["id"], "phase": j.get("phase")} for j in comp_map.get("jobs") or []],
         },
+        # the words the hub defines and every page links on first use, read here, at slice time, so a served page
+        # renders from its slice alone (the educator review, S5)
+        "glossary": glossary(),
     }
 
 
@@ -2437,6 +2583,15 @@ def _records_slice(view: str, reg, pol, pf=None) -> dict:
 
 
 def render_served(s, pol) -> tuple[str, str, str, str]:
+    """One served page, as `_render_served` renders it, with each defined term's first use linked to the hub's block
+    (the hub itself holds the block, so its words stay plain)."""
+    title, desc, path, content = _render_served(s, pol)
+    if path != "/strategy":
+        content = link_terms(content, s.site.get("glossary", []), names=register_names(s.register))  # the slice's words
+    return title, desc, path, content
+
+
+def _render_served(s, pol) -> tuple[str, str, str, str]:
     """One served page, as (title, description, path, content), rendered from its slice alone: the core function the
     view runs, on the slice; the site's vocabulary and the records, the slice's; its digest, the slice's
     (40-BREADTH.md step 2, S1)."""
@@ -2472,7 +2627,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         }
         cap = next(c for c in reg.capabilities if c.id == ident)
         return (
-            cap.outcome,
+            named(reg, cap.id),  # the page's title is the capability's name (S2)
             f"{cap.object_in_focus[:1].upper()}{cap.object_in_focus[1:]}: what it returns, what it costs once and "
             "to keep, who owns it, and where each part is taught",
             f"/strategy/{cap.id}",
@@ -2547,7 +2702,7 @@ def render_served(s, pol) -> tuple[str, str, str, str]:
         f"{NAME}: every capability with what it returns, what it costs and the role that holds it; the board, the costs "
         "and value, and the role briefs",
         "/strategy",
-        index_page(prov([]), reg, pages),
+        index_page(prov([]), reg, pages, levels=_levels(pol)[0], bar=_levels(pol)[1], terms=s.site.get("glossary", [])),
     )
 
 
