@@ -1,22 +1,145 @@
 {
- "captured_utc": "2026-10-21T23:44:53Z",
+ "captured_utc": "2026-11-27T05:55:33Z",
  "instances": [
   {
    "label": "the instance asked about",
    "sddcManagerVersions": [
-    "9.1.1.0.25713928"
+    "9.1.1.0200.25801071"
    ],
    "domains": {
     "total": 2,
     "management": 1,
     "workload": 1
    },
-   "releases": 19,
+   "releases": 21,
+   "releaseList": [
+    {
+     "version": "4.4.1.0",
+     "releaseDate": "2022-05-11"
+    },
+    {
+     "version": "4.4.1.1",
+     "releaseDate": "2022-06-29"
+    },
+    {
+     "version": "4.5.0.0",
+     "releaseDate": "2022-10-10"
+    },
+    {
+     "version": "4.5.1.0",
+     "releaseDate": "2023-05-11"
+    },
+    {
+     "version": "4.5.2.0",
+     "releaseDate": "2023-08-16"
+    },
+    {
+     "version": "5.0.0.0",
+     "releaseDate": "2023-05-29"
+    },
+    {
+     "version": "5.0.0.1",
+     "releaseDate": "2023-09-28"
+    },
+    {
+     "version": "5.1.0.0",
+     "releaseDate": "2023-11-06"
+    },
+    {
+     "version": "5.1.1.0",
+     "releaseDate": "2024-03-25"
+    },
+    {
+     "version": "5.2.0.0",
+     "releaseDate": "2024-07-21"
+    },
+    {
+     "version": "5.2.1.0",
+     "releaseDate": "2024-10-08"
+    },
+    {
+     "version": "5.2.2.0",
+     "releaseDate": "2025-09-05"
+    },
+    {
+     "version": "5.2.3.0",
+     "releaseDate": "2026-02-23"
+    },
+    {
+     "version": "5.2.4.0",
+     "releaseDate": "2026-05-27"
+    },
+    {
+     "version": "5.2.5.0",
+     "releaseDate": "2026-11-19"
+    },
+    {
+     "version": "9.0.0.0",
+     "releaseDate": "2025-05-22"
+    },
+    {
+     "version": "9.0.1.0",
+     "releaseDate": "2025-09-29"
+    },
+    {
+     "version": "9.0.2.0",
+     "releaseDate": "2026-01-20"
+    },
+    {
+     "version": "9.1.0.0",
+     "releaseDate": "2026-05-12"
+    },
+    {
+     "version": "9.1.1.0",
+     "releaseDate": "2026-09-03"
+    },
+    {
+     "version": "9.1.2.0",
+     "releaseDate": "2026-11-24"
+    }
+   ],
+   "running": {
+    "SDDC_MANAGER": [
+     "9.1.1.0200.25801071"
+    ],
+    "VCENTER": [
+     "9.1.1.0100.25784172"
+    ],
+    "NSX_T_MANAGER": [
+     "9.1.1.0100.25762940"
+    ]
+   },
+   "domainTargets": [
+    {
+     "domain": "{{domain-1}}",
+     "type": "MANAGEMENT",
+     "targetVersion": "9.1.1.0",
+     "isCustomizedBom": true,
+     "futureReleases": [
+      {
+       "version": "9.1.2.0",
+       "applicabilityStatus": "APPLICABLE"
+      }
+     ]
+    },
+    {
+     "domain": "{{domain-2}}",
+     "type": "VI",
+     "targetVersion": "9.1.1.0",
+     "isCustomizedBom": true,
+     "futureReleases": [
+      {
+       "version": "9.1.2.0",
+       "applicabilityStatus": "APPLICABLE"
+      }
+     ]
+    }
+   ],
    "bundles": {
-    "total": 368,
+    "total": 414,
     "byStatus": {
-     "PENDING": 338,
-     "SUCCESSFUL": 29,
+     "PENDING": 398,
+     "SUCCESSFUL": 15,
      "FAILED": 1
     }
    },
@@ -25,6 +148,40 @@
    "offeredAndStaged": 0,
    "unstagedMB": 0,
    "join": [],
+   "targetedOffers": [
+    {
+     "targetVersion": "9.1.2.0",
+     "status": 200,
+     "upgradables": 1,
+     "distinctBundlesOffered": 1,
+     "offeredAndStaged": 0,
+     "unstagedMB": 2544.4,
+     "join": [
+      {
+       "upgradableStatus": "AVAILABLE",
+       "bundleType": "SDDC_MANAGER",
+       "components": [
+        {
+         "type": "SDDC_MANAGER",
+         "toVersion": "9.1.2.0.25936686"
+        }
+       ],
+       "downloadStatus": "PENDING",
+       "sizeMB": 2544.4,
+       "staged": false
+      }
+     ]
+    }
+   ],
+   "laterPatches": [
+    {
+     "component": "VCENTER",
+     "running": "9.1.1.0100.25784172",
+     "patch": "9.1.1.0200.25901347",
+     "releasedDate": "2026-11-19",
+     "downloadStatus": "PENDING"
+    }
+   ],
    "workloadDomainRefusal": {
     "status": 400,
     "message": "Management Domain with ID {{id}} not found."
@@ -42,19 +199,129 @@
   {
    "label": "the rehearsal instance",
    "sddcManagerVersions": [
-    "9.1.1.0.25713928"
+    "9.1.1.0200.25801071"
    ],
    "domains": {
     "total": 1,
     "management": 1,
     "workload": 0
    },
-   "releases": 19,
+   "releases": 21,
+   "releaseList": [
+    {
+     "version": "4.4.1.0",
+     "releaseDate": "2022-05-11"
+    },
+    {
+     "version": "4.4.1.1",
+     "releaseDate": "2022-06-29"
+    },
+    {
+     "version": "4.5.0.0",
+     "releaseDate": "2022-10-10"
+    },
+    {
+     "version": "4.5.1.0",
+     "releaseDate": "2023-05-11"
+    },
+    {
+     "version": "4.5.2.0",
+     "releaseDate": "2023-08-16"
+    },
+    {
+     "version": "5.0.0.0",
+     "releaseDate": "2023-05-29"
+    },
+    {
+     "version": "5.0.0.1",
+     "releaseDate": "2023-09-28"
+    },
+    {
+     "version": "5.1.0.0",
+     "releaseDate": "2023-11-06"
+    },
+    {
+     "version": "5.1.1.0",
+     "releaseDate": "2024-03-25"
+    },
+    {
+     "version": "5.2.0.0",
+     "releaseDate": "2024-07-21"
+    },
+    {
+     "version": "5.2.1.0",
+     "releaseDate": "2024-10-08"
+    },
+    {
+     "version": "5.2.2.0",
+     "releaseDate": "2025-09-05"
+    },
+    {
+     "version": "5.2.3.0",
+     "releaseDate": "2026-02-23"
+    },
+    {
+     "version": "5.2.4.0",
+     "releaseDate": "2026-05-27"
+    },
+    {
+     "version": "5.2.5.0",
+     "releaseDate": "2026-11-19"
+    },
+    {
+     "version": "9.0.0.0",
+     "releaseDate": "2025-05-22"
+    },
+    {
+     "version": "9.0.1.0",
+     "releaseDate": "2025-09-29"
+    },
+    {
+     "version": "9.0.2.0",
+     "releaseDate": "2026-01-20"
+    },
+    {
+     "version": "9.1.0.0",
+     "releaseDate": "2026-05-12"
+    },
+    {
+     "version": "9.1.1.0",
+     "releaseDate": "2026-09-03"
+    },
+    {
+     "version": "9.1.2.0",
+     "releaseDate": "2026-11-24"
+    }
+   ],
+   "running": {
+    "SDDC_MANAGER": [
+     "9.1.1.0200.25801071"
+    ],
+    "VCENTER": [
+     "9.1.1.0100.25784172"
+    ],
+    "NSX_T_MANAGER": [
+     "9.1.1.0100.25762940"
+    ]
+   },
+   "domainTargets": [
+    {
+     "domain": "{{domain-3}}",
+     "type": "MANAGEMENT",
+     "targetVersion": "9.1.1.0",
+     "isCustomizedBom": true,
+     "futureReleases": [
+      {
+       "version": "9.1.2.0",
+       "applicabilityStatus": "APPLICABLE"
+      }
+     ]
+    }
+   ],
    "bundles": {
-    "total": 366,
+    "total": 412,
     "byStatus": {
-     "PENDING": 339,
-     "SUCCESSFUL": 27
+     "PENDING": 412
     }
    },
    "upgradables": 0,
@@ -62,6 +329,40 @@
    "offeredAndStaged": 0,
    "unstagedMB": 0,
    "join": [],
+   "targetedOffers": [
+    {
+     "targetVersion": "9.1.2.0",
+     "status": 200,
+     "upgradables": 1,
+     "distinctBundlesOffered": 1,
+     "offeredAndStaged": 0,
+     "unstagedMB": 2544.4,
+     "join": [
+      {
+       "upgradableStatus": "AVAILABLE",
+       "bundleType": "SDDC_MANAGER",
+       "components": [
+        {
+         "type": "SDDC_MANAGER",
+         "toVersion": "9.1.2.0.25936686"
+        }
+       ],
+       "downloadStatus": "PENDING",
+       "sizeMB": 2544.4,
+       "staged": false
+      }
+     ]
+    }
+   ],
+   "laterPatches": [
+    {
+     "component": "VCENTER",
+     "running": "9.1.1.0100.25784172",
+     "patch": "9.1.1.0200.25901347",
+     "releasedDate": "2026-11-19",
+     "downloadStatus": "PENDING"
+    }
+   ],
    "workloadDomainRefusal": null,
    "depot": {
     "via": "v1/services-config",

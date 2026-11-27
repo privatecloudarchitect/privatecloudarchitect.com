@@ -7,8 +7,8 @@ is printed or written.
 
 | File | What it is |
 |---|---|
-| `lifecycle.py` | Reads the releases the instance knows about, the bundle depot counted by download status, and the upgradable state, then **joins** the offered upgrades to the bundles behind them and reports how much is still to fetch, in the API's own unit (sizeMB). Name a second instance and it compares your rehearsal instance with the one it rehearses for. It also follows a retired endpoint to the replacement its own `410` names. Writes `lifecycle.json`, and refuses to write a record carrying an instance name. |
-| `lifecycle.json` | Example output: the record a run of 2026-10-21 wrote over two instances, for comparing its shape with yours. Its counts are that run's, never what yours should hold. `records/lifecycle-2026-10-21.json` holds the same reading, so a new run's overwrite of this file leaves it in place. |
+| `lifecycle.py` | Reads the releases the instance knows about, the bundle depot counted by download status, and the upgradable state, then **joins** the offered upgrades to the bundles behind them and reports how much is still to fetch, in the API's own unit (sizeMB). The upgradable read answers for a target release, so it is asked again for each release the registry names applicable to the management domain, and a zero is never read as current. It lists each SDDC Manager, vCenter and NSX Manager patch the depot holds above the running version, which no upgradable read offers. Name a second instance and it compares your rehearsal instance with the one it rehearses for. It also follows a retired endpoint to the replacement its own `410` names. Writes `lifecycle.json`, and refuses to write a record carrying an instance name. |
+| `lifecycle.json` | Example output: the record a run of 2026-11-27 wrote over two instances, for comparing its shape with yours. Its counts are that run's, never what yours should hold. `records/lifecycle-2026-11-27.json` holds the same reading, so a new run's overwrite of this file leaves it in place; `records/` keeps the earlier readings. |
 
 ## Run it
 
@@ -26,7 +26,7 @@ python3 lifecycle.py
 
 | Exit | Meaning |
 |---|---|
-| 0 | nothing to act on: every offered upgrade has its content staged, or nothing is offered |
+| 0 | nothing to act on: every offered upgrade has its content staged, or nothing is offered to the read without a target. An applicable release's offer and a later patch are printed, never alerted on |
 | 1 | an offered upgrade's content is not staged on the instance asked about: the weekly alert keys on this |
 | 2 | an argument was given, a setting is missing, or a token file is open to group or other |
 | 3 | a read failed, so the answer is unknown |
@@ -49,6 +49,14 @@ Two traps the script handles so you do not have to:
 - **The upgradable read keys on the management domain.** A workload domain's own id is refused with a message
   saying the management domain was not found, which is true and reads like a missing object. Filter to the
   management domain before any loop.
+- **And it answers for a target release.** On SDDC Manager 9.1.1.0200, asked with no target it offered nothing,
+  and asked with `targetVersion` for a release the domain's future releases named applicable, it offered that
+  release's SDDC Manager upgrade with none of its content staged. So a zero is not a current estate, and the script
+  asks for each applicable release by name.
+- **A component's patch is a bundle, not a release.** A later vCenter patch was a `PATCH` bundle in the depot,
+  pending, and neither the releases nor any upgradable read named it. The script compares it with the running
+  version as a version within its line, never as a build, and reports its download status, which says whether its
+  content is staged here, not what any component runs.
 
 ## Scope, stated plainly
 
@@ -61,11 +69,16 @@ Two traps the script handles so you do not have to:
 ## Reading the record
 
 `instances` carries one entry per instance read. Inside each: `domains` split into management and workload,
-`releases` known, `bundles` with `byStatus` (`PENDING` means known about and not downloaded), `upgradables`
+`releases` known and `releaseList` (each release's version and date), `running` (the SDDC Manager, vCenter and
+NSX Manager versions read), `domainTargets` (each domain's `targetVersion`, its `isCustomizedBom` as the API reports
+it, and its `futureReleases` with their applicability), `bundles` with `byStatus` (`PENDING` means known about and not downloaded), `upgradables`
 offered, `distinctBundlesOffered` and `offeredAndStaged`, and `unstagedMB` as the outstanding download, summed
 over distinct bundles in the API's own unit. A record written before 2026-10-07 carries `unstagedGB` instead:
 the same sum divided by 1024 and labelled GB, which names a decimal unit for a binary division; read it as MB
 divided by 1024. `join`
-is one row per offer with the bundle behind it and whether it is staged. `workloadDomainRefusal` quotes the
+is one row per offer with the bundle behind it, its components and whether it is staged; `targetedOffers` is the
+same join for each applicable release, asked by name; `laterPatches` lists each patch bundle above a running
+version on its line, with its release date and download status. A record written before 2026-11-27 carries none
+of these five, and its zero offers answer only the read without a target. `workloadDomainRefusal` quotes the
 refusal rather than describing it, and `depot` records which endpoint served the depot configuration on your
 build and what it reported.

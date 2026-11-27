@@ -393,7 +393,9 @@ def bom_row_for(bom, what):
 
 
 def compare_bom(rows, bom):
-    """Each version row against the bill of materials: at its build, a later patch of the release, or behind it."""
+    """Each version row against the bill of materials: at its build, a later patch of the release, or behind it, an
+    earlier patch of the bill's own release included. differs is what is left: a release above the bill's, or a build the
+    bill does not list on its own patch, so a reader of the status can tell a wrong bill from a component behind it."""
     out = []
     for what, ver, where in rows:
         b = bom_row_for(bom, what)
@@ -405,6 +407,8 @@ def compare_bom(rows, bom):
             status = "build"
         elif release(ver) == bom["release"] and int(patch(ver) or 0) > int(patch(b["version"]) or 0):
             status = "later patch"
+        elif release(ver) == bom["release"] and int(patch(ver) or 0) < int(patch(b["version"]) or 0):
+            status = "behind"   # an earlier patch of the bill's own release is behind the bill, not a different bill
         elif tuple(map(int, (release(ver) or "0.0.0").split("."))) < tuple(map(int, bom["release"].split("."))):
             status = "behind"
         else:
