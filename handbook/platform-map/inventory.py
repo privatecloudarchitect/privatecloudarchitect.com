@@ -417,6 +417,20 @@ def compare_bom(rows, bom):
     return out
 
 
+def bom_checks(bom_rows):
+    """The bill's two checks, kept apart: a component behind the bill (an earlier release, or an earlier patch of the
+    bill's own) has drifted from it; a component on another release, or at a build the bill does not list, is read
+    against the wrong bill, so its release's own bill is the one to read it against. A component ahead of the bill is
+    never called behind it."""
+    def named(rows):
+        return f": {len(rows)} ({', '.join(sorted({r['what'] for r in rows}))})" if rows else ""
+    behind = [r for r in bom_rows if r["status"] == "behind"]
+    other = [r for r in bom_rows if r["status"] == "differs"]
+    return [(not behind, "no component behind the bill of materials" + named(behind)),
+            (not other, "every component on the bill's release" + named(other)
+             + (", so read them against their own release's bill" if other else ""))]
+
+
 def bom_coverage(bom, bom_rows, instances):
     """Every row of the bill, in three states: read (a version above compared with it), seen (deployed, its running
     version not compared here) or unread (nothing here read it, so nothing here says whether it is
@@ -572,8 +586,7 @@ def main():
     checks.append((len(rel) == 1, "one release across every component read" + (f": {next(iter(rel))}" if len(rel) == 1 else
                                                                                f": {len(rel)} releases ({', '.join(sorted(map(str, rel)))})")))
     if bom_rows:
-        off = [r for r in bom_rows if r["status"] in ("behind", "differs")]
-        checks.append((not off, "no component behind the bill of materials" + (f": {len(off)} ({', '.join(sorted({r['what'] for r in off}))})" if off else "")))
+        checks += bom_checks(bom_rows)
     print("\nchecks")
     for ok, what in checks:
         print(f"  {'ok     ' if ok else 'DIFFERS'} {what}")
